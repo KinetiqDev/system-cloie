@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StudentSection, YearLevel } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
@@ -46,6 +46,10 @@ describe("manage-course-assignments", () => {
     userId: "faculty-1",
     email: "faculty@test.com",
     roles: [ROLES.FACULTY],
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   describe("createCourseAssignment", () => {
@@ -141,8 +145,38 @@ describe("manage-course-assignments", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toMatch(/must match the Course's owning program/i);
+        expect(result.error).toMatch(/Program Heads cannot manage General Education assignments/i);
       }
+    });
+
+    it("should allow secretary to create a General Education assignment for a program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "ge-course",
+        program_id: null,
+      } as never);
+      vi.mocked(prisma.courseAssignment.create).mockResolvedValue({ id: "assignment-1" } as never);
+
+      const result = await createCourseAssignment({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "ge-course",
+        programId: "program-1",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
+
+      expect(result.success).toBe(true);
+      expect(prisma.courseAssignment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            course_id: "ge-course",
+            program_id: "program-1",
+          }),
+        })
+      );
     });
 
     it("should reject assignment creation when programId differs from the Course's owning program", async () => {
@@ -244,6 +278,29 @@ describe("manage-course-assignments", () => {
 
       expect(result.success).toBe(true);
     });
+
+    it("should allow secretary to update a General Education assignment program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-1",
+        course: { program_id: null },
+      } as never);
+      vi.mocked(prisma.courseAssignment.update).mockResolvedValue({ id: "assignment-1" } as never);
+
+      const result = await updateCourseAssignment({
+        assignmentId: "assignment-1",
+        programId: "program-1",
+      });
+
+      expect(result.success).toBe(true);
+      expect(prisma.courseAssignment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ program_id: "program-1" }),
+        })
+      );
+    });
   });
 
   describe("deactivateCourseAssignment", () => {
@@ -344,6 +401,38 @@ describe("manage-course-assignments", () => {
       expect(result.success).toBe(false);
       expect(result.created).toBe(0);
       expect(result.errors).toHaveLength(2);
+    });
+
+    it("should allow secretary to bulk create General Education assignments", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "ge-course",
+        program_id: null,
+      } as never);
+      vi.mocked(prisma.courseAssignment.create).mockResolvedValue({ id: "assignment-1" } as never);
+
+      const result = await bulkCreateCourseAssignments([
+        {
+          termInstanceId: "term-1",
+          facultyId: "faculty-1",
+          courseId: "ge-course",
+          programId: "program-1",
+          yearLevel: YearLevel.FIRST_YEAR,
+          section: StudentSection.MORNING,
+        },
+      ]);
+
+      expect(result).toEqual({ success: true, created: 1, errors: [] });
+      expect(prisma.courseAssignment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            course_id: "ge-course",
+            program_id: "program-1",
+          }),
+        })
+      );
     });
   });
 });

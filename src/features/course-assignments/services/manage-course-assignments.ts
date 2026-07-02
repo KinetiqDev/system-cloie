@@ -54,7 +54,7 @@ export async function createCourseAssignment(
     return { success: false, error: "Course not found." };
   }
 
-  if (course.program_id !== input.programId) {
+  if (course.program_id !== null && course.program_id !== input.programId) {
     return { success: false, error: "Assignment program must match the Course's owning program." };
   }
 
@@ -81,7 +81,6 @@ export async function createCourseAssignment(
 
     return { success: true, data: { id: assignment.id } };
   } catch (error) {
-    void error;
     // Handle unique constraint violation (database enforces uniqueness)
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return { success: false, error: "An identical assignment already exists. If inactive, please activate it instead of creating a new one." };
@@ -108,7 +107,11 @@ export async function updateCourseAssignment(
     return { success: false, error: "Assignment not found." };
   }
 
-  if (input.programId && input.programId !== existing.course.program_id) {
+  if (
+    input.programId &&
+    existing.course.program_id !== null &&
+    input.programId !== existing.course.program_id
+  ) {
     return { success: false, error: "Assignment program must match the Course's owning program." };
   }
 
@@ -130,8 +133,7 @@ export async function updateCourseAssignment(
     });
 
     return { success: true, data: undefined };
-  } catch (error) {
-    void error;
+  } catch {
     return { success: false, error: "Failed to update course assignment." };
   }
 }
@@ -168,8 +170,7 @@ export async function deactivateCourseAssignment(
     });
 
     return { success: true, data: undefined };
-  } catch (error) {
-    void error;
+  } catch {
     return { success: false, error: "Failed to deactivate course assignment." };
   }
 }
@@ -206,8 +207,7 @@ export async function activateCourseAssignment(
     });
 
     return { success: true, data: undefined };
-  } catch (error) {
-    void error;
+  } catch {
     return { success: false, error: "Failed to activate course assignment." };
   }
 }
@@ -255,8 +255,7 @@ export async function deleteCourseAssignment(
     });
 
     return { success: true, data: undefined };
-  } catch (error) {
-    void error;
+  } catch {
     return { success: false, error: "Failed to delete course assignment." };
   }
 }
@@ -306,7 +305,7 @@ export async function bulkCreateCourseAssignments(
         continue;
       }
 
-      if (course.program_id !== input.programId) {
+      if (course.program_id !== null && course.program_id !== input.programId) {
         errors.push({ index: i, error: "Assignment program must match the Course's owning program." });
         continue;
       }
@@ -333,7 +332,6 @@ export async function bulkCreateCourseAssignments(
 
       created++;
     } catch (error) {
-    void error;
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
         errors.push({ index: i, error: "An identical assignment already exists. If inactive, please activate it instead of creating a new one." });
       } else {

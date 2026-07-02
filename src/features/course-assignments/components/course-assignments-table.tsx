@@ -172,6 +172,7 @@ export function CourseAssignmentsTable({
     : "This will permanently delete the assignment. This action cannot be undone.";
   const confirmButtonText = confirmDialog.type === "deactivate" ? "Deactivate" : "Delete";
   const confirmButtonVariant = confirmDialog.type === "deactivate" ? "default" : "destructive";
+  const isConfirmDialogProcessing = processingId === confirmDialog.assignment?.id;
 
   return (
     <div className="space-y-4">
@@ -293,13 +294,13 @@ export function CourseAssignmentsTable({
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={processingId !== null}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isConfirmDialogProcessing}>Cancel</AlertDialogCancel>
             <Button
               variant={confirmButtonVariant}
               onClick={confirmAction}
-              disabled={processingId !== null}
+              disabled={isConfirmDialogProcessing}
             >
-              {processingId !== null ? `${confirmButtonText}...` : confirmButtonText}
+              {isConfirmDialogProcessing ? `${confirmButtonText}...` : confirmButtonText}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

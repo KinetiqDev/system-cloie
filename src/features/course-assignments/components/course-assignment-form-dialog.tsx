@@ -21,19 +21,10 @@ import { FacultySearchPopover } from "./shared/faculty-search-popover";
 import { WizardStepper } from "./shared/wizard-stepper";
 import { AssignmentSummaryBlock } from "./shared/assignment-summary-block";
 import { createCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
-import type { FacultySearchResult } from "@/features/course-assignments/types";
+import type { AssignableCourse, FacultySearchResult } from "@/features/course-assignments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
-
-interface Course {
-  id: string;
-  code: string;
-  title: string;
-  default_year_level?: YearLevel | null;
-  course_scope: CourseScope;
-  program_id: string | null;
-}
 
 interface Program {
   id: string;
@@ -44,7 +35,7 @@ interface Program {
 interface CourseAssignmentFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  availableCourses: Course[];
+  availableCourses: AssignableCourse[];
   availablePrograms: Program[];
   termInstances: TermInstanceItem[];
   defaultTermInstanceId?: string | null;
@@ -92,14 +83,13 @@ export function CourseAssignmentFormDialog({
   // Pre-fill year level from course default when course changes (only if user hasn't touched it)
   useEffect(() => {
     if (courseId && courseId !== previousCourseId.current && !hasTouchedYearLevel) {
-      const course = availableCourses.find((c) => c.id === courseId);
-      if (course?.default_year_level) {
+      if (selectedCourse?.default_year_level) {
         // eslint-disable-next-line react-hooks/set-state-in-effect -- controlled prefill of default year level when course changes and user has not manually edited it
-        setYearLevel(course.default_year_level);
+        setYearLevel(selectedCourse.default_year_level);
       }
     }
     previousCourseId.current = courseId;
-  }, [courseId, hasTouchedYearLevel, availableCourses]);
+  }, [courseId, hasTouchedYearLevel, selectedCourse?.default_year_level]);
   // Note: setYearLevel in effect is safe - guarded by hasTouchedYearLevel and course existence checks
 
   const handleYearLevelChange = (value: YearLevel) => {
@@ -108,6 +98,8 @@ export function CourseAssignmentFormDialog({
   };
 
   const handleNext = () => {
+    if (isSubmitting) return;
+
     if (step === "term") setStep("course");
     else if (step === "course") setStep("class");
     else if (step === "class") setStep("faculty");
@@ -127,6 +119,8 @@ export function CourseAssignmentFormDialog({
   };
 
   const handleBack = () => {
+    if (isSubmitting) return;
+
     if (step === "course") setStep("term");
     else if (step === "class") setStep("course");
     else if (step === "faculty") setStep("class");
@@ -137,6 +131,8 @@ export function CourseAssignmentFormDialog({
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     if (!termInstanceId || !courseId || !programId || !selectedFaculty) {
       showToast("Please fill in all required fields.", "error");
       return;
@@ -178,6 +174,10 @@ export function CourseAssignmentFormDialog({
   };
 
   const handleOpenChange = (open: boolean) => {
+    if (!open && isSubmitting) {
+      return;
+    }
+
     if (!open) {
       resetForm();
     }
@@ -189,7 +189,7 @@ export function CourseAssignmentFormDialog({
       case "term":
         return !!termInstanceId;
       case "course":
-        return !!courseId;
+        return !!selectedCourse;
       case "class":
         return !!programId && !!section;
       case "faculty":
@@ -357,18 +357,18 @@ export function CourseAssignmentFormDialog({
         <DialogFooter className="flex justify-between">
           <div>
             {step !== "term" && step !== "confirm" && (
-              <Button variant="outline" onClick={handleBack}>
+              <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
                 Back
               </Button>
             )}
             {step === "confirm" && (
-              <Button variant="outline" onClick={handleBack}>
+              <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
                 Back
               </Button>
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => handleOpenChange(false)}>
+            <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
               Cancel
             </Button>
             {step === "confirm" ? (

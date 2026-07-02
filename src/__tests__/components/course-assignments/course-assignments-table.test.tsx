@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { YearLevel, StudentSection, CourseScope } from "@prisma/client";
+import type { ComponentProps } from "react";
 
 import { CourseAssignmentsTable } from "@/features/course-assignments/components/course-assignments-table";
 import {
@@ -58,7 +59,7 @@ describe("CourseAssignmentsTable", () => {
     vi.restoreAllMocks();
   });
 
-  function renderTable(props: Partial<React.ComponentProps<typeof CourseAssignmentsTable>> = {}) {
+  function renderTable(props: Partial<ComponentProps<typeof CourseAssignmentsTable>> = {}) {
     const assignments = props.assignments ?? [createAssignment()];
     return render(
       <CourseAssignmentsTable
@@ -183,6 +184,41 @@ describe("CourseAssignmentsTable", () => {
     openRowActions();
     const deleteItem = screen.getByRole("menuitem", { name: /delete/i });
     expect(deleteItem).toHaveAttribute("data-disabled");
+
+    await act(async () => {
+      resolveDelete({ success: true });
+    });
+  });
+
+  it("keeps another row's confirm dialog enabled while a different row is processing", async () => {
+    let resolveDelete: (value: { success: true }) => void = () => {};
+    vi.mocked(deleteCourseAssignmentAction).mockImplementation(
+      () => new Promise((resolve) => {
+        resolveDelete = resolve;
+      })
+    );
+
+    renderTable({
+      assignments: [
+        createAssignment({ id: "assignment-1", courseCode: "CS101" }),
+        createAssignment({ id: "assignment-2", courseCode: "CS102" }),
+      ],
+    });
+
+    openRowActions("CS101");
+    fireEvent.click(screen.getByRole("menuitem", { name: /delete/i }));
+    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: /^Delete$/i }));
+
+    await waitFor(() => {
+      expect(deleteCourseAssignmentAction).toHaveBeenCalledWith({ assignmentId: "assignment-1" });
+    });
+
+    openRowActions("CS102");
+    fireEvent.click(screen.getByRole("menuitem", { name: /delete/i }));
+
+    const secondDialog = await screen.findByRole("alertdialog");
+    expect(within(secondDialog).getByRole("button", { name: /cancel/i })).toBeEnabled();
+    expect(within(secondDialog).getByRole("button", { name: /^Delete$/i })).toBeEnabled();
 
     await act(async () => {
       resolveDelete({ success: true });
