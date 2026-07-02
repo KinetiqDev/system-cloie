@@ -112,6 +112,10 @@ export function EditCourseAssignmentDialog({
               <p>
                 <strong>Term:</strong> {assignment.termLabel}
               </p>
+              <p className="pt-1 text-xs text-muted-foreground">
+                Course, faculty, and term cannot be edited here. If one is wrong, deactivate
+                this assignment and create the correct replacement.
+              </p>
             </div>
 
             <ClassIdentityFields

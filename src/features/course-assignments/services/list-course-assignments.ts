@@ -34,7 +34,12 @@ export async function listCourseAssignments(
 
   // Resolve the PH's assigned program IDs for row-level scoping
   let phProgramIds: string[] | undefined;
-  if (authSession && authSession.roles.includes(ROLES.PROGRAM_HEAD)) {
+  if (
+    authSession &&
+    authSession.roles.includes(ROLES.PROGRAM_HEAD) &&
+    !authSession.roles.includes(ROLES.SECRETARY) &&
+    !authSession.roles.includes(ROLES.DEAN)
+  ) {
     const phAssignments = await prisma.programHeadAssignment.findMany({
       where: { program_head_id: authSession.userId, is_active: true },
       select: { program_id: true },

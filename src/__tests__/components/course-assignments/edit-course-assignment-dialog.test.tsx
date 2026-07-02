@@ -95,6 +95,7 @@ describe("EditCourseAssignmentDialog", () => {
 
     expect(screen.getByText(/CS101 — Intro to Computing/i)).toBeInTheDocument();
     expect(screen.getByText(/Test Faculty/i)).toBeInTheDocument();
+    expect(screen.getByText(/deactivate this assignment and create the correct replacement/i)).toBeInTheDocument();
     expect(screen.getByText("BSCS — BS Computer Science")).toBeInTheDocument();
     expect(screen.getByText(/course default: 2nd year/i)).toBeInTheDocument();
   });

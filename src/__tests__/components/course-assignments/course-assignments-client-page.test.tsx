@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { YearLevel, CourseScope } from "@prisma/client";
 
-import { CourseAssignmentsClientPage } from "@/app/(app)/program-head/course-assignments/client-page";
+import { CourseAssignmentsClientPage as ProgramHeadCourseAssignmentsClientPage } from "@/app/(app)/program-head/course-assignments/client-page";
+import { CourseAssignmentsClientPage as SecretaryCourseAssignmentsClientPage } from "@/app/(app)/secretary/course-assignments/client-page";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
@@ -10,6 +11,35 @@ vi.mock("@/lib/actions/course-assignment-actions", () => ({
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
+}));
+
+vi.mock("@/features/course-assignments/components/shared/assignment-filters", () => ({
+  AssignmentFilters: ({ filters, onFiltersChange }: {
+    filters: {
+      isActive: boolean | null;
+      courseScope: string | null;
+      searchQuery: string;
+      [key: string]: unknown;
+    };
+    onFiltersChange: (filters: {
+      isActive: boolean | null;
+      courseScope: string | null;
+      searchQuery: string;
+      [key: string]: unknown;
+    }) => void;
+  }) => (
+    <div data-testid="assignment-filters">
+      <button type="button" onClick={() => onFiltersChange({ ...filters, isActive: false })}>
+        Set inactive
+      </button>
+      <button
+        type="button"
+        onClick={() => onFiltersChange({ ...filters, courseScope: "GENERAL_EDUCATION" })}
+      >
+        Set GE scope
+      </button>
+    </div>
+  ),
 }));
 
 import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
@@ -79,7 +109,7 @@ describe("CourseAssignmentsClientPage", () => {
 
   it("pre-fills the year level from the selected course's default", async () => {
     render(
-      <CourseAssignmentsClientPage
+      <ProgramHeadCourseAssignmentsClientPage
         availableCourses={mockCourses}
         availablePrograms={mockPrograms}
         availableFaculty={mockFaculty}
@@ -109,7 +139,7 @@ describe("CourseAssignmentsClientPage", () => {
 
   it("does not render or launch a merged-class helper", async () => {
     render(
-      <CourseAssignmentsClientPage
+      <ProgramHeadCourseAssignmentsClientPage
         availableCourses={mockCourses}
         availablePrograms={mockPrograms}
         availableFaculty={mockFaculty}
@@ -123,5 +153,79 @@ describe("CourseAssignmentsClientPage", () => {
 
     expect(screen.queryByRole("button", { name: /create merged class/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: /create merged class assignment/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("SecretaryCourseAssignmentsClientPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(listCourseAssignmentsAction).mockResolvedValue({
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+        page: 0,
+        pageSize: 10,
+      },
+    });
+  });
+
+  function renderSecretaryPage() {
+    render(
+      <SecretaryCourseAssignmentsClientPage
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+        availableFaculty={mockFaculty}
+        termInstances={mockTermInstances}
+      />
+    );
+  }
+
+  it("loads active assignments by default", async () => {
+    renderSecretaryPage();
+
+    await waitFor(() => {
+      expect(listCourseAssignmentsAction).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: true }),
+        { page: 0 }
+      );
+    });
+  });
+
+  it("passes status filter changes to the listing action", async () => {
+    renderSecretaryPage();
+
+    await waitFor(() => {
+      expect(listCourseAssignmentsAction).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /set inactive/i }));
+
+    await waitFor(() => {
+      expect(listCourseAssignmentsAction).toHaveBeenLastCalledWith(
+        expect.objectContaining({ isActive: false }),
+        { page: 0 }
+      );
+    });
+  });
+
+  it("passes Course scope filter changes to the listing action", async () => {
+    renderSecretaryPage();
+
+    await waitFor(() => {
+      expect(listCourseAssignmentsAction).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /set ge scope/i }));
+
+    await waitFor(() => {
+      expect(listCourseAssignmentsAction).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isActive: true,
+          courseScope: CourseScope.GENERAL_EDUCATION,
+        }),
+        { page: 0 }
+      );
+    });
   });
 });

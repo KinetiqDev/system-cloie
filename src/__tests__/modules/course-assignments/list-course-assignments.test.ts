@@ -140,6 +140,22 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
     expect((callArgs as { where: Record<string, unknown> }).where).not.toHaveProperty("program_id");
   });
 
+  it("Secretary with Program Head role keeps all-program Secretary scope", async () => {
+    const mockSecretaryProgramHeadSession = createAuthSessionSnapshot({
+      userId: "secretary-ph-1",
+      email: "secretary-ph@test.com",
+      roles: [ROLES.SECRETARY, ROLES.PROGRAM_HEAD],
+    });
+
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockSecretaryProgramHeadSession);
+
+    await listCourseAssignments({});
+
+    expect(prisma.programHeadAssignment.findMany).not.toHaveBeenCalled();
+    const callArgs = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0][0];
+    expect((callArgs as { where: Record<string, unknown> }).where).not.toHaveProperty("program_id");
+  });
+
   it("Applies courseScope filter by course.course_scope", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
 
