@@ -51,15 +51,7 @@ export default async function NewProgramHeadCiloEvaluationPage({
     redirect("/program-head/tools");
   }
 
-  // Fetch course assignments for PH's program scope
-  // Get PH's program IDs first
-  const phAssignments = await prisma.programHeadAssignment.findMany({
-    where: { program_head_id: session.userId, is_active: true },
-    select: { program_id: true },
-  });
-  const phProgramIds = Array.from(new Set(phAssignments.map((a) => a.program_id)));
-
-  // Fetch all active assignments in PH's scope for the template's course
+  // Fetch active assignments scoped to the Program Head for the template's course
   const templateCourseId = publicationContext.data.course.id;
   const assignmentsResult = await listCourseAssignments(
     {

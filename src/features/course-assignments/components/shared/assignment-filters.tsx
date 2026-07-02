@@ -71,7 +71,7 @@ export function AssignmentFilters({
 
   const getScopeLabel = (value: CourseScope | null) => {
     if (value === CourseScope.GENERAL_EDUCATION) return "General Education";
-    if (value === CourseScope.PROGRAM_SPECIFIC) return "Program";
+    if (value === CourseScope.PROGRAM_SPECIFIC) return "Program-specific";
     return "All Scopes";
   };
 
@@ -257,7 +257,7 @@ export function AssignmentFilters({
           <SelectContent>
             <SelectItem value="all">All Scopes</SelectItem>
             <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
-            <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-Specific</SelectItem>
+            <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-specific</SelectItem>
           </SelectContent>
         </Select>
       </div>

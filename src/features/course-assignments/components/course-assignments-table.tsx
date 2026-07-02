@@ -227,7 +227,7 @@ export function CourseAssignmentsTable({
                       variant={isGeneralEducation ? "secondary" : "outline"}
                       className="text-[10px] px-1.5 py-0"
                     >
-                      {isGeneralEducation ? "GE" : "Program"}
+                      {isGeneralEducation ? "GE" : "Program-specific"}
                     </Badge>
                   </TableCell>
                   <TableCell>

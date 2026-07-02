@@ -14,7 +14,8 @@ import type {
 } from "../types";
 
 /**
- * List course assignments for Program Head view.
+ * List course assignments with role-aware scoping.
+ * Program Heads are limited to their assigned programs; Secretary/Dean see all programs.
  * Returns hydrated rows with faculty info, course info, and "last term taught" hint.
  */
 export async function listCourseAssignments(
