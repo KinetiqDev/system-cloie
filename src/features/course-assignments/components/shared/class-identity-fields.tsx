@@ -17,6 +17,7 @@ interface ClassIdentityFieldsProps {
   onYearLevelChange: (value: YearLevel) => void;
   onSectionChange: (value: StudentSection | null) => void;
   disabled?: boolean;
+  programDisabled?: boolean;
   suggestedYearLevel?: YearLevel | null;
 }
 
@@ -29,6 +30,7 @@ export function ClassIdentityFields({
   onYearLevelChange,
   onSectionChange,
   disabled = false,
+  programDisabled = false,
   suggestedYearLevel,
 }: ClassIdentityFieldsProps) {
   const hasHint = suggestedYearLevel != null;
@@ -38,7 +40,7 @@ export function ClassIdentityFields({
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="program">Program</Label>
-        <Select value={programId} onValueChange={(value) => value && onProgramChange(value)} disabled={disabled}>
+        <Select value={programId} onValueChange={(value) => value && onProgramChange(value)} disabled={disabled || programDisabled}>
           <SelectTrigger id="program">
             <SelectValue placeholder="Select program">
               {programId

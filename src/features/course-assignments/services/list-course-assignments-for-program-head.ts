@@ -81,6 +81,7 @@ export async function listCourseAssignmentsForProgramHead(
           },
           course: {
             select: {
+              id: true,
               code: true,
               title: true,
               course_scope: true,
@@ -152,6 +153,7 @@ export async function listCourseAssignmentsForProgramHead(
         facultyEmail: a.faculty?.email,
         courseCode: a.course?.code,
         courseTitle: a.course?.title,
+        courseScope: a.course?.course_scope,
         programCode: a.program?.code,
         programName: a.program?.name,
         termLabel: a.term_instance

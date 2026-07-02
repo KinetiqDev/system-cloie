@@ -1,16 +1,95 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderHook, act } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { YearLevel, StudentSection } from "@prisma/client";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { YearLevel, StudentSection, CourseScope } from "@prisma/client";
 import { useState, useEffect } from "react";
 
 import { ClassIdentityFields } from "@/features/course-assignments/components/shared/class-identity-fields";
+import { CourseAssignmentFormDialog } from "@/features/course-assignments/components/course-assignment-form-dialog";
+import { createCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
+import type { TermInstanceItem } from "@/features/academic-calendar/types";
+import type { FacultySearchResult } from "@/features/course-assignments/types";
+
+vi.mock("@/lib/actions/course-assignment-actions", () => ({
+  createCourseAssignmentAction: vi.fn(),
+  bulkCreateCourseAssignmentsAction: vi.fn(),
+  searchFacultyPoolAction: vi.fn(),
+  listCourseAssignmentsForProgramHeadAction: vi.fn(),
+  updateCourseAssignmentAction: vi.fn(),
+  activateCourseAssignmentAction: vi.fn(),
+  deactivateCourseAssignmentAction: vi.fn(),
+  deleteCourseAssignmentAction: vi.fn(),
+}));
+
+const facultyMockState = vi.hoisted(() => ({ crossProgram: false }));
+
+vi.mock("@/features/course-assignments/components/shared/faculty-search-popover", () => ({
+  FacultySearchPopover: ({ onSelect }: { onSelect: (faculty: FacultySearchResult) => void }) => (
+    <button
+      type="button"
+      onClick={() =>
+        onSelect({
+          id: "faculty-1",
+          firstName: "Test",
+          lastName: "Faculty",
+          email: "test@example.com",
+          affiliations: facultyMockState.crossProgram ? [] : ["BS Computer Science"],
+          primaryAffiliation: facultyMockState.crossProgram ? undefined : "BS Computer Science",
+        })
+      }
+    >
+      Pick faculty
+    </button>
+  ),
+}));
+
+const mockPrograms = [
+  { id: "prog-1", code: "BSCS", name: "BS Computer Science" },
+];
+
+const mockCourses = [
+  {
+    id: "course-1",
+    code: "CS101",
+    title: "Intro",
+    default_year_level: YearLevel.FIRST_YEAR,
+    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    program_id: "prog-1",
+  },
+  {
+    id: "course-2",
+    code: "CS201",
+    title: "Data Structures",
+    default_year_level: YearLevel.SECOND_YEAR,
+    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    program_id: "prog-1",
+  },
+  {
+    id: "course-3",
+    code: "GE101",
+    title: "General Education",
+    default_year_level: YearLevel.FIRST_YEAR,
+    course_scope: CourseScope.GENERAL_EDUCATION,
+    program_id: null,
+  },
+];
+
+const mockTermInstances = [
+  {
+    id: "term-1",
+    schoolYearId: "sy-1",
+    schoolYearCode: "2025-2026",
+    semester: "FIRST" as const,
+    term: "FIRST_TERM" as const,
+    startDate: null,
+    endDate: null,
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+] as unknown as TermInstanceItem[];
 
 describe("ClassIdentityFields - Hint chip", () => {
-  const mockPrograms = [
-    { id: "prog-1", code: "BSCS", name: "BS Computer Science" },
-  ];
-
   const defaultProps = {
     programId: "prog-1",
     yearLevel: YearLevel.FIRST_YEAR,
@@ -65,7 +144,7 @@ describe("CourseAssignment pre-fill logic", () => {
   });
 
   it("pre-fills yearLevel when courseId changes and user hasn't touched it", () => {
-    const mockCourses = [
+    const mockCoursesLocal = [
       { id: "course-1", code: "CS101", title: "Intro", default_year_level: YearLevel.FIRST_YEAR },
       { id: "course-2", code: "CS201", title: "Data", default_year_level: YearLevel.SECOND_YEAR },
     ];
@@ -78,7 +157,7 @@ describe("CourseAssignment pre-fill logic", () => {
       // Simulate the pre-fill logic from CourseAssignmentFormDialog
       useEffect(() => {
         if (courseId && !hasTouchedYearLevel) {
-          const course = mockCourses.find((c) => c.id === courseId);
+          const course = mockCoursesLocal.find((c) => c.id === courseId);
           if (course?.default_year_level) {
             setYearLevel(course.default_year_level);
           }
@@ -107,7 +186,7 @@ describe("CourseAssignment pre-fill logic", () => {
   });
 
   it("does not pre-fill when user has manually changed yearLevel", () => {
-    const mockCourses = [
+    const mockCoursesLocal = [
       { id: "course-1", code: "CS101", title: "Intro", default_year_level: YearLevel.FIRST_YEAR },
     ];
 
@@ -118,7 +197,7 @@ describe("CourseAssignment pre-fill logic", () => {
 
       useEffect(() => {
         if (courseId && !hasTouchedYearLevel) {
-          const course = mockCourses.find((c) => c.id === courseId);
+          const course = mockCoursesLocal.find((c) => c.id === courseId);
           if (course?.default_year_level) {
             setYearLevel(course.default_year_level);
           }
@@ -146,7 +225,7 @@ describe("CourseAssignment pre-fill logic", () => {
   });
 
   it("does not change yearLevel when course has no default_year_level", () => {
-    const mockCourses = [
+    const mockCoursesLocal = [
       { id: "course-1", code: "CS301", title: "Advanced", default_year_level: null },
     ];
 
@@ -157,7 +236,7 @@ describe("CourseAssignment pre-fill logic", () => {
 
       useEffect(() => {
         if (courseId && !hasTouchedYearLevel) {
-          const course = mockCourses.find((c) => c.id === courseId);
+          const course = mockCoursesLocal.find((c) => c.id === courseId);
           if (course?.default_year_level) {
             setYearLevel(course.default_year_level);
           }
@@ -176,7 +255,7 @@ describe("CourseAssignment pre-fill logic", () => {
   });
 
   it("resets hasTouchedYearLevel on resetForm equivalent", () => {
-    const mockCourses = [
+    const mockCoursesLocal = [
       { id: "course-1", code: "CS101", title: "Intro", default_year_level: YearLevel.SECOND_YEAR },
     ];
 
@@ -187,7 +266,7 @@ describe("CourseAssignment pre-fill logic", () => {
 
       useEffect(() => {
         if (courseId && !hasTouchedYearLevel) {
-          const course = mockCourses.find((c) => c.id === courseId);
+          const course = mockCoursesLocal.find((c) => c.id === courseId);
           if (course?.default_year_level) {
             setYearLevel(course.default_year_level);
           }
@@ -220,5 +299,181 @@ describe("CourseAssignment pre-fill logic", () => {
     });
 
     expect(result.current.yearLevel).toBe(YearLevel.SECOND_YEAR);
+  });
+});
+
+describe("CourseAssignmentFormDialog visible wizard", () => {
+  let toastMessages: Array<{ kind: string; message: string }> = [];
+  const toastListener = ((event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    toastMessages.push({ kind: detail.kind, message: detail.message });
+  }) as EventListener;
+
+  function Wrapper({ crossProgram = false }: { crossProgram?: boolean }) {
+    const [open, setOpen] = useState(true);
+    const onSuccess = vi.fn();
+
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)}>
+          Open Dialog
+        </button>
+        <CourseAssignmentFormDialog
+          open={open}
+          onOpenChange={setOpen}
+          availableCourses={mockCourses}
+          availablePrograms={mockPrograms}
+          termInstances={mockTermInstances}
+          defaultTermInstanceId="term-1"
+          defaultCourseId="course-2"
+          onSuccess={onSuccess}
+        />
+        {crossProgram && <span data-testid="cross-program-flag" />}
+      </>
+    );
+  }
+
+  beforeEach(() => {
+    facultyMockState.crossProgram = false;
+    toastMessages = [];
+    window.addEventListener("cloie-toast", toastListener);
+    vi.mocked(createCourseAssignmentAction).mockResolvedValue({
+      success: true,
+      data: { id: "assignment-1" },
+    });
+  });
+
+  afterEach(() => {
+    window.removeEventListener("cloie-toast", toastListener);
+    vi.restoreAllMocks();
+  });
+
+  function clickSelectByPlaceholder(placeholder: string) {
+    const value = screen.getByText(placeholder);
+    const trigger = value.closest('[role="combobox"]');
+    if (!trigger) throw new Error(`Select trigger for "${placeholder}" not found`);
+    fireEvent.click(trigger);
+  }
+
+  it("excludes General Education courses from the create picker", async () => {
+    render(
+      <CourseAssignmentFormDialog
+        open
+        onOpenChange={vi.fn()}
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+        termInstances={mockTermInstances}
+        defaultTermInstanceId="term-1"
+      />
+    );
+
+    clickSelectByPlaceholder("Select a course...");
+
+    expect(await screen.findByRole("option", { name: /cs101 — intro/i })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /ge101 — general education/i })).not.toBeInTheDocument();
+  });
+
+  it("locks the program to the selected Course's owning program", async () => {
+    render(
+      <CourseAssignmentFormDialog
+        open
+        onOpenChange={vi.fn()}
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+        termInstances={mockTermInstances}
+        defaultTermInstanceId="term-1"
+      />
+    );
+
+    clickSelectByPlaceholder("Select a course...");
+    fireEvent.click(await screen.findByRole("option", { name: /cs101 — intro/i }));
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    const programTrigger = screen.getByLabelText("Program");
+    expect(programTrigger).toBeDisabled();
+    expect(programTrigger).toHaveTextContent(/bscs — bs computer science/i);
+  });
+
+  it("pre-fills the year level from the catalog default", async () => {
+    render(<Wrapper />);
+
+    // Dialog starts at the course step because defaults are provided.
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(await screen.findByText(/course default: 2nd year/i)).toBeInTheDocument();
+  });
+
+  it("resets cleanly after closing so the next assignment still gets the catalog default", async () => {
+    render(<Wrapper />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    await screen.findByText(/course default: 2nd year/i);
+
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /open dialog/i }));
+
+    const nextButton = screen.getByRole("button", { name: /next/i });
+    await waitFor(() => {
+      expect(nextButton).not.toBeDisabled();
+    });
+
+    fireEvent.click(nextButton);
+    expect(await screen.findByText(/course default: 2nd year/i)).toBeInTheDocument();
+  });
+
+  it("creates an assignment directly when the faculty belongs to the selected program", async () => {
+    render(<Wrapper />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await waitFor(() => {
+      expect(createCourseAssignmentAction).toHaveBeenCalledWith({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "course-2",
+        programId: "prog-1",
+        yearLevel: YearLevel.SECOND_YEAR,
+        section: StudentSection.MORNING,
+      });
+    });
+
+    expect(toastMessages.some((t) => t.kind === "success")).toBe(true);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows cross-program warning and a summary before confirming", async () => {
+    facultyMockState.crossProgram = true;
+
+    render(<Wrapper crossProgram />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(await screen.findByText(/cross-program assignment/i)).toBeInTheDocument();
+    expect(screen.getByText(/cs201 — data structures/i)).toBeInTheDocument();
+    expect(screen.getByText(/bscs/i)).toBeInTheDocument();
+    expect(screen.getByText(/2nd year/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /confirm assignment/i }));
+
+    await waitFor(() => {
+      expect(createCourseAssignmentAction).toHaveBeenCalled();
+    });
   });
 });

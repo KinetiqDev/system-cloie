@@ -9,11 +9,11 @@ import { AssignmentFilters } from "@/features/course-assignments/components/shar
 import { CourseAssignmentFormDialog } from "@/features/course-assignments/components/course-assignment-form-dialog";
 import { listCourseAssignmentsForProgramHeadAction } from "@/lib/actions/course-assignment-actions";
 import type { AssignmentFiltersState } from "@/features/course-assignments/components/shared/assignment-filters";
-import type { CourseAssignmentItem } from "@/features/course-assignments/types";
+import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
 interface CourseAssignmentsClientPageProps {
-  availableCourses: Array<{ id: string; code: string; title: string }>;
+  availableCourses: AssignableCourse[];
   availablePrograms: Array<{ id: string; code: string; name: string }>;
   availableFaculty: Array<{ id: string; firstName: string; lastName: string; email: string }>;
   termInstances: TermInstanceItem[];
@@ -94,10 +94,12 @@ export function CourseAssignmentsClientPage({
             Manage faculty assignments for courses in your program
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Assign Faculty
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Assign Faculty
+          </Button>
+        </div>
       </div>
 
       <AssignmentFilters
@@ -116,6 +118,7 @@ export function CourseAssignmentsClientPage({
         loading={loading}
         onPageChange={setPage}
         onAssignmentUpdated={refreshAssignments}
+        onAssignFaculty={() => setCreateOpen(true)}
       />
 
       <CourseAssignmentFormDialog

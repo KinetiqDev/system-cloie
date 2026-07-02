@@ -652,11 +652,7 @@ export function ProgramHeadCoursesCatalog({
                                 termInstanceId={selectedTermId}
                                 termInstances={termInstances}
                                 availablePrograms={programs}
-                                availableCourses={courses.map((c) => ({
-                                  id: c.id,
-                                  code: c.code,
-                                  title: c.title,
-                                }))}
+                                availableCourses={courses}
                                 triggerRender={
                                   <Button
                                     variant="ghost"

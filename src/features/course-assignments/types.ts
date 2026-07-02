@@ -1,4 +1,17 @@
-import type { YearLevel, StudentSection } from "@prisma/client";
+import type { YearLevel, StudentSection, CourseScope } from "@prisma/client";
+
+/**
+ * Course option surfaced by the course assignment route and dialogs.
+ * Includes catalog defaults and scope so the UI can pre-fill and distinguish GE courses.
+ */
+export type AssignableCourse = {
+  id: string;
+  code: string;
+  title: string;
+  default_year_level: YearLevel | null;
+  course_scope: CourseScope;
+  program_id: string | null;
+};
 
 /**
  * Course assignment record with related data.
@@ -20,6 +33,7 @@ export type CourseAssignmentItem = {
   facultyEmail?: string;
   courseCode?: string;
   courseTitle?: string;
+  courseScope?: CourseScope;
   programCode?: string;
   programName?: string;
   termLabel?: string;

@@ -54,6 +54,10 @@ export async function createCourseAssignment(
     return { success: false, error: "Course not found." };
   }
 
+  if (course.program_id !== null && course.program_id !== input.programId) {
+    return { success: false, error: "Assignment program must match the Course's owning program." };
+  }
+
   // Resolve PH program scope and check permissions
   const phProgramScope = await resolvePHProgramScope(authSession);
   const permission = canManageCourseAssignment(authSession, course.program_id, phProgramScope);
@@ -103,6 +107,14 @@ export async function updateCourseAssignment(
     return { success: false, error: "Assignment not found." };
   }
 
+  if (
+    input.programId &&
+    existing.course.program_id !== null &&
+    input.programId !== existing.course.program_id
+  ) {
+    return { success: false, error: "Assignment program must match the Course's owning program." };
+  }
+
   // Resolve PH program scope and check permissions
   const phProgramScope = await resolvePHProgramScope(authSession);
   const permission = canManageCourseAssignment(authSession, existing.course.program_id, phProgramScope);
@@ -121,7 +133,7 @@ export async function updateCourseAssignment(
     });
 
     return { success: true, data: undefined };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to update course assignment." };
   }
 }
@@ -158,7 +170,7 @@ export async function deactivateCourseAssignment(
     });
 
     return { success: true, data: undefined };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to deactivate course assignment." };
   }
 }
@@ -195,7 +207,7 @@ export async function activateCourseAssignment(
     });
 
     return { success: true, data: undefined };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to activate course assignment." };
   }
 }
@@ -243,7 +255,7 @@ export async function deleteCourseAssignment(
     });
 
     return { success: true, data: undefined };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to delete course assignment." };
   }
 }
@@ -293,6 +305,11 @@ export async function bulkCreateCourseAssignments(
         continue;
       }
 
+      if (course.program_id !== null && course.program_id !== input.programId) {
+        errors.push({ index: i, error: "Assignment program must match the Course's owning program." });
+        continue;
+      }
+
       // Check permissions
       const permission = canManageCourseAssignment(authSession, course.program_id, phProgramScope);
       if (!permission.allowed) {
@@ -307,7 +324,7 @@ export async function bulkCreateCourseAssignments(
           course_id: input.courseId,
           program_id: input.programId,
           year_level: input.yearLevel,
-          section: input.section ?? null,
+          section: input.section,
           is_active: true,
           ...(authSession?.userId ? { assigned_by: authSession.userId } : {}),
         },
@@ -316,7 +333,7 @@ export async function bulkCreateCourseAssignments(
       created++;
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
-        errors.push({ index: i, error: "Assignment already exists." });
+        errors.push({ index: i, error: "An identical assignment already exists. If inactive, please activate it instead of creating a new one." });
       } else {
         errors.push({ index: i, error: "Failed to create assignment." });
       }
