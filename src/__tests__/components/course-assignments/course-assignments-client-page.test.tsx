@@ -6,13 +6,13 @@ import { CourseAssignmentsClientPage } from "@/app/(app)/program-head/course-ass
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
-  listCourseAssignmentsForProgramHeadAction: vi.fn(),
+  listCourseAssignmentsAction: vi.fn(),
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
 }));
 
-import { listCourseAssignmentsForProgramHeadAction } from "@/lib/actions/course-assignment-actions";
+import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
 
 const mockPrograms = [
   { id: "program-1", code: "BSCS", name: "BS Computer Science" },
@@ -66,7 +66,7 @@ function clickSelectByPlaceholder(placeholder: string) {
 describe("CourseAssignmentsClientPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(listCourseAssignmentsForProgramHeadAction).mockResolvedValue({
+    vi.mocked(listCourseAssignmentsAction).mockResolvedValue({
       success: true,
       data: {
         items: [],

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import type { SystemRole } from "@prisma/client";
-import type { CourseAssignmentResult, CourseAssignmentItem } from "../types";
+import type { CourseAssignmentResult } from "../types";
 
 /**
  * Grouped course assignment for faculty view.
@@ -113,7 +113,7 @@ export async function listCourseAssignmentsForFaculty(
       success: true,
       data: Array.from(grouped.values()),
     };
-  } catch (error) {
-    return { success: false, error: "Failed to list course assignments." };
+  } catch {
+    return { success: false, error: "Failed to list faculty assignments." };
   }
 }

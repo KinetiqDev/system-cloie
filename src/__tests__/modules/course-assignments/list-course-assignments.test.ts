@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { CourseScope } from "@prisma/client";
 import { listCourseAssignmentsForProgramHead } from "@/features/course-assignments/services/list-course-assignments-for-program-head";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -17,7 +18,7 @@ vi.mock("@/lib/db/prisma", () => ({
   },
 }));
 
-describe("listCourseAssignmentsForProgramHead – PH scope enforcement", () => {
+describe("listCourseAssignments – role-aware scope enforcement", () => {
   const mockPHSession = createAuthSessionSnapshot({
     userId: "ph-1",
     email: "ph@test.com",
@@ -121,5 +122,35 @@ describe("listCourseAssignmentsForProgramHead – PH scope enforcement", () => {
 
     const callArgs = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0][0];
     expect((callArgs as { where: Record<string, unknown> }).where).not.toHaveProperty("program_id");
+  });
+
+  it("Secretary without filter.programId → no program_id constraint", async () => {
+    const mockSecretarySession = createAuthSessionSnapshot({
+      userId: "secretary-1",
+      email: "secretary@test.com",
+      roles: [ROLES.SECRETARY],
+    });
+
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockSecretarySession);
+
+    await listCourseAssignmentsForProgramHead({});
+
+    expect(prisma.programHeadAssignment.findMany).not.toHaveBeenCalled();
+    const callArgs = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0][0];
+    expect((callArgs as { where: Record<string, unknown> }).where).not.toHaveProperty("program_id");
+  });
+
+  it("Applies courseScope filter by course.course_scope", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+    await listCourseAssignmentsForProgramHead({ courseScope: CourseScope.GENERAL_EDUCATION });
+
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          course: { course_scope: CourseScope.GENERAL_EDUCATION },
+        }),
+      })
+    );
   });
 });

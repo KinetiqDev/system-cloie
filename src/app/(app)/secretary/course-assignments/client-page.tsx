@@ -26,7 +26,7 @@ const DEFAULT_FILTERS: AssignmentFiltersState = {
   programId: null,
   yearLevel: null,
   section: null,
-  isActive: null,
+  isActive: true,
   courseScope: null,
   searchQuery: "",
 };
@@ -95,7 +95,7 @@ export function CourseAssignmentsClientPage({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Course Assignments</h1>
           <p className="text-muted-foreground mt-1">
-            Manage faculty assignments for courses in your program
+            Manage faculty assignments for all programs, including General Education courses
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -120,6 +120,7 @@ export function CourseAssignmentsClientPage({
         total={total}
         page={page}
         loading={loading}
+        mode="secretary"
         availableCourses={availableCourses}
         availablePrograms={availablePrograms}
         onPageChange={setPage}
@@ -133,6 +134,7 @@ export function CourseAssignmentsClientPage({
         availableCourses={availableCourses}
         availablePrograms={availablePrograms}
         termInstances={termInstances}
+        mode="secretary"
         onSuccess={refreshAssignments}
       />
     </div>

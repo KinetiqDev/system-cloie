@@ -108,6 +108,7 @@ export type ListCourseAssignmentsFilter = {
   yearLevel?: YearLevel;
   section?: StudentSection;
   isActive?: boolean;
+  courseScope?: CourseScope;
 };
 
 /**

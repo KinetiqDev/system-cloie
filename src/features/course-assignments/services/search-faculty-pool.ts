@@ -89,7 +89,7 @@ export async function searchFacultyPool(
       success: true,
       data: { items, total },
     };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to search faculty pool." };
   }
 }

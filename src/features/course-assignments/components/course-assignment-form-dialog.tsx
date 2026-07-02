@@ -32,6 +32,20 @@ interface Program {
   name: string;
 }
 
+type CourseAssignmentFormMode = "program-head" | "secretary";
+
+function getInitialProgramId(
+  defaultCourseId: string | null | undefined,
+  availableCourses: AssignableCourse[]
+): string | null {
+  if (!defaultCourseId) return null;
+  const course = availableCourses.find((c) => c.id === defaultCourseId);
+  if (course?.course_scope === CourseScope.PROGRAM_SPECIFIC) {
+    return course.program_id;
+  }
+  return null;
+}
+
 interface CourseAssignmentFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,6 +54,7 @@ interface CourseAssignmentFormDialogProps {
   termInstances: TermInstanceItem[];
   defaultTermInstanceId?: string | null;
   defaultCourseId?: string | null;
+  mode?: CourseAssignmentFormMode;
   onSuccess?: () => void;
 }
 
@@ -53,6 +68,7 @@ export function CourseAssignmentFormDialog({
   termInstances,
   defaultTermInstanceId,
   defaultCourseId,
+  mode = "program-head",
   onSuccess,
 }: CourseAssignmentFormDialogProps) {
   const [step, setStep] = useState<Step>(defaultTermInstanceId ? "course" : "term");
@@ -61,6 +77,9 @@ export function CourseAssignmentFormDialog({
   // Form state
   const [termInstanceId, setTermInstanceId] = useState<string | null>(defaultTermInstanceId ?? null);
   const [courseId, setCourseId] = useState<string | null>(defaultCourseId ?? null);
+  const [programId, setProgramId] = useState<string | null>(
+    getInitialProgramId(defaultCourseId, availableCourses)
+  );
   const [yearLevel, setYearLevel] = useState<YearLevel>(YearLevel.FIRST_YEAR);
   const [section, setSection] = useState<StudentSection>(StudentSection.MORNING);
   const [selectedFaculty, setSelectedFaculty] = useState<FacultySearchResult | null>(null);
@@ -69,15 +88,18 @@ export function CourseAssignmentFormDialog({
 
   const previousCourseId = useRef<string | null>(null);
 
-  const assignableCourses = availableCourses.filter(
-    (c) =>
-      c.course_scope === CourseScope.PROGRAM_SPECIFIC &&
-      availablePrograms.some((p) => p.id === c.program_id)
-  );
+  const assignableCourses =
+    mode === "secretary"
+      ? availableCourses
+      : availableCourses.filter(
+          (c) =>
+            c.course_scope === CourseScope.PROGRAM_SPECIFIC &&
+            availablePrograms.some((p) => p.id === c.program_id)
+        );
 
   const selectedCourse = assignableCourses.find((c) => c.id === courseId);
-  // Lock the assignment program to the selected Course's owning program.
-  const programId = selectedCourse?.program_id ?? "";
+  const isGeneralEducation = selectedCourse?.course_scope === CourseScope.GENERAL_EDUCATION;
+  const programLocked = !isGeneralEducation;
   const selectedProgram = availablePrograms.find((p) => p.id === programId);
 
   // Pre-fill year level from course default when course changes (only if user hasn't touched it)
@@ -165,6 +187,7 @@ export function CourseAssignmentFormDialog({
     setStep(defaultTermInstanceId ? "course" : "term");
     setTermInstanceId(defaultTermInstanceId ?? null);
     setCourseId(defaultCourseId ?? null);
+    setProgramId(getInitialProgramId(defaultCourseId, availableCourses));
     setYearLevel(YearLevel.FIRST_YEAR);
     setSection(StudentSection.MORNING);
     setSelectedFaculty(null);
@@ -235,7 +258,13 @@ export function CourseAssignmentFormDialog({
               <Label>Course</Label>
                 <Select
                 value={courseId ?? ""}
-                onValueChange={(value) => value && setCourseId(value)}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  setCourseId(value);
+                  const nextCourse = assignableCourses.find((c) => c.id === value);
+                  setProgramId(nextCourse?.program_id ?? null);
+                  setHasTouchedYearLevel(false);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a course...">
@@ -262,14 +291,14 @@ export function CourseAssignmentFormDialog({
         {step === "class" && (
           <div className="space-y-4">
             <ClassIdentityFields
-              programId={programId}
+              programId={programId ?? ""}
               yearLevel={yearLevel}
               section={section}
               availablePrograms={availablePrograms}
-              onProgramChange={() => {}}
+              onProgramChange={setProgramId}
               onYearLevelChange={handleYearLevelChange}
               onSectionChange={(value) => value && setSection(value)}
-              programDisabled
+              programDisabled={programLocked}
               suggestedYearLevel={selectedCourse?.default_year_level ?? null}
             />
           </div>
@@ -286,7 +315,7 @@ export function CourseAssignmentFormDialog({
                     ? `${selectedFaculty.firstName} ${selectedFaculty.lastName}`
                     : null
                 }
-                targetProgramId={programId}
+                targetProgramId={programId ?? undefined}
                 targetProgramName={selectedProgram?.name}
                 onSelect={setSelectedFaculty}
               />

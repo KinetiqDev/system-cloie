@@ -65,6 +65,9 @@ export async function listCourseAssignmentsForProgramHead(
     ...(filter.yearLevel && { year_level: filter.yearLevel }),
     ...(filter.section && { section: filter.section }),
     ...(filter.isActive !== undefined && { is_active: filter.isActive }),
+    ...(filter.courseScope && {
+      course: { course_scope: filter.courseScope },
+    }),
   };
 
   try {
@@ -176,7 +179,7 @@ export async function listCourseAssignmentsForProgramHead(
         pageSize,
       },
     };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to list course assignments." };
   }
 }

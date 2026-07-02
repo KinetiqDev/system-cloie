@@ -28,16 +28,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Power, AlertTriangle, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Power, Pencil, AlertTriangle, Plus } from "lucide-react";
 import { showToast } from "@/components/ui/toast";
 import {
   deactivateCourseAssignmentAction,
   activateCourseAssignmentAction,
   deleteCourseAssignmentAction,
 } from "@/lib/actions/course-assignment-actions";
-import type { CourseAssignmentItem } from "@/features/course-assignments/types";
+import { EditCourseAssignmentDialog } from "./edit-course-assignment-dialog";
+import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { getYearLevelDisplay, getSectionLabel } from "@/lib/constants/academic";
+
+interface Program {
+  id: string;
+  code: string;
+  name: string;
+}
+
+type CourseAssignmentsTableMode = "program-head" | "secretary";
 
 interface CourseAssignmentsTableProps {
   assignments: CourseAssignmentItem[];
@@ -45,6 +54,9 @@ interface CourseAssignmentsTableProps {
   page: number;
   pageSize?: number;
   loading?: boolean;
+  mode?: CourseAssignmentsTableMode;
+  availableCourses?: AssignableCourse[];
+  availablePrograms?: Program[];
   onPageChange: (page: number) => void;
   onAssignmentUpdated?: () => void;
   onAssignFaculty?: () => void;
@@ -56,6 +68,9 @@ export function CourseAssignmentsTable({
   page,
   pageSize = DEFAULT_TABLE_PAGE_SIZE,
   loading = false,
+  mode = "program-head",
+  availableCourses = [],
+  availablePrograms = [],
   onPageChange,
   onAssignmentUpdated,
   onAssignFaculty,
@@ -66,6 +81,7 @@ export function CourseAssignmentsTable({
     type: "deactivate" | "delete" | null;
     assignment: CourseAssignmentItem | null;
   }>({ open: false, type: null, assignment: null });
+  const [editAssignment, setEditAssignment] = useState<CourseAssignmentItem | null>(null);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -151,7 +167,9 @@ export function CourseAssignmentsTable({
         <div>
           <h3 className="text-lg font-medium">No course assignments found</h3>
           <p className="text-muted-foreground mt-1 text-sm">
-            Assign faculty to a Program-specific Course to get started.
+            {mode === "secretary"
+              ? "Assign faculty to a course across any program to get started."
+              : "Assign faculty to a Program-specific Course to get started."}
           </p>
         </div>
         <div className="flex items-center justify-center gap-2">
@@ -181,6 +199,7 @@ export function CourseAssignmentsTable({
           <TableHeader>
             <TableRow>
               <TableHead>Course</TableHead>
+              <TableHead>Scope</TableHead>
               <TableHead>Faculty</TableHead>
               <TableHead>Program</TableHead>
               <TableHead>Year Level</TableHead>
@@ -193,19 +212,23 @@ export function CourseAssignmentsTable({
           <TableBody>
             {assignments.map((assignment) => {
               const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
+              const isReadOnly = isGeneralEducation && mode === "program-head";
 
               return (
-                <TableRow key={assignment.id} data-readonly={isGeneralEducation || undefined}>
+                <TableRow key={assignment.id} data-readonly={isReadOnly || undefined}>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{assignment.courseCode}</span>
-                      {isGeneralEducation && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          GE
-                        </Badge>
-                      )}
                     </div>
                     <div className="text-sm text-muted-foreground">{assignment.courseTitle}</div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={isGeneralEducation ? "secondary" : "outline"}
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      {isGeneralEducation ? "GE" : "Program"}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div>{assignment.facultyName}</div>
@@ -223,7 +246,7 @@ export function CourseAssignmentsTable({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {isGeneralEducation ? (
+                    {isReadOnly ? (
                       <span className="text-xs text-muted-foreground">Managed by Secretary/Dean</span>
                     ) : (
                       <DropdownMenu>
@@ -240,6 +263,15 @@ export function CourseAssignmentsTable({
                           }
                         />
                         <DropdownMenuContent align="end">
+                          {mode === "secretary" && (
+                            <DropdownMenuItem
+                              onClick={() => setEditAssignment(assignment)}
+                              disabled={processingId === assignment.id}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
                           {assignment.isActive ? (
                             <DropdownMenuItem
                               onClick={() => openConfirmDialog("deactivate", assignment)}
@@ -305,6 +337,22 @@ export function CourseAssignmentsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {mode === "secretary" && (
+        <EditCourseAssignmentDialog
+          open={editAssignment !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditAssignment(null);
+          }}
+          assignment={editAssignment}
+          availableCourses={availableCourses}
+          availablePrograms={availablePrograms}
+          onSuccess={() => {
+            setEditAssignment(null);
+            onAssignmentUpdated?.();
+          }}
+        />
+      )}
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">

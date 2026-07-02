@@ -24,6 +24,10 @@ _Avoid_: Course offering default, scheduled term
 A term-scoped mapping between a teacher, a course, a program, a year level, and a section that grants teaching capability.
 _Avoid_: Teaching assignment, roster record
 
+**Secretary course assignment operations**:
+All-program stewardship of Course assignments by a Secretary, including General Education and Program-specific assignments across every academic program.
+_Avoid_: Program Head impersonation, per-program Secretary mode
+
 **Faculty affiliation**:
 A faculty member's active relationship to one or more academic programs. Affiliation is displayed as assignment context, but it does not prevent a Program Head from assigning a faculty member from another program to one of the Program Head's program-specific Courses.
 _Avoid_: Faculty scope, assignment permission

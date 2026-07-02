@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Building2,
   BookOpen,
-  GraduationCap,
   Layers3,
   BarChart3,
   Users2,
@@ -50,6 +49,7 @@ const SECRETARY_NAV: NavItem[] = [
   { name: "School Years", href: "/secretary/school-years", icon: Calendar },
   { name: "Programs", href: "/secretary/programs", icon: Building2 },
   { name: "Courses", href: "/secretary/courses", icon: BookOpen },
+  { name: "Course Assignments", href: "/secretary/course-assignments", icon: UsersRound },
   { name: "Tools", href: "/secretary/instruments", icon: ClipboardList },
 ];
 
@@ -151,7 +151,8 @@ export function getMobileNavByRoles(roles: Role[]): NavItem[] {
   }
 }
 
-export function getSecondaryNavByRoles(_roles: Role[]): NavItem[] {
+export function getSecondaryNavByRoles(roles: Role[]): NavItem[] {
+  void roles;
   return [];
 }
 

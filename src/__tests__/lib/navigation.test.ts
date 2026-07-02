@@ -12,6 +12,14 @@ describe("navigation helpers", () => {
     });
   });
 
+  it("secretary navigation includes course assignments", () => {
+    const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
+    expect(secretaryNav.map((item) => item.href)).toContain("/secretary/course-assignments");
+    expect(secretaryNav.find((item) => item.href === "/secretary/course-assignments")?.name).toBe(
+      "Course Assignments"
+    );
+  });
+
   it("orders faculty navigation correctly", () => {
     expect(getMainNavByRoles([ROLES.FACULTY]).map((item) => item.name)).toEqual([
       "Dashboard",

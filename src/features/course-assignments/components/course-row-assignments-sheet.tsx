@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus } from "lucide-react";
-import { listCourseAssignmentsForProgramHeadAction } from "@/lib/actions/course-assignment-actions";
+import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
 import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
@@ -50,7 +50,7 @@ export function CourseRowAssignmentsSheet({
     if (!termInstanceId) return;
     
     setLoading(true);
-    const result = await listCourseAssignmentsForProgramHeadAction({
+    const result = await listCourseAssignmentsAction({
       termInstanceId,
       courseId,
     });

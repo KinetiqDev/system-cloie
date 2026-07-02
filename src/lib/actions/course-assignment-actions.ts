@@ -45,6 +45,7 @@ export async function createCourseAssignmentAction(input: CreateCourseAssignment
 
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
+    revalidatePath("/secretary/course-assignments");
   }
 
   return result;
@@ -64,6 +65,7 @@ export async function updateCourseAssignmentAction(input: UpdateCourseAssignment
 
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
+    revalidatePath("/secretary/course-assignments");
   }
 
   return result;
@@ -83,6 +85,7 @@ export async function deactivateCourseAssignmentAction(input: DeactivateCourseAs
 
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
+    revalidatePath("/secretary/course-assignments");
   }
 
   return result;
@@ -102,6 +105,7 @@ export async function activateCourseAssignmentAction(input: ActivateCourseAssign
 
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
+    revalidatePath("/secretary/course-assignments");
   }
 
   return result;
@@ -121,6 +125,7 @@ export async function deleteCourseAssignmentAction(input: DeleteCourseAssignment
 
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
+    revalidatePath("/secretary/course-assignments");
   }
 
   return result;
@@ -140,19 +145,30 @@ export async function bulkCreateCourseAssignmentsAction(input: BulkCreateCourseA
 
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
+    revalidatePath("/secretary/course-assignments");
   }
 
   return result;
 }
 
 /**
- * List course assignments for Program Head.
+ * List course assignments for the current role (Program Head scoped, Secretary/Dean unscoped).
+ */
+export async function listCourseAssignmentsAction(
+  filter: ListCourseAssignmentsFilter,
+  options?: ListOptions
+) {
+  return listCourseAssignmentsForProgramHead(filter, options);
+}
+
+/**
+ * @deprecated Use listCourseAssignmentsAction instead. Kept for callers that haven't migrated.
  */
 export async function listCourseAssignmentsForProgramHeadAction(
   filter: ListCourseAssignmentsFilter,
   options?: ListOptions
 ) {
-  return listCourseAssignmentsForProgramHead(filter, options);
+  return listCourseAssignmentsAction(filter, options);
 }
 
 /**
