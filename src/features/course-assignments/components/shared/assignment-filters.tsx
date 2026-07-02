@@ -71,7 +71,7 @@ export function AssignmentFilters({
 
   const getScopeLabel = (value: CourseScope | null) => {
     if (value === CourseScope.GENERAL_EDUCATION) return "General Education";
-    if (value === CourseScope.PROGRAM_SPECIFIC) return "Program-Specific";
+    if (value === CourseScope.PROGRAM_SPECIFIC) return "Program";
     return "All Scopes";
   };
 

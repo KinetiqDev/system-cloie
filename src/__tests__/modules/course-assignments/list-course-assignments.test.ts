@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { CourseScope } from "@prisma/client";
-import { listCourseAssignmentsForProgramHead } from "@/features/course-assignments/services/list-course-assignments-for-program-head";
+import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
@@ -48,7 +48,7 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
       { program_id: "prog-B" },
     ] as never);
 
-    await listCourseAssignmentsForProgramHead({});
+    await listCourseAssignments({});
 
     // The findMany where should constrain to PH's programs
     expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
@@ -67,7 +67,7 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
       { program_id: "prog-B" },
     ] as never);
 
-    await listCourseAssignmentsForProgramHead({ programId: "prog-A" });
+    await listCourseAssignments({ programId: "prog-A" });
 
     expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -85,7 +85,7 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
       { program_id: "prog-B" },
     ] as never);
 
-    await listCourseAssignmentsForProgramHead({ programId: "prog-C" });
+    await listCourseAssignments({ programId: "prog-C" });
 
     // Should use { in: [] } which matches nothing
     expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
@@ -100,7 +100,7 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
   it("Admin with filter.programId → passes through freely", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
 
-    await listCourseAssignmentsForProgramHead({ programId: "prog-C" });
+    await listCourseAssignments({ programId: "prog-C" });
 
     // Admin doesn't resolve PH assignments, so no programHeadAssignment query
     expect(prisma.programHeadAssignment.findMany).not.toHaveBeenCalled();
@@ -118,7 +118,7 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
   it("Admin without filter.programId → no program_id constraint", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
 
-    await listCourseAssignmentsForProgramHead({});
+    await listCourseAssignments({});
 
     const callArgs = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0][0];
     expect((callArgs as { where: Record<string, unknown> }).where).not.toHaveProperty("program_id");
@@ -133,7 +133,7 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
 
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockSecretarySession);
 
-    await listCourseAssignmentsForProgramHead({});
+    await listCourseAssignments({});
 
     expect(prisma.programHeadAssignment.findMany).not.toHaveBeenCalled();
     const callArgs = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0][0];
@@ -143,7 +143,7 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
   it("Applies courseScope filter by course.course_scope", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
 
-    await listCourseAssignmentsForProgramHead({ courseScope: CourseScope.GENERAL_EDUCATION });
+    await listCourseAssignments({ courseScope: CourseScope.GENERAL_EDUCATION });
 
     expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

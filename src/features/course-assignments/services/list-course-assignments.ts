@@ -17,7 +17,7 @@ import type {
  * List course assignments for Program Head view.
  * Returns hydrated rows with faculty info, course info, and "last term taught" hint.
  */
-export async function listCourseAssignmentsForProgramHead(
+export async function listCourseAssignments(
   filter: ListCourseAssignmentsFilter,
   options?: ListOptions
 ): Promise<CourseAssignmentResult<ListCourseAssignmentsResult>> {

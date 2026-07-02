@@ -17,7 +17,7 @@ import {
   deleteCourseAssignment,
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
-import { listCourseAssignmentsForProgramHead } from "@/features/course-assignments/services/list-course-assignments-for-program-head";
+import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import { listCourseAssignmentsForFaculty } from "@/features/course-assignments/services/list-course-assignments-for-faculty";
 import { searchFacultyPool } from "@/features/course-assignments/services/search-faculty-pool";
 import type {
@@ -158,7 +158,7 @@ export async function listCourseAssignmentsAction(
   filter: ListCourseAssignmentsFilter,
   options?: ListOptions
 ) {
-  return listCourseAssignmentsForProgramHead(filter, options);
+  return listCourseAssignments(filter, options);
 }
 
 /**

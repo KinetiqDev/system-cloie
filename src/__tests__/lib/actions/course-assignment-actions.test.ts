@@ -22,8 +22,8 @@ vi.mock("@/features/course-assignments/services/manage-course-assignments", () =
   bulkCreateCourseAssignments: vi.fn(() => Promise.resolve({ success: true, created: 1, errors: [] })),
 }));
 
-vi.mock("@/features/course-assignments/services/list-course-assignments-for-program-head", () => ({
-  listCourseAssignmentsForProgramHead: vi.fn(),
+vi.mock("@/features/course-assignments/services/list-course-assignments", () => ({
+  listCourseAssignments: vi.fn(),
 }));
 
 vi.mock("@/features/course-assignments/services/list-course-assignments-for-faculty", () => ({

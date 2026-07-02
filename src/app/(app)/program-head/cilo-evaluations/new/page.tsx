@@ -8,7 +8,7 @@ import {
   previewCourseBoundRespondentsAction,
   publishCourseBoundEvaluationAction,
 } from "@/lib/actions/course-bound-evaluation-actions";
-import { listCourseAssignmentsForProgramHead } from "@/features/course-assignments/services/list-course-assignments-for-program-head";
+import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
@@ -61,7 +61,7 @@ export default async function NewProgramHeadCiloEvaluationPage({
 
   // Fetch all active assignments in PH's scope for the template's course
   const templateCourseId = publicationContext.data.course.id;
-  const assignmentsResult = await listCourseAssignmentsForProgramHead(
+  const assignmentsResult = await listCourseAssignments(
     {
       courseId: templateCourseId,
       isActive: true,
