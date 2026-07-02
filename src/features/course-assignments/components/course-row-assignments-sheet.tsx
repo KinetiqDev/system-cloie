@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { CourseScope } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus } from "lucide-react";
 import { listCourseAssignmentsForProgramHeadAction } from "@/lib/actions/course-assignment-actions";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
-import type { CourseAssignmentItem } from "@/features/course-assignments/types";
+import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { getYearLevelDisplay, getSectionLabel } from "@/lib/constants/academic";
 
@@ -26,7 +27,7 @@ interface CourseRowAssignmentsSheetProps {
   termInstanceId: string | null;
   termInstances: TermInstanceItem[];
   availablePrograms: Array<{ id: string; code: string; name: string }>;
-  availableCourses: Array<{ id: string; code: string; title: string }>;
+  availableCourses: AssignableCourse[];
   triggerRender: React.ReactElement;
 }
 
@@ -65,6 +66,9 @@ export function CourseRowAssignmentsSheet({
       queueMicrotask(() => loadAssignments());
     }
   }, [open, termInstanceId, loadAssignments]);
+
+  const course = availableCourses.find((c) => c.id === courseId);
+  const isGeneralEducation = course?.course_scope === CourseScope.GENERAL_EDUCATION;
 
   return (
     <>
@@ -124,14 +128,20 @@ export function CourseRowAssignmentsSheet({
             )}
 
             {termInstanceId && (
-              <Button
-                className="w-full"
-                onClick={() => setDialogOpen(true)}
-                disabled={!termInstanceId}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Assign Faculty
-              </Button>
+              isGeneralEducation ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  General Education assignments are managed by Secretary/Dean.
+                </p>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={() => setDialogOpen(true)}
+                  disabled={!termInstanceId}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Assign Faculty
+                </Button>
+              )
             )}
           </div>
         </DialogContent>

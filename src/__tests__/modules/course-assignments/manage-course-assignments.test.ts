@@ -23,6 +23,9 @@ vi.mock("@/lib/db/prisma", () => ({
     course: {
       findUnique: vi.fn(),
     },
+    programHeadAssignment: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -88,6 +91,110 @@ describe("manage-course-assignments", () => {
       });
 
       expect(result.success).toBe(false);
+    });
+
+    it("should allow Program Head to create an assignment within their program scope", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.programHeadAssignment.findMany).mockResolvedValue([
+        { program_id: "program-1" },
+      ] as never);
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "course-1",
+        program_id: "program-1",
+      } as never);
+      vi.mocked(prisma.courseAssignment.create).mockResolvedValue({ id: "assignment-1" } as never);
+
+      const result = await createCourseAssignment({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "course-1",
+        programId: "program-1",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    it("should reject Program Head creation of a General Education assignment", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.programHeadAssignment.findMany).mockResolvedValue([
+        { program_id: "program-1" },
+      ] as never);
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "ge-course",
+        program_id: null,
+      } as never);
+
+      const result = await createCourseAssignment({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "ge-course",
+        programId: "program-1",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toMatch(/must match the Course's owning program/i);
+      }
+    });
+
+    it("should reject assignment creation when programId differs from the Course's owning program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.programHeadAssignment.findMany).mockResolvedValue([
+        { program_id: "program-1" },
+      ] as never);
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "course-1",
+        program_id: "program-1",
+      } as never);
+
+      const result = await createCourseAssignment({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "course-1",
+        programId: "program-2",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("must match");
+      }
+    });
+
+    it("should allow Program Head to assign a cross-program faculty member", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.programHeadAssignment.findMany).mockResolvedValue([
+        { program_id: "program-1" },
+      ] as never);
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "course-1",
+        program_id: "program-1",
+      } as never);
+      vi.mocked(prisma.courseAssignment.create).mockResolvedValue({ id: "assignment-1" } as never);
+
+      const result = await createCourseAssignment({
+        termInstanceId: "term-1",
+        facultyId: "faculty-other-program",
+        courseId: "course-1",
+        programId: "program-1",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
+
+      expect(result.success).toBe(true);
     });
 
     it("should handle unique constraint violation", async () => {
@@ -200,6 +307,8 @@ describe("manage-course-assignments", () => {
       expect(result.success).toBe(true);
       expect(result.created).toBe(2);
       expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].error).toContain("already exists");
+      expect(result.errors[0].error).toContain("activate it instead");
     });
 
     it("should return success=false when every assignment fails", async () => {

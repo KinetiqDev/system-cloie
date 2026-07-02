@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 import { CourseAssignmentsClientPage } from "./client-page";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
+import type { AssignableCourse } from "@/features/course-assignments/types";
 
 export const metadata = {
   title: "Course Assignments — Program Head | CLOIE",
@@ -56,10 +57,13 @@ export default async function CourseAssignmentsPage() {
     (sy) => sy.termInstances
   );
 
-  const availableCourses = coursesResult.courses.map((c) => ({
+  const availableCourses: AssignableCourse[] = coursesResult.courses.map((c) => ({
     id: c.id,
     code: c.code,
     title: c.title,
+    default_year_level: c.default_year_level,
+    course_scope: c.course_scope,
+    program_id: c.program_id,
   }));
 
   return (

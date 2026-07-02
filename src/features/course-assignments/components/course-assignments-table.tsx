@@ -1,5 +1,6 @@
 "use client";
 
+import { CourseScope } from "@prisma/client";
 import { useState } from "react";
 import {
   Table,
@@ -13,20 +14,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronLeft, ChevronRight, MoreHorizontal, Edit, Trash2, Power, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Trash2, Power, AlertTriangle, Plus } from "lucide-react";
 import { showToast } from "@/components/ui/toast";
 import {
   deactivateCourseAssignmentAction,
@@ -45,7 +47,7 @@ interface CourseAssignmentsTableProps {
   loading?: boolean;
   onPageChange: (page: number) => void;
   onAssignmentUpdated?: () => void;
-  onEdit?: (assignment: CourseAssignmentItem) => void;
+  onAssignFaculty?: () => void;
 }
 
 export function CourseAssignmentsTable({
@@ -56,7 +58,7 @@ export function CourseAssignmentsTable({
   loading = false,
   onPageChange,
   onAssignmentUpdated,
-  onEdit,
+  onAssignFaculty,
 }: CourseAssignmentsTableProps) {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -142,8 +144,24 @@ export function CourseAssignmentsTable({
 
   if (assignments.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No course assignments found.
+      <div className="text-center py-12 space-y-4" data-testid="empty-state">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+          <AlertTriangle className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <div>
+          <h3 className="text-lg font-medium">No course assignments found</h3>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Assign faculty to a Program-specific Course to get started.
+          </p>
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          {onAssignFaculty && (
+            <Button onClick={onAssignFaculty}>
+              <Plus className="mr-2 h-4 w-4" />
+              Assign Faculty
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
@@ -172,106 +190,120 @@ export function CourseAssignmentsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assignments.map((assignment) => (
-              <TableRow key={assignment.id}>
-                <TableCell>
-                  <div className="font-medium">{assignment.courseCode}</div>
-                  <div className="text-sm text-muted-foreground">{assignment.courseTitle}</div>
-                </TableCell>
-                <TableCell>
-                  <div>{assignment.facultyName}</div>
-                  <div className="text-sm text-muted-foreground">{assignment.facultyEmail}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{assignment.programCode}</Badge>
-                </TableCell>
-                <TableCell>{getYearLevelDisplay(assignment.yearLevel)}</TableCell>
-                <TableCell>{getSectionLabel(assignment.section)}</TableCell>
-                <TableCell>{assignment.termLabel}</TableCell>
-                <TableCell>
-                  <Badge variant={assignment.isActive ? "default" : "outline"}>
-                    {assignment.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      }
-                    />
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEdit?.(assignment)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      {assignment.isActive ? (
-                        <DropdownMenuItem
-                          onClick={() => openConfirmDialog("deactivate", assignment)}
-                          disabled={processingId === assignment.id}
-                        >
-                          <Power className="mr-2 h-4 w-4 text-amber-600" />
-                          Deactivate
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem
-                          onClick={() => handleActivate(assignment.id)}
-                          disabled={processingId === assignment.id}
-                        >
-                          <Power className="mr-2 h-4 w-4 text-emerald-600" />
-                          Activate
-                        </DropdownMenuItem>
+            {assignments.map((assignment) => {
+              const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
+
+              return (
+                <TableRow key={assignment.id} data-readonly={isGeneralEducation || undefined}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{assignment.courseCode}</span>
+                      {isGeneralEducation && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          GE
+                        </Badge>
                       )}
-                      <DropdownMenuItem
-                        onClick={() => openConfirmDialog("delete", assignment)}
-                        disabled={processingId === assignment.id}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+                    </div>
+                    <div className="text-sm text-muted-foreground">{assignment.courseTitle}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div>{assignment.facultyName}</div>
+                    <div className="text-sm text-muted-foreground">{assignment.facultyEmail}</div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{assignment.programCode}</Badge>
+                  </TableCell>
+                  <TableCell>{getYearLevelDisplay(assignment.yearLevel)}</TableCell>
+                  <TableCell>{getSectionLabel(assignment.section)}</TableCell>
+                  <TableCell>{assignment.termLabel}</TableCell>
+                  <TableCell>
+                    <Badge variant={assignment.isActive ? "default" : "outline"}>
+                      {assignment.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {isGeneralEducation ? (
+                      <span className="text-xs text-muted-foreground">Managed by Secretary/Dean</span>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              aria-label={`Open actions for ${assignment.courseCode}`}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                        <DropdownMenuContent align="end">
+                          {assignment.isActive ? (
+                            <DropdownMenuItem
+                              onClick={() => openConfirmDialog("deactivate", assignment)}
+                              disabled={processingId === assignment.id}
+                            >
+                              <Power className="mr-2 h-4 w-4 text-amber-600" />
+                              Deactivate
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => handleActivate(assignment.id)}
+                              disabled={processingId === assignment.id}
+                            >
+                              <Power className="mr-2 h-4 w-4 text-emerald-600" />
+                              Activate
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => openConfirmDialog("delete", assignment)}
+                            disabled={processingId === assignment.id}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
 
       {/* Confirmation Dialog */}
-      <Dialog open={confirmDialog.open} onOpenChange={closeConfirmDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <AlertDialog open={confirmDialog.open} onOpenChange={closeConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
               {confirmDialog.type === "delete" && <AlertTriangle className="h-5 w-5 text-red-500" />}
               {dialogTitle}
-            </DialogTitle>
-            <DialogDescription>{dialogDescription}</DialogDescription>
-          </DialogHeader>
+            </AlertDialogTitle>
+            <AlertDialogDescription>{dialogDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
           {confirmDialog.assignment && (
-            <div className="bg-muted rounded-md p-3 text-sm">
+            <div className="bg-muted rounded-md p-3 text-sm space-y-1">
               <p><strong>Course:</strong> {confirmDialog.assignment.courseCode} - {confirmDialog.assignment.courseTitle}</p>
               <p><strong>Faculty:</strong> {confirmDialog.assignment.facultyName}</p>
               <p><strong>Term:</strong> {confirmDialog.assignment.termLabel}</p>
             </div>
           )}
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeConfirmDialog}>
-              Cancel
-            </Button>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processingId !== null}>Cancel</AlertDialogCancel>
             <Button
-              variant={confirmButtonVariant as "default" | "destructive"}
+              variant={confirmButtonVariant}
               onClick={confirmAction}
               disabled={processingId !== null}
             >
               {processingId !== null ? `${confirmButtonText}...` : confirmButtonText}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
@@ -282,6 +314,7 @@ export function CourseAssignmentsTable({
             <Button
               variant="outline"
               size="sm"
+              aria-label="Previous page"
               onClick={() => onPageChange(page - 1)}
               disabled={page === 0}
             >
@@ -293,6 +326,7 @@ export function CourseAssignmentsTable({
             <Button
               variant="outline"
               size="sm"
+              aria-label="Next page"
               onClick={() => onPageChange(page + 1)}
               disabled={page >= totalPages - 1}
             >

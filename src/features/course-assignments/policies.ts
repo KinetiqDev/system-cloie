@@ -4,7 +4,7 @@ import type { AuthSessionSnapshot } from "@/features/auth/services/build-auth-se
 
 /**
  * Check if user can manage course assignments.
- * Program Heads can manage courses in their program scope or General Education.
+ * Program Heads can manage only Program-specific Courses within their program scope.
  * Admins and Deans can manage any course.
  * Faculty cannot manage assignments (they are assigned by PH/Admin).
  */
@@ -22,14 +22,12 @@ export function canManageCourseAssignment(
     return { allowed: true };
   }
 
-  // Program Head can manage courses in their scope
+  // Program Head can manage only Program-specific Courses in their scope.
   if (session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    // GE courses (null program_id) are allowed for all PH
     if (courseProgramId === null) {
-      return { allowed: true };
+      return { allowed: false, reason: "Program Heads cannot manage General Education assignments." };
     }
-    
-    // Check if course program is in PH scope
+
     if (phProgramScope.includes(courseProgramId)) {
       return { allowed: true };
     }
@@ -38,19 +36,6 @@ export function canManageCourseAssignment(
   }
 
   return { allowed: false, reason: "Insufficient permissions." };
-}
-
-/**
- * Check if faculty can be assigned to a course.
- * Faculty can be from any program (cross-program assignments allowed).
- */
-export function canAssignFaculty(
-  facultyId: string,
-  _targetProgramId: string
-): { allowed: true } | { allowed: false; reason: string } {
-  // Cross-program faculty assignments are allowed
-  // The faculty's primary affiliation is just a hint
-  return { allowed: true };
 }
 
 /**
