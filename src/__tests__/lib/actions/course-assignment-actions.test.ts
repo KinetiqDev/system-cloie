@@ -42,6 +42,14 @@ import {
   deleteCourseAssignmentAction,
   bulkCreateCourseAssignmentsAction,
 } from "@/lib/actions/course-assignment-actions";
+import {
+  createCourseAssignment,
+  updateCourseAssignment,
+  deactivateCourseAssignment,
+  activateCourseAssignment,
+  deleteCourseAssignment,
+  bulkCreateCourseAssignments,
+} from "@/features/course-assignments/services/manage-course-assignments";
 
 describe("course-assignment actions revalidate both role routes on success", () => {
   beforeEach(() => {
@@ -111,5 +119,88 @@ describe("course-assignment actions revalidate both role routes on success", () 
 
     expect(revalidatePathSpy).toHaveBeenCalledWith("/program-head/course-assignments");
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/course-assignments");
+  });
+});
+
+describe("course-assignment actions do not revalidate when the underlying operation fails", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("createCourseAssignmentAction does not revalidate on failure", async () => {
+    vi.mocked(createCourseAssignment).mockResolvedValueOnce({ success: false, error: "Course is outside your program scope." });
+
+    const result = await createCourseAssignmentAction({
+      termInstanceId: TERM_ID,
+      facultyId: FACULTY_ID,
+      courseId: COURSE_ID,
+      programId: PROGRAM_ID,
+      yearLevel: YearLevel.FIRST_YEAR,
+      section: StudentSection.MORNING,
+    });
+
+    expect(result.success).toBe(false);
+    expect(revalidatePathSpy).not.toHaveBeenCalled();
+  });
+
+  it("updateCourseAssignmentAction does not revalidate on failure", async () => {
+    vi.mocked(updateCourseAssignment).mockResolvedValueOnce({ success: false, error: "Assignment not found." });
+
+    const result = await updateCourseAssignmentAction({
+      assignmentId: ASSIGNMENT_ID,
+      programId: PROGRAM_ID,
+      yearLevel: YearLevel.FIRST_YEAR,
+      section: StudentSection.MORNING,
+    });
+
+    expect(result.success).toBe(false);
+    expect(revalidatePathSpy).not.toHaveBeenCalled();
+  });
+
+  it("deactivateCourseAssignmentAction does not revalidate on failure", async () => {
+    vi.mocked(deactivateCourseAssignment).mockResolvedValueOnce({ success: false, error: "Insufficient permissions." });
+
+    const result = await deactivateCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
+
+    expect(result.success).toBe(false);
+    expect(revalidatePathSpy).not.toHaveBeenCalled();
+  });
+
+  it("activateCourseAssignmentAction does not revalidate on failure", async () => {
+    vi.mocked(activateCourseAssignment).mockResolvedValueOnce({ success: false, error: "Insufficient permissions." });
+
+    const result = await activateCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
+
+    expect(result.success).toBe(false);
+    expect(revalidatePathSpy).not.toHaveBeenCalled();
+  });
+
+  it("deleteCourseAssignmentAction does not revalidate on failure", async () => {
+    vi.mocked(deleteCourseAssignment).mockResolvedValueOnce({ success: false, error: "Cannot delete assignment because it has published course-bound evaluations." });
+
+    const result = await deleteCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
+
+    expect(result.success).toBe(false);
+    expect(revalidatePathSpy).not.toHaveBeenCalled();
+  });
+
+  it("bulkCreateCourseAssignmentsAction does not revalidate on total failure", async () => {
+    vi.mocked(bulkCreateCourseAssignments).mockResolvedValueOnce({ success: false, created: 0, errors: [{ index: 0, error: "Course not found." }] });
+
+    const result = await bulkCreateCourseAssignmentsAction({
+      assignments: [
+        {
+          termInstanceId: TERM_ID,
+          facultyId: FACULTY_ID,
+          courseId: COURSE_ID,
+          programId: PROGRAM_ID,
+          yearLevel: YearLevel.FIRST_YEAR,
+          section: StudentSection.MORNING,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    expect(revalidatePathSpy).not.toHaveBeenCalled();
   });
 });
