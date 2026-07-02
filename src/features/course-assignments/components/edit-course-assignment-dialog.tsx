@@ -50,14 +50,14 @@ export function EditCourseAssignmentDialog({
   const programDisabled = !isGeneralEducation;
 
   useEffect(() => {
-    if (assignment) {
-      // Prefill form when the dialog opens for a different assignment.
+    if (open && assignment) {
+      // Prefill form when the dialog opens or changes assignment.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProgramId(assignment.programId);
       setYearLevel(assignment.yearLevel);
       setSection(assignment.section);
     }
-  }, [assignment]);
+  }, [open, assignment]);
 
   const handleSubmit = async () => {
     if (!assignment) return;

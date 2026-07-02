@@ -188,6 +188,47 @@ describe("EditCourseAssignmentDialog", () => {
     expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
   });
 
+  it("resets unsaved class identity edits when reopened for the same assignment", async () => {
+    const assignment = createAssignment();
+    const onOpenChange = vi.fn();
+
+    const { rerender } = render(
+      <EditCourseAssignmentDialog
+        open
+        onOpenChange={onOpenChange}
+        assignment={assignment}
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+      />
+    );
+
+    await openAndSelect(/year level/i, "3rd Year");
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeEnabled();
+
+    rerender(
+      <EditCourseAssignmentDialog
+        open={false}
+        onOpenChange={onOpenChange}
+        assignment={assignment}
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+      />
+    );
+
+    rerender(
+      <EditCourseAssignmentDialog
+        open
+        onOpenChange={onOpenChange}
+        assignment={assignment}
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled();
+    expect(screen.getByText(/course default: 2nd year/i)).toBeInTheDocument();
+  });
+
   it("shows an error toast when update fails", async () => {
     vi.mocked(updateCourseAssignmentAction).mockResolvedValue({
       success: false,
