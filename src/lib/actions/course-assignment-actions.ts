@@ -31,6 +31,12 @@ import type {
   ListOptions,
 } from "@/features/course-assignments/types";
 
+function revalidateCourseAssignmentRoutes() {
+  revalidatePath("/program-head/course-assignments");
+  revalidatePath("/secretary/course-assignments");
+  revalidatePath("/dean/course-assignments");
+}
+
 /**
  * Create a new course assignment.
  */
@@ -44,9 +50,7 @@ export async function createCourseAssignmentAction(input: CreateCourseAssignment
   const result = await createCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
-    revalidatePath("/secretary/course-assignments");
-    revalidatePath("/dean/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -65,9 +69,7 @@ export async function updateCourseAssignmentAction(input: UpdateCourseAssignment
   const result = await updateCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
-    revalidatePath("/secretary/course-assignments");
-    revalidatePath("/dean/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -86,9 +88,7 @@ export async function deactivateCourseAssignmentAction(input: DeactivateCourseAs
   const result = await deactivateCourseAssignment(parsed.data.assignmentId);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
-    revalidatePath("/secretary/course-assignments");
-    revalidatePath("/dean/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -107,9 +107,7 @@ export async function activateCourseAssignmentAction(input: ActivateCourseAssign
   const result = await activateCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
-    revalidatePath("/secretary/course-assignments");
-    revalidatePath("/dean/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -128,9 +126,7 @@ export async function deleteCourseAssignmentAction(input: DeleteCourseAssignment
   const result = await deleteCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
-    revalidatePath("/secretary/course-assignments");
-    revalidatePath("/dean/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -149,9 +145,7 @@ export async function bulkCreateCourseAssignmentsAction(input: BulkCreateCourseA
   const result = await bulkCreateCourseAssignments(parsed.data.assignments);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
-    revalidatePath("/secretary/course-assignments");
-    revalidatePath("/dean/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;

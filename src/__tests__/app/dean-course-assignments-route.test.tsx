@@ -8,12 +8,14 @@ const {
   redirectMock,
   resolveAuthSessionMock,
   loadPageDataMock,
+  listCourseAssignmentsActionMock,
 } = vi.hoisted(() => ({
   redirectMock: vi.fn((path: string) => {
     throw new Error(`${REDIRECT_ERROR}:${path}`);
   }),
   resolveAuthSessionMock: vi.fn(),
   loadPageDataMock: vi.fn(),
+  listCourseAssignmentsActionMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -28,6 +30,17 @@ vi.mock("@/features/course-assignments/services/load-all-program-course-assignme
   loadAllProgramCourseAssignmentsPageData: loadPageDataMock,
 }));
 
+vi.mock("@/lib/actions/course-assignment-actions", () => ({
+  listCourseAssignmentsAction: listCourseAssignmentsActionMock,
+  createCourseAssignmentAction: vi.fn(),
+  bulkCreateCourseAssignmentsAction: vi.fn(),
+  searchFacultyPoolAction: vi.fn(),
+  deactivateCourseAssignmentAction: vi.fn(),
+  activateCourseAssignmentAction: vi.fn(),
+  deleteCourseAssignmentAction: vi.fn(),
+  updateCourseAssignmentAction: vi.fn(),
+}));
+
 describe("Dean Course Assignments route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -36,6 +49,15 @@ describe("Dean Course Assignments route", () => {
       availablePrograms: [],
       availableFaculty: [],
       termInstances: [],
+    });
+    listCourseAssignmentsActionMock.mockResolvedValue({
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+        page: 0,
+        pageSize: 10,
+      },
     });
   });
 

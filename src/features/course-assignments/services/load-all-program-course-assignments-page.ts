@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db/prisma";
-import { listSchoolYears } from "@/features/academic-calendar/services/list-school-years";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import type { AssignableCourse } from "@/features/course-assignments/types";
 
@@ -29,8 +28,18 @@ export type AllProgramCourseAssignmentsPageData = {
  * dropdown-loading queries across role-owned dashboard routes.
  */
 export async function loadAllProgramCourseAssignmentsPageData(): Promise<AllProgramCourseAssignmentsPageData> {
-  const [schoolYearsResult, programs, courses, faculty] = await Promise.all([
-    listSchoolYears(),
+  const [schoolYears, programs, courses, faculty] = await Promise.all([
+    prisma.schoolYear.findMany({
+      include: {
+        term_instances: {
+          orderBy: [
+            { semester: "asc" },
+            { term: "asc" },
+          ],
+        },
+      },
+      orderBy: { created_at: "desc" },
+    }),
     prisma.program.findMany({
       where: { is_active: true },
       select: { id: true, code: true, name: true },
@@ -72,8 +81,19 @@ export async function loadAllProgramCourseAssignmentsPageData(): Promise<AllProg
     ).values(),
   ].sort((a, b) => a.lastName.localeCompare(b.lastName));
 
-  const termInstances: TermInstanceItem[] = schoolYearsResult.items.flatMap(
-    (sy) => sy.termInstances
+  const termInstances: TermInstanceItem[] = schoolYears.flatMap((sy) =>
+    sy.term_instances.map((ti) => ({
+      id: ti.id,
+      schoolYearId: ti.school_year_id,
+      schoolYearCode: sy.code,
+      semester: ti.semester,
+      term: ti.term,
+      startDate: ti.start_date,
+      endDate: ti.end_date,
+      isActive: ti.is_active,
+      createdAt: ti.created_at,
+      updatedAt: ti.updated_at,
+    }))
   );
 
   const availableCourses: AssignableCourse[] = courses.map((c) => ({

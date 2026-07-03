@@ -1,14 +1,19 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { YearLevel, CourseScope } from "@prisma/client";
+import { YearLevel, StudentSection, CourseScope } from "@prisma/client";
 
 import { CourseAssignmentsPageShell } from "@/features/course-assignments/components/course-assignments-page-shell";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
+import type { CourseAssignmentItem } from "@/features/course-assignments/types";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
   listCourseAssignmentsAction: vi.fn(),
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
+  deactivateCourseAssignmentAction: vi.fn(),
+  activateCourseAssignmentAction: vi.fn(),
+  deleteCourseAssignmentAction: vi.fn(),
+  updateCourseAssignmentAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
 }));
 
@@ -41,7 +46,10 @@ vi.mock("@/features/course-assignments/components/shared/assignment-filters", ()
   ),
 }));
 
-import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
+import {
+  deactivateCourseAssignmentAction,
+  listCourseAssignmentsAction,
+} from "@/lib/actions/course-assignment-actions";
 
 const mockPrograms = [
   { id: "program-1", code: "BSCS", name: "BS Computer Science" },
@@ -85,6 +93,31 @@ const mockTermInstances = [
   },
 ] as unknown as TermInstanceItem[];
 
+function createAssignment(overrides: Partial<CourseAssignmentItem> = {}): CourseAssignmentItem {
+  return {
+    id: "assignment-1",
+    termInstanceId: "term-1",
+    facultyId: "faculty-1",
+    courseId: "course-1",
+    programId: "program-1",
+    yearLevel: YearLevel.SECOND_YEAR,
+    section: StudentSection.MORNING,
+    assignedBy: null,
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    facultyName: "Test Faculty",
+    facultyEmail: "test@example.com",
+    courseCode: "CS101",
+    courseTitle: "Intro to Computing",
+    courseScope: CourseScope.PROGRAM_SPECIFIC,
+    programCode: "BSCS",
+    programName: "BS Computer Science",
+    termLabel: "2025-2026 — 1st Semester — 1st Term",
+    ...overrides,
+  };
+}
+
 function renderAllProgramShell(props = {}) {
   return render(
     <CourseAssignmentsPageShell
@@ -104,6 +137,7 @@ function renderAllProgramShell(props = {}) {
 describe("CourseAssignmentsPageShell (all-program mode)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(deactivateCourseAssignmentAction).mockResolvedValue({ success: true });
     vi.mocked(listCourseAssignmentsAction).mockResolvedValue({
       success: true,
       data: {
@@ -173,5 +207,125 @@ describe("CourseAssignmentsPageShell (all-program mode)", () => {
         { page: 0 }
       );
     });
+  });
+
+  it("clears stale assignments and shows the load error when listing returns a failure", async () => {
+    vi.mocked(listCourseAssignmentsAction)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [createAssignment()],
+          total: 1,
+          page: 0,
+          pageSize: 10,
+        },
+      })
+      .mockResolvedValueOnce({ success: false, error: "Failed to list course assignments." });
+
+    renderAllProgramShell();
+
+    await waitFor(() => {
+      expect(screen.getByText("CS101")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /set inactive/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Failed to list course assignments.");
+    });
+    expect(screen.queryByText("CS101")).not.toBeInTheDocument();
+    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+  });
+
+  it("clears stale assignments and shows a generic load error when listing rejects", async () => {
+    vi.mocked(listCourseAssignmentsAction)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [createAssignment()],
+          total: 1,
+          page: 0,
+          pageSize: 10,
+        },
+      })
+      .mockRejectedValueOnce(new Error("network failed"));
+
+    renderAllProgramShell();
+
+    await waitFor(() => {
+      expect(screen.getByText("CS101")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /set inactive/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Failed to load course assignments.");
+    });
+    expect(screen.queryByText("CS101")).not.toBeInTheDocument();
+  });
+
+  it("clamps the current page after a refresh returns an out-of-range empty page", async () => {
+    vi.mocked(listCourseAssignmentsAction)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [createAssignment()],
+          total: 21,
+          page: 0,
+          pageSize: 20,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [createAssignment({ id: "assignment-2", courseCode: "CS102" })],
+          total: 21,
+          page: 1,
+          pageSize: 20,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [],
+          total: 20,
+          page: 1,
+          pageSize: 20,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [createAssignment()],
+          total: 20,
+          page: 0,
+          pageSize: 20,
+        },
+      });
+
+    renderAllProgramShell();
+
+    await waitFor(() => {
+      expect(screen.getByText("CS101")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText(/next page/i));
+
+    await waitFor(() => {
+      expect(screen.getByText("CS102")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText(/open actions for CS102/i));
+    fireEvent.click(screen.getByRole("menuitem", { name: /deactivate/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^deactivate$/i }));
+
+    await waitFor(() => {
+      expect(listCourseAssignmentsAction).toHaveBeenLastCalledWith(
+        expect.objectContaining({ isActive: true }),
+        { page: 0 }
+      );
+    });
+    expect(screen.getByText("CS101")).toBeInTheDocument();
+    expect(screen.queryByTestId("empty-state")).not.toBeInTheDocument();
   });
 });

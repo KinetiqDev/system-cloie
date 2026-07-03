@@ -63,6 +63,7 @@ export function CourseAssignmentsPageShell({
   const [assignments, setAssignments] = useState<CourseAssignmentItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -75,26 +76,53 @@ export function CourseAssignmentsPageShell({
 
     async function fetchAssignments() {
       setLoading(true);
-      const result = await listCourseAssignmentsAction(
-        {
-          ...(filters.termInstanceId && { termInstanceId: filters.termInstanceId }),
-          ...(filters.courseId && { courseId: filters.courseId }),
-          ...(filters.facultyId && { facultyId: filters.facultyId }),
-          ...(filters.programId && { programId: filters.programId }),
-          ...(filters.yearLevel && { yearLevel: filters.yearLevel as YearLevel }),
-          ...(filters.section && { section: filters.section as StudentSection }),
-          ...(filters.isActive !== null && { isActive: filters.isActive }),
-          ...(filters.courseScope && { courseScope: filters.courseScope }),
-        },
-        { page }
-      );
+      try {
+        const result = await listCourseAssignmentsAction(
+          {
+            ...(filters.termInstanceId && { termInstanceId: filters.termInstanceId }),
+            ...(filters.courseId && { courseId: filters.courseId }),
+            ...(filters.facultyId && { facultyId: filters.facultyId }),
+            ...(filters.programId && { programId: filters.programId }),
+            ...(filters.yearLevel && { yearLevel: filters.yearLevel as YearLevel }),
+            ...(filters.section && { section: filters.section as StudentSection }),
+            ...(filters.isActive !== null && { isActive: filters.isActive }),
+            ...(filters.courseScope && { courseScope: filters.courseScope }),
+          },
+          { page }
+        );
 
-      if (!cancelled) {
-        if (result.success) {
-          setAssignments(result.data.items);
-          setTotal(result.data.total);
+        if (!cancelled) {
+          if (result.success) {
+            const lastValidPage = Math.max(
+              0,
+              Math.ceil(result.data.total / result.data.pageSize) - 1
+            );
+
+            if (result.data.total > 0 && page > lastValidPage) {
+              setLoadError(null);
+              setPage(lastValidPage);
+              return;
+            }
+
+            setLoadError(null);
+            setAssignments(result.data.items);
+            setTotal(result.data.total);
+          } else {
+            setLoadError(result.error);
+            setAssignments([]);
+            setTotal(0);
+          }
         }
-        setLoading(false);
+      } catch {
+        if (!cancelled) {
+          setLoadError("Failed to load course assignments.");
+          setAssignments([]);
+          setTotal(0);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -133,6 +161,12 @@ export function CourseAssignmentsPageShell({
         availableFaculty={availableFaculty}
         termInstances={termInstances}
       />
+
+      {loadError && (
+        <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {loadError}
+        </div>
+      )}
 
       <CourseAssignmentsTable
         assignments={assignments}
