@@ -31,6 +31,12 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
     roles: [ROLES.SECRETARY],
   });
 
+  const mockDeanSession = createAuthSessionSnapshot({
+    userId: "dean-1",
+    email: "dean@test.com",
+    roles: [ROLES.DEAN],
+  });
+
   let prisma: Awaited<typeof import("@/lib/db/prisma")>["prisma"];
 
   beforeEach(async () => {
@@ -154,6 +160,31 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
     expect(prisma.programHeadAssignment.findMany).not.toHaveBeenCalled();
     const callArgs = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0][0];
     expect((callArgs as { where: Record<string, unknown> }).where).not.toHaveProperty("program_id");
+  });
+
+  it("Dean without filter.programId → no program_id constraint", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
+
+    await listCourseAssignments({});
+
+    expect(prisma.programHeadAssignment.findMany).not.toHaveBeenCalled();
+    const callArgs = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0][0];
+    expect((callArgs as { where: Record<string, unknown> }).where).not.toHaveProperty("program_id");
+  });
+
+  it("Dean with filter.programId → passes through freely", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
+
+    await listCourseAssignments({ programId: "prog-C" });
+
+    expect(prisma.programHeadAssignment.findMany).not.toHaveBeenCalled();
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          program_id: "prog-C",
+        }),
+      })
+    );
   });
 
   it("Applies courseScope filter by course.course_scope", async () => {

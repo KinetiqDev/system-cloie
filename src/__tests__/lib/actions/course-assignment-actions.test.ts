@@ -51,12 +51,12 @@ import {
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
 
-describe("course-assignment actions revalidate both role routes on success", () => {
+describe("course-assignment actions revalidate all role routes on success", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("createCourseAssignmentAction revalidates /program-head/course-assignments and /secretary/course-assignments", async () => {
+  it("createCourseAssignmentAction revalidates /program-head, /secretary, and /dean course-assignment routes", async () => {
     await createCourseAssignmentAction({
       termInstanceId: TERM_ID,
       facultyId: FACULTY_ID,
@@ -68,9 +68,10 @@ describe("course-assignment actions revalidate both role routes on success", () 
 
     expect(revalidatePathSpy).toHaveBeenCalledWith("/program-head/course-assignments");
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/course-assignments");
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/course-assignments");
   });
 
-  it("updateCourseAssignmentAction revalidates /program-head/course-assignments and /secretary/course-assignments", async () => {
+  it("updateCourseAssignmentAction revalidates /program-head, /secretary, and /dean course-assignment routes", async () => {
     await updateCourseAssignmentAction({
       assignmentId: ASSIGNMENT_ID,
       programId: PROGRAM_ID,
@@ -80,30 +81,34 @@ describe("course-assignment actions revalidate both role routes on success", () 
 
     expect(revalidatePathSpy).toHaveBeenCalledWith("/program-head/course-assignments");
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/course-assignments");
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/course-assignments");
   });
 
-  it("deactivateCourseAssignmentAction revalidates /program-head/course-assignments and /secretary/course-assignments", async () => {
+  it("deactivateCourseAssignmentAction revalidates /program-head, /secretary, and /dean course-assignment routes", async () => {
     await deactivateCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
 
     expect(revalidatePathSpy).toHaveBeenCalledWith("/program-head/course-assignments");
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/course-assignments");
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/course-assignments");
   });
 
-  it("activateCourseAssignmentAction revalidates /program-head/course-assignments and /secretary/course-assignments", async () => {
+  it("activateCourseAssignmentAction revalidates /program-head, /secretary, and /dean course-assignment routes", async () => {
     await activateCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
 
     expect(revalidatePathSpy).toHaveBeenCalledWith("/program-head/course-assignments");
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/course-assignments");
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/course-assignments");
   });
 
-  it("deleteCourseAssignmentAction revalidates /program-head/course-assignments and /secretary/course-assignments", async () => {
+  it("deleteCourseAssignmentAction revalidates /program-head, /secretary, and /dean course-assignment routes", async () => {
     await deleteCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
 
     expect(revalidatePathSpy).toHaveBeenCalledWith("/program-head/course-assignments");
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/course-assignments");
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/course-assignments");
   });
 
-  it("bulkCreateCourseAssignmentsAction revalidates /program-head/course-assignments and /secretary/course-assignments", async () => {
+  it("bulkCreateCourseAssignmentsAction revalidates /program-head, /secretary, and /dean course-assignment routes", async () => {
     await bulkCreateCourseAssignmentsAction({
       assignments: [
         {
@@ -119,6 +124,7 @@ describe("course-assignment actions revalidate both role routes on success", () 
 
     expect(revalidatePathSpy).toHaveBeenCalledWith("/program-head/course-assignments");
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/course-assignments");
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/course-assignments");
   });
 });
 

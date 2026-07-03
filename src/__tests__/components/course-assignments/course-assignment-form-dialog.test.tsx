@@ -480,7 +480,7 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
   });
 });
 
-describe("CourseAssignmentFormDialog Secretary mode", () => {
+describe("CourseAssignmentFormDialog all-program mode", () => {
   beforeEach(() => {
     facultyMockState.crossProgram = false;
     vi.clearAllMocks();
@@ -518,7 +518,7 @@ describe("CourseAssignmentFormDialog Secretary mode", () => {
         termInstances={mockTermInstances}
         defaultTermInstanceId="term-1"
         defaultCourseId={defaultCourseId ?? null}
-        mode="secretary"
+        mode="all-program"
         onSuccess={vi.fn()}
       />
     );
@@ -533,7 +533,7 @@ describe("CourseAssignmentFormDialog Secretary mode", () => {
     expect(screen.getByRole("option", { name: /ge101 — general education/i })).toBeInTheDocument();
   });
 
-  it("locks program for Program-specific courses in secretary mode", async () => {
+  it("locks program for Program-specific courses in all-program mode", async () => {
     render(<Wrapper defaultCourseId="course-1" />);
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));

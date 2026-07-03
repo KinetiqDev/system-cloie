@@ -28,6 +28,18 @@ _Avoid_: Teaching assignment, roster record
 All-program stewardship of Course assignments by a Secretary, including General Education and Program-specific assignments across every academic program.
 _Avoid_: Program Head impersonation, per-program Secretary mode
 
+**Dean course assignment operations**:
+All-program stewardship of Course assignments by a Dean, reusing the same operational rules as Secretary course assignment operations for General Education and Program-specific assignments.
+_Avoid_: Separate Dean assignment model, analytics-only Dean mode
+
+**All-program Course assignment manager**:
+A Secretary or Dean user who can manage General Education and Program-specific Course assignments across every academic program through the same operational rules.
+_Avoid_: Secretary mode, Dean mode, role impersonation
+
+**Role-owned route**:
+A dashboard URL owned by one role even when the underlying operation capability is shared with another role. Secretary and Dean Course assignment routes remain separate role-owned routes.
+_Avoid_: Role impersonation route, shared dashboard route
+
 **Faculty affiliation**:
 A faculty member's active relationship to one or more academic programs. Affiliation is displayed as assignment context, but it does not prevent a Program Head from assigning a faculty member from another program to one of the Program Head's program-specific Courses.
 _Avoid_: Faculty scope, assignment permission

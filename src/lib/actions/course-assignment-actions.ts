@@ -46,6 +46,7 @@ export async function createCourseAssignmentAction(input: CreateCourseAssignment
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
     revalidatePath("/secretary/course-assignments");
+    revalidatePath("/dean/course-assignments");
   }
 
   return result;
@@ -66,6 +67,7 @@ export async function updateCourseAssignmentAction(input: UpdateCourseAssignment
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
     revalidatePath("/secretary/course-assignments");
+    revalidatePath("/dean/course-assignments");
   }
 
   return result;
@@ -86,6 +88,7 @@ export async function deactivateCourseAssignmentAction(input: DeactivateCourseAs
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
     revalidatePath("/secretary/course-assignments");
+    revalidatePath("/dean/course-assignments");
   }
 
   return result;
@@ -106,6 +109,7 @@ export async function activateCourseAssignmentAction(input: ActivateCourseAssign
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
     revalidatePath("/secretary/course-assignments");
+    revalidatePath("/dean/course-assignments");
   }
 
   return result;
@@ -126,6 +130,7 @@ export async function deleteCourseAssignmentAction(input: DeleteCourseAssignment
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
     revalidatePath("/secretary/course-assignments");
+    revalidatePath("/dean/course-assignments");
   }
 
   return result;
@@ -146,6 +151,7 @@ export async function bulkCreateCourseAssignmentsAction(input: BulkCreateCourseA
   if (result.success) {
     revalidatePath("/program-head/course-assignments");
     revalidatePath("/secretary/course-assignments");
+    revalidatePath("/dean/course-assignments");
   }
 
   return result;

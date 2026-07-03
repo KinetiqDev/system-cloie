@@ -47,6 +47,24 @@ describe("navigation helpers", () => {
     );
   });
 
+  it("orders dean navigation with course assignments after courses", () => {
+    const deanNav = getMainNavByRoles([ROLES.DEAN]);
+    const deanHrefs = deanNav.map((item) => item.href);
+
+    expect(deanHrefs).toContain("/dean/course-assignments");
+    expect(deanNav.find((item) => item.href === "/dean/course-assignments")?.name).toBe(
+      "Course Assignments"
+    );
+
+    const coursesIndex = deanHrefs.indexOf("/dean/courses");
+    const courseAssignmentsIndex = deanHrefs.indexOf("/dean/course-assignments");
+    expect(courseAssignmentsIndex).toBe(coursesIndex + 1);
+
+    expect(getMobileNavByRoles([ROLES.DEAN]).map((item) => item.href)).toContain(
+      "/dean/course-assignments"
+    );
+  });
+
   it("prefers dean and program-head navigation over faculty navigation for multi-role reviewers", () => {
     expect(
       getMainNavByRoles([ROLES.FACULTY, ROLES.PROGRAM_HEAD]).map((item) => item.href)

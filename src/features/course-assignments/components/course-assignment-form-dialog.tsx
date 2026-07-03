@@ -32,7 +32,7 @@ interface Program {
   name: string;
 }
 
-type CourseAssignmentFormMode = "program-head" | "secretary";
+type CourseAssignmentFormMode = "program-head" | "all-program";
 
 function getInitialProgramId(
   defaultCourseId: string | null | undefined,
@@ -89,7 +89,7 @@ export function CourseAssignmentFormDialog({
   const previousCourseId = useRef<string | null>(null);
 
   const assignableCourses =
-    mode === "secretary"
+    mode === "all-program"
       ? availableCourses
       : availableCourses.filter(
           (c) =>

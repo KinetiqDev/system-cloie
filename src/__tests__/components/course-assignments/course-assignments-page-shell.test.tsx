@@ -2,8 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { YearLevel, CourseScope } from "@prisma/client";
 
-import { CourseAssignmentsClientPage as ProgramHeadCourseAssignmentsClientPage } from "@/app/(app)/program-head/course-assignments/client-page";
-import { CourseAssignmentsClientPage as SecretaryCourseAssignmentsClientPage } from "@/app/(app)/secretary/course-assignments/client-page";
+import { CourseAssignmentsPageShell } from "@/features/course-assignments/components/course-assignments-page-shell";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
@@ -86,14 +85,23 @@ const mockTermInstances = [
   },
 ] as unknown as TermInstanceItem[];
 
-function clickSelectByPlaceholder(placeholder: string) {
-  const value = screen.getByText(placeholder);
-  const trigger = value.closest('[role="combobox"]');
-  if (!trigger) throw new Error(`Select trigger for "${placeholder}" not found`);
-  fireEvent.click(trigger);
+function renderAllProgramShell(props = {}) {
+  return render(
+    <CourseAssignmentsPageShell
+      pageTitle="Course Assignments"
+      pageDescription="Manage faculty assignments for all programs, including General Education courses"
+      mode="all-program"
+      defaultIsActive={true}
+      availableCourses={mockCourses}
+      availablePrograms={mockPrograms}
+      availableFaculty={mockFaculty}
+      termInstances={mockTermInstances}
+      {...props}
+    />
+  );
 }
 
-describe("CourseAssignmentsClientPage", () => {
+describe("CourseAssignmentsPageShell (all-program mode)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(listCourseAssignmentsAction).mockResolvedValue({
@@ -107,82 +115,20 @@ describe("CourseAssignmentsClientPage", () => {
     });
   });
 
-  it("pre-fills the year level from the selected course's default", async () => {
-    render(
-      <ProgramHeadCourseAssignmentsClientPage
-        availableCourses={mockCourses}
-        availablePrograms={mockPrograms}
-        availableFaculty={mockFaculty}
-        termInstances={mockTermInstances}
-      />
-    );
+  it("renders role-specific page copy", async () => {
+    renderAllProgramShell({
+      pageTitle: "Course Assignments",
+      pageDescription: "Secretary-specific description",
+    });
 
     await waitFor(() => {
-      expect(screen.getByText(/no course assignments found/i)).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /course assignments/i })).toBeInTheDocument();
     });
-
-    fireEvent.click(screen.getAllByRole("button", { name: /assign faculty/i })[0]);
-
-    // Term step
-    clickSelectByPlaceholder("Select a term...");
-    fireEvent.click(await screen.findByRole("option", { name: /2025-2026 — 1st Semester — 1st Term/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    // Course step
-    clickSelectByPlaceholder("Select a course...");
-    fireEvent.click(await screen.findByRole("option", { name: /cs101 — introduction to computing/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    // Class step: the default hint from the course default is visible
-    expect(await screen.findByText(/course default: 2nd year/i)).toBeInTheDocument();
+    expect(screen.getByText("Secretary-specific description")).toBeInTheDocument();
   });
-
-  it("does not render or launch a merged-class helper", async () => {
-    render(
-      <ProgramHeadCourseAssignmentsClientPage
-        availableCourses={mockCourses}
-        availablePrograms={mockPrograms}
-        availableFaculty={mockFaculty}
-        termInstances={mockTermInstances}
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(/no course assignments found/i)).toBeInTheDocument();
-    });
-
-    expect(screen.queryByRole("button", { name: /create merged class/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: /create merged class assignment/i })).not.toBeInTheDocument();
-  });
-});
-
-describe("SecretaryCourseAssignmentsClientPage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(listCourseAssignmentsAction).mockResolvedValue({
-      success: true,
-      data: {
-        items: [],
-        total: 0,
-        page: 0,
-        pageSize: 10,
-      },
-    });
-  });
-
-  function renderSecretaryPage() {
-    render(
-      <SecretaryCourseAssignmentsClientPage
-        availableCourses={mockCourses}
-        availablePrograms={mockPrograms}
-        availableFaculty={mockFaculty}
-        termInstances={mockTermInstances}
-      />
-    );
-  }
 
   it("loads active assignments by default", async () => {
-    renderSecretaryPage();
+    renderAllProgramShell();
 
     await waitFor(() => {
       expect(listCourseAssignmentsAction).toHaveBeenCalledWith(
@@ -193,7 +139,7 @@ describe("SecretaryCourseAssignmentsClientPage", () => {
   });
 
   it("passes status filter changes to the listing action", async () => {
-    renderSecretaryPage();
+    renderAllProgramShell();
 
     await waitFor(() => {
       expect(listCourseAssignmentsAction).toHaveBeenCalled();
@@ -210,7 +156,7 @@ describe("SecretaryCourseAssignmentsClientPage", () => {
   });
 
   it("passes Course scope filter changes to the listing action", async () => {
-    renderSecretaryPage();
+    renderAllProgramShell();
 
     await waitFor(() => {
       expect(listCourseAssignmentsAction).toHaveBeenCalled();

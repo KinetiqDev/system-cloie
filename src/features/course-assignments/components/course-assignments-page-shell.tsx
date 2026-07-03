@@ -4,40 +4,61 @@ import { useState, useEffect, useCallback } from "react";
 import { YearLevel, StudentSection } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { CourseAssignmentsTable } from "@/features/course-assignments/components/course-assignments-table";
-import { AssignmentFilters } from "@/features/course-assignments/components/shared/assignment-filters";
-import { CourseAssignmentFormDialog } from "@/features/course-assignments/components/course-assignment-form-dialog";
+import { CourseAssignmentsTable } from "./course-assignments-table";
+import { AssignmentFilters } from "./shared/assignment-filters";
+import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
 import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
-import type { AssignmentFiltersState } from "@/features/course-assignments/components/shared/assignment-filters";
+import type { AssignmentFiltersState } from "./shared/assignment-filters";
 import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
-interface CourseAssignmentsClientPageProps {
+interface ProgramOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
+interface FacultyOption {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export type CourseAssignmentsPageMode = "all-program" | "program-head";
+
+export interface CourseAssignmentsPageShellProps {
+  pageTitle: string;
+  pageDescription: string;
+  mode: CourseAssignmentsPageMode;
+  defaultIsActive: boolean | null;
   availableCourses: AssignableCourse[];
-  availablePrograms: Array<{ id: string; code: string; name: string }>;
-  availableFaculty: Array<{ id: string; firstName: string; lastName: string; email: string }>;
+  availablePrograms: ProgramOption[];
+  availableFaculty: FacultyOption[];
   termInstances: TermInstanceItem[];
 }
 
-const DEFAULT_FILTERS: AssignmentFiltersState = {
-  termInstanceId: null,
-  courseId: null,
-  facultyId: null,
-  programId: null,
-  yearLevel: null,
-  section: null,
-  isActive: true,
-  courseScope: null,
-  searchQuery: "",
-};
-
-export function CourseAssignmentsClientPage({
+export function CourseAssignmentsPageShell({
+  pageTitle,
+  pageDescription,
+  mode,
+  defaultIsActive,
   availableCourses,
   availablePrograms,
   availableFaculty,
   termInstances,
-}: CourseAssignmentsClientPageProps) {
-  const [filters, setFilters] = useState<AssignmentFiltersState>(DEFAULT_FILTERS);
+}: CourseAssignmentsPageShellProps) {
+  const [filters, setFilters] = useState<AssignmentFiltersState>({
+    termInstanceId: null,
+    courseId: null,
+    facultyId: null,
+    programId: null,
+    yearLevel: null,
+    section: null,
+    isActive: defaultIsActive,
+    courseScope: null,
+    searchQuery: "",
+  });
   const [page, setPage] = useState(0);
   const [assignments, setAssignments] = useState<CourseAssignmentItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -93,10 +114,8 @@ export function CourseAssignmentsClientPage({
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Course Assignments</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage faculty assignments for all programs, including General Education courses
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
+          <p className="text-muted-foreground mt-1">{pageDescription}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => setCreateOpen(true)}>
@@ -120,7 +139,7 @@ export function CourseAssignmentsClientPage({
         total={total}
         page={page}
         loading={loading}
-        mode="secretary"
+        mode={mode}
         availableCourses={availableCourses}
         availablePrograms={availablePrograms}
         onPageChange={setPage}
@@ -134,7 +153,7 @@ export function CourseAssignmentsClientPage({
         availableCourses={availableCourses}
         availablePrograms={availablePrograms}
         termInstances={termInstances}
-        mode="secretary"
+        mode={mode}
         onSuccess={refreshAssignments}
       />
     </div>

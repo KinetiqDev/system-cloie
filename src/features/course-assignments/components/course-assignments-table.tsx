@@ -46,7 +46,7 @@ interface Program {
   name: string;
 }
 
-type CourseAssignmentsTableMode = "program-head" | "secretary";
+type CourseAssignmentsTableMode = "program-head" | "all-program";
 
 interface CourseAssignmentsTableProps {
   assignments: CourseAssignmentItem[];
@@ -167,7 +167,7 @@ export function CourseAssignmentsTable({
         <div>
           <h3 className="text-lg font-medium">No course assignments found</h3>
           <p className="text-muted-foreground mt-1 text-sm">
-            {mode === "secretary"
+            {mode === "all-program"
               ? "Assign faculty to a course across any program to get started."
               : "Assign faculty to a Program-specific Course to get started."}
           </p>
@@ -263,7 +263,7 @@ export function CourseAssignmentsTable({
                           }
                         />
                         <DropdownMenuContent align="end">
-                          {mode === "secretary" && (
+                          {mode === "all-program" && (
                             <DropdownMenuItem
                               onClick={() => setEditAssignment(assignment)}
                               disabled={processingId === assignment.id}
@@ -338,7 +338,7 @@ export function CourseAssignmentsTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      {mode === "secretary" && (
+      {mode === "all-program" && (
         <EditCourseAssignmentDialog
           open={editAssignment !== null}
           onOpenChange={(open) => {

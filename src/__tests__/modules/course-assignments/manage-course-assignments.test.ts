@@ -7,6 +7,8 @@ import {
   createCourseAssignment,
   updateCourseAssignment,
   deactivateCourseAssignment,
+  activateCourseAssignment,
+  deleteCourseAssignment,
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
@@ -19,6 +21,7 @@ vi.mock("@/lib/db/prisma", () => ({
       findFirst: vi.fn(),
       update: vi.fn(),
       findUnique: vi.fn(),
+      delete: vi.fn(),
     },
     course: {
       findUnique: vi.fn(),
@@ -34,6 +37,12 @@ describe("manage-course-assignments", () => {
     userId: "admin-1",
     email: "secretary@test.com",
     roles: [ROLES.SECRETARY],
+  });
+
+  const mockDeanSession = createAuthSessionSnapshot({
+    userId: "dean-1",
+    email: "dean@test.com",
+    roles: [ROLES.DEAN],
   });
 
   const mockProgramHeadSession = createAuthSessionSnapshot({
@@ -53,8 +62,11 @@ describe("manage-course-assignments", () => {
   });
 
   describe("createCourseAssignment", () => {
-    it("should allow admin to create assignment", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    it.each([
+      { label: "Secretary", session: mockAdminSession },
+      { label: "Dean", session: mockDeanSession },
+    ])("should allow $label to create assignment", async ({ session }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
@@ -149,8 +161,11 @@ describe("manage-course-assignments", () => {
       }
     });
 
-    it("should allow secretary to create a General Education assignment for a program", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    it.each([
+      { label: "Secretary", session: mockAdminSession },
+      { label: "Dean", session: mockDeanSession },
+    ])("should allow $label to create a General Education assignment for a program", async ({ session }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
@@ -177,6 +192,30 @@ describe("manage-course-assignments", () => {
           }),
         })
       );
+    });
+
+    it("should reject Dean creation of a Program-specific assignment for a non-owning program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "course-1",
+        program_id: "program-1",
+      } as never);
+
+      const result = await createCourseAssignment({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "course-1",
+        programId: "program-2",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("must match");
+      }
     });
 
     it("should reject assignment creation when programId differs from the Course's owning program", async () => {
@@ -261,8 +300,11 @@ describe("manage-course-assignments", () => {
   });
 
   describe("updateCourseAssignment", () => {
-    it("should allow admin to update assignment", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    it.each([
+      { label: "Secretary", session: mockAdminSession },
+      { label: "Dean", session: mockDeanSession },
+    ])("should allow $label to update assignment", async ({ session }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
@@ -277,6 +319,33 @@ describe("manage-course-assignments", () => {
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it("should allow Dean to update valid class identity fields", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-1",
+        course: { program_id: "program-1" },
+      } as never);
+      vi.mocked(prisma.courseAssignment.update).mockResolvedValue({ id: "assignment-1" } as never);
+
+      const result = await updateCourseAssignment({
+        assignmentId: "assignment-1",
+        yearLevel: YearLevel.THIRD_YEAR,
+        section: StudentSection.AFTERNOON,
+      });
+
+      expect(result.success).toBe(true);
+      expect(prisma.courseAssignment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            year_level: YearLevel.THIRD_YEAR,
+            section: StudentSection.AFTERNOON,
+          }),
+        })
+      );
     });
 
     it("should allow secretary to update a General Education assignment program", async () => {
@@ -304,8 +373,11 @@ describe("manage-course-assignments", () => {
   });
 
   describe("deactivateCourseAssignment", () => {
-    it("should allow admin to deactivate assignment", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    it.each([
+      { label: "Secretary", session: mockAdminSession },
+      { label: "Dean", session: mockDeanSession },
+    ])("should allow $label to deactivate assignment", async ({ session }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
@@ -317,6 +389,77 @@ describe("manage-course-assignments", () => {
       const result = await deactivateCourseAssignment("assignment-1");
 
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe("activateCourseAssignment", () => {
+    it.each([
+      { label: "Secretary", session: mockAdminSession },
+      { label: "Dean", session: mockDeanSession },
+    ])("should allow $label to reactivate assignment", async ({ session }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-1",
+        course: { program_id: "program-1" },
+      } as never);
+      vi.mocked(prisma.courseAssignment.update).mockResolvedValue({ id: "assignment-1" } as never);
+
+      const result = await activateCourseAssignment({ assignmentId: "assignment-1" });
+
+      expect(result.success).toBe(true);
+      expect(prisma.courseAssignment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ is_active: true }),
+        })
+      );
+    });
+  });
+
+  describe("deleteCourseAssignment", () => {
+    it.each([
+      { label: "Secretary", session: mockAdminSession },
+      { label: "Dean", session: mockDeanSession },
+    ])("should allow $label to safely delete assignment with no course-bound evaluations", async ({ session }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-1",
+        course: { program_id: "program-1" },
+        course_bound_evaluations: [],
+      } as never);
+      vi.mocked(prisma.courseAssignment.delete).mockResolvedValue({ id: "assignment-1" } as never);
+
+      const result = await deleteCourseAssignment({ assignmentId: "assignment-1" });
+
+      expect(result.success).toBe(true);
+      expect(prisma.courseAssignment.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: "assignment-1" } })
+      );
+    });
+
+    it.each([
+      { label: "Secretary", session: mockAdminSession },
+      { label: "Dean", session: mockDeanSession },
+    ])("should block $label deletion when course-bound evaluations exist", async ({ session }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-1",
+        course: { program_id: "program-1" },
+        course_bound_evaluations: [{ id: "cbe-1" }],
+      } as never);
+
+      const result = await deleteCourseAssignment({ assignmentId: "assignment-1" });
+
+      expect(result.success).toBe(false);
+      expect(prisma.courseAssignment.delete).not.toHaveBeenCalled();
+      if (!result.success) {
+        expect(result.error).toMatch(/published course-bound evaluations/i);
+      }
     });
   });
 

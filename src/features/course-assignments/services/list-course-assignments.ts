@@ -59,7 +59,7 @@ export async function listCourseAssignments(
       programIdCondition = { in: phProgramIds };
     }
   } else if (filter.programId) {
-    // Admin/Dean: allow free filtering
+    // All-program managers can filter freely across programs.
     programIdCondition = filter.programId;
   }
 

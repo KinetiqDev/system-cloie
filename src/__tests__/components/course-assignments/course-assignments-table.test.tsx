@@ -253,15 +253,15 @@ describe("CourseAssignmentsTable", () => {
     expect(screen.queryByLabelText(/open actions for GE101/i)).not.toBeInTheDocument();
   });
 
-  it("renders Secretary-mode empty-state copy", () => {
+  it("renders all-program empty-state copy", () => {
     const onAssign = vi.fn();
 
-    renderTable({ assignments: [], total: 0, mode: "secretary", onAssignFaculty: onAssign });
+    renderTable({ assignments: [], total: 0, mode: "all-program", onAssignFaculty: onAssign });
 
     expect(screen.getByTestId("empty-state")).toHaveTextContent(/assign faculty to a course across any program/i);
   });
 
-  it("allows General Education row actions in secretary mode", () => {
+  it("allows General Education row actions in all-program mode", () => {
     const geAssignment = createAssignment({
       id: "ge-1",
       courseCode: "GE101",
@@ -269,14 +269,14 @@ describe("CourseAssignmentsTable", () => {
       courseScope: CourseScope.GENERAL_EDUCATION,
     });
 
-    renderTable({ assignments: [geAssignment], mode: "secretary" });
+    renderTable({ assignments: [geAssignment], mode: "all-program" });
 
     expect(screen.getByText("GE")).toBeInTheDocument();
     expect(screen.queryByText(/managed by secretary\/dean/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/open actions for GE101/i)).toBeInTheDocument();
   });
 
-  it("shows the Edit action in secretary mode and opens the edit dialog", async () => {
+  it("shows the Edit action in all-program mode and opens the edit dialog", async () => {
     const mockPrograms = [{ id: "program-1", code: "BSCS", name: "BS Computer Science" }];
     const mockCourses = [
       {
@@ -292,7 +292,7 @@ describe("CourseAssignmentsTable", () => {
     const assignment = createAssignment();
     renderTable({
       assignments: [assignment],
-      mode: "secretary",
+      mode: "all-program",
       availableCourses: mockCourses,
       availablePrograms: mockPrograms,
     });
