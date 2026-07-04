@@ -12,6 +12,14 @@ describe("navigation helpers", () => {
     });
   });
 
+  it("secretary navigation includes course assignments", () => {
+    const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
+    expect(secretaryNav.map((item) => item.href)).toContain("/secretary/course-assignments");
+    expect(secretaryNav.find((item) => item.href === "/secretary/course-assignments")?.name).toBe(
+      "Course Assignments"
+    );
+  });
+
   it("orders faculty navigation correctly", () => {
     expect(getMainNavByRoles([ROLES.FACULTY]).map((item) => item.name)).toEqual([
       "Dashboard",
@@ -36,6 +44,24 @@ describe("navigation helpers", () => {
     );
     expect(getMobileNavByRoles([ROLES.DEAN]).map((item) => item.href)).not.toContain(
       "/dean/cilo-reviews"
+    );
+  });
+
+  it("orders dean navigation with course assignments after courses", () => {
+    const deanNav = getMainNavByRoles([ROLES.DEAN]);
+    const deanHrefs = deanNav.map((item) => item.href);
+
+    expect(deanHrefs).toContain("/dean/course-assignments");
+    expect(deanNav.find((item) => item.href === "/dean/course-assignments")?.name).toBe(
+      "Course Assignments"
+    );
+
+    const coursesIndex = deanHrefs.indexOf("/dean/courses");
+    const courseAssignmentsIndex = deanHrefs.indexOf("/dean/course-assignments");
+    expect(courseAssignmentsIndex).toBe(coursesIndex + 1);
+
+    expect(getMobileNavByRoles([ROLES.DEAN]).map((item) => item.href)).toContain(
+      "/dean/course-assignments"
     );
   });
 

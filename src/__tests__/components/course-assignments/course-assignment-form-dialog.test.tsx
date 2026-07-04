@@ -14,6 +14,7 @@ vi.mock("@/lib/actions/course-assignment-actions", () => ({
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
+  listCourseAssignmentsAction: vi.fn(),
   listCourseAssignmentsForProgramHeadAction: vi.fn(),
   updateCourseAssignmentAction: vi.fn(),
   activateCourseAssignmentAction: vi.fn(),
@@ -45,6 +46,7 @@ vi.mock("@/features/course-assignments/components/shared/faculty-search-popover"
 
 const mockPrograms = [
   { id: "prog-1", code: "BSCS", name: "BS Computer Science" },
+  { id: "prog-2", code: "BSED", name: "BS Education" },
 ];
 
 const mockCourses = [
@@ -474,6 +476,101 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
 
     await waitFor(() => {
       expect(createCourseAssignmentAction).toHaveBeenCalled();
+    });
+  });
+});
+
+describe("CourseAssignmentFormDialog all-program mode", () => {
+  beforeEach(() => {
+    facultyMockState.crossProgram = false;
+    vi.clearAllMocks();
+    vi.mocked(createCourseAssignmentAction).mockResolvedValue({
+      success: true,
+      data: { id: "assignment-1" },
+    });
+  });
+
+  async function openAndSelect(label: RegExp, optionText: string) {
+    const trigger = screen.getByLabelText(label);
+    fireEvent.click(trigger);
+    const option = await screen.findByRole("option", { name: optionText });
+    fireEvent.focus(option);
+    fireEvent.keyDown(option, { key: "Enter" });
+    fireEvent.keyUp(option, { key: "Enter" });
+  }
+
+  function clickSelectByPlaceholder(placeholder: string) {
+    const value = screen.getByText(placeholder);
+    const trigger = value.closest('[role="combobox"]');
+    if (!trigger) throw new Error(`Select trigger for "${placeholder}" not found`);
+    fireEvent.click(trigger);
+  }
+
+  function Wrapper({ defaultCourseId }: { defaultCourseId?: string | null }) {
+    const [open, setOpen] = useState(true);
+
+    return (
+      <CourseAssignmentFormDialog
+        open={open}
+        onOpenChange={setOpen}
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+        termInstances={mockTermInstances}
+        defaultTermInstanceId="term-1"
+        defaultCourseId={defaultCourseId ?? null}
+        mode="all-program"
+        onSuccess={vi.fn()}
+      />
+    );
+  }
+
+  it("includes General Education courses in the create picker", async () => {
+    render(<Wrapper />);
+
+    clickSelectByPlaceholder("Select a course...");
+
+    expect(await screen.findByRole("option", { name: /cs101 — intro/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /ge101 — general education/i })).toBeInTheDocument();
+  });
+
+  it("locks program for Program-specific courses in all-program mode", async () => {
+    render(<Wrapper defaultCourseId="course-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    const programTrigger = screen.getByLabelText("Program");
+    expect(programTrigger).toBeDisabled();
+    expect(programTrigger).toHaveTextContent(/bscs — bs computer science/i);
+  });
+
+  it("requires choosing a target program for General Education courses", async () => {
+    render(<Wrapper defaultCourseId="course-3" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    const programTrigger = screen.getByLabelText("Program");
+    expect(programTrigger).not.toBeDisabled();
+    expect(programTrigger).not.toHaveTextContent(/bscs/i);
+
+    await openAndSelect(/program/i, "BSED — BS Education");
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(await screen.findByText(/cross-program assignment/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /confirm assignment/i }));
+
+    await waitFor(() => {
+      expect(createCourseAssignmentAction).toHaveBeenCalledWith({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "course-3",
+        programId: "prog-2",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
     });
   });
 });

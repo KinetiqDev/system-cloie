@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { YearLevel, StudentSection } from "@prisma/client";
+import { CourseScope, YearLevel, StudentSection } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,8 @@ export interface AssignmentFiltersState {
   programId: string | null;
   yearLevel: YearLevel | null;
   section: StudentSection | null;
+  isActive: boolean | null;
+  courseScope: CourseScope | null;
   searchQuery: string;
 }
 
@@ -44,6 +45,8 @@ export function AssignmentFilters({
     filters.programId ||
     filters.yearLevel ||
     filters.section ||
+    filters.isActive !== null ||
+    filters.courseScope ||
     filters.searchQuery;
 
   const clearFilters = () => {
@@ -54,8 +57,22 @@ export function AssignmentFilters({
       programId: null,
       yearLevel: null,
       section: null,
+      isActive: null,
+      courseScope: null,
       searchQuery: "",
     });
+  };
+
+  const getStatusLabel = (value: boolean | null) => {
+    if (value === true) return "Active";
+    if (value === false) return "Inactive";
+    return "All Statuses";
+  };
+
+  const getScopeLabel = (value: CourseScope | null) => {
+    if (value === CourseScope.GENERAL_EDUCATION) return "General Education";
+    if (value === CourseScope.PROGRAM_SPECIFIC) return "Program-specific";
+    return "All Scopes";
   };
 
   const updateFilter = <K extends keyof AssignmentFiltersState>(
@@ -200,6 +217,47 @@ export function AssignmentFilters({
                 {option.label}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="min-w-[140px]">
+        <Select
+          value={filters.isActive === null ? "all" : String(filters.isActive)}
+          onValueChange={(value) =>
+            updateFilter("isActive", value === "all" ? null : value === "true")
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="All Statuses">
+              {getStatusLabel(filters.isActive)}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="true">Active</SelectItem>
+            <SelectItem value="false">Inactive</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="min-w-[170px]">
+        <Select
+          value={filters.courseScope ?? "all"}
+          onValueChange={(value) =>
+            updateFilter(
+              "courseScope",
+              value === "all" ? null : (value as CourseScope)
+            )
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="All Scopes">{getScopeLabel(filters.courseScope)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Scopes</SelectItem>
+            <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
+            <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-specific</SelectItem>
           </SelectContent>
         </Select>
       </div>

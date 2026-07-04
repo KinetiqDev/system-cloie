@@ -7,7 +7,7 @@ import { Plus } from "lucide-react";
 import { CourseAssignmentsTable } from "@/features/course-assignments/components/course-assignments-table";
 import { AssignmentFilters } from "@/features/course-assignments/components/shared/assignment-filters";
 import { CourseAssignmentFormDialog } from "@/features/course-assignments/components/course-assignment-form-dialog";
-import { listCourseAssignmentsForProgramHeadAction } from "@/lib/actions/course-assignment-actions";
+import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
 import type { AssignmentFiltersState } from "@/features/course-assignments/components/shared/assignment-filters";
 import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
@@ -26,6 +26,8 @@ const DEFAULT_FILTERS: AssignmentFiltersState = {
   programId: null,
   yearLevel: null,
   section: null,
+  isActive: null,
+  courseScope: null,
   searchQuery: "",
 };
 
@@ -52,7 +54,7 @@ export function CourseAssignmentsClientPage({
 
     async function fetchAssignments() {
       setLoading(true);
-      const result = await listCourseAssignmentsForProgramHeadAction(
+      const result = await listCourseAssignmentsAction(
         {
           ...(filters.termInstanceId && { termInstanceId: filters.termInstanceId }),
           ...(filters.courseId && { courseId: filters.courseId }),
@@ -60,6 +62,8 @@ export function CourseAssignmentsClientPage({
           ...(filters.programId && { programId: filters.programId }),
           ...(filters.yearLevel && { yearLevel: filters.yearLevel as YearLevel }),
           ...(filters.section && { section: filters.section as StudentSection }),
+          ...(filters.isActive !== null && { isActive: filters.isActive }),
+          ...(filters.courseScope && { courseScope: filters.courseScope }),
         },
         { page }
       );
@@ -116,6 +120,8 @@ export function CourseAssignmentsClientPage({
         total={total}
         page={page}
         loading={loading}
+        availableCourses={availableCourses}
+        availablePrograms={availablePrograms}
         onPageChange={setPage}
         onAssignmentUpdated={refreshAssignments}
         onAssignFaculty={() => setCreateOpen(true)}

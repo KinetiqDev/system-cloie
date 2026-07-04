@@ -14,10 +14,11 @@ import type {
 } from "../types";
 
 /**
- * List course assignments for Program Head view.
+ * List course assignments with role-aware scoping.
+ * Program Heads are limited to their assigned programs; Secretary/Dean see all programs.
  * Returns hydrated rows with faculty info, course info, and "last term taught" hint.
  */
-export async function listCourseAssignmentsForProgramHead(
+export async function listCourseAssignments(
   filter: ListCourseAssignmentsFilter,
   options?: ListOptions
 ): Promise<CourseAssignmentResult<ListCourseAssignmentsResult>> {
@@ -33,7 +34,12 @@ export async function listCourseAssignmentsForProgramHead(
 
   // Resolve the PH's assigned program IDs for row-level scoping
   let phProgramIds: string[] | undefined;
-  if (authSession && authSession.roles.includes(ROLES.PROGRAM_HEAD)) {
+  if (
+    authSession &&
+    authSession.roles.includes(ROLES.PROGRAM_HEAD) &&
+    !authSession.roles.includes(ROLES.SECRETARY) &&
+    !authSession.roles.includes(ROLES.DEAN)
+  ) {
     const phAssignments = await prisma.programHeadAssignment.findMany({
       where: { program_head_id: authSession.userId, is_active: true },
       select: { program_id: true },
@@ -53,7 +59,7 @@ export async function listCourseAssignmentsForProgramHead(
       programIdCondition = { in: phProgramIds };
     }
   } else if (filter.programId) {
-    // Admin/Dean: allow free filtering
+    // All-program managers can filter freely across programs.
     programIdCondition = filter.programId;
   }
 
@@ -65,6 +71,9 @@ export async function listCourseAssignmentsForProgramHead(
     ...(filter.yearLevel && { year_level: filter.yearLevel }),
     ...(filter.section && { section: filter.section }),
     ...(filter.isActive !== undefined && { is_active: filter.isActive }),
+    ...(filter.courseScope && {
+      course: { course_scope: filter.courseScope },
+    }),
   };
 
   try {
@@ -176,7 +185,7 @@ export async function listCourseAssignmentsForProgramHead(
         pageSize,
       },
     };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to list course assignments." };
   }
 }

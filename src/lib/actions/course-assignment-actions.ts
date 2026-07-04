@@ -17,7 +17,7 @@ import {
   deleteCourseAssignment,
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
-import { listCourseAssignmentsForProgramHead } from "@/features/course-assignments/services/list-course-assignments-for-program-head";
+import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import { listCourseAssignmentsForFaculty } from "@/features/course-assignments/services/list-course-assignments-for-faculty";
 import { searchFacultyPool } from "@/features/course-assignments/services/search-faculty-pool";
 import type {
@@ -30,6 +30,12 @@ import type {
   ListCourseAssignmentsFilter,
   ListOptions,
 } from "@/features/course-assignments/types";
+
+function revalidateCourseAssignmentRoutes() {
+  revalidatePath("/program-head/course-assignments");
+  revalidatePath("/secretary/course-assignments");
+  revalidatePath("/dean/course-assignments");
+}
 
 /**
  * Create a new course assignment.
@@ -44,7 +50,7 @@ export async function createCourseAssignmentAction(input: CreateCourseAssignment
   const result = await createCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -63,7 +69,7 @@ export async function updateCourseAssignmentAction(input: UpdateCourseAssignment
   const result = await updateCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -82,7 +88,7 @@ export async function deactivateCourseAssignmentAction(input: DeactivateCourseAs
   const result = await deactivateCourseAssignment(parsed.data.assignmentId);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -101,7 +107,7 @@ export async function activateCourseAssignmentAction(input: ActivateCourseAssign
   const result = await activateCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -120,7 +126,7 @@ export async function deleteCourseAssignmentAction(input: DeleteCourseAssignment
   const result = await deleteCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
@@ -139,20 +145,30 @@ export async function bulkCreateCourseAssignmentsAction(input: BulkCreateCourseA
   const result = await bulkCreateCourseAssignments(parsed.data.assignments);
 
   if (result.success) {
-    revalidatePath("/program-head/course-assignments");
+    revalidateCourseAssignmentRoutes();
   }
 
   return result;
 }
 
 /**
- * List course assignments for Program Head.
+ * List course assignments for the current role (Program Head scoped, Secretary/Dean unscoped).
+ */
+export async function listCourseAssignmentsAction(
+  filter: ListCourseAssignmentsFilter,
+  options?: ListOptions
+) {
+  return listCourseAssignments(filter, options);
+}
+
+/**
+ * @deprecated Use listCourseAssignmentsAction instead. Kept for callers that haven't migrated.
  */
 export async function listCourseAssignmentsForProgramHeadAction(
   filter: ListCourseAssignmentsFilter,
   options?: ListOptions
 ) {
-  return listCourseAssignmentsForProgramHead(filter, options);
+  return listCourseAssignmentsAction(filter, options);
 }
 
 /**

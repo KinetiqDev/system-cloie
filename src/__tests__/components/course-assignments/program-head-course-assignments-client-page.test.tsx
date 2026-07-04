@@ -2,17 +2,17 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { YearLevel, CourseScope } from "@prisma/client";
 
-import { CourseAssignmentsClientPage } from "@/app/(app)/program-head/course-assignments/client-page";
+import { CourseAssignmentsClientPage as ProgramHeadCourseAssignmentsClientPage } from "@/app/(app)/program-head/course-assignments/client-page";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
-  listCourseAssignmentsForProgramHeadAction: vi.fn(),
+  listCourseAssignmentsAction: vi.fn(),
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
 }));
 
-import { listCourseAssignmentsForProgramHeadAction } from "@/lib/actions/course-assignment-actions";
+import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
 
 const mockPrograms = [
   { id: "program-1", code: "BSCS", name: "BS Computer Science" },
@@ -63,10 +63,10 @@ function clickSelectByPlaceholder(placeholder: string) {
   fireEvent.click(trigger);
 }
 
-describe("CourseAssignmentsClientPage", () => {
+describe("ProgramHeadCourseAssignmentsClientPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(listCourseAssignmentsForProgramHeadAction).mockResolvedValue({
+    vi.mocked(listCourseAssignmentsAction).mockResolvedValue({
       success: true,
       data: {
         items: [],
@@ -79,7 +79,7 @@ describe("CourseAssignmentsClientPage", () => {
 
   it("pre-fills the year level from the selected course's default", async () => {
     render(
-      <CourseAssignmentsClientPage
+      <ProgramHeadCourseAssignmentsClientPage
         availableCourses={mockCourses}
         availablePrograms={mockPrograms}
         availableFaculty={mockFaculty}
@@ -109,7 +109,7 @@ describe("CourseAssignmentsClientPage", () => {
 
   it("does not render or launch a merged-class helper", async () => {
     render(
-      <CourseAssignmentsClientPage
+      <ProgramHeadCourseAssignmentsClientPage
         availableCourses={mockCourses}
         availablePrograms={mockPrograms}
         availableFaculty={mockFaculty}

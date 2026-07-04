@@ -9,7 +9,6 @@ import {
   deactivateCourseAssignmentAction,
   deleteCourseAssignmentAction,
 } from "@/lib/actions/course-assignment-actions";
-import type { CourseAssignmentItem } from "@/features/course-assignments/types";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
   activateCourseAssignmentAction: vi.fn(),
@@ -239,7 +238,7 @@ describe("CourseAssignmentsTable", () => {
     expect(screen.queryByRole("button", { name: /create merged class/i })).not.toBeInTheDocument();
   });
 
-  it("renders General Education rows as read-only without management actions", () => {
+  it("renders General Education rows as read-only in program-head mode without management actions", () => {
     const geAssignment = createAssignment({
       id: "ge-1",
       courseCode: "GE101",
@@ -252,6 +251,60 @@ describe("CourseAssignmentsTable", () => {
     expect(screen.getByText("GE")).toBeInTheDocument();
     expect(screen.getByText(/managed by secretary\/dean/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/open actions for GE101/i)).not.toBeInTheDocument();
+  });
+
+  it("renders all-program empty-state copy", () => {
+    const onAssign = vi.fn();
+
+    renderTable({ assignments: [], total: 0, mode: "all-program", onAssignFaculty: onAssign });
+
+    expect(screen.getByTestId("empty-state")).toHaveTextContent(/assign faculty to a course across any program/i);
+  });
+
+  it("allows General Education row actions in all-program mode", () => {
+    const geAssignment = createAssignment({
+      id: "ge-1",
+      courseCode: "GE101",
+      courseTitle: "General Education",
+      courseScope: CourseScope.GENERAL_EDUCATION,
+    });
+
+    renderTable({ assignments: [geAssignment], mode: "all-program" });
+
+    expect(screen.getByText("GE")).toBeInTheDocument();
+    expect(screen.queryByText(/managed by secretary\/dean/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/open actions for GE101/i)).toBeInTheDocument();
+  });
+
+  it("shows the Edit action in all-program mode and opens the edit dialog", async () => {
+    const mockPrograms = [{ id: "program-1", code: "BSCS", name: "BS Computer Science" }];
+    const mockCourses = [
+      {
+        id: "course-1",
+        code: "CS101",
+        title: "Intro to Computing",
+        default_year_level: YearLevel.SECOND_YEAR,
+        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        program_id: "program-1",
+      },
+    ];
+
+    const assignment = createAssignment();
+    renderTable({
+      assignments: [assignment],
+      mode: "all-program",
+      availableCourses: mockCourses,
+      availablePrograms: mockPrograms,
+    });
+    openRowActions();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: /edit/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: /edit class identity/i });
+    expect(dialog).toHaveTextContent(/CS101 — Intro to Computing/i);
+    expect(dialog).toHaveTextContent(/Test Faculty/i);
+    expect(dialog).toHaveTextContent(/BSCS/i);
+    expect(dialog).toHaveTextContent(/2nd Year/i);
   });
 
   it("does not reset the current page when an assignment is deleted", async () => {
