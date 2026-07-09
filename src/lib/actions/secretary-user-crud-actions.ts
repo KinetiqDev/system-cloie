@@ -29,9 +29,14 @@ export async function createUserBySecretaryAction(formData: FormData): Promise<A
     last_name: formData.get("last_name"),
     email: formData.get("email"),
     role: formData.get("role"),
-    program_ids: formData.getAll("program_ids").filter(Boolean),
     program_id: formData.get("program_id") || undefined,
     major_id: formData.get("major_id") || undefined,
+    student_id_number: formData.get("student_id_number") || undefined,
+    year_level: formData.get("year_level") || undefined,
+    section: formData.get("section") || undefined,
+    graduation_year: formData.get("graduation_year") || undefined,
+    company_name: formData.get("company_name") || undefined,
+    position: formData.get("position") || undefined,
   };
 
   const parsed = createUserBySecretarySchema.safeParse(raw);

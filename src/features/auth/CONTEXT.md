@@ -21,7 +21,7 @@ An administrator-controlled role change where the administrator must provide the
 _Avoid_: Self-service onboarding, incomplete self-service role claim
 
 **Secretary-created account**:
-A CLOIE account created by a Secretary as either the required path for pre-provisioned roles or an override path for self-service roles.
+A CLOIE account created by a Secretary as either the required path for pre-provisioned roles or an override path for self-service roles, with the selected role's required institution-managed information completed at creation time.
 _Avoid_: Seeded user, invited user when no invitation is involved
 
 **Bootstrap secretary**:
@@ -33,7 +33,7 @@ A CLOIE role for people participating from inside Assumption College of Davao: S
 _Avoid_: Staff role, ACD role when including Students
 
 **ACD institutional email**:
-An email address on exactly `acd.edu.ph` or `acdeducation.com`, used to establish eligibility for internal roles.
+An email address on exactly `acd.edu.ph` or `acdeducation.com`, used to establish eligibility for internal roles in both public-entry and Secretary-created account flows.
 _Avoid_: Any ACD subdomain, any school-looking email
 
 **External role**:
@@ -72,6 +72,10 @@ _Avoid_: Self-service role switch, role upgrade, role stacking
 The role-specific information that must exist before a CLOIE account can actively use a selected account role.
 _Avoid_: Optional profile data, historical record
 
+**Program Head assignment**:
+The managed program a Program Head is responsible for in CLOIE; a Secretary-created Program Head account must start with exactly one active Program Head assignment.
+_Avoid_: Faculty program affiliation, teaching assignment
+
 **Graduate transition**:
 An administrator-controlled role change that moves a former Student account into Alumni participation.
 _Avoid_: Separate alumni account, self-service graduation
@@ -85,7 +89,7 @@ A sign-in attempt where the selected portal role differs from the existing CLOIE
 _Avoid_: Role switch, primary-role fallback
 
 **Faculty program affiliation**:
-The academic program a Faculty Member is associated with for CLOIE participation.
+The academic program a Faculty Member is associated with for CLOIE participation; a Secretary-created Faculty account must start with one primary faculty program affiliation, while additional affiliations may be managed after account creation.
 _Avoid_: Faculty course assignment, teaching load when referring only to onboarding identity
 
 **Teaching capability**:
@@ -124,6 +128,14 @@ _Avoid_: Faculty pending account, faculty pre-provisioned account
 A Student-provided academic enrollment claim used by CLOIE to place the student in an active term, program, year level, and section.
 _Avoid_: Registrar-verified enrollment, official enrollment record
 
+**Secretary-recorded enrollment**:
+A Secretary-provided academic enrollment record for a Student account in the active academic term, including program, year level, and section; a Secretary-created Student account should receive this record at creation time when an active term exists.
+_Avoid_: Self-declared enrollment, optional profile note
+
+**Student academic profile**:
+The static academic identity for a Student account, including student ID number, academic program, and applicable major when the selected program has majors in the catalog.
+_Avoid_: Current enrollment, year level record, section record
+
 **Deferred enrollment**:
 A Student state where the student profile has been created but active-term enrollment could not yet be recorded because no active academic term is available.
 _Avoid_: Failed student onboarding, completed enrollment, blocked account
@@ -145,11 +157,11 @@ A non-dashboard page that explains why a Google-authenticated person cannot cont
 _Avoid_: Login error page, onboarding page
 
 **External verification**:
-The institutional review state for an Alumni or Industry Partner account after self-service onboarding.
+The institutional review state for an Alumni or Industry Partner account after self-service onboarding; Secretary-created external accounts are considered institution-verified at creation time.
 _Avoid_: Profile completion, onboarding status
 
 **Alumni profile**:
-The self-declared graduate identity for an Alumni account, including the academic program, applicable major, and graduation year the person claims.
+The graduate identity for an Alumni account, including the academic program, applicable major when the selected program has majors in the catalog, and graduation year the person claims or the institution records.
 _Avoid_: Student profile, alumni proof record
 
 **Industry Partner profile**:
