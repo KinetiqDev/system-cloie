@@ -35,9 +35,18 @@ vi.mock("@/components/ui/select", () => {
     );
   }
 
-  function SelectTrigger({ children }: { children: React.ReactNode }) {
+  function SelectTrigger({
+    children,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     return (
-      <button type="button" role="combobox" aria-expanded="false" aria-controls="role-listbox">
+      <button
+        type="button"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="role-listbox"
+        {...props}
+      >
         {children}
       </button>
     );

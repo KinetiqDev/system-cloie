@@ -1,13 +1,13 @@
 import { EnrollmentSource, SystemRole, VerificationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { isInstitutionalEmail } from "@/lib/utils/email-domain";
-import type { CreateUserBySecretaryInput } from "../schemas/create-user";
+import {
+  INSTITUTIONAL_EMAIL_MESSAGE,
+  type CreateUserBySecretaryInput,
+} from "../schemas/create-user";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
-
-const INSTITUTIONAL_EMAIL_ERROR =
-  "An ACD institutional email (@acd.edu.ph or @acdeducation.com) is required for this role.";
 
 /**
  * Roles that require an ACD institutional email when created by a Secretary.
@@ -30,6 +30,48 @@ const PROGRAM_REQUIRED_ROLES: SystemRole[] = [
   SystemRole.ALUMNI,
 ];
 
+type ProgramMajorValidationResult =
+  | { success: true; activeMajorId: string | null }
+  | { success: false; error: string };
+
+async function validateProgramAndMajor(
+  programId: string,
+  majorId: string | undefined,
+  options: { requireMajorIfAvailable: boolean }
+): Promise<ProgramMajorValidationResult> {
+  const programWithMajors = await prisma.program.findUnique({
+    where: { id: programId },
+    include: {
+      majors: {
+        where: { is_active: true },
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!programWithMajors) {
+    return { success: false, error: "The selected program was not found." };
+  }
+
+  const programHasActiveMajors = programWithMajors.majors.length > 0;
+  if (options.requireMajorIfAvailable && programHasActiveMajors && !majorId) {
+    return { success: false, error: "Select a major for this program." };
+  }
+
+  if (majorId) {
+    const majorBelongsToProgram = programWithMajors.majors.some((major) => major.id === majorId);
+    if (!majorBelongsToProgram) {
+      return {
+        success: false,
+        error: "The selected major does not belong to the selected program.",
+      };
+    }
+    return { success: true, activeMajorId: majorId };
+  }
+
+  return { success: true, activeMajorId: null };
+}
+
 export async function createUserBySecretary(
   input: CreateUserBySecretaryInput
 ): Promise<ServiceResult<{ id: string }>> {
@@ -50,12 +92,21 @@ export async function createUserBySecretary(
 
   // 1. Enforce institutional email for internal roles
   if (INSTITUTIONAL_EMAIL_ROLES.includes(role) && !isInstitutionalEmail(email)) {
-    return { success: false, error: INSTITUTIONAL_EMAIL_ERROR };
+    return { success: false, error: INSTITUTIONAL_EMAIL_MESSAGE };
   }
 
   // 2. Enforce required program for Program Head, Faculty, Student, and Alumni
   if (PROGRAM_REQUIRED_ROLES.includes(role) && !program_id) {
     return { success: false, error: "Select an affiliated program." };
+  }
+
+  if ((role === SystemRole.PROGRAM_HEAD || role === SystemRole.FACULTY) && program_id) {
+    const programResult = await validateProgramAndMajor(program_id, undefined, {
+      requireMajorIfAvailable: false,
+    });
+    if (!programResult.success) {
+      return { success: false, error: programResult.error };
+    }
   }
 
   // 3. Validate Student-specific academic context and conditional major requirement
@@ -68,32 +119,13 @@ export async function createUserBySecretary(
       };
     }
 
-    const programWithMajors = await prisma.program.findUnique({
-      where: { id: program_id },
-      include: {
-        majors: {
-          where: { is_active: true },
-          select: { id: true },
-        },
-      },
+    const majorResult = await validateProgramAndMajor(program_id!, major_id, {
+      requireMajorIfAvailable: true,
     });
-
-    if (!programWithMajors) {
-      return { success: false, error: "The selected program was not found." };
+    if (!majorResult.success) {
+      return { success: false, error: majorResult.error };
     }
-
-    const programHasActiveMajors = programWithMajors.majors.length > 0;
-    if (programHasActiveMajors && !major_id) {
-      return { success: false, error: "Select a major for this program." };
-    }
-
-    if (major_id) {
-      const majorBelongsToProgram = programWithMajors.majors.some((m) => m.id === major_id);
-      if (!majorBelongsToProgram) {
-        return { success: false, error: "The selected major does not belong to the selected program." };
-      }
-      activeMajorId = major_id;
-    }
+    activeMajorId = majorResult.activeMajorId;
   }
 
   if (role === SystemRole.ALUMNI) {
@@ -104,32 +136,13 @@ export async function createUserBySecretary(
       };
     }
 
-    const programWithMajors = await prisma.program.findUnique({
-      where: { id: program_id },
-      include: {
-        majors: {
-          where: { is_active: true },
-          select: { id: true },
-        },
-      },
+    const majorResult = await validateProgramAndMajor(program_id, major_id, {
+      requireMajorIfAvailable: true,
     });
-
-    if (!programWithMajors) {
-      return { success: false, error: "The selected program was not found." };
+    if (!majorResult.success) {
+      return { success: false, error: majorResult.error };
     }
-
-    const programHasActiveMajors = programWithMajors.majors.length > 0;
-    if (programHasActiveMajors && !major_id) {
-      return { success: false, error: "Select a major for this program." };
-    }
-
-    if (major_id) {
-      const majorBelongsToProgram = programWithMajors.majors.some((m) => m.id === major_id);
-      if (!majorBelongsToProgram) {
-        return { success: false, error: "The selected major does not belong to the selected program." };
-      }
-      activeMajorId = major_id;
-    }
+    activeMajorId = majorResult.activeMajorId;
   }
 
   // 4. Validate Industry Partner-specific required fields

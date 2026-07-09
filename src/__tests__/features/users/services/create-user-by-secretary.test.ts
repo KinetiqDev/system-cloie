@@ -609,12 +609,16 @@ describe("createUserBySecretary service", () => {
       email: "ph@acd.edu.ph",
       role: SystemRole.PROGRAM_HEAD,
       program_id: "program-ph",
-        major_id: undefined,
+      major_id: undefined,
       student_id_number: undefined,
       year_level: undefined,
       section: undefined,
     } as const;
 
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "program-ph",
+      majors: [],
+    });
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-ph" });
 
@@ -646,12 +650,16 @@ describe("createUserBySecretary service", () => {
       email: "faculty@acdeducation.com",
       role: SystemRole.FACULTY,
       program_id: "program-faculty",
-        major_id: undefined,
+      major_id: undefined,
       student_id_number: undefined,
       year_level: undefined,
       section: undefined,
     } as const;
 
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "program-faculty",
+      majors: [],
+    });
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-faculty" });
 
@@ -691,6 +699,42 @@ describe("createUserBySecretary service", () => {
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
+  it("rejects a Program Head account when the selected program was not found", async () => {
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const result = await createUserBySecretary({
+      ...validSecretaryInput,
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_id: programId,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/selected program was not found/i);
+    }
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Faculty account when the selected program was not found", async () => {
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const result = await createUserBySecretary({
+      ...validSecretaryInput,
+      email: "faculty@acdeducation.com",
+      role: SystemRole.FACULTY,
+      program_id: programId,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/selected program was not found/i);
+    }
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("rejects a Faculty account without a program", async () => {
     const result = await createUserBySecretary({
       ...validSecretaryInput,
@@ -713,7 +757,7 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.STUDENT,
       program_id: programId,
       major_id: majorId,
-        student_id_number: "2024-0001",
+      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     } as const;
@@ -769,7 +813,7 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.STUDENT,
       program_id: programId,
       major_id: undefined,
-        student_id_number: "2024-0001",
+      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     } as const;
@@ -834,6 +878,27 @@ describe("createUserBySecretary service", () => {
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
+  it("rejects a Student account when the selected program was not found", async () => {
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const result = await createUserBySecretary({
+      ...validSecretaryInput,
+      email: "student@acd.edu.ph",
+      role: SystemRole.STUDENT,
+      program_id: programId,
+      student_id_number: "2024-0001",
+      year_level: YearLevel.FIRST_YEAR,
+      section: StudentSection.MORNING,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/selected program was not found/i);
+    }
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("rejects a Student account when the selected program has active majors but no major is selected", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
@@ -890,7 +955,7 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.ALUMNI,
       program_id: programId,
       major_id: undefined,
-        student_id_number: undefined,
+      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
       graduation_year: 2022,
@@ -972,7 +1037,7 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.ALUMNI,
       program_id: programId,
       major_id: undefined,
-        student_id_number: undefined,
+      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
       graduation_year: 2023,
@@ -1021,6 +1086,25 @@ describe("createUserBySecretary service", () => {
       expect(result.error).toMatch(/graduation year/i);
     }
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("rejects an Alumni account when the selected program was not found", async () => {
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const result = await createUserBySecretary({
+      ...validSecretaryInput,
+      email: "ally.alumni@gmail.com",
+      role: SystemRole.ALUMNI,
+      program_id: programId,
+      graduation_year: 2022,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/selected program was not found/i);
+    }
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("rejects an Alumni account when the selected program has active majors but no major is selected", async () => {

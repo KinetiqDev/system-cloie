@@ -102,7 +102,7 @@ export const createUserBySecretarySchema = z
       if (data.role !== SystemRole.STUDENT) {
         return true;
       }
-      return !!data.student_id_number && data.student_id_number.trim().length > 0;
+      return !!data.student_id_number;
     },
     {
       message: "Student ID number is required.",
@@ -153,7 +153,7 @@ export const createUserBySecretarySchema = z
       if (data.role !== SystemRole.INDUSTRY_PARTNER) {
         return true;
       }
-      return !!data.company_name && data.company_name.trim().length >= 2;
+      return !!data.company_name && data.company_name.length >= 2;
     },
     {
       message: "Company or organization name is required.",
