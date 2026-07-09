@@ -29,6 +29,7 @@ export async function createUserBySecretaryAction(formData: FormData): Promise<A
     last_name: formData.get("last_name"),
     email: formData.get("email"),
     role: formData.get("role"),
+    program_id: formData.get("program_id") || undefined,
   };
  
   const parsed = createUserBySecretarySchema.safeParse(raw);

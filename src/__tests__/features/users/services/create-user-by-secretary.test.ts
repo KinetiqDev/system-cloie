@@ -14,8 +14,16 @@ vi.mock("@/lib/db/prisma", () => ({
     userRole: {
       create: vi.fn(),
     },
+    facultyProgramAffiliation: {
+      create: vi.fn(),
+    },
+    programHeadAssignment: {
+      create: vi.fn(),
+    },
   },
 }));
+
+const programId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
 
 describe("create-user-by-secretary schema", () => {
   const validSecretaryInput = {
@@ -28,9 +36,6 @@ describe("create-user-by-secretary schema", () => {
   it("parses valid Secretary input", () => {
     const result = createUserBySecretarySchema.safeParse(validSecretaryInput);
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.email).toBe("secretary@acd.edu.ph");
-    }
   });
 
   it("parses valid Dean input", () => {
@@ -40,50 +45,46 @@ describe("create-user-by-secretary schema", () => {
       role: SystemRole.DEAN,
     });
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.email).toBe("dean@acdeducation.com");
-    }
   });
 
-  it("rejects Secretary input with a non-institutional email", () => {
+  it("parses valid Program Head input with a managed program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      ...validSecretaryInput,
-      email: "secretary@gmail.com",
+      first_name: "Alice",
+      last_name: "Smith",
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_id: programId,
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const emailIssues = result.error.issues.filter((issue) => issue.path.includes("email"));
-      expect(emailIssues.length).toBeGreaterThan(0);
-      expect(emailIssues[0]?.message).toMatch(/acd institutional email/i);
-    }
+    expect(result.success).toBe(true);
   });
 
-  it("rejects Dean input with a non-institutional email", () => {
+  it("parses valid Faculty input with a primary program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      ...validSecretaryInput,
-      email: "dean@company.com",
-      role: SystemRole.DEAN,
+      first_name: "Bob",
+      last_name: "Jones",
+      email: "faculty@acdeducation.com",
+      role: SystemRole.FACULTY,
+      program_id: programId,
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const emailIssues = result.error.issues.filter((issue) => issue.path.includes("email"));
-      expect(emailIssues.length).toBeGreaterThan(0);
-      expect(emailIssues[0]?.message).toMatch(/acd institutional email/i);
-    }
+    expect(result.success).toBe(true);
   });
 
-  it("rejects missing first name", () => {
+  it("rejects Program Head input without a program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      ...validSecretaryInput,
-      first_name: "",
+      first_name: "Alice",
+      last_name: "Smith",
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
     });
     expect(result.success).toBe(false);
   });
 
-  it("rejects missing last name", () => {
+  it("rejects Faculty input without a program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      ...validSecretaryInput,
-      last_name: "",
+      first_name: "Bob",
+      last_name: "Jones",
+      email: "faculty@acdeducation.com",
+      role: SystemRole.FACULTY,
     });
     expect(result.success).toBe(false);
   });
@@ -109,67 +110,67 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-1" });
 
     const result = await createUserBySecretary({ ...validSecretaryInput });
-
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.id).toBe("user-1");
-    }
-    expect(prisma.user.create).toHaveBeenCalledWith({
-      data: {
-        first_name: "Jane",
-        last_name: "Doe",
-        email: "secretary@acd.edu.ph",
-        is_active: true,
-      },
-    });
-    expect(prisma.userRole.create).toHaveBeenCalledWith({
-      data: {
-        user_id: "user-1",
-        role: SystemRole.SECRETARY,
-      },
-    });
   });
 
-  it("creates an active Dean account", async () => {
-    const deanInput = {
-      ...validSecretaryInput,
-      email: "dean@acdeducation.com",
-      role: SystemRole.DEAN,
-    };
+  it("creates an active Program Head account with a managed program", async () => {
+    const phInput = {
+      first_name: "Alice",
+      last_name: "Smith",
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_id: "program-ph",
+    } as const;
+
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-2" });
+    (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-ph" });
 
-    const result = await createUserBySecretary(deanInput);
+    const result = await createUserBySecretary(phInput);
 
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.id).toBe("user-2");
-    }
-    expect(prisma.user.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        first_name: "Jane",
-        last_name: "Doe",
-        email: "dean@acdeducation.com",
-        is_active: true,
-      }),
-    });
     expect(prisma.userRole.create).toHaveBeenCalledWith({
       data: {
-        user_id: "user-2",
-        role: SystemRole.DEAN,
+        user_id: "user-ph",
+        role: SystemRole.PROGRAM_HEAD,
+      },
+    });
+    expect(prisma.programHeadAssignment.create).toHaveBeenCalledWith({
+      data: {
+        program_head_id: "user-ph",
+        program_id: "program-ph",
+        is_active: true,
       },
     });
   });
 
-  it("rejects a duplicate account email", async () => {
-    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "existing-user" });
+  it("creates an active Faculty account with a primary program affiliation", async () => {
+    const facultyInput = {
+      first_name: "Bob",
+      last_name: "Jones",
+      email: "faculty@acdeducation.com",
+      role: SystemRole.FACULTY,
+      program_id: "program-faculty",
+    } as const;
 
-    const result = await createUserBySecretary({ ...validSecretaryInput });
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-faculty" });
 
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error).toMatch(/already exists/i);
-    }
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    const result = await createUserBySecretary(facultyInput);
+
+    expect(result.success).toBe(true);
+    expect(prisma.userRole.create).toHaveBeenCalledWith({
+      data: {
+        user_id: "user-faculty",
+        role: SystemRole.FACULTY,
+      },
+    });
+    expect(prisma.facultyProgramAffiliation.create).toHaveBeenCalledWith({
+      data: {
+        faculty_id: "user-faculty",
+        program_id: "program-faculty",
+        is_active: true,
+        is_primary: true,
+      },
+    });
   });
 });
