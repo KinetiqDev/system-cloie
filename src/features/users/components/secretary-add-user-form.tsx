@@ -2,17 +2,33 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, Controller } from "react-hook-form";
+import {
+  useForm,
+  Controller,
+  type Control,
+  type Path,
+  type UseFormRegister,
+} from "react-hook-form";
 import { SystemRole } from "@prisma/client";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
-import { createUserBySecretarySchema, type CreateUserBySecretaryInput } from "../schemas/create-user";
+import {
+  createUserBySecretarySchema,
+  type CreateUserBySecretaryInput,
+} from "../schemas/create-user";
 
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -20,7 +36,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, UserPlus } from "lucide-react";
+import {
+  YEAR_LEVEL_OPTIONS,
+  STUDENT_SECTION_OPTIONS,
+} from "@/lib/constants/academic";
+import { AlertCircle, Loader2, UserPlus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -36,7 +57,7 @@ type AddUserFormProps = {
 
 const ROLE_LABELS: Record<SystemRole, string> = {
   [SystemRole.SECRETARY]: "Secretary",
-  [SystemRole.DEAN]: "Dean",
+  [SystemRole.DEAN]: "College Dean",
   [SystemRole.PROGRAM_HEAD]: "Program Head",
   [SystemRole.FACULTY]: "Faculty",
   [SystemRole.STUDENT]: "Student",
@@ -44,19 +65,198 @@ const ROLE_LABELS: Record<SystemRole, string> = {
   [SystemRole.INDUSTRY_PARTNER]: "Industry Partner",
 };
 
-const MULTI_SELECT_ROLES: SystemRole[] = [SystemRole.FACULTY, SystemRole.INDUSTRY_PARTNER];
-
 const SINGLE_SELECT_ROLES: SystemRole[] = [
   SystemRole.STUDENT,
   SystemRole.PROGRAM_HEAD,
+  SystemRole.FACULTY,
   SystemRole.ALUMNI,
+  SystemRole.INDUSTRY_PARTNER,
 ];
 
-function needsProgramField(role: SystemRole | undefined): "multi" | "single" | "none" {
+const INTERNAL_EMAIL_HELPER =
+  "Internal roles require an @acd.edu.ph or @acdeducation.com address.";
+
+function needsProgramField(role: SystemRole | undefined): "single" | "none" {
   if (!role) return "none";
-  if (MULTI_SELECT_ROLES.includes(role)) return "multi";
   if (SINGLE_SELECT_ROLES.includes(role)) return "single";
   return "none";
+}
+
+function isStudentRole(role: SystemRole | undefined): boolean {
+  return role === SystemRole.STUDENT;
+}
+
+function isAlumniRole(role: SystemRole | undefined): boolean {
+  return role === SystemRole.ALUMNI;
+}
+
+function isIndustryPartnerRole(role: SystemRole | undefined): boolean {
+  return role === SystemRole.INDUSTRY_PARTNER;
+}
+
+function getRoleDetailsSectionTitle(role: SystemRole | undefined): string | null {
+  if (!role) return null;
+  if (role === SystemRole.STUDENT) return "Student details";
+  if (role === SystemRole.ALUMNI) return "Alumni details";
+  if (role === SystemRole.INDUSTRY_PARTNER) return "Industry partner details";
+  if (role === SystemRole.PROGRAM_HEAD || role === SystemRole.FACULTY) {
+    return "Program assignment";
+  }
+  return null;
+}
+
+type SelectOption = { value: string; label: string };
+
+type FormControlProps = {
+  id: string;
+  label: string;
+  optional?: boolean;
+  helper?: string;
+  error?: string;
+  children: React.ReactNode;
+};
+
+function FormControl({ id, label, optional, helper, error, children }: FormControlProps) {
+  const helperId = helper ? `${id}-helper` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+
+  return (
+    <div className="flex flex-col gap-2" data-invalid={error ? "" : undefined}>
+      <Label htmlFor={id}>
+        {label}
+        {optional && (
+          <span className="ml-1 font-normal normal-case text-text-muted">(optional)</span>
+        )}
+      </Label>
+      {helper && (
+        <p id={helperId} className="text-text-muted text-xs">
+          {helper}
+        </p>
+      )}
+      {children}
+      {error && (
+        <p id={errorId} role="alert" className="text-danger flex items-center gap-1 text-xs">
+          <AlertCircle className="size-3" />
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type TextFieldProps = {
+  id: string;
+  label: string;
+  name: Path<CreateUserBySecretaryInput>;
+  register: UseFormRegister<CreateUserBySecretaryInput>;
+  error?: string;
+  helper?: string;
+  optional?: boolean;
+  placeholder?: string;
+  type?: React.HTMLInputTypeAttribute;
+  min?: number | string;
+  max?: number | string;
+};
+
+function TextField({
+  id,
+  label,
+  name,
+  register,
+  error,
+  helper,
+  optional,
+  placeholder,
+  type = "text",
+  min,
+  max,
+}: TextFieldProps) {
+  const describedByIds = [helper ? `${id}-helper` : null, error ? `${id}-error` : null]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <FormControl id={id} label={label} optional={optional} helper={helper} error={error}>
+      <Input
+        id={id}
+        type={type}
+        min={min}
+        max={max}
+        placeholder={placeholder}
+        aria-invalid={!!error}
+        aria-describedby={describedByIds || undefined}
+        {...register(name)}
+      />
+    </FormControl>
+  );
+}
+
+type SelectFieldProps = {
+  id: string;
+  label: string;
+  name: Path<CreateUserBySecretaryInput>;
+  control: Control<CreateUserBySecretaryInput>;
+  value?: string;
+  onChange?: (value: string) => void;
+  options: SelectOption[];
+  placeholder?: string;
+  helper?: string;
+  optional?: boolean;
+  error?: string;
+};
+
+function SelectField({
+  id,
+  label,
+  name,
+  control,
+  value,
+  onChange,
+  options,
+  placeholder,
+  helper,
+  optional,
+  error,
+}: SelectFieldProps) {
+  const selectedLabel = options.find((option) => option.value === value)?.label;
+  const describedByIds = [helper ? `${id}-helper` : null, error ? `${id}-error` : null]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <FormControl id={id} label={label} optional={optional} helper={helper} error={error}>
+      <Controller
+        name={name}
+        control={control}
+        render={({ field }) => (
+          <Select
+            value={value ?? ""}
+            onValueChange={(nextValue) => {
+              const selectedValue = nextValue ?? "";
+              field.onChange(selectedValue);
+              onChange?.(selectedValue);
+            }}
+          >
+            <SelectTrigger
+              id={id}
+              className={cn("w-full", error && "border-destructive")}
+              aria-invalid={!!error}
+              aria-describedby={describedByIds || undefined}
+            >
+              <SelectValue placeholder={placeholder}>{selectedLabel}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </FormControl>
+  );
 }
 
 export function AddUserForm({ programs, createAction }: AddUserFormProps) {
@@ -69,6 +269,8 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
     handleSubmit,
     watch,
     setValue,
+    clearErrors,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<CreateUserBySecretaryInput>({
     resolver: customZodResolver(createUserBySecretarySchema),
@@ -77,81 +279,131 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
       last_name: "",
       email: "",
       role: undefined as unknown as SystemRole,
-      program_ids: [],
       program_id: undefined,
       major_id: undefined,
+      student_id_number: "",
+      year_level: undefined,
+      section: undefined,
+      graduation_year: undefined,
+      company_name: "",
+      position: "",
     },
   });
 
   const selectedRole = watch("role");
   const selectedProgramId = watch("program_id");
-  const selectedProgramIds = watch("program_ids") ?? [];
   const programMode = needsProgramField(selectedRole);
+  const studentMode = isStudentRole(selectedRole);
+  const alumniMode = isAlumniRole(selectedRole);
+  const industryPartnerMode = isIndustryPartnerRole(selectedRole);
+  const detailsSectionTitle = getRoleDetailsSectionTitle(selectedRole);
+  const showDetailsSection = detailsSectionTitle !== null;
 
-  // For single-select: resolve majors of the selected program
-  // Program Head does NOT show major — one PH per program regardless of majors
-  const singleProgram = programs.find((p) => p.id === selectedProgramId);
+  const selectedProgram = programs.find((program) => program.id === selectedProgramId);
+  const hasMajors = !!selectedProgram && selectedProgram.majors.length > 0;
   const showMajor =
-    programMode === "single" &&
-    selectedRole !== SystemRole.PROGRAM_HEAD &&
-    singleProgram &&
-    singleProgram.majors.length > 0;
+    programMode === "single" && (studentMode || alumniMode) && hasMajors;
 
-  // Lookup helpers
-  const getProgramLabel = (id: string) => {
-    const p = programs.find((prog) => prog.id === id);
-    return p ? `${p.code} — ${p.name}` : "";
-  };
+  const programLabel = studentMode ? "Academic program" : "Affiliated program";
 
-  const getMajorLabel = (id: string) => {
-    const m = singleProgram?.majors.find((major) => major.id === id);
-    return m ? m.name : "";
-  };
+  const roleOptions = Object.values(SystemRole).map((role) => ({
+    value: role,
+    label: ROLE_LABELS[role],
+  }));
 
-  const getRoleLabel = (role: SystemRole) => ROLE_LABELS[role] ?? role;
+  const programOptions = programs.map((program) => ({
+    value: program.id,
+    label: `${program.code} — ${program.name}`,
+  }));
 
-  // When role changes, reset program-related fields
-  const handleRoleChange = (newRole: SystemRole) => {
+  const majorOptions =
+    selectedProgram?.majors.map((major) => ({
+      value: major.id,
+      label: major.name,
+    })) ?? [];
+
+  const yearLevelOptions = YEAR_LEVEL_OPTIONS.map((option) => ({
+    value: option.value,
+    label: option.label,
+  }));
+
+  const sectionOptions = STUDENT_SECTION_OPTIONS.map((option) => ({
+    value: option.value,
+    label: option.label,
+  }));
+
+  function handleRoleChange(newRole: SystemRole) {
+    setGlobalError(null);
+    clearErrors();
     setValue("role", newRole);
-    setValue("program_ids", []);
-    setValue("program_id", undefined);
-    setValue("major_id", undefined);
-  };
 
-  // Toggle a program in multi-select mode
-  const handleToggleProgram = (programId: string) => {
-    const current = selectedProgramIds;
-    const next = current.includes(programId)
-      ? current.filter((id) => id !== programId)
-      : [...current, programId];
-    setValue("program_ids", next);
-  };
+    const resetValues: Partial<CreateUserBySecretaryInput> = {
+      program_id: undefined,
+      major_id: undefined,
+      student_id_number: "",
+      year_level: undefined,
+      section: undefined,
+      graduation_year: undefined,
+      company_name: "",
+      position: "",
+    };
+
+    (
+      Object.keys(resetValues) as Array<keyof typeof resetValues>
+    ).forEach((fieldName) => {
+      setValue(fieldName as Path<CreateUserBySecretaryInput>, resetValues[fieldName] as never);
+    });
+  }
 
   const onSubmit = async (data: CreateUserBySecretaryInput) => {
     setGlobalError(null);
 
-    // Build FormData for the server action
-    const fd = new FormData();
-    fd.set("first_name", data.first_name);
-    fd.set("last_name", data.last_name);
-    fd.set("email", data.email);
-    fd.set("role", data.role);
-
-    if (programMode === "multi" && data.program_ids) {
-      for (const pid of data.program_ids) {
-        fd.append("program_ids", pid);
-      }
+    if (showMajor && !data.major_id) {
+      setError("major_id", {
+        type: "manual",
+        message: "Select a major for this program.",
+      });
+      return;
     }
 
+    const formData = new FormData();
+    formData.set("first_name", data.first_name);
+    formData.set("last_name", data.last_name);
+    formData.set("email", data.email);
+    formData.set("role", data.role);
+
     if (programMode === "single" && data.program_id) {
-      fd.set("program_id", data.program_id);
+      formData.set("program_id", data.program_id);
     }
 
     if (data.major_id) {
-      fd.set("major_id", data.major_id);
+      formData.set("major_id", data.major_id);
     }
 
-    const result = await createAction(fd);
+    if (studentMode) {
+      if (data.student_id_number) {
+        formData.set("student_id_number", data.student_id_number);
+      }
+      if (data.year_level) {
+        formData.set("year_level", data.year_level);
+      }
+      if (data.section) {
+        formData.set("section", data.section);
+      }
+    }
+
+    if (alumniMode && data.graduation_year != null) {
+      formData.set("graduation_year", String(data.graduation_year));
+    }
+
+    if (industryPartnerMode) {
+      formData.set("company_name", data.company_name ?? "");
+      if (data.position) {
+        formData.set("position", data.position);
+      }
+    }
+
+    const result = await createAction(formData);
 
     if (!result.success) {
       setGlobalError(result.error);
@@ -164,248 +416,200 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
   return (
     <Card className="border-border shadow-lg">
       <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-6 px-6 py-8 sm:px-8">
-          {/* Heading */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <UserPlus className="text-primary size-5" />
-              <h2 className="text-heading-lg text-text-primary font-bold">Add New User</h2>
-            </div>
-            <p className="text-body-sm text-text-secondary">
-              Create a new user account and assign their initial role.
-            </p>
-          </div>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="text-primary size-5" />
+            Add new user
+          </CardTitle>
+          <CardDescription>
+            Create a new user account and assign their initial role.
+          </CardDescription>
+        </CardHeader>
 
+        <CardContent className="flex flex-col gap-6 px-6 py-6 sm:px-8">
           {globalError && (
-            <Alert variant="destructive" className="border-danger/50 bg-danger-soft text-danger">
+            <Alert variant="destructive">
               <AlertCircle className="size-4" />
               <AlertDescription>{globalError}</AlertDescription>
             </Alert>
           )}
 
-          {/* Row 1: First Name | Last Name */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label
-                htmlFor="first_name"
-                className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
-              >
-                First Name
-              </Label>
-              <Input
-                id="first_name"
-                placeholder="Enter first name"
-                {...register("first_name")}
-                className={errors.first_name ? "border-danger focus-visible:ring-danger" : ""}
-              />
-              {errors.first_name && (
-                <p className="text-danger flex items-center gap-1 text-xs">
-                  <AlertCircle className="size-3" />
-                  {errors.first_name.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="last_name"
-                className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
-              >
-                Last Name
-              </Label>
-              <Input
-                id="last_name"
-                placeholder="Enter last name"
-                {...register("last_name")}
-                className={errors.last_name ? "border-danger focus-visible:ring-danger" : ""}
-              />
-              {errors.last_name && (
-                <p className="text-danger flex items-center gap-1 text-xs">
-                  <AlertCircle className="size-3" />
-                  {errors.last_name.message}
-                </p>
-              )}
-            </div>
+            <TextField
+              id="first_name"
+              label="First name"
+              name="first_name"
+              register={register}
+              error={errors.first_name?.message}
+              placeholder="Enter first name"
+            />
+            <TextField
+              id="last_name"
+              label="Last name"
+              name="last_name"
+              register={register}
+              error={errors.last_name?.message}
+              placeholder="Enter last name"
+            />
           </div>
 
-          {/* Row 2: Email | Role */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
-              >
-                Email Address
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="user@example.com"
-                {...register("email")}
-                className={errors.email ? "border-danger focus-visible:ring-danger" : ""}
-              />
-              {errors.email && (
-                <p className="text-danger flex items-center gap-1 text-xs">
-                  <AlertCircle className="size-3" />
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
-                Role
-              </Label>
-              <Controller
-                name="role"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    onValueChange={(v) => handleRoleChange(v as SystemRole)}
-                    value={field.value ?? ""}
-                  >
-                    <SelectTrigger className={`w-full ${errors.role ? "border-danger" : ""}`}>
-                      <SelectValue placeholder="Select a role">
-                        {field.value ? getRoleLabel(field.value) : null}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.values(SystemRole).map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {ROLE_LABELS[r]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.role && (
-                <p className="text-danger flex items-center gap-1 text-xs">
-                  <AlertCircle className="size-3" />
-                  {errors.role.message}
-                </p>
-              )}
-            </div>
+            <TextField
+              id="email"
+              label="Email address"
+              type="email"
+              name="email"
+              register={register}
+              error={errors.email?.message}
+              helper={INTERNAL_EMAIL_HELPER}
+              placeholder="user@example.com"
+            />
+            <SelectField
+              id="role"
+              label="Role"
+              name="role"
+              control={control}
+              value={selectedRole}
+              onChange={(value) => handleRoleChange(value as SystemRole)}
+              options={roleOptions}
+              placeholder="Select a role"
+              error={errors.role?.message}
+            />
           </div>
 
-          {/* Row 3 (conditional): Affiliated Program */}
-          {programMode === "multi" && (
-            <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
-                Affiliated Programs
-              </Label>
-              <div className="border-border max-h-52 space-y-1 overflow-y-auto rounded-lg border p-3">
-                {programs.map((program) => {
-                  const isChecked = selectedProgramIds.includes(program.id);
-                  return (
-                    <label
-                      key={program.id}
-                      className="hover:bg-surface-muted flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition-colors"
-                    >
-                      <Checkbox
-                        checked={isChecked}
-                        onCheckedChange={() => handleToggleProgram(program.id)}
-                      />
-                      <span className="text-body-sm text-text-primary">
-                        {program.code} — {program.name}
-                      </span>
-                    </label>
-                  );
-                })}
-                {programs.length === 0 && (
-                  <p className="text-body-sm text-text-muted">No active programs available.</p>
-                )}
-              </div>
-              {errors.program_ids && (
-                <p className="text-danger flex items-center gap-1 text-xs">
-                  <AlertCircle className="size-3" />
-                  {errors.program_ids.message}
-                </p>
-              )}
-            </div>
-          )}
+          {showDetailsSection && (
+            <>
+              <Separator />
+              <fieldset className="flex flex-col gap-4 min-w-0">
+                <legend className="float-none w-full text-label-sm font-semibold uppercase tracking-wider text-text-secondary">
+                  {detailsSectionTitle}
+                </legend>
 
-          {programMode === "single" && (
-            <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
-                Affiliated Program
-              </Label>
-              <Controller
-                name="program_id"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    onValueChange={(v) => {
-                      field.onChange(v);
-                      // Reset major when program changes
+                {programMode === "single" && (
+                  <SelectField
+                    id="program_id"
+                    label={programLabel}
+                    name="program_id"
+                    control={control}
+                    value={selectedProgramId}
+                    onChange={() => {
                       setValue("major_id", undefined);
+                      clearErrors("major_id");
                     }}
-                    value={field.value ?? ""}
-                  >
-                    <SelectTrigger className={`w-full ${errors.program_id ? "border-danger" : ""}`}>
-                      <SelectValue placeholder="Select a program">
-                        {field.value ? getProgramLabel(field.value) : null}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {programs.map((program) => (
-                        <SelectItem key={program.id} value={program.id}>
-                          {program.code} — {program.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={programOptions}
+                    placeholder="Select a program"
+                    optional={industryPartnerMode}
+                    error={errors.program_id?.message}
+                  />
                 )}
-              />
-              {errors.program_id && (
-                <p className="text-danger flex items-center gap-1 text-xs">
-                  <AlertCircle className="size-3" />
-                  {errors.program_id.message}
-                </p>
-              )}
-            </div>
-          )}
 
-          {/* Row 4 (conditional): Major */}
-          {showMajor && (
-            <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
-                Major
-              </Label>
-              <Controller
-                name="major_id"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                    <SelectTrigger className={`w-full ${errors.major_id ? "border-danger" : ""}`}>
-                      <SelectValue placeholder="Select a major">
-                        {field.value ? getMajorLabel(field.value) : null}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {singleProgram!.majors.map((major) => (
-                        <SelectItem key={major.id} value={major.id}>
-                          {major.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {showMajor && (
+                  <SelectField
+                    id="major_id"
+                    label="Major"
+                    name="major_id"
+                    control={control}
+                    value={watch("major_id")}
+                    options={majorOptions}
+                    placeholder="Select a major"
+                    helper="Required because the selected program offers majors."
+                    error={errors.major_id?.message}
+                  />
                 )}
-              />
-              {errors.major_id && (
-                <p className="text-danger flex items-center gap-1 text-xs">
-                  <AlertCircle className="size-3" />
-                  {errors.major_id.message}
-                </p>
-              )}
-            </div>
+
+                {studentMode && (
+                  <>
+                    <TextField
+                      id="student_id_number"
+                      label="Student ID number"
+                      name="student_id_number"
+                      register={register}
+                      error={errors.student_id_number?.message}
+                      placeholder="e.g. 2024-0001"
+                    />
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <SelectField
+                        id="year_level"
+                        label="Year level"
+                        name="year_level"
+                        control={control}
+                        value={watch("year_level")}
+                        options={yearLevelOptions}
+                        placeholder="Select a year level"
+                        error={errors.year_level?.message}
+                      />
+                      <SelectField
+                        id="section"
+                        label="Section"
+                        name="section"
+                        control={control}
+                        value={watch("section")}
+                        options={sectionOptions}
+                        placeholder="Select a section"
+                        error={errors.section?.message}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {alumniMode && (
+                  <TextField
+                    id="graduation_year"
+                    label="Graduation year"
+                    type="number"
+                    name="graduation_year"
+                    register={register}
+                    error={errors.graduation_year?.message}
+                    placeholder="e.g. 2023"
+                    min={1900}
+                    max={2100}
+                  />
+                )}
+
+                {industryPartnerMode && (
+                  <>
+                    <TextField
+                      id="company_name"
+                      label="Company / organization name"
+                      name="company_name"
+                      register={register}
+                      error={errors.company_name?.message}
+                      placeholder="e.g. Acme Corporation"
+                    />
+                    <TextField
+                      id="position"
+                      label="Position / title"
+                      name="position"
+                      register={register}
+                      error={errors.position?.message}
+                      optional
+                      placeholder="e.g. Hiring Manager"
+                    />
+                  </>
+                )}
+              </fieldset>
+            </>
           )}
         </CardContent>
 
-        <CardFooter className="flex justify-end px-6 pt-2 pb-8 sm:px-8">
-          <Button type="submit" className="gap-2 font-semibold" disabled={isSubmitting}>
-            {isSubmitting ? "Creating…" : "Create User"}
-            {!isSubmitting && <UserPlus className="size-4" />}
+        <CardFooter className="flex-col-reverse gap-3 px-6 pt-2 pb-8 sm:flex-row sm:justify-end sm:px-8">
+          <Button
+            type="submit"
+            className="w-full gap-2 font-semibold sm:w-auto"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="animate-spin" data-icon="inline-start" />
+                Creating user…
+              </>
+            ) : (
+              <>
+                Create user
+                <UserPlus data-icon="inline-end" />
+              </>
+            )}
           </Button>
         </CardFooter>
       </form>
