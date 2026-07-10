@@ -72,6 +72,17 @@ describe("editUserBySecretary service", () => {
       alumniProfile: {
         upsert: vi.fn(),
       },
+      studentAcademicProfile: {
+        upsert: vi.fn(),
+      },
+      studentEnrollment: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
+        create: vi.fn(),
+      },
+      academicTermInstance: {
+        findFirst: vi.fn().mockResolvedValue({ id: "active-term" }),
+      },
       industryPartnerProfile: {
         upsert: vi.fn(),
       },
@@ -353,6 +364,70 @@ describe("editUserBySecretary service", () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it("rejects an expired confirmation token", async () => {
+    const result = await editUserBySecretary({
+      ...validInput,
+      faculty: { program_id: PROG_NEW },
+      confirmationToken: makeToken(`FACULTY:id=${USER_ID}:program=${PROG_NEW}`, -1),
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid or expired confirmation token. Please review the changes again.",
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [SystemRole.STUDENT, `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=null:section=null`],
+    [SystemRole.FACULTY, `FACULTY:id=${USER_ID}:program=${PROG_NEW}`],
+    [SystemRole.PROGRAM_HEAD, `PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`],
+    [SystemRole.ALUMNI, `ALUMNI:id=${USER_ID}:program=${PROG_NEW}:major=null:graduationYear=2020:verificationStatus=APPROVED`],
+    [SystemRole.INDUSTRY_PARTNER, `INDUSTRY_PARTNER:id=${USER_ID}:company=CLOIE Labs:position=null:program=null:verificationStatus=APPROVED`],
+  ])("binds protected %s confirmation to target and exact proposal", async (role, payload) => {
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: USER_ID,
+      is_active: true,
+      roles: [{ role }],
+      student_profile: role === SystemRole.STUDENT ? { program_id: PROG_OLD, major_id: null } : null,
+      enrollments: [],
+      faculty_program_affiliations:
+        role === SystemRole.FACULTY ? [{ id: "aff-1", program_id: PROG_OLD }] : [],
+      program_head_assignments:
+        role === SystemRole.PROGRAM_HEAD ? [{ id: "assignment-1", program_id: PROG_OLD }] : [],
+      alumni_profile:
+        role === SystemRole.ALUMNI
+          ? { program_id: PROG_OLD, major_id: null, graduation_year: 2019, verification_status: VerificationStatus.PENDING }
+          : null,
+      industry_partner_profile:
+        role === SystemRole.INDUSTRY_PARTNER
+          ? { company_name: "Old Company", position: null, program_id: null, verification_status: VerificationStatus.PENDING }
+          : null,
+    });
+
+    const input =
+      role === SystemRole.STUDENT
+        ? { id: USER_ID, first_name: "Jane", last_name: "Smith", student: { student_id_number: "S123", program_id: PROG_NEW } }
+        : role === SystemRole.FACULTY
+          ? { id: USER_ID, first_name: "Jane", last_name: "Smith", faculty: { program_id: PROG_NEW } }
+          : role === SystemRole.PROGRAM_HEAD
+            ? { id: USER_ID, first_name: "Jane", last_name: "Smith", program_head: { program_id: PROG_NEW } }
+            : role === SystemRole.ALUMNI
+              ? { id: USER_ID, first_name: "Jane", last_name: "Smith", alumni: { graduation_year: 2020, program_id: PROG_NEW, verification_status: VerificationStatus.APPROVED } }
+              : { id: USER_ID, first_name: "Jane", last_name: "Smith", industry_partner: { company_name: "CLOIE Labs", verification_status: VerificationStatus.APPROVED } };
+
+    const first = await editUserBySecretary(input);
+    expect(first.success).toBe(true);
+    if (first.success) expect(first.data.protectedPayload).toContain(`id=${USER_ID}`);
+
+    const alteredPayload = payload.includes("INDUSTRY_PARTNER")
+      ? payload.replace("CLOIE Labs", "Altered Labs")
+      : payload.replace(PROG_NEW, PROG_OLD);
+    const altered = await editUserBySecretary({ ...input, confirmationToken: makeToken(alteredPayload) });
+    expect(altered.success).toBe(false);
+    if (!altered.success) expect(altered.error).toMatch(/invalid or expired confirmation token/i);
+  });
+
   it("completes a legacy Faculty account by creating a primary affiliation when none exists", async () => {
     // Legacy: no existing primary affiliation
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -509,6 +584,131 @@ describe("editUserBySecretary service", () => {
     // No update/create on affiliations
     expect(mockTx.facultyProgramAffiliation.update).not.toHaveBeenCalled();
     expect(mockTx.facultyProgramAffiliation.create).not.toHaveBeenCalled();
+  });
+
+  describe("Student profile and enrollment", () => {
+    const studentInput = {
+      id: USER_ID,
+      first_name: "Jane",
+      last_name: "Smith",
+      student: {
+        student_id_number: "S123",
+        program_id: PROG_NEW,
+        major_id: null,
+        year_level: "SECOND_YEAR" as const,
+        section: "AFTERNOON" as const,
+      },
+    };
+
+    function setStudentRecord(
+      profile: object | null,
+      enrollments: Array<object>
+    ) {
+      (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: USER_ID,
+        is_active: true,
+        roles: [{ role: SystemRole.STUDENT }],
+        student_profile: profile,
+        enrollments,
+        faculty_program_affiliations: [],
+        program_head_assignments: [],
+        alumni_profile: null,
+        industry_partner_profile: null,
+      });
+    }
+
+    it("synchronizes profile and active enrollment in one transaction", async () => {
+      setStudentRecord(
+        { program_id: PROG_OLD, major_id: null },
+        [{ id: "active-enrollment", year_level: "FIRST_YEAR", section: "MORNING" }]
+      );
+      mockTx.studentEnrollment.findFirst.mockResolvedValue({
+        id: "active-enrollment",
+        year_level: "FIRST_YEAR",
+        section: "MORNING",
+      });
+      mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
+
+      const result = await editUserBySecretary({
+        ...studentInput,
+        confirmationToken: makeToken(
+          `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=SECOND_YEAR:section=AFTERNOON`
+        ),
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.studentAcademicProfile.upsert).toHaveBeenCalledWith({
+        where: { user_id: USER_ID },
+        create: expect.objectContaining({ user_id: USER_ID, program_id: PROG_NEW }),
+        update: expect.objectContaining({ program_id: PROG_NEW }),
+      });
+      expect(mockTx.studentEnrollment.update).toHaveBeenCalledWith({
+        where: { id: "active-enrollment" },
+        data: {
+          program_id: PROG_NEW,
+          major_id: null,
+          year_level: "SECOND_YEAR",
+          section: "AFTERNOON",
+        },
+      });
+      expect(mockTx.studentEnrollment.create).not.toHaveBeenCalled();
+    });
+
+    it("preserves historical enrollment and does not create missing active enrollment", async () => {
+      setStudentRecord({ program_id: PROG_OLD, major_id: null }, []);
+      mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
+
+      const result = await editUserBySecretary({
+        ...studentInput,
+        student: { ...studentInput.student, year_level: undefined, section: undefined },
+        confirmationToken: makeToken(
+          `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=null:section=null`
+        ),
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.studentAcademicProfile.upsert).toHaveBeenCalled();
+      expect(mockTx.studentEnrollment.update).not.toHaveBeenCalled();
+      expect(mockTx.studentEnrollment.create).not.toHaveBeenCalled();
+    });
+
+    it("rolls back profile and enrollment writes when related update fails", async () => {
+      setStudentRecord(
+        { program_id: PROG_OLD, major_id: null },
+        [{ id: "active-enrollment", year_level: "FIRST_YEAR", section: "MORNING" }]
+      );
+      const failingTx = {
+        user: { update: vi.fn() },
+        academicTermInstance: { findFirst: vi.fn().mockResolvedValue({ id: "active-term" }) },
+        studentAcademicProfile: { upsert: vi.fn() },
+        studentEnrollment: {
+          findFirst: vi.fn().mockResolvedValue({
+            id: "active-enrollment",
+            year_level: "FIRST_YEAR",
+            section: "MORNING",
+          }),
+          update: vi.fn().mockRejectedValue(new Error("Enrollment write failed")),
+          create: vi.fn(),
+        },
+        program: {
+          findUnique: vi.fn().mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] }),
+        },
+      };
+      (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) =>
+        cb(failingTx)
+      );
+
+      const result = await editUserBySecretary({
+        ...studentInput,
+        confirmationToken: makeToken(
+          `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=SECOND_YEAR:section=AFTERNOON`
+        ),
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(/enrollment write failed/i);
+      expect(failingTx.studentAcademicProfile.upsert).toHaveBeenCalled();
+    });
   });
 
   describe("Program Head assignment", () => {

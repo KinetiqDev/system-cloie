@@ -18,20 +18,23 @@ vi.mock("@/lib/actions/secretary-edit-user-actions", () => ({
 const SelectContext = React.createContext<{
   value?: string;
   onValueChange?: (value: string) => void;
+  disabled?: boolean;
 }>({});
 
 vi.mock("@/components/ui/select", () => {
   function Select({
     value,
     onValueChange,
+    disabled,
     children,
   }: {
     value?: string;
     onValueChange?: (value: string) => void;
+    disabled?: boolean;
     children: React.ReactNode;
   }) {
     return (
-      <SelectContext.Provider value={{ value, onValueChange }}>
+        <SelectContext.Provider value={{ value, onValueChange, disabled }}>
         <span data-testid="select-value" data-value={value ?? ""}>
           {children}
         </span>
@@ -39,8 +42,9 @@ vi.mock("@/components/ui/select", () => {
     );
   }
   function SelectTrigger({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+    const { disabled } = React.useContext(SelectContext);
     return (
-      <button type="button" role="combobox" aria-expanded="false" {...props}>
+      <button type="button" role="combobox" aria-expanded="false" disabled={disabled} {...props}>
         {children}
       </button>
     );
@@ -441,6 +445,88 @@ describe("EditUserDialog", () => {
     expect(screen.getByText(/limited dashboard access remains/i)).toBeInTheDocument();
   });
 
+  it("requires explicit verification for a legacy Industry Partner", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Legacy",
+        lastName: "Partner",
+        email: "legacy@example.com",
+        isActive: true,
+        role: SystemRole.INDUSTRY_PARTNER,
+        student: null,
+        activeEnrollment: null,
+        faculty: null,
+        programHead: null,
+        verification: null,
+        industryPartner: { companyName: "Old Company", position: null, programId: null },
+        alumni: null,
+      },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
+    await waitFor(() => expect(screen.getByDisplayValue("Legacy")).toBeInTheDocument());
+    expect(screen.getByLabelText(/verification status/i)).toHaveTextContent("Not set");
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/verification status must be selected/i);
+    expect(editUserBySecretaryAction).not.toHaveBeenCalled();
+  });
+
+  it("explains unavailable Student placement when no active enrollment exists", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Deferred",
+        lastName: "Student",
+        email: "student@acd.edu.ph",
+        isActive: true,
+        role: SystemRole.STUDENT,
+        student: {
+          studentIdNumber: "S123",
+          programId: "prog-old",
+          programCode: "BSIT",
+          programName: "Information Technology",
+          majorId: null,
+          majorName: null,
+          programIsActive: true,
+          majorIsActive: null,
+        },
+        activeEnrollment: null,
+        faculty: null,
+        programHead: null,
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+      },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={[{ id: "prog-old", code: "BSIT", name: "Information Technology", majors: [] }]}
+        yearLevels={["FIRST_YEAR"]}
+      />
+    );
+    await waitFor(() => expect(screen.getByDisplayValue("Deferred")).toBeInTheDocument());
+    expect(screen.getByText(/does not have an active term enrollment/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Year Level")).toBeDisabled();
+    expect(screen.getByLabelText("Section")).toBeDisabled();
+  });
+
   it("shows confirmation summary for faculty program change", async () => {
     (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: true,
@@ -507,6 +593,59 @@ describe("EditUserDialog", () => {
     // Old and new program names visible in confirmation
     expect(screen.getAllByText("Information Technology").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Information Systems").length).toBeGreaterThan(0);
+  });
+
+  it("restores editable form after cancelling confirmation", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Jane",
+        lastName: "Smith",
+        email: "jane@acd.edu.ph",
+        isActive: true,
+        role: SystemRole.FACULTY,
+        student: null,
+        activeEnrollment: null,
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+        faculty: { primaryProgramId: "prog-old" },
+        programHead: null,
+      },
+    });
+    (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        protectedConfirmationRequired: true,
+        token: "test-token",
+        confirmationReview: {
+          role: SystemRole.FACULTY,
+          oldValues: { program: "Information Technology" },
+          newValues: { program: "Information Systems" },
+        },
+      },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
+    await waitFor(() => expect(screen.getByDisplayValue("Jane")).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText(/primary program affiliation/i));
+    fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /go back/i })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /go back/i }));
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/primary program affiliation/i)).toBeInTheDocument();
   });
 
   it("shows managed-program control for Program Head role", async () => {
