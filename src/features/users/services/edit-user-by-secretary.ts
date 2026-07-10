@@ -1,0 +1,453 @@
+import { prisma } from "@/lib/db/prisma";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { ROLES } from "@/lib/constants/roles";
+import { type ServiceResult } from "@/lib/utils/service-result";
+import { type EditUserBySecretaryInput, editUserBySecretarySchema } from "../schemas/edit-user";
+import CryptoJS from "crypto-js";
+import { timingSafeEqual } from "node:crypto";
+import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
+import { SystemRole } from "@prisma/client";
+
+/**
+ * Derives a deterministic protected payload string for the requested changes.
+ * This ensures the confirmation token is bound to exactly these values.
+ */
+function deriveProtectedPayload(
+  parsedData: EditUserBySecretaryInput,
+  existingRole: SystemRole,
+  userId: string
+): string | null {
+  if (existingRole === SystemRole.STUDENT && parsedData.student) {
+    return `STUDENT:id=${userId}:program=${parsedData.student.program_id}:major=${parsedData.student.major_id ?? "null"}:year=${parsedData.student.year_level ?? "null"}:section=${parsedData.student.section ?? "null"}`;
+  }
+  if (existingRole === SystemRole.FACULTY && parsedData.faculty) {
+    return `FACULTY:id=${userId}:program=${parsedData.faculty.program_id}`;
+  }
+  if (existingRole === SystemRole.PROGRAM_HEAD && parsedData.program_head) {
+    return `PROGRAM_HEAD:id=${userId}:program=${parsedData.program_head.program_id}`;
+  }
+  if (existingRole === SystemRole.ALUMNI && parsedData.alumni) {
+    return `ALUMNI:id=${userId}:program=${parsedData.alumni.program_id}:major=${parsedData.alumni.major_id ?? "null"}:graduationYear=${parsedData.alumni.graduation_year}:verificationStatus=${parsedData.alumni.verification_status}`;
+  }
+  if (existingRole === SystemRole.INDUSTRY_PARTNER && parsedData.industry_partner) {
+    return `INDUSTRY_PARTNER:id=${userId}:company=${parsedData.industry_partner.company_name}:position=${parsedData.industry_partner.position ?? "null"}:program=${parsedData.industry_partner.program_id ?? "null"}:verificationStatus=${parsedData.industry_partner.verification_status}`;
+  }
+  return null;
+}
+
+export function generateConfirmationToken(payload: string): string {
+  const secret = getConfirmationSecret();
+  // We embed an expiration timestamp (e.g. 5 minutes from now)
+  const expiresAt = Date.now() + 5 * 60 * 1000;
+  const raw = `${payload}|${expiresAt}`;
+  const hmac = CryptoJS.HmacSHA256(raw, secret).toString();
+  // Return base64 encoded token containing the raw data and signature
+  return btoa(`${raw}|${hmac}`);
+}
+
+function verifyConfirmationToken(token: string, expectedPayload: string): boolean {
+  try {
+    const decoded = atob(token);
+    const parts = decoded.split("|");
+    if (parts.length !== 3) return false;
+
+    const [payload, expiresAtStr, signature] = parts;
+    const expiresAt = parseInt(expiresAtStr, 10);
+
+    if (Date.now() > expiresAt) return false;
+    if (payload !== expectedPayload) return false;
+
+    const secret = getConfirmationSecret();
+    const expectedSignature = CryptoJS.HmacSHA256(`${payload}|${expiresAtStr}`, secret).toString();
+
+    const actual = Buffer.from(signature, "hex");
+    const expected = Buffer.from(expectedSignature, "hex");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Secretary role-based user edit service. #80 establishes the deep-module
+ * write seam and base identity behavior. Subsequent role slices (#81–#85)
+ * extend the protected-change detection, confirmation protocol, and
+ * role-specific record updates without reshaping this surface.
+ */
+export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): Promise<
+  ServiceResult<{
+    id: string;
+    protectedConfirmationRequired?: boolean;
+    protectedPayload?: string;
+    token?: string;
+  }>
+> {
+  const parsed = editUserBySecretarySchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input.",
+    };
+  }
+
+  const session = await resolveAuthSession();
+  if (!session?.activeRole) {
+    return { success: false, error: "Authentication required." };
+  }
+  if (session.activeRole !== ROLES.SECRETARY) {
+    return { success: false, error: "Secretary access required." };
+  }
+
+  const { id, first_name, last_name, student, faculty, program_head, alumni, industry_partner } =
+    parsed.data;
+
+  if (id === session.userId) {
+    return { success: false, error: "Cannot edit your own account." };
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      is_active: true,
+      roles: { select: { role: true } },
+      student_profile: true,
+      enrollments: {
+        where: { is_active: true, term: { is_active: true } },
+        take: 1,
+      },
+      faculty_program_affiliations: {
+        where: { is_active: true, is_primary: true },
+        take: 1,
+      },
+      program_head_assignments: {
+        where: { is_active: true },
+        take: 1,
+      },
+      alumni_profile: true,
+      industry_partner_profile: true,
+    },
+  });
+
+  if (!existing) {
+    return { success: false, error: "User not found." };
+  }
+
+  const existingRole = existing.roles[0]?.role;
+  if (!existingRole) {
+    return { success: false, error: "User has no assigned CLOIE account role." };
+  }
+
+  // Detect protected changes
+  const protectedPayload = deriveProtectedPayload(parsed.data, existingRole, id);
+
+  if (existingRole === SystemRole.STUDENT && !student) {
+    return { success: false, error: "Student details are required for Student accounts." };
+  }
+  if (existingRole === SystemRole.FACULTY && !faculty) {
+    return { success: false, error: "Faculty details are required for Faculty accounts." };
+  }
+  if (existingRole === SystemRole.PROGRAM_HEAD && !program_head) {
+    return { success: false, error: "Program Head details are required for Program Head accounts." };
+  }
+  if (existingRole === SystemRole.ALUMNI && !alumni) {
+    return { success: false, error: "Alumni details are required for Alumni accounts." };
+  }
+  if (existingRole === SystemRole.INDUSTRY_PARTNER && !industry_partner) {
+    return { success: false, error: "Industry Partner details are required for Industry Partner accounts." };
+  }
+  if (student && Boolean(student.year_level) !== Boolean(student.section)) {
+    return { success: false, error: "Year level and section must be provided together." };
+  }
+  if (student && (student.year_level || student.section) && !existing.enrollments[0]) {
+    return { success: false, error: "Student has no editable active enrollment." };
+  }
+
+  if (protectedPayload) {
+    let requiresConfirmation = false;
+    if (existingRole === SystemRole.STUDENT && student) {
+      const p = existing.student_profile;
+      const e = existing.enrollments[0];
+
+      const profileChanged =
+        !p || p.program_id !== student.program_id || p.major_id !== (student.major_id ?? null);
+      const placementChanged =
+        student.year_level &&
+        student.section &&
+        (!e || e.year_level !== student.year_level || e.section !== student.section);
+
+      if (profileChanged || placementChanged) {
+        requiresConfirmation = true;
+      }
+    } else if (existingRole === SystemRole.FACULTY && faculty) {
+      const currentPrimary =
+        existing.faculty_program_affiliations && existing.faculty_program_affiliations.length > 0
+          ? existing.faculty_program_affiliations[0]
+          : null;
+      if (!currentPrimary || currentPrimary.program_id !== faculty.program_id) {
+        requiresConfirmation = true;
+      }
+    } else if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
+      const currentAssignment = existing.program_head_assignments?.[0] ?? null;
+      if (!currentAssignment || currentAssignment.program_id !== program_head.program_id) {
+        requiresConfirmation = true;
+      }
+    } else if (existingRole === SystemRole.ALUMNI && alumni) {
+      const profile = existing.alumni_profile;
+      if (
+        !profile ||
+        profile.program_id !== alumni.program_id ||
+        profile.major_id !== (alumni.major_id ?? null) ||
+        profile.graduation_year !== alumni.graduation_year ||
+        profile.verification_status !== alumni.verification_status
+      ) {
+        requiresConfirmation = true;
+      }
+    } else if (existingRole === SystemRole.INDUSTRY_PARTNER && industry_partner) {
+      const profile = existing.industry_partner_profile;
+      if (!profile || profile.verification_status !== industry_partner.verification_status) {
+        requiresConfirmation = true;
+      }
+    }
+
+    if (requiresConfirmation) {
+      if (!parsed.data.confirmationToken) {
+        // Issue token and bounce back for confirmation
+        return {
+          success: true,
+          data: {
+            id,
+            protectedConfirmationRequired: true,
+            protectedPayload: protectedPayload!,
+            token: generateConfirmationToken(protectedPayload!),
+          },
+        };
+      } else {
+        // Verify token
+        if (!verifyConfirmationToken(parsed.data.confirmationToken, protectedPayload!)) {
+          return {
+            success: false,
+            error: "Invalid or expired confirmation token. Please review the changes again.",
+          };
+        }
+      }
+    }
+  }
+
+  // Perform the transactional update
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Base identity update
+      await tx.user.update({
+        where: { id },
+        data: {
+          first_name,
+          last_name,
+        },
+      });
+
+      // Student role updates
+      if (existingRole === SystemRole.STUDENT && student) {
+        // Validate major belongs to program and program has active majors requirement
+        const program = await tx.program.findUnique({
+          where: { id: student.program_id },
+          include: { majors: { where: { is_active: true } } },
+        });
+
+        if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
+
+        if (program.majors.length > 0) {
+          if (!student.major_id) {
+            throw new Error("A major is required for the selected program.");
+          }
+          if (!program.majors.some((m) => m.id === student.major_id)) {
+            throw new Error("Selected major is not valid for this program.");
+          }
+        } else if (student.major_id) {
+          throw new Error("Selected program does not have majors.");
+        }
+
+        // Upsert static profile
+        await tx.studentAcademicProfile.upsert({
+          where: { user_id: id },
+          create: {
+            user_id: id,
+            student_id_number: student.student_id_number,
+            program_id: student.program_id,
+            major_id: student.major_id ?? null,
+          },
+          update: {
+            student_id_number: student.student_id_number,
+            program_id: student.program_id,
+            major_id: student.major_id ?? null,
+          },
+        });
+
+        // Sync active enrollment if present or if placement is being set
+        const activeTerm = await tx.academicTermInstance.findFirst({ where: { is_active: true } });
+        if (activeTerm) {
+          const activeEnrollment = await tx.studentEnrollment.findFirst({
+            where: { student_user_id: id, is_active: true, term_instance_id: activeTerm.id },
+          });
+
+          if (activeEnrollment) {
+            // Update existing enrollment
+            await tx.studentEnrollment.update({
+              where: { id: activeEnrollment.id },
+              data: {
+                program_id: student.program_id,
+                major_id: student.major_id ?? null,
+                year_level: student.year_level ?? activeEnrollment.year_level,
+                section: student.section ?? activeEnrollment.section,
+              },
+            });
+          }
+          // Do NOT create a missing enrollment per spec #79 / #81
+        }
+      } else if (existingRole === SystemRole.FACULTY && faculty) {
+        // Find existing active primary affiliation to see if we need to change it
+        const primary = await tx.facultyProgramAffiliation.findFirst({
+          where: { faculty_id: id, is_active: true, is_primary: true },
+        });
+
+        if (!primary || primary.program_id !== faculty.program_id) {
+          const program = await tx.program.findUnique({ where: { id: faculty.program_id } });
+          if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
+          if (primary) {
+            // Deactivate current primary
+            await tx.facultyProgramAffiliation.update({
+              where: { id: primary.id },
+              data: { is_active: false, is_primary: false },
+            });
+          }
+
+          // Check if there's an existing record for the target program (active or inactive)
+          const existingTarget = await tx.facultyProgramAffiliation.findUnique({
+            where: { faculty_id_program_id: { faculty_id: id, program_id: faculty.program_id } },
+          });
+
+          if (existingTarget) {
+            // Reactivate/promote existing
+            await tx.facultyProgramAffiliation.update({
+              where: { id: existingTarget.id },
+              data: { is_active: true, is_primary: true },
+            });
+          } else {
+            // Create new primary
+            await tx.facultyProgramAffiliation.create({
+              data: {
+                faculty_id: id,
+                program_id: faculty.program_id,
+                is_active: true,
+                is_primary: true,
+              },
+            });
+          }
+        }
+      } else if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
+        const assignment = await tx.programHeadAssignment.findFirst({
+          where: { program_head_id: id, is_active: true },
+        });
+
+        if (!assignment || assignment.program_id !== program_head.program_id) {
+          const program = await tx.program.findUnique({ where: { id: program_head.program_id } });
+          if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
+          if (assignment) {
+            await tx.programHeadAssignment.update({
+              where: { id: assignment.id },
+              data: { is_active: false },
+            });
+          }
+
+          const existingTarget = await tx.programHeadAssignment.findUnique({
+            where: {
+              program_head_id_program_id: {
+                program_head_id: id,
+                program_id: program_head.program_id,
+              },
+            },
+          });
+
+          if (existingTarget) {
+            await tx.programHeadAssignment.update({
+              where: { id: existingTarget.id },
+              data: { is_active: true },
+            });
+          } else {
+            await tx.programHeadAssignment.create({
+              data: {
+                program_head_id: id,
+                program_id: program_head.program_id,
+                is_active: true,
+              },
+            });
+          }
+        }
+      } else if (existingRole === SystemRole.ALUMNI && alumni) {
+        const program = await tx.program.findUnique({
+          where: { id: alumni.program_id },
+          include: { majors: { where: { is_active: true } } },
+        });
+        if (!program || !program.is_active)
+          throw new Error("Selected program is archived or inactive.");
+        if (program.majors.length > 0 && !alumni.major_id) {
+          throw new Error("A major is required for the selected program.");
+        }
+        if (alumni.major_id && !program.majors.some((major) => major.id === alumni.major_id)) {
+          throw new Error("Selected major is not valid for this program.");
+        }
+        if (program.majors.length === 0 && alumni.major_id) {
+          throw new Error("Selected program does not have majors.");
+        }
+        await tx.alumniProfile.upsert({
+          where: { user_id: id },
+          create: {
+            user_id: id,
+            graduation_year: alumni.graduation_year,
+            program_id: alumni.program_id,
+            major_id: alumni.major_id ?? null,
+            verification_status: alumni.verification_status,
+          },
+          update: {
+            graduation_year: alumni.graduation_year,
+            program_id: alumni.program_id,
+            major_id: alumni.major_id ?? null,
+            verification_status: alumni.verification_status,
+          },
+        });
+      } else if (existingRole === SystemRole.INDUSTRY_PARTNER && industry_partner) {
+        if (industry_partner.program_id) {
+          const program = await tx.program.findUnique({
+            where: { id: industry_partner.program_id },
+          });
+          if (!program || !program.is_active) {
+            throw new Error("Selected affiliated program is archived or inactive.");
+          }
+        }
+        await tx.industryPartnerProfile.upsert({
+          where: { user_id: id },
+          create: {
+            user_id: id,
+            company_name: industry_partner.company_name,
+            position: industry_partner.position || null,
+            program_id: industry_partner.program_id ?? null,
+            verification_status: industry_partner.verification_status,
+          },
+          update: {
+            company_name: industry_partner.company_name,
+            position: industry_partner.position || null,
+            program_id: industry_partner.program_id ?? null,
+            verification_status: industry_partner.verification_status,
+          },
+        });
+      }
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "Database update failed." };
+  }
+
+  return { success: true, data: { id } };
+}

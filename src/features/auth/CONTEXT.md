@@ -167,3 +167,7 @@ _Avoid_: Student profile, alumni proof record
 **Industry Partner profile**:
 The self-declared organization identity for an Industry Partner account, including the company or organization the person represents and any applicable program affiliation.
 _Avoid_: Employer record, company account
+
+**Protected account edit**:
+A Secretary-managed account change that can alter academic history, current student placement, managed program responsibility, or external access; CLOIE requires an explicit review of the exact changes before saving it.
+_Avoid_: Ordinary profile correction, browser-only confirmation
