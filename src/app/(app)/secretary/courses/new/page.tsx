@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CourseForm } from "@/features/academic-structure/components/course-form";
 import { createCourseAction } from "@/lib/actions/management-foundation-actions";
 import { prisma } from "@/lib/db/prisma";
+import { CreateCourseClientWrapper } from "./client-wrapper";
 
 export default async function CreateCoursePage() {
   const programs = await prisma.program.findMany({
@@ -53,11 +54,10 @@ export default async function CreateCoursePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CourseForm
+          <CreateCourseClientWrapper
             action={createCourseAction}
             programs={programs}
             majors={majorsForForm}
-            submitLabel="Create Course"
           />
         </CardContent>
       </Card>

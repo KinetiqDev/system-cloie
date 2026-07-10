@@ -1,10 +1,20 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgramForm } from "@/features/academic-structure/components/program-form";
 import { createProgramAction } from "@/lib/actions/admin-program-actions";
 
 export default function CreateProgramPage() {
+  const router = useRouter();
+
+  const handleSuccess = () => {
+    const message = "Program created successfully!";
+    router.push(`/secretary/programs?toast=${encodeURIComponent(message)}`);
+  };
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Back link */}
@@ -27,7 +37,11 @@ export default function CreateProgramPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ProgramForm action={createProgramAction} submitLabel="Create Program" />
+          <ProgramForm
+            action={createProgramAction}
+            submitLabel="Create Program"
+            onSuccess={handleSuccess}
+          />
         </CardContent>
       </Card>
     </div>
