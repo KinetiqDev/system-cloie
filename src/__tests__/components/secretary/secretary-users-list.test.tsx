@@ -65,6 +65,7 @@ describe("SecretaryUsersList", () => {
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
+        currentUserId="admin-1"
       />
     );
 
@@ -80,6 +81,7 @@ describe("SecretaryUsersList", () => {
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
+        currentUserId="admin-1"
       />
     );
 
@@ -94,6 +96,7 @@ describe("SecretaryUsersList", () => {
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
+        currentUserId="admin-1"
       />
     );
 
@@ -107,6 +110,7 @@ describe("SecretaryUsersList", () => {
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
+        currentUserId="admin-1"
       />
     );
 

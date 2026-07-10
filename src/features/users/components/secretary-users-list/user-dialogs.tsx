@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -26,7 +25,6 @@ import {
   toggleUserActiveAction,
   updateStudentAcademicContextAction,
 } from "@/lib/actions/management-foundation-actions";
-import { updateUserBySecretaryAction } from "@/lib/actions/secretary-user-crud-actions";
 import type { SecretaryUserSummaryItem } from "../../services/list-secretary-users-summary";
 
 const SECTION_OPTIONS: { label: string; value: StudentSection }[] = [
@@ -66,8 +64,6 @@ function getRoleBadgeClass(role: SystemRole): string {
 interface UserDialogsProps {
   viewUser: SecretaryUserSummaryItem | null;
   onCloseView: () => void;
-  editUser: SecretaryUserSummaryItem | null;
-  onCloseEdit: () => void;
   studentContextUser: SecretaryUserSummaryItem | null;
   onCloseStudentContext: () => void;
   programs: Array<{ id: string; code: string; name: string; majors: Array<{ id: string; name: string }> }>;
@@ -75,42 +71,27 @@ interface UserDialogsProps {
   onUserUpdated: () => void;
 }
 
+/**
+ * Secretary User Management dialogs (non-edit). The adaptive Edit User
+ * dialog lives in `./edit-user-dialog` and is mounted by the list page.
+ * The Student Context dialog remains here only for #80; #81 will fold
+ * Student placement into the adaptive Edit User dialog and remove it.
+ */
 export function UserDialogs({
   viewUser,
   onCloseView,
-  editUser,
-  onCloseEdit,
   studentContextUser,
   onCloseStudentContext,
-  programs,
+  programs: _programs,
   yearLevels,
   onUserUpdated,
 }: UserDialogsProps) {
-  // All hooks must be at the top level - never inside conditionals
   const [isPending, startTransition] = useTransition();
-  const [editError, setEditError] = useState<string | null>(null);
   const [contextError, setContextError] = useState<string | null>(null);
 
-  // Early return only after all hooks are called
-  if (!viewUser && !editUser && !studentContextUser) {
+  if (!viewUser && !studentContextUser) {
     return null;
   }
-
-  // View Dialog handlers and content
-  const handleEditSubmit = (formData: FormData) => {
-    if (!editUser) return;
-    setEditError(null);
-    startTransition(async () => {
-      const result = await updateUserBySecretaryAction(formData);
-      if (!result.success) {
-        setEditError(result.error);
-        return;
-      }
-      showToast(`${editUser.firstName} ${editUser.lastName}'s information has been updated.`);
-      onUserUpdated();
-      onCloseEdit();
-    });
-  };
 
   const handleContextSubmit = (formData: FormData) => {
     if (!studentContextUser) return;
@@ -178,7 +159,7 @@ export function UserDialogs({
                   {viewUser.programLabel}
                 </div>
               </div>
-              {viewUser.majorLabel && (
+              {viewUser.majorLabel && viewUser.majorLabel !== "N/A" && (
                 <div className="space-y-1">
                   <label className="text-muted-foreground text-[10px] font-black tracking-widest uppercase">
                     Major
@@ -189,7 +170,7 @@ export function UserDialogs({
                   </div>
                 </div>
               )}
-              {viewUser.sectionLabel && (
+              {viewUser.sectionLabel && viewUser.sectionLabel !== "—" && (
                 <div className="space-y-1">
                   <label className="text-muted-foreground text-[10px] font-black tracking-widest uppercase">
                     Section
@@ -213,65 +194,7 @@ export function UserDialogs({
         </Dialog>
       )}
 
-      {/* Edit Dialog */}
-      {editUser && (
-        <Dialog open={!!editUser} onOpenChange={(open) => !open && onCloseEdit()}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
-                Update details for {editUser.firstName} {editUser.lastName}.
-              </DialogDescription>
-            </DialogHeader>
-            <form action={handleEditSubmit} className="space-y-4 pt-2">
-              <input type="hidden" name="id" value={editUser.id} />
-
-              {editError && (
-                <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
-                  {editError}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-first-name">First Name</Label>
-                <Input
-                  id="edit-first-name"
-                  name="first_name"
-                  defaultValue={editUser.firstName}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-last-name">Last Name</Label>
-                <Input
-                  id="edit-last-name"
-                  name="last_name"
-                  defaultValue={editUser.lastName}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Email Address</Label>
-                <Input value={editUser.email} disabled className="opacity-60" />
-                <p className="text-muted-foreground text-xs">Email cannot be changed.</p>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={onCloseEdit}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Student Context Dialog */}
+      {/* Student Context Dialog — kept for #80, removed in #81. */}
       {studentContextUser && (
         <Dialog open={!!studentContextUser} onOpenChange={(open) => !open && onCloseStudentContext()}>
           <DialogContent className="sm:max-w-md">

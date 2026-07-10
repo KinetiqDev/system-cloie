@@ -14,6 +14,7 @@ import { UsersFilterBar } from "./users-filter-bar";
 import { UsersDataTable } from "./users-data-table";
 import { UsersPagination } from "./users-pagination";
 import { UserDialogs, useToggleUserActive } from "./user-dialogs";
+import { EditUserDialog } from "./edit-user-dialog";
 
 const PAGE_SIZE = 15;
 
@@ -27,9 +28,16 @@ interface SecretaryUsersListProps {
     majors: Array<{ id: string; name: string }>;
   }>;
   yearLevels: YearLevel[];
+  currentUserId: string;
 }
 
-export function SecretaryUsersList({ users, kpi, programs, yearLevels }: SecretaryUsersListProps) {
+export function SecretaryUsersList({
+  users,
+  kpi,
+  programs,
+  yearLevels,
+  currentUserId,
+}: SecretaryUsersListProps) {
   // ---- Filter state -------------------------------------------------------
   const [roleFilter, setRoleFilter] = useState<string>("__all__");
   const [programFilter, setProgramFilter] = useState<string>("__all__");
@@ -39,7 +47,7 @@ export function SecretaryUsersList({ users, kpi, programs, yearLevels }: Secreta
 
   // ---- Modal state ---------------------------------------------------------
   const [viewUser, setViewUser] = useState<SecretaryUserSummaryItem | null>(null);
-  const [editUser, setEditUser] = useState<SecretaryUserSummaryItem | null>(null);
+  const [editUserId, setEditUserId] = useState<string | null>(null);
   const [studentContextUser, setStudentContextUser] = useState<SecretaryUserSummaryItem | null>(null);
 
   // ---- Toggle active hook --------------------------------------------------
@@ -159,7 +167,7 @@ export function SecretaryUsersList({ users, kpi, programs, yearLevels }: Secreta
       <UsersDataTable
         users={paginatedUsers}
         onViewUser={setViewUser}
-        onEditUser={setEditUser}
+        onEditUser={(user) => setEditUserId(user.id)}
         onEditStudentContext={setStudentContextUser}
         onToggleActive={handleToggleActive}
         isPending={isPending}
@@ -176,12 +184,17 @@ export function SecretaryUsersList({ users, kpi, programs, yearLevels }: Secreta
       <UserDialogs
         viewUser={viewUser}
         onCloseView={() => setViewUser(null)}
-        editUser={editUser}
-        onCloseEdit={() => setEditUser(null)}
         studentContextUser={studentContextUser}
         onCloseStudentContext={() => setStudentContextUser(null)}
         programs={programs}
         yearLevels={yearLevels}
+        onUserUpdated={handleUserUpdated}
+      />
+
+      <EditUserDialog
+        userId={editUserId}
+        currentUserId={currentUserId}
+        onClose={() => setEditUserId(null)}
         onUserUpdated={handleUserUpdated}
       />
     </div>
