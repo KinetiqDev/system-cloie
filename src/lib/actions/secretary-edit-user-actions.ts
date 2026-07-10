@@ -5,7 +5,6 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { ROLES } from "@/lib/constants/roles";
 import {
   editUserBySecretarySchema,
-  type EditUserBySecretaryInput,
 } from "@/features/users/schemas/edit-user";
 import {
   editUserBySecretary,
@@ -77,6 +76,18 @@ export async function editUserBySecretaryAction(
       major_id: formData.get("student.major_id") || undefined,
       year_level: formData.get("student.year_level") || undefined,
       section: formData.get("student.section") || undefined,
+    };
+  }
+
+  if (formData.get("faculty.program_id")) {
+    raw.faculty = {
+      program_id: formData.get("faculty.program_id"),
+    };
+  }
+
+  if (formData.get("program_head.program_id")) {
+    raw.program_head = {
+      program_id: formData.get("program_head.program_id"),
     };
   }
 
