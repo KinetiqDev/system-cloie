@@ -134,25 +134,26 @@ function EditUserDialogBody({
   yearLevels,
 }: EditUserDialogBodyProps) {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
-  
+
   // Base fields
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  
+
   // Student fields
   const [studentIdNumber, setStudentIdNumber] = useState("");
   const [programId, setProgramId] = useState("");
   const [majorId, setMajorId] = useState<string | null>(null);
   const [yearLevel, setYearLevel] = useState<YearLevel | null>(null);
   const [section, setSection] = useState<StudentSection | null>(null);
-  
+
   // Confirmation state
   const [confirmationToken, setConfirmationToken] = useState<string | null>(null);
   const [confirmationSummary, setConfirmationSummary] = useState<{
-    profileChanged: boolean;
-    placementChanged: boolean;
-    oldValues: any;
-    newValues: any;
+    profileChanged?: boolean;
+    placementChanged?: boolean;
+    facultyProgramChanged?: boolean;
+    oldValues: Record<string, string>;
+    newValues: Record<string, string>;
   } | null>(null);
 
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -162,19 +163,23 @@ function EditUserDialogBody({
     () => programs.find((p) => p.id === programId),
     [programs, programId]
   );
-  
+
   const programHasMajors = selectedProgram && selectedProgram.majors.length > 0;
-  
-  // If program changes and it has no majors, or the current major isn't in it, clear major
-  useEffect(() => {
-    if (selectedProgram) {
-      if (selectedProgram.majors.length === 0) {
+
+  const handleProgramChange = (v: string | null) => {
+    const val = v ?? "";
+    setProgramId(val);
+
+    // Clear major when program changes
+    const newProgram = programs.find((p) => p.id === val);
+    if (newProgram) {
+      if (newProgram.majors.length === 0) {
         setMajorId(null);
-      } else if (majorId && !selectedProgram.majors.some((m) => m.id === majorId)) {
+      } else if (majorId && !newProgram.majors.some((m) => m.id === majorId)) {
         setMajorId(null);
       }
     }
-  }, [selectedProgram, majorId]);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -188,15 +193,17 @@ function EditUserDialogBody({
       }
       setFirstName(result.data.firstName);
       setLastName(result.data.lastName);
-      
+
       if (result.data.role === SystemRole.STUDENT) {
         setStudentIdNumber(result.data.student?.studentIdNumber ?? "");
         setProgramId(result.data.student?.programId ?? "");
         setMajorId(result.data.student?.majorId ?? null);
         setYearLevel((result.data.activeEnrollment?.yearLevel as YearLevel) ?? null);
         setSection((result.data.activeEnrollment?.section as StudentSection) ?? null);
+      } else if (result.data.role === SystemRole.FACULTY) {
+        setProgramId(result.data.faculty?.primaryProgramId ?? "");
       }
-      
+
       setLoadState({ status: "ready", record: result.data });
     })();
 
@@ -222,12 +229,12 @@ function EditUserDialogBody({
     setSubmitError(null);
     const formData = new FormData();
     if (loadState.status !== "ready") return;
-    
+
     formData.set("id", userId);
     formData.set("role", loadState.record.role);
     formData.set("first_name", trimmedFirst);
     formData.set("last_name", trimmedLast);
-    
+
     if (loadState.status === "ready" && loadState.record.role === SystemRole.STUDENT) {
       if (!studentIdNumber.trim()) {
         setSubmitError("Student ID number is required.");
@@ -241,21 +248,27 @@ function EditUserDialogBody({
         setSubmitError("Major is required for the selected program.");
         return;
       }
-      
+
       const hasYearLevel = !!yearLevel;
       const hasSection = !!section;
       if (hasYearLevel !== hasSection) {
         setSubmitError("Year level and section must be provided together if updating placement.");
         return;
       }
-      
+
       formData.set("student.student_id_number", studentIdNumber.trim());
       formData.set("student.program_id", programId);
       if (majorId) formData.set("student.major_id", majorId);
       if (yearLevel) formData.set("student.year_level", yearLevel);
       if (section) formData.set("student.section", section);
+    } else if (loadState.status === "ready" && loadState.record.role === SystemRole.FACULTY) {
+      if (!programId) {
+        setSubmitError("Primary program affiliation is required.");
+        return;
+      }
+      formData.set("faculty.program_id", programId);
     }
-    
+
     if (confirmationToken) {
       formData.set("confirmationToken", confirmationToken);
     }
@@ -269,41 +282,56 @@ function EditUserDialogBody({
         setSubmitError(result.error);
         return;
       }
-      
+
       if (result.data?.protectedConfirmationRequired) {
-        // Build summary
-        const oldP = record?.student?.programId;
-        const newP = programId;
-        const oldM = record?.student?.majorId;
-        const newM = majorId;
-        const oldYL = record?.activeEnrollment?.yearLevel;
-        const newYL = yearLevel;
-        const oldSec = record?.activeEnrollment?.section;
-        const newSec = section;
-        
-        const profileChanged = !!(oldP !== newP || oldM !== newM);
-        const placementChanged = !!((newYL && newSec) && (oldYL !== newYL || oldSec !== newSec));
-        
-        setConfirmationToken(result.data.token!);
-        setConfirmationSummary({
-          profileChanged,
-          placementChanged,
-          oldValues: {
-            program: programs.find(p => p.id === oldP)?.name ?? "None",
-            major: programs.find(p => p.id === oldP)?.majors.find(m => m.id === oldM)?.name ?? "None",
-            year: oldYL ? formatYearLevel(oldYL as YearLevel) : "None",
-            section: oldSec ? formatSection(oldSec as StudentSection) : "None",
-          },
-          newValues: {
-            program: programs.find(p => p.id === newP)?.name ?? "None",
-            major: programs.find(p => p.id === newP)?.majors.find(m => m.id === newM)?.name ?? "None",
-            year: newYL ? formatYearLevel(newYL) : "None",
-            section: newSec ? formatSection(newSec) : "None",
-          }
-        });
+        if (record?.role === SystemRole.STUDENT) {
+          // Build summary
+          const oldP = record?.student?.programId;
+          const newP = programId;
+          const oldM = record?.student?.majorId;
+          const newM = majorId;
+          const oldYL = record?.activeEnrollment?.yearLevel;
+          const newYL = yearLevel;
+          const oldSec = record?.activeEnrollment?.section;
+          const newSec = section;
+
+          const profileChanged = !!(oldP !== newP || oldM !== newM);
+          const placementChanged = !!((newYL && newSec) && (oldYL !== newYL || oldSec !== newSec));
+
+          setConfirmationToken(result.data.token!);
+          setConfirmationSummary({
+            profileChanged,
+            placementChanged,
+            oldValues: {
+              program: programs.find(p => p.id === oldP)?.name ?? "None",
+              major: programs.find(p => p.id === oldP)?.majors.find(m => m.id === oldM)?.name ?? "None",
+              year: oldYL ? formatYearLevel(oldYL as YearLevel) : "None",
+              section: oldSec ? formatSection(oldSec as StudentSection) : "None",
+            },
+            newValues: {
+              program: programs.find(p => p.id === newP)?.name ?? "None",
+              major: programs.find(p => p.id === newP)?.majors.find(m => m.id === newM)?.name ?? "None",
+              year: newYL ? formatYearLevel(newYL) : "None",
+              section: newSec ? formatSection(newSec) : "None",
+            }
+          });
+        } else if (record?.role === SystemRole.FACULTY) {
+          const oldP = record?.faculty?.primaryProgramId;
+          const newP = programId;
+          setConfirmationToken(result.data.token!);
+          setConfirmationSummary({
+            facultyProgramChanged: true,
+            oldValues: {
+              program: programs.find(p => p.id === oldP)?.name ?? "None",
+            },
+            newValues: {
+              program: programs.find(p => p.id === newP)?.name ?? "None",
+            }
+          });
+        }
         return;
       }
-      
+
       showToast(`${label}'s information has been updated.`);
       onUserUpdated();
       onClose();
@@ -424,7 +452,7 @@ function EditUserDialogBody({
               Role changes are an administrator-controlled workflow and are not part of this dialog.
             </p>
           </fieldset>
-          
+
           {loadState.record.role === SystemRole.STUDENT && (
             <>
               <div className="space-y-2 pt-4 border-t">
@@ -444,7 +472,7 @@ function EditUserDialogBody({
                 <Label htmlFor="edit-user-program">Program</Label>
                 <Select
                   value={programId}
-                  onValueChange={(v) => setProgramId(v ?? "")}
+                  onValueChange={handleProgramChange}
                   disabled={isSubmitting}
                 >
                   <SelectTrigger id="edit-user-program">
@@ -481,7 +509,7 @@ function EditUserDialogBody({
                   </Select>
                 </div>
               )}
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-user-year-level">Year Level</Label>
@@ -529,6 +557,31 @@ function EditUserDialogBody({
                 If the student does not have an active term enrollment, year level and section cannot be saved.
               </p>
             </>
+          )}
+
+          {loadState.record.role === SystemRole.FACULTY && (
+            <div className="space-y-2 pt-4 border-t">
+              <Label htmlFor="edit-user-faculty-program">Primary Program Affiliation</Label>
+              <Select
+                value={programId}
+                onValueChange={(v) => setProgramId(v ?? "")}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="edit-user-faculty-program">
+                  <SelectValue placeholder="Select primary program" />
+                </SelectTrigger>
+                <SelectContent>
+                  {programs.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Additional active affiliations remain unchanged. If the selected program is currently an additional affiliation, it will be promoted to primary.
+              </p>
+            </div>
           )}
 
           <div className="flex justify-end gap-2 pt-4">
@@ -580,7 +633,7 @@ function EditUserDialogBody({
                 </div>
               </div>
             )}
-            
+
             {confirmationSummary.placementChanged && (
               <div className="space-y-2">
                 <h4 className="font-semibold text-sm">Active Term Placement Changes</h4>
@@ -592,10 +645,24 @@ function EditUserDialogBody({
                 </div>
               </div>
             )}
-            
+
+            {confirmationSummary.facultyProgramChanged && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm">Primary Program Affiliation Changes</h4>
+                <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                  <div className="text-muted-foreground">Previous:</div>
+                  <div>{confirmationSummary.oldValues.program}</div>
+                  <div className="font-medium text-primary">New:</div>
+                  <div className="font-medium">{confirmationSummary.newValues.program}</div>
+                </div>
+              </div>
+            )}
+
             <p className="text-sm text-muted-foreground flex items-start gap-2 pt-2">
               <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
-              Historical enrollments remain unchanged. This update only applies to the static profile and the current active term.
+              {confirmationSummary.facultyProgramChanged
+                ? "Additional active affiliations remain unchanged. If the selected program is currently an additional affiliation, it will be promoted to primary."
+                : "Historical enrollments remain unchanged. This update only applies to the static profile and the current active term."}
             </p>
           </div>
 

@@ -54,6 +54,7 @@ describe("getUserEditRecordBySecretary", () => {
         role: SystemRole.DEAN,
         student: null,
         activeEnrollment: null,
+        faculty: null,
         verification: null,
         industryPartner: null,
         alumni: null,
@@ -133,6 +134,30 @@ describe("getUserEditRecordBySecretary", () => {
         majorId: "maj-1",
         yearLevel: "FIRST_YEAR",
         section: "MORNING",
+      });
+    }
+  });
+
+  it("projects faculty primary program when present", async () => {
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "faculty-id",
+      first_name: "Frank",
+      last_name: "Faculty",
+      email: "frank@acd.edu.ph",
+      is_active: true,
+      roles: [{ role: SystemRole.FACULTY }],
+      faculty_program_affiliations: [
+        { program_id: "prog-fac" }
+      ],
+    });
+
+    const result = await getUserEditRecordBySecretary("faculty-id");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.role).toBe(SystemRole.FACULTY);
+      expect(result.data.faculty).toEqual({
+        primaryProgramId: "prog-fac",
       });
     }
   });

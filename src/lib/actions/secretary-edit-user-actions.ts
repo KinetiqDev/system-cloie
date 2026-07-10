@@ -63,12 +63,11 @@ export async function editUserBySecretaryAction(
     return access;
   }
 
-  const raw: any = {
+  const raw: Record<string, unknown> = {
     id: String(formData.get("id") ?? ""),
     role: formData.get("role") || undefined,
     first_name: String(formData.get("first_name") ?? ""),
     last_name: String(formData.get("last_name") ?? ""),
-    confirmationToken: formData.get("confirmationToken") || undefined,
   };
   
   if (formData.get("student.program_id")) {

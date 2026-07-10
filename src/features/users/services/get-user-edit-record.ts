@@ -36,6 +36,10 @@ export type SecretaryUserEditRecord = {
     yearLevel: YearLevel;
     section: string | null;
   } | null;
+  // Faculty primary program affiliation.
+  faculty: {
+    primaryProgramId: string | null;
+  } | null;
   // External verification status for Alumni and Industry Partner accounts.
   verification: {
     status: VerificationStatus;
@@ -97,6 +101,10 @@ export async function getUserEditRecordBySecretary(
         },
         take: 1, // A student has at most one active enrollment in the active term
       },
+      faculty_program_affiliations: {
+        where: { is_active: true, is_primary: true },
+        take: 1,
+      },
       industry_partner_profile: true,
       alumni_profile: true,
     },
@@ -140,6 +148,11 @@ export async function getUserEditRecordBySecretary(
             majorId: activeEnrollment.major_id,
             yearLevel: activeEnrollment.year_level,
             section: activeEnrollment.section,
+          }
+        : null,
+      faculty: user.faculty_program_affiliations && user.faculty_program_affiliations.length > 0
+        ? {
+            primaryProgramId: user.faculty_program_affiliations[0].program_id,
           }
         : null,
       verification: user.alumni_profile

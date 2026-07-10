@@ -49,6 +49,9 @@ export const editUserBySecretarySchema = z
   .merge(baseIdentityEditSchema)
   .merge(z.object({
     student: studentEditSchema.optional(),
+    faculty: z.object({
+      program_id: z.string().uuid("Program is required."),
+    }).optional(),
   }))
   .superRefine((data, ctx) => {
     if (data.role === SystemRole.STUDENT) {
@@ -79,6 +82,14 @@ export const editUserBySecretarySchema = z
             path: ["student", "section"],
           });
         }
+      }
+    } else if (data.role === SystemRole.FACULTY) {
+      if (!data.faculty) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Faculty details are required for Faculty accounts.",
+          path: ["faculty"],
+        });
       }
     }
   });

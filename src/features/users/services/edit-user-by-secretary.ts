@@ -18,6 +18,9 @@ function deriveProtectedPayload(parsedData: EditUserBySecretaryInput, existingRo
   if (existingRole === SystemRole.STUDENT && parsedData.student) {
     return `STUDENT:program=${parsedData.student.program_id}:major=${parsedData.student.major_id ?? "null"}:year=${parsedData.student.year_level ?? "null"}:section=${parsedData.student.section ?? "null"}`;
   }
+  if (existingRole === SystemRole.FACULTY && parsedData.faculty) {
+    return `FACULTY:program=${parsedData.faculty.program_id}`;
+  }
   return null;
 }
 
@@ -36,16 +39,16 @@ function verifyConfirmationToken(token: string, expectedPayload: string): boolea
     const decoded = atob(token);
     const parts = decoded.split("|");
     if (parts.length !== 3) return false;
-    
+
     const [payload, expiresAtStr, signature] = parts;
     const expiresAt = parseInt(expiresAtStr, 10);
-    
+
     if (Date.now() > expiresAt) return false;
     if (payload !== expectedPayload) return false;
-    
+
     const secret = getConfirmationSecret();
     const expectedSignature = CryptoJS.HmacSHA256(`${payload}|${expiresAtStr}`, secret).toString();
-    
+
     return signature === expectedSignature;
   } catch {
     return false;
@@ -77,7 +80,7 @@ export async function editUserBySecretary(
     return { success: false, error: "Secretary access required." };
   }
 
-  const { id, first_name, last_name, student } = parsed.data;
+  const { id, first_name, last_name, student, faculty } = parsed.data;
 
   if (id === session.userId) {
     return { success: false, error: "Cannot edit your own account." };
@@ -85,13 +88,17 @@ export async function editUserBySecretary(
 
   const existing = await prisma.user.findUnique({
     where: { id },
-    select: { 
-      id: true, 
-      is_active: true, 
+    select: {
+      id: true,
+      is_active: true,
       roles: { select: { role: true } },
       student_profile: true,
       enrollments: {
         where: { is_active: true, term: { is_active: true } },
+        take: 1
+      },
+      faculty_program_affiliations: {
+        where: { is_active: true, is_primary: true },
         take: 1
       }
     },
@@ -108,18 +115,25 @@ export async function editUserBySecretary(
 
   // Detect protected changes
   const protectedPayload = deriveProtectedPayload(parsed.data, existingRole);
-  
+
   if (protectedPayload) {
     let requiresConfirmation = false;
     if (existingRole === SystemRole.STUDENT && student) {
       const p = existing.student_profile;
       const e = existing.enrollments[0];
-      
+
       const profileChanged = !p || p.program_id !== student.program_id || p.major_id !== (student.major_id ?? null);
-      const placementChanged = (student.year_level && student.section) && 
+      const placementChanged = (student.year_level && student.section) &&
         (!e || e.year_level !== student.year_level || e.section !== student.section);
-        
+
       if (profileChanged || placementChanged) {
+        requiresConfirmation = true;
+      }
+    } else if (existingRole === SystemRole.FACULTY && faculty) {
+      const currentPrimary = existing.faculty_program_affiliations && existing.faculty_program_affiliations.length > 0
+        ? existing.faculty_program_affiliations[0]
+        : null;
+      if (!currentPrimary || currentPrimary.program_id !== faculty.program_id) {
         requiresConfirmation = true;
       }
     }
@@ -132,13 +146,13 @@ export async function editUserBySecretary(
           data: {
             id,
             protectedConfirmationRequired: true,
-            protectedPayload,
-            token: generateConfirmationToken(protectedPayload),
+            protectedPayload: protectedPayload!,
+            token: generateConfirmationToken(protectedPayload!),
           }
         };
       } else {
         // Verify token
-        if (!verifyConfirmationToken(parsed.data.confirmationToken, protectedPayload)) {
+        if (!verifyConfirmationToken(parsed.data.confirmationToken, protectedPayload!)) {
           return { success: false, error: "Invalid or expired confirmation token. Please review the changes again." };
         }
       }
@@ -164,9 +178,9 @@ export async function editUserBySecretary(
           where: { id: student.program_id },
           include: { majors: { where: { is_active: true } } }
         });
-        
+
         if (!program) throw new Error("Selected program not found.");
-        
+
         if (program.majors.length > 0) {
           if (!student.major_id) {
             throw new Error("A major is required for the selected program.");
@@ -215,10 +229,51 @@ export async function editUserBySecretary(
           }
           // Do NOT create a missing enrollment per spec #79 / #81
         }
+      } else if (existingRole === SystemRole.FACULTY && faculty) {
+        // Find existing active primary affiliation to see if we need to change it
+        const primary = await tx.facultyProgramAffiliation.findFirst({
+          where: { faculty_id: id, is_active: true, is_primary: true }
+        });
+
+        if (!primary || primary.program_id !== faculty.program_id) {
+          if (primary) {
+            // Deactivate current primary
+            await tx.facultyProgramAffiliation.update({
+              where: { id: primary.id },
+              data: { is_active: false, is_primary: false }
+            });
+          }
+
+          // Check if there's an existing record for the target program (active or inactive)
+          const existingTarget = await tx.facultyProgramAffiliation.findUnique({
+            where: { faculty_id_program_id: { faculty_id: id, program_id: faculty.program_id } }
+          });
+
+          if (existingTarget) {
+            // Reactivate/promote existing
+            await tx.facultyProgramAffiliation.update({
+              where: { id: existingTarget.id },
+              data: { is_active: true, is_primary: true }
+            });
+          } else {
+            // Create new primary
+            await tx.facultyProgramAffiliation.create({
+              data: {
+                faculty_id: id,
+                program_id: faculty.program_id,
+                is_active: true,
+                is_primary: true,
+              }
+            });
+          }
+        }
       }
     });
-  } catch (err: any) {
-    return { success: false, error: err.message ?? "Database update failed." };
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      return { success: false, error: err.message };
+    }
+    return { success: false, error: "Database update failed." };
   }
 
   return { success: true, data: { id } };
