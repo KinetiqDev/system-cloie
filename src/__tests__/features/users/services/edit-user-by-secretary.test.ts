@@ -60,6 +60,12 @@ describe("editUserBySecretary service", () => {
         update: vi.fn(),
         create: vi.fn(),
       },
+      programHeadAssignment: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findUnique: vi.fn().mockResolvedValue(null),
+        update: vi.fn(),
+        create: vi.fn(),
+      },
     };
   }
 
@@ -81,6 +87,7 @@ describe("editUserBySecretary service", () => {
       faculty_program_affiliations: [
         { id: "aff-1", program_id: PROG_OLD, is_primary: true, is_active: true },
       ],
+      program_head_assignments: [],
     });
 
     mockTx = buildMockTx();
@@ -466,5 +473,125 @@ describe("editUserBySecretary service", () => {
     // No update/create on affiliations
     expect(mockTx.facultyProgramAffiliation.update).not.toHaveBeenCalled();
     expect(mockTx.facultyProgramAffiliation.create).not.toHaveBeenCalled();
+  });
+
+  describe("Program Head assignment", () => {
+    const programHeadInput = {
+      id: USER_ID,
+      role: SystemRole.PROGRAM_HEAD,
+      first_name: "Jane",
+      last_name: "Smith",
+      program_head: { program_id: PROG_NEW },
+    };
+
+    function setProgramHeadRecord(assignments: Array<{ id: string; program_id: string; is_active: boolean }>) {
+      (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: USER_ID,
+        is_active: true,
+        roles: [{ role: SystemRole.PROGRAM_HEAD }],
+        student_profile: null,
+        enrollments: [],
+        faculty_program_affiliations: [],
+        program_head_assignments: assignments.filter((assignment) => assignment.is_active),
+      });
+    }
+
+    it("requires confirmation when changing assignment", async () => {
+      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
+
+      const result = await editUserBySecretary(programHeadInput);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.protectedConfirmationRequired).toBe(true);
+        expect(result.data.protectedPayload).toBe(`PROGRAM_HEAD:program=${PROG_NEW}`);
+      }
+    });
+
+    it("replaces active assignment with a new row", async () => {
+      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
+      mockTx.programHeadAssignment.findFirst.mockResolvedValue({ id: "assignment-old", program_id: PROG_OLD });
+      const token = makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`);
+
+      const result = await editUserBySecretary({ ...programHeadInput, confirmationToken: token });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.programHeadAssignment.update).toHaveBeenCalledWith({
+        where: { id: "assignment-old" },
+        data: { is_active: false },
+      });
+      expect(mockTx.programHeadAssignment.create).toHaveBeenCalledWith({
+        data: { program_head_id: USER_ID, program_id: PROG_NEW, is_active: true },
+      });
+    });
+
+    it("reactivates an existing inactive assignment without duplicating it", async () => {
+      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
+      mockTx.programHeadAssignment.findFirst.mockResolvedValue({ id: "assignment-old", program_id: PROG_OLD });
+      mockTx.programHeadAssignment.findUnique.mockResolvedValue({ id: "assignment-old-target", program_id: PROG_NEW, is_active: false });
+      const result = await editUserBySecretary({
+        ...programHeadInput,
+        confirmationToken: makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`),
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.programHeadAssignment.update).toHaveBeenCalledWith({
+        where: { id: "assignment-old-target" },
+        data: { is_active: true },
+      });
+      expect(mockTx.programHeadAssignment.create).not.toHaveBeenCalled();
+    });
+
+    it("completes legacy account by creating its first assignment", async () => {
+      setProgramHeadRecord([]);
+      mockTx.programHeadAssignment.findFirst.mockResolvedValue(null);
+      const first = await editUserBySecretary(programHeadInput);
+      expect(first.success).toBe(true);
+      if (!first.success || !first.data.token) return;
+
+      const result = await editUserBySecretary({ ...programHeadInput, confirmationToken: first.data.token });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.programHeadAssignment.create).toHaveBeenCalledWith({
+        data: { program_head_id: USER_ID, program_id: PROG_NEW, is_active: true },
+      });
+    });
+
+    it("does not touch course data or other users during reassignment", async () => {
+      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
+      mockTx.programHeadAssignment.findFirst.mockResolvedValue({ id: "assignment-old", program_id: PROG_OLD });
+      const result = await editUserBySecretary({
+        ...programHeadInput,
+        confirmationToken: makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`),
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.programHeadAssignment.update).toHaveBeenCalledTimes(1);
+      expect(mockTx.programHeadAssignment.create).toHaveBeenCalledTimes(1);
+      expect(mockTx).not.toHaveProperty("courseAssignment");
+      expect(mockTx).not.toHaveProperty("courseBoundEvaluation");
+    });
+
+    it("rolls back Program Head assignment changes when the transaction fails", async () => {
+      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
+      const failingTx = {
+        user: { update: vi.fn().mockRejectedValue(new Error("DB write failed")) },
+        programHeadAssignment: {
+          findFirst: vi.fn().mockResolvedValue({ id: "assignment-old", program_id: PROG_OLD }),
+          findUnique: vi.fn().mockResolvedValue(null),
+          update: vi.fn(),
+          create: vi.fn(),
+        },
+      };
+      (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(failingTx));
+
+      const result = await editUserBySecretary({
+        ...programHeadInput,
+        confirmationToken: makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`),
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(/db write failed/i);
+    });
   });
 });

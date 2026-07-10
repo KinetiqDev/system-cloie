@@ -21,6 +21,9 @@ function deriveProtectedPayload(parsedData: EditUserBySecretaryInput, existingRo
   if (existingRole === SystemRole.FACULTY && parsedData.faculty) {
     return `FACULTY:program=${parsedData.faculty.program_id}`;
   }
+  if (existingRole === SystemRole.PROGRAM_HEAD && parsedData.program_head) {
+    return `PROGRAM_HEAD:program=${parsedData.program_head.program_id}`;
+  }
   return null;
 }
 
@@ -80,7 +83,7 @@ export async function editUserBySecretary(
     return { success: false, error: "Secretary access required." };
   }
 
-  const { id, first_name, last_name, student, faculty } = parsed.data;
+  const { id, first_name, last_name, student, faculty, program_head } = parsed.data;
 
   if (id === session.userId) {
     return { success: false, error: "Cannot edit your own account." };
@@ -100,6 +103,10 @@ export async function editUserBySecretary(
       faculty_program_affiliations: {
         where: { is_active: true, is_primary: true },
         take: 1
+      },
+      program_head_assignments: {
+        where: { is_active: true },
+        take: 1,
       }
     },
   });
@@ -134,6 +141,11 @@ export async function editUserBySecretary(
         ? existing.faculty_program_affiliations[0]
         : null;
       if (!currentPrimary || currentPrimary.program_id !== faculty.program_id) {
+        requiresConfirmation = true;
+      }
+    } else if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
+      const currentAssignment = existing.program_head_assignments?.[0] ?? null;
+      if (!currentAssignment || currentAssignment.program_id !== program_head.program_id) {
         requiresConfirmation = true;
       }
     }
@@ -264,6 +276,43 @@ export async function editUserBySecretary(
                 is_active: true,
                 is_primary: true,
               }
+            });
+          }
+        }
+      } else if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
+        const assignment = await tx.programHeadAssignment.findFirst({
+          where: { program_head_id: id, is_active: true },
+        });
+
+        if (!assignment || assignment.program_id !== program_head.program_id) {
+          if (assignment) {
+            await tx.programHeadAssignment.update({
+              where: { id: assignment.id },
+              data: { is_active: false },
+            });
+          }
+
+          const existingTarget = await tx.programHeadAssignment.findUnique({
+            where: {
+              program_head_id_program_id: {
+                program_head_id: id,
+                program_id: program_head.program_id,
+              },
+            },
+          });
+
+          if (existingTarget) {
+            await tx.programHeadAssignment.update({
+              where: { id: existingTarget.id },
+              data: { is_active: true },
+            });
+          } else {
+            await tx.programHeadAssignment.create({
+              data: {
+                program_head_id: id,
+                program_id: program_head.program_id,
+                is_active: true,
+              },
             });
           }
         }

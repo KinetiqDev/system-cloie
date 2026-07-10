@@ -152,6 +152,7 @@ function EditUserDialogBody({
     profileChanged?: boolean;
     placementChanged?: boolean;
     facultyProgramChanged?: boolean;
+    programHeadAssignmentChanged?: boolean;
     oldValues: Record<string, string>;
     newValues: Record<string, string>;
   } | null>(null);
@@ -202,6 +203,8 @@ function EditUserDialogBody({
         setSection((result.data.activeEnrollment?.section as StudentSection) ?? null);
       } else if (result.data.role === SystemRole.FACULTY) {
         setProgramId(result.data.faculty?.primaryProgramId ?? "");
+      } else if (result.data.role === SystemRole.PROGRAM_HEAD) {
+        setProgramId(result.data.programHead?.assignmentProgramId ?? "");
       }
 
       setLoadState({ status: "ready", record: result.data });
@@ -267,6 +270,12 @@ function EditUserDialogBody({
         return;
       }
       formData.set("faculty.program_id", programId);
+    } else if (loadState.status === "ready" && loadState.record.role === SystemRole.PROGRAM_HEAD) {
+      if (!programId) {
+        setSubmitError("Managed program is required.");
+        return;
+      }
+      formData.set("program_head.program_id", programId);
     }
 
     if (confirmationToken) {
@@ -327,6 +336,18 @@ function EditUserDialogBody({
             newValues: {
               program: programs.find(p => p.id === newP)?.name ?? "None",
             }
+          });
+        } else if (record?.role === SystemRole.PROGRAM_HEAD) {
+          const oldP = record.programHead?.assignmentProgramId;
+          setConfirmationToken(result.data.token!);
+          setConfirmationSummary({
+            programHeadAssignmentChanged: true,
+            oldValues: {
+              program: programs.find((p) => p.id === oldP)?.name ?? "No active assignment",
+            },
+            newValues: {
+              program: programs.find((p) => p.id === programId)?.name ?? "None",
+            },
           });
         }
         return;
@@ -584,6 +605,31 @@ function EditUserDialogBody({
             </div>
           )}
 
+          {loadState.record.role === SystemRole.PROGRAM_HEAD && (
+            <div className="space-y-2 border-t pt-4">
+              <Label htmlFor="edit-user-program-head-program">Managed Program</Label>
+              <Select
+                value={programId}
+                onValueChange={(v) => setProgramId(v ?? "")}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="edit-user-program-head-program">
+                  <SelectValue placeholder="Select managed program" />
+                </SelectTrigger>
+                <SelectContent>
+                  {programs.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Only this Program Head&apos;s assignment changes. Other Program Heads and course assignments remain unchanged.
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
             <Button
               type="button"
@@ -658,10 +704,24 @@ function EditUserDialogBody({
               </div>
             )}
 
+            {confirmationSummary.programHeadAssignmentChanged && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Program Head Assignment Changes</h4>
+                <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                  <div className="text-muted-foreground">Previous:</div>
+                  <div>{confirmationSummary.oldValues.program}</div>
+                  <div className="font-medium text-primary">New:</div>
+                  <div className="font-medium">{confirmationSummary.newValues.program}</div>
+                </div>
+              </div>
+            )}
+
             <p className="text-sm text-muted-foreground flex items-start gap-2 pt-2">
               <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
               {confirmationSummary.facultyProgramChanged
                 ? "Additional active affiliations remain unchanged. If the selected program is currently an additional affiliation, it will be promoted to primary."
+                : confirmationSummary.programHeadAssignmentChanged
+                ? "The previous assignment becomes inactive. If this program was managed before, its existing assignment-history row is reactivated. Other Program Heads, course assignments, evaluations, and historical academic work remain unchanged."
                 : "Historical enrollments remain unchanged. This update only applies to the static profile and the current active term."}
             </p>
           </div>

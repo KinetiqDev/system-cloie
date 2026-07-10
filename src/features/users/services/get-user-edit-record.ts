@@ -40,6 +40,9 @@ export type SecretaryUserEditRecord = {
   faculty: {
     primaryProgramId: string | null;
   } | null;
+  programHead: {
+    assignmentProgramId: string | null;
+  } | null;
   // External verification status for Alumni and Industry Partner accounts.
   verification: {
     status: VerificationStatus;
@@ -105,6 +108,10 @@ export async function getUserEditRecordBySecretary(
         where: { is_active: true, is_primary: true },
         take: 1,
       },
+      program_head_assignments: {
+        where: { is_active: true },
+        take: 1,
+      },
       industry_partner_profile: true,
       alumni_profile: true,
     },
@@ -155,6 +162,9 @@ export async function getUserEditRecordBySecretary(
             primaryProgramId: user.faculty_program_affiliations[0].program_id,
           }
         : null,
+      programHead: {
+        assignmentProgramId: user.program_head_assignments?.[0]?.program_id ?? null,
+      },
       verification: user.alumni_profile
         ? { status: user.alumni_profile.verification_status }
         : user.industry_partner_profile

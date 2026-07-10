@@ -121,7 +121,16 @@ describe("EditUserDialog", () => {
       () => new Promise(() => {}) // Never resolves
     );
 
-    renderDialog();
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(/loading user record/i);
@@ -145,7 +154,16 @@ describe("EditUserDialog", () => {
       },
     });
 
-    renderDialog();
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("John")).toBeInTheDocument();
@@ -222,7 +240,16 @@ describe("EditUserDialog", () => {
       data: { id: "target-user" },
     });
 
-    renderDialog();
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("John")).toBeInTheDocument();
@@ -252,7 +279,16 @@ describe("EditUserDialog", () => {
       error: "User not found.",
     });
 
-    renderDialog();
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(/user not found/i);
@@ -283,7 +319,8 @@ describe("EditUserDialog", () => {
         verification: null,
         industryPartner: null,
         alumni: null,
-        faculty: { primaryProgramId: "prog-old" },
+         faculty: { primaryProgramId: "prog-old" },
+         programHead: null,
       },
     });
 
@@ -321,7 +358,8 @@ describe("EditUserDialog", () => {
         verification: null,
         industryPartner: null,
         alumni: null,
-        faculty: { primaryProgramId: "prog-old" },
+         faculty: { primaryProgramId: "prog-old" },
+         programHead: null,
       },
     });
 
@@ -353,7 +391,7 @@ describe("EditUserDialog", () => {
     // Change the primary program select
     const programSelect = screen.getByLabelText(/primary program affiliation/i);
     fireEvent.click(programSelect);
-    fireEvent.click(screen.getByText("Information Systems"));
+    fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
 
     // Submit to trigger confirmation flow
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
@@ -366,5 +404,85 @@ describe("EditUserDialog", () => {
     // Old and new program names visible in confirmation
     expect(screen.getAllByText("Information Technology").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Information Systems").length).toBeGreaterThan(0);
+  });
+
+  it("shows managed-program control for Program Head role", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Pat",
+        lastName: "Head",
+        email: "pat@acd.edu.ph",
+        isActive: true,
+        role: SystemRole.PROGRAM_HEAD,
+        student: null,
+        activeEnrollment: null,
+        faculty: null,
+        programHead: { assignmentProgramId: "prog-old" },
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+      },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
+    expect(screen.getByLabelText(/managed program/i)).toBeInTheDocument();
+    expect(screen.getByText(/other program heads and course assignments remain unchanged/i)).toBeInTheDocument();
+  });
+
+  it("shows assignment-history effect in Program Head confirmation", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Pat",
+        lastName: "Head",
+        email: "pat@acd.edu.ph",
+        isActive: true,
+        role: SystemRole.PROGRAM_HEAD,
+        student: null,
+        activeEnrollment: null,
+        faculty: null,
+        programHead: { assignmentProgramId: "prog-old" },
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+      },
+    });
+    (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: { protectedConfirmationRequired: true, token: "test-token" },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText(/managed program/i));
+    fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(screen.getByText(/program head assignment changes/i)).toBeInTheDocument());
+    expect(screen.getByText(/previous assignment becomes inactive/i)).toBeInTheDocument();
   });
 });

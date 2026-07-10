@@ -52,6 +52,9 @@ export const editUserBySecretarySchema = z
     faculty: z.object({
       program_id: z.string().uuid("Program is required."),
     }).optional(),
+    program_head: z.object({
+      program_id: z.string().uuid("Program is required."),
+    }).optional(),
   }))
   .superRefine((data, ctx) => {
     if (data.role === SystemRole.STUDENT) {
@@ -89,6 +92,14 @@ export const editUserBySecretarySchema = z
           code: z.ZodIssueCode.custom,
           message: "Faculty details are required for Faculty accounts.",
           path: ["faculty"],
+        });
+      }
+    } else if (data.role === SystemRole.PROGRAM_HEAD) {
+      if (!data.program_head) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Program Head details are required for Program Head accounts.",
+          path: ["program_head"],
         });
       }
     }
