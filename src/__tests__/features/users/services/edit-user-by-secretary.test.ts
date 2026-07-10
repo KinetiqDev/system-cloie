@@ -9,6 +9,7 @@ import CryptoJS from "crypto-js";
 
 // Valid Zod-4 compliant UUIDs (version bits [1-8], variant bits [89ab])
 const USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+const OTHER_USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12";
 const SECRETARY_ID = "123e4567-e89b-12d3-a456-426614174000";
 const PROG_OLD = "00000000-0000-0000-0000-000000000000"; // nil UUID (allowed by Zod 4)
 const PROG_NEW = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22"; // valid v4-ish
@@ -39,7 +40,6 @@ function makeToken(payload: string, ttlMs = 60_000): string {
 describe("editUserBySecretary service", () => {
   const validInput = {
     id: USER_ID,
-    role: SystemRole.FACULTY,
     first_name: "Jane",
     last_name: "Smith",
     faculty: { program_id: PROG_OLD },
@@ -186,6 +186,32 @@ describe("editUserBySecretary service", () => {
     if (!result.success) expect(result.error).toMatch(/last name is required/i);
   });
 
+  it("rejects a crafted request without details for the target's role", async () => {
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: USER_ID,
+      is_active: true,
+      roles: [{ role: SystemRole.STUDENT }],
+      student_profile: null,
+      enrollments: [],
+      faculty_program_affiliations: [],
+      program_head_assignments: [],
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await editUserBySecretary({
+      id: USER_ID,
+      first_name: "Jane",
+      last_name: "Smith",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Student details are required for Student accounts.",
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("requires a confirmation token when changing student protected fields", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: USER_ID,
@@ -198,7 +224,6 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.STUDENT,
       first_name: "Jane",
       last_name: "Smith",
       student: {
@@ -206,8 +231,6 @@ describe("editUserBySecretary service", () => {
         program_id: PROG_NEW,
       },
     });
-
-    if (!result.success) console.log("[student protected fields]", result.error);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -222,13 +245,10 @@ describe("editUserBySecretary service", () => {
     // Mock: current primary = PROG_OLD, request = PROG_NEW → change detected → token required
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
     });
-
-    if (!result.success) console.log("[fac confirmation]", result.error);
 
     expect(result.success).toBe(true);
     if (result.success) {
@@ -245,19 +265,16 @@ describe("editUserBySecretary service", () => {
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
-    const payload = `FACULTY:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
-
-    if (!result.success) console.log("[fac replacement]", result.error);
 
     expect(result.success).toBe(true);
     // Old primary deactivated
@@ -286,19 +303,16 @@ describe("editUserBySecretary service", () => {
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
-    const payload = `FACULTY:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
-
-    if (!result.success) console.log("[fac promote]", result.error);
 
     expect(result.success).toBe(true);
     // Existing inactive record promoted
@@ -313,7 +327,6 @@ describe("editUserBySecretary service", () => {
   it("rejects an invalid or expired confirmation token", async () => {
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
@@ -322,6 +335,22 @@ describe("editUserBySecretary service", () => {
 
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error).toMatch(/invalid or expired confirmation token/i);
+  });
+
+  it("rejects a confirmation token issued for another target user", async () => {
+    const result = await editUserBySecretary({
+      id: OTHER_USER_ID,
+      first_name: "Jane",
+      last_name: "Smith",
+      faculty: { program_id: PROG_NEW },
+      confirmationToken: makeToken(`FACULTY:id=${USER_ID}:program=${PROG_NEW}`),
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid or expired confirmation token. Please review the changes again.",
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("completes a legacy Faculty account by creating a primary affiliation when none exists", async () => {
@@ -346,7 +375,6 @@ describe("editUserBySecretary service", () => {
     // legacy account is a protected change since there's no existing primary)
     const firstResult = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
@@ -357,14 +385,11 @@ describe("editUserBySecretary service", () => {
     // Second request: with token → transaction creates the primary affiliation
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: firstResult.data.token,
     });
-
-    if (!result.success) console.log("[fac legacy]", result.error);
 
     expect(result.success).toBe(true);
     expect(mockTx.facultyProgramAffiliation.create).toHaveBeenCalledWith({
@@ -389,19 +414,16 @@ describe("editUserBySecretary service", () => {
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
-    const payload = `FACULTY:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
-
-    if (!result.success) console.log("[fac promote active]", result.error);
 
     expect(result.success).toBe(true);
     // Old primary deactivated
@@ -427,19 +449,16 @@ describe("editUserBySecretary service", () => {
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
-    const payload = `FACULTY:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
-
-    if (!result.success) console.log("[fac preservation]", result.error);
 
     expect(result.success).toBe(true);
     // Exactly 1 update (deactivate old primary) + 1 create (new primary)
@@ -467,19 +486,16 @@ describe("editUserBySecretary service", () => {
       cb(failingTx)
     );
 
-    const payload = `FACULTY:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      role: SystemRole.FACULTY,
       first_name: "Jane",
       last_name: "Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
-
-    if (result.success) console.log("[fac atomicity] expected failure but got success");
 
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error).toMatch(/db write failed/i);
@@ -498,7 +514,6 @@ describe("editUserBySecretary service", () => {
   describe("Program Head assignment", () => {
     const programHeadInput = {
       id: USER_ID,
-      role: SystemRole.PROGRAM_HEAD,
       first_name: "Jane",
       last_name: "Smith",
       program_head: { program_id: PROG_NEW },
@@ -526,7 +541,7 @@ describe("editUserBySecretary service", () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.protectedConfirmationRequired).toBe(true);
-        expect(result.data.protectedPayload).toBe(`PROGRAM_HEAD:program=${PROG_NEW}`);
+        expect(result.data.protectedPayload).toBe(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`);
       }
     });
 
@@ -536,7 +551,7 @@ describe("editUserBySecretary service", () => {
         id: "assignment-old",
         program_id: PROG_OLD,
       });
-      const token = makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`);
+      const token = makeToken(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`);
 
       const result = await editUserBySecretary({ ...programHeadInput, confirmationToken: token });
 
@@ -563,7 +578,7 @@ describe("editUserBySecretary service", () => {
       });
       const result = await editUserBySecretary({
         ...programHeadInput,
-        confirmationToken: makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`),
+        confirmationToken: makeToken(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`),
       });
 
       expect(result.success).toBe(true);
@@ -600,7 +615,7 @@ describe("editUserBySecretary service", () => {
       });
       const result = await editUserBySecretary({
         ...programHeadInput,
-        confirmationToken: makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`),
+        confirmationToken: makeToken(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`),
       });
 
       expect(result.success).toBe(true);
@@ -627,7 +642,7 @@ describe("editUserBySecretary service", () => {
 
       const result = await editUserBySecretary({
         ...programHeadInput,
-        confirmationToken: makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`),
+        confirmationToken: makeToken(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`),
       });
 
       expect(result.success).toBe(false);
@@ -638,7 +653,6 @@ describe("editUserBySecretary service", () => {
   describe("Alumni profile and verification", () => {
     const alumniInput = {
       id: USER_ID,
-      role: SystemRole.ALUMNI,
       first_name: "Jane",
       last_name: "Smith",
       alumni: {
@@ -709,7 +723,7 @@ describe("editUserBySecretary service", () => {
       });
       mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
       const token = makeToken(
-        `ALUMNI:program=${PROG_NEW}:major=${PROG_OLD}:graduationYear=2020:verificationStatus=APPROVED`
+        `ALUMNI:id=${USER_ID}:program=${PROG_NEW}:major=${PROG_OLD}:graduationYear=2020:verificationStatus=APPROVED`
       );
 
       const result = await editUserBySecretary({
@@ -726,7 +740,6 @@ describe("editUserBySecretary service", () => {
   describe("Industry Partner profile and verification", () => {
     const industryInput = {
       id: USER_ID,
-      role: SystemRole.INDUSTRY_PARTNER,
       first_name: "Jane",
       last_name: "Smith",
       industry_partner: {
@@ -812,7 +825,7 @@ describe("editUserBySecretary service", () => {
           verification_status: VerificationStatus.PENDING,
         },
         confirmationToken: makeToken(
-          `INDUSTRY_PARTNER:company=CLOIE Labs:position=Hiring Manager:program=${PROG_NEW}:verificationStatus=PENDING`
+          `INDUSTRY_PARTNER:id=${USER_ID}:company=CLOIE Labs:position=Hiring Manager:program=${PROG_NEW}:verificationStatus=PENDING`
         ),
       });
 

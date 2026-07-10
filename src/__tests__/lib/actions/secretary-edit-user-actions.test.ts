@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SystemRole } from "@prisma/client";
 
 const { resolveAuthSession, editUserBySecretary } = vi.hoisted(() => ({
   resolveAuthSession: vi.fn(),
@@ -25,7 +24,6 @@ describe("editUserBySecretaryAction", () => {
   it("forwards Program Head assignment fields to service validation", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("role", SystemRole.PROGRAM_HEAD);
     formData.set("first_name", "Ana");
     formData.set("last_name", "Cruz");
     formData.set("program_head.program_id", "33333333-3333-4333-8333-333333333333");
@@ -43,7 +41,6 @@ describe("editUserBySecretaryAction", () => {
   it("forwards Alumni fields and confirmation token", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("role", SystemRole.ALUMNI);
     formData.set("first_name", "Ana");
     formData.set("last_name", "Cruz");
     formData.set("alumni.program_id", "33333333-3333-4333-8333-333333333333");
@@ -69,7 +66,6 @@ describe("editUserBySecretaryAction", () => {
   it("forwards Industry Partner fields and confirmation token", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("role", SystemRole.INDUSTRY_PARTNER);
     formData.set("first_name", "Ana");
     formData.set("last_name", "Cruz");
     formData.set("industry_partner.company_name", "CLOIE Labs");
@@ -91,5 +87,30 @@ describe("editUserBySecretaryAction", () => {
         },
       })
     );
+  });
+
+  it("rejects self-edit before calling the service", async () => {
+    const formData = new FormData();
+    formData.set("id", "11111111-1111-4111-8111-111111111111");
+    formData.set("first_name", "Ana");
+    formData.set("last_name", "Cruz");
+
+    const result = await editUserBySecretaryAction(formData);
+
+    expect(result.success).toBe(false);
+    expect(editUserBySecretary).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-Secretary callers before calling the service", async () => {
+    resolveAuthSession.mockResolvedValue({ userId: "dean-id", activeRole: "DEAN" });
+    const formData = new FormData();
+    formData.set("id", "22222222-2222-4222-8222-222222222222");
+    formData.set("first_name", "Ana");
+    formData.set("last_name", "Cruz");
+
+    const result = await editUserBySecretaryAction(formData);
+
+    expect(result.success).toBe(false);
+    expect(editUserBySecretary).not.toHaveBeenCalled();
   });
 });

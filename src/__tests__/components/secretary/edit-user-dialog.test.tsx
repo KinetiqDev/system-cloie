@@ -16,6 +16,7 @@ vi.mock("@/lib/actions/secretary-edit-user-actions", () => ({
 // Mock the Base UI-backed Select with a lightweight, test-friendly version so
 // program selection can be exercised without relying on pointer/keyboard internals.
 const SelectContext = React.createContext<{
+  value?: string;
   onValueChange?: (value: string) => void;
 }>({});
 
@@ -30,7 +31,7 @@ vi.mock("@/components/ui/select", () => {
     children: React.ReactNode;
   }) {
     return (
-      <SelectContext.Provider value={{ onValueChange }}>
+      <SelectContext.Provider value={{ value, onValueChange }}>
         <span data-testid="select-value" data-value={value ?? ""}>
           {children}
         </span>
@@ -51,7 +52,8 @@ vi.mock("@/components/ui/select", () => {
     placeholder?: string;
     children?: React.ReactNode;
   }) {
-    return <span>{children ?? placeholder}</span>;
+    const { value } = React.useContext(SelectContext);
+    return <span>{children ?? placeholder ?? value}</span>;
   }
   function SelectContent({ children }: { children: React.ReactNode }) {
     return <div role="listbox">{children}</div>;
@@ -336,6 +338,66 @@ describe("EditUserDialog", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows labels instead of stored IDs and enum values in selected controls", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Abbegail",
+        lastName: "Abebon",
+        email: "student@acd.edu.ph",
+        isActive: true,
+        role: SystemRole.STUDENT,
+        student: {
+          studentIdNumber: "1000818031",
+          programId: "prog-old",
+          programCode: "BSIT",
+          programName: "Information Technology",
+          majorId: "major-old",
+          majorName: "Networks",
+        },
+        activeEnrollment: {
+          id: "enrollment-id",
+          termInstanceId: "term-id",
+          programId: "prog-old",
+          majorId: "major-old",
+          yearLevel: "FOURTH_YEAR",
+          section: "EVENING",
+        },
+        faculty: null,
+        programHead: null,
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+      },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={[
+          {
+            id: "prog-old",
+            code: "BSIT",
+            name: "Information Technology",
+            majors: [{ id: "major-old", name: "Networks" }],
+          },
+        ]}
+        yearLevels={["FOURTH_YEAR"]}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue("Abbegail")).toBeInTheDocument());
+
+    expect(screen.getByLabelText("Program")).toHaveTextContent("Information Technology");
+    expect(screen.getByLabelText("Major")).toHaveTextContent("Networks");
+    expect(screen.getByLabelText("Year Level")).toHaveTextContent("Fourth Year");
+    expect(screen.getByLabelText("Section")).toHaveTextContent("Evening");
+  });
+
   it("shows Industry Partner organization, optional fields, and verification effect", async () => {
     (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: true,
@@ -375,6 +437,7 @@ describe("EditUserDialog", () => {
     expect(screen.getByLabelText(/position \(optional\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/affiliated program \(optional\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/verification status/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/verification status/i)).toHaveTextContent("Pending");
     expect(screen.getByText(/limited dashboard access remains/i)).toBeInTheDocument();
   });
 
@@ -519,6 +582,7 @@ describe("EditUserDialog", () => {
     );
 
     await waitFor(() => expect(screen.getByDisplayValue("Ally")).toBeInTheDocument());
+    expect(screen.getByLabelText(/verification status/i)).toHaveTextContent("Pending");
     expect(screen.getByLabelText(/graduation year/i)).toHaveValue(2020);
     expect(screen.getByLabelText(/verification status/i)).toBeInTheDocument();
     expect(

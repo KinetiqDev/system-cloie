@@ -275,7 +275,6 @@ function EditUserDialogBody({
     if (loadState.status !== "ready") return;
 
     formData.set("id", userId);
-    formData.set("role", loadState.record.role);
     formData.set("first_name", trimmedFirst);
     formData.set("last_name", trimmedLast);
 
@@ -293,6 +292,7 @@ function EditUserDialogBody({
         return;
       }
 
+      const canEditPlacement = !!loadState.record.activeEnrollment;
       const hasYearLevel = !!yearLevel;
       const hasSection = !!section;
       if (hasYearLevel !== hasSection) {
@@ -303,8 +303,8 @@ function EditUserDialogBody({
       formData.set("student.student_id_number", studentIdNumber.trim());
       formData.set("student.program_id", programId);
       if (majorId) formData.set("student.major_id", majorId);
-      if (yearLevel) formData.set("student.year_level", yearLevel);
-      if (section) formData.set("student.section", section);
+      if (canEditPlacement && yearLevel) formData.set("student.year_level", yearLevel);
+      if (canEditPlacement && section) formData.set("student.section", section);
     } else if (loadState.status === "ready" && loadState.record.role === SystemRole.FACULTY) {
       if (!programId) {
         setSubmitError("Primary program affiliation is required.");
@@ -601,7 +601,7 @@ function EditUserDialogBody({
                   disabled={isSubmitting}
                 >
                   <SelectTrigger id="edit-user-program">
-                    <SelectValue placeholder="Select program" />
+                    <SelectValue placeholder="Select program">{selectedProgram?.name}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {programs.map((p) => (
@@ -618,7 +618,9 @@ function EditUserDialogBody({
                   <Label htmlFor="edit-user-major">Major</Label>
                   <Select value={majorId ?? ""} onValueChange={setMajorId} disabled={isSubmitting}>
                     <SelectTrigger id="edit-user-major">
-                      <SelectValue placeholder="Select major" />
+                      <SelectValue placeholder="Select major">
+                        {selectedProgram?.majors.find((major) => major.id === majorId)?.name}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {selectedProgram.majors.map((m) => (
@@ -637,10 +639,12 @@ function EditUserDialogBody({
                   <Select
                     value={yearLevel ?? ""}
                     onValueChange={(val) => setYearLevel(val as YearLevel)}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !loadState.record.activeEnrollment}
                   >
                     <SelectTrigger id="edit-user-year-level">
-                      <SelectValue placeholder="Select year level" />
+                      <SelectValue placeholder="Select year level">
+                        {yearLevel ? formatYearLevel(yearLevel) : undefined}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">(None)</SelectItem>
@@ -658,10 +662,12 @@ function EditUserDialogBody({
                   <Select
                     value={section ?? ""}
                     onValueChange={(val) => setSection(val as StudentSection)}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !loadState.record.activeEnrollment}
                   >
                     <SelectTrigger id="edit-user-section">
-                      <SelectValue placeholder="Select section" />
+                      <SelectValue placeholder="Select section">
+                        {section ? formatSection(section) : undefined}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">(None)</SelectItem>
@@ -690,7 +696,7 @@ function EditUserDialogBody({
                 disabled={isSubmitting}
               >
                 <SelectTrigger id="edit-user-faculty-program">
-                  <SelectValue placeholder="Select primary program" />
+                  <SelectValue placeholder="Select primary program">{selectedProgram?.name}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {programs.map((p) => (
@@ -716,7 +722,7 @@ function EditUserDialogBody({
                 disabled={isSubmitting}
               >
                 <SelectTrigger id="edit-user-program-head-program">
-                  <SelectValue placeholder="Select managed program" />
+                  <SelectValue placeholder="Select managed program">{selectedProgram?.name}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {programs.map((p) => (
@@ -744,7 +750,7 @@ function EditUserDialogBody({
                   disabled={isSubmitting}
                 >
                   <SelectTrigger id="edit-user-alumni-program">
-                    <SelectValue placeholder="Select program" />
+                    <SelectValue placeholder="Select program">{selectedProgram?.name}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {programs.map((p) => (
@@ -760,7 +766,9 @@ function EditUserDialogBody({
                   <Label htmlFor="edit-user-alumni-major">Major</Label>
                   <Select value={majorId ?? ""} onValueChange={setMajorId} disabled={isSubmitting}>
                     <SelectTrigger id="edit-user-alumni-major">
-                      <SelectValue placeholder="Select major" />
+                      <SelectValue placeholder="Select major">
+                        {selectedProgram?.majors.find((major) => major.id === majorId)?.name}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {selectedProgram.majors.map((m) => (
@@ -793,7 +801,7 @@ function EditUserDialogBody({
                   disabled={isSubmitting}
                 >
                   <SelectTrigger id="edit-user-alumni-verification">
-                    <SelectValue />
+                    <SelectValue>{formatVerificationStatus(verificationStatus)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={VerificationStatus.PENDING}>Pending</SelectItem>
@@ -838,7 +846,9 @@ function EditUserDialogBody({
                   disabled={isSubmitting}
                 >
                   <SelectTrigger id="edit-user-industry-program">
-                    <SelectValue placeholder="No affiliated program" />
+                    <SelectValue placeholder="No affiliated program">
+                      {selectedProgram?.name}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">No affiliated program</SelectItem>
@@ -858,7 +868,7 @@ function EditUserDialogBody({
                   disabled={isSubmitting}
                 >
                   <SelectTrigger id="edit-user-industry-verification">
-                    <SelectValue />
+                    <SelectValue>{formatVerificationStatus(verificationStatus)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={VerificationStatus.PENDING}>Pending</SelectItem>

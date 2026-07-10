@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SystemRole, YearLevel, StudentSection, VerificationStatus } from "@prisma/client";
+import { YearLevel, StudentSection, VerificationStatus } from "@prisma/client";
 
 /**
  * Base identity fields editable for any account through the Secretary
@@ -69,7 +69,6 @@ export type IndustryPartnerEditInput = z.infer<typeof industryPartnerEditSchema>
 export const editUserBySecretarySchema = z
   .object({
     id: z.string().uuid(),
-    role: z.nativeEnum(SystemRole), // Sent for routing/validation, but not updated
     confirmationToken: z.string().optional(), // Token for protected edits
   })
   .merge(baseIdentityEditSchema)
@@ -89,66 +88,6 @@ export const editUserBySecretarySchema = z
       alumni: alumniEditSchema.optional(),
       industry_partner: industryPartnerEditSchema.optional(),
     })
-  )
-  .superRefine((data, ctx) => {
-    if (data.role === SystemRole.STUDENT) {
-      if (!data.student) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Student details are required for Student accounts.",
-          path: ["student"],
-        });
-        return;
-      }
-
-      // Year level and section are a pair if one is provided
-      const hasYearLevel = !!data.student.year_level;
-      const hasSection = !!data.student.section;
-      if (hasYearLevel !== hasSection) {
-        if (!hasYearLevel) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Year level is required when section is selected.",
-            path: ["student", "year_level"],
-          });
-        }
-        if (!hasSection) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Section is required when year level is selected.",
-            path: ["student", "section"],
-          });
-        }
-      }
-    } else if (data.role === SystemRole.FACULTY) {
-      if (!data.faculty) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Faculty details are required for Faculty accounts.",
-          path: ["faculty"],
-        });
-      }
-    } else if (data.role === SystemRole.PROGRAM_HEAD) {
-      if (!data.program_head) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Program Head details are required for Program Head accounts.",
-          path: ["program_head"],
-        });
-      }
-    } else if (data.role === SystemRole.ALUMNI && !data.alumni) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Alumni details are required for Alumni accounts.",
-        path: ["alumni"],
-      });
-    } else if (data.role === SystemRole.INDUSTRY_PARTNER && !data.industry_partner) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Industry Partner details are required for Industry Partner accounts.",
-        path: ["industry_partner"],
-      });
-    }
-  });
+  );
 
 export type EditUserBySecretaryInput = z.infer<typeof editUserBySecretarySchema>;

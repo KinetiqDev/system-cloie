@@ -4,6 +4,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { type EditUserBySecretaryInput, editUserBySecretarySchema } from "../schemas/edit-user";
 import CryptoJS from "crypto-js";
+import { timingSafeEqual } from "node:crypto";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 import { SystemRole } from "@prisma/client";
 
@@ -13,22 +14,23 @@ import { SystemRole } from "@prisma/client";
  */
 function deriveProtectedPayload(
   parsedData: EditUserBySecretaryInput,
-  existingRole: SystemRole
+  existingRole: SystemRole,
+  userId: string
 ): string | null {
   if (existingRole === SystemRole.STUDENT && parsedData.student) {
-    return `STUDENT:program=${parsedData.student.program_id}:major=${parsedData.student.major_id ?? "null"}:year=${parsedData.student.year_level ?? "null"}:section=${parsedData.student.section ?? "null"}`;
+    return `STUDENT:id=${userId}:program=${parsedData.student.program_id}:major=${parsedData.student.major_id ?? "null"}:year=${parsedData.student.year_level ?? "null"}:section=${parsedData.student.section ?? "null"}`;
   }
   if (existingRole === SystemRole.FACULTY && parsedData.faculty) {
-    return `FACULTY:program=${parsedData.faculty.program_id}`;
+    return `FACULTY:id=${userId}:program=${parsedData.faculty.program_id}`;
   }
   if (existingRole === SystemRole.PROGRAM_HEAD && parsedData.program_head) {
-    return `PROGRAM_HEAD:program=${parsedData.program_head.program_id}`;
+    return `PROGRAM_HEAD:id=${userId}:program=${parsedData.program_head.program_id}`;
   }
   if (existingRole === SystemRole.ALUMNI && parsedData.alumni) {
-    return `ALUMNI:program=${parsedData.alumni.program_id}:major=${parsedData.alumni.major_id ?? "null"}:graduationYear=${parsedData.alumni.graduation_year}:verificationStatus=${parsedData.alumni.verification_status}`;
+    return `ALUMNI:id=${userId}:program=${parsedData.alumni.program_id}:major=${parsedData.alumni.major_id ?? "null"}:graduationYear=${parsedData.alumni.graduation_year}:verificationStatus=${parsedData.alumni.verification_status}`;
   }
   if (existingRole === SystemRole.INDUSTRY_PARTNER && parsedData.industry_partner) {
-    return `INDUSTRY_PARTNER:company=${parsedData.industry_partner.company_name}:position=${parsedData.industry_partner.position ?? "null"}:program=${parsedData.industry_partner.program_id ?? "null"}:verificationStatus=${parsedData.industry_partner.verification_status}`;
+    return `INDUSTRY_PARTNER:id=${userId}:company=${parsedData.industry_partner.company_name}:position=${parsedData.industry_partner.position ?? "null"}:program=${parsedData.industry_partner.program_id ?? "null"}:verificationStatus=${parsedData.industry_partner.verification_status}`;
   }
   return null;
 }
@@ -58,7 +60,9 @@ function verifyConfirmationToken(token: string, expectedPayload: string): boolea
     const secret = getConfirmationSecret();
     const expectedSignature = CryptoJS.HmacSHA256(`${payload}|${expiresAtStr}`, secret).toString();
 
-    return signature === expectedSignature;
+    const actual = Buffer.from(signature, "hex");
+    const expected = Buffer.from(expectedSignature, "hex");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
   } catch {
     return false;
   }
@@ -135,7 +139,29 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
   }
 
   // Detect protected changes
-  const protectedPayload = deriveProtectedPayload(parsed.data, existingRole);
+  const protectedPayload = deriveProtectedPayload(parsed.data, existingRole, id);
+
+  if (existingRole === SystemRole.STUDENT && !student) {
+    return { success: false, error: "Student details are required for Student accounts." };
+  }
+  if (existingRole === SystemRole.FACULTY && !faculty) {
+    return { success: false, error: "Faculty details are required for Faculty accounts." };
+  }
+  if (existingRole === SystemRole.PROGRAM_HEAD && !program_head) {
+    return { success: false, error: "Program Head details are required for Program Head accounts." };
+  }
+  if (existingRole === SystemRole.ALUMNI && !alumni) {
+    return { success: false, error: "Alumni details are required for Alumni accounts." };
+  }
+  if (existingRole === SystemRole.INDUSTRY_PARTNER && !industry_partner) {
+    return { success: false, error: "Industry Partner details are required for Industry Partner accounts." };
+  }
+  if (student && Boolean(student.year_level) !== Boolean(student.section)) {
+    return { success: false, error: "Year level and section must be provided together." };
+  }
+  if (student && (student.year_level || student.section) && !existing.enrollments[0]) {
+    return { success: false, error: "Student has no editable active enrollment." };
+  }
 
   if (protectedPayload) {
     let requiresConfirmation = false;
@@ -228,7 +254,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
           include: { majors: { where: { is_active: true } } },
         });
 
-        if (!program) throw new Error("Selected program not found.");
+        if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
 
         if (program.majors.length > 0) {
           if (!student.major_id) {
@@ -285,6 +311,8 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         });
 
         if (!primary || primary.program_id !== faculty.program_id) {
+          const program = await tx.program.findUnique({ where: { id: faculty.program_id } });
+          if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
           if (primary) {
             // Deactivate current primary
             await tx.facultyProgramAffiliation.update({
@@ -322,6 +350,8 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         });
 
         if (!assignment || assignment.program_id !== program_head.program_id) {
+          const program = await tx.program.findUnique({ where: { id: program_head.program_id } });
+          if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
           if (assignment) {
             await tx.programHeadAssignment.update({
               where: { id: assignment.id },
