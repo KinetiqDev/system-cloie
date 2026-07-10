@@ -3,20 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
-import {
-  editUserBySecretarySchema,
-} from "@/features/users/schemas/edit-user";
-import {
-  editUserBySecretary,
-} from "@/features/users/services/edit-user-by-secretary";
+import { editUserBySecretarySchema } from "@/features/users/schemas/edit-user";
+import { editUserBySecretary } from "@/features/users/services/edit-user-by-secretary";
 import {
   getUserEditRecordBySecretary,
   type SecretaryUserEditRecord,
 } from "@/features/users/services/get-user-edit-record";
 
-type ActionResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: string };
+type ActionResult<T> = { success: true; data: T } | { success: false; error: string };
 
 type AccessGrant = { id: string };
 
@@ -54,9 +48,14 @@ export async function getUserEditRecordAction(
  * #80 supports base identity updates only. Role-specific record updates
  * and the protected-change confirmation protocol land in #81–#85.
  */
-export async function editUserBySecretaryAction(
-  formData: FormData
-): Promise<ActionResult<{ id: string; protectedConfirmationRequired?: boolean; protectedPayload?: string; token?: string }>> {
+export async function editUserBySecretaryAction(formData: FormData): Promise<
+  ActionResult<{
+    id: string;
+    protectedConfirmationRequired?: boolean;
+    protectedPayload?: string;
+    token?: string;
+  }>
+> {
   const access = await requireSecretaryAccess();
   if (!access.success) {
     return access;
@@ -67,8 +66,9 @@ export async function editUserBySecretaryAction(
     role: formData.get("role") || undefined,
     first_name: String(formData.get("first_name") ?? ""),
     last_name: String(formData.get("last_name") ?? ""),
+    confirmationToken: formData.get("confirmationToken") || undefined,
   };
-  
+
   if (formData.get("student.program_id")) {
     raw.student = {
       student_id_number: formData.get("student.student_id_number"),
@@ -88,6 +88,15 @@ export async function editUserBySecretaryAction(
   if (formData.get("program_head.program_id")) {
     raw.program_head = {
       program_id: formData.get("program_head.program_id"),
+    };
+  }
+
+  if (formData.get("alumni.program_id")) {
+    raw.alumni = {
+      graduation_year: formData.get("alumni.graduation_year"),
+      program_id: formData.get("alumni.program_id"),
+      major_id: formData.get("alumni.major_id") || null,
+      verification_status: formData.get("alumni.verification_status"),
     };
   }
 

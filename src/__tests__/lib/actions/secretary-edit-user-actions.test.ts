@@ -33,8 +33,36 @@ describe("editUserBySecretaryAction", () => {
     const result = await editUserBySecretaryAction(formData);
 
     expect(result.success).toBe(true);
-    expect(editUserBySecretary).toHaveBeenCalledWith(expect.objectContaining({
-      program_head: { program_id: "33333333-3333-4333-8333-333333333333" },
-    }));
+    expect(editUserBySecretary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        program_head: { program_id: "33333333-3333-4333-8333-333333333333" },
+      })
+    );
+  });
+
+  it("forwards Alumni fields and confirmation token", async () => {
+    const formData = new FormData();
+    formData.set("id", "22222222-2222-4222-8222-222222222222");
+    formData.set("role", SystemRole.ALUMNI);
+    formData.set("first_name", "Ana");
+    formData.set("last_name", "Cruz");
+    formData.set("alumni.program_id", "33333333-3333-4333-8333-333333333333");
+    formData.set("alumni.graduation_year", "2020");
+    formData.set("alumni.verification_status", "APPROVED");
+    formData.set("confirmationToken", "token");
+
+    await editUserBySecretaryAction(formData);
+
+    expect(editUserBySecretary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confirmationToken: "token",
+        alumni: {
+          graduation_year: 2020,
+          program_id: "33333333-3333-4333-8333-333333333333",
+          major_id: null,
+          verification_status: "APPROVED",
+        },
+      })
+    );
   });
 });

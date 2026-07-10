@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { EditUserDialog } from "@/features/users/components/secretary-users-list/edit-user-dialog";
-import { SystemRole } from "@prisma/client";
-import { getUserEditRecordAction, editUserBySecretaryAction } from "@/lib/actions/secretary-edit-user-actions";
+import { SystemRole, VerificationStatus } from "@prisma/client";
+import {
+  getUserEditRecordAction,
+  editUserBySecretaryAction,
+} from "@/lib/actions/secretary-edit-user-actions";
 
 vi.mock("@/lib/actions/secretary-edit-user-actions", () => ({
   getUserEditRecordAction: vi.fn(),
@@ -34,10 +37,7 @@ vi.mock("@/components/ui/select", () => {
       </SelectContext.Provider>
     );
   }
-  function SelectTrigger({
-    children,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  function SelectTrigger({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     return (
       <button type="button" role="combobox" aria-expanded="false" {...props}>
         {children}
@@ -56,20 +56,10 @@ vi.mock("@/components/ui/select", () => {
   function SelectContent({ children }: { children: React.ReactNode }) {
     return <div role="listbox">{children}</div>;
   }
-  function SelectItem({
-    value,
-    children,
-  }: {
-    value: string;
-    children: React.ReactNode;
-  }) {
+  function SelectItem({ value, children }: { value: string; children: React.ReactNode }) {
     const ctx = React.useContext(SelectContext);
     return (
-      <div
-        role="option"
-        data-value={value}
-        onClick={() => ctx.onValueChange?.(value)}
-      >
+      <div role="option" data-value={value} onClick={() => ctx.onValueChange?.(value)}>
         {children}
       </div>
     );
@@ -262,7 +252,8 @@ describe("EditUserDialog", () => {
       expect(editUserBySecretaryAction).toHaveBeenCalledTimes(1);
     });
 
-    const formData = (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0] as FormData;
+    const formData = (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as FormData;
     expect(formData.get("id")).toBe("target-user");
     expect(formData.get("first_name")).toBe("Johnny");
     expect(formData.get("last_name")).toBe("Doe");
@@ -319,8 +310,8 @@ describe("EditUserDialog", () => {
         verification: null,
         industryPartner: null,
         alumni: null,
-         faculty: { primaryProgramId: "prog-old" },
-         programHead: null,
+        faculty: { primaryProgramId: "prog-old" },
+        programHead: null,
       },
     });
 
@@ -340,7 +331,9 @@ describe("EditUserDialog", () => {
     });
 
     expect(screen.getByLabelText(/primary program affiliation/i)).toBeInTheDocument();
-    expect(screen.getByText(/additional active affiliations remain unchanged/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/additional active affiliations remain unchanged/i)
+    ).toBeInTheDocument();
   });
 
   it("shows confirmation summary for faculty program change", async () => {
@@ -358,8 +351,8 @@ describe("EditUserDialog", () => {
         verification: null,
         industryPartner: null,
         alumni: null,
-         faculty: { primaryProgramId: "prog-old" },
-         programHead: null,
+        faculty: { primaryProgramId: "prog-old" },
+        programHead: null,
       },
     });
 
@@ -439,7 +432,56 @@ describe("EditUserDialog", () => {
 
     await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
     expect(screen.getByLabelText(/managed program/i)).toBeInTheDocument();
-    expect(screen.getByText(/other program heads and course assignments remain unchanged/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/other program heads and course assignments remain unchanged/i)
+    ).toBeInTheDocument();
+  });
+
+  it("shows Alumni academic and verification controls with access effect wording", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Ally",
+        lastName: "Alum",
+        email: "ally@gmail.com",
+        isActive: true,
+        role: SystemRole.ALUMNI,
+        student: null,
+        activeEnrollment: null,
+        faculty: null,
+        programHead: null,
+        verification: { status: VerificationStatus.PENDING },
+        industryPartner: null,
+        alumni: { graduationYear: 2020, programId: "prog-old", majorId: null },
+      },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={[
+          { id: "prog-old", code: "BSIT", name: "Information Technology", majors: [] },
+          {
+            id: "prog-new",
+            code: "BSIS",
+            name: "Information Systems",
+            majors: [{ id: "major-1", name: "Data Systems" }],
+          },
+        ]}
+        yearLevels={[]}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue("Ally")).toBeInTheDocument());
+    expect(screen.getByLabelText(/graduation year/i)).toHaveValue(2020);
+    expect(screen.getByLabelText(/verification status/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/limited dashboard access remains with a review notice/i)
+    ).toBeInTheDocument();
   });
 
   it("shows assignment-history effect in Program Head confirmation", async () => {
@@ -482,7 +524,9 @@ describe("EditUserDialog", () => {
     fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
-    await waitFor(() => expect(screen.getByText(/program head assignment changes/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/program head assignment changes/i)).toBeInTheDocument()
+    );
     expect(screen.getByText(/previous assignment becomes inactive/i)).toBeInTheDocument();
   });
 });

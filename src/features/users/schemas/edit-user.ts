@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SystemRole, YearLevel, StudentSection } from "@prisma/client";
+import { SystemRole, YearLevel, StudentSection, VerificationStatus } from "@prisma/client";
 
 /**
  * Base identity fields editable for any account through the Secretary
@@ -35,6 +35,21 @@ export const studentEditSchema = z.object({
 
 export type StudentEditInput = z.infer<typeof studentEditSchema>;
 
+export const alumniEditSchema = z.object({
+  graduation_year: z.coerce
+    .number()
+    .int("Graduation year must be a whole number")
+    .min(1950)
+    .max(new Date().getFullYear() + 5),
+  program_id: z.string().uuid("Program is required."),
+  major_id: z.string().uuid("Major is invalid.").nullable().optional(),
+  verification_status: z.nativeEnum(VerificationStatus, {
+    message: "Verification status is required.",
+  }),
+});
+
+export type AlumniEditInput = z.infer<typeof alumniEditSchema>;
+
 /**
  * Secretary-managed edit request for the base identity of an account, and any
  * role-specific details. The CLOIE account role and email are intentionally
@@ -47,15 +62,22 @@ export const editUserBySecretarySchema = z
     confirmationToken: z.string().optional(), // Token for protected edits
   })
   .merge(baseIdentityEditSchema)
-  .merge(z.object({
-    student: studentEditSchema.optional(),
-    faculty: z.object({
-      program_id: z.string().uuid("Program is required."),
-    }).optional(),
-    program_head: z.object({
-      program_id: z.string().uuid("Program is required."),
-    }).optional(),
-  }))
+  .merge(
+    z.object({
+      student: studentEditSchema.optional(),
+      faculty: z
+        .object({
+          program_id: z.string().uuid("Program is required."),
+        })
+        .optional(),
+      program_head: z
+        .object({
+          program_id: z.string().uuid("Program is required."),
+        })
+        .optional(),
+      alumni: alumniEditSchema.optional(),
+    })
+  )
   .superRefine((data, ctx) => {
     if (data.role === SystemRole.STUDENT) {
       if (!data.student) {
@@ -66,7 +88,7 @@ export const editUserBySecretarySchema = z
         });
         return;
       }
-      
+
       // Year level and section are a pair if one is provided
       const hasYearLevel = !!data.student.year_level;
       const hasSection = !!data.student.section;
@@ -102,6 +124,12 @@ export const editUserBySecretarySchema = z
           path: ["program_head"],
         });
       }
+    } else if (data.role === SystemRole.ALUMNI && !data.alumni) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Alumni details are required for Alumni accounts.",
+        path: ["alumni"],
+      });
     }
   });
 

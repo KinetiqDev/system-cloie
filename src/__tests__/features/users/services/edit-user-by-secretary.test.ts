@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SystemRole } from "@prisma/client";
+import { SystemRole, VerificationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { editUserBySecretary } from "@/features/users/services/edit-user-by-secretary";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -48,14 +48,17 @@ describe("editUserBySecretary service", () => {
   // Default transaction mock (identity-only save, no faculty branch triggered when program unchanged)
   let mockTx: ReturnType<typeof buildMockTx>;
 
-  function buildMockTx(overrides: Partial<{
-    findFirst: ReturnType<typeof vi.fn>;
-    findUnique: ReturnType<typeof vi.fn>;
-  }> = {}) {
+  function buildMockTx(
+    overrides: Partial<{
+      findFirst: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
+    }> = {}
+  ) {
     return {
       user: { update: vi.fn() },
       facultyProgramAffiliation: {
-        findFirst: overrides.findFirst ?? vi.fn().mockResolvedValue({ id: "aff-1", program_id: PROG_OLD }),
+        findFirst:
+          overrides.findFirst ?? vi.fn().mockResolvedValue({ id: "aff-1", program_id: PROG_OLD }),
         findUnique: overrides.findUnique ?? vi.fn().mockResolvedValue(null),
         update: vi.fn(),
         create: vi.fn(),
@@ -65,6 +68,12 @@ describe("editUserBySecretary service", () => {
         findUnique: vi.fn().mockResolvedValue(null),
         update: vi.fn(),
         create: vi.fn(),
+      },
+      alumniProfile: {
+        upsert: vi.fn(),
+      },
+      program: {
+        findUnique: vi.fn().mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] }),
       },
     };
   }
@@ -88,6 +97,7 @@ describe("editUserBySecretary service", () => {
         { id: "aff-1", program_id: PROG_OLD, is_primary: true, is_active: true },
       ],
       program_head_assignments: [],
+      alumni_profile: null,
     });
 
     mockTx = buildMockTx();
@@ -266,7 +276,9 @@ describe("editUserBySecretary service", () => {
     // Per-test tx: findUnique returns an existing inactive record for PROG_NEW
     mockTx = buildMockTx({
       findFirst: vi.fn().mockResolvedValue({ id: "aff-1", program_id: PROG_OLD }),
-      findUnique: vi.fn().mockResolvedValue({ id: "aff-existing", program_id: PROG_NEW, is_active: false }),
+      findUnique: vi
+        .fn()
+        .mockResolvedValue({ id: "aff-existing", program_id: PROG_NEW, is_active: false }),
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
@@ -367,7 +379,9 @@ describe("editUserBySecretary service", () => {
     // tx: findFirst returns current primary (PROG_OLD), findUnique returns an ACTIVE record for PROG_NEW
     mockTx = buildMockTx({
       findFirst: vi.fn().mockResolvedValue({ id: "aff-1", program_id: PROG_OLD }),
-      findUnique: vi.fn().mockResolvedValue({ id: "aff-existing", program_id: PROG_NEW, is_active: true }),
+      findUnique: vi
+        .fn()
+        .mockResolvedValue({ id: "aff-existing", program_id: PROG_NEW, is_active: true }),
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
@@ -445,7 +459,9 @@ describe("editUserBySecretary service", () => {
         create: vi.fn(),
       },
     };
-    (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(failingTx));
+    (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) =>
+      cb(failingTx)
+    );
 
     const payload = `FACULTY:program=${PROG_NEW}`;
     const token = makeToken(payload);
@@ -484,7 +500,9 @@ describe("editUserBySecretary service", () => {
       program_head: { program_id: PROG_NEW },
     };
 
-    function setProgramHeadRecord(assignments: Array<{ id: string; program_id: string; is_active: boolean }>) {
+    function setProgramHeadRecord(
+      assignments: Array<{ id: string; program_id: string; is_active: boolean }>
+    ) {
       (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: USER_ID,
         is_active: true,
@@ -510,7 +528,10 @@ describe("editUserBySecretary service", () => {
 
     it("replaces active assignment with a new row", async () => {
       setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
-      mockTx.programHeadAssignment.findFirst.mockResolvedValue({ id: "assignment-old", program_id: PROG_OLD });
+      mockTx.programHeadAssignment.findFirst.mockResolvedValue({
+        id: "assignment-old",
+        program_id: PROG_OLD,
+      });
       const token = makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`);
 
       const result = await editUserBySecretary({ ...programHeadInput, confirmationToken: token });
@@ -527,8 +548,15 @@ describe("editUserBySecretary service", () => {
 
     it("reactivates an existing inactive assignment without duplicating it", async () => {
       setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
-      mockTx.programHeadAssignment.findFirst.mockResolvedValue({ id: "assignment-old", program_id: PROG_OLD });
-      mockTx.programHeadAssignment.findUnique.mockResolvedValue({ id: "assignment-old-target", program_id: PROG_NEW, is_active: false });
+      mockTx.programHeadAssignment.findFirst.mockResolvedValue({
+        id: "assignment-old",
+        program_id: PROG_OLD,
+      });
+      mockTx.programHeadAssignment.findUnique.mockResolvedValue({
+        id: "assignment-old-target",
+        program_id: PROG_NEW,
+        is_active: false,
+      });
       const result = await editUserBySecretary({
         ...programHeadInput,
         confirmationToken: makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`),
@@ -549,7 +577,10 @@ describe("editUserBySecretary service", () => {
       expect(first.success).toBe(true);
       if (!first.success || !first.data.token) return;
 
-      const result = await editUserBySecretary({ ...programHeadInput, confirmationToken: first.data.token });
+      const result = await editUserBySecretary({
+        ...programHeadInput,
+        confirmationToken: first.data.token,
+      });
 
       expect(result.success).toBe(true);
       expect(mockTx.programHeadAssignment.create).toHaveBeenCalledWith({
@@ -559,7 +590,10 @@ describe("editUserBySecretary service", () => {
 
     it("does not touch course data or other users during reassignment", async () => {
       setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
-      mockTx.programHeadAssignment.findFirst.mockResolvedValue({ id: "assignment-old", program_id: PROG_OLD });
+      mockTx.programHeadAssignment.findFirst.mockResolvedValue({
+        id: "assignment-old",
+        program_id: PROG_OLD,
+      });
       const result = await editUserBySecretary({
         ...programHeadInput,
         confirmationToken: makeToken(`PROGRAM_HEAD:program=${PROG_NEW}`),
@@ -583,7 +617,9 @@ describe("editUserBySecretary service", () => {
           create: vi.fn(),
         },
       };
-      (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(failingTx));
+      (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) =>
+        cb(failingTx)
+      );
 
       const result = await editUserBySecretary({
         ...programHeadInput,
@@ -592,6 +628,94 @@ describe("editUserBySecretary service", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) expect(result.error).toMatch(/db write failed/i);
+    });
+  });
+
+  describe("Alumni profile and verification", () => {
+    const alumniInput = {
+      id: USER_ID,
+      role: SystemRole.ALUMNI,
+      first_name: "Jane",
+      last_name: "Smith",
+      alumni: {
+        graduation_year: 2020,
+        program_id: PROG_NEW,
+        major_id: null,
+        verification_status: VerificationStatus.APPROVED,
+      },
+    };
+
+    function setAlumniProfile(profile: object | null) {
+      (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: USER_ID,
+        is_active: true,
+        roles: [{ role: SystemRole.ALUMNI }],
+        student_profile: null,
+        enrollments: [],
+        faculty_program_affiliations: [],
+        program_head_assignments: [],
+        alumni_profile: profile,
+      });
+    }
+
+    it("requires one confirmation for academic and verification changes", async () => {
+      setAlumniProfile({
+        program_id: PROG_OLD,
+        major_id: null,
+        graduation_year: 2019,
+        verification_status: VerificationStatus.PENDING,
+      });
+
+      const result = await editUserBySecretary(alumniInput);
+
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.protectedConfirmationRequired).toBe(true);
+    });
+
+    it("completes legacy Alumni profile atomically after confirmation", async () => {
+      setAlumniProfile(null);
+      const first = await editUserBySecretary(alumniInput);
+      expect(first.success).toBe(true);
+      if (!first.success || !first.data.token) return;
+
+      const result = await editUserBySecretary({
+        ...alumniInput,
+        confirmationToken: first.data.token,
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.alumniProfile.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { user_id: USER_ID },
+          create: expect.objectContaining({
+            program_id: PROG_NEW,
+            graduation_year: 2020,
+            verification_status: VerificationStatus.APPROVED,
+          }),
+        })
+      );
+    });
+
+    it("rejects a major that is not active in selected program", async () => {
+      setAlumniProfile({
+        program_id: PROG_OLD,
+        major_id: null,
+        graduation_year: 2019,
+        verification_status: VerificationStatus.PENDING,
+      });
+      mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
+      const token = makeToken(
+        `ALUMNI:program=${PROG_NEW}:major=${PROG_OLD}:graduationYear=2020:verificationStatus=APPROVED`
+      );
+
+      const result = await editUserBySecretary({
+        ...alumniInput,
+        alumni: { ...alumniInput.alumni, major_id: PROG_OLD },
+        confirmationToken: token,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(/does not have majors|not valid/i);
     });
   });
 });

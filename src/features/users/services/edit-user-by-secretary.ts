@@ -2,10 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
-import {
-  type EditUserBySecretaryInput,
-  editUserBySecretarySchema,
-} from "../schemas/edit-user";
+import { type EditUserBySecretaryInput, editUserBySecretarySchema } from "../schemas/edit-user";
 import CryptoJS from "crypto-js";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 import { SystemRole } from "@prisma/client";
@@ -14,7 +11,10 @@ import { SystemRole } from "@prisma/client";
  * Derives a deterministic protected payload string for the requested changes.
  * This ensures the confirmation token is bound to exactly these values.
  */
-function deriveProtectedPayload(parsedData: EditUserBySecretaryInput, existingRole: SystemRole): string | null {
+function deriveProtectedPayload(
+  parsedData: EditUserBySecretaryInput,
+  existingRole: SystemRole
+): string | null {
   if (existingRole === SystemRole.STUDENT && parsedData.student) {
     return `STUDENT:program=${parsedData.student.program_id}:major=${parsedData.student.major_id ?? "null"}:year=${parsedData.student.year_level ?? "null"}:section=${parsedData.student.section ?? "null"}`;
   }
@@ -23,6 +23,9 @@ function deriveProtectedPayload(parsedData: EditUserBySecretaryInput, existingRo
   }
   if (existingRole === SystemRole.PROGRAM_HEAD && parsedData.program_head) {
     return `PROGRAM_HEAD:program=${parsedData.program_head.program_id}`;
+  }
+  if (existingRole === SystemRole.ALUMNI && parsedData.alumni) {
+    return `ALUMNI:program=${parsedData.alumni.program_id}:major=${parsedData.alumni.major_id ?? "null"}:graduationYear=${parsedData.alumni.graduation_year}:verificationStatus=${parsedData.alumni.verification_status}`;
   }
   return null;
 }
@@ -64,9 +67,14 @@ function verifyConfirmationToken(token: string, expectedPayload: string): boolea
  * extend the protected-change detection, confirmation protocol, and
  * role-specific record updates without reshaping this surface.
  */
-export async function editUserBySecretary(
-  rawInput: EditUserBySecretaryInput
-): Promise<ServiceResult<{ id: string; protectedConfirmationRequired?: boolean; protectedPayload?: string; token?: string }>> {
+export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): Promise<
+  ServiceResult<{
+    id: string;
+    protectedConfirmationRequired?: boolean;
+    protectedPayload?: string;
+    token?: string;
+  }>
+> {
   const parsed = editUserBySecretarySchema.safeParse(rawInput);
   if (!parsed.success) {
     return {
@@ -83,7 +91,7 @@ export async function editUserBySecretary(
     return { success: false, error: "Secretary access required." };
   }
 
-  const { id, first_name, last_name, student, faculty, program_head } = parsed.data;
+  const { id, first_name, last_name, student, faculty, program_head, alumni } = parsed.data;
 
   if (id === session.userId) {
     return { success: false, error: "Cannot edit your own account." };
@@ -98,16 +106,17 @@ export async function editUserBySecretary(
       student_profile: true,
       enrollments: {
         where: { is_active: true, term: { is_active: true } },
-        take: 1
+        take: 1,
       },
       faculty_program_affiliations: {
         where: { is_active: true, is_primary: true },
-        take: 1
+        take: 1,
       },
       program_head_assignments: {
         where: { is_active: true },
         take: 1,
-      }
+      },
+      alumni_profile: true,
     },
   });
 
@@ -129,23 +138,38 @@ export async function editUserBySecretary(
       const p = existing.student_profile;
       const e = existing.enrollments[0];
 
-      const profileChanged = !p || p.program_id !== student.program_id || p.major_id !== (student.major_id ?? null);
-      const placementChanged = (student.year_level && student.section) &&
+      const profileChanged =
+        !p || p.program_id !== student.program_id || p.major_id !== (student.major_id ?? null);
+      const placementChanged =
+        student.year_level &&
+        student.section &&
         (!e || e.year_level !== student.year_level || e.section !== student.section);
 
       if (profileChanged || placementChanged) {
         requiresConfirmation = true;
       }
     } else if (existingRole === SystemRole.FACULTY && faculty) {
-      const currentPrimary = existing.faculty_program_affiliations && existing.faculty_program_affiliations.length > 0
-        ? existing.faculty_program_affiliations[0]
-        : null;
+      const currentPrimary =
+        existing.faculty_program_affiliations && existing.faculty_program_affiliations.length > 0
+          ? existing.faculty_program_affiliations[0]
+          : null;
       if (!currentPrimary || currentPrimary.program_id !== faculty.program_id) {
         requiresConfirmation = true;
       }
     } else if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
       const currentAssignment = existing.program_head_assignments?.[0] ?? null;
       if (!currentAssignment || currentAssignment.program_id !== program_head.program_id) {
+        requiresConfirmation = true;
+      }
+    } else if (existingRole === SystemRole.ALUMNI && alumni) {
+      const profile = existing.alumni_profile;
+      if (
+        !profile ||
+        profile.program_id !== alumni.program_id ||
+        profile.major_id !== (alumni.major_id ?? null) ||
+        profile.graduation_year !== alumni.graduation_year ||
+        profile.verification_status !== alumni.verification_status
+      ) {
         requiresConfirmation = true;
       }
     }
@@ -160,12 +184,15 @@ export async function editUserBySecretary(
             protectedConfirmationRequired: true,
             protectedPayload: protectedPayload!,
             token: generateConfirmationToken(protectedPayload!),
-          }
+          },
         };
       } else {
         // Verify token
         if (!verifyConfirmationToken(parsed.data.confirmationToken, protectedPayload!)) {
-          return { success: false, error: "Invalid or expired confirmation token. Please review the changes again." };
+          return {
+            success: false,
+            error: "Invalid or expired confirmation token. Please review the changes again.",
+          };
         }
       }
     }
@@ -188,7 +215,7 @@ export async function editUserBySecretary(
         // Validate major belongs to program and program has active majors requirement
         const program = await tx.program.findUnique({
           where: { id: student.program_id },
-          include: { majors: { where: { is_active: true } } }
+          include: { majors: { where: { is_active: true } } },
         });
 
         if (!program) throw new Error("Selected program not found.");
@@ -197,11 +224,11 @@ export async function editUserBySecretary(
           if (!student.major_id) {
             throw new Error("A major is required for the selected program.");
           }
-          if (!program.majors.some(m => m.id === student.major_id)) {
+          if (!program.majors.some((m) => m.id === student.major_id)) {
             throw new Error("Selected major is not valid for this program.");
           }
         } else if (student.major_id) {
-            throw new Error("Selected program does not have majors.");
+          throw new Error("Selected program does not have majors.");
         }
 
         // Upsert static profile
@@ -217,14 +244,14 @@ export async function editUserBySecretary(
             student_id_number: student.student_id_number,
             program_id: student.program_id,
             major_id: student.major_id ?? null,
-          }
+          },
         });
 
         // Sync active enrollment if present or if placement is being set
         const activeTerm = await tx.academicTermInstance.findFirst({ where: { is_active: true } });
         if (activeTerm) {
           const activeEnrollment = await tx.studentEnrollment.findFirst({
-            where: { student_user_id: id, is_active: true, term_instance_id: activeTerm.id }
+            where: { student_user_id: id, is_active: true, term_instance_id: activeTerm.id },
           });
 
           if (activeEnrollment) {
@@ -236,7 +263,7 @@ export async function editUserBySecretary(
                 major_id: student.major_id ?? null,
                 year_level: student.year_level ?? activeEnrollment.year_level,
                 section: student.section ?? activeEnrollment.section,
-              }
+              },
             });
           }
           // Do NOT create a missing enrollment per spec #79 / #81
@@ -244,7 +271,7 @@ export async function editUserBySecretary(
       } else if (existingRole === SystemRole.FACULTY && faculty) {
         // Find existing active primary affiliation to see if we need to change it
         const primary = await tx.facultyProgramAffiliation.findFirst({
-          where: { faculty_id: id, is_active: true, is_primary: true }
+          where: { faculty_id: id, is_active: true, is_primary: true },
         });
 
         if (!primary || primary.program_id !== faculty.program_id) {
@@ -252,20 +279,20 @@ export async function editUserBySecretary(
             // Deactivate current primary
             await tx.facultyProgramAffiliation.update({
               where: { id: primary.id },
-              data: { is_active: false, is_primary: false }
+              data: { is_active: false, is_primary: false },
             });
           }
 
           // Check if there's an existing record for the target program (active or inactive)
           const existingTarget = await tx.facultyProgramAffiliation.findUnique({
-            where: { faculty_id_program_id: { faculty_id: id, program_id: faculty.program_id } }
+            where: { faculty_id_program_id: { faculty_id: id, program_id: faculty.program_id } },
           });
 
           if (existingTarget) {
             // Reactivate/promote existing
             await tx.facultyProgramAffiliation.update({
               where: { id: existingTarget.id },
-              data: { is_active: true, is_primary: true }
+              data: { is_active: true, is_primary: true },
             });
           } else {
             // Create new primary
@@ -275,7 +302,7 @@ export async function editUserBySecretary(
                 program_id: faculty.program_id,
                 is_active: true,
                 is_primary: true,
-              }
+              },
             });
           }
         }
@@ -316,6 +343,38 @@ export async function editUserBySecretary(
             });
           }
         }
+      } else if (existingRole === SystemRole.ALUMNI && alumni) {
+        const program = await tx.program.findUnique({
+          where: { id: alumni.program_id },
+          include: { majors: { where: { is_active: true } } },
+        });
+        if (!program || !program.is_active)
+          throw new Error("Selected program is archived or inactive.");
+        if (program.majors.length > 0 && !alumni.major_id) {
+          throw new Error("A major is required for the selected program.");
+        }
+        if (alumni.major_id && !program.majors.some((major) => major.id === alumni.major_id)) {
+          throw new Error("Selected major is not valid for this program.");
+        }
+        if (program.majors.length === 0 && alumni.major_id) {
+          throw new Error("Selected program does not have majors.");
+        }
+        await tx.alumniProfile.upsert({
+          where: { user_id: id },
+          create: {
+            user_id: id,
+            graduation_year: alumni.graduation_year,
+            program_id: alumni.program_id,
+            major_id: alumni.major_id ?? null,
+            verification_status: alumni.verification_status,
+          },
+          update: {
+            graduation_year: alumni.graduation_year,
+            program_id: alumni.program_id,
+            major_id: alumni.major_id ?? null,
+            verification_status: alumni.verification_status,
+          },
+        });
       }
     });
   } catch (err: unknown) {
