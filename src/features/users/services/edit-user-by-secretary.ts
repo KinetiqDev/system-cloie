@@ -27,6 +27,9 @@ function deriveProtectedPayload(
   if (existingRole === SystemRole.ALUMNI && parsedData.alumni) {
     return `ALUMNI:program=${parsedData.alumni.program_id}:major=${parsedData.alumni.major_id ?? "null"}:graduationYear=${parsedData.alumni.graduation_year}:verificationStatus=${parsedData.alumni.verification_status}`;
   }
+  if (existingRole === SystemRole.INDUSTRY_PARTNER && parsedData.industry_partner) {
+    return `INDUSTRY_PARTNER:company=${parsedData.industry_partner.company_name}:position=${parsedData.industry_partner.position ?? "null"}:program=${parsedData.industry_partner.program_id ?? "null"}:verificationStatus=${parsedData.industry_partner.verification_status}`;
+  }
   return null;
 }
 
@@ -91,7 +94,8 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     return { success: false, error: "Secretary access required." };
   }
 
-  const { id, first_name, last_name, student, faculty, program_head, alumni } = parsed.data;
+  const { id, first_name, last_name, student, faculty, program_head, alumni, industry_partner } =
+    parsed.data;
 
   if (id === session.userId) {
     return { success: false, error: "Cannot edit your own account." };
@@ -117,6 +121,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         take: 1,
       },
       alumni_profile: true,
+      industry_partner_profile: true,
     },
   });
 
@@ -170,6 +175,11 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         profile.graduation_year !== alumni.graduation_year ||
         profile.verification_status !== alumni.verification_status
       ) {
+        requiresConfirmation = true;
+      }
+    } else if (existingRole === SystemRole.INDUSTRY_PARTNER && industry_partner) {
+      const profile = existing.industry_partner_profile;
+      if (!profile || profile.verification_status !== industry_partner.verification_status) {
         requiresConfirmation = true;
       }
     }
@@ -373,6 +383,31 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
             program_id: alumni.program_id,
             major_id: alumni.major_id ?? null,
             verification_status: alumni.verification_status,
+          },
+        });
+      } else if (existingRole === SystemRole.INDUSTRY_PARTNER && industry_partner) {
+        if (industry_partner.program_id) {
+          const program = await tx.program.findUnique({
+            where: { id: industry_partner.program_id },
+          });
+          if (!program || !program.is_active) {
+            throw new Error("Selected affiliated program is archived or inactive.");
+          }
+        }
+        await tx.industryPartnerProfile.upsert({
+          where: { user_id: id },
+          create: {
+            user_id: id,
+            company_name: industry_partner.company_name,
+            position: industry_partner.position || null,
+            program_id: industry_partner.program_id ?? null,
+            verification_status: industry_partner.verification_status,
+          },
+          update: {
+            company_name: industry_partner.company_name,
+            position: industry_partner.position || null,
+            program_id: industry_partner.program_id ?? null,
+            verification_status: industry_partner.verification_status,
           },
         });
       }

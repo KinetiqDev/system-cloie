@@ -100,6 +100,15 @@ export async function editUserBySecretaryAction(formData: FormData): Promise<
     };
   }
 
+  if (formData.get("industry_partner.company_name")) {
+    raw.industry_partner = {
+      company_name: formData.get("industry_partner.company_name"),
+      position: formData.get("industry_partner.position") || null,
+      program_id: formData.get("industry_partner.program_id") || null,
+      verification_status: formData.get("industry_partner.verification_status"),
+    };
+  }
+
   const parsed = editUserBySecretarySchema.safeParse(raw);
   if (!parsed.success) {
     return {

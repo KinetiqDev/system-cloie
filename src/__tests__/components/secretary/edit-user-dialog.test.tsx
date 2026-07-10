@@ -336,6 +336,48 @@ describe("EditUserDialog", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows Industry Partner organization, optional fields, and verification effect", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Pat",
+        lastName: "Partner",
+        email: "partner@example.com",
+        isActive: true,
+        role: SystemRole.INDUSTRY_PARTNER,
+        student: null,
+        activeEnrollment: null,
+        faculty: null,
+        programHead: null,
+        verification: { status: VerificationStatus.PENDING },
+        industryPartner: {
+          companyName: "CLOIE Labs",
+          position: null,
+          programId: null,
+        },
+        alumni: null,
+      },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue("CLOIE Labs")).toBeInTheDocument());
+    expect(screen.getByLabelText(/position \(optional\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/affiliated program \(optional\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/verification status/i)).toBeInTheDocument();
+    expect(screen.getByText(/limited dashboard access remains/i)).toBeInTheDocument();
+  });
+
   it("shows confirmation summary for faculty program change", async () => {
     (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: true,

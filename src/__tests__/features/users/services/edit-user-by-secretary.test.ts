@@ -72,6 +72,9 @@ describe("editUserBySecretary service", () => {
       alumniProfile: {
         upsert: vi.fn(),
       },
+      industryPartnerProfile: {
+        upsert: vi.fn(),
+      },
       program: {
         findUnique: vi.fn().mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] }),
       },
@@ -98,6 +101,7 @@ describe("editUserBySecretary service", () => {
       ],
       program_head_assignments: [],
       alumni_profile: null,
+      industry_partner_profile: null,
     });
 
     mockTx = buildMockTx();
@@ -716,6 +720,104 @@ describe("editUserBySecretary service", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) expect(result.error).toMatch(/does not have majors|not valid/i);
+    });
+  });
+
+  describe("Industry Partner profile and verification", () => {
+    const industryInput = {
+      id: USER_ID,
+      role: SystemRole.INDUSTRY_PARTNER,
+      first_name: "Jane",
+      last_name: "Smith",
+      industry_partner: {
+        company_name: "CLOIE Labs",
+        position: "Hiring Manager",
+        program_id: PROG_NEW,
+        verification_status: VerificationStatus.APPROVED,
+      },
+    };
+
+    function setIndustryProfile(profile: object | null) {
+      (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: USER_ID,
+        is_active: true,
+        roles: [{ role: SystemRole.INDUSTRY_PARTNER }],
+        student_profile: null,
+        enrollments: [],
+        faculty_program_affiliations: [],
+        program_head_assignments: [],
+        alumni_profile: null,
+        industry_partner_profile: profile,
+      });
+    }
+
+    it("requires confirmation when verification changes", async () => {
+      setIndustryProfile({
+        company_name: "Old Company",
+        position: null,
+        program_id: null,
+        verification_status: VerificationStatus.PENDING,
+      });
+
+      const result = await editUserBySecretary(industryInput);
+
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.protectedConfirmationRequired).toBe(true);
+    });
+
+    it("completes a legacy Industry Partner profile after confirmation", async () => {
+      setIndustryProfile(null);
+      const first = await editUserBySecretary(industryInput);
+      expect(first.success).toBe(true);
+      if (!first.success) return;
+
+      const confirmed = await editUserBySecretary({
+        ...industryInput,
+        confirmationToken: first.data.token,
+      });
+
+      expect(confirmed.success).toBe(true);
+      expect(mockTx.industryPartnerProfile.upsert).toHaveBeenCalledWith({
+        where: { user_id: USER_ID },
+        create: {
+          user_id: USER_ID,
+          company_name: "CLOIE Labs",
+          position: "Hiring Manager",
+          program_id: PROG_NEW,
+          verification_status: VerificationStatus.APPROVED,
+        },
+        update: {
+          company_name: "CLOIE Labs",
+          position: "Hiring Manager",
+          program_id: PROG_NEW,
+          verification_status: VerificationStatus.APPROVED,
+        },
+      });
+    });
+
+    it("rejects an inactive affiliated program", async () => {
+      setIndustryProfile({
+        company_name: "Old Company",
+        position: null,
+        program_id: PROG_OLD,
+        verification_status: VerificationStatus.PENDING,
+      });
+      mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: false, majors: [] });
+
+      const result = await editUserBySecretary({
+        ...industryInput,
+        industry_partner: {
+          ...industryInput.industry_partner,
+          program_id: PROG_NEW,
+          verification_status: VerificationStatus.PENDING,
+        },
+        confirmationToken: makeToken(
+          `INDUSTRY_PARTNER:company=CLOIE Labs:position=Hiring Manager:program=${PROG_NEW}:verificationStatus=PENDING`
+        ),
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(/archived or inactive/i);
     });
   });
 });

@@ -65,4 +65,31 @@ describe("editUserBySecretaryAction", () => {
       })
     );
   });
+
+  it("forwards Industry Partner fields and confirmation token", async () => {
+    const formData = new FormData();
+    formData.set("id", "22222222-2222-4222-8222-222222222222");
+    formData.set("role", SystemRole.INDUSTRY_PARTNER);
+    formData.set("first_name", "Ana");
+    formData.set("last_name", "Cruz");
+    formData.set("industry_partner.company_name", "CLOIE Labs");
+    formData.set("industry_partner.position", "Hiring Manager");
+    formData.set("industry_partner.program_id", "33333333-3333-4333-8333-333333333333");
+    formData.set("industry_partner.verification_status", "APPROVED");
+    formData.set("confirmationToken", "token");
+
+    await editUserBySecretaryAction(formData);
+
+    expect(editUserBySecretary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confirmationToken: "token",
+        industry_partner: {
+          company_name: "CLOIE Labs",
+          position: "Hiring Manager",
+          program_id: "33333333-3333-4333-8333-333333333333",
+          verification_status: "APPROVED",
+        },
+      })
+    );
+  });
 });

@@ -51,9 +51,8 @@ function formatVerificationStatus(status: VerificationStatus | null): string {
 }
 
 function verificationEffect(status: VerificationStatus): string {
-  if (status === VerificationStatus.APPROVED) return "Approved: normal Alumni dashboard access.";
-  if (status === VerificationStatus.REJECTED)
-    return "Rejected: Alumni dashboard access is blocked.";
+  if (status === VerificationStatus.APPROVED) return "Approved: normal role-dashboard access.";
+  if (status === VerificationStatus.REJECTED) return "Rejected: role-dashboard access is blocked.";
   return "Pending: limited dashboard access remains with a review notice.";
 }
 
@@ -173,6 +172,8 @@ function EditUserDialogBody({
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>(
     VerificationStatus.PENDING
   );
+  const [companyName, setCompanyName] = useState("");
+  const [position, setPosition] = useState("");
 
   // Confirmation state
   const [confirmationToken, setConfirmationToken] = useState<string | null>(null);
@@ -182,6 +183,7 @@ function EditUserDialogBody({
     facultyProgramChanged?: boolean;
     programHeadAssignmentChanged?: boolean;
     alumniChanged?: boolean;
+    industryPartnerChanged?: boolean;
     oldValues: Record<string, string>;
     newValues: Record<string, string>;
   } | null>(null);
@@ -238,6 +240,11 @@ function EditUserDialogBody({
         setProgramId(result.data.alumni?.programId ?? "");
         setMajorId(result.data.alumni?.majorId ?? null);
         setGraduationYear(result.data.alumni?.graduationYear?.toString() ?? "");
+        setVerificationStatus(result.data.verification?.status ?? VerificationStatus.PENDING);
+      } else if (result.data.role === SystemRole.INDUSTRY_PARTNER) {
+        setCompanyName(result.data.industryPartner?.companyName ?? "");
+        setPosition(result.data.industryPartner?.position ?? "");
+        setProgramId(result.data.industryPartner?.programId ?? "");
         setVerificationStatus(result.data.verification?.status ?? VerificationStatus.PENDING);
       }
 
@@ -328,6 +335,18 @@ function EditUserDialogBody({
       formData.set("alumni.program_id", programId);
       if (majorId) formData.set("alumni.major_id", majorId);
       formData.set("alumni.verification_status", verificationStatus);
+    } else if (
+      loadState.status === "ready" &&
+      loadState.record.role === SystemRole.INDUSTRY_PARTNER
+    ) {
+      if (!companyName.trim()) {
+        setSubmitError("Organization name is required.");
+        return;
+      }
+      formData.set("industry_partner.company_name", companyName.trim());
+      if (position.trim()) formData.set("industry_partner.position", position.trim());
+      if (programId) formData.set("industry_partner.program_id", programId);
+      formData.set("industry_partner.verification_status", verificationStatus);
     }
 
     if (confirmationToken) {
@@ -423,6 +442,24 @@ function EditUserDialogBody({
               program: programs.find((p) => p.id === programId)?.name ?? "None",
               major: selectedProgram?.majors.find((m) => m.id === majorId)?.name ?? "None",
               graduationYear,
+              verification: formatVerificationStatus(verificationStatus),
+            },
+          });
+        } else if (record?.role === SystemRole.INDUSTRY_PARTNER) {
+          setConfirmationToken(result.data.token!);
+          setConfirmationSummary({
+            industryPartnerChanged: true,
+            oldValues: {
+              company: record.industryPartner?.companyName ?? "No profile",
+              position: record.industryPartner?.position ?? "None",
+              program:
+                programs.find((p) => p.id === record.industryPartner?.programId)?.name ?? "None",
+              verification: formatVerificationStatus(record.verification?.status ?? null),
+            },
+            newValues: {
+              company: companyName,
+              position: position.trim() || "None",
+              program: programs.find((p) => p.id === programId)?.name ?? "None",
               verification: formatVerificationStatus(verificationStatus),
             },
           });
@@ -771,6 +808,71 @@ function EditUserDialogBody({
             </div>
           )}
 
+          {loadState.record.role === SystemRole.INDUSTRY_PARTNER && (
+            <div className="space-y-4 border-t pt-4">
+              <p className="text-sm font-semibold">Organization and Verification</p>
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-industry-company">Organization Name</Label>
+                <Input
+                  id="edit-user-industry-company"
+                  value={companyName}
+                  onChange={(event) => setCompanyName(event.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-industry-position">Position (optional)</Label>
+                <Input
+                  id="edit-user-industry-position"
+                  value={position}
+                  onChange={(event) => setPosition(event.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-industry-program">Affiliated Program (optional)</Label>
+                <Select
+                  value={programId}
+                  onValueChange={(value) => setProgramId(value ?? "")}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="edit-user-industry-program">
+                    <SelectValue placeholder="No affiliated program" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No affiliated program</SelectItem>
+                    {programs.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-industry-verification">Verification Status</Label>
+                <Select
+                  value={verificationStatus}
+                  onValueChange={(value) => setVerificationStatus(value as VerificationStatus)}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="edit-user-industry-verification">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={VerificationStatus.PENDING}>Pending</SelectItem>
+                    <SelectItem value={VerificationStatus.APPROVED}>Approved</SelectItem>
+                    <SelectItem value={VerificationStatus.REJECTED}>Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">
+                  {verificationEffect(verificationStatus)}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
@@ -876,10 +978,37 @@ function EditUserDialogBody({
               </div>
             )}
 
+            {confirmationSummary.industryPartnerChanged && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">
+                  Industry Partner Organization and Verification
+                </h4>
+                <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                  <div className="text-muted-foreground">Previous:</div>
+                  <div>
+                    {confirmationSummary.oldValues.company} •{" "}
+                    {confirmationSummary.oldValues.position} •{" "}
+                    {confirmationSummary.oldValues.program} •{" "}
+                    {confirmationSummary.oldValues.verification}
+                  </div>
+                  <div className="text-primary font-medium">New:</div>
+                  <div className="font-medium">
+                    {confirmationSummary.newValues.company} •{" "}
+                    {confirmationSummary.newValues.position} •{" "}
+                    {confirmationSummary.newValues.program} •{" "}
+                    {confirmationSummary.newValues.verification}
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  {verificationEffect(verificationStatus)}
+                </p>
+              </div>
+            )}
+
             <p className="text-muted-foreground flex items-start gap-2 pt-2 text-sm">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
-              {confirmationSummary.alumniChanged
-                ? "Academic history and verification save together."
+              {confirmationSummary.alumniChanged || confirmationSummary.industryPartnerChanged
+                ? "Profile and verification save together."
                 : confirmationSummary.facultyProgramChanged
                   ? "Additional active affiliations remain unchanged. If the selected program is currently an additional affiliation, it will be promoted to primary."
                   : confirmationSummary.programHeadAssignmentChanged

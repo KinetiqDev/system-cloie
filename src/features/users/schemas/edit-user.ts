@@ -50,6 +50,17 @@ export const alumniEditSchema = z.object({
 
 export type AlumniEditInput = z.infer<typeof alumniEditSchema>;
 
+export const industryPartnerEditSchema = z.object({
+  company_name: z.string().trim().min(1, "Organization name is required."),
+  position: z.string().trim().nullable().optional(),
+  program_id: z.string().uuid("Affiliated program is invalid.").nullable().optional(),
+  verification_status: z.nativeEnum(VerificationStatus, {
+    message: "Verification status is required.",
+  }),
+});
+
+export type IndustryPartnerEditInput = z.infer<typeof industryPartnerEditSchema>;
+
 /**
  * Secretary-managed edit request for the base identity of an account, and any
  * role-specific details. The CLOIE account role and email are intentionally
@@ -76,6 +87,7 @@ export const editUserBySecretarySchema = z
         })
         .optional(),
       alumni: alumniEditSchema.optional(),
+      industry_partner: industryPartnerEditSchema.optional(),
     })
   )
   .superRefine((data, ctx) => {
@@ -129,6 +141,12 @@ export const editUserBySecretarySchema = z
         code: z.ZodIssueCode.custom,
         message: "Alumni details are required for Alumni accounts.",
         path: ["alumni"],
+      });
+    } else if (data.role === SystemRole.INDUSTRY_PARTNER && !data.industry_partner) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Industry Partner details are required for Industry Partner accounts.",
+        path: ["industry_partner"],
       });
     }
   });
