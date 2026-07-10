@@ -24,6 +24,8 @@ export type SecretaryUserEditRecord = {
     programName: string | null;
     majorId: string | null;
     majorName: string | null;
+    programIsActive: boolean | null;
+    majorIsActive: boolean | null;
     studentIdNumber: string | null;
   } | null;
   // Active-term enrollment record is intentionally not projected here; #81
@@ -58,6 +60,10 @@ export type SecretaryUserEditRecord = {
     graduationYear: number;
     programId: string;
     majorId: string | null;
+    programName: string | null;
+    majorName: string | null;
+    programIsActive: boolean;
+    majorIsActive: boolean | null;
   } | null;
 };
 
@@ -90,8 +96,8 @@ export async function getUserEditRecordBySecretary(
       roles: { select: { role: true } },
       student_profile: {
         include: {
-          program: { select: { code: true, name: true } },
-          major: { select: { name: true } },
+          program: { select: { code: true, name: true, is_active: true } },
+          major: { select: { name: true, is_active: true } },
         },
       },
       enrollments: {
@@ -113,7 +119,12 @@ export async function getUserEditRecordBySecretary(
         take: 1,
       },
       industry_partner_profile: true,
-      alumni_profile: true,
+      alumni_profile: {
+        include: {
+          program: { select: { name: true, is_active: true } },
+          major: { select: { name: true, is_active: true } },
+        },
+      },
     },
   });
 
@@ -142,8 +153,10 @@ export async function getUserEditRecordBySecretary(
             programId: user.student_profile.program_id,
             programCode: user.student_profile.program?.code ?? null,
             programName: user.student_profile.program?.name ?? null,
+            programIsActive: user.student_profile.program?.is_active ?? null,
             majorId: user.student_profile.major_id,
             majorName: user.student_profile.major?.name ?? null,
+            majorIsActive: user.student_profile.major?.is_active ?? null,
             studentIdNumber: user.student_profile.student_id_number,
           }
         : null,
@@ -182,6 +195,10 @@ export async function getUserEditRecordBySecretary(
             graduationYear: user.alumni_profile.graduation_year,
             programId: user.alumni_profile.program_id,
             majorId: user.alumni_profile.major_id,
+            programName: user.alumni_profile.program?.name ?? null,
+            majorName: user.alumni_profile.major?.name ?? null,
+            programIsActive: user.alumni_profile.program?.is_active ?? false,
+            majorIsActive: user.alumni_profile.major?.is_active ?? null,
           }
         : null,
     },

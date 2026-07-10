@@ -80,6 +80,11 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     protectedConfirmationRequired?: boolean;
     protectedPayload?: string;
     token?: string;
+    confirmationReview?: {
+      role: SystemRole;
+      oldValues: Record<string, string>;
+      newValues: Record<string, string>;
+    };
   }>
 > {
   const parsed = editUserBySecretarySchema.safeParse(rawInput);
@@ -111,7 +116,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
       id: true,
       is_active: true,
       roles: { select: { role: true } },
-      student_profile: true,
+      student_profile: { include: { program: { select: { name: true } }, major: { select: { name: true } } } },
       enrollments: {
         where: { is_active: true, term: { is_active: true } },
         take: 1,
@@ -119,13 +124,15 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
       faculty_program_affiliations: {
         where: { is_active: true, is_primary: true },
         take: 1,
+        include: { program: { select: { name: true } } },
       },
       program_head_assignments: {
         where: { is_active: true },
         take: 1,
+        include: { program: { select: { name: true } } },
       },
-      alumni_profile: true,
-      industry_partner_profile: true,
+      alumni_profile: { include: { program: { select: { name: true } }, major: { select: { name: true } } } },
+      industry_partner_profile: { include: { program: { select: { name: true } } } },
     },
   });
 
@@ -140,6 +147,114 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
 
   // Detect protected changes
   const protectedPayload = deriveProtectedPayload(parsed.data, existingRole, id);
+
+  const confirmationReview: {
+    role: SystemRole;
+    oldValues: Record<string, string>;
+    newValues: Record<string, string>;
+  } | undefined = protectedPayload
+    ? (() : {
+        role: SystemRole;
+        oldValues: Record<string, string>;
+        newValues: Record<string, string>;
+      } | undefined => {
+        if (existingRole === SystemRole.STUDENT && student) {
+          const current = existing.student_profile;
+          const enrollment = existing.enrollments[0];
+          return {
+            role: existingRole,
+            oldValues: {
+              program: current?.program?.name ?? "None",
+              major: current?.major?.name ?? "None",
+              year: enrollment?.year_level ? String(enrollment.year_level) : "None",
+              section: enrollment?.section ? String(enrollment.section) : "None",
+            },
+            newValues: {
+              program: student.program_id,
+              major: student.major_id ?? "None",
+              year: student.year_level ? String(student.year_level) : "None",
+              section: student.section ? String(student.section) : "None",
+            },
+          };
+        }
+        if (existingRole === SystemRole.FACULTY && faculty) {
+          return {
+            role: existingRole,
+            oldValues: { program: existing.faculty_program_affiliations[0]?.program?.name ?? "None" },
+            newValues: { program: faculty.program_id },
+          };
+        }
+        if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
+          return {
+            role: existingRole,
+            oldValues: { program: existing.program_head_assignments[0]?.program?.name ?? "None" },
+            newValues: { program: program_head.program_id },
+          };
+        }
+        if (existingRole === SystemRole.ALUMNI && alumni) {
+          const current = existing.alumni_profile;
+          return {
+            role: existingRole,
+            oldValues: {
+              program: current?.program?.name ?? "None",
+              major: current?.major?.name ?? "None",
+              graduationYear: current ? String(current.graduation_year) : "None",
+              verification: current?.verification_status ?? "None",
+            },
+            newValues: {
+              program: alumni.program_id,
+              major: alumni.major_id ?? "None",
+              graduationYear: String(alumni.graduation_year),
+              verification: alumni.verification_status,
+            },
+          };
+        }
+        if (existingRole === SystemRole.INDUSTRY_PARTNER && industry_partner) {
+          const current = existing.industry_partner_profile;
+          return {
+            role: existingRole,
+            oldValues: {
+              company: current?.company_name ?? "None",
+              position: current?.position ?? "None",
+              program: current?.program?.name ?? "None",
+              verification: current?.verification_status ?? "None",
+            },
+            newValues: {
+              company: industry_partner.company_name,
+              position: industry_partner.position ?? "None",
+              program: industry_partner.program_id ?? "None",
+              verification: industry_partner.verification_status,
+            },
+          };
+        }
+        return undefined;
+      })()
+    : undefined;
+
+  if (confirmationReview && prisma.program) {
+    const ids = [
+      student?.program_id,
+      faculty?.program_id,
+      program_head?.program_id,
+      alumni?.program_id,
+      industry_partner?.program_id,
+    ]
+      .filter((value): value is string => Boolean(value));
+    const catalogs = await prisma.program.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true, majors: { select: { id: true, name: true } } },
+    });
+    const names = new Map(catalogs.map((program) => [program.id, program.name]));
+    const majors = new Map(catalogs.flatMap((program) => program.majors.map((major) => [major.id, major.name])));
+    const requestedProgram = ids[0];
+    if (requestedProgram) {
+      confirmationReview.newValues.program = names.get(requestedProgram) ?? requestedProgram;
+    }
+    if (student?.major_id || alumni?.major_id) {
+      const requestedMajor = student?.major_id ?? alumni?.major_id;
+      confirmationReview.newValues.major = majors.get(requestedMajor!) ?? requestedMajor!;
+    }
+  }
 
   if (existingRole === SystemRole.STUDENT && !student) {
     return { success: false, error: "Student details are required for Student accounts." };
@@ -220,6 +335,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
             protectedConfirmationRequired: true,
             protectedPayload: protectedPayload!,
             token: generateConfirmationToken(protectedPayload!),
+            confirmationReview,
           },
         };
       } else {
@@ -254,13 +370,18 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
           include: { majors: { where: { is_active: true } } },
         });
 
-        if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
+         if (!program || (!program.is_active && program.id !== existing.student_profile?.program_id)) {
+           throw new Error("Selected program is archived or inactive.");
+         }
 
         if (program.majors.length > 0) {
           if (!student.major_id) {
             throw new Error("A major is required for the selected program.");
           }
-          if (!program.majors.some((m) => m.id === student.major_id)) {
+           if (
+             !program.majors.some((m) => m.id === student.major_id) &&
+             student.major_id !== existing.student_profile?.major_id
+           ) {
             throw new Error("Selected major is not valid for this program.");
           }
         } else if (student.major_id) {
@@ -388,12 +509,16 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
           where: { id: alumni.program_id },
           include: { majors: { where: { is_active: true } } },
         });
-        if (!program || !program.is_active)
+         if (!program || (!program.is_active && program.id !== existing.alumni_profile?.program_id))
           throw new Error("Selected program is archived or inactive.");
         if (program.majors.length > 0 && !alumni.major_id) {
           throw new Error("A major is required for the selected program.");
         }
-        if (alumni.major_id && !program.majors.some((major) => major.id === alumni.major_id)) {
+         if (
+           alumni.major_id &&
+           !program.majors.some((major) => major.id === alumni.major_id) &&
+           alumni.major_id !== existing.alumni_profile?.major_id
+         ) {
           throw new Error("Selected major is not valid for this program.");
         }
         if (program.majors.length === 0 && alumni.major_id) {

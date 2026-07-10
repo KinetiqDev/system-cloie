@@ -34,7 +34,8 @@ export type SecretaryUsersSummaryResult = {
     id: string;
     code: string;
     name: string;
-    majors: Array<{ id: string; name: string }>;
+    isActive: boolean;
+    majors: Array<{ id: string; name: string; isActive: boolean }>;
   }>;
   yearLevels: YearLevel[];
 };
@@ -135,14 +136,12 @@ export async function listSecretaryUsersSummary(): Promise<SecretaryUsersSummary
   const [rawUsers, programs] = await Promise.all([
     queryUsers(),
     prisma.program.findMany({
-      where: { is_active: true },
-      orderBy: { code: "asc" },
-      include: {
-        majors: {
-          where: { is_active: true },
-          orderBy: { name: "asc" },
-          select: { id: true, name: true },
-        },
+       orderBy: { code: "asc" },
+       include: {
+         majors: {
+           orderBy: { name: "asc" },
+           select: { id: true, name: true, is_active: true },
+         },
       },
     }),
   ]);
@@ -189,7 +188,12 @@ export async function listSecretaryUsersSummary(): Promise<SecretaryUsersSummary
       id: p.id,
       code: p.code,
       name: p.name,
-      majors: p.majors,
+      isActive: p.is_active,
+      majors: p.majors.map((major) => ({
+        id: major.id,
+        name: major.name,
+        isActive: major.is_active,
+      })),
     })),
   };
 }

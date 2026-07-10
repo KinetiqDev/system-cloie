@@ -92,6 +92,8 @@ describe("getUserEditRecordBySecretary", () => {
         majorId: "maj-1",
         majorName: "Web Dev",
         studentIdNumber: "2024-001",
+        programIsActive: null,
+        majorIsActive: null,
       });
     }
   });
@@ -208,6 +210,10 @@ describe("getUserEditRecordBySecretary", () => {
         graduationYear: 2020,
         programId: "prog-1",
         majorId: null,
+        programName: null,
+        majorName: null,
+        programIsActive: false,
+        majorIsActive: null,
       });
     }
   });

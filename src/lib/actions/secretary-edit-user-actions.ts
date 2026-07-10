@@ -54,6 +54,11 @@ export async function editUserBySecretaryAction(formData: FormData): Promise<
     protectedConfirmationRequired?: boolean;
     protectedPayload?: string;
     token?: string;
+    confirmationReview?: {
+      role: string;
+      oldValues: Record<string, string>;
+      newValues: Record<string, string>;
+    };
   }>
 > {
   const access = await requireSecretaryAccess();

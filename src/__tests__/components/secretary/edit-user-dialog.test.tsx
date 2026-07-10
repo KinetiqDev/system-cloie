@@ -468,6 +468,11 @@ describe("EditUserDialog", () => {
         protectedConfirmationRequired: true,
         protectedPayload: "FACULTY:program=prog-new",
         token: "test-token",
+        confirmationReview: {
+          role: SystemRole.FACULTY,
+          oldValues: { program: "Information Technology" },
+          newValues: { program: "Information Systems" },
+        },
       },
     });
 

@@ -92,7 +92,8 @@ interface EditUserDialogProps {
     id: string;
     code: string;
     name: string;
-    majors: Array<{ id: string; name: string }>;
+    isActive?: boolean;
+    majors: Array<{ id: string; name: string; isActive?: boolean }>;
   }>;
   yearLevels: YearLevel[];
 }
@@ -138,7 +139,8 @@ interface EditUserDialogBodyProps {
     id: string;
     code: string;
     name: string;
-    majors: Array<{ id: string; name: string }>;
+    isActive?: boolean;
+    majors: Array<{ id: string; name: string; isActive?: boolean }>;
   }>;
   yearLevels: YearLevel[];
 }
@@ -169,9 +171,7 @@ function EditUserDialogBody({
   const [yearLevel, setYearLevel] = useState<YearLevel | null>(null);
   const [section, setSection] = useState<StudentSection | null>(null);
   const [graduationYear, setGraduationYear] = useState("");
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>(
-    VerificationStatus.PENDING
-  );
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
   const [companyName, setCompanyName] = useState("");
   const [position, setPosition] = useState("");
 
@@ -197,6 +197,7 @@ function EditUserDialogBody({
   );
 
   const programHasMajors = selectedProgram && selectedProgram.majors.length > 0;
+  const selectedProgramIsArchived = selectedProgram?.isActive === false;
 
   const handleProgramChange = (v: string | null) => {
     const val = v ?? "";
@@ -240,12 +241,12 @@ function EditUserDialogBody({
         setProgramId(result.data.alumni?.programId ?? "");
         setMajorId(result.data.alumni?.majorId ?? null);
         setGraduationYear(result.data.alumni?.graduationYear?.toString() ?? "");
-        setVerificationStatus(result.data.verification?.status ?? VerificationStatus.PENDING);
+         setVerificationStatus(result.data.verification?.status ?? null);
       } else if (result.data.role === SystemRole.INDUSTRY_PARTNER) {
         setCompanyName(result.data.industryPartner?.companyName ?? "");
         setPosition(result.data.industryPartner?.position ?? "");
         setProgramId(result.data.industryPartner?.programId ?? "");
-        setVerificationStatus(result.data.verification?.status ?? VerificationStatus.PENDING);
+         setVerificationStatus(result.data.verification?.status ?? null);
       }
 
       setLoadState({ status: "ready", record: result.data });
@@ -327,6 +328,10 @@ function EditUserDialogBody({
         setSubmitError("Program is required.");
         return;
       }
+      if (!verificationStatus) {
+        setSubmitError("Verification status must be selected.");
+        return;
+      }
       if (programHasMajors && !majorId) {
         setSubmitError("Major is required for the selected program.");
         return;
@@ -341,6 +346,10 @@ function EditUserDialogBody({
     ) {
       if (!companyName.trim()) {
         setSubmitError("Organization name is required.");
+        return;
+      }
+      if (!verificationStatus) {
+        setSubmitError("Verification status must be selected.");
         return;
       }
       formData.set("industry_partner.company_name", companyName.trim());
@@ -366,8 +375,6 @@ function EditUserDialogBody({
       if (result.data?.protectedConfirmationRequired) {
         if (record?.role === SystemRole.STUDENT) {
           // Build summary
-          const oldP = record?.student?.programId;
-          const newP = programId;
           const oldM = record?.student?.majorId;
           const newM = majorId;
           const oldYL = record?.activeEnrollment?.yearLevel;
@@ -375,94 +382,45 @@ function EditUserDialogBody({
           const oldSec = record?.activeEnrollment?.section;
           const newSec = section;
 
-          const profileChanged = !!(oldP !== newP || oldM !== newM);
+           const profileChanged = !!(oldM !== newM);
           const placementChanged = !!(newYL && newSec && (oldYL !== newYL || oldSec !== newSec));
 
           setConfirmationToken(result.data.token!);
-          setConfirmationSummary({
+           setConfirmationSummary({
             profileChanged,
             placementChanged,
-            oldValues: {
-              program: programs.find((p) => p.id === oldP)?.name ?? "None",
-              major:
-                programs.find((p) => p.id === oldP)?.majors.find((m) => m.id === oldM)?.name ??
-                "None",
-              year: oldYL ? formatYearLevel(oldYL as YearLevel) : "None",
-              section: oldSec ? formatSection(oldSec as StudentSection) : "None",
-            },
-            newValues: {
-              program: programs.find((p) => p.id === newP)?.name ?? "None",
-              major:
-                programs.find((p) => p.id === newP)?.majors.find((m) => m.id === newM)?.name ??
-                "None",
-              year: newYL ? formatYearLevel(newYL) : "None",
-              section: newSec ? formatSection(newSec) : "None",
-            },
-          });
+             oldValues: result.data.confirmationReview?.oldValues ?? {},
+             newValues: result.data.confirmationReview?.newValues ?? {},
+           });
         } else if (record?.role === SystemRole.FACULTY) {
-          const oldP = record?.faculty?.primaryProgramId;
-          const newP = programId;
           setConfirmationToken(result.data.token!);
-          setConfirmationSummary({
+           setConfirmationSummary({
             facultyProgramChanged: true,
-            oldValues: {
-              program: programs.find((p) => p.id === oldP)?.name ?? "None",
-            },
-            newValues: {
-              program: programs.find((p) => p.id === newP)?.name ?? "None",
-            },
-          });
+             oldValues: result.data.confirmationReview?.oldValues ?? {},
+             newValues: result.data.confirmationReview?.newValues ?? {},
+           });
         } else if (record?.role === SystemRole.PROGRAM_HEAD) {
           const oldP = record.programHead?.assignmentProgramId;
           setConfirmationToken(result.data.token!);
-          setConfirmationSummary({
+           setConfirmationSummary({
             programHeadAssignmentChanged: true,
-            oldValues: {
-              program: programs.find((p) => p.id === oldP)?.name ?? "No active assignment",
-            },
-            newValues: {
-              program: programs.find((p) => p.id === programId)?.name ?? "None",
-            },
-          });
+             oldValues: result.data.confirmationReview?.oldValues ?? {},
+             newValues: result.data.confirmationReview?.newValues ?? {},
+           });
         } else if (record?.role === SystemRole.ALUMNI) {
           setConfirmationToken(result.data.token!);
-          setConfirmationSummary({
+           setConfirmationSummary({
             alumniChanged: true,
-            oldValues: {
-              program:
-                programs.find((p) => p.id === record.alumni?.programId)?.name ?? "No profile",
-              major:
-                programs
-                  .find((p) => p.id === record.alumni?.programId)
-                  ?.majors.find((m) => m.id === record.alumni?.majorId)?.name ?? "None",
-              graduationYear: record.alumni ? String(record.alumni.graduationYear) : "No profile",
-              verification: formatVerificationStatus(record.verification?.status ?? null),
-            },
-            newValues: {
-              program: programs.find((p) => p.id === programId)?.name ?? "None",
-              major: selectedProgram?.majors.find((m) => m.id === majorId)?.name ?? "None",
-              graduationYear,
-              verification: formatVerificationStatus(verificationStatus),
-            },
-          });
+             oldValues: result.data.confirmationReview?.oldValues ?? {},
+             newValues: result.data.confirmationReview?.newValues ?? {},
+           });
         } else if (record?.role === SystemRole.INDUSTRY_PARTNER) {
           setConfirmationToken(result.data.token!);
-          setConfirmationSummary({
+           setConfirmationSummary({
             industryPartnerChanged: true,
-            oldValues: {
-              company: record.industryPartner?.companyName ?? "No profile",
-              position: record.industryPartner?.position ?? "None",
-              program:
-                programs.find((p) => p.id === record.industryPartner?.programId)?.name ?? "None",
-              verification: formatVerificationStatus(record.verification?.status ?? null),
-            },
-            newValues: {
-              company: companyName,
-              position: position.trim() || "None",
-              program: programs.find((p) => p.id === programId)?.name ?? "None",
-              verification: formatVerificationStatus(verificationStatus),
-            },
-          });
+             oldValues: result.data.confirmationReview?.oldValues ?? {},
+             newValues: result.data.confirmationReview?.newValues ?? {},
+           });
         }
         return;
       }
@@ -604,13 +562,18 @@ function EditUserDialogBody({
                     <SelectValue placeholder="Select program">{selectedProgram?.name}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {programs.map((p) => (
+                     {programs.filter((p) => p.isActive !== false).map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedProgramIsArchived && (
+                  <p className="text-muted-foreground text-xs">
+                    Current program is archived. It remains context only; new archived selections are unavailable.
+                  </p>
+                )}
               </div>
 
               {programHasMajors && (
@@ -623,7 +586,7 @@ function EditUserDialogBody({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedProgram.majors.map((m) => (
+                       {selectedProgram.majors.filter((m) => m.isActive !== false).map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           {m.name}
                         </SelectItem>
@@ -699,7 +662,7 @@ function EditUserDialogBody({
                   <SelectValue placeholder="Select primary program">{selectedProgram?.name}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {programs.map((p) => (
+                   {programs.filter((p) => p.isActive !== false).map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                     </SelectItem>
@@ -725,7 +688,7 @@ function EditUserDialogBody({
                   <SelectValue placeholder="Select managed program">{selectedProgram?.name}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {programs.map((p) => (
+                   {programs.filter((p) => p.isActive !== false).map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                     </SelectItem>
@@ -753,7 +716,7 @@ function EditUserDialogBody({
                     <SelectValue placeholder="Select program">{selectedProgram?.name}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {programs.map((p) => (
+                     {programs.filter((p) => p.isActive !== false).map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
                       </SelectItem>
@@ -771,7 +734,7 @@ function EditUserDialogBody({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedProgram.majors.map((m) => (
+                       {selectedProgram.majors.filter((m) => m.isActive !== false).map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           {m.name}
                         </SelectItem>
@@ -809,8 +772,8 @@ function EditUserDialogBody({
                     <SelectItem value={VerificationStatus.REJECTED}>Rejected</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-muted-foreground text-xs">
-                  {verificationEffect(verificationStatus)}
+                 <p className="text-muted-foreground text-xs">
+                   {verificationStatus ? verificationEffect(verificationStatus) : "Choose a verification status."}
                 </p>
               </div>
             </div>
@@ -852,13 +815,18 @@ function EditUserDialogBody({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">No affiliated program</SelectItem>
-                    {programs.map((p) => (
+                     {programs.filter((p) => p.isActive !== false).map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedProgramIsArchived && (
+                  <p className="text-muted-foreground text-xs">
+                    Current program is archived. It remains context only; new archived selections are unavailable.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-user-industry-verification">Verification Status</Label>
@@ -868,7 +836,7 @@ function EditUserDialogBody({
                   disabled={isSubmitting}
                 >
                   <SelectTrigger id="edit-user-industry-verification">
-                    <SelectValue>{formatVerificationStatus(verificationStatus)}</SelectValue>
+                   <SelectValue>{formatVerificationStatus(verificationStatus)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={VerificationStatus.PENDING}>Pending</SelectItem>
@@ -877,7 +845,7 @@ function EditUserDialogBody({
                   </SelectContent>
                 </Select>
                 <p className="text-muted-foreground text-xs">
-                  {verificationEffect(verificationStatus)}
+                   {verificationStatus ? verificationEffect(verificationStatus) : "Choose a verification status."}
                 </p>
               </div>
             </div>
@@ -982,8 +950,8 @@ function EditUserDialogBody({
                     {confirmationSummary.newValues.verification}
                   </div>
                 </div>
-                <p className="text-muted-foreground text-sm">
-                  {verificationEffect(verificationStatus)}
+                 <p className="text-muted-foreground text-sm">
+                   {verificationStatus ? verificationEffect(verificationStatus) : "Choose a verification status."}
                 </p>
               </div>
             )}
@@ -1009,8 +977,8 @@ function EditUserDialogBody({
                     {confirmationSummary.newValues.verification}
                   </div>
                 </div>
-                <p className="text-muted-foreground text-sm">
-                  {verificationEffect(verificationStatus)}
+                 <p className="text-muted-foreground text-sm">
+                   {verificationStatus ? verificationEffect(verificationStatus) : "Choose a verification status."}
                 </p>
               </div>
             )}
@@ -1018,7 +986,7 @@ function EditUserDialogBody({
             <p className="text-muted-foreground flex items-start gap-2 pt-2 text-sm">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
               {confirmationSummary.alumniChanged || confirmationSummary.industryPartnerChanged
-                ? "Profile and verification save together."
+               ? "Profile and verification save together."
                 : confirmationSummary.facultyProgramChanged
                   ? "Additional active affiliations remain unchanged. If the selected program is currently an additional affiliation, it will be promoted to primary."
                   : confirmationSummary.programHeadAssignmentChanged
