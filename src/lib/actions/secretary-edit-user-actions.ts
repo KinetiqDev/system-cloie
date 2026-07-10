@@ -57,17 +57,29 @@ export async function getUserEditRecordAction(
  */
 export async function editUserBySecretaryAction(
   formData: FormData
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; protectedConfirmationRequired?: boolean; protectedPayload?: string; token?: string }>> {
   const access = await requireSecretaryAccess();
   if (!access.success) {
     return access;
   }
 
-  const raw: EditUserBySecretaryInput = {
+  const raw: any = {
     id: String(formData.get("id") ?? ""),
+    role: formData.get("role") || undefined,
     first_name: String(formData.get("first_name") ?? ""),
     last_name: String(formData.get("last_name") ?? ""),
+    confirmationToken: formData.get("confirmationToken") || undefined,
   };
+  
+  if (formData.get("student.program_id")) {
+    raw.student = {
+      student_id_number: formData.get("student.student_id_number"),
+      program_id: formData.get("student.program_id"),
+      major_id: formData.get("student.major_id") || undefined,
+      year_level: formData.get("student.year_level") || undefined,
+      section: formData.get("student.section") || undefined,
+    };
+  }
 
   const parsed = editUserBySecretarySchema.safeParse(raw);
   if (!parsed.success) {
@@ -86,6 +98,8 @@ export async function editUserBySecretaryAction(
     return { success: false, error: result.error };
   }
 
-  revalidatePath("/secretary/users");
-  return { success: true, data: { id: result.data.id } };
+  if (!result.data.protectedConfirmationRequired) {
+    revalidatePath("/secretary/users");
+  }
+  return { success: true, data: result.data };
 }

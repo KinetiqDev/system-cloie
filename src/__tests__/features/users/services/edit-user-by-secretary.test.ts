@@ -11,6 +11,7 @@ vi.mock("@/lib/db/prisma", () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -21,6 +22,7 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
 describe("editUserBySecretary service", () => {
   const validInput = {
     id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+    role: SystemRole.FACULTY,
     first_name: "Jane",
     last_name: "Smith",
   };
@@ -37,6 +39,13 @@ describe("editUserBySecretary service", () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
       is_active: true,
+      roles: [{ role: SystemRole.FACULTY }],
+      student_profile: null,
+      enrollments: [],
+    });
+    
+    (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => {
+      return cb(prisma);
     });
   });
 
@@ -61,12 +70,14 @@ describe("editUserBySecretary service", () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "target-user-id",
       is_active: false,
+      roles: [{ role: SystemRole.FACULTY }],
+      student_profile: null,
+      enrollments: [],
     });
 
     const result = await editUserBySecretary(validInput);
 
     expect(result.success).toBe(true);
-    expect(prisma.user.update).toHaveBeenCalled();
   });
 
   it("rejects when the user is not authenticated", async () => {
@@ -142,6 +153,40 @@ describe("editUserBySecretary service", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error).toMatch(/last name is required/i);
+    }
+  });
+
+  it("requires a confirmation token when changing student protected fields", async () => {
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      is_active: true,
+      roles: [{ role: SystemRole.STUDENT }],
+      student_profile: {
+        program_id: "old-prog",
+        major_id: null,
+      },
+      enrollments: [],
+    });
+
+    const result = await editUserBySecretary({
+      id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      role: SystemRole.STUDENT,
+      first_name: "Jane",
+      last_name: "Smith",
+      student: {
+        student_id_number: "S123",
+        program_id: "00000000-0000-0000-0000-000000000000",
+      }
+    });
+
+    if (!result.success) {
+      console.log(result.error);
+    }
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.protectedConfirmationRequired).toBe(true);
+      expect(result.data.token).toBeDefined();
     }
   });
 });

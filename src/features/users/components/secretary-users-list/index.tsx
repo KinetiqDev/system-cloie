@@ -48,7 +48,6 @@ export function SecretaryUsersList({
   // ---- Modal state ---------------------------------------------------------
   const [viewUser, setViewUser] = useState<SecretaryUserSummaryItem | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [studentContextUser, setStudentContextUser] = useState<SecretaryUserSummaryItem | null>(null);
 
   // ---- Toggle active hook --------------------------------------------------
   const { toggleActive, isPending } = useToggleUserActive();
@@ -168,7 +167,6 @@ export function SecretaryUsersList({
         users={paginatedUsers}
         onViewUser={setViewUser}
         onEditUser={(user) => setEditUserId(user.id)}
-        onEditStudentContext={setStudentContextUser}
         onToggleActive={handleToggleActive}
         isPending={isPending}
       />
@@ -184,10 +182,6 @@ export function SecretaryUsersList({
       <UserDialogs
         viewUser={viewUser}
         onCloseView={() => setViewUser(null)}
-        studentContextUser={studentContextUser}
-        onCloseStudentContext={() => setStudentContextUser(null)}
-        programs={programs}
-        yearLevels={yearLevels}
         onUserUpdated={handleUserUpdated}
       />
 
@@ -196,6 +190,8 @@ export function SecretaryUsersList({
         currentUserId={currentUserId}
         onClose={() => setEditUserId(null)}
         onUserUpdated={handleUserUpdated}
+        programs={programs}
+        yearLevels={yearLevels}
       />
     </div>
   );

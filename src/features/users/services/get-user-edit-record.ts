@@ -83,9 +83,19 @@ export async function getUserEditRecordBySecretary(
       roles: { select: { role: true } },
       student_profile: {
         include: {
-          program: { select: { id: true, code: true, name: true } },
-          major: { select: { id: true, name: true } },
+          program: { select: { code: true, name: true } },
+          major: { select: { name: true } },
         },
+      },
+      enrollments: {
+        where: {
+          is_active: true,
+          term: { is_active: true },
+        },
+        include: {
+          term: { select: { id: true, semester: true, school_year: { select: { code: true } } } },
+        },
+        take: 1, // A student has at most one active enrollment in the active term
       },
       industry_partner_profile: true,
       alumni_profile: true,
@@ -100,6 +110,8 @@ export async function getUserEditRecordBySecretary(
   if (!role) {
     return { success: false, error: "User has no assigned CLOIE account role." };
   }
+
+  const activeEnrollment = user.enrollments?.[0] ?? null;
 
   return {
     success: true,
@@ -120,10 +132,16 @@ export async function getUserEditRecordBySecretary(
             studentIdNumber: user.student_profile.student_id_number,
           }
         : null,
-      // #81 will project the active enrollment record when Student placement
-      // becomes editable. The dialog surface keeps this slot reserved so the
-      // role-aware read seam can grow without reshaping the wire format.
-      activeEnrollment: null,
+      activeEnrollment: activeEnrollment
+        ? {
+            id: activeEnrollment.id,
+            termInstanceId: activeEnrollment.term_instance_id,
+            programId: activeEnrollment.program_id,
+            majorId: activeEnrollment.major_id,
+            yearLevel: activeEnrollment.year_level,
+            section: activeEnrollment.section,
+          }
+        : null,
       verification: user.alumni_profile
         ? { status: user.alumni_profile.verification_status }
         : user.industry_partner_profile

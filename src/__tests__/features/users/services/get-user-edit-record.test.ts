@@ -94,6 +94,49 @@ describe("getUserEditRecordBySecretary", () => {
     }
   });
 
+  it("projects active enrollment fields when present", async () => {
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "student-id",
+      first_name: "Sam",
+      last_name: "Student",
+      email: "sam@acd.edu.ph",
+      is_active: true,
+      roles: [{ role: SystemRole.STUDENT }],
+      student_profile: {
+        program_id: "prog-1",
+        program: { code: "BSIT", name: "Info Tech" },
+        major_id: "maj-1",
+        major: { name: "Web Dev" },
+        student_id_number: "2024-001",
+      },
+      enrollments: [
+        {
+          id: "enrollment-id",
+          term_instance_id: "term-id",
+          program_id: "prog-1",
+          major_id: "maj-1",
+          year_level: "FIRST_YEAR",
+          section: "MORNING",
+        }
+      ]
+    });
+
+    const result = await getUserEditRecordBySecretary("student-id");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.role).toBe(SystemRole.STUDENT);
+      expect(result.data.activeEnrollment).toEqual({
+        id: "enrollment-id",
+        termInstanceId: "term-id",
+        programId: "prog-1",
+        majorId: "maj-1",
+        yearLevel: "FIRST_YEAR",
+        section: "MORNING",
+      });
+    }
+  });
+
   it("projects alumni and verification fields when present", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "alumni-id",

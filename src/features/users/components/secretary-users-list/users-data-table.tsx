@@ -56,7 +56,6 @@ interface UsersDataTableProps {
   users: SecretaryUserSummaryItem[];
   onViewUser: (user: SecretaryUserSummaryItem) => void;
   onEditUser: (user: SecretaryUserSummaryItem) => void;
-  onEditStudentContext: (user: SecretaryUserSummaryItem) => void;
   onToggleActive: (userId: string, currentActive: boolean) => void;
   isPending: boolean;
 }
@@ -65,7 +64,6 @@ export function UsersDataTable({
   users,
   onViewUser,
   onEditUser,
-  onEditStudentContext,
   onToggleActive,
   isPending,
 }: UsersDataTableProps) {
@@ -146,11 +144,6 @@ export function UsersDataTable({
                       <DropdownMenuItem onClick={() => onEditUser(user)}>
                         Edit user
                       </DropdownMenuItem>
-                      {user.roles.includes(SystemRole.STUDENT) && (
-                        <DropdownMenuItem onClick={() => onEditStudentContext(user)}>
-                          Edit student context
-                        </DropdownMenuItem>
-                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         disabled={isPending}
@@ -204,11 +197,6 @@ export function UsersDataTable({
                     <DropdownMenuItem onClick={() => onEditUser(user)}>
                       Edit user
                     </DropdownMenuItem>
-                    {user.roles.includes(SystemRole.STUDENT) && (
-                      <DropdownMenuItem onClick={() => onEditStudentContext(user)}>
-                        Edit student context
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       disabled={isPending}

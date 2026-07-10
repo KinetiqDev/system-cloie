@@ -31,6 +31,8 @@ describe("EditUserDialog", () => {
         currentUserId="secretary-admin"
         onClose={mockOnClose}
         onUserUpdated={mockOnUserUpdated}
+        programs={[]}
+        yearLevels={[]}
       />
     );
   }
@@ -105,6 +107,8 @@ describe("EditUserDialog", () => {
         currentUserId="secretary-admin"
         onClose={mockOnClose}
         onUserUpdated={mockOnUserUpdated}
+        programs={[]}
+        yearLevels={[]}
       />
     );
 
