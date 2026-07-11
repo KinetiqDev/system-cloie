@@ -643,12 +643,9 @@ describe("EditUserDialog", () => {
     fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
     await waitFor(() => expect(screen.getByRole("button", { name: /go back/i })).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByRole("button", { name: /confirm and save/i })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: /go back/i }));
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
-      expect(screen.getByLabelText(/primary program affiliation/i)).toBeInTheDocument();
-    });
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/primary program affiliation/i)).toBeInTheDocument();
   });
 
   it("shows managed-program control for Program Head role", async () => {

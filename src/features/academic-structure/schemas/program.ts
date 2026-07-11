@@ -42,14 +42,6 @@ export const updateProgramSchema = z.object({
 
 export type UpdateProgramInput = z.infer<typeof updateProgramSchema>;
 
-export const deleteProgramSchema = z.object({
-  id: z.string().uuid(),
-  confirmationCode: z.string(),
-  revision: z.string().datetime(),
-});
-
-export type DeleteProgramInput = z.infer<typeof deleteProgramSchema>;
-
 export const createMajorSchema = z.object({
   program_id: z.string().uuid(),
   name: z
