@@ -242,10 +242,10 @@ export function ManagementCoursesList({
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap">
         {/* Scope filter */}
         <Select value={scopeFilter} onValueChange={handleScopeChange}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue>
               {scopeFilter === "__all__"
                 ? "All Scopes"
@@ -263,7 +263,7 @@ export function ManagementCoursesList({
 
         {/* Program filter */}
         <Select value={programFilter} onValueChange={handleProgramChange}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full md:w-[200px]">
             <SelectValue>
               {programFilter === "__all__"
                 ? "All Programs"
@@ -283,7 +283,7 @@ export function ManagementCoursesList({
         {/* Major filter (conditional — only when selected program has majors) */}
         {availableMajors.length > 0 && (
           <Select value={majorFilter} onValueChange={handleMajorChange}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue>
                 {majorFilter === "__all__"
                   ? "All Majors"
@@ -302,7 +302,7 @@ export function ManagementCoursesList({
         )}
 
         {/* Search */}
-        <div className="relative ml-auto w-full max-w-xs">
+        <div className="relative w-full md:max-w-xs md:ml-auto">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search by code or title..."
@@ -317,15 +317,15 @@ export function ManagementCoursesList({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Code</TableHead>
-            <TableHead>Course Title</TableHead>
-            <TableHead>Scope</TableHead>
-            <TableHead>Program</TableHead>
-            <TableHead>Major</TableHead>
-            <TableHead className="text-right">CILOs</TableHead>
-            <TableHead className="text-right">Evaluations</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-12">Actions</TableHead>
+            <TableHead className="w-full md:w-auto">Course</TableHead>
+            <TableHead className="hidden md:table-cell">Course Title</TableHead>
+            <TableHead className="hidden md:table-cell">Scope</TableHead>
+            <TableHead className="hidden md:table-cell">Program</TableHead>
+            <TableHead className="hidden md:table-cell">Major</TableHead>
+            <TableHead className="hidden md:table-cell text-right">CILOs</TableHead>
+            <TableHead className="hidden md:table-cell text-right">Evaluations</TableHead>
+            <TableHead className="hidden md:table-cell">Status</TableHead>
+            <TableHead className="w-12 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -337,22 +337,46 @@ export function ManagementCoursesList({
             </TableRow>
           ) : (
             paginatedCourses.map((course) => (
-              <TableRow key={course.id}>
-                <TableCell className="font-bold">{course.code}</TableCell>
-                <TableCell>{course.title}</TableCell>
-                <TableCell>
+              <TableRow key={course.id} className="group">
+                <TableCell className="w-[99%] md:w-auto max-w-[200px] sm:max-w-[300px] md:max-w-none align-top">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-foreground font-bold truncate">{course.code}</span>
+                    <span className="text-muted-foreground md:hidden text-xs line-clamp-2 break-words">
+                      {course.title}
+                    </span>
+                    <div className="md:hidden mt-1 flex flex-wrap items-center gap-1.5">
+                      <Badge className={getCourseScopeBadgeClass(course.courseScope)}>
+                        {course.courseScopeLabel}
+                      </Badge>
+                      <Badge variant={course.isActive ? "default" : "secondary"} className={!course.isActive ? "bg-amber-100 text-amber-900 hover:bg-amber-200" : ""}>
+                        {course.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                    <div className="md:hidden mt-0.5 text-xs text-muted-foreground flex items-center gap-1.5 overflow-hidden">
+                      <span className="truncate min-w-0">{course.programCode ?? "No Program"}</span>
+                      {course.majorName && (
+                        <>
+                          <span className="text-border shrink-0">•</span>
+                          <span className="truncate min-w-0">{course.majorName}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">{course.title}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   <Badge className={getCourseScopeBadgeClass(course.courseScope)}>{course.courseScopeLabel}</Badge>
                 </TableCell>
-                <TableCell>{course.programCode ?? "—"}</TableCell>
-                <TableCell>{course.majorName ?? "—"}</TableCell>
-                <TableCell className="text-right">{course.ciloCount}</TableCell>
-                <TableCell className="text-right">{course.evaluationCount}</TableCell>
-                <TableCell>
-                  <Badge variant={course.isActive ? "default" : "secondary"}>
+                <TableCell className="hidden md:table-cell">{course.programCode ?? "—"}</TableCell>
+                <TableCell className="hidden md:table-cell">{course.majorName ?? "—"}</TableCell>
+                <TableCell className="hidden md:table-cell text-right">{course.ciloCount}</TableCell>
+                <TableCell className="hidden md:table-cell text-right">{course.evaluationCount}</TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Badge variant={course.isActive ? "default" : "secondary"} className={!course.isActive ? "bg-amber-100 text-amber-900 hover:bg-amber-200" : ""}>
                     {course.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-8 items-center justify-center rounded-md transition-colors">
                       <MoreVertical className="size-4" />
