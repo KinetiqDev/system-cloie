@@ -4,9 +4,11 @@ import { SystemRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import type { ServiceResult } from "@/lib/utils/service-result";
 import {
   createProgramSchema,
   updateProgramSchema,
+  deleteProgramSchema,
   createMajorSchema,
   updateMajorSchema,
 } from "@/features/academic-structure/schemas/program";
@@ -14,6 +16,10 @@ import {
   createProgram,
   updateProgram,
   toggleProgramActive,
+  preflightProgramDeletion,
+  deleteProgram,
+  type ProgramDeletionPreflight,
+  type DeleteProgramResult,
   createMajor,
   updateMajor,
   toggleMajorActive,
@@ -21,14 +27,25 @@ import {
 } from "@/features/academic-structure/services/manage-programs";
 
 type ActionResult = { success: true } | { success: false; error: string };
+type ProgramDeletionResult =
+  | ServiceResult<ProgramDeletionPreflight>
+  | DeleteProgramResult;
+
+const PROGRAM_LIFECYCLE_ROLES: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+
+async function requireProgramLifecycleSteward(): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) return { error: "Authentication required.", success: false };
+  if (!PROGRAM_LIFECYCLE_ROLES.includes(session.activeRole)) return { error: "Insufficient permissions.", success: false };
+  return { success: true };
+}
 
 export async function createProgramAction(formData: FormData): Promise<ActionResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
+  if (!PROGRAM_LIFECYCLE_ROLES.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
 
@@ -58,8 +75,7 @@ export async function updateProgramAction(formData: FormData): Promise<ActionRes
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
+  if (!PROGRAM_LIFECYCLE_ROLES.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
 
@@ -87,18 +103,13 @@ export async function updateProgramAction(formData: FormData): Promise<ActionRes
 
 export async function toggleProgramActiveAction(
   id: string,
-  is_active: boolean
+  is_active: boolean,
+  expectedIsActive = !is_active
 ): Promise<ActionResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { error: "Authentication required.", success: false };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { error: "Insufficient permissions.", success: false };
-  }
+  const authorization = await requireProgramLifecycleSteward();
+  if (!authorization.success) return authorization;
 
-  const result = await toggleProgramActive(id, is_active);
+  const result = await toggleProgramActive(id, is_active, expectedIsActive);
 
   if (!result.success) {
     return { success: false, error: result.error };
@@ -107,6 +118,34 @@ export async function toggleProgramActiveAction(
   revalidatePath("/secretary/programs");
   revalidatePath("/dean/programs");
   return { success: true };
+}
+
+export async function preflightProgramDeletionAction(id: string): Promise<ProgramDeletionResult> {
+  const authorization = await requireProgramLifecycleSteward();
+  if (!authorization.success) return authorization;
+  return preflightProgramDeletion(id);
+}
+
+export async function deleteProgramAction(input: {
+  id: string;
+  confirmationCode: string;
+  revision: string;
+}): Promise<ProgramDeletionResult> {
+  const authorization = await requireProgramLifecycleSteward();
+  if (!authorization.success) return authorization;
+
+  const parsed = deleteProgramSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: "Invalid deletion confirmation." };
+
+  const result = await deleteProgram({
+    ...parsed.data,
+    confirmationCode: input.confirmationCode.trim(),
+  });
+  if (!result.success) return result;
+
+  revalidatePath("/secretary/programs");
+  revalidatePath("/dean/programs");
+  return result;
 }
 
 export async function createMajorAction(formData: FormData): Promise<ActionResult> {
