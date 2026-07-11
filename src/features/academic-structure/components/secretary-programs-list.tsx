@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BookOpen, GraduationCap, Layers, MoreVertical, Search, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -30,8 +40,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toggleProgramActiveAction } from "@/lib/actions/admin-program-actions";
+import {
+  deleteProgramAction,
+  preflightProgramDeletionAction,
+  toggleProgramActiveAction,
+} from "@/lib/actions/admin-program-actions";
+import { showToast } from "@/components/ui/toast";
 import { ManageMajorsDialog } from "./manage-majors-dialog";
+import type { ProgramDeletionPreflight } from "../services/manage-programs";
 
 import type {
   SecretaryProgramSummaryItem,
@@ -64,6 +80,12 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const [lifecycleProgram, setLifecycleProgram] = useState<SecretaryProgramSummaryItem | null>(null);
+  const [preflight, setPreflight] = useState<ProgramDeletionPreflight | null>(null);
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
+  const [confirmationCode, setConfirmationCode] = useState("");
+  const [confirmDeactivation, setConfirmDeactivation] = useState(false);
 
   // ---- Manage Majors dialog state -----------------------------------------
   const [majorsDialogProgram, setMajorsDialogProgram] = useState<SecretaryProgramSummaryItem | null>(
@@ -114,7 +136,60 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
   // ---- Action handlers -----------------------------------------------------
   const handleToggleActive = (programId: string, currentActive: boolean) => {
     startTransition(async () => {
-      await toggleProgramActiveAction(programId, !currentActive);
+      const result = await toggleProgramActiveAction(programId, !currentActive);
+      if (!result.success) showToast(result.error, "error");
+      else showToast(currentActive ? "Program deactivated." : "Program activated.");
+    });
+  };
+
+  const handleDeactivate = (program: SecretaryProgramSummaryItem) => {
+    startTransition(async () => {
+      const result = await toggleProgramActiveAction(program.id, false, true);
+      if (!result.success) {
+        setLifecycleError(result.error);
+        return;
+      }
+      closeLifecycleDialog();
+      showToast("Program deactivated.");
+    });
+  };
+
+  const openDeletionPreflight = (program: SecretaryProgramSummaryItem) => {
+    setLifecycleProgram(program);
+    setPreflight(null);
+    setLifecycleError(null);
+    setConfirmationCode("");
+    startTransition(async () => {
+      const result = await preflightProgramDeletionAction(program.id);
+      if (!result.success) setLifecycleError(result.error);
+      else if ("dependencies" in result.data) setPreflight(result.data);
+    });
+  };
+
+  const closeLifecycleDialog = () => {
+    setLifecycleProgram(null);
+    setPreflight(null);
+    setLifecycleError(null);
+    setConfirmationCode("");
+    setConfirmDeactivation(false);
+  };
+
+  const handleDelete = () => {
+    if (!lifecycleProgram || !preflight || confirmationCode.trim() !== preflight.code) return;
+    startTransition(async () => {
+      const result = await deleteProgramAction({
+        id: preflight.id,
+        confirmationCode,
+        revision: preflight.revision,
+      });
+      if (!result.success) {
+        setLifecycleError(result.error);
+        if ("data" in result && result.data) setPreflight(result.data);
+        return;
+      }
+      closeLifecycleDialog();
+      router.refresh();
+      showToast(`Program ${preflight.code} deleted.`);
     });
   };
 
@@ -264,9 +339,24 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         disabled={isPending}
-                        onClick={() => handleToggleActive(program.id, program.isActive)}
+                        onClick={() => {
+                          if (program.isActive) {
+                            setLifecycleProgram(program);
+                            setConfirmDeactivation(true);
+                            setLifecycleError(null);
+                          } else {
+                            handleToggleActive(program.id, false);
+                          }
+                        }}
                       >
                         {program.isActive ? "Deactivate" : "Activate"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        disabled={isPending}
+                        onClick={() => openDeletionPreflight(program)}
+                      >
+                        Delete program
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -340,6 +430,121 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
           }}
         />
       )}
+
+      <AlertDialog open={!!lifecycleProgram} onOpenChange={(open) => !open && closeLifecycleDialog()}>
+        <AlertDialogContent className="max-h-[min(90dvh,42rem)] overflow-y-auto sm:max-w-lg">
+          {confirmDeactivation && lifecycleProgram ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Deactivate {lifecycleProgram.code}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Records and history remain. New active-Program selections exclude this Program,
+                  and Program Heads lose program-scoped tools while it is inactive.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {lifecycleError && <p role="alert" className="text-destructive text-sm">{lifecycleError}</p>}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+                <Button
+                  variant="destructive"
+                  disabled={isPending}
+                  onClick={() => {
+                    handleDeactivate(lifecycleProgram);
+                  }}
+                >
+                  Deactivate
+                </Button>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {preflight ? `Delete ${preflight.code}?` : "Check deletion eligibility"}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {preflight
+                    ? `${preflight.name} (${preflight.code}) can only be permanently deleted while inactive and empty.`
+                    : "Checking current Program status and linked records."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              {!preflight && !lifecycleError && (
+                <p role="status" aria-live="polite" className="text-muted-foreground text-sm">Checking current blockers…</p>
+              )}
+              {lifecycleError && <p role="alert" className="text-destructive text-sm">{lifecycleError}</p>}
+              {preflight && (
+                <div className="flex flex-col gap-4 text-sm">
+                  {(preflight.blockers.inactive || preflight.blockers.linkedRecords) && (
+                    <div className="border-destructive/30 bg-destructive/5 rounded-md border p-3">
+                      <p className="font-medium">Deletion blocked</p>
+                      {preflight.blockers.inactive && <p>Program must be inactive first.</p>}
+                      {preflight.blockers.linkedRecords && (
+                        <p>Linked records remain. Review counts below before choosing a safe action.</p>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-4">
+                    {Object.entries(preflight.dependencies).map(([group, values]) => {
+                      const entries = Object.entries(values).filter(([, count]) => count > 0);
+                      if (entries.length === 0) return null;
+                      const title = group === "academicSetup"
+                        ? "Academic setup"
+                        : group === "peopleAndHistory"
+                          ? "People and history"
+                          : group === "externalLinks"
+                            ? "External links"
+                            : group[0].toUpperCase() + group.slice(1);
+                      return (
+                        <section key={group} aria-label={title}>
+                          <h3 className="mb-2 font-medium">{title}</h3>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {entries.map(([label, count]) => (
+                              <div key={`${group}-${label}`} className="flex justify-between gap-3 rounded-md border px-3 py-2">
+                                <span>{label.replaceAll(/([A-Z])/g, " $1")}</span><strong>{count}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                  {!preflight.blockers.inactive && !preflight.blockers.linkedRecords && (
+                    <label className="flex flex-col gap-2 font-medium" htmlFor="program-delete-code">
+                      Type <code>{preflight.code}</code> to confirm permanent deletion.
+                      <Input
+                        id="program-delete-code"
+                        value={confirmationCode}
+                        onChange={(event) => setConfirmationCode(event.target.value)}
+                        placeholder={preflight.code}
+                        autoComplete="off"
+                        aria-describedby="program-delete-warning"
+                      />
+                    </label>
+                  )}
+                  <p id="program-delete-warning" className="text-muted-foreground">
+                    System checks status, revision, and linked records again immediately before deletion.
+                  </p>
+                </div>
+              )}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+                {preflight && (preflight.blockers.inactive || preflight.blockers.linkedRecords) ? (
+                  <Button disabled={isPending} onClick={() => openDeletionPreflight(lifecycleProgram!)}>Check again</Button>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    disabled={isPending || !preflight || confirmationCode.trim() !== preflight.code}
+                    onClick={handleDelete}
+                  >
+                    Delete permanently
+                  </Button>
+                )}
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
