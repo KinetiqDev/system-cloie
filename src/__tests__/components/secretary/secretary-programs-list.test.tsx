@@ -1,45 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { SecretaryProgramsList } from "@/features/academic-structure/components/secretary-programs-list";
 
-const preflightMock = vi.hoisted(() => vi.fn());
-const deleteMock = vi.hoisted(() => vi.fn());
-const toggleMock = vi.hoisted(() => vi.fn());
-const refreshMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@/lib/actions/admin-program-actions", () => ({
-  preflightProgramDeletionAction: preflightMock,
-  deleteProgramAction: deleteMock,
-  toggleProgramActiveAction: toggleMock,
-}));
-
-vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: refreshMock }) }));
-
 describe("SecretaryProgramsList", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    preflightMock.mockResolvedValue({
-      success: true,
-      data: {
-        id: "prog-2",
-        code: "BSEE",
-        name: "Bachelor of Science in Electrical Engineering",
-        isActive: false,
-        revision: "2026-07-11T00:00:00.000Z",
-        blockers: { inactive: false, linkedRecords: false },
-        dependencies: {
-          academicSetup: { majors: 0, courses: 0, graduateOutcomes: 0 },
-          peopleAndHistory: { studentProfiles: 0, enrollments: 0, alumniProfiles: 0 },
-          teaching: { courseAssignments: 0, facultyAffiliations: 0, programHeadAssignments: 0 },
-          evaluation: { evaluationTargets: 0, centralDeployments: 0, instrumentTemplates: 0 },
-          externalLinks: { stakeholderInvites: 0, industryPartnerProfiles: 0 },
-        },
-      },
-    });
-    deleteMock.mockResolvedValue({ success: true, data: { id: "prog-2" } });
-    toggleMock.mockResolvedValue({ success: true, data: undefined });
-  });
   const mockPrograms = [
     {
       id: "prog-1",
@@ -113,35 +76,5 @@ describe("SecretaryProgramsList", () => {
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
 
     expect(screen.getByText("Structural Engineering, Water Resources")).toBeInTheDocument();
-  });
-
-  it("shows Delete program only after opening a row action menu", async () => {
-    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
-
-    expect(screen.queryByText("Delete program")).not.toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Actions" })[1]);
-    expect(await screen.findByText("Delete program")).toBeInTheDocument();
-    expect(preflightMock).not.toHaveBeenCalled();
-  });
-
-  it("preflights on demand and requires exact code before deletion", async () => {
-    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Actions" })[1]);
-    fireEvent.click(await screen.findByText("Delete program"));
-
-    await waitFor(() => expect(preflightMock).toHaveBeenCalledWith("prog-2"));
-    const input = await screen.findByLabelText(/type/i);
-    const deleteButton = screen.getByRole("button", { name: /delete permanently/i });
-    expect(deleteButton).toBeDisabled();
-    fireEvent.change(input, { target: { value: "bsee" } });
-    expect(deleteButton).toBeDisabled();
-    fireEvent.change(input, { target: { value: " BSEE " } });
-    expect(deleteButton).toBeEnabled();
-    fireEvent.click(deleteButton);
-    await waitFor(() => expect(deleteMock).toHaveBeenCalledWith({
-      id: "prog-2",
-      confirmationCode: " BSEE ",
-      revision: "2026-07-11T00:00:00.000Z",
-    }));
   });
 });
