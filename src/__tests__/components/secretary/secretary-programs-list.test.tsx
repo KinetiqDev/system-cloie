@@ -144,4 +144,36 @@ describe("SecretaryProgramsList", () => {
       revision: "2026-07-11T00:00:00.000Z",
     }));
   });
+
+  it("ignores preflight results from a closed dialog", async () => {
+    let resolvePreflight!: (value: unknown) => void;
+    preflightMock.mockReturnValueOnce(new Promise((resolve) => { resolvePreflight = resolve; }));
+    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Actions" })[1]);
+    fireEvent.click(await screen.findByText("Delete program"));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+
+    resolvePreflight({
+      success: true,
+      data: {
+        id: "prog-2",
+        code: "STALE",
+        name: "Bachelor of Science in Electrical Engineering",
+        isActive: false,
+        revision: "2026-07-11T00:00:00.000Z",
+        blockers: { inactive: false, linkedRecords: false },
+        dependencies: {
+          academicSetup: { majors: 0, courses: 0, graduateOutcomes: 0 },
+          peopleAndHistory: { studentProfiles: 0, enrollments: 0, alumniProfiles: 0 },
+          teaching: { courseAssignments: 0, facultyAffiliations: 0, programHeadAssignments: 0 },
+          evaluation: { evaluationTargets: 0, centralDeployments: 0, instrumentTemplates: 0 },
+          externalLinks: { stakeholderInvites: 0, industryPartnerProfiles: 0 },
+        },
+      },
+    });
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+  });
 });
