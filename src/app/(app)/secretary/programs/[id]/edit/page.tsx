@@ -19,14 +19,14 @@ export default async function EditProgramPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="flex flex-wrap items-start gap-3">
         <Link href="/secretary/programs" className={buttonVariants({ variant: "outline", size: "sm" })}>
-          ← Back to Programs
+          ← Back
         </Link>
-        <div>
-          <h1 className="text-heading-lg">Edit Program: {program.code}</h1>
-          <p className="text-body-md text-text-secondary">{program.name}</p>
+        <div className="min-w-0">
+          <h1 className="text-heading-lg">Edit: {program.code}</h1>
+          <p className="text-body-sm text-text-secondary truncate">{program.name}</p>
         </div>
       </div>
 

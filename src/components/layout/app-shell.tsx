@@ -26,12 +26,12 @@ export function AppShell({ children, user, roles }: AppShellProps) {
       <Sidebar user={user} roles={roles} />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col lg:pl-64">
+      <div className="flex flex-1 min-w-0 flex-col lg:pl-64">
         {/* Top App Bar — includes hamburger trigger for admin/dean/ph/faculty */}
         <Topbar user={user} mobileNavMode={mobileNavMode} roles={roles} />
 
         {/* Page Content */}
-        <main className="mx-auto w-full max-w-[1600px] flex-1 overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-8">
+        <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-1 flex-col overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-8">
           {children}
         </main>
 
