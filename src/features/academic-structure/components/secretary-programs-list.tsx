@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, GraduationCap, Layers, MoreVertical, Search, Users } from "lucide-react";
@@ -86,6 +86,7 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
   const [lifecycleError, setLifecycleError] = useState<string | null>(null);
   const [confirmationCode, setConfirmationCode] = useState("");
   const [confirmDeactivation, setConfirmDeactivation] = useState(false);
+  const preflightRequest = useRef(0);
 
   // ---- Manage Majors dialog state -----------------------------------------
   const [majorsDialogProgram, setMajorsDialogProgram] = useState<SecretaryProgramSummaryItem | null>(
@@ -155,18 +156,21 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
   };
 
   const openDeletionPreflight = (program: SecretaryProgramSummaryItem) => {
+    const request = ++preflightRequest.current;
     setLifecycleProgram(program);
     setPreflight(null);
     setLifecycleError(null);
     setConfirmationCode("");
     startTransition(async () => {
       const result = await preflightProgramDeletionAction(program.id);
+      if (request !== preflightRequest.current) return;
       if (!result.success) setLifecycleError(result.error);
       else if ("dependencies" in result.data) setPreflight(result.data);
     });
   };
 
   const closeLifecycleDialog = () => {
+    preflightRequest.current++;
     setLifecycleProgram(null);
     setPreflight(null);
     setLifecycleError(null);
@@ -528,7 +532,7 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
                 </div>
               )}
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel disabled={isPending && !!preflight}>Cancel</AlertDialogCancel>
                 {preflight && (preflight.blockers.inactive || preflight.blockers.linkedRecords) ? (
                   <Button disabled={isPending} onClick={() => openDeletionPreflight(lifecycleProgram!)}>Check again</Button>
                 ) : (
