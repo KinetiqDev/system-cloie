@@ -45,12 +45,12 @@ export function Topbar({ user, mobileNavMode = "bottom-nav", roles }: TopbarProp
           <>
             <Image
               src="/logos/cloie-logo.png"
-              alt="CLOIE Logo"
+              alt="System CLOIE Logo"
               width={28}
               height={28}
               className="rounded"
             />
-            <span className="text-title-md text-primary font-bold tracking-tight">CLOIE</span>
+            <span className="text-title-md text-primary font-bold tracking-tight">System CLOIE</span>
           </>
         )}
       </div>

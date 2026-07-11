@@ -51,13 +51,14 @@ const PAGE_SIZE = 15;
 type SecretaryProgramsListProps = {
   programs: SecretaryProgramSummaryItem[];
   kpi: SecretaryProgramsKPI;
+  basePath?: string;
 };
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListProps) {
+export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/programs" }: SecretaryProgramsListProps) {
   // ---- Filter state -------------------------------------------------------
   const [statusFilter, setStatusFilter] = useState<string>("__all__");
   const [searchTerm, setSearchTerm] = useState("");
@@ -171,7 +172,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
 
       {/* Action bar */}
       <div className="flex items-center justify-end">
-        <Button render={<Link href="/secretary/programs/new" />}>Create Program</Button>
+        <Button render={<Link href={`${basePath}/new`} />}>Create Program</Button>
       </div>
 
       {/* Filter bar */}
@@ -253,7 +254,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        render={<Link href={`/secretary/programs/${program.id}/edit`} />}
+                        render={<Link href={`${basePath}/${program.id}/edit`} />}
                       >
                         Edit
                       </DropdownMenuItem>

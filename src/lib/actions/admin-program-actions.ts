@@ -1,6 +1,9 @@
 "use server";
 
+import { SystemRole } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { ROLES } from "@/lib/constants/roles";
 import {
   createProgramSchema,
   updateProgramSchema,
@@ -20,6 +23,15 @@ import {
 type ActionResult = { success: true } | { success: false; error: string };
 
 export async function createProgramAction(formData: FormData): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { error: "Insufficient permissions.", success: false };
+  }
+
   const parsed = createProgramSchema.safeParse({
     code: formData.get("code"),
     name: formData.get("name"),
@@ -37,10 +49,20 @@ export async function createProgramAction(formData: FormData): Promise<ActionRes
   }
 
   revalidatePath("/secretary/programs");
+  revalidatePath("/dean/programs");
   return { success: true };
 }
 
 export async function updateProgramAction(formData: FormData): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { error: "Insufficient permissions.", success: false };
+  }
+
   const parsed = updateProgramSchema.safeParse({
     id: formData.get("id"),
     code: formData.get("code"),
@@ -59,6 +81,7 @@ export async function updateProgramAction(formData: FormData): Promise<ActionRes
   }
 
   revalidatePath("/secretary/programs");
+  revalidatePath("/dean/programs");
   return { success: true };
 }
 
@@ -66,6 +89,15 @@ export async function toggleProgramActiveAction(
   id: string,
   is_active: boolean
 ): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { error: "Insufficient permissions.", success: false };
+  }
+
   const result = await toggleProgramActive(id, is_active);
 
   if (!result.success) {
@@ -73,10 +105,20 @@ export async function toggleProgramActiveAction(
   }
 
   revalidatePath("/secretary/programs");
+  revalidatePath("/dean/programs");
   return { success: true };
 }
 
 export async function createMajorAction(formData: FormData): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { error: "Insufficient permissions.", success: false };
+  }
+
   const parsed = createMajorSchema.safeParse({
     program_id: formData.get("program_id"),
     name: formData.get("name"),
@@ -93,6 +135,7 @@ export async function createMajorAction(formData: FormData): Promise<ActionResul
   }
 
   revalidatePath("/secretary/programs");
+  revalidatePath("/dean/programs");
   return { success: true };
 }
 
@@ -120,6 +163,15 @@ export async function toggleMajorActiveAction(
   id: string,
   is_active: boolean
 ): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { error: "Insufficient permissions.", success: false };
+  }
+
   const result = await toggleMajorActive(id, is_active);
 
   if (!result.success) {
@@ -127,10 +179,20 @@ export async function toggleMajorActiveAction(
   }
 
   revalidatePath("/secretary/programs");
+  revalidatePath("/dean/programs");
   return { success: true };
 }
 
 export async function deleteMajorAction(id: string): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { error: "Insufficient permissions.", success: false };
+  }
+
   const result = await deleteMajor(id);
 
   if (!result.success) {
@@ -138,5 +200,6 @@ export async function deleteMajorAction(id: string): Promise<ActionResult> {
   }
 
   revalidatePath("/secretary/programs");
+  revalidatePath("/dean/programs");
   return { success: true };
 }

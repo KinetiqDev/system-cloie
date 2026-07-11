@@ -28,12 +28,12 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
         <div className="flex items-center gap-3">
           <Image
             src="/logos/cloie-logo.png"
-            alt="CLOIE Logo"
+            alt="System CLOIE Logo"
             width={32}
             height={32}
             className="rounded"
           />
-          <span className="text-title-lg text-primary font-bold tracking-tight">CLOIE</span>
+          <span className="text-title-lg text-primary font-bold tracking-tight">System CLOIE</span>
         </div>
       </div>
 

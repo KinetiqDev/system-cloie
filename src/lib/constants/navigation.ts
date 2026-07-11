@@ -66,6 +66,7 @@ const PROGRAM_HEAD_NAV: NavItem[] = [
 
 const DEAN_NAV: NavItem[] = [
   { name: "Dashboard", href: "/dean/dashboard", icon: LayoutDashboard },
+  { name: "Programs", href: "/dean/programs", icon: Building2 },
   { name: "Courses", href: "/dean/courses", icon: BookOpen },
   { name: "Course Assignments", href: "/dean/course-assignments", icon: UsersRound },
   { name: "Tools", href: "/dean/instruments", icon: Layers3 },
