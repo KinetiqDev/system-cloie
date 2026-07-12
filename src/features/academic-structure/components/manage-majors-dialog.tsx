@@ -16,7 +16,6 @@ import {
   Drawer,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -206,7 +205,7 @@ export function ManageMajorsDialog({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-      <DrawerContent className="px-4 pb-8 flex max-h-[85vh] flex-col">
+      <DrawerContent className="px-4 pb-8 flex max-h-[85dvh] flex-col">
         <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
           <DrawerTitle>Manage Majors — {program.code}</DrawerTitle>
           <DrawerDescription className="line-clamp-2">

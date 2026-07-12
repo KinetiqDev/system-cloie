@@ -6,9 +6,7 @@ import { resolveAuthSessionFromDevUser } from "@/features/auth/services/resolve-
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
 
 export async function POST(request: Request) {
-  const isDemoAllowed =
-    process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-  if (!isDemoAllowed) {
+  if (process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Unavailable outside development." }, { status: 404 });
   }
 

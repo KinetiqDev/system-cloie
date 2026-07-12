@@ -89,30 +89,30 @@ describe("SecretaryProgramsList", () => {
 
     expect(screen.getByText("Academic Programs")).toBeInTheDocument();
     expect(screen.getByText("Total Programs")).toBeInTheDocument();
-    expect(screen.getByText("Programs with Majors")).toBeInTheDocument();
+    expect(screen.getByText("With Majors")).toBeInTheDocument();
     expect(screen.getByText("Total Majors")).toBeInTheDocument();
   });
 
   it("displays program data in table", () => {
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
 
-    expect(screen.getByText("BSCE")).toBeInTheDocument();
-    expect(screen.getByText("Bachelor of Science in Civil Engineering")).toBeInTheDocument();
-    expect(screen.getByText("BSEE")).toBeInTheDocument();
-    expect(screen.getByText("Bachelor of Science in Electrical Engineering")).toBeInTheDocument();
+    expect(screen.getAllByText("BSCE")).toHaveLength(2);
+    expect(screen.getAllByText("Bachelor of Science in Civil Engineering")).toHaveLength(2);
+    expect(screen.getAllByText("BSEE")).toHaveLength(2);
+    expect(screen.getAllByText("Bachelor of Science in Electrical Engineering")).toHaveLength(2);
   });
 
   it("shows active/inactive badges correctly", () => {
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
 
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("Inactive")).toBeInTheDocument();
+    expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Inactive")).toHaveLength(2);
   });
 
   it("displays majors in program row", () => {
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
 
-    expect(screen.getByText("Structural Engineering, Water Resources")).toBeInTheDocument();
+    expect(screen.getAllByText("Structural Engineering, Water Resources")).toHaveLength(2);
   });
 
   it("shows Delete program only after opening a row action menu", async () => {

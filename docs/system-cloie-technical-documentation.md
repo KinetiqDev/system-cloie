@@ -386,7 +386,7 @@ This section defines key technical terms used in the System CLOIE capstone proje
 
 The conceptual framework of System CLOIE is anchored on the Input–Process–Output (IPO) model, integrated with a Continuous Quality Improvement (CQI) feedback loop based on the Plan–Do–Check–Act (PDCA) cycle. This structure ensures that academic evaluation is not merely a static collection of data but a dynamic system for iterative institutional development.
 
-**Input** The Input phase comprises data entries and system configurations originating from four hierarchical user levels. The System Administrator and College Dean establish the system’s foundation through full CRUD (Create, Read, Update, Delete) access to the core database catalog, specifically for programs, courses, and evaluation tool templates. Program Heads provide program-level parameters by encoding the specific Program / Graduate Outcomes (GOs) required for their respective departments. Faculty Members fulfill a dual-input role, responsible for encoding Course Intended Learning Outcomes (CILOs) for their assigned subjects and executing bulk uploads to populate student respondents. Finally, the core evaluation data is provided by Stakeholders—including Students, Alumni, and Industry Partners—who interact with the system by completing digital evaluation tools containing both quantitative and qualitative prompts.
+**Input** The Input phase comprises data entries and system configurations originating from four hierarchical user levels. The System Administrator establishes the system’s foundation through full CRUD (Create, Read, Update, Delete) access to the core database catalog, specifically for programs, courses, and evaluation tool templates. The College Dean has all-program stewardship for course assignments and college-wide oversight of evaluation instruments, analytics, and reports, but does not manage the core program or course catalog. Program Heads provide program-level parameters by encoding the specific Program / Graduate Outcomes (GOs) required for their respective departments. Faculty Members fulfill a dual-input role, responsible for encoding Course Intended Learning Outcomes (CILOs) for their assigned subjects and executing bulk uploads to populate student respondents. Finally, the core evaluation data is provided by Stakeholders—including Students, Alumni, and Industry Partners—who interact with the system by completing digital evaluation tools containing both quantitative and qualitative prompts.
 
 **Process** The Process phase governs the transformation of inputs within the centralized CLOIE cloud environment through a strict, top-to-bottom sequential flow. The workflow begins at the **Catalog Hub**, which synchronizes all academic and system data in real-time. This data is then managed by the **Outcome Mapping Engine**, which establishes the logical relational mapping between course-bound CILOs and broader GOs. Before deployment, the **Evaluation Template Engine** allows academic leaders to configure and customize specific tool instances. Once configured, the **Participant Processing Engine** filters uploaded lists to generate targeted deployment rosters, which the **Deployment Router** then pushes directly to stakeholder dashboards. Upon submission, responses pass into **Anonymized Storage**, where identifiable data is stripped for privacy and records are securely locked. The processed data is then finalized through **Dual Analytics Engines**: the Qualitative NLP Processor tokenizes textual feedback to identify prominent themes for word cloud generation, while the *Quantitative Processor* computes mean scores and aggregates attainment levels while flagging any data inconsistencies.
 
@@ -1088,7 +1088,7 @@ The project concludes with the Final Documentation and Defense Phase (August to 
 
 ## **3.4 Work Breakdown Structure** {#3.4-work-breakdown-structure}
 
-**![][image1]**
+![Work Breakdown Structure for Project CLOIE][image1]
 
 ### ***Figure 7\.** Work Breakdown Structure* {#figure-7.-work-breakdown-structure}
 
@@ -1122,7 +1122,7 @@ Summary of **CBA**
 
 ## **3.6 Testing Plan** {#3.6-testing-plan}
 
-	Below are the testing plan and the test cases for System CLOIE. The test plan ensures that each feature and functionality operates correctly and aligns with its intended purpose. It aims to detect and resolve any errors, bugs, or security issues before deployment to guarantee a smooth and secure user experience. Each test case is assigned to a specific team member and follows a defined testing approach. This process is crucial to ensure the system’s stability, reliability, and readiness for real-world use, especially in handling sensitive mental health data.
+	Below are the testing plan and the test cases for System CLOIE. The test plan ensures that each feature and functionality operates correctly and aligns with its intended purpose. It aims to detect and resolve any errors, bugs, or security issues before deployment to guarantee a smooth and secure user experience. Each test case is assigned to a specific team member and follows a defined testing approach. This process is crucial to ensure the system’s stability, reliability, and readiness for real-world use, especially when handling academic evaluation and stakeholder feedback data.
 
 **CLOIE Project Team:**
 
@@ -1206,7 +1206,7 @@ Summary of **CBA**
 
 | TEST CASE ID: TC-07 |  |  |  |  |  |
 | ----- | :---- | :---- | :---- | :---- | :---- |
-| **TEST CASE NAME:** Faculty Course-Bound CILO Evaluation Creation and Publication Evaluation Instrument and Template Management  |  |  |  |  |  |
+| **TEST CASE NAME:** Faculty Course-Bound CILO Evaluation Creation and Publication  |  |  |  |  |  |
 | **Test Scenario** | **Pre-Conditions** | **Test Steps** | **Expected Results** | **Actual Results** |  |
 | Faculty creates course-bound evaluation from valid context  | Faculty has eligible program/course context and CILOs exist  | Select Program, Major if applicable, Semester, Term, Course, configure details, and preview  | Derived course-bound form is generated with selected context and dynamic CILO section  |  |  |
 | Faculty publishes course-bound evaluation | Derived form is configured with valid activation/deadline and targets  | Confirm publication  | Form is published atomically with frozen CILO and course-info snapshots |  |  |
@@ -1274,13 +1274,13 @@ Summary of **CBA**
 | **Test Scenario** | **Pre-Conditions** | **Test Steps** | **Expected Results** |  |  |
 | Automated unit/integration test suite passes  | Dependencies installed   | Run pnpm test  | Vitest suite completes successfully     |  |  |
 | Static analysis passes  | Dependencies installed  | Run pnpm lint   | ESLint completes without blocking errors  |  |  |
-| Production build succeeds  | Deployment targets a different role/program/year level    | Run pnpm build   | Next.js production build completes successfully  |  |  |
+| Production build succeeds  | Dependencies are installed, required environment variables are configured, and checkout is clean  | Run pnpm build   | Next.js production build completes successfully  |  |  |
 
 ## **3.7 Implementation Plan** {#3.7-implementation-plan}
 
 	The Implementation Plan outlines the structured process of deploying the System CLOIE at Assumption College of Davao, covering the transition from final development to full operational use. It begins with the proponents finalizing the production deployment to the cloud hosting environment, including domain configuration, Supabase database setup, and verification of security settings in coordination with the institution's IT personnel. Once the environment is ready, user accounts are created and configured for faculty members, program heads, the college dean, students, alumni, and industry partners based on official ACD records. Following account setup, key users undergo an orientation and training session covering system navigation, outcomes encoding, evaluation cycle management, and report generation, supported by a simple user guide.
 
-After training, the initial evaluation cycle is launched under proponent supervision, with forms assigned to stakeholder groups and respondents guided through access and completion. Following the initial cycle, the proponents conduct a post-deployment review to address any issues and formally hand over all documentation, source code, deployment credentials, and configuration guides to designated ACD personnel. This cycle ensures that the system remains functional, secure, and ready for sustained institutional use.
+After training, the initial evaluation cycle is launched under proponent supervision, with forms assigned to stakeholder groups and respondents guided through access and completion. Following the initial cycle, the proponents conduct a post-deployment review to address any issues and formally hand over documentation, source code, and configuration guides to designated ACD personnel. Long-lived deployment credentials must not be transferred through documentation or personal accounts; approved secret-manager access must use scoped secrets that are rotated or revoked after handoff. This cycle ensures that the system remains functional, secure, and ready for sustained institutional use.
 
 ## 
 
@@ -1347,7 +1347,7 @@ The System Administrator manages user accounts, academic programs, courses, and 
 |  | View Assigned Courses | Browse courses where the faculty member has active teaching assignments. |
 |  | Manage CILO Evaluations | Create and manage CILO-aligned evaluation forms and templates for assigned courses. |
 | **Students** | Login | Authenticate using ACD institutional credentials to access the system. |
-|  | View Dashboard Overview of pending evaluations, recent activity, and submission status.  | View Dashboard Overview of pending evaluations, recent activity, and submission status.  |
+|  | View Dashboard | Overview of pending evaluations, recent activity, and submission status. |
 |  | View My Evaluations | List assigned evaluations (course-bound and program-wide) with status indicators. |
 |  | Submit Evaluation Response | Complete and submit evaluation forms for both course-bound and program-wide evaluations. |
 |  | Save Draft Response | Save incomplete evaluation responses as drafts for later completion. |

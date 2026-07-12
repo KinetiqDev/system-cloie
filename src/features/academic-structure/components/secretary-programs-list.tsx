@@ -203,7 +203,8 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
   };
 
   // ---- Shared row actions (used by both card + table) ---------------------
-  const RowActions = ({ program }: { program: SecretaryProgramSummaryItem }) => (
+  function renderRowActions(program: SecretaryProgramSummaryItem) {
+    return (
     <DropdownMenu>
       <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-9 items-center justify-center rounded-md transition-colors">
         <MoreVertical className="size-4" />
@@ -240,7 +241,8 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
+    );
+  }
 
   // ---- Pagination helpers --------------------------------------------------
   function buildPageNumbers(): (number | "ellipsis")[] {
@@ -368,7 +370,7 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
                 </div>
               </div>
               {/* Right: actions */}
-              <RowActions program={program} />
+              {renderRowActions(program)}
             </div>
           ))
         )}
@@ -415,7 +417,7 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <RowActions program={program} />
+                    {renderRowActions(program)}
                   </TableCell>
                 </TableRow>
               ))

@@ -341,7 +341,7 @@ export function ManagementCoursesList({
                 <TableCell className="w-[99%] md:w-auto max-w-[200px] sm:max-w-[300px] md:max-w-none align-top">
                   <div className="flex flex-col gap-1">
                     <span className="text-foreground font-bold truncate">{course.code}</span>
-                    <span className="text-muted-foreground md:hidden text-xs line-clamp-2 break-words">
+                    <span className="text-muted-foreground md:hidden text-xs whitespace-normal line-clamp-2 break-words">
                       {course.title}
                     </span>
                     <div className="md:hidden mt-1 flex flex-wrap items-center gap-1.5">

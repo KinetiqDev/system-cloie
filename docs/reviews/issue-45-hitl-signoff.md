@@ -2,7 +2,7 @@
 
 **Date**: 2026-06-21
 **Signed by**: Tugeru (repo owner)
-**Reviewer identity**: `git config user.name` = `Tugeru`; `git config user.email` = `andyzaneegut250@gmail.com`
+**Reviewer identity**: `git config user.name` = `Tugeru`
 **Authorization context**: Retroactive sign-off. The migration was applied to the linked Supabase remote on 2026-06-19 08:00 UTC before this artifact existed. The repo owner has explicitly authorized retroactive HITL sign-off for this migration on 2026-06-21.
 
 ---
@@ -35,7 +35,7 @@ Audit script: `scripts/audit-cbe-legacy-columns-precise.ts` (the consolidated pr
 
 Command:
 
-```
+```console
 $ pnpm exec tsx scripts/audit-cbe-legacy-columns-precise.ts
 🔍 Auditing codebase precisely for legacy CourseBoundEvaluation column references...
 
@@ -44,24 +44,24 @@ $ pnpm exec tsx scripts/audit-cbe-legacy-columns-precise.ts
 
 **Audit run timestamp**: 2026-06-21T11:53:20Z (UTC)
 **Audit output**: `✅ AUDIT PASSED - Zero precise references to legacy CourseBoundEvaluation columns found in src/.`
-**Conclusion**: Zero code readers of the dropped columns remain in `src/`. The migration was safe to apply and the codebase is in a consistent post-drop state.
+**Conclusion**: The audit found zero precise references in non-test TypeScript files under `src/`. This supports application-source cleanup but does not independently establish migration safety across SQL, scripts, tests, generated artifacts, or external consumers.
 
 ## 4. Application Status on Linked Supabase Remote
 
 Command:
 
-```
+```console
 $ pnpm supabase:migration:list
    Local          | Remote         | Time (UTC)
    ----------------|----------------|---------------------
    ...
-   20260619080000 | 20260619080000 | 2026-06-19 08:00:00   ← this migration, applied
-   20260620102903 | 20260620102903 | 2026-06-20 10:29:03   ← one migration after
+20260619080000 | 20260619080000 | 2026-06-19 08:00:00   ← this migration, applied
+20260620102903 | 20260620102903 | 2026-06-20 10:29:03   ← one migration after
 ```
 
 Drift check:
 
-```
+```console
 $ pnpm supabase:push:dry-run
 DRY RUN: migrations will *not* be pushed to the database.
 Connecting to remote database...
@@ -70,9 +70,25 @@ Remote database is up to date.
 
 **Conclusion**: Migration `20260619080000` is applied to the linked Supabase remote database. Local and remote are in sync — zero drift.
 
+Catalog verification, captured 2026-07-12 against the linked remote:
+
+```sql
+SELECT column_name, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'course_bound_evaluations'
+ORDER BY ordinal_position;
+```
+
+```text
+course_assignment_id | NO
+deployed_by          | YES
+```
+
+The legacy `course_id`, `faculty_id`, `program_id`, `major_id`, and `section` columns are absent. The remote has a unique `course_bound_evaluations_course_assignment_id_key` index and a `course_bound_evaluations_course_assignment_id_fkey` foreign key with `ON DELETE RESTRICT`. Ten CBE rows have ten distinct, non-null assignment links; no duplicate links exist.
+
 ## 5. Post-Application Build + Typecheck Verification
 
-```
+```console
 $ pnpm exec tsc --noEmit
 (exit 0, 0 errors)
 
@@ -132,7 +148,7 @@ I, Tugeru (repo owner), have reviewed the audit output above and confirm that:
 
 **Signed**: Tugeru
 **Date**: 2026-06-21 (UTC: 2026-06-21T11:53:20Z)
-**Git identity at time of sign-off**: `Tugeru <andyzaneegut250@gmail.com>`
+**Git identity at time of sign-off**: `Tugeru`
 **Migration checksum verified**: `5f40a8e8d53e42a33175aa76a95b864bf345b53268f187908bf8d15ffc766866`
 
 ---
