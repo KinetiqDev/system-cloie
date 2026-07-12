@@ -20,7 +20,7 @@ export default function Home() {
               className="shrink-0 object-contain"
             />
             <div className="space-y-0">
-              <p className="text-title-md font-bold text-text-primary">System CLOIE</p>
+              <p className="text-title-md font-bold text-primary">System CLOIE</p>
               <p className="text-caption text-text-muted">Assumption College of Davao</p>
             </div>
           </div>

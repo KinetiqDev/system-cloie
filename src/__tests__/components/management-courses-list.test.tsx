@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ManagementCoursesList } from "@/features/academic-structure/components/management-courses-list";
 import type {
@@ -71,9 +71,9 @@ describe("ManagementCoursesList", () => {
 
     expect(screen.getByText("Courses")).toBeInTheDocument();
     expect(screen.getByText("GE101")).toBeInTheDocument();
-    expect(screen.getByText("Introduction to General Education")).toBeInTheDocument();
+    expect(screen.getAllByText("Introduction to General Education")).toHaveLength(2);
     expect(screen.getByText("IT101")).toBeInTheDocument();
-    expect(screen.getByText("Introduction to Programming")).toBeInTheDocument();
+    expect(screen.getAllByText("Introduction to Programming")).toHaveLength(2);
     expect(screen.getByText("Create Course")).toHaveAttribute("href", "/secretary/courses/new");
   });
 
@@ -134,7 +134,7 @@ describe("ManagementCoursesList", () => {
       />
     );
 
-    expect(screen.getByText("BSIT")).toBeInTheDocument();
+    expect(screen.getAllByText("BSIT")).toHaveLength(2);
   });
 
   test("displays CILO and evaluation counts", () => {

@@ -3,7 +3,15 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, GraduationCap, Layers, MoreVertical, Search, Users } from "lucide-react";
+import {
+  BookOpen,
+  GraduationCap,
+  Layers,
+  MoreVertical,
+  Plus,
+  Search,
+  Users,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -97,14 +105,12 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
   const filteredPrograms = useMemo(() => {
     let result = programs;
 
-    // Status filter
     if (statusFilter === "active") {
       result = result.filter((p) => p.isActive);
     } else if (statusFilter === "inactive") {
       result = result.filter((p) => !p.isActive);
     }
 
-    // Search by code or name
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
       result = result.filter(
@@ -123,7 +129,6 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
     safePage * PAGE_SIZE
   );
 
-  // Reset to page 1 when filters change
   const handleStatusChange = (value: string | null) => {
     setStatusFilter(value ?? "__all__");
     setCurrentPage(1);
@@ -197,6 +202,48 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
     });
   };
 
+  // ---- Shared row actions (used by both card + table) ---------------------
+  function renderRowActions(program: SecretaryProgramSummaryItem) {
+    return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-9 items-center justify-center rounded-md transition-colors">
+        <MoreVertical className="size-4" />
+        <span className="sr-only">Actions</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem render={<Link href={`${basePath}/${program.id}/edit`} />}>
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setMajorsDialogProgram(program)}>
+          Manage Majors
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={isPending}
+          onClick={() => {
+            if (program.isActive) {
+              setLifecycleProgram(program);
+              setConfirmDeactivation(true);
+              setLifecycleError(null);
+            } else {
+              handleToggleActive(program.id, false);
+            }
+          }}
+        >
+          {program.isActive ? "Deactivate" : "Activate"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          disabled={isPending}
+          onClick={() => openDeletionPreflight(program)}
+        >
+          Delete program
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    );
+  }
+
   // ---- Pagination helpers --------------------------------------------------
   function buildPageNumbers(): (number | "ellipsis")[] {
     const pages: (number | "ellipsis")[] = [];
@@ -216,49 +263,51 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
 
   // ---- Render --------------------------------------------------------------
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-heading-lg">Academic Programs</h1>
-        <p className="text-body-md text-text-secondary">
-          Manage academic programs, their majors, and program metadata across the college.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-heading-lg">Academic Programs</h1>
+          <p className="text-body-sm text-text-secondary hidden sm:block">
+            Manage academic programs, their majors, and program metadata across the college.
+          </p>
+        </div>
+        {/* CTA — always visible, top-right */}
+        <Button render={<Link href={`${basePath}/new`} />} className="shrink-0">
+          <Plus className="size-4 sm:hidden" data-icon="inline-start" />
+          <span className="hidden sm:inline">Create Program</span>
+          <span className="sm:hidden sr-only">Create Program</span>
+        </Button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <KPICard
           label="Total Programs"
           value={kpi.totalPrograms}
-          icon={<BookOpen className="text-muted-foreground size-5" />}
+          icon={<BookOpen className="text-muted-foreground size-4 sm:size-5" />}
         />
         <KPICard
-          label="Active Programs"
+          label="Active"
           value={kpi.activePrograms}
-          icon={<Layers className="text-muted-foreground size-5" />}
+          icon={<Layers className="text-muted-foreground size-4 sm:size-5" />}
         />
         <KPICard
-          label="Programs with Majors"
+          label="With Majors"
           value={kpi.programsWithMajors}
-          icon={<GraduationCap className="text-muted-foreground size-5" />}
+          icon={<GraduationCap className="text-muted-foreground size-4 sm:size-5" />}
         />
         <KPICard
           label="Total Majors"
           value={kpi.totalMajors}
-          icon={<Users className="text-muted-foreground size-5" />}
+          icon={<Users className="text-muted-foreground size-4 sm:size-5" />}
         />
       </div>
 
-      {/* Action bar */}
-      <div className="flex items-center justify-end">
-        <Button render={<Link href={`${basePath}/new`} />}>Create Program</Button>
-      </div>
-
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Status filter */}
+      {/* Filter bar — stacks on mobile, inline on sm+ */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Select value={statusFilter} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue>
               {statusFilter === "__all__"
                 ? "All Statuses"
@@ -274,102 +323,108 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
           </SelectContent>
         </Select>
 
-        {/* Search */}
-        <div className="relative ml-auto w-full max-w-xs">
+        <div className="relative flex-1">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search by code or name..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-8"
+            className="pl-8 w-full"
           />
         </div>
       </div>
 
-      {/* Data table */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Code</TableHead>
-            <TableHead>Program Name</TableHead>
-            <TableHead>Majors</TableHead>
-            <TableHead className="text-right">Courses</TableHead>
-            <TableHead className="text-right">GOs</TableHead>
-            <TableHead className="text-right">Students</TableHead>
-            <TableHead className="text-right">Faculty</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-12">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginatedPrograms.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
-                No programs found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            paginatedPrograms.map((program) => (
-              <TableRow key={program.id}>
-                <TableCell className="font-bold">{program.code}</TableCell>
-                <TableCell>{program.name}</TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {program.majorNames.length > 0 ? program.majorNames.join(", ") : "—"}
-                </TableCell>
-                <TableCell className="text-right">{program.courseCount}</TableCell>
-                <TableCell className="text-right">{program.goCount}</TableCell>
-                <TableCell className="text-right">{program.studentCount}</TableCell>
-                <TableCell className="text-right">{program.facultyCount}</TableCell>
-                <TableCell>
-                  <Badge variant={program.isActive ? "default" : "secondary"}>
+      {/* ---- Mobile card list (hidden md+) -------------------------------- */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {paginatedPrograms.length === 0 ? (
+          <p className="text-muted-foreground py-10 text-center text-sm">No programs found.</p>
+        ) : (
+          paginatedPrograms.map((program) => (
+            <div
+              key={program.id}
+              className="bg-surface border-border flex items-start justify-between gap-3 rounded-xl border p-4 shadow-xs"
+            >
+              {/* Left: info */}
+              <div className="min-w-0 flex-1 space-y-2">
+                {/* Code + status */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-label-md font-bold text-text-primary">{program.code}</span>
+                  <Badge variant={program.isActive ? "default" : "secondary"} className="text-xs">
                     {program.isActive ? "Active" : "Inactive"}
                   </Badge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-8 items-center justify-center rounded-md transition-colors">
-                      <MoreVertical className="size-4" />
-                      <span className="sr-only">Actions</span>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        render={<Link href={`${basePath}/${program.id}/edit`} />}
-                      >
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setMajorsDialogProgram(program)}>
-                        Manage Majors
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        disabled={isPending}
-                        onClick={() => {
-                          if (program.isActive) {
-                            setLifecycleProgram(program);
-                            setConfirmDeactivation(true);
-                            setLifecycleError(null);
-                          } else {
-                            handleToggleActive(program.id, false);
-                          }
-                        }}
-                      >
-                        {program.isActive ? "Deactivate" : "Activate"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        disabled={isPending}
-                        onClick={() => openDeletionPreflight(program)}
-                      >
-                        Delete program
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                </div>
+                {/* Name */}
+                <p className="text-body-sm text-text-secondary leading-snug">{program.name}</p>
+                {/* Majors */}
+                {program.majorNames.length > 0 && (
+                  <p className="text-caption text-text-muted truncate">
+                    {program.majorNames.join(", ")}
+                  </p>
+                )}
+                {/* Stats row */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted pt-1">
+                  <span><span className="font-medium text-text-secondary">{program.courseCount}</span> courses</span>
+                  <span><span className="font-medium text-text-secondary">{program.studentCount}</span> students</span>
+                  <span><span className="font-medium text-text-secondary">{program.facultyCount}</span> faculty</span>
+                  <span><span className="font-medium text-text-secondary">{program.goCount}</span> GOs</span>
+                </div>
+              </div>
+              {/* Right: actions */}
+              {renderRowActions(program)}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* ---- Desktop table (hidden below md) ------------------------------ */}
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Code</TableHead>
+              <TableHead>Program Name</TableHead>
+              <TableHead>Majors</TableHead>
+              <TableHead className="text-right">Courses</TableHead>
+              <TableHead className="text-right">GOs</TableHead>
+              <TableHead className="text-right">Students</TableHead>
+              <TableHead className="text-right">Faculty</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-12">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedPrograms.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
+                  No programs found.
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              paginatedPrograms.map((program) => (
+                <TableRow key={program.id}>
+                  <TableCell className="font-bold">{program.code}</TableCell>
+                  <TableCell>{program.name}</TableCell>
+                  <TableCell className="max-w-[200px] truncate">
+                    {program.majorNames.length > 0 ? program.majorNames.join(", ") : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">{program.courseCount}</TableCell>
+                  <TableCell className="text-right">{program.goCount}</TableCell>
+                  <TableCell className="text-right">{program.studentCount}</TableCell>
+                  <TableCell className="text-right">{program.facultyCount}</TableCell>
+                  <TableCell>
+                    <Badge variant={program.isActive ? "default" : "secondary"}>
+                      {program.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {renderRowActions(program)}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -560,14 +615,14 @@ export function SecretaryProgramsList({ programs, kpi, basePath = "/secretary/pr
 function KPICard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardDescription className="text-xs font-semibold tracking-wider uppercase">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex items-center justify-between gap-2">
+          <CardDescription className="text-xs font-semibold tracking-wider uppercase truncate">
             {label}
           </CardDescription>
-          {icon}
+          <div className="shrink-0">{icon}</div>
         </div>
-        <CardTitle className="text-2xl font-bold">{value.toLocaleString()}</CardTitle>
+        <CardTitle className="text-xl font-bold sm:text-2xl">{value.toLocaleString()}</CardTitle>
       </CardHeader>
     </Card>
   );
