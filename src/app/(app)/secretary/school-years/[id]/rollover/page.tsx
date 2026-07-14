@@ -52,14 +52,14 @@ export default async function TermRolloverPage({ params }: PageProps) {
       term: ti.term ?? null,
       startDate: ti.start_date ?? null,
       endDate: ti.end_date ?? null,
-      isActive: ti.is_active,
+      status: ti.status,
       createdAt: ti.created_at,
       updatedAt: ti.updated_at,
     })
   );
 
   // 4. Find active term (source) and next term (target)
-  const activeTermIndex = termInstances.findIndex((ti) => ti.isActive);
+  const activeTermIndex = termInstances.findIndex((ti) => ti.status === "ACTIVE");
   const sourceTerm = activeTermIndex >= 0 ? termInstances[activeTermIndex] : null;
   const targetTerm =
     activeTermIndex >= 0 ? termInstances[activeTermIndex + 1] : null;
@@ -102,14 +102,14 @@ export default async function TermRolloverPage({ params }: PageProps) {
             <div
               key={ti.id}
               className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
-                ti.isActive ? "bg-primary/10" : "bg-surface-container-low"
+                ti.status === "ACTIVE" ? "bg-primary/10" : "bg-surface-container-low"
               }`}
             >
               <span>
                 {ti.semester}
                 {ti.term ? ` — ${ti.term}` : ""}
               </span>
-              {ti.isActive && (
+              {ti.status === "ACTIVE" && (
                 <span className="text-primary text-xs font-medium">Active</span>
               )}
             </div>

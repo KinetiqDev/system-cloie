@@ -137,7 +137,7 @@ export default async function NewFacultyCiloEvaluationPage({
     term: ti.term ?? null,
     startDate: ti.start_date ?? null,
     endDate: ti.end_date ?? null,
-    isActive: ti.is_active,
+    status: ti.status,
     createdAt: ti.created_at,
     updatedAt: ti.updated_at,
   }));

@@ -90,7 +90,7 @@ export async function loadAllProgramCourseAssignmentsPageData(): Promise<AllProg
       term: ti.term,
       startDate: ti.start_date,
       endDate: ti.end_date,
-      isActive: ti.is_active,
+      status: ti.status,
       createdAt: ti.created_at,
       updatedAt: ti.updated_at,
     }))

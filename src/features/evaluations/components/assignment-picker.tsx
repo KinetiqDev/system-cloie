@@ -218,7 +218,7 @@ export function GroupedAssignmentPicker({
             {sortedTerms.map((term) => (
               <SelectItem key={term.id} value={term.id}>
                 <span className="flex items-center gap-2">
-                  {term.isActive && (
+                  {term.status === "ACTIVE" && (
                     <span className="bg-primary h-2 w-2 rounded-full" />
                   )}
                   {formatTermInstanceLabel(

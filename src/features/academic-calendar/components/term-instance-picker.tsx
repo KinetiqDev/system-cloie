@@ -41,7 +41,7 @@ export function TermInstancePicker({
   allowClear = false,
 }: TermInstancePickerProps) {
   const filteredInstances = showOnlyActive
-    ? termInstances.filter((t) => t.isActive)
+    ? termInstances.filter((t) => t.status === "ACTIVE")
     : termInstances;
 
   // Sort by school year code desc, then semester order, then term order
@@ -94,7 +94,7 @@ export function TermInstancePicker({
           {sortedInstances.map((instance) => (
             <SelectItem key={instance.id} value={instance.id}>
               <span className="flex items-center gap-2">
-                {instance.isActive && (
+                {instance.status === "ACTIVE" && (
                   <span className="bg-primary h-2 w-2 rounded-full" />
                 )}
                 {formatTermInstanceLabel(

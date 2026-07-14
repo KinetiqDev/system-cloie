@@ -3,6 +3,7 @@ import { loadEnvConfig } from "@next/env";
 loadEnvConfig(process.cwd());
 
 import {
+  AcademicPeriodStatus,
   AcademicSemester,
   AcademicTerm,
   CourseScope,
@@ -94,10 +95,11 @@ const D = {
   // School Years
   SY_2026_2027: "e1111111-1111-4111-8111-111111111111",
   SY_2027_2028: "e2222222-2222-4222-8222-222222222222",
-  // Term Instances
+  // Term Instances (Slice 1 lifecycle fixtures: 1 ACTIVE, 1 COMPLETED, 1 PLANNED, 1 CANCELLED)
   TI_2026_2027_1ST: "e3333333-3333-4333-8333-333333333333",
   TI_2026_2027_2ND: "e4444444-4444-4444-8444-444444444444",
   TI_2027_2028_1ST: "e5555555-5555-4555-8555-555555555555",
+  TI_2027_2028_2ND_CANCELLED: "e6666666-4666-4666-8666-666666666666",
   // Course Assignments (faculty-course-term links)
   CA_BSIT_IT201: "e6666666-6666-4666-8666-666666666666",
   CA_BSBA_FIN101: "e7777777-7777-4777-8777-777777777777",
@@ -1295,81 +1297,141 @@ async function seedAcademicCalendar() {
     },
   });
 
-  console.log("  → Term instances...");
+  console.log("  → Resetting mock Academic Period fixtures...");
+  // Slice 1 lifecycle reset: drop the term-instance IDs we own plus their
+  // dependent records (responses, assignments, evaluations, enrollments).
+  // Development data is disposable; this keeps fixtures lifecycle-valid.
+  const managedTermInstanceIds = [
+    D.TI_2026_2027_1ST,
+    D.TI_2026_2027_2ND,
+    D.TI_2027_2028_1ST,
+    D.TI_2027_2028_2ND_CANCELLED,
+  ];
 
-  // Create Term Instance: 2026-2027 First Semester (historical)
-  const ti2026First = await prisma.academicTermInstance.upsert({
-    where: { id: D.TI_2026_2027_1ST },
-    update: {
-      school_year_id: sy2026_2027.id,
-      semester: AcademicSemester.FIRST,
-      term: AcademicTerm.FIRST_TERM,
-      start_date: new Date("2026-08-01"),
-      end_date: new Date("2026-12-15"),
-      is_active: false,
+  await prisma.qualitativeResponseItem.deleteMany({
+    where: {
+      response: {
+        OR: [
+          { assignment: { course_bound: { term_instance_id: { in: managedTermInstanceIds } } } },
+          { assignment: { central_deployment: { term_instance_id: { in: managedTermInstanceIds } } } },
+        ],
+      },
     },
-    create: {
+  });
+  await prisma.quantitativeResponseItem.deleteMany({
+    where: {
+      response: {
+        OR: [
+          { assignment: { course_bound: { term_instance_id: { in: managedTermInstanceIds } } } },
+          { assignment: { central_deployment: { term_instance_id: { in: managedTermInstanceIds } } } },
+        ],
+      },
+    },
+  });
+  await prisma.response.deleteMany({
+    where: {
+      OR: [
+        { assignment: { course_bound: { term_instance_id: { in: managedTermInstanceIds } } } },
+        { assignment: { central_deployment: { term_instance_id: { in: managedTermInstanceIds } } } },
+      ],
+    },
+  });
+  await prisma.evaluationAssignment.deleteMany({
+    where: {
+      OR: [
+        { course_bound: { term_instance_id: { in: managedTermInstanceIds } } },
+        { central_deployment: { term_instance_id: { in: managedTermInstanceIds } } },
+      ],
+    },
+  });
+  await prisma.courseBoundCiloQuestionBinding.deleteMany({
+    where: {
+      course_bound_evaluation: { term_instance_id: { in: managedTermInstanceIds } },
+    },
+  });
+  await prisma.courseBoundEvaluationTarget.deleteMany({
+    where: {
+      course_bound_evaluation: { term_instance_id: { in: managedTermInstanceIds } },
+    },
+  });
+  await prisma.courseBoundEvaluation.deleteMany({
+    where: { term_instance_id: { in: managedTermInstanceIds } },
+  });
+  await prisma.centralDeployment.deleteMany({
+    where: { term_instance_id: { in: managedTermInstanceIds } },
+  });
+  await prisma.courseAssignment.deleteMany({
+    where: { term_instance_id: { in: managedTermInstanceIds } },
+  });
+  await prisma.studentEnrollment.deleteMany({
+    where: { term_instance_id: { in: managedTermInstanceIds } },
+  });
+  await prisma.academicTermInstance.deleteMany({
+    where: { id: { in: managedTermInstanceIds } },
+  });
+
+  console.log("  → Term instances (lifecycle fixtures)...");
+
+  // 2026-2027 First Semester — COMPLETED (historical)
+  const ti2026First = await prisma.academicTermInstance.create({
+    data: {
       id: D.TI_2026_2027_1ST,
       school_year_id: sy2026_2027.id,
       semester: AcademicSemester.FIRST,
       term: AcademicTerm.FIRST_TERM,
       start_date: new Date("2026-08-01"),
       end_date: new Date("2026-12-15"),
-      is_active: false,
+      status: AcademicPeriodStatus.COMPLETED,
     },
   });
 
-  // Create Term Instance: 2026-2027 Second Semester (ACTIVE - current)
-  const ti2026Second = await prisma.academicTermInstance.upsert({
-    where: { id: D.TI_2026_2027_2ND },
-    update: {
-      school_year_id: sy2026_2027.id,
-      semester: AcademicSemester.SECOND,
-      term: AcademicTerm.SECOND_TERM,
-      start_date: new Date("2027-01-15"),
-      end_date: new Date("2027-05-31"),
-      is_active: true,
-    },
-    create: {
+  // 2026-2027 Second Semester — ACTIVE (current)
+  const ti2026Second = await prisma.academicTermInstance.create({
+    data: {
       id: D.TI_2026_2027_2ND,
       school_year_id: sy2026_2027.id,
       semester: AcademicSemester.SECOND,
       term: AcademicTerm.SECOND_TERM,
       start_date: new Date("2027-01-15"),
       end_date: new Date("2027-05-31"),
-      is_active: true,
+      status: AcademicPeriodStatus.ACTIVE,
     },
   });
 
-  // Create Term Instance: 2027-2028 First Semester (future for rollover testing)
-  const ti2027First = await prisma.academicTermInstance.upsert({
-    where: { id: D.TI_2027_2028_1ST },
-    update: {
-      school_year_id: sy2027_2028.id,
-      semester: AcademicSemester.FIRST,
-      term: AcademicTerm.FIRST_TERM,
-      start_date: new Date("2027-08-01"),
-      end_date: new Date("2027-12-15"),
-      is_active: false,
-    },
-    create: {
+  // 2027-2028 First Semester — PLANNED (upcoming)
+  const ti2027First = await prisma.academicTermInstance.create({
+    data: {
       id: D.TI_2027_2028_1ST,
       school_year_id: sy2027_2028.id,
       semester: AcademicSemester.FIRST,
       term: AcademicTerm.FIRST_TERM,
       start_date: new Date("2027-08-01"),
       end_date: new Date("2027-12-15"),
-      is_active: false,
+      status: AcademicPeriodStatus.PLANNED,
+    },
+  });
+
+  // 2027-2028 Second Semester — CANCELLED (covers all four lifecycle states)
+  const ti2027SecondCancelled = await prisma.academicTermInstance.create({
+    data: {
+      id: D.TI_2027_2028_2ND_CANCELLED,
+      school_year_id: sy2027_2028.id,
+      semester: AcademicSemester.SECOND,
+      term: AcademicTerm.SECOND_TERM,
+      start_date: new Date("2028-01-15"),
+      end_date: new Date("2028-05-31"),
+      status: AcademicPeriodStatus.CANCELLED,
     },
   });
 
   return {
     schoolYear: sy2026_2027,
-    termInstance: ti2026Second, // Return active term
+    termInstance: ti2026Second, // Return the ACTIVE period for downstream fixtures
     termInstances: {
       ti2026First,
       ti2026Second,
       ti2027First,
+      ti2027SecondCancelled,
     },
   };
 }

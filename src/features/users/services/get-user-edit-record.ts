@@ -103,7 +103,7 @@ export async function getUserEditRecordBySecretary(
       enrollments: {
         where: {
           is_active: true,
-          term: { is_active: true },
+          term: { status: "ACTIVE" },
         },
         include: {
           term: { select: { id: true, semester: true, school_year: { select: { code: true } } } },

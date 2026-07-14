@@ -1,5 +1,46 @@
-import { AcademicSemester } from "@prisma/client";
+import { AcademicPeriodStatus, AcademicSemester } from "@prisma/client";
 import { isValidSemesterTerm } from "@/lib/constants/academic-period";
+
+export type LifecycleTransitionDecision =
+  | { allowed: true }
+  | { allowed: false; reason: string };
+
+/**
+ * Decide whether an Academic Period may move from its current status to a target.
+ * Rules (see spec #111):
+ * - PLANNED -> ACTIVE | CANCELLED
+ * - ACTIVE  -> COMPLETED | CANCELLED
+ * - COMPLETED, CANCELLED are immutable
+ * - Same-status moves are not allowed (the service should not call them)
+ */
+export function canTransitionPeriod(
+  current: AcademicPeriodStatus,
+  target: AcademicPeriodStatus
+): LifecycleTransitionDecision {
+  if (current === target) {
+    return { allowed: false, reason: "Period is already in the target status" };
+  }
+
+  if (current === "COMPLETED" || current === "CANCELLED") {
+    return { allowed: false, reason: "Completed and cancelled periods are immutable" };
+  }
+
+  const allowed: Record<AcademicPeriodStatus, AcademicPeriodStatus[]> = {
+    PLANNED: ["ACTIVE", "CANCELLED"],
+    ACTIVE: ["COMPLETED", "CANCELLED"],
+    COMPLETED: [],
+    CANCELLED: [],
+  };
+
+  if (allowed[current].includes(target)) {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    reason: `Illegal transition: ${current} -> ${target}`,
+  };
+}
 
 /**
  * Check if a School Year can be archived.

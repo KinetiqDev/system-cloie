@@ -225,7 +225,7 @@ export async function createUserBySecretary(
           });
 
           const activeTerm = await tx.academicTermInstance.findFirst({
-            where: { is_active: true },
+            where: { status: "ACTIVE" },
             select: { id: true },
           });
 

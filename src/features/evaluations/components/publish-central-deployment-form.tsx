@@ -320,7 +320,7 @@ export function PublishCentralDeploymentForm({
                   <option key={ti.id} value={ti.id}>
                     {ti.schoolYearCode} — {getSemesterLabel(ti.semester)}
                     {ti.term ? ` — ${getTermLabel(ti.term)}` : ""}
-                    {ti.isActive ? " (Active)" : ""}
+                    {ti.status === "ACTIVE" ? " (Active)" : ""}
                   </option>
                 ))}
               </select>

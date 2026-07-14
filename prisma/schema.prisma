@@ -36,6 +36,15 @@ enum AcademicTerm {
   @@map("academic_term")
 }
 
+enum AcademicPeriodStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+
+  @@map("academic_period_status")
+}
+
 enum YearLevel {
   FIRST_YEAR
   SECOND_YEAR
@@ -124,15 +133,15 @@ model SchoolYear {
 }
 
 model AcademicTermInstance {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  school_year_id  String           @db.Uuid
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  school_year_id  String                @db.Uuid
   semester        AcademicSemester
   term            AcademicTerm?
-  start_date      DateTime?        @db.Date
-  end_date        DateTime?        @db.Date
-  is_active       Boolean          @default(false)
-  created_at      DateTime         @default(now())
-  updated_at      DateTime         @updatedAt
+  start_date      DateTime?             @db.Date
+  end_date        DateTime?             @db.Date
+  status          AcademicPeriodStatus  @default(PLANNED)
+  created_at      DateTime              @default(now())
+  updated_at      DateTime              @updatedAt
 
   school_year SchoolYear @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
   student_enrollments StudentEnrollment[]
@@ -142,7 +151,7 @@ model AcademicTermInstance {
 
   // Prisma cannot express NULLS NOT DISTINCT; the actual unique constraint is managed via Supabase migration
   @@index([school_year_id, semester, term])
-  @@index([is_active])
+  @@index([status])
   @@map("academic_term_instances")
 }
 

@@ -118,7 +118,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
       roles: { select: { role: true } },
       student_profile: { include: { program: { select: { name: true } }, major: { select: { name: true } } } },
       enrollments: {
-        where: { is_active: true, term: { is_active: true } },
+        where: { is_active: true, term: { status: "ACTIVE" } },
         take: 1,
       },
       faculty_program_affiliations: {
@@ -405,7 +405,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         });
 
         // Sync active enrollment if present or if placement is being set
-        const activeTerm = await tx.academicTermInstance.findFirst({ where: { is_active: true } });
+        const activeTerm = await tx.academicTermInstance.findFirst({ where: { status: "ACTIVE" } });
         if (activeTerm) {
           const activeEnrollment = await tx.studentEnrollment.findFirst({
             where: { student_user_id: id, is_active: true, term_instance_id: activeTerm.id },

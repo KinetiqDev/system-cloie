@@ -118,7 +118,7 @@ export async function archiveSchoolYear(
 
   // Get active term instance to check constraint
   const activeTerm = await prisma.academicTermInstance.findFirst({
-    where: { is_active: true },
+    where: { status: "ACTIVE" },
     select: { id: true },
   });
 

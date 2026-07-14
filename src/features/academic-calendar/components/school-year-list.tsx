@@ -173,7 +173,7 @@ function TermInstanceRow({ term, isArchived, onSetActive }: TermInstanceRowProps
       <TableCell>{getSemesterLabel(term.semester)}</TableCell>
       <TableCell>{term.term ? getTermLabel(term.term) : "—"}</TableCell>
       <TableCell>
-        {term.isActive ? (
+        {term.status === "ACTIVE" ? (
           <Badge variant="default">
             <CheckCircle className="mr-1 h-3 w-3" />
             Active
@@ -186,7 +186,7 @@ function TermInstanceRow({ term, isArchived, onSetActive }: TermInstanceRowProps
         {formatDateRange(term.startDate, term.endDate)}
       </TableCell>
       <TableCell>
-        {!term.isActive && !isArchived && (
+        {!term.status === "ACTIVE" && !isArchived && (
           <Button variant="ghost" size="sm" onClick={onSetActive}>
             Set Active
           </Button>
