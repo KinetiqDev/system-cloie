@@ -21,7 +21,7 @@ export async function loadCilosForCourseAction(courseId: string): Promise<{
   }
 
   const cilos = await prisma.cILO.findMany({
-    where: { course_id: courseId },
+    where: { course_id: courseId, is_active: true },
     select: { id: true, description: true },
     orderBy: { created_at: "asc" },
   });
@@ -30,7 +30,7 @@ export async function loadCilosForCourseAction(courseId: string): Promise<{
 }
 
 // ---------------------------------------------------------------------------
-// Save CILOs for a course (delete-all-then-recreate pattern)
+// Save CILOs for a course
 // ---------------------------------------------------------------------------
 
 export async function saveCilosForCourseAction(
@@ -66,18 +66,19 @@ export async function saveCilosForCourseAction(
     await prisma.$transaction(async (tx) => {
       // Fetch existing CILOs for this course
       const existingCilos = await tx.cILO.findMany({
-        where: { course_id: courseId },
+        where: { course_id: courseId, is_active: true },
         select: { id: true },
       });
 
-      // Delete CILOs that are absent from the input (removed by user)
-      const toDeleteIds = existingCilos
+      // Archive CILOs absent from input. Preserve their mappings for restore.
+      const toArchiveIds = existingCilos
         .filter((c) => !keepIds.has(c.id))
         .map((c) => c.id);
 
-      if (toDeleteIds.length > 0) {
-        await tx.cILO.deleteMany({
-          where: { id: { in: toDeleteIds } },
+      if (toArchiveIds.length > 0) {
+        await tx.cILO.updateMany({
+          where: { id: { in: toArchiveIds } },
+          data: { is_active: false },
         });
       }
 
@@ -85,7 +86,7 @@ export async function saveCilosForCourseAction(
       for (const item of toUpdate) {
         await tx.cILO.update({
           where: { id: item.id! },
-          data: { description: item.description },
+          data: { description: item.description, is_active: true },
         });
       }
 
@@ -118,6 +119,38 @@ export async function saveCilosForCourseAction(
 
   revalidatePath("/faculty/cilos");
   return { success: true };
+}
+
+async function setCiloActiveAction(
+  courseId: string,
+  ciloId: string,
+  is_active: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const session = await resolveAuthSession();
+
+  if (!session || !session.roles.includes(ROLES.FACULTY)) {
+    return { success: false, error: "Faculty authentication required." };
+  }
+
+  const result = await prisma.cILO.updateMany({
+    where: { id: ciloId, course_id: courseId },
+    data: { is_active },
+  });
+
+  if (result.count === 0) {
+    return { success: false, error: "CILO not found for this course." };
+  }
+
+  revalidatePath("/faculty/cilos");
+  return { success: true };
+}
+
+export function archiveCiloForCourseAction(courseId: string, ciloId: string) {
+  return setCiloActiveAction(courseId, ciloId, false);
+}
+
+export function restoreCiloForCourseAction(courseId: string, ciloId: string) {
+  return setCiloActiveAction(courseId, ciloId, true);
 }
 
 // ---------------------------------------------------------------------------

@@ -83,7 +83,7 @@ export async function listProgramHeadCourses(): Promise<ProgramHeadCoursesResult
           },
         },
       },
-      _count: { select: { cilos: true } },
+      _count: { select: { cilos: { where: { is_active: true } } } },
     },
     orderBy: [{ code: "asc" }],
   });
@@ -103,7 +103,7 @@ export async function listProgramHeadCourses(): Promise<ProgramHeadCoursesResult
           },
         },
       },
-      _count: { select: { cilos: true } },
+      _count: { select: { cilos: { where: { is_active: true } } } },
     },
     orderBy: [{ code: "asc" }],
   });

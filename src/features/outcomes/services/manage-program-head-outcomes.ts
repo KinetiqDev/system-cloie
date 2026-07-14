@@ -342,13 +342,14 @@ export async function listCILOMappingsForProgram(): Promise<ServiceResult<Course
   const courses = await prisma.course.findMany({
     where: {
       program_id: programId,
-      cilos: { some: {} },
+      cilos: { some: { is_active: true } },
     },
     select: {
       id: true,
       code: true,
       title: true,
       cilos: {
+        where: { is_active: true },
         select: {
           id: true,
           description: true,

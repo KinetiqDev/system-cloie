@@ -104,7 +104,7 @@ async function listCourses() {
       },
       _count: {
         select: {
-          cilos: true,
+          cilos: { where: { is_active: true } },
         },
       },
     },
@@ -209,7 +209,7 @@ export async function deleteCourse(id: string): Promise<ServiceResult> {
       },
       _count: {
         select: {
-          cilos: true,
+          cilos: { where: { is_active: true } },
         },
       },
     },

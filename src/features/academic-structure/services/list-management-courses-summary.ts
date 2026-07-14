@@ -75,7 +75,7 @@ export async function listManagementCoursesSummary(): Promise<{
         },
         _count: {
           select: {
-            cilos: true,
+            cilos: { where: { is_active: true } },
           },
         },
       },

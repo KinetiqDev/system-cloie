@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { saveFacultyManagedCilos, loadFacultyManagedCilos } from "@/features/evaluations/services/manage-faculty-cilos";
 
 const {
-  deleteManyCilosMock,
+  updateManyCilosMock,
   createManyCilosMock,
   findManyCilosMock,
   updateCiloMock,
@@ -10,7 +10,7 @@ const {
   resolveAuthSessionMock,
   listFacultyCourseContextsMock,
 } = vi.hoisted(() => ({
-  deleteManyCilosMock: vi.fn(),
+  updateManyCilosMock: vi.fn(),
   createManyCilosMock: vi.fn(),
   findManyCilosMock: vi.fn(),
   updateCiloMock: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock("@/lib/db/prisma", () => {
   const mockTx = {
     cILO: {
       findMany: findManyCilosMock,
-      deleteMany: deleteManyCilosMock,
+      updateMany: updateManyCilosMock,
       update: updateCiloMock,
       createMany: createManyCilosMock,
     },
@@ -97,7 +97,7 @@ describe("manage-faculty-cilos", () => {
   });
 
   describe("saveFacultyManagedCilos", () => {
-    it("performs diff-upsert: updates modified, creates new, deletes removed", async () => {
+    it("archives removed CILOs while preserving their mappings", async () => {
       resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: ["FACULTY"] });
       listFacultyCourseContextsMock.mockResolvedValue({
         success: true,
@@ -127,7 +127,7 @@ describe("manage-faculty-cilos", () => {
         items: [
           { id: "cilo-existing-1", description: "Updated CILO 1" }, // Updated
           { description: "New CILO" },                              // Created
-          // "cilo-existing-2" is omitted, so it should be deleted
+          // "cilo-existing-2" is omitted, so it should be archived
         ],
       };
 
@@ -135,15 +135,15 @@ describe("manage-faculty-cilos", () => {
 
       expect(result.success).toBe(true);
 
-      // Verify deletion of omitted CILO
-      expect(deleteManyCilosMock).toHaveBeenCalledWith({
+      expect(updateManyCilosMock).toHaveBeenCalledWith({
         where: { id: { in: ["cilo-existing-2"] } },
+        data: { is_active: false },
       });
 
       // Verify update of existing CILO
       expect(updateCiloMock).toHaveBeenCalledWith({
         where: { id: "cilo-existing-1" },
-        data: { description: "Updated CILO 1" },
+        data: { description: "Updated CILO 1", is_active: true },
       });
 
       // Verify creation of new CILO
@@ -190,7 +190,7 @@ describe("manage-faculty-cilos", () => {
       await saveFacultyManagedCilos(payload);
 
       expect(createManyCilosMock).not.toHaveBeenCalled();
-      expect(deleteManyCilosMock).not.toHaveBeenCalled();
+      expect(updateManyCilosMock).not.toHaveBeenCalled();
     });
   });
 });

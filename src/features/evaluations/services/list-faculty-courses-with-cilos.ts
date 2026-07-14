@@ -69,7 +69,7 @@ export async function listFacultyCoursesWithCilos(
     include: {
       program: { select: { id: true, code: true, name: true } },
       major: { select: { id: true, name: true } },
-      _count: { select: { cilos: true } },
+      _count: { select: { cilos: { where: { is_active: true } } } },
     },
     orderBy: { code: "asc" },
   });

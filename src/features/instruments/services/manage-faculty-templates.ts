@@ -165,6 +165,7 @@ async function validateDraftBindings(input: {
     where: {
       course_id: input.boundCourseId,
       id: { in: input.bindings.map((binding) => binding.ciloId) },
+      is_active: true,
     },
     select: { description: true, id: true },
   });
@@ -445,7 +446,7 @@ export async function getFacultyTemplatePublicationContext(
   }
 
   const cilos = await prisma.cILO.findMany({
-    where: { course_id: template.bound_course_id },
+    where: { course_id: template.bound_course_id, is_active: true },
     orderBy: { created_at: "asc" },
     select: { description: true, id: true },
   });

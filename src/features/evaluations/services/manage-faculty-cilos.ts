@@ -60,6 +60,7 @@ export async function loadFacultyManagedCilos(
   const cilos = await prisma.cILO.findMany({
     where: {
       course_id: scopedContext.courseId,
+      is_active: true,
     },
     orderBy: { created_at: "asc" },
     select: {
@@ -109,18 +110,19 @@ export async function saveFacultyManagedCilos(
   await prisma.$transaction(async (tx) => {
     // Fetch existing CILOs for this course
     const existingCilos = await tx.cILO.findMany({
-      where: { course_id: scopedContext.courseId },
+      where: { course_id: scopedContext.courseId, is_active: true },
       select: { id: true },
     });
 
-    // Delete CILOs that are absent from the input (removed by user)
-    const toDeleteIds = existingCilos
+    // Archive CILOs absent from input. Preserve their mappings for restore.
+    const toArchiveIds = existingCilos
       .filter((c) => !keepIds.has(c.id))
       .map((c) => c.id);
 
-    if (toDeleteIds.length > 0) {
-      await tx.cILO.deleteMany({
-        where: { id: { in: toDeleteIds } },
+    if (toArchiveIds.length > 0) {
+      await tx.cILO.updateMany({
+        where: { id: { in: toArchiveIds } },
+        data: { is_active: false },
       });
     }
 
@@ -128,7 +130,7 @@ export async function saveFacultyManagedCilos(
     for (const item of toUpdate) {
       await tx.cILO.update({
         where: { id: item.id! },
-        data: { description: item.description },
+        data: { description: item.description, is_active: true },
       });
     }
 
@@ -158,6 +160,7 @@ export async function saveFacultyManagedCilos(
   const items = await prisma.cILO.findMany({
     where: {
       course_id: scopedContext.courseId,
+      is_active: true,
     },
     orderBy: { created_at: "asc" },
     select: {

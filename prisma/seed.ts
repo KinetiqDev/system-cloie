@@ -1733,7 +1733,12 @@ async function seedCourseAssignments(
   const courseAssignments = [
     // BSIT courses - Faculty assignments
     { courseCode: "IT-OD-401", programCode: "BSIT", facultyId: U.FAC_BSIT, yearLevel: YearLevel.FOURTH_YEAR, section: "MORNING" },
+    { courseCode: "IT-OD-401", programCode: "BSIT", facultyId: U.FAC_BSIT, yearLevel: YearLevel.FOURTH_YEAR, section: "AFTERNOON" },
     { courseCode: "IT201", programCode: "BSIT", facultyId: U.FAC_BSIT, yearLevel: YearLevel.SECOND_YEAR, section: "MORNING" },
+
+    // General Education course taught by one faculty across program contexts
+    { courseCode: "GEGS101", programCode: "BSIT", facultyId: U.FAC_BSIT, yearLevel: YearLevel.FIRST_YEAR, section: "MORNING" },
+    { courseCode: "GEGS101", programCode: "BSBA", facultyId: U.FAC_BSIT, yearLevel: YearLevel.FIRST_YEAR, section: "MORNING" },
 
     // BSBA courses
     { courseCode: "MKT301", programCode: "BSBA", facultyId: U.FAC_BSBA, yearLevel: YearLevel.FOURTH_YEAR, section: "MORNING" },
@@ -1764,12 +1769,11 @@ async function seedCourseAssignments(
       continue;
     }
 
-    // Check for existing assignment
+    // Check for existing assignment by class identity (unique per term/course/program/year/section)
     const existing = await prisma.courseAssignment.findFirst({
       where: {
         term_instance_id: termInstanceId,
         course_id: course.id,
-        faculty_id: ca.facultyId,
         program_id: program.id,
         year_level: ca.yearLevel,
         section: ca.section as import("@prisma/client").StudentSection,

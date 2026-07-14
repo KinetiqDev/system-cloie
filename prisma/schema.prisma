@@ -201,9 +201,9 @@ model CourseAssignment {
   assigner      User?                @relation("AssignmentAssigner", fields: [assigned_by], references: [id], onDelete: SetNull)
   course_bound_evaluations CourseBoundEvaluation[]
 
-  // Unique constraint: one assignment per faculty/course/program/year/section per term
+  // Unique constraint: one assignment per course/program/year/section per term (one faculty per class)
   // NULLS NOT DISTINCT enforced in SQL migration; mirrored here as index
-  @@index([term_instance_id, course_id, faculty_id, program_id, year_level, section])
+  @@index([term_instance_id, course_id, program_id, year_level, section])
   @@index([term_instance_id, faculty_id])
   @@index([term_instance_id, course_id])
   @@index([is_active])
@@ -375,6 +375,7 @@ model CILO {
   description   String
   course_id     String   @db.Uuid
   created_by    String   @db.Uuid
+  is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
