@@ -283,7 +283,7 @@ export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHea
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Archive Confirmation Dialog */}
       <Dialog
         open={!!deletingGO}
         onOpenChange={(open) => {
@@ -295,19 +295,12 @@ export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHea
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Graduate Outcome</DialogTitle>
+            <DialogTitle>Archive Graduate Outcome</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete{" "}
+              Are you sure you want to archive{" "}
               <strong className="text-text-primary">{deletingGO?.code}</strong>? This action cannot
-              be undone.
+              be undone from this screen.
             </DialogDescription>
-            {deletingGO && deletingGO._count.cilo_mappings > 0 && (
-              <div className="bg-warning-soft text-text-primary mt-3 rounded-md p-3 text-sm">
-                <strong>Cannot delete:</strong> this GO has {deletingGO._count.cilo_mappings}{" "}
-                {deletingGO._count.cilo_mappings === 1 ? "CILO" : "CILOs"} mapped to it. Remove all
-                CILO mappings first.
-              </div>
-            )}
           </DialogHeader>
           {deleteError && (
             <div className="bg-danger-soft text-danger rounded-md p-3 text-sm">{deleteError}</div>
@@ -324,10 +317,10 @@ export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHea
             </Button>
             <Button
               variant="destructive"
-              disabled={isPending || (deletingGO?._count.cilo_mappings ?? 0) > 0}
+              disabled={isPending}
               onClick={() => deletingGO && handleDelete(deletingGO)}
             >
-              {isPending ? "Deleting..." : "Delete"}
+              {isPending ? "Archiving..." : "Archive"}
             </Button>
           </div>
         </DialogContent>

@@ -2,8 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 
 /**
  * Resolve course IDs that the faculty member is assigned to.
- * If termInstanceId is provided, returns course IDs for that term assignment.
- * Otherwise, returns distinct course IDs across all terms.
+ * Returns course IDs from active assignment-period assignments only.
  */
 export async function resolveFacultyCourseIds(
   facultyId: string,
@@ -15,6 +14,7 @@ export async function resolveFacultyCourseIds(
         faculty_id: facultyId,
         term_instance_id: termInstanceId,
         is_active: true,
+        term_instance: { status: "ACTIVE" },
       },
       select: { course_id: true },
     });
@@ -24,6 +24,7 @@ export async function resolveFacultyCourseIds(
       where: {
         faculty_id: facultyId,
         is_active: true,
+        term_instance: { status: "ACTIVE" },
       },
       select: { course_id: true },
       distinct: ["course_id"],

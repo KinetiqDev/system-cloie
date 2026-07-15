@@ -121,6 +121,7 @@ describe("listFacultyCourseContexts", () => {
       where: {
         faculty_id: "faculty-1",
         is_active: true,
+        term_instance: { status: "ACTIVE" },
       },
       select: { course_id: true },
       distinct: ["course_id"],
@@ -217,6 +218,7 @@ describe("listFacultyCourseContexts", () => {
         faculty_id: "faculty-1",
         term_instance_id: "term-instance-1",
         is_active: true,
+        term_instance: { status: "ACTIVE" },
       },
       select: { course_id: true },
     });

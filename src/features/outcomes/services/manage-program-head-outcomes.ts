@@ -4,7 +4,15 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import type { CreateGOInput, UpdateGOInput } from "../schemas/go";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
-import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+import { commitOutcomeWrite, prepareOutcomeWrite } from "./manage-outcome-writes";
+
+async function writeProgramHeadOutcome(
+  input: Parameters<typeof prepareOutcomeWrite>[0]
+): Promise<ServiceResult<{ id?: string }>> {
+  const review = await prepareOutcomeWrite(input);
+  if (!review.success) return review;
+  return commitOutcomeWrite(review.data, true);
+}
 
 async function resolveAndValidatePHScope(
   userId: string
@@ -110,33 +118,10 @@ export async function createGO(input: CreateGOInput): Promise<ServiceResult<{ id
   const { programIds } = scopeResult.data;
   const programId = programIds[0];
 
-  try {
-    const maxOrderResult = await prisma.gO.aggregate({
-      where: { program_id: programId },
-      _max: { order: true },
-    });
-    const nextOrder = (maxOrderResult._max.order ?? -1) + 1;
-
-    const go = await prisma.gO.create({
-      data: {
-        code: input.code,
-        description: input.description,
-        order: nextOrder,
-        program_id: programId,
-      },
-    });
-
-    return { success: true, data: { id: go.id } };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: `A GO with code "${input.code}" already exists in this program.`,
-      };
-    }
-
-    throw error;
-  }
+  const result = await writeProgramHeadOutcome({ kind: "GO", action: "create", programId, ...input });
+  if (!result.success) return result;
+  if (!result.data.id) return { success: false, error: "Graduate Outcome was not created." };
+  return { success: true, data: { id: result.data.id } };
 }
 
 // ─── Update GO ───────────────────────────────────────────────────────────────
@@ -175,26 +160,10 @@ export async function updateGO(input: UpdateGOInput): Promise<ServiceResult<{ id
     };
   }
 
-  try {
-    const go = await prisma.gO.update({
-      where: { id: input.id },
-      data: {
-        code: input.code,
-        description: input.description,
-      },
-    });
-
-    return { success: true, data: { id: go.id } };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: `A GO with code "${input.code}" already exists in this program.`,
-      };
-    }
-
-    throw error;
-  }
+  const result = await writeProgramHeadOutcome({ kind: "GO", action: "update", ...input });
+  if (!result.success) return result;
+  if (!result.data.id) return { success: false, error: "Graduate Outcome was not updated." };
+  return { success: true, data: { id: result.data.id } };
 }
 
 // ─── Delete GO ───────────────────────────────────────────────────────────────
@@ -217,14 +186,7 @@ export async function deleteGO(id: string): Promise<ServiceResult> {
 
   const { programIds } = scopeResult.data;
 
-  const existingGO = await prisma.gO.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      program_id: true,
-      _count: { select: { cilo_mappings: true } },
-    },
-  });
+  const existingGO = await prisma.gO.findUnique({ where: { id }, select: { id: true, program_id: true } });
 
   if (!existingGO) {
     return { success: false, error: "Graduate Outcome not found." };
@@ -237,15 +199,8 @@ export async function deleteGO(id: string): Promise<ServiceResult> {
     };
   }
 
-  if (existingGO._count.cilo_mappings > 0) {
-    return {
-      success: false,
-      error: "Cannot delete GO with existing CILO mappings. Remove mappings first.",
-    };
-  }
-
-  await prisma.gO.delete({ where: { id } });
-
+  const result = await writeProgramHeadOutcome({ kind: "GO", action: "archive", id });
+  if (!result.success) return result;
   return { success: true, data: undefined };
 }
 
@@ -269,34 +224,8 @@ export async function reorderGOs(orderedIds: string[]): Promise<ServiceResult> {
 
   const { programIds } = scopeResult.data;
 
-  // Verify all IDs belong to PH's program
-  const gos = await prisma.gO.findMany({
-    where: { id: { in: orderedIds } },
-    select: { id: true, program_id: true },
-  });
-
-  if (gos.length !== orderedIds.length) {
-    return {
-      success: false,
-      error: "One or more GO IDs were not found.",
-    };
-  }
-
-  const invalidGOs = gos.filter((go) => !programIds.includes(go.program_id));
-
-  if (invalidGOs.length > 0) {
-    return {
-      success: false,
-      error: "You do not have permission to reorder these Graduate Outcomes.",
-    };
-  }
-
-  await prisma.$transaction(
-    orderedIds.map((id, index) =>
-      prisma.gO.update({ where: { id }, data: { order: index } })
-    )
-  );
-
+  const result = await writeProgramHeadOutcome({ kind: "GO", action: "reorder", programId: programIds[0], orderedIds });
+  if (!result.success) return result;
   return { success: true, data: undefined };
 }
 

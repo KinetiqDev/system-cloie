@@ -1,18 +1,24 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-const { findManyCilosMock, updateManyCilosMock, findUniqueCourseMock, resolveAuthSessionMock } =
+const { findManyCilosMock, findUniqueCiloMock, updateCiloMock, findUniqueCourseMock, courseAssignmentFindFirstMock, resolveAuthSessionMock } =
   vi.hoisted(() => ({
     findManyCilosMock: vi.fn(),
-    updateManyCilosMock: vi.fn(),
+    findUniqueCiloMock: vi.fn(),
+    updateCiloMock: vi.fn(),
     findUniqueCourseMock: vi.fn(),
+    courseAssignmentFindFirstMock: vi.fn(),
     resolveAuthSessionMock: vi.fn(),
   }));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    cILO: { findMany: findManyCilosMock, updateMany: updateManyCilosMock },
+    cILO: { findMany: findManyCilosMock, findUnique: findUniqueCiloMock, update: updateCiloMock },
     course: { findUnique: findUniqueCourseMock },
-    $transaction: vi.fn((fn) => fn({ cILO: { findMany: findManyCilosMock } })),
+    courseAssignment: { findFirst: courseAssignmentFindFirstMock },
+    $transaction: vi.fn((fn) => fn({
+      cILO: { findMany: findManyCilosMock, findUnique: findUniqueCiloMock, update: updateCiloMock },
+      courseAssignment: { findFirst: courseAssignmentFindFirstMock },
+    })),
   },
 }));
 
@@ -30,6 +36,14 @@ describe("CILO archive/restore", () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "faculty-1",
       roles: ["FACULTY"],
+      activeRole: "FACULTY",
+    });
+    courseAssignmentFindFirstMock.mockResolvedValue({ id: "assignment-1" });
+    findUniqueCiloMock.mockResolvedValue({
+      id: "cilo-1",
+      description: "CILO 1",
+      course_id: "course-1",
+      is_active: true,
     });
   });
 
@@ -73,7 +87,7 @@ describe("CILO archive/restore", () => {
   });
 
   it("archives and restores without deleting CILO mappings", async () => {
-    updateManyCilosMock.mockResolvedValue({ count: 1 });
+    updateCiloMock.mockResolvedValue({ id: "cilo-1" });
     const { archiveCiloForCourseAction, restoreCiloForCourseAction } = await import(
       "@/lib/actions/faculty-cilo-actions"
     );
@@ -81,16 +95,16 @@ describe("CILO archive/restore", () => {
     await expect(archiveCiloForCourseAction("course-1", "cilo-1")).resolves.toEqual({
       success: true,
     });
-    expect(updateManyCilosMock).toHaveBeenLastCalledWith({
-      where: { id: "cilo-1", course_id: "course-1" },
+    expect(updateCiloMock).toHaveBeenLastCalledWith({
+      where: { id: "cilo-1" },
       data: { is_active: false },
     });
 
     await expect(restoreCiloForCourseAction("course-1", "cilo-1")).resolves.toEqual({
       success: true,
     });
-    expect(updateManyCilosMock).toHaveBeenLastCalledWith({
-      where: { id: "cilo-1", course_id: "course-1" },
+    expect(updateCiloMock).toHaveBeenLastCalledWith({
+      where: { id: "cilo-1" },
       data: { is_active: true },
     });
   });

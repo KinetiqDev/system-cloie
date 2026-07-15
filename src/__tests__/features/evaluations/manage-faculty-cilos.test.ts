@@ -9,6 +9,8 @@ const {
   updateManyQuestionBindingsMock,
   resolveAuthSessionMock,
   listFacultyCourseContextsMock,
+  prepareOutcomeWriteMock,
+  commitOutcomeWriteMock,
 } = vi.hoisted(() => ({
   updateManyCilosMock: vi.fn(),
   createManyCilosMock: vi.fn(),
@@ -17,6 +19,8 @@ const {
   updateManyQuestionBindingsMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   listFacultyCourseContextsMock: vi.fn(),
+  prepareOutcomeWriteMock: vi.fn(),
+  commitOutcomeWriteMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => {
@@ -48,6 +52,11 @@ vi.mock("@/features/evaluations/services/list-faculty-course-contexts", () => ({
   listFacultyCourseContexts: listFacultyCourseContextsMock,
 }));
 
+vi.mock("@/features/outcomes/services/manage-outcome-writes", () => ({
+  prepareOutcomeWrite: prepareOutcomeWriteMock,
+  commitOutcomeWrite: commitOutcomeWriteMock,
+}));
+
 describe("manage-faculty-cilos", () => {
   const mockContext = {
     courseId: "course-1",
@@ -57,6 +66,8 @@ describe("manage-faculty-cilos", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    prepareOutcomeWriteMock.mockImplementation(async (input) => ({ success: true, data: { input } }));
+    commitOutcomeWriteMock.mockResolvedValue({ success: true, data: {} });
   });
 
   describe("loadFacultyManagedCilos", () => {
@@ -135,27 +146,9 @@ describe("manage-faculty-cilos", () => {
 
       expect(result.success).toBe(true);
 
-      expect(updateManyCilosMock).toHaveBeenCalledWith({
-        where: { id: { in: ["cilo-existing-2"] } },
-        data: { is_active: false },
-      });
-
-      // Verify update of existing CILO
-      expect(updateCiloMock).toHaveBeenCalledWith({
-        where: { id: "cilo-existing-1" },
-        data: { description: "Updated CILO 1", is_active: true },
-      });
-
-      // Verify creation of new CILO
-      expect(createManyCilosMock).toHaveBeenCalledWith({
-        data: [
-          {
-            course_id: "course-1",
-            created_by: "faculty-1",
-            description: "New CILO",
-          },
-        ],
-      });
+      expect(prepareOutcomeWriteMock).toHaveBeenCalledWith({ kind: "CILO", action: "archive", id: "cilo-existing-2" });
+      expect(prepareOutcomeWriteMock).toHaveBeenCalledWith({ kind: "CILO", action: "update", id: "cilo-existing-1", description: "Updated CILO 1" });
+      expect(prepareOutcomeWriteMock).toHaveBeenCalledWith({ kind: "CILO", action: "create", courseId: "course-1", description: "New CILO" });
 
       // Verify template binding snapshot update for modified CILO
       expect(updateManyQuestionBindingsMock).toHaveBeenCalledWith({
@@ -189,8 +182,7 @@ describe("manage-faculty-cilos", () => {
 
       await saveFacultyManagedCilos(payload);
 
-      expect(createManyCilosMock).not.toHaveBeenCalled();
-      expect(updateManyCilosMock).not.toHaveBeenCalled();
+      expect(prepareOutcomeWriteMock).not.toHaveBeenCalled();
     });
   });
 });

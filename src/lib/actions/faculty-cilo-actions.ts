@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import { commitOutcomeWrite, prepareOutcomeWrite } from "@/features/outcomes/services/manage-outcome-writes";
+
+async function writeCilo(input: Parameters<typeof prepareOutcomeWrite>[0]): Promise<{ success: boolean; error?: string }> {
+  const review = await prepareOutcomeWrite(input);
+  if (!review.success) return review;
+  return commitOutcomeWrite(review.data, true);
+}
 
 // ---------------------------------------------------------------------------
 // Load CILOs for a course
@@ -19,6 +26,12 @@ export async function loadCilosForCourseAction(courseId: string): Promise<{
   if (!session || !session.roles.includes(ROLES.FACULTY)) {
     return { success: false, error: "Faculty authentication required." };
   }
+
+  const assignment = await prisma.courseAssignment.findFirst({
+    where: { faculty_id: session.userId, course_id: courseId, is_active: true, term_instance: { status: "ACTIVE" } },
+    select: { id: true },
+  });
+  if (!assignment) return { success: false, error: "You do not have permission to manage CILOs for this course." };
 
   const cilos = await prisma.cILO.findMany({
     where: { course_id: courseId, is_active: true },
@@ -43,6 +56,12 @@ export async function saveCilosForCourseAction(
     return { success: false, error: "Faculty authentication required." };
   }
 
+  const assignment = await prisma.courseAssignment.findFirst({
+    where: { faculty_id: session.userId, course_id: courseId, is_active: true, term_instance: { status: "ACTIVE" } },
+    select: { id: true },
+  });
+  if (!assignment) return { success: false, error: "You do not have permission to manage CILOs for this course." };
+
   // Validate course exists
   const course = await prisma.course.findUnique({
     where: { id: courseId },
@@ -63,55 +82,32 @@ export async function saveCilosForCourseAction(
   const keepIds = new Set(toUpdate.map((c) => c.id!));
 
   try {
-    await prisma.$transaction(async (tx) => {
-      // Fetch existing CILOs for this course
-      const existingCilos = await tx.cILO.findMany({
-        where: { course_id: courseId, is_active: true },
-        select: { id: true },
-      });
-
-      // Archive CILOs absent from input. Preserve their mappings for restore.
-      const toArchiveIds = existingCilos
-        .filter((c) => !keepIds.has(c.id))
-        .map((c) => c.id);
-
-      if (toArchiveIds.length > 0) {
-        await tx.cILO.updateMany({
-          where: { id: { in: toArchiveIds } },
-          data: { is_active: false },
-        });
-      }
-
-      // Update existing CILOs with new descriptions
-      for (const item of toUpdate) {
-        await tx.cILO.update({
-          where: { id: item.id! },
-          data: { description: item.description, is_active: true },
-        });
-      }
-
-      // Create new CILOs
-      if (toCreate.length > 0) {
-        await tx.cILO.createMany({
-          data: toCreate.map((item) => ({
-            course_id: courseId,
-            description: item.description,
-            created_by: session.userId,
-          })),
-        });
-      }
-
-      // Update template binding snapshots for updated CILOs.
-      // This only affects InstrumentTemplateCiloQuestionBinding (draft/template-level).
-      // Published evaluations use a separate CourseBoundCiloQuestionBinding table whose
-      // snapshots are frozen at publish time and are NOT affected by this update.
-      for (const item of toUpdate) {
-        await tx.instrumentTemplateCiloQuestionBinding.updateMany({
-          where: { cilo_id: item.id! },
-          data: { cilo_description_snapshot: item.description },
-        });
-      }
+    const existingCilos = await prisma.cILO.findMany({
+      where: { course_id: courseId, is_active: true },
+      select: { id: true },
     });
+    const existingIds = new Set(existingCilos.map((cilo) => cilo.id));
+    if (toUpdate.some((item) => !existingIds.has(item.id!))) {
+      return { success: false, error: "CILO not found for this course." };
+    }
+
+    const toArchiveIds = existingCilos.filter((cilo) => !keepIds.has(cilo.id)).map((cilo) => cilo.id);
+    for (const id of toArchiveIds) {
+      const result = await writeCilo({ kind: "CILO", action: "archive", id });
+      if (!result.success) return result;
+    }
+    for (const item of toUpdate) {
+      const result = await writeCilo({ kind: "CILO", action: "update", id: item.id!, description: item.description });
+      if (!result.success) return result;
+      await prisma.instrumentTemplateCiloQuestionBinding.updateMany({
+        where: { cilo_id: item.id! },
+        data: { cilo_description_snapshot: item.description },
+      });
+    }
+    for (const item of toCreate) {
+      const result = await writeCilo({ kind: "CILO", action: "create", courseId, description: item.description });
+      if (!result.success) return result;
+    }
   } catch (err) {
     console.error("Failed to save CILOs:", err);
     return { success: false, error: "Failed to save CILOs." };
@@ -132,14 +128,14 @@ async function setCiloActiveAction(
     return { success: false, error: "Faculty authentication required." };
   }
 
-  const result = await prisma.cILO.updateMany({
-    where: { id: ciloId, course_id: courseId },
-    data: { is_active },
+  const assignment = await prisma.courseAssignment.findFirst({
+    where: { faculty_id: session.userId, course_id: courseId, is_active: true, term_instance: { status: "ACTIVE" } },
+    select: { id: true },
   });
+  if (!assignment) return { success: false, error: "You do not have permission to manage CILOs for this course." };
 
-  if (result.count === 0) {
-    return { success: false, error: "CILO not found for this course." };
-  }
+  const result = await writeCilo({ kind: "CILO", action: is_active ? "restore" : "archive", id: ciloId });
+  if (!result.success) return result;
 
   revalidatePath("/faculty/cilos");
   return { success: true };
@@ -167,6 +163,12 @@ export async function addCilosToCourseAction(
     return { success: false, error: "Faculty authentication required." };
   }
 
+  const assignment = await prisma.courseAssignment.findFirst({
+    where: { faculty_id: session.userId, course_id: courseId, is_active: true, term_instance: { status: "ACTIVE" } },
+    select: { id: true },
+  });
+  if (!assignment) return { success: false, error: "You do not have permission to manage CILOs for this course." };
+
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     select: { id: true },
@@ -183,13 +185,10 @@ export async function addCilosToCourseAction(
   }
 
   try {
-    await prisma.cILO.createMany({
-      data: validDescriptions.map((desc) => ({
-        course_id: courseId,
-        description: desc.trim(),
-        created_by: session.userId,
-      })),
-    });
+    for (const description of validDescriptions) {
+      const result = await writeCilo({ kind: "CILO", action: "create", courseId, description });
+      if (!result.success) return result;
+    }
   } catch (err) {
     console.error("Failed to add CILOs:", err);
     return { success: false, error: "Failed to add CILOs." };

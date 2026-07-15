@@ -3,26 +3,24 @@ import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
 
 const {
-  goAggregateMock,
   goCreateMock,
-  goDeleteMock,
   goFindManyMock,
   goFindUniqueMock,
   goUpdateMock,
   programFindUniqueMock,
   programHeadAssignmentFindManyMock,
+  programHeadAssignmentFindFirstMock,
   resolveAuthSessionMock,
   transactionMock,
   courseFindManyMock,
 } = vi.hoisted(() => ({
-  goAggregateMock: vi.fn(),
   goCreateMock: vi.fn(),
-  goDeleteMock: vi.fn(),
   goFindManyMock: vi.fn(),
   goFindUniqueMock: vi.fn(),
   goUpdateMock: vi.fn(),
   programFindUniqueMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
+  programHeadAssignmentFindFirstMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   transactionMock: vi.fn(),
   courseFindManyMock: vi.fn(),
@@ -31,9 +29,7 @@ const {
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     gO: {
-      aggregate: goAggregateMock,
       create: goCreateMock,
-      delete: goDeleteMock,
       findMany: goFindManyMock,
       findUnique: goFindUniqueMock,
       update: goUpdateMock,
@@ -43,6 +39,7 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     programHeadAssignment: {
       findMany: programHeadAssignmentFindManyMock,
+      findFirst: programHeadAssignmentFindFirstMock,
     },
     course: {
       findMany: courseFindManyMock,
@@ -81,6 +78,17 @@ describe("manage-program-head-outcomes", () => {
     // Default: PH is authenticated with an active program assignment
     resolveAuthSessionMock.mockResolvedValue(PH_SESSION);
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: PROGRAM_ID }]);
+    programHeadAssignmentFindFirstMock.mockResolvedValue({ id: "assignment-1" });
+    transactionMock.mockImplementation(async (callback) => callback({
+      gO: {
+        findMany: goFindManyMock,
+        findUnique: goFindUniqueMock,
+        create: goCreateMock,
+        update: goUpdateMock,
+      },
+      program: { findUnique: programFindUniqueMock },
+      programHeadAssignment: { findFirst: programHeadAssignmentFindFirstMock },
+    }));
 
     const mod = await import("@/features/outcomes/services/manage-program-head-outcomes");
     listProgramGOs = mod.listProgramGOs;
@@ -137,7 +145,8 @@ describe("manage-program-head-outcomes", () => {
   // ─── createGO ────────────────────────────────────────────────────────
 
   it("PH can create a GO within assigned program", async () => {
-    goAggregateMock.mockResolvedValue({ _max: { order: null } });
+    goFindManyMock.mockResolvedValue([]);
+    programFindUniqueMock.mockResolvedValue({ is_active: true });
     goCreateMock.mockResolvedValue({ id: GO_ID });
 
     const result = await createGO({
@@ -173,7 +182,8 @@ describe("manage-program-head-outcomes", () => {
   });
 
   it("unique constraint error on duplicate GO code within program", async () => {
-    goAggregateMock.mockResolvedValue({ _max: { order: null } });
+    goFindManyMock.mockResolvedValue([]);
+    programFindUniqueMock.mockResolvedValue({ is_active: true });
     goCreateMock.mockRejectedValue(createPrismaUniqueConstraintError());
 
     const result = await createGO({
@@ -183,7 +193,7 @@ describe("manage-program-head-outcomes", () => {
 
     expect(result).toEqual({
       success: false,
-      error: 'A GO with code "GO-1" already exists in this program.',
+      error: "Graduate Outcome code already exists.",
     });
   });
 
@@ -192,6 +202,10 @@ describe("manage-program-head-outcomes", () => {
   it("PH can update a GO within scope", async () => {
     goFindUniqueMock.mockResolvedValue({
       id: GO_ID,
+      code: "GO-1",
+      description: "Original",
+      order: 0,
+      is_active: true,
       program_id: PROGRAM_ID,
     });
     goUpdateMock.mockResolvedValue({ id: GO_ID });
@@ -233,59 +247,59 @@ describe("manage-program-head-outcomes", () => {
 
   // ─── deleteGO ────────────────────────────────────────────────────────
 
-  it("PH can delete GO with no mappings", async () => {
+  it("PH archives GO without deleting mappings", async () => {
     goFindUniqueMock.mockResolvedValue({
       id: GO_ID,
       program_id: PROGRAM_ID,
-      _count: { cilo_mappings: 0 },
+      code: "GO-1",
+      description: "Original",
+      order: 0,
+      is_active: true,
     });
-    goDeleteMock.mockResolvedValue({ id: GO_ID });
+    goUpdateMock.mockResolvedValue({ id: GO_ID });
 
     const result = await deleteGO(GO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
-    expect(goDeleteMock).toHaveBeenCalledWith({ where: { id: GO_ID } });
+    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: false } });
   });
 
-  it("PH cannot delete GO with existing CILO mappings", async () => {
+  it("PH archives GO with existing CILO mappings", async () => {
     goFindUniqueMock.mockResolvedValue({
       id: GO_ID,
       program_id: PROGRAM_ID,
-      _count: { cilo_mappings: 3 },
+      code: "GO-1",
+      description: "Original",
+      order: 0,
+      is_active: true,
     });
+    goUpdateMock.mockResolvedValue({ id: GO_ID });
 
     const result = await deleteGO(GO_ID);
 
-    expect(result).toEqual({
-      success: false,
-      error: "Cannot delete GO with existing CILO mappings. Remove mappings first.",
-    });
-    expect(goDeleteMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: true, data: undefined });
+    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: false } });
   });
 
   // ─── reorderGOs ──────────────────────────────────────────────────────
 
   it("reorder validates all IDs belong to PH's program", async () => {
-    goFindManyMock.mockResolvedValue([
-      { id: "go-1", program_id: PROGRAM_ID },
-      { id: "go-2", program_id: "other-program" },
-    ]);
+    goFindManyMock.mockResolvedValue([{ id: "go-1", order: 0 }]);
 
     const result = await reorderGOs(["go-1", "go-2"]);
 
     expect(result).toEqual({
       success: false,
-      error: "You do not have permission to reorder these Graduate Outcomes.",
+      error: "Graduate Outcomes must be a complete unique program order.",
     });
-    expect(transactionMock).not.toHaveBeenCalled();
+    expect(transactionMock).toHaveBeenCalled();
   });
 
   it("reorder succeeds when all IDs belong to PH's program", async () => {
     goFindManyMock.mockResolvedValue([
-      { id: "go-1", program_id: PROGRAM_ID },
-      { id: "go-2", program_id: PROGRAM_ID },
+      { id: "go-1", order: 0 },
+      { id: "go-2", order: 1 },
     ]);
-    transactionMock.mockResolvedValue([]);
 
     const result = await reorderGOs(["go-2", "go-1"]);
 

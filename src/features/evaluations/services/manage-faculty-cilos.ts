@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { listFacultyCourseContexts } from "./list-faculty-course-contexts";
+import { commitOutcomeWrite, prepareOutcomeWrite } from "@/features/outcomes/services/manage-outcome-writes";
 import type {
   FacultyManagedCiloContext,
   FacultyManagedCiloLoadResult,
@@ -107,55 +108,33 @@ export async function saveFacultyManagedCilos(
   const toCreate = normalizedItems.filter((item) => !item.id);
   const keepIds = new Set(toUpdate.map((item) => item.id!));
 
-  await prisma.$transaction(async (tx) => {
-    // Fetch existing CILOs for this course
-    const existingCilos = await tx.cILO.findMany({
-      where: { course_id: scopedContext.courseId, is_active: true },
-      select: { id: true },
-    });
-
-    // Archive CILOs absent from input. Preserve their mappings for restore.
-    const toArchiveIds = existingCilos
-      .filter((c) => !keepIds.has(c.id))
-      .map((c) => c.id);
-
-    if (toArchiveIds.length > 0) {
-      await tx.cILO.updateMany({
-        where: { id: { in: toArchiveIds } },
-        data: { is_active: false },
-      });
-    }
-
-    // Update existing CILOs with new descriptions
-    for (const item of toUpdate) {
-      await tx.cILO.update({
-        where: { id: item.id! },
-        data: { description: item.description, is_active: true },
-      });
-    }
-
-    // Create new CILOs
-    if (toCreate.length > 0) {
-      await tx.cILO.createMany({
-        data: toCreate.map((item) => ({
-          course_id: scopedContext.courseId,
-          created_by: authSession.userId,
-          description: item.description,
-        })),
-      });
-    }
-
-    // Update template binding snapshots for updated CILOs.
-    // This only affects InstrumentTemplateCiloQuestionBinding (draft/template-level).
-    // Published evaluations use a separate CourseBoundCiloQuestionBinding table whose
-    // snapshots are frozen at publish time and are NOT affected by this update.
-    for (const item of toUpdate) {
-      await tx.instrumentTemplateCiloQuestionBinding.updateMany({
-        where: { cilo_id: item.id! },
-        data: { cilo_description_snapshot: item.description },
-      });
-    }
+  const existingCilos = await prisma.cILO.findMany({
+    where: { course_id: scopedContext.courseId, is_active: true },
+    select: { id: true },
   });
+  const existingIds = new Set(existingCilos.map((cilo) => cilo.id));
+  if (toUpdate.some((item) => !existingIds.has(item.id!))) {
+    return { error: "CILO not found for this course context.", success: false };
+  }
+
+  const writes = [
+    ...existingCilos.filter((cilo) => !keepIds.has(cilo.id)).map((cilo) => ({ kind: "CILO" as const, action: "archive" as const, id: cilo.id })),
+    ...toUpdate.map((item) => ({ kind: "CILO" as const, action: "update" as const, id: item.id!, description: item.description })),
+    ...toCreate.map((item) => ({ kind: "CILO" as const, action: "create" as const, courseId: scopedContext.courseId, description: item.description })),
+  ];
+  for (const input of writes) {
+    const review = await prepareOutcomeWrite(input);
+    if (!review.success) return review;
+    const result = await commitOutcomeWrite(review.data, true);
+    if (!result.success) return result;
+  }
+
+  for (const item of toUpdate) {
+    await prisma.instrumentTemplateCiloQuestionBinding.updateMany({
+      where: { cilo_id: item.id! },
+      data: { cilo_description_snapshot: item.description },
+    });
+  }
 
   const items = await prisma.cILO.findMany({
     where: {
