@@ -3,8 +3,12 @@ import { transitionPeriodStatus } from "@/features/academic-calendar/services/ma
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
+import { persistPeriodReadinessSnapshot } from "@/features/academic-calendar/services/read-period-readiness";
 
 vi.mock("@/features/auth/services/resolve-auth-session");
+vi.mock("@/features/academic-calendar/services/read-period-readiness", () => ({
+  persistPeriodReadinessSnapshot: vi.fn(),
+}));
 vi.mock("@/lib/db/prisma", () => {
   const prisma = {
     academicTermInstance: {
@@ -159,6 +163,7 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
         data: expect.objectContaining({ status: "COMPLETED" }),
       })
     );
+    expect(persistPeriodReadinessSnapshot).toHaveBeenCalledWith("p-active", prisma);
   });
 
   it("rejects completing without end_date", async () => {

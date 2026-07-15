@@ -6,21 +6,19 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { canTransitionPeriod } from "../policies";
+import { persistPeriodReadinessSnapshot } from "./read-period-readiness";
 
 type Tx = PrismaTypes.TransactionClient;
 
 /**
- * Stable completion seam. Future slices (readiness snapshot persistence) hook here.
+ * Stable completion seam for readiness snapshot persistence.
  * Must run inside the same transaction that promotes ACTIVE -> COMPLETED.
- * No-op in Slice 1.
  */
 async function onPeriodCompleted(
-  _periodId: string,
-  _tx: Tx
+  periodId: string,
+  tx: Tx
 ): Promise<void> {
-  void _periodId;
-  void _tx;
-  // intentionally empty; readiness snapshot persistence ships in #115
+  await persistPeriodReadinessSnapshot(periodId, tx);
 }
 
 class LifecycleConflictError extends Error {}

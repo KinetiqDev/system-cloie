@@ -9,6 +9,38 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      academic_period_readiness_snapshots: {
+        Row: {
+          contexts: Json
+          created_at: string
+          id: string
+          period_id: string
+          program_totals: Json
+        }
+        Insert: {
+          contexts: Json
+          created_at?: string
+          id?: string
+          period_id: string
+          program_totals: Json
+        }
+        Update: {
+          contexts?: Json
+          created_at?: string
+          id?: string
+          period_id?: string
+          program_totals?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_period_readiness_snapshots_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: true
+            referencedRelation: "academic_term_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academic_term_instances: {
         Row: {
           created_at: string

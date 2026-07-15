@@ -148,11 +148,24 @@ model AcademicTermInstance {
   course_assignments CourseAssignment[]
   course_bound_evaluations CourseBoundEvaluation[]
   central_deployments CentralDeployment[]
+  readiness_snapshot AcademicPeriodReadinessSnapshot?
 
   // Prisma cannot express NULLS NOT DISTINCT; the actual unique constraint is managed via Supabase migration
   @@index([school_year_id, semester, term])
   @@index([status])
   @@map("academic_term_instances")
+}
+
+model AcademicPeriodReadinessSnapshot {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  period_id       String   @unique @db.Uuid
+  contexts        Json
+  program_totals  Json
+  created_at      DateTime @default(now())
+
+  period AcademicTermInstance @relation(fields: [period_id], references: [id], onDelete: Restrict)
+
+  @@map("academic_period_readiness_snapshots")
 }
 
 model StudentEnrollment {
@@ -398,6 +411,7 @@ model CILOMapping {
   go         GO     @relation(fields: [go_id], references: [id], onDelete: Cascade)
 
   @@map("cilo_mappings")
+  @@unique([cilo_id, go_id])
 }
 
 // ============================================================================
