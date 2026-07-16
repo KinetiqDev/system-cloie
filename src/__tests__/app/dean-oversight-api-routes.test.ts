@@ -10,6 +10,7 @@ const {
   getLearningOutcomesMock,
   getEnrollmentsMock,
   getRosterMock,
+  listEligiblePeriodsMock,
   logMock,
 } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
@@ -17,6 +18,7 @@ const {
   getLearningOutcomesMock: vi.fn(),
   getEnrollmentsMock: vi.fn(),
   getRosterMock: vi.fn(),
+  listEligiblePeriodsMock: vi.fn(),
   logMock: vi.spyOn(console, "error").mockImplementation(() => undefined),
 }));
 
@@ -31,12 +33,14 @@ vi.mock("@/features/dean/services/read-dean-oversight", () => ({
   getDeanLearningOutcomes: getLearningOutcomesMock,
   getDeanEnrollments: getEnrollmentsMock,
   getDeanRoster: getRosterMock,
+  listDeanEligiblePeriods: listEligiblePeriodsMock,
 }));
 
 import { GET as getDashboard } from "@/app/api/dean/dashboard/route";
 import { GET as getLearningOutcomes } from "@/app/api/dean/learning-outcomes/route";
 import { GET as getEnrollments } from "@/app/api/dean/enrollments/route";
 import { GET as getRoster } from "@/app/api/dean/enrollments/roster/route";
+import { GET as getEligiblePeriods } from "@/app/api/dean/eligible-periods/route";
 
 const PERIOD_ID = "11111111-1111-4111-8111-111111111111";
 const ASSIGNMENT_ID = "22222222-2222-4222-8222-222222222222";
@@ -99,6 +103,9 @@ describe("Dean oversight JSON routes", () => {
         totalPages: 1,
       },
     });
+    listEligiblePeriodsMock.mockResolvedValue([
+      { id: PERIOD_ID, label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" },
+    ]);
   });
 
   it("returns 401 without session and private no-store headers", async () => {
@@ -127,6 +134,17 @@ describe("Dean oversight JSON routes", () => {
     expect(response.status).toBe(400);
     expect(await json(response)).toEqual({ error: "Dashboard does not accept query parameters." });
     expect(getDashboardMock).not.toHaveBeenCalled();
+  });
+
+  it("returns Dean-only eligible periods with private no-store headers", async () => {
+    const response = await getEligiblePeriods(request("/api/dean/eligible-periods"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(await json(response)).toEqual({
+      periods: [{ id: PERIOD_ID, label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" }],
+    });
+    expect(listEligiblePeriodsMock).toHaveBeenCalledTimes(1);
   });
 
   it("validates learning outcome period and risk grammar", async () => {

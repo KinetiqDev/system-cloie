@@ -1,14 +1,18 @@
 import type { AcademicPeriodStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
-import { readPeriodReadiness, type PeriodReadiness, type ReadinessContext } from "@/features/academic-calendar/services/read-period-readiness";
+import {
+  readPeriodReadiness,
+  type PeriodReadiness,
+  type ReadinessContext,
+} from "@/features/academic-calendar/services/read-period-readiness";
 
 export class DeanReadModelNotFoundError extends Error {}
 export class DeanReadModelBadRequestError extends Error {}
 
 export type DeanReadState<T> = { state: "ready"; data: T } | { state: "no-eligible-period" };
 
-type PeriodSummary = { id: string; label: string; status: AcademicPeriodStatus };
+export type DeanPeriodSummary = { id: string; label: string; status: AcademicPeriodStatus };
 
 type PeriodRecord = Prisma.AcademicTermInstanceGetPayload<{
   include: { school_year: { select: { code: true } } };
@@ -20,7 +24,13 @@ type AssignmentRow = {
   program_id: string;
   year_level: string;
   section: string;
-  course: { code: string; title: string; is_active: boolean; course_scope: string; program_id: string | null };
+  course: {
+    code: string;
+    title: string;
+    is_active: boolean;
+    course_scope: string;
+    program_id: string | null;
+  };
   program: { id: string; name: string; is_active: boolean };
 };
 
@@ -33,10 +43,18 @@ export type DeanDashboardData = {
     incompleteMappingContexts: number;
   };
   risks: { missingCilos: number; incompleteMappings: number; notReady: number };
+  programs: Array<{
+    id: string;
+    name: string;
+    activeContexts: number;
+    readyContexts: number;
+    missingCiloContexts: number;
+    incompleteMappingContexts: number;
+  }>;
 };
 
 export type DeanLearningOutcomesData = {
-  period: PeriodSummary;
+  period: DeanPeriodSummary;
   risk: "missing-cilos" | "incomplete-mappings" | "not-ready" | null;
   programs: Array<{
     id: string;
@@ -69,7 +87,7 @@ export type DeanLearningOutcomesData = {
 };
 
 export type DeanEnrollmentsData = {
-  period: PeriodSummary;
+  period: DeanPeriodSummary;
   programs: Array<{
     id: string;
     name: string;
@@ -101,7 +119,7 @@ export type DeanRosterData = {
   totalPages: number;
 };
 
-function periodSummary(period: PeriodRecord): PeriodSummary {
+function periodSummary(period: PeriodRecord): DeanPeriodSummary {
   return {
     id: period.id,
     label: formatTermInstanceLabel(period.school_year.code, period.semester, period.term),
@@ -109,7 +127,28 @@ function periodSummary(period: PeriodRecord): PeriodSummary {
   };
 }
 
-function archivedLabel(name: string, isArchived: boolean, periodStatus: AcademicPeriodStatus): string {
+export async function listDeanEligiblePeriods(): Promise<DeanPeriodSummary[]> {
+  const [active, completed] = await Promise.all([
+    prisma.academicTermInstance.findFirst({
+      where: { status: "ACTIVE" },
+      include: { school_year: { select: { code: true } } },
+    }),
+    prisma.academicTermInstance.findMany({
+      where: { status: "COMPLETED" },
+      include: { school_year: { select: { code: true } } },
+      orderBy: [{ end_date: "desc" }, { created_at: "desc" }],
+    }),
+  ]);
+  return [active, ...completed]
+    .filter((period): period is PeriodRecord => Boolean(period))
+    .map(periodSummary);
+}
+
+function archivedLabel(
+  name: string,
+  isArchived: boolean,
+  periodStatus: AcademicPeriodStatus
+): string {
   return periodStatus === "COMPLETED" && isArchived ? `${name} (Archived)` : name;
 }
 
@@ -150,17 +189,22 @@ async function requirePeriod(
 }
 
 function readinessForProgram(readiness: PeriodReadiness, programId: string) {
-  return readiness.programTotals.find((total) => total.programId === programId) ?? {
-    programId,
-    programName: "",
-    activeContexts: 0,
-    readyContexts: 0,
-    missingCiloContexts: 0,
-    incompleteMappingContexts: 0,
-  };
+  return (
+    readiness.programTotals.find((total) => total.programId === programId) ?? {
+      programId,
+      programName: "",
+      activeContexts: 0,
+      readyContexts: 0,
+      missingCiloContexts: 0,
+      incompleteMappingContexts: 0,
+    }
+  );
 }
 
-function contextMatchesRisk(context: ReadinessContext, risk: DeanLearningOutcomesData["risk"]): boolean {
+function contextMatchesRisk(
+  context: ReadinessContext,
+  risk: DeanLearningOutcomesData["risk"]
+): boolean {
   if (risk === "missing-cilos") return context.state === "missing-cilos";
   if (risk === "incomplete-mappings") return context.state === "incomplete-mapping";
   if (risk === "not-ready") return context.state !== "ready";
@@ -180,13 +224,17 @@ async function assignmentRows(periodId: string, includeArchived: boolean) {
       program_id: true,
       year_level: true,
       section: true,
-      course: { select: { code: true, title: true, is_active: true, course_scope: true, program_id: true } },
+      course: {
+        select: { code: true, title: true, is_active: true, course_scope: true, program_id: true },
+      },
       program: { select: { id: true, name: true, is_active: true } },
     },
     orderBy: [{ course: { code: "asc" } }, { year_level: "asc" }, { section: "asc" }],
   });
   return (assignments as AssignmentRow[]).filter(
-    (assignment) => assignment.course.course_scope === "GENERAL_EDUCATION" || assignment.course.program_id === assignment.program_id
+    (assignment) =>
+      assignment.course.course_scope === "GENERAL_EDUCATION" ||
+      assignment.course.program_id === assignment.program_id
   );
 }
 
@@ -198,19 +246,45 @@ export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardDat
   if (!period) return { state: "no-eligible-period" };
 
   const readiness = await readPeriodReadiness(period.id);
-  const missingCilos = readiness.programTotals.reduce((sum, total) => sum + total.missingCiloContexts, 0);
-  const incompleteMappings = readiness.programTotals.reduce((sum, total) => sum + total.incompleteMappingContexts, 0);
+  const missingCilos = readiness.programTotals.reduce(
+    (sum, total) => sum + total.missingCiloContexts,
+    0
+  );
+  const incompleteMappings = readiness.programTotals.reduce(
+    (sum, total) => sum + total.incompleteMappingContexts,
+    0
+  );
   return {
     state: "ready",
     data: {
       activePeriod: { id: period.id, label: periodSummary(period).label },
       kpis: {
-        activeContexts: readiness.programTotals.reduce((sum, total) => sum + total.activeContexts, 0),
+        activeContexts: readiness.programTotals.reduce(
+          (sum, total) => sum + total.activeContexts,
+          0
+        ),
         readyContexts: readiness.programTotals.reduce((sum, total) => sum + total.readyContexts, 0),
         missingCiloContexts: missingCilos,
         incompleteMappingContexts: incompleteMappings,
       },
       risks: { missingCilos, incompleteMappings, notReady: missingCilos + incompleteMappings },
+      programs: readiness.programTotals.map(
+        ({
+          programId,
+          programName,
+          activeContexts,
+          readyContexts,
+          missingCiloContexts,
+          incompleteMappingContexts,
+        }) => ({
+          id: programId,
+          name: programName,
+          activeContexts,
+          readyContexts,
+          missingCiloContexts,
+          incompleteMappingContexts,
+        })
+      ),
     },
   };
 }
@@ -229,7 +303,9 @@ export async function getDeanLearningOutcomes(
   const readiness = await readPeriodReadiness(period.id);
   const includeArchived = period.status === "COMPLETED";
   const assignments = await assignmentRows(period.id, includeArchived);
-  const contextsByKey = new Map(readiness.contexts.map((context) => [`${context.courseId}:${context.programId}`, context]));
+  const contextsByKey = new Map(
+    readiness.contexts.map((context) => [`${context.courseId}:${context.programId}`, context])
+  );
   const programs = new Map<string, DeanLearningOutcomesData["programs"][number]>();
 
   for (const assignment of assignments) {
@@ -239,29 +315,33 @@ export async function getDeanLearningOutcomes(
     const program = programs.get(assignment.program_id) ?? {
       id: assignment.program.id,
       name: archivedLabel(assignment.program.name, !assignment.program.is_active, period.status),
-       graduateOutcomeCount: context.graduateOutcomes.filter(
-         (go) => period.status === "COMPLETED" || !go.isArchived
-       ).length,
+      graduateOutcomeCount: context.graduateOutcomes.filter(
+        (go) => period.status === "COMPLETED" || !go.isArchived
+      ).length,
       activeContexts: total.activeContexts,
       readyContexts: total.readyContexts,
       missingCiloContexts: total.missingCiloContexts,
       incompleteMappingContexts: total.incompleteMappingContexts,
-       graduateOutcomes: context.graduateOutcomes
-         .filter((go) => period.status === "COMPLETED" || !go.isArchived)
-         .map((go) => ({
-        id: go.id,
-        code: go.code,
-        statement: archivedLabel(go.description, go.isArchived, period.status),
-        isArchived: go.isArchived,
-        displayOrder: go.order,
-         })),
+      graduateOutcomes: context.graduateOutcomes
+        .filter((go) => period.status === "COMPLETED" || !go.isArchived)
+        .map((go) => ({
+          id: go.id,
+          code: go.code,
+          statement: go.description,
+          isArchived: go.isArchived,
+          displayOrder: go.order,
+        })),
       mappingGaps: [],
     };
     if (context.state === "missing-cilos") {
       program.mappingGaps.push({
         courseId: assignment.course_id,
         courseCode: assignment.course.code,
-        courseName: archivedLabel(assignment.course.title, !assignment.course.is_active, period.status),
+        courseName: archivedLabel(
+          assignment.course.title,
+          !assignment.course.is_active,
+          period.status
+        ),
         yearLevel: assignment.year_level,
         section: assignment.section,
         ciloId: null,
@@ -271,15 +351,21 @@ export async function getDeanLearningOutcomes(
         missingGraduateOutcomeIds: [],
       });
     } else if (context.state === "incomplete-mapping") {
-      for (const cilo of context.cilos.filter((item) => item.missingGraduateOutcomeIds.length > 0)) {
+      for (const cilo of context.cilos.filter(
+        (item) => item.missingGraduateOutcomeIds.length > 0
+      )) {
         program.mappingGaps.push({
           courseId: assignment.course_id,
           courseCode: assignment.course.code,
-          courseName: archivedLabel(assignment.course.title, !assignment.course.is_active, period.status),
+          courseName: archivedLabel(
+            assignment.course.title,
+            !assignment.course.is_active,
+            period.status
+          ),
           yearLevel: assignment.year_level,
           section: assignment.section,
           ciloId: cilo.id,
-          ciloStatement: archivedLabel(cilo.description, cilo.isArchived, period.status),
+            ciloStatement: cilo.description,
           ciloIsArchived: cilo.isArchived,
           reason: "incomplete-mapping",
           missingGraduateOutcomeIds: cilo.missingGraduateOutcomeIds,
@@ -295,16 +381,28 @@ export async function getDeanLearningOutcomes(
       period: periodSummary(period),
       risk,
       programs: [...programs.values()]
-        .sort((a, b) => (b.missingCiloContexts + b.incompleteMappingContexts) - (a.missingCiloContexts + a.incompleteMappingContexts) || a.name.localeCompare(b.name))
+        .sort(
+          (a, b) =>
+            b.missingCiloContexts +
+              b.incompleteMappingContexts -
+              (a.missingCiloContexts + a.incompleteMappingContexts) || a.name.localeCompare(b.name)
+        )
         .map((program) => ({
           ...program,
-          mappingGaps: program.mappingGaps.sort((a, b) => a.courseCode.localeCompare(b.courseCode) || a.yearLevel.localeCompare(b.yearLevel) || a.section.localeCompare(b.section)),
+          mappingGaps: program.mappingGaps.sort(
+            (a, b) =>
+              a.courseCode.localeCompare(b.courseCode) ||
+              a.yearLevel.localeCompare(b.yearLevel) ||
+              a.section.localeCompare(b.section)
+          ),
         })),
     },
   };
 }
 
-export async function getDeanEnrollments(periodId: string | undefined): Promise<DeanReadState<DeanEnrollmentsData>> {
+export async function getDeanEnrollments(
+  periodId: string | undefined
+): Promise<DeanReadState<DeanEnrollmentsData>> {
   const period = await requirePeriod(periodId, "active-or-completed");
   if (!period && periodId === undefined) return { state: "no-eligible-period" };
   if (periodId === undefined && period?.status === "ACTIVE") {
@@ -313,7 +411,8 @@ export async function getDeanEnrollments(periodId: string | undefined): Promise<
   if (!period) return { state: "no-eligible-period" };
   const includeArchived = period.status === "COMPLETED";
   const assignments = await assignmentRows(period.id, includeArchived);
-  if (assignments.length === 0) return { state: "ready", data: { period: periodSummary(period), programs: [] } };
+  if (assignments.length === 0)
+    return { state: "ready", data: { period: periodSummary(period), programs: [] } };
 
   const [programCounts, classCounts] = await Promise.all([
     prisma.studentEnrollment.groupBy({
@@ -327,13 +426,22 @@ export async function getDeanEnrollments(periodId: string | undefined): Promise<
       _count: { student_user_id: true },
     }),
   ]);
-  const countFor = (programId: string, yearLevel: string, section: string) => classCounts.find(
-    (count) => count.program_id === programId && count.year_level === yearLevel && count.section === section
-  )?._count.student_user_id ?? 0;
-  const programCountFor = (programId: string) => programCounts.find((count) => count.program_id === programId)?._count.student_user_id ?? 0;
+  const countFor = (programId: string, yearLevel: string, section: string) =>
+    classCounts.find(
+      (count) =>
+        count.program_id === programId &&
+        count.year_level === yearLevel &&
+        count.section === section
+    )?._count.student_user_id ?? 0;
+  const programCountFor = (programId: string) =>
+    programCounts.find((count) => count.program_id === programId)?._count.student_user_id ?? 0;
   const programs = new Map<string, DeanEnrollmentsData["programs"][number]>();
   for (const assignment of assignments) {
-    const enrolledStudentCount = countFor(assignment.program_id, assignment.year_level, assignment.section);
+    const enrolledStudentCount = countFor(
+      assignment.program_id,
+      assignment.year_level,
+      assignment.section
+    );
     const program = programs.get(assignment.program_id) ?? {
       id: assignment.program.id,
       name: archivedLabel(assignment.program.name, !assignment.program.is_active, period.status),
@@ -343,7 +451,11 @@ export async function getDeanEnrollments(periodId: string | undefined): Promise<
     program.classes.push({
       assignmentId: assignment.id,
       courseCode: assignment.course.code,
-      courseName: archivedLabel(assignment.course.title, !assignment.course.is_active, period.status),
+      courseName: archivedLabel(
+        assignment.course.title,
+        !assignment.course.is_active,
+        period.status
+      ),
       yearLevel: assignment.year_level,
       section: assignment.section,
       enrolledStudentCount,
@@ -372,35 +484,44 @@ export async function getDeanRoster(input: {
       id: input.assignmentId,
       term_instance_id: period.id,
       is_active: true,
-      ...(period.status === "ACTIVE" ? { course: { is_active: true }, program: { is_active: true } } : {}),
+      ...(period.status === "ACTIVE"
+        ? { course: { is_active: true }, program: { is_active: true } }
+        : {}),
     },
     select: {
       id: true,
       program_id: true,
       year_level: true,
       section: true,
-      course: { select: { code: true, title: true, is_active: true, course_scope: true, program_id: true } },
+      course: {
+        select: { code: true, title: true, is_active: true, course_scope: true, program_id: true },
+      },
       program: { select: { name: true, is_active: true } },
     },
   });
-  if (!assignment) throw new DeanReadModelNotFoundError("Course assignment is not in selected period");
-  if (assignment.course.course_scope === "PROGRAM_SPECIFIC" && assignment.course.program_id !== assignment.program_id) {
+  if (!assignment)
+    throw new DeanReadModelNotFoundError("Course assignment is not in selected period");
+  if (
+    assignment.course.course_scope === "PROGRAM_SPECIFIC" &&
+    assignment.course.program_id !== assignment.program_id
+  ) {
     throw new DeanReadModelNotFoundError("Course assignment is not in selected program");
   }
 
   const searchTerms = input.query?.split(/\s+/).filter(Boolean) ?? [];
-  const searchFilter: Prisma.StudentEnrollmentWhereInput = searchTerms.length > 0
-    ? {
-        AND: searchTerms.map((term) => ({
-          student: {
-            OR: [
-              { first_name: { contains: term, mode: "insensitive" } },
-              { last_name: { contains: term, mode: "insensitive" } },
-            ],
-          },
-        })),
-      }
-    : {};
+  const searchFilter: Prisma.StudentEnrollmentWhereInput =
+    searchTerms.length > 0
+      ? {
+          AND: searchTerms.map((term) => ({
+            student: {
+              OR: [
+                { first_name: { contains: term, mode: "insensitive" } },
+                { last_name: { contains: term, mode: "insensitive" } },
+              ],
+            },
+          })),
+        }
+      : {};
 
   const studentWhere: Prisma.StudentEnrollmentWhereInput = {
     term_instance_id: period.id,
@@ -415,7 +536,11 @@ export async function getDeanRoster(input: {
     prisma.studentEnrollment.findMany({
       where: studentWhere,
       select: { student: { select: { first_name: true, last_name: true } } },
-      orderBy: [{ student: { first_name: "asc" } }, { student: { last_name: "asc" } }, { student_user_id: "asc" }],
+      orderBy: [
+        { student: { first_name: "asc" } },
+        { student: { last_name: "asc" } },
+        { student_user_id: "asc" },
+      ],
       skip: (input.page - 1) * 25,
       take: 25,
     }),
@@ -426,12 +551,22 @@ export async function getDeanRoster(input: {
       assignment: {
         id: assignment.id,
         courseCode: assignment.course.code,
-        courseName: archivedLabel(assignment.course.title, !assignment.course.is_active, period.status),
-        programName: archivedLabel(assignment.program.name, !assignment.program.is_active, period.status),
+        courseName: archivedLabel(
+          assignment.course.title,
+          !assignment.course.is_active,
+          period.status
+        ),
+        programName: archivedLabel(
+          assignment.program.name,
+          !assignment.program.is_active,
+          period.status
+        ),
         yearLevel: assignment.year_level,
         section: assignment.section,
       },
-      students: students.map(({ student }) => ({ displayName: `${student.first_name} ${student.last_name}` })),
+      students: students.map(({ student }) => ({
+        displayName: `${student.first_name} ${student.last_name}`,
+      })),
       page: input.page,
       pageSize: 25,
       totalCount,
