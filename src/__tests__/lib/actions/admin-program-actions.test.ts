@@ -58,7 +58,7 @@ describe("Program lifecycle actions", () => {
 
     expect(deleteMock).toHaveBeenCalledWith({ id, confirmationCode: "BSCS", revision });
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/programs");
-    expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/programs");
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/academic-structure/programs");
     expect(result).toEqual({ success: true, data: { id } });
   });
 

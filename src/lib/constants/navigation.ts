@@ -22,6 +22,13 @@ export interface NavItem {
   badgeCount?: number;
 }
 
+export interface NavGroup {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  items: NavItem[];
+}
+
 const STUDENT_NAV: NavItem[] = [
   { name: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
   { name: "My Evaluations", href: "/student/evaluations", icon: FileText },
@@ -64,15 +71,42 @@ const PROGRAM_HEAD_NAV: NavItem[] = [
   { name: "Profile", href: "/program-head/profile", icon: UserCircle },
 ];
 
-const DEAN_NAV: NavItem[] = [
+const DEAN_PRIMARY_NAV: NavItem[] = [
   { name: "Dashboard", href: "/dean/dashboard", icon: LayoutDashboard },
-  { name: "Programs", href: "/dean/programs", icon: Building2 },
-  { name: "Courses", href: "/dean/courses", icon: BookOpen },
-  { name: "Course Assignments", href: "/dean/course-assignments", icon: UsersRound },
-  { name: "Tools", href: "/dean/instruments", icon: Layers3 },
-  { name: "Analytics", href: "/dean/analytics", icon: BarChart3 },
-  { name: "Reports", href: "/dean/reports", icon: FileText },
+  { name: "Structure", href: "/dean/academic-structure", icon: Building2 },
+  { name: "Oversight", href: "/dean/college-oversight", icon: Layers3 },
   { name: "Profile", href: "/dean/profile", icon: UserCircle },
+];
+
+const DEAN_NAV_GROUPS: NavGroup[] = [
+  {
+    name: "Academic Structure",
+    href: "/dean/academic-structure",
+    icon: Building2,
+    items: [
+      { name: "Programs", href: "/dean/academic-structure/programs", icon: Building2 },
+      { name: "Courses", href: "/dean/academic-structure/courses", icon: BookOpen },
+      {
+        name: "Course Assignments",
+        href: "/dean/academic-structure/course-assignments",
+        icon: UsersRound,
+      },
+      { name: "Instruments", href: "/dean/academic-structure/instruments", icon: Layers3 },
+    ],
+  },
+  {
+    name: "College Oversight",
+    href: "/dean/college-oversight",
+    icon: Layers3,
+    items: [
+      {
+        name: "Learning Outcomes",
+        href: "/dean/college-oversight/learning-outcomes",
+        icon: BookOpen,
+      },
+      { name: "Enrollments", href: "/dean/college-oversight/enrollments", icon: UsersRound },
+    ],
+  },
 ];
 
 const ALUMNI_NAV: NavItem[] = [
@@ -103,18 +137,18 @@ const ROLE_NAV_PRECEDENCE = [
   ROLES.STUDENT,
 ] as const;
 
-function resolveHighestNavRole(roles: Role[]) {
+export function getHighestNavRole(roles: Role[]) {
   return ROLE_NAV_PRECEDENCE.find((role) => roles.includes(role)) ?? null;
 }
 
 export function getMainNavByRoles(roles: Role[]): NavItem[] {
-  const highestRole = resolveHighestNavRole(roles);
+  const highestRole = getHighestNavRole(roles);
 
   switch (highestRole) {
     case ROLES.SECRETARY:
       return SECRETARY_NAV;
     case ROLES.DEAN:
-      return DEAN_NAV;
+      return DEAN_PRIMARY_NAV;
     case ROLES.PROGRAM_HEAD:
       return PROGRAM_HEAD_NAV;
     case ROLES.FACULTY:
@@ -131,13 +165,13 @@ export function getMainNavByRoles(roles: Role[]): NavItem[] {
 }
 
 export function getMobileNavByRoles(roles: Role[]): NavItem[] {
-  const highestRole = resolveHighestNavRole(roles);
+  const highestRole = getHighestNavRole(roles);
 
   switch (highestRole) {
     case ROLES.SECRETARY:
       return SECRETARY_NAV;
     case ROLES.DEAN:
-      return DEAN_NAV;
+      return DEAN_PRIMARY_NAV;
     case ROLES.PROGRAM_HEAD:
       return PROGRAM_HEAD_NAV;
     case ROLES.FACULTY:
@@ -153,26 +187,60 @@ export function getMobileNavByRoles(roles: Role[]): NavItem[] {
   }
 }
 
+export function getDeanNavGroups(): NavGroup[] {
+  return DEAN_NAV_GROUPS;
+}
+
+export function getDeanPrimaryNav(): NavItem[] {
+  return DEAN_PRIMARY_NAV;
+}
+
+export function getDeanStandaloneNav(): NavItem[] {
+  return DEAN_PRIMARY_NAV.filter(
+    (item) => item.href === "/dean/dashboard" || item.href === "/dean/profile"
+  );
+}
+
+export function isNavItemActive(pathname: string, href: string): boolean {
+  const normalizedPath = pathname.replace(/\/$/, "") || "/";
+  const normalizedHref = href.replace(/\/$/, "") || "/";
+  return normalizedPath === normalizedHref || normalizedPath.startsWith(`${normalizedHref}/`);
+}
+
+export function getDeanActiveGroup(pathname: string): NavGroup | null {
+  return getDeanNavGroups().find((group) => isNavItemActive(pathname, group.href)) ?? null;
+}
+
+export function getDeanActiveItem(pathname: string): NavItem | null {
+  const items = [...getDeanPrimaryNav(), ...getDeanNavGroups().flatMap((group) => group.items)];
+  return (
+    items
+      .filter((item) => isNavItemActive(pathname, item.href))
+      .sort((left, right) => right.href.length - left.href.length)[0] ?? null
+  );
+}
+
 export function getSecondaryNavByRoles(roles: Role[]): NavItem[] {
   void roles;
   return [];
 }
 
-export type MobileNavMode = "bottom-nav" | "hamburger";
+export type MobileNavMode = "bottom-nav" | "hamburger" | "dean-tabs";
 
 /**
  * Admin, Dean, Program Head, and Faculty use a hamburger sidebar on mobile.
  * Student, Alumni, and Industry Partner use a bottom navigation bar.
  */
 export function getMobileNavMode(roles: Role[]): MobileNavMode {
-  const highestRole = resolveHighestNavRole(roles);
+  const highestRole = getHighestNavRole(roles);
 
   switch (highestRole) {
     case ROLES.SECRETARY:
-    case ROLES.DEAN:
     case ROLES.PROGRAM_HEAD:
     case ROLES.FACULTY:
       return "hamburger";
+    case ROLES.DEAN:
+      return "dean-tabs";
     default:
       return "bottom-nav";
   }

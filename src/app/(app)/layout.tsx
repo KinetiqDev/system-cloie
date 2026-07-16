@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <SessionGuard>
-      <AppShell user={user} roles={session?.roles}>
+      <AppShell user={user} roles={session?.roles} activeRole={session?.activeRole}>
         {children}
       </AppShell>
     </SessionGuard>
