@@ -95,6 +95,7 @@ export function ManagementCoursesList({
   programs,
   basePath = "/secretary/courses",
 }: ManagementCoursesListProps) {
+  const showEvaluationCount = !basePath.startsWith("/dean/");
   // ---- Filter state -------------------------------------------------------
   const [scopeFilter, setScopeFilter] = useState<string>("__all__");
   const [programFilter, setProgramFilter] = useState<string>("__all__");
@@ -323,7 +324,9 @@ export function ManagementCoursesList({
             <TableHead className="hidden md:table-cell">Program</TableHead>
             <TableHead className="hidden md:table-cell">Major</TableHead>
             <TableHead className="hidden md:table-cell text-right">CILOs</TableHead>
-            <TableHead className="hidden md:table-cell text-right">Evaluations</TableHead>
+            {showEvaluationCount && (
+              <TableHead className="hidden text-right md:table-cell">Evaluations</TableHead>
+            )}
             <TableHead className="hidden md:table-cell">Status</TableHead>
             <TableHead className="w-12 text-right">Actions</TableHead>
           </TableRow>
@@ -331,7 +334,10 @@ export function ManagementCoursesList({
         <TableBody>
           {paginatedCourses.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
+              <TableCell
+                colSpan={showEvaluationCount ? 9 : 8}
+                className="text-muted-foreground h-24 text-center"
+              >
                 No courses found.
               </TableCell>
             </TableRow>
@@ -370,7 +376,11 @@ export function ManagementCoursesList({
                 <TableCell className="hidden md:table-cell">{course.programCode ?? "—"}</TableCell>
                 <TableCell className="hidden md:table-cell">{course.majorName ?? "—"}</TableCell>
                 <TableCell className="hidden md:table-cell text-right">{course.ciloCount}</TableCell>
-                <TableCell className="hidden md:table-cell text-right">{course.evaluationCount}</TableCell>
+              {showEvaluationCount && (
+                <TableCell className="hidden text-right md:table-cell">
+                  {course.evaluationCount}
+                </TableCell>
+              )}
                 <TableCell className="hidden md:table-cell">
                   <Badge variant={course.isActive ? "default" : "secondary"} className={!course.isActive ? "bg-amber-100 text-amber-900 hover:bg-amber-200" : ""}>
                     {course.isActive ? "Active" : "Inactive"}

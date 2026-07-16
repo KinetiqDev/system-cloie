@@ -19,7 +19,7 @@ import { transitionPeriodStatus } from "./manage-academic-period-lifecycle";
 export async function verifySecretaryAccess(): Promise<ServiceResult<{ userId: string }>> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.SECRETARY)) {
+  if (!session || session.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Secretary access required" };
   }
 
@@ -107,6 +107,10 @@ export async function updateTermInstance(
 
   if (existing.school_year.is_archived) {
     return { success: false, error: "Cannot modify terms of an archived school year" };
+  }
+
+  if (existing.status === "COMPLETED" || existing.status === "CANCELLED") {
+    return { success: false, error: "Completed and cancelled periods are immutable" };
   }
 
   const updated = await prisma.academicTermInstance.update({

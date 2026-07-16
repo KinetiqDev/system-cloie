@@ -75,6 +75,37 @@ describe("readPeriodReadiness", () => {
     expect(readiness.contexts.map((context) => context.programId)).toEqual(["program-1", "program-2"]);
   });
 
+  it("accepts General Education mappings to an active GO from another Program", async () => {
+    vi.mocked(prisma.academicTermInstance.findUnique)
+      .mockResolvedValueOnce({ status: "ACTIVE" } as never)
+      .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([
+      assignment({
+        course: {
+          ...assignment().course,
+          course_scope: "GENERAL_EDUCATION",
+          program_id: null,
+          cilos: [{
+            id: "cilo-1",
+            description: "Apply knowledge",
+            is_active: true,
+            cilo_mappings: [{ go: { id: "go-2", program_id: "program-2", is_active: true } }],
+          }],
+        },
+        program: {
+          id: "program-1",
+          name: "Program A",
+          is_active: true,
+          gos: [{ id: "go-1", code: "GO1", description: "Goal", is_active: true, order: 1 }],
+        },
+      }),
+    ] as never);
+
+    const readiness = await readPeriodReadiness("period-1");
+
+    expect(readiness.contexts[0]).toMatchObject({ state: "ready", affectedCiloIds: [] });
+  });
+
   it("reads completed readiness only from its immutable snapshot", async () => {
     const snapshot = { contexts: [{ courseId: "historical-course" }], program_totals: [{ programId: "program-1" }] };
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({ status: "COMPLETED" } as never);

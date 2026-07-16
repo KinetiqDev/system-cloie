@@ -117,7 +117,7 @@ export function SchoolYearDetailClientPage({
                       {formatDateRange(term.startDate, term.endDate)}
                     </TableCell>
                     <TableCell>
-                      {!term.status === "ACTIVE" && !schoolYear.isArchived && (
+                      {term.status === "PLANNED" && !schoolYear.isArchived && (
                         <Button
                           variant="ghost"
                           size="sm"

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
@@ -51,6 +51,12 @@ export default async function DeanLearningOutcomesPage({
         }
       />
     );
+  if (!params.period && activePeriodId) {
+    const query = new URLSearchParams({ period: activePeriodId });
+    if (risk) query.set("risk", risk);
+    if (params.program) query.set("program", params.program);
+    redirect(`/dean/college-oversight/learning-outcomes?${query}`);
+  }
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       selectedPeriodId

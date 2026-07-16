@@ -141,11 +141,11 @@ async function setCiloActiveAction(
   return { success: true };
 }
 
-export function archiveCiloForCourseAction(courseId: string, ciloId: string) {
+export async function archiveCiloForCourseAction(courseId: string, ciloId: string) {
   return setCiloActiveAction(courseId, ciloId, false);
 }
 
-export function restoreCiloForCourseAction(courseId: string, ciloId: string) {
+export async function restoreCiloForCourseAction(courseId: string, ciloId: string) {
   return setCiloActiveAction(courseId, ciloId, true);
 }
 

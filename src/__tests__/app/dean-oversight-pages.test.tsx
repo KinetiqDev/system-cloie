@@ -222,13 +222,20 @@ describe("Dean oversight pages", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("uses active period when URL omits period", async () => {
-    render(await DeanLearningOutcomesPage({ searchParams: Promise.resolve({}) }));
-    expect(fetchDeanReadMock).toHaveBeenLastCalledWith(
-      expect.any(Function),
-      `/api/dean/learning-outcomes?period=${PERIOD_ID}`
+  it("hides evaluation surfaces from Learning Outcomes", async () => {
+    render(await DeanLearningOutcomesPage({ searchParams: Promise.resolve({ period: PERIOD_ID }) }));
+
+    expect(screen.queryByText(/evaluation|analytics|reports|export/i)).not.toBeInTheDocument();
+  });
+
+  it("redirects active period into URL when period is omitted", async () => {
+    await expect(DeanLearningOutcomesPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      "NEXT_REDIRECT"
     );
-    expect(screen.getByRole("combobox", { name: "Academic Period" })).toHaveValue(PERIOD_ID);
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/dean/college-oversight/learning-outcomes?period=${PERIOD_ID}`
+    );
+    expect(fetchDeanReadMock).toHaveBeenCalledTimes(1);
   });
 
   it("renders explicit no-eligible-period state", async () => {

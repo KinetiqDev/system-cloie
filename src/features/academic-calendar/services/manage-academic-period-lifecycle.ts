@@ -40,7 +40,7 @@ export async function transitionPeriodStatus(
 ): Promise<ServiceResult<{ id: string; status: AcademicPeriodStatus }>> {
   const session = await resolveAuthSession();
 
-  if (!session?.roles.includes(ROLES.SECRETARY)) {
+  if (session?.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Secretary access required" };
   }
 

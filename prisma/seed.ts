@@ -19,6 +19,7 @@ import {
   YearLevel,
 } from "@prisma/client";
 import { prisma } from "../src/lib/db/prisma";
+import { persistPeriodReadinessSnapshot } from "../src/features/academic-calendar/services/read-period-readiness";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Types (mirrors src/features/instruments/types.ts for seed-only usage)
@@ -1366,6 +1367,18 @@ async function seedAcademicCalendar() {
   await prisma.studentEnrollment.deleteMany({
     where: { term_instance_id: { in: managedTermInstanceIds } },
   });
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE "academic_period_readiness_snapshots" DISABLE TRIGGER "academic_period_readiness_snapshots_immutable"'
+  );
+  try {
+    await prisma.academicPeriodReadinessSnapshot.deleteMany({
+      where: { period_id: { in: managedTermInstanceIds } },
+    });
+  } finally {
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "academic_period_readiness_snapshots" ENABLE TRIGGER "academic_period_readiness_snapshots_immutable"'
+    );
+  }
   await prisma.academicTermInstance.deleteMany({
     where: { id: { in: managedTermInstanceIds } },
   });
@@ -3308,6 +3321,7 @@ async function main() {
 
   console.log("[C] Outcomes (GOs, CILOs, mappings)...");
   const { ciloMap } = await seedOutcomes(pMap, cMap);
+  await persistPeriodReadinessSnapshot(termInstances.ti2026First.id);
 
   console.log("[D] Instrument templates...");
   await seedTemplates();

@@ -60,6 +60,17 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
     if (!r.success) expect(r.error).toMatch(/secretary/i);
   });
 
+  it("rejects a Secretary role that is not active", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ roles: [ROLES.FACULTY, ROLES.SECRETARY] })
+    );
+
+    const r = await transitionPeriodStatus("p-1", "ACTIVE");
+
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/secretary/i);
+  });
+
   it("returns error when period not found", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue(null);

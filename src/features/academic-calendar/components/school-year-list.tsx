@@ -186,7 +186,7 @@ function TermInstanceRow({ term, isArchived, onSetActive }: TermInstanceRowProps
         {formatDateRange(term.startDate, term.endDate)}
       </TableCell>
       <TableCell>
-        {!term.status === "ACTIVE" && !isArchived && (
+        {term.status !== "ACTIVE" && !isArchived && (
           <Button variant="ghost" size="sm" onClick={onSetActive}>
             Set Active
           </Button>

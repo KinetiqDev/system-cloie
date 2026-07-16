@@ -405,7 +405,7 @@ export async function getDeanEnrollments(
 ): Promise<DeanReadState<DeanEnrollmentsData>> {
   const period = await requirePeriod(periodId, "active-or-completed");
   if (!period && periodId === undefined) return { state: "no-eligible-period" };
-  if (periodId === undefined && period?.status === "ACTIVE") {
+  if (periodId === undefined && period) {
     throw new DeanReadModelBadRequestError("period is required.");
   }
   if (!period) return { state: "no-eligible-period" };

@@ -195,4 +195,17 @@ describe("ManagementCoursesList", () => {
     const editLink = await screen.findByText("Edit");
     expect(editLink).toHaveAttribute("href", "/dean/courses/course-1/edit");
   });
+
+  test("hides evaluation counts from Dean course oversight", () => {
+    render(
+      <ManagementCoursesList
+        courses={mockCourses}
+        kpi={mockKPI}
+        programs={mockPrograms}
+        basePath="/dean/academic-structure/courses"
+      />
+    );
+
+    expect(screen.queryByText("Evaluations")).not.toBeInTheDocument();
+  });
 });

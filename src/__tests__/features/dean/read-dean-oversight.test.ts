@@ -60,27 +60,21 @@ describe("Dean oversight read model", () => {
     }));
   });
 
-  it("defaults enrollments to latest completed period when no active period exists", async () => {
+  it("requires an explicit period when only a completed period exists", async () => {
     prismaMock.academicTermInstance.findFirst
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(period("COMPLETED"));
     prismaMock.courseAssignment.findMany.mockResolvedValue([]);
 
-    await expect(getDeanEnrollments(undefined)).resolves.toMatchObject({
-      state: "ready",
-      data: { period: { id: PERIOD_ID, status: "COMPLETED" }, programs: [] },
-    });
+    await expect(getDeanEnrollments(undefined)).rejects.toThrow("period is required");
   });
 
-  it("falls back to newest completed period when no active period exists", async () => {
+  it("does not silently select a completed period for an omitted URL period", async () => {
     prismaMock.academicTermInstance.findFirst
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(period("COMPLETED"));
 
-    await expect(getDeanEnrollments(undefined)).resolves.toMatchObject({
-      state: "ready",
-      data: { period: { status: "COMPLETED" }, programs: [] },
-    });
+    await expect(getDeanEnrollments(undefined)).rejects.toThrow("period is required");
     expect(prismaMock.academicTermInstance.findFirst).toHaveBeenNthCalledWith(2, expect.objectContaining({
       where: { status: "COMPLETED" },
       orderBy: [{ end_date: "desc" }, { created_at: "desc" }],

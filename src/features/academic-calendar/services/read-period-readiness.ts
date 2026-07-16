@@ -103,12 +103,16 @@ function buildContexts(assignments: ContextSource[], includeArchived: boolean): 
     const activeCilos = first.course.cilos.filter((cilo) => cilo.is_active);
     const cilos = includedCilos.map((cilo) => {
       const mapped = cilo.cilo_mappings.filter(
-        ({ go }) => go.program_id === first.program_id && go.is_active
+        ({ go }) =>
+          go.is_active &&
+          (first.course.course_scope === "GENERAL_EDUCATION" || go.program_id === first.program_id)
       );
       const mappedIds = new Set(mapped.map(({ go }) => go.id));
-      const missingGraduateOutcomeIds = first.program.gos
-        .filter((go) => go.is_active && !mappedIds.has(go.id))
-        .map((go) => go.id);
+      const missingGraduateOutcomeIds = first.course.course_scope === "GENERAL_EDUCATION"
+        ? []
+        : first.program.gos
+            .filter((go) => go.is_active && !mappedIds.has(go.id))
+            .map((go) => go.id);
       return {
         id: cilo.id,
         description: cilo.description,
@@ -117,7 +121,11 @@ function buildContexts(assignments: ContextSource[], includeArchived: boolean): 
       };
     });
     const hasIncompleteMapping = activeCilos.some((cilo) =>
-      !cilo.cilo_mappings.some(({ go }) => go.program_id === first.program_id && go.is_active)
+      !cilo.cilo_mappings.some(
+        ({ go }) =>
+          go.is_active &&
+          (first.course.course_scope === "GENERAL_EDUCATION" || go.program_id === first.program_id)
+      )
     );
     const state: ReadinessState = activeCilos.length === 0
       ? "missing-cilos"
@@ -125,7 +133,14 @@ function buildContexts(assignments: ContextSource[], includeArchived: boolean): 
         ? "incomplete-mapping"
         : "ready";
     const affectedCiloIds = state === "missing-cilos" ? [] : activeCilos
-      .filter((cilo) => !cilo.cilo_mappings.some(({ go }) => go.program_id === first.program_id && go.is_active))
+      .filter(
+        (cilo) =>
+          !cilo.cilo_mappings.some(
+            ({ go }) =>
+              go.is_active &&
+              (first.course.course_scope === "GENERAL_EDUCATION" || go.program_id === first.program_id)
+          )
+      )
       .map((cilo) => cilo.id);
     const affectedGraduateOutcomeIds = [...new Set(cilos.flatMap((cilo) => cilo.missingGraduateOutcomeIds))];
 

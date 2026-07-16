@@ -212,11 +212,13 @@ describe("Dean oversight JSON routes", () => {
     expect(await json(empty)).toEqual({ state: "no-eligible-period" });
   });
 
-  it("passes missing enrollment period to adapter for active-period grammar", async () => {
+  it("rejects missing enrollment period when eligible periods exist", async () => {
+    const { DeanReadModelBadRequestError } = await import("@/features/dean/services/read-dean-oversight");
+    getEnrollmentsMock.mockRejectedValue(new DeanReadModelBadRequestError("period is required."));
     const response = await getEnrollments(request("/api/dean/enrollments"));
 
-    expect(response.status).toBe(200);
-    expect(getEnrollmentsMock).toHaveBeenCalledWith(undefined);
+    expect(response.status).toBe(400);
+    expect(await json(response)).toEqual({ error: "period is required." });
   });
 
   it("validates roster query trimming, length, page, and fixed page size", async () => {

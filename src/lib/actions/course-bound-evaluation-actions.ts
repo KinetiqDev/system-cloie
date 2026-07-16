@@ -43,7 +43,6 @@ export async function publishCourseBoundEvaluationAction(
   if (result.success) {
     revalidatePath("/faculty/tools");
     revalidatePath("/program-head/cilo-reviews");
-    revalidatePath("/dean/cilo-reviews");
   }
 
   return result;
