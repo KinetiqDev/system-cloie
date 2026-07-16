@@ -531,20 +531,20 @@ export async function getDeanRoster(input: {
     is_active: true,
     ...searchFilter,
   };
-  const [totalCount, students] = await Promise.all([
-    prisma.studentEnrollment.count({ where: studentWhere }),
-    prisma.studentEnrollment.findMany({
-      where: studentWhere,
-      select: { student: { select: { first_name: true, last_name: true } } },
-      orderBy: [
-        { student: { first_name: "asc" } },
-        { student: { last_name: "asc" } },
-        { student_user_id: "asc" },
-      ],
-      skip: (input.page - 1) * 25,
-      take: 25,
-    }),
-  ]);
+  const totalCount = await prisma.studentEnrollment.count({ where: studentWhere });
+  const totalPages = Math.max(1, Math.ceil(totalCount / 25));
+  const page = Math.min(input.page, Math.max(1, totalPages));
+  const students = await prisma.studentEnrollment.findMany({
+    where: studentWhere,
+    select: { student: { select: { first_name: true, last_name: true } } },
+    orderBy: [
+      { student: { first_name: "asc" } },
+      { student: { last_name: "asc" } },
+      { student_user_id: "asc" },
+    ],
+    skip: (page - 1) * 25,
+    take: 25,
+  });
   return {
     state: "ready",
     data: {
@@ -567,10 +567,10 @@ export async function getDeanRoster(input: {
       students: students.map(({ student }) => ({
         displayName: `${student.first_name} ${student.last_name}`,
       })),
-      page: input.page,
+      page,
       pageSize: 25,
       totalCount,
-      totalPages: Math.ceil(totalCount / 25),
+      totalPages,
     },
   };
 }

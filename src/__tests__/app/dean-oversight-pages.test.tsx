@@ -13,8 +13,13 @@ const notFoundMock = vi.hoisted(() =>
     throw new Error("NOT_FOUND");
   })
 );
+const redirectMock = vi.hoisted(() =>
+  vi.fn(() => {
+    throw new Error("NEXT_REDIRECT");
+  })
+);
 
-vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
+vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
 
 vi.mock("@/features/dean/services/fetch-dean-read", () => ({
   fetchDeanRead: fetchDeanReadMock,
@@ -274,27 +279,28 @@ describe("Dean oversight pages", () => {
       return Promise.resolve({ state: "ready", data: { ...enrollmentData, period: completed } });
     });
 
-    render(await DeanEnrollmentsPage({ searchParams: Promise.resolve({}) }));
-
-    expect(fetchDeanReadMock).toHaveBeenLastCalledWith(
-      expect.any(Function),
-      `/api/dean/enrollments?period=${completed.id}`
+    await expect(DeanEnrollmentsPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      "NEXT_REDIRECT"
     );
-    expect(screen.getByText("Archived view")).toBeInTheDocument();
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/dean/college-oversight/enrollments?period=${completed.id}`
+    );
+    expect(fetchDeanReadMock).toHaveBeenCalledTimes(1);
   });
 
-  it("uses active enrollment period when URL omits period", async () => {
+  it("redirects omitted enrollment period to active period URL", async () => {
     fetchDeanReadMock.mockImplementation((_route: unknown, path: string) => {
       if (path === "/api/dean/eligible-periods") return Promise.resolve({ periods: [period] });
       return Promise.resolve({ state: "ready", data: enrollmentData });
     });
 
-    render(await DeanEnrollmentsPage({ searchParams: Promise.resolve({}) }));
-
-    expect(fetchDeanReadMock).toHaveBeenLastCalledWith(
-      expect.any(Function),
-      `/api/dean/enrollments?period=${PERIOD_ID}`
+    await expect(DeanEnrollmentsPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      "NEXT_REDIRECT"
     );
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/dean/college-oversight/enrollments?period=${PERIOD_ID}`
+    );
+    expect(fetchDeanReadMock).toHaveBeenCalledTimes(1);
   });
 
   it("renders explicit no-eligible-period enrollment state", async () => {
@@ -365,5 +371,27 @@ describe("Dean oversight pages", () => {
 
     expect(screen.getByText("Select a class roster")).toBeInTheDocument();
     expect(fetchDeanReadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("redirects out-of-range roster pages to last valid page", async () => {
+    fetchDeanReadMock.mockImplementation((_route: unknown, path: string) => {
+      if (path === "/api/dean/eligible-periods") return Promise.resolve({ periods: [period] });
+      return Promise.resolve({ state: "ready", data: { ...rosterData, page: 2 } });
+    });
+
+    await expect(
+      DeanEnrollmentRosterPage({
+        searchParams: Promise.resolve({
+          period: PERIOD_ID,
+          assignment: ASSIGNMENT_ID,
+          query: "Student",
+          page: "999",
+        }),
+      })
+    ).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/dean/college-oversight/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}&page=2&query=Student`
+    );
   });
 });

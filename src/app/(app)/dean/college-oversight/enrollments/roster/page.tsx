@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,6 +76,15 @@ export default async function DeanEnrollmentRosterPage({
   }
 
   const { data } = result;
+  if (data.page !== page) {
+    const canonicalQuery = new URLSearchParams({
+      period,
+      assignment,
+      page: String(data.page),
+    });
+    if (query) canonicalQuery.set("query", query);
+    redirect(`/dean/college-oversight/enrollments/roster?${canonicalQuery}`);
+  }
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">

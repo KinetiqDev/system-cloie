@@ -161,14 +161,14 @@ describe("Dean oversight read model", () => {
           section: "MORNING",
         },
         students: [{ displayName: "Ada Lovelace" }],
-        page: 2,
+        page: 1,
         pageSize: 25,
         totalCount: 1,
         totalPages: 1,
       },
     });
     expect(prismaMock.studentEnrollment.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      skip: 25,
+      skip: 0,
       take: 25,
       where: expect.objectContaining({
         term_instance_id: PERIOD_ID,
@@ -180,5 +180,23 @@ describe("Dean oversight read model", () => {
       orderBy: [{ student: { first_name: "asc" } }, { student: { last_name: "asc" } }, { student_user_id: "asc" }],
     }));
     expect(JSON.stringify(result)).not.toMatch(/studentId|email|enrollmentId|source|accountId/i);
+  });
+
+  it("clamps roster pages before calculating Prisma offset", async () => {
+    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
+    prismaMock.courseAssignment.findFirst.mockResolvedValue(assignment());
+    prismaMock.studentEnrollment.count.mockResolvedValue(26);
+    prismaMock.studentEnrollment.findMany.mockResolvedValue([{ student: { first_name: "Ada", last_name: "Lovelace" } }]);
+
+    const result = await getDeanRoster({
+      periodId: PERIOD_ID,
+      assignmentId: ASSIGNMENT_ID,
+      page: Number.MAX_SAFE_INTEGER,
+    });
+
+    expect(result).toMatchObject({ state: "ready", data: { page: 2, totalPages: 2 } });
+    expect(prismaMock.studentEnrollment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 25, take: 25 })
+    );
   });
 });

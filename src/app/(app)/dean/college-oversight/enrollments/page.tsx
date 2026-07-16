@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +40,9 @@ export default async function DeanEnrollmentsPage({
         message="No active or completed Academic Period is available for enrollment oversight."
       />
     );
+  }
+  if (!parsedParams.data.period) {
+    redirect(`/dean/college-oversight/enrollments?period=${encodeURIComponent(selectedPeriodId)}`);
   }
   let result: DeanReadState<DeanEnrollmentsData>;
   try {
@@ -83,7 +86,7 @@ export default async function DeanEnrollmentsPage({
         {data.programs.length === 0 ? (
           <Card>
             <CardContent className="text-text-secondary py-6 text-sm">
-              No active Course and class enrollment records in this period.
+              No Course and class enrollment records in this period.
             </CardContent>
           </Card>
         ) : (
