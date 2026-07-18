@@ -34,7 +34,7 @@ CLOIE is a **college-level, multi-program academic evaluation platform** that su
 CLOIE is intended to support multiple academic programs, their courses, faculty members, academic leaders, and stakeholder groups within Assumption College of Davao.
 
 CLOIE shall provide **role-specific portals and dashboards** for:
-- System Administrator
+- Secretary
 - Program Head
 - Faculty Member
 - Student
@@ -44,9 +44,9 @@ CLOIE shall provide **role-specific portals and dashboards** for:
 
 The **Student portal** shall be shared by regular students and graduating students. Graduating-student-specific instruments, such as the **Graduating Student Exit Survey**, shall be delivered through the Student role based on academic eligibility and assignment rather than through a separate portal role.
 
-The **College Dean portal** and **Program Head portal** shall follow the same general portal capabilities and operational access pattern. The primary difference shall be scope of visibility:
-- the **Program Head** shall operate within the assigned program scope
-- the **College Dean** shall access analytics and reports across all college programs, with filtering and drill-down into specific programs
+The **College Dean portal** and **Program Head portal** are dedicated role-owned portals with separate routes and distinct access scopes. The primary difference is:
+- the **Program Head** shall operate within the assigned program scope with full write/authoring access
+- the **College Dean** shall access analytics and records across all college programs in a read-only oversight capacity, with filtering and drill-down into specific programs
 
 For the **Post-Term CILO Evaluation Tool**, CLOIE shall use a **course-bound evaluation form model** in which a faculty member creates a **derived course-bound form instance** from an authorized template by selecting the academic/course context, including **Program**, **Major if applicable**, **Semester**, **Term**, and **Course** from the valid scoped course catalog, then encoding the course’s CILOs, configuring allowed editable form content, setting activation and deadline values, previewing the student-facing form, and publishing it.
 
@@ -153,7 +153,7 @@ The software is intended to:
 11. support **installable access** through PWA-compatible behavior on supported Android, iOS, and desktop platforms
 12. ensure device-specific interaction quality for forms, dashboards, and administrative workflows
 13. support the governed addition of new evaluation tools and the controlled modification of existing ones through template/version workflows
-14. support a shared academic-leadership portal model in which **Program Heads** and the **College Dean** use the same general reporting, monitoring, and evaluation-management capabilities, differing primarily in academic scope of visibility
+14. support role-owned portals for **Program Heads** and the **College Dean** with distinct access scopes: Program Heads manage within assigned program; Dean has college-wide read-only oversight with program filtering
 15. support student-role-based delivery of graduating-student-specific tools through academic eligibility rather than a separate portal role
 16. restrict the supported question model in current scope to **Likert-scale** and **guided open-ended** question types
 17. support predefined suggested responses for guided open-ended questions and respondent-side click-to-populate behavior with editable final text
@@ -180,14 +180,14 @@ At a high level, CLOIE provides:
 
 ### 2.4 User Classes and Characteristics
 
-#### 2.4.1 System Administrator
-Administrative user responsible for configuration and governance of the platform, including users, roles, programs, majors, program catalog details, course catalog, institutional instruments, core records, and traceable system configuration. This role may also manage centrally governed availability and respondent assignment settings for non-course-bound stakeholder tools.
+#### 2.4.1 Secretary
+Administrative user responsible for configuration and governance of the platform, including users, roles, programs, majors, program catalog details, course catalog, institutional instruments, core records, and traceable system configuration. The Secretary holds explicit Secretary-scoped permissions that include administrative equivalents of Program Head operations where institutional policy requires — this is a defined role capability, not impersonation or role delegation. The Secretary also creates complete user accounts for all staff and stakeholder roles (faculty, program heads, deans, industry partners) and may update student academic context. **ICTC** handles technical maintenance only and does not perform user administration.
 
 #### 2.4.2 College Dean
-Academic-leadership user who has the same general portal capabilities and operational access pattern as the Program Head. The College Dean may review outcomes, governed stakeholder-tool templates, deployment context, analytics, reports, dashboards, and evidence outputs across all college programs, with filtering and drill-down into specific programs. The dean does not automatically inherit administrator privileges.
+Academic-leadership user with college-wide read-only oversight access. The College Dean may view outcomes, governed stakeholder-tool deployments, analytics, reports, dashboards, and evidence outputs across all college programs, with filtering and drill-down into specific programs. The Dean does not hold Program Head authoring or write permissions and does not automatically inherit administrator privileges. The Dean portal is a dedicated role-owned portal, not a copy of the Program Head portal.
 
 #### 2.4.3 Program Head
-Academic-leadership user who is assigned to a specific program scope and has the same general portal capabilities and operational access pattern as the College Dean, but limited to the assigned program. This role may review program outcomes, author and manage program-level templates for non-course-bound stakeholder tools, configure deployment settings within program scope, manage the course catalog within assigned program and valid major scope, control whether selected templates are available for faculty use, and review program-scoped analytics and reports.
+Academic-leadership user who is assigned to a specific program scope. This role may review program outcomes, author and manage program-level templates for non-course-bound stakeholder tools, configure deployment settings within program scope, manage program-specific and major-specific course catalog entries within assigned program scope, control whether selected templates are available for faculty use, and review program-scoped analytics and reports. **General Education (GE) course assignments are managed by the Secretary or Dean; Program Heads may view GE courses but do not manage GE catalog assignments.**
 
 #### 2.4.4 Faculty Member
 Academic user who encodes and manages CILOs, maps course outcomes where applicable to Graduate Outcomes, creates and publishes **course-bound Post-Term CILO Evaluation Tool** instances, and reviews summarized course-level results. Where faculty-accessible program templates are supported, a faculty member may create a new evaluation tool only from templates explicitly exposed for faculty use.
@@ -195,9 +195,6 @@ Academic user who encodes and manages CILOs, maps course outcomes where applicab
 For the Post-Term CILO Evaluation Tool, the faculty member shall create a **derived editable course-bound form instance** from an authorized template by selecting the valid academic context, including **Program**, **Major if applicable**, **Semester**, **Term**, and **Course** from the scoped course catalog, then encoding or updating the course-specific CILOs and other allowed configurable fields before publication.
 
 A faculty member may be affiliated with one or more programs.
-
-#### 2.4.4 Faculty Member
-Academic user who encodes and manages CILOs, maps course outcomes where applicable, creates and publishes **course-bound Post-Term CILO Evaluation Tool** instances, and reviews summarized course-level results. Where faculty-accessible program templates are supported, a faculty member may create a new evaluation tool only from templates explicitly exposed for faculty use. A faculty member may be affiliated with one or more programs.
 
 #### 2.4.5 Student
 Internal respondent who signs up or logs in through the approved access model, views only assigned evaluation forms relevant to academic context, submits responses, and may review submitted answers in read-only mode where permitted. This role includes graduating students when they qualify for graduating-student-targeted instruments based on academic status, year level, or assigned eligibility.
@@ -345,7 +342,7 @@ For the other stakeholder tools, the evaluation context may be managed centrally
 25. Quantitative and qualitative outputs shall be exposed only according to role, program scope, and confidentiality rules.
 26. Program Heads shall only access templates, analytics, reports, governed evaluation-management records, and course-catalog records within assigned program scope and valid major scope.
 27. General education courses shall remain shared academic entities even when they are visible or selectable across multiple program contexts.
-28. The College Dean shall have the same general review, monitoring, reporting, and governed evaluation-management capabilities as the Program Head, except that the dean’s analytics and report visibility shall span all college programs.
+28. The College Dean shall have college-wide read-only oversight access for analytics, outcome reviews, and reports across all programs; the Dean does not inherit Program Head write/authoring capabilities.
 29. The College Dean may filter, compare, and drill down into specific program views without being restricted to a single assigned program scope.
 30. Reports shall support review and evidence generation, but final academic decisions remain outside the system.
 31. Submitted responses shall be protected from unintended modification after final confirmation.
@@ -381,7 +378,7 @@ The user interface shall meet these general requirements:
 3. The system shall provide **touch-friendly controls** and spacing for mobile and tablet users.
 4. The system shall provide **dashboard-oriented layouts** for desktop-oriented management and reporting tasks.
 5. The system shall provide header, navigation, and role-appropriate sidebar or equivalent navigation structure for major authenticated portals.
-6. The **Program Head portal** and **College Dean portal** shall follow the same general portal structure, navigation pattern, and major feature set, with the primary difference being scope of visible analytics, reports, and governed evaluation-management records.
+6. The **Program Head portal** and **College Dean portal** are dedicated role-owned portals with separate routes; Program Head has program-scoped write access; Dean has college-wide read-only oversight access.
 7. The **Student portal** shall be shared by regular students and graduating students, with graduating-student-specific forms shown through eligibility and assignment rules rather than a separate portal.
 8. The system shall provide preview and confirmation steps for critical workflows such as evaluation submission and faculty publication of course-bound CILO forms.
 9. The system shall support app-like navigation and installability expectations consistent with a PWA.
@@ -439,7 +436,7 @@ MVP operation assumes online use, with only limited PWA shell support outside fu
 - **FR-1.7** The system shall restrict data access according to role, program, major, course, academic context, stakeholder visibility rules, and report-segregation rules.
 - **FR-1.8** The system shall enforce program-scoped analytics, report, and governed evaluation-management access for Program Heads.
 - **FR-1.9** The system shall enforce college-wide aggregated analytics, report, and governed evaluation-management access with program filtering for the College Dean.
-- **FR-1.10** The system shall allow the Program Head and College Dean to use the same general academic-leadership portal pattern while enforcing different visibility scopes.
+- **FR-1.10** The system shall route the Program Head and College Dean to separate role-owned portals, sharing service infrastructure where applicable but enforcing distinct visibility scopes: Program Head writes within assigned program; Dean has college-wide read-only oversight.
 - **FR-1.11** The system shall not grant administrator privileges to the College Dean unless separately assigned through a valid administrator role.
 - **FR-1.12** The system shall deliver graduating-student-specific form access through the Student role using academic-status or eligibility checks.
 
@@ -528,8 +525,8 @@ MVP operation assumes online use, with only limited PWA shell support outside fu
 - **FR-4.15** Faculty edits to the derived course-bound form instance shall not overwrite the source template.
 
 #### 5.4.4 Program-Level Template Builder for Non-Course-Bound Tools
-- **FR-4.14** The system shall provide a governed program-level template builder for authorized program heads.
-- **FR-4.15** The system shall allow a program head to create entirely new non-course-bound evaluation tools within authorized program scope.
+- **FR-4.16** The system shall provide a governed program-level template builder for authorized program heads.
+- **FR-4.17-ren** The system shall allow a program head to create entirely new non-course-bound evaluation tools within authorized program scope.
 - **FR-4.16** The system shall allow a program head to create or edit a template title, description, purpose, and instructions.
 - **FR-4.17** The system shall allow a program head to create, edit, reorder, and delete template sections.
 - **FR-4.18** The system shall allow a program head to add, edit, reorder, and delete question items within sections.
@@ -613,7 +610,7 @@ MVP operation assumes online use, with only limited PWA shell support outside fu
 - **FR-8.4** The system shall support stakeholder comparison or grouping views where applicable.
 - **FR-8.5** The system shall support program-scoped analytics segregation for authorized Program Heads.
 - **FR-8.6** The system shall support college-wide aggregated analytics with program filtering for the College Dean.
-- **FR-8.7** The College Dean shall have the same general analytics capabilities available to the Program Head, except that the dean’s analytics visibility shall span all college programs.
+- **FR-8.7** The College Dean shall have college-wide analytics access across all programs, with filtering and drill-down into specific programs; this is read-only oversight scope, distinct from Program Head program-scoped authoring access.
 - **FR-8.8** The system shall allow the College Dean to compare programs and drill down into specific program views for deeper analysis.
 - **FR-8.9** The system shall prioritize post-data processing and analytics for the Post-Term CILO Evaluation Tool.
 - **FR-8.10** The system shall support qualitative analytics through word-cloud generation from open-ended responses.
@@ -629,7 +626,7 @@ MVP operation assumes online use, with only limited PWA shell support outside fu
 - **FR-9.6** The system shall support exportable report outputs according to implementation priority.
 - **FR-9.7** The system shall restrict Program Head reports to assigned program scope.
 - **FR-9.8** The system shall support dean-level filtered access across programs.
-- **FR-9.9** The College Dean shall have the same general reporting capabilities available to the Program Head, except that the dean’s report visibility shall span all college programs.
+- **FR-9.9** The College Dean shall have college-wide report access across all programs, with filtering and drill-down into specific programs; Dean reports reflect read-only oversight scope.
 - **FR-9.10** The system shall support qualitative summary views, including word-cloud outputs where implemented.
 - **FR-9.11** The system shall support mean-based quantitative summary outputs for supported Likert-scale instruments.
 - **FR-9.12** The system shall support reporting views that preserve materially conflicting GO-level and CILO-level results for review.
@@ -642,7 +639,7 @@ MVP operation assumes online use, with only limited PWA shell support outside fu
 
 ### 5.11 System Administration and Configuration Module
 - **FR-11.1** The system shall allow authorized users to manage user accounts and roles.
-- **FR-11.2** The system shall allow authorized administrators to register or invite faculty members, program heads, deans, and industry partners using controlled account-creation workflows.
+- **FR-11.2** The system shall allow the Secretary to create complete user accounts for faculty members, program heads, deans, and industry partners; there is no email-invitation flow.
 - **FR-11.3** The system shall allow authorized administrators to update student year level, program context, and graduating eligibility where needed.
 - **FR-11.4** The system shall allow authorized users to manage institutional instruments.
 - **FR-11.5** The system shall allow authorized users to manage academic reference data and core records.
@@ -770,7 +767,7 @@ The administrator workflow shall support this sequence:
 1. log in
 2. enter the administrator portal
 3. manage user accounts and roles
-4. register or invite faculty members, program heads, deans, and industry partners
+4. create complete user accounts for faculty members, program heads, deans, and industry partners
 5. update student academic context and graduating eligibility where needed
 6. manage programs, majors, and course catalog records
 7. manage institutional baseline instruments and governed records
@@ -839,7 +836,7 @@ Alumni and industry partners shall be able to:
 The dean workflow shall support this sequence:
 1. log in
 2. enter the dean portal
-3. use the same general academic-leadership portal structure and core review capabilities available to the Program Head
+3. enter the dedicated College Dean portal with college-wide read-only oversight access
 4. review college-wide aggregated analytics and reports
 5. review governed evaluation-management records within dean-authorized scope
 6. filter into a specific program view where needed
@@ -1107,7 +1104,7 @@ It specifically reflects the revised architecture in which:
 - **Program Heads** may create, manage, version, edit, save, and deploy **program-level templates** for non-course-bound stakeholder tools within assigned program scope, including additional tools beyond the four baseline instruments
 - the system supports only **Likert-scale** and **guided open-ended** question types in current scope
 - the system computes quantitative analytics through **mean-based aggregation** and supports qualitative analytics through **word-cloud generation**
-- the **College Dean** uses the same general academic-leadership portal capabilities and operational access pattern as the **Program Head**, but with analytics and report visibility spanning all college programs
+- the **College Dean** uses a dedicated dean portal with college-wide read-only oversight access — separate routes from the Program Head portal; analytics and report visibility spans all college programs
 - the system enforces **program-scoped analytics and report segregation** for Program Heads and **college-wide filtered visibility** for the College Dean
 - the system is delivered as a **responsive installable PWA**
 - the application stack follows the current **Next.js + Supabase + PostgreSQL + Prisma** direction

@@ -208,8 +208,8 @@ CLOIE is intended to support the academic programs of Assumption College of Dava
 
 | Role | Primary Purpose in CLOIE |
 |---|---|
-| System Administrator | Manage users, roles, programs, majors, program catalog details, course catalog, institutional instruments, system records, and governed platform configuration |
-| College Dean | Use the same portal capabilities and operational access pattern as a Program Head, but with college-wide visibility across all academic programs; review aggregated analytics and reports across the college and filter into specific programs for deeper analysis |
+| Secretary | Manage users, roles, programs, majors, program catalog details, course catalog, institutional instruments, system records, and governed platform configuration. The Secretary holds explicit Secretary-scoped permissions that cover administrative operations equivalent to Program Head operations where institutional policy requires; this is a defined role capability, not impersonation or delegation. |
+| College Dean | Access college-wide analytics, outcome overviews, academic structure records, and enrollment summaries across all academic programs in a read-only oversight capacity; filter and drill down into specific programs for deeper review. The Dean does not inherit Program Head authoring or write permissions. |
 | Program Head | Operate within an assigned program scope; manage or review program outcomes, author/manage program-level evaluation tool templates, deploy stakeholder tools, and review program-scoped analytics and reports |
 | Faculty Member | Encode CILOs, map course outcomes to Graduate Outcomes where applicable, create and publish **derived course-bound Post-Term CILO evaluation form instances**, select valid academic/course context from the scoped course catalog, edit allowed configurable portions of the derived instance, and review summarized results for valid academic contexts |
 | Student | Answer assigned course/program evaluation forms relevant to their academic context, including graduating-student-specific instruments when eligible based on academic status |
@@ -229,8 +229,8 @@ Access must be restricted based on:
 
 The role-based access model shall also enforce scoped academic visibility:
 - **Program Heads** shall access only the functions, analytics, reports, and evaluation-management records within their assigned program scope.
-- **College Deans** shall have the same portal capabilities and operational access pattern as Program Heads, but their analytics and report visibility shall span all college programs under the college.
-- **College Deans** shall be able to filter, compare, and drill down into specific programs without being limited to a single assigned program scope.
+- **College Deans** shall have college-wide read-only oversight access: they may view analytics, outcome overviews, enrollment summaries, and academic structure records across all programs. Deans do not hold Program Head authoring permissions and do not inherit write access through the Dean role.
+- **College Deans** shall be able to filter and drill down into specific programs for deeper review without being limited to a single assigned program scope.
 - Graduating-student-specific evaluation tools shall be delivered through the **Student** role based on academic status, year level, or graduating eligibility rather than through a separate role.
 
 ### 6.4 Role-Specific Portal Principle
@@ -239,7 +239,7 @@ Each major role shall have a **role-specific portal/dashboard** with a header, r
 The student portal/dashboard shall be shared by both regular students and graduating students. Differences in accessible evaluation tools shall be determined by assignment and eligibility rules rather than separate portal structures.
 
 ### 6.5 Role Scope Clarifications
-- **System Administrator** may register/invite faculty members, program heads, deans, and industry partners using controlled account-creation workflows; may change user roles; and may update student year level and program affiliation.
+- **Secretary** creates complete user accounts for faculty members, program heads, deans, and industry partners directly; there is no invite-link or email-invitation flow. The Secretary may also update student year level and program affiliation, and may change user roles within governed limits. **ICTC** handles technical maintenance only and does not perform user administration.
 - **Program Head** shall be tied to a program scope and may only view analytics and reports belonging to that program, while the college dean may view cross-program aggregates.
 - **Faculty Member** may be affiliated with one or more programs.
 - **Industry Partner** records shall include company information and associated program context.
@@ -368,7 +368,7 @@ Desktop and tablet layouts shall prioritize dashboard clarity, table readability
 ### 8.7 College Dean Workflow
 1. Open CLOIE through browser or installed app entry point.
 2. Log in securely.
-3. Enter the College Dean portal/dashboard, which uses the same general portal capabilities and operational access pattern as the Program Head portal.
+3. Enter the College Dean portal/dashboard — a dedicated dean-specific portal with college-wide read-only oversight capabilities; not a copy of the Program Head portal.
 4. Access aggregated analytics, reports, outcomes views, and stakeholder evaluation insights across all college programs.
 5. Filter or drill down into specific programs for deeper analysis and review.
 6. Compare attainment and feedback across programs and across stakeholder groups.
@@ -458,7 +458,7 @@ Control secure access to the platform and enforce permissions by role and academ
 - Support user creation, modification, activation, deactivation, and role assignment.
 - Determine role, permissions, scoped visibility, and redirect behavior from internal account records rather than email domain alone.
 - Redirect authenticated users to role-specific portals after login.
-- Allow **Program Heads** and **College Deans** to use the same general portal pattern and feature set where applicable, while enforcing different academic visibility scopes.
+- Allow **Program Heads** and **College Deans** to use role-owned portals with shared service infrastructure where applicable, while enforcing strict visibility scope differences: Program Heads write/manage within their program; Dean has college-wide read-only oversight.
 - Enforce that **Program Heads** are limited to their assigned program scope.
 - Enforce that **College Deans** can access the same analytics and reporting functions across all college programs, with filtering into specific programs.
 - Enforce that graduating-student-specific forms are exposed through the **Student** role based on academic status rather than a separate role.
@@ -599,7 +599,7 @@ Transform collected responses into meaningful academic insights.
 - Quantitative Likert-scale responses shall be aggregated using mean computation.
 - Qualitative open-ended responses shall support word cloud-based analysis.
 - Support program-scoped analytics segregation so that Program Heads only access analytics for their assigned program.
-- Support college-wide analytics visibility for the College Dean using the same general analytics capabilities available to Program Heads, but across all college programs.
+- Support college-wide analytics visibility for the College Dean — the Dean may view aggregated analytics across all programs and filter into specific programs; this is read-only oversight, not Program Head write access.
 - Allow the College Dean to filter, compare, and drill down into specific programs for deeper analysis.
 
 ---
@@ -616,7 +616,7 @@ Generate usable outputs for academic leadership, quality assurance, and accredit
 - Provide role-appropriate report access.
 - Support export-ready reporting where feasible.
 - Restrict Program Head reporting access to the assigned program scope only.
-- Allow the College Dean to access the same general report structures and reporting functions as the Program Head, but across all college programs.
+- Allow the College Dean to access college-wide report views with filtering into specific programs; Dean reports cover scope only, not Program Head authoring capabilities.
 - Allow the College Dean to filter and drill down into specific programs for deeper review.
 - Support report outputs that include mean-based quantitative summaries and qualitative word cloud views where applicable.
 
@@ -902,7 +902,7 @@ This approach allows the product to:
 ### 16.2 User Success Indicators
 - Faculty can manage course outcomes, publish course-bound CILO evaluation forms, and view summaries.
 - Program Heads can access full program-scoped analytics and reports for review within their assigned program.
-- College Deans can access the same general analytics and reporting capabilities across all college programs and filter into specific programs for deeper review.
+- College Deans can access college-wide analytics and reporting across all college programs, with filtering and drill-down into specific programs.
 - Students and other respondents can complete assigned evaluations with minimal confusion.
 - Administrators can configure core academic and evaluation structures without breaking system consistency.
 - Users experience clear and usable navigation across different device classes.
@@ -942,7 +942,7 @@ The product may be considered aligned with the intended CLOIE scope when:
 - Reports must be aligned to program outcomes and stakeholder feedback.
 - Reports must be accessible only to appropriate roles.
 - Program Head reports must be limited to the assigned program scope.
-- College Dean reports must support college-wide access using the same general reporting capabilities available to Program Heads, with filtering into specific programs for drill-down review.
+- College Dean reports must support college-wide filtered access across programs, with drill-down into specific programs; the Dean portal uses role-owned routes and is not a copy of the Program Head portal.
 
 ### 17.3 Usability Acceptance Criteria
 - Respondents can complete forms without major confusion.
@@ -1050,7 +1050,7 @@ Focus:
 
 ## 20. Open Questions for Final Validation
 The following should still be finalized or reconfirmed during detailed drafting and implementation:
-1. final report templates and display preferences for the shared Program Head / College Dean reporting environment, noting that both roles use the same general reporting capabilities while differing in scope of visibility
+1. final report templates and display preferences for the Program Head and College Dean reporting environments; note that both roles have distinct role-owned portals with different visibility scopes — Program Head within assigned program, College Dean college-wide read-only
 2. whether all stakeholder types require account-based login or some external-access flow
 3. exact scoring normalization rules across the supported instruments
 4. specific attainment thresholds and interpretation rules
