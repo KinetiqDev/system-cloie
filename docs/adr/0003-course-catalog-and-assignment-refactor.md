@@ -6,7 +6,7 @@ To eliminate the manual "Course Offerings" encoding step and improve data integr
 
 1. **Course catalog defaults:** The base `Course` catalog table stores the default/recommended `year_level`, `semester`, and `term` during which it is active in a school year.
 2. **Year level override:** The `CourseAssignment` table keeps its own `year_level` field, letting the Secretary or Program Head override the default year level if a specific program schedules a shared course for a different cohort.
-3. **No mixed assignments:** Every `CourseAssignment` record is strictly bound to a single program (`program_id` is required and non-nullable). Merged classes containing students from multiple programs are split into separate assignment records.
+3. **No mixed assignments:** Every `CourseAssignment` record is strictly bound to a single program (`program_id` is required and non-nullable). Merged classes containing students from multiple programs are split into separate assignment records. A class is unique by academic period, Course, Academic Program, year level, and section; exactly one Faculty Member may be assigned to that class.
 4. **Strictly required sections:** Every course assignment must have a section (Morning, Afternoon, or Evening) selected.
 5. **One evaluation per class:** A course assignment can have at most one evaluation. The `CourseBoundEvaluation` model has a strict 1-to-1 link to `CourseAssignment` via a required and unique `course_assignment_id` field. Redundant scheduling fields are dropped from the evaluation table.
 
@@ -14,7 +14,7 @@ To eliminate the manual "Course Offerings" encoding step and improve data integr
 
 - Hardcoding temporal defaults on the catalog simplifies active-term filtering for assignments.
 - Allowing year-level overrides on assignments solves scheduling discrepancies for general education courses without duplicating catalog entries.
-- Requiring both `program_id` and `section` on `CourseAssignment` keeps the database clean and lets us enforce a simple uniqueness constraint directly in Prisma: `@@unique([term_instance_id, course_id, faculty_id, program_id, year_level, section])`.
+- Requiring both `program_id` and `section` on `CourseAssignment` keeps the database clean and lets us enforce a simple uniqueness constraint directly in Prisma: `@@unique([term_instance_id, course_id, program_id, year_level, section])`.
 - Enforcing a 1-to-1 relationship for evaluations prevents accidental duplicate deployments and ensures neat, normalized reports.
 
 ## Clarifications (added during PRD 2 review — Issue #36)
@@ -26,6 +26,7 @@ To eliminate the manual "Course Offerings" encoding step and improve data integr
 10. **CSV roster upload out of scope:** PRD 2 user story 10 (faculty CSV class list upload) is deferred to Issue #26 PRD 6. Course-bound evaluation recipients are sourced exclusively from `StudentEnrollment` via `listStudentsForClass`.
 11. **Course scope controls assignment stewardship:** General Education course assignments are stewarded by Secretary or Dean users. Program Heads may view General Education assignments for their program, but Program Head management actions are limited to Program-specific Courses owned by their assigned program scope. A Program-specific Course assignment targets the Course's owning program.
 12. **Merged classes remain ungrouped:** Merged classes are still represented as separate `CourseAssignment` records, one per program. PRD 3 rejects a dedicated merged-class helper or grouping model; users create each required program row explicitly.
+13. **One Faculty Member per class:** Two Faculty Members cannot be assigned to the same Course, Academic Program, year level, section, and academic period. A Faculty Member may teach the same Course across different sections or, for General Education Courses, across different Academic Programs. Development data is disposable: this constraint migration resets conflicting mock Course assignments and dependent mock evaluation data, then seed data recreates valid fixtures.
 
 ## Implementation
 

@@ -60,7 +60,7 @@ async function getOnBehalfTemplatePublicationContext(
   }
 
   const cilos = await prisma.cILO.findMany({
-    where: { course_id: template.bound_course_id },
+    where: { course_id: template.bound_course_id, is_active: true },
     orderBy: { created_at: "asc" },
     select: { description: true, id: true },
   });

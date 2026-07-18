@@ -34,7 +34,7 @@ import type {
 function revalidateCourseAssignmentRoutes() {
   revalidatePath("/program-head/course-assignments");
   revalidatePath("/secretary/course-assignments");
-  revalidatePath("/dean/course-assignments");
+  revalidatePath("/dean/academic-structure/course-assignments");
 }
 
 /**

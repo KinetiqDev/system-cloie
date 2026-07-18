@@ -36,6 +36,15 @@ enum AcademicTerm {
   @@map("academic_term")
 }
 
+enum AcademicPeriodStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+
+  @@map("academic_period_status")
+}
+
 enum YearLevel {
   FIRST_YEAR
   SECOND_YEAR
@@ -124,26 +133,39 @@ model SchoolYear {
 }
 
 model AcademicTermInstance {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  school_year_id  String           @db.Uuid
+  id              String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  school_year_id  String                @db.Uuid
   semester        AcademicSemester
   term            AcademicTerm?
-  start_date      DateTime?        @db.Date
-  end_date        DateTime?        @db.Date
-  is_active       Boolean          @default(false)
-  created_at      DateTime         @default(now())
-  updated_at      DateTime         @updatedAt
+  start_date      DateTime?             @db.Date
+  end_date        DateTime?             @db.Date
+  status          AcademicPeriodStatus  @default(PLANNED)
+  created_at      DateTime              @default(now())
+  updated_at      DateTime              @updatedAt
 
   school_year SchoolYear @relation(fields: [school_year_id], references: [id], onDelete: Cascade)
   student_enrollments StudentEnrollment[]
   course_assignments CourseAssignment[]
   course_bound_evaluations CourseBoundEvaluation[]
   central_deployments CentralDeployment[]
+  readiness_snapshot AcademicPeriodReadinessSnapshot?
 
   // Prisma cannot express NULLS NOT DISTINCT; the actual unique constraint is managed via Supabase migration
   @@index([school_year_id, semester, term])
-  @@index([is_active])
+  @@index([status])
   @@map("academic_term_instances")
+}
+
+model AcademicPeriodReadinessSnapshot {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  period_id       String   @unique @db.Uuid
+  contexts        Json
+  program_totals  Json
+  created_at      DateTime @default(now())
+
+  period AcademicTermInstance @relation(fields: [period_id], references: [id], onDelete: Restrict)
+
+  @@map("academic_period_readiness_snapshots")
 }
 
 model StudentEnrollment {
@@ -192,9 +214,9 @@ model CourseAssignment {
   assigner      User?                @relation("AssignmentAssigner", fields: [assigned_by], references: [id], onDelete: SetNull)
   course_bound_evaluations CourseBoundEvaluation[]
 
-  // Unique constraint: one assignment per faculty/course/program/year/section per term
+  // Unique constraint: one assignment per course/program/year/section per term (one faculty per class)
   // NULLS NOT DISTINCT enforced in SQL migration; mirrored here as index
-  @@index([term_instance_id, course_id, faculty_id, program_id, year_level, section])
+  @@index([term_instance_id, course_id, program_id, year_level, section])
   @@index([term_instance_id, faculty_id])
   @@index([term_instance_id, course_id])
   @@index([is_active])
@@ -366,6 +388,7 @@ model CILO {
   description   String
   course_id     String   @db.Uuid
   created_by    String   @db.Uuid
+  is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
@@ -388,6 +411,7 @@ model CILOMapping {
   go         GO     @relation(fields: [go_id], references: [id], onDelete: Cascade)
 
   @@map("cilo_mappings")
+  @@unique([cilo_id, go_id])
 }
 
 // ============================================================================

@@ -6,6 +6,7 @@ import type {
   ListSchoolYearsFilter,
   ListSchoolYearsResult,
   SchoolYearWithTerms,
+  TermInstanceItem,
 } from "../types";
 
 /**
@@ -64,7 +65,7 @@ export async function listSchoolYears(
       : null,
     createdAt: sy.created_at,
     updatedAt: sy.updated_at,
-    termInstances: sy.term_instances.map((ti) => ({
+    termInstances: sy.term_instances.map<TermInstanceItem>((ti) => ({
       id: ti.id,
       schoolYearId: ti.school_year_id,
       schoolYearCode: sy.code,
@@ -72,7 +73,7 @@ export async function listSchoolYears(
       term: ti.term,
       startDate: ti.start_date,
       endDate: ti.end_date,
-      isActive: ti.is_active,
+      status: ti.status,
       createdAt: ti.created_at,
       updatedAt: ti.updated_at,
     })),
@@ -130,7 +131,7 @@ export async function getSchoolYearById(
       : null,
     createdAt: sy.created_at,
     updatedAt: sy.updated_at,
-    termInstances: sy.term_instances.map((ti) => ({
+    termInstances: sy.term_instances.map<TermInstanceItem>((ti) => ({
       id: ti.id,
       schoolYearId: ti.school_year_id,
       schoolYearCode: sy.code,
@@ -138,7 +139,7 @@ export async function getSchoolYearById(
       term: ti.term,
       startDate: ti.start_date,
       endDate: ti.end_date,
-      isActive: ti.is_active,
+      status: ti.status,
       createdAt: ti.created_at,
       updatedAt: ti.updated_at,
     })),

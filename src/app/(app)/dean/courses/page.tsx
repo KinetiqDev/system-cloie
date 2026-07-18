@@ -1,10 +1,5 @@
-import { listManagementCoursesSummary } from "@/features/academic-structure/services/list-management-courses-summary";
-import { ManagementCoursesList } from "@/features/academic-structure/components/management-courses-list";
+import { permanentRedirect } from "next/navigation";
 
 export default async function DeanCoursesPage() {
-  const { courses, kpi, programs } = await listManagementCoursesSummary();
-
-  return (
-    <ManagementCoursesList courses={courses} kpi={kpi} programs={programs} basePath="/dean/courses" />
-  );
+  permanentRedirect("/dean/academic-structure/courses");
 }

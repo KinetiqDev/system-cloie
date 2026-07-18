@@ -5,13 +5,13 @@ import { prisma } from "@/lib/db/prisma";
 import type { ActiveTermContext } from "../types";
 
 /**
- * Resolve the currently active term instance.
+ * Resolve the currently active Academic Period.
  * Uses React.cache for per-request memoization.
- * Returns null if no active term is set.
+ * Returns null if no ACTIVE period is set.
  */
 export const resolveActiveTerm = cache(async (): Promise<ActiveTermContext | null> => {
   const termInstance = await prisma.academicTermInstance.findFirst({
-    where: { is_active: true },
+    where: { status: "ACTIVE" },
     include: {
       school_year: true,
     },
@@ -41,7 +41,7 @@ export const resolveActiveTerm = cache(async (): Promise<ActiveTermContext | nul
       term: termInstance.term,
       startDate: termInstance.start_date,
       endDate: termInstance.end_date,
-      isActive: termInstance.is_active,
+      status: termInstance.status,
       createdAt: termInstance.created_at,
       updatedAt: termInstance.updated_at,
     },
@@ -49,21 +49,21 @@ export const resolveActiveTerm = cache(async (): Promise<ActiveTermContext | nul
 });
 
 /**
- * Check if an active term is configured.
+ * Check if an active period is configured.
  */
 export async function hasActiveTerm(): Promise<boolean> {
   const count = await prisma.academicTermInstance.count({
-    where: { is_active: true },
+    where: { status: "ACTIVE" },
   });
   return count > 0;
 }
 
 /**
- * Get the active term ID, or null if none exists.
+ * Get the active period ID, or null if none exists.
  */
 export async function getActiveTermId(): Promise<string | null> {
   const active = await prisma.academicTermInstance.findFirst({
-    where: { is_active: true },
+    where: { status: "ACTIVE" },
     select: { id: true },
   });
   return active?.id ?? null;

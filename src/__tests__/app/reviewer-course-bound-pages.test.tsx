@@ -180,19 +180,15 @@ describe("reviewer course-bound pages", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders dean list and detail flow using shared review components", async () => {
+  it("returns 404 for deferred Dean review surfaces", async () => {
     const DeanListPage = (await import("../../app/(app)/dean/cilo-reviews/page")).default;
     const DeanDetailPage = (await import("../../app/(app)/dean/cilo-reviews/[evaluationId]/page"))
       .default;
 
-    render(await DeanListPage());
-    expect(listCourseBoundReviewItemsMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Published list: College CILO Reviews")).toBeInTheDocument();
-
-    const detail = await DeanDetailPage({ params: Promise.resolve({ evaluationId: "eval-1" }) });
-    render(detail);
-    expect(getCourseBoundReviewDetailMock).toHaveBeenCalledWith("eval-1");
-    expect(screen.getByText("Tabs base path: /dean/cilo-reviews/eval-1")).toBeInTheDocument();
+    await expect(DeanListPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(DeanDetailPage({ params: Promise.resolve({ evaluationId: "eval-1" }) })).rejects.toThrow(
+      "NEXT_NOT_FOUND"
+    );
   });
 
   it("renders role response pages and routes missing payloads to notFound", async () => {
@@ -213,12 +209,11 @@ describe("reviewer course-bound pages", () => {
       screen.getByText("Response detail: Post-Term CILO Evaluation Tool (Respondent R-827493)")
     ).toBeInTheDocument();
 
-    render(
-      await DeanResponsePage({
+    await expect(
+      DeanResponsePage({
         params: Promise.resolve({ evaluationId: "eval-1", responseId: "response-1" }),
       })
-    );
-    expect(getCourseBoundResponseReviewMock).toHaveBeenCalledWith("response-1");
+    ).rejects.toThrow("NEXT_NOT_FOUND");
 
     getCourseBoundResponseReviewMock.mockResolvedValueOnce(null);
     await expect(

@@ -4,13 +4,14 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { isValidSemesterTerm, compareSemesters } from "@/lib/constants/academic-period";
-import { canSetActiveTerm, canDeleteTermInstance } from "../policies";
+import { canDeleteTermInstance } from "../policies";
 import type {
   CreateTermInstanceInput,
   UpdateTermInstanceInput,
 } from "../schemas/term-instance";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+import { transitionPeriodStatus } from "./manage-academic-period-lifecycle";
 
 /**
  * Verify secretary access.
@@ -18,7 +19,7 @@ import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 export async function verifySecretaryAccess(): Promise<ServiceResult<{ userId: string }>> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.SECRETARY)) {
+  if (!session || session.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Secretary access required" };
   }
 
@@ -67,7 +68,6 @@ export async function addTermInstance(
         term: input.term ?? null,
         start_date: input.startDate ?? null,
         end_date: input.endDate ?? null,
-        is_active: false,
       },
     });
 
@@ -109,6 +109,10 @@ export async function updateTermInstance(
     return { success: false, error: "Cannot modify terms of an archived school year" };
   }
 
+  if (existing.status === "COMPLETED" || existing.status === "CANCELLED") {
+    return { success: false, error: "Completed and cancelled periods are immutable" };
+  }
+
   const updated = await prisma.academicTermInstance.update({
     where: { id: input.id },
     data: {
@@ -146,7 +150,7 @@ export async function deleteTermInstance(id: string): Promise<ServiceResult> {
 
   // Check if this is the active term
   const activeTerm = await prisma.academicTermInstance.findFirst({
-    where: { is_active: true },
+    where: { status: "ACTIVE" },
     select: { id: true },
   });
 
@@ -168,8 +172,8 @@ export async function deleteTermInstance(id: string): Promise<ServiceResult> {
 
 /**
  * Set a Term Instance as the active term.
- * This transactionally clears any existing active term first.
- * Returns rolloverSuggested to prompt admin for term rollover (Phase 8).
+ * Delegates to the lifecycle service so the transition rules and one-active
+ * enforcement live in one place. Returns rollover suggestion for the UI.
  */
 export async function setActiveTermInstance(
   termInstanceId: string
@@ -194,65 +198,26 @@ export async function setActiveTermInstance(
     return { success: false, error: "Cannot activate a term in an archived school year" };
   }
 
-  // Get current active for validation (outside transaction is fine for this read-only check)
-  const currentActive = await prisma.academicTermInstance.findFirst({
-    where: { is_active: true },
+  const priorActive = await prisma.academicTermInstance.findFirst({
+    where: { status: "ACTIVE", id: { not: termInstanceId } },
     select: { id: true },
   });
 
-  const check = canSetActiveTerm(
-    termInstanceId,
-    currentActive?.id ?? null,
-    termInstance.semester,
-    termInstance.term
-  );
-
-  if (!check.allowed) {
-    return { success: false, error: check.reason };
+  const transition = await transitionPeriodStatus(termInstanceId, "ACTIVE");
+  if (!transition.success) {
+    return { success: false, error: transition.error };
   }
 
-  // Transaction: clear existing active, set new active
-  // Re-fetch currentActive inside transaction to prevent race conditions with concurrent requests
-  const result = await prisma.$transaction(async (tx) => {
-    // Get current active INSIDE transaction to prevent race conditions
-    const currentActiveTx = await tx.academicTermInstance.findFirst({
-      where: { is_active: true },
-      select: { id: true },
-    });
-
-    // Clear existing active (if any) - using the transaction-fetched value
-    if (currentActiveTx) {
-      await tx.academicTermInstance.update({
-        where: { id: currentActiveTx.id },
-        data: { is_active: false },
-      });
-    }
-
-    // Set new active
-    const updated = await tx.academicTermInstance.update({
-      where: { id: termInstanceId },
-      data: { is_active: true },
-    });
-
-    return {
-      id: updated.id,
-      previousActiveId: currentActiveTx?.id ?? null,
-    };
-  });
-
-  // Phase 8: Find next term in same school year for rollover suggestion
-  // Fetch all inactive terms in the same school year and find the next one
   const allTerms = await prisma.academicTermInstance.findMany({
     where: {
       school_year_id: termInstance.school_year.id,
-      is_active: false,
+      status: { not: "ACTIVE" },
       id: { not: termInstanceId },
     },
     orderBy: [{ semester: "asc" }, { term: "asc" }],
     select: { id: true, semester: true, term: true },
   });
 
-  // Find the first term that comes after the activated term
   const nextTerm = allTerms.find((t) => {
     const semesterComparison = compareSemesters(t.semester, termInstance.semester);
 
@@ -267,7 +232,8 @@ export async function setActiveTermInstance(
   return {
     success: true,
     data: {
-      ...result,
+      id: termInstanceId,
+      previousActiveId: priorActive?.id ?? null,
       rolloverSuggested: nextTerm?.id ?? null,
     },
   };
@@ -275,17 +241,16 @@ export async function setActiveTermInstance(
 
 /**
  * Check if a term instance has dependent records across all related tables.
- * Returns true if any enrollments, assignments, evaluations, or deployments reference this term.
+ * Returns true if any related record references this term.
  */
 async function checkHasDependentRecords(termInstanceId: string): Promise<boolean> {
-  const [enrollments, assignments, evaluations, deployments] = await Promise.all([
+  const [enrollments, assignments, evaluations, deployments, snapshots] = await Promise.all([
     prisma.studentEnrollment.count({ where: { term_instance_id: termInstanceId }, take: 1 }),
     prisma.courseAssignment.count({ where: { term_instance_id: termInstanceId }, take: 1 }),
     prisma.courseBoundEvaluation.count({ where: { term_instance_id: termInstanceId }, take: 1 }),
     prisma.centralDeployment.count({ where: { term_instance_id: termInstanceId }, take: 1 }),
+    prisma.academicPeriodReadinessSnapshot.count({ where: { period_id: termInstanceId }, take: 1 }),
   ]);
 
-  return enrollments + assignments + evaluations + deployments > 0;
+  return enrollments + assignments + evaluations + deployments + (snapshots ?? 0) > 0;
 }
-
-

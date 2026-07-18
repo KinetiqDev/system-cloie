@@ -1,0 +1,113 @@
+"use server";
+
+import { AcademicPeriodStatus, Prisma, type Prisma as PrismaTypes } from "@prisma/client";
+import { prisma } from "@/lib/db/prisma";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { ROLES } from "@/lib/constants/roles";
+import { type ServiceResult } from "@/lib/utils/service-result";
+import { canTransitionPeriod } from "../policies";
+import { persistPeriodReadinessSnapshot } from "./read-period-readiness";
+
+type Tx = PrismaTypes.TransactionClient;
+
+/**
+ * Stable completion seam for readiness snapshot persistence.
+ * Must run inside the same transaction that promotes ACTIVE -> COMPLETED.
+ */
+async function onPeriodCompleted(
+  periodId: string,
+  tx: Tx
+): Promise<void> {
+  await persistPeriodReadinessSnapshot(periodId, tx);
+}
+
+class LifecycleConflictError extends Error {}
+
+/**
+ * Secretary-only Academic Period lifecycle transition.
+ *
+ * Spec #113:
+ * - PLANNED -> ACTIVE | CANCELLED
+ * - ACTIVE  -> COMPLETED | CANCELLED
+ * - terminal states immutable
+ * - activating a period atomically completes the prior active period,
+ *   rejecting when prior period has no end_date
+ * - one-active is enforced by a partial unique index in Postgres
+ */
+export async function transitionPeriodStatus(
+  periodId: string,
+  target: AcademicPeriodStatus
+): Promise<ServiceResult<{ id: string; status: AcademicPeriodStatus }>> {
+  const session = await resolveAuthSession();
+
+  if (session?.activeRole !== ROLES.SECRETARY) {
+    return { success: false, error: "Secretary access required" };
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existing = await tx.academicTermInstance.findUnique({
+        where: { id: periodId },
+        select: { id: true, end_date: true, status: true },
+      });
+
+      if (!existing) {
+        return { success: false, error: "Academic period not found" };
+      }
+
+      const decision = canTransitionPeriod(existing.status, target);
+      if (!decision.allowed) {
+        return { success: false, error: decision.reason };
+      }
+
+    if (target === "ACTIVE") {
+      const priorActive = await tx.academicTermInstance.findFirst({
+        where: { status: "ACTIVE", id: { not: periodId } },
+        select: { id: true, end_date: true },
+      });
+
+      if (priorActive) {
+        if (!priorActive.end_date) {
+          return {
+            success: false,
+            error:
+              "Current active period is missing end_date; cannot complete it before activating a new period",
+          };
+        }
+        const completed = await tx.academicTermInstance.updateMany({
+          where: { id: priorActive.id, status: "ACTIVE" },
+          data: { status: "COMPLETED" },
+        });
+        if (completed.count !== 1) throw new LifecycleConflictError();
+        await onPeriodCompleted(priorActive.id, tx);
+      }
+    }
+
+    if (target === "COMPLETED" && !existing.end_date) {
+      return {
+        success: false,
+        error: "Cannot complete a period without an end_date",
+      };
+    }
+
+    const updated = await tx.academicTermInstance.updateMany({
+      where: { id: periodId, status: existing.status },
+      data: { status: target },
+    });
+    if (updated.count !== 1) throw new LifecycleConflictError();
+
+    if (target === "COMPLETED") await onPeriodCompleted(periodId, tx);
+
+      return { success: true, data: { id: periodId, status: target } };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    if (
+      error instanceof LifecycleConflictError ||
+      (error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === "P2002" || error.code === "P2034"))
+    ) {
+      return { success: false, error: "Academic period changed; retry the transition" };
+    }
+    throw error;
+  }
+}

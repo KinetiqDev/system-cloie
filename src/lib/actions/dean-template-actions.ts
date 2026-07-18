@@ -19,7 +19,7 @@ import {
 type ActionResult = { success: true } | { success: false; error: string };
 
 function revalidateDeanTools() {
-  revalidatePath("/dean/instruments");
+  revalidatePath("/dean/academic-structure/instruments");
 }
 
 export async function createDeanTemplateAction(formData: FormData): Promise<ActionResult> {

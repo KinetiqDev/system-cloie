@@ -81,7 +81,7 @@ export function SetActiveTermDialog({
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <strong>{termLabel}</strong> will become the active term.
-              {termInstance.isActive && " This term is already active."}
+              {termInstance.status === "ACTIVE" && " This term is already active."}
             </AlertDescription>
           </Alert>
         </div>
@@ -98,7 +98,7 @@ export function SetActiveTermDialog({
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={isSubmitting || termInstance.isActive}
+            disabled={isSubmitting || termInstance.status === "ACTIVE"}
           >
             {isSubmitting ? "Setting..." : "Set Active"}
           </Button>

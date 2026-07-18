@@ -5,7 +5,18 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
-import { getMainNavByRoles, getSecondaryNavByRoles } from "@/lib/constants/navigation";
+import {
+  getDeanActiveGroup,
+  getDeanNavGroups,
+  getDeanStandaloneNav,
+  getHighestNavRole,
+  getMainNavByRoles,
+  getSecondaryNavByRoles,
+  isNavItemActive,
+} from "@/lib/constants/navigation";
+import { ROLES } from "@/lib/constants/roles";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 
 interface SidebarProps {
   user?: {
@@ -21,6 +32,10 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
 
   const mainNav = getMainNavByRoles(roles);
   const secondaryNav = getSecondaryNavByRoles(roles);
+
+  if (getHighestNavRole(roles) === ROLES.DEAN) {
+    return <DeanSidebar user={user} />;
+  }
 
   return (
     <aside className="border-border bg-surface fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r lg:flex">
@@ -112,6 +127,67 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
           </div>
         </div>
       </div>
+    </aside>
+  );
+}
+
+function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
+  const pathname = usePathname();
+  const activeGroup = getDeanActiveGroup(pathname);
+  const groups = getDeanNavGroups();
+  const [dashboard, profile] = getDeanStandaloneNav();
+  const [openGroup, setOpenGroup] = useState<{ href: string; pathname: string } | null>(null);
+
+  const renderLink = (item: typeof dashboard, compact = false) => {
+    const active = isNavItemActive(pathname, item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        title={compact ? item.name : undefined}
+        className={cn(
+          "group flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:min-w-11",
+          compact ? "justify-center lg:justify-start" : "",
+          active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+        )}
+      >
+        <item.icon className="size-5 shrink-0" aria-hidden="true" />
+        <span className={cn(compact && "md:hidden lg:inline")}>{item.name}</span>
+      </Link>
+    );
+  };
+
+  return (
+    <aside className="border-border bg-surface fixed inset-y-0 left-0 z-50 hidden w-16 flex-col border-r md:flex lg:w-64">
+      <div className="border-border flex h-16 shrink-0 items-center justify-center border-b px-3 lg:justify-start lg:px-6">
+        <Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={32} height={32} className="size-8 rounded" />
+        <span className="text-title-lg text-primary ml-3 hidden font-bold tracking-tight lg:inline">System CLOIE</span>
+      </div>
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6 lg:px-4" aria-label="Dean navigation">
+        {renderLink(dashboard, true)}
+          {groups.map((group) => {
+            const active = pathname === group.href;
+            const expanded =
+              activeGroup?.href === group.href ||
+              (openGroup?.href === group.href && openGroup.pathname === pathname);
+            return (
+              <div key={group.href}>
+                <div className="flex items-center gap-1">
+                  <Link href={group.href} aria-current={pathname === group.href ? "page" : undefined} title={group.name} className={cn("flex min-h-11 flex-1 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2 focus-visible:outline-ring md:min-w-11", active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary")}>
+                    <group.icon className="size-5 shrink-0" aria-hidden="true" /><span className="md:hidden lg:inline">{group.name}</span>
+                  </Link>
+                  <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${group.name}`} aria-expanded={expanded} disabled={activeGroup !== null} onClick={() => setOpenGroup(expanded ? null : { href: group.href, pathname })} className="hidden min-h-11 min-w-11 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-ring md:flex lg:min-w-11">
+                    <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} aria-hidden="true" />
+                  </button>
+                </div>
+                {expanded && <div className="mt-1 ml-4 hidden gap-1 border-l border-border pl-2 md:flex md:flex-col">{group.items.map((item) => renderLink(item, true))}</div>}
+            </div>
+          );
+        })}
+        {renderLink(profile, true)}
+      </nav>
+      <div className="border-border border-t p-4"><div className="flex items-center gap-3"><div className="bg-primary flex size-9 shrink-0 items-center justify-center rounded-full text-white"><span className="text-body-sm font-semibold">{user?.name?.[0] || "U"}</span></div><div className="hidden min-w-0 flex-col overflow-hidden lg:flex"><span className="text-label-md text-text-primary truncate font-semibold">{user?.name || "User"}</span><span className="text-caption text-text-muted truncate">{user?.email || "No email provided"}</span></div></div></div>
     </aside>
   );
 }

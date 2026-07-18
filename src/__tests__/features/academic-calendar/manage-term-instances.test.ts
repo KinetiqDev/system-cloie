@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { deleteTermInstance, verifySecretaryAccess } from "@/features/academic-calendar/services/manage-term-instances";
+import {
+  deleteTermInstance,
+  updateTermInstance,
+  verifySecretaryAccess,
+} from "@/features/academic-calendar/services/manage-term-instances";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
@@ -10,12 +14,14 @@ vi.mock("@/lib/db/prisma", () => ({
     academicTermInstance: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
+      update: vi.fn(),
       delete: vi.fn(),
     },
     studentEnrollment: { count: vi.fn() },
     courseAssignment: { count: vi.fn() },
     courseBoundEvaluation: { count: vi.fn() },
     centralDeployment: { count: vi.fn() },
+    academicPeriodReadinessSnapshot: { count: vi.fn() },
   },
 }));
 
@@ -45,6 +51,19 @@ describe("manage-term-instances / verifySecretaryAccess", () => {
 
   it("should deny non-secretary access", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockFacultySession);
+
+    const result = await verifySecretaryAccess();
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("Secretary access required");
+    }
+  });
+
+  it("should deny Secretary role when it is not active", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ roles: [ROLES.FACULTY, ROLES.SECRETARY] })
+    );
 
     const result = await verifySecretaryAccess();
 
@@ -107,6 +126,24 @@ describe("manage-term-instances / deleteTermInstance", () => {
     if (!result.success) {
       expect(result.error).toContain("not found");
     }
+  });
+
+  it("should reject updates to completed periods", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "ti-done",
+      status: "COMPLETED",
+      school_year: { is_archived: false },
+    } as never);
+
+    const result = await updateTermInstance({
+      id: "ti-done",
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-05-31"),
+    });
+
+    expect(result).toEqual({ success: false, error: "Completed and cancelled periods are immutable" });
+    expect(prisma.academicTermInstance.update).not.toHaveBeenCalled();
   });
 
   it("should block deletion when term has student enrollments", async () => {
@@ -215,7 +252,7 @@ describe("manage-term-instances / deleteTermInstance", () => {
     });
   });
 
-  it("should check all four dependent tables", async () => {
+  it("should check every dependent table", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "ti-1",
@@ -243,5 +280,24 @@ describe("manage-term-instances / deleteTermInstance", () => {
     expect(prisma.centralDeployment.count).toHaveBeenCalledWith(
       expect.objectContaining({ where: { term_instance_id: "ti-1" } })
     );
+    expect(prisma.academicPeriodReadinessSnapshot.count).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { period_id: "ti-1" } })
+    );
+  });
+
+  it("should block deletion when term has a readiness snapshot", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({ id: "ti-1", school_year: { is_archived: false } } as never);
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "ti-other" } as never);
+    vi.mocked(prisma.studentEnrollment.count).mockResolvedValue(0 as never);
+    vi.mocked(prisma.courseAssignment.count).mockResolvedValue(0 as never);
+    vi.mocked(prisma.courseBoundEvaluation.count).mockResolvedValue(0 as never);
+    vi.mocked(prisma.centralDeployment.count).mockResolvedValue(0 as never);
+    vi.mocked(prisma.academicPeriodReadinessSnapshot.count).mockResolvedValue(1 as never);
+
+    const result = await deleteTermInstance("ti-1");
+
+    expect(result.success).toBe(false);
+    expect(prisma.academicTermInstance.delete).not.toHaveBeenCalled();
   });
 });

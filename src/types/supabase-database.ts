@@ -9,15 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      academic_period_readiness_snapshots: {
+        Row: {
+          contexts: Json
+          created_at: string
+          id: string
+          period_id: string
+          program_totals: Json
+        }
+        Insert: {
+          contexts: Json
+          created_at?: string
+          id?: string
+          period_id: string
+          program_totals: Json
+        }
+        Update: {
+          contexts?: Json
+          created_at?: string
+          id?: string
+          period_id?: string
+          program_totals?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academic_period_readiness_snapshots_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: true
+            referencedRelation: "academic_term_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academic_term_instances: {
         Row: {
           created_at: string
           end_date: string | null
           id: string
-          is_active: boolean
           school_year_id: string
           semester: Database["public"]["Enums"]["academic_semester"]
           start_date: string | null
+          status: Database["public"]["Enums"]["academic_period_status"]
           term: Database["public"]["Enums"]["academic_term"] | null
           updated_at: string
         }
@@ -25,10 +57,10 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
-          is_active?: boolean
           school_year_id: string
           semester: Database["public"]["Enums"]["academic_semester"]
           start_date?: string | null
+          status?: Database["public"]["Enums"]["academic_period_status"]
           term?: Database["public"]["Enums"]["academic_term"] | null
           updated_at: string
         }
@@ -36,10 +68,10 @@ export type Database = {
           created_at?: string
           end_date?: string | null
           id?: string
-          is_active?: boolean
           school_year_id?: string
           semester?: Database["public"]["Enums"]["academic_semester"]
           start_date?: string | null
+          status?: Database["public"]["Enums"]["academic_period_status"]
           term?: Database["public"]["Enums"]["academic_term"] | null
           updated_at?: string
         }
@@ -231,6 +263,7 @@ export type Database = {
           created_by: string
           description: string
           id: string
+          is_active: boolean
           updated_at: string
         }
         Insert: {
@@ -239,6 +272,7 @@ export type Database = {
           created_by: string
           description: string
           id?: string
+          is_active?: boolean
           updated_at: string
         }
         Update: {
@@ -247,6 +281,7 @@ export type Database = {
           created_by?: string
           description?: string
           id?: string
+          is_active?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -1509,6 +1544,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      academic_period_status: "PLANNED" | "ACTIVE" | "COMPLETED" | "CANCELLED"
       academic_semester: "1ST" | "2ND" | "SUMMER"
       academic_term: "FIRST_TERM" | "SECOND_TERM"
       CourseScope: "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC"
@@ -1657,6 +1693,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      academic_period_status: ["PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"],
       academic_semester: ["1ST", "2ND", "SUMMER"],
       academic_term: ["FIRST_TERM", "SECOND_TERM"],
       CourseScope: ["GENERAL_EDUCATION", "PROGRAM_SPECIFIC"],

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { getMainNavByRoles, getMobileNavByRoles } from "@/lib/constants/navigation";
+import {
+  getDeanActiveGroup,
+  getDeanActiveItem,
+  getDeanNavGroups,
+  getHighestNavRole,
+  getMainNavByRoles,
+  getMobileNavByRoles,
+} from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
 
 describe("navigation helpers", () => {
@@ -47,22 +54,15 @@ describe("navigation helpers", () => {
     );
   });
 
-  it("orders dean navigation with course assignments after courses", () => {
+  it("exposes grouped canonical Dean navigation", () => {
     const deanNav = getMainNavByRoles([ROLES.DEAN]);
-    const deanHrefs = deanNav.map((item) => item.href);
-
-    expect(deanHrefs).toContain("/dean/course-assignments");
-    expect(deanNav.find((item) => item.href === "/dean/course-assignments")?.name).toBe(
-      "Course Assignments"
-    );
-
-    const coursesIndex = deanHrefs.indexOf("/dean/courses");
-    const courseAssignmentsIndex = deanHrefs.indexOf("/dean/course-assignments");
-    expect(courseAssignmentsIndex).toBe(coursesIndex + 1);
-
-    expect(getMobileNavByRoles([ROLES.DEAN]).map((item) => item.href)).toContain(
-      "/dean/course-assignments"
-    );
+    expect(deanNav.map((item) => item.href)).toEqual([
+      "/dean/dashboard",
+      "/dean/academic-structure",
+      "/dean/college-oversight",
+      "/dean/profile",
+    ]);
+    expect(getMobileNavByRoles([ROLES.DEAN]).map((item) => item.href)).toEqual(deanNav.map((item) => item.href));
   });
 
   it("prefers dean and program-head navigation over faculty navigation for multi-role reviewers", () => {
@@ -72,5 +72,24 @@ describe("navigation helpers", () => {
     expect(getMobileNavByRoles([ROLES.FACULTY, ROLES.DEAN]).map((item) => item.href)).not.toContain(
       "/faculty/cilo-evaluations"
     );
+  });
+
+  it("uses one highest role for navigation and layout decisions", () => {
+    expect(getHighestNavRole([ROLES.DEAN, ROLES.SECRETARY])).toBe(ROLES.SECRETARY);
+    expect(getMainNavByRoles([ROLES.DEAN, ROLES.SECRETARY])[0]?.href).toBe(
+      "/secretary/dashboard"
+    );
+    expect(getMobileNavByRoles([ROLES.DEAN, ROLES.SECRETARY])[0]?.href).toBe(
+      "/secretary/dashboard"
+    );
+  });
+
+  it("marks deepest Dean route active and keeps its parent group discoverable", () => {
+    expect(getDeanActiveItem("/dean/academic-structure/courses/abc/edit")?.name).toBe("Courses");
+    expect(getDeanActiveGroup("/dean/academic-structure/courses/abc/edit")?.name).toBe("Academic Structure");
+    expect(getDeanNavGroups().find((group) => group.name === "College Oversight")?.items.map((item) => item.name)).toEqual([
+      "Learning Outcomes",
+      "Enrollments",
+    ]);
   });
 });

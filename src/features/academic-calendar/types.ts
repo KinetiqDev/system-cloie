@@ -1,4 +1,4 @@
-import { AcademicSemester, AcademicTerm } from "@prisma/client";
+import { AcademicPeriodStatus, AcademicSemester, AcademicTerm } from "@prisma/client";
 
 /**
  * Represents a School Year entity.
@@ -33,7 +33,7 @@ export interface TermInstanceItem {
   term: AcademicTerm | null;
   startDate: Date | null;
   endDate: Date | null;
-  isActive: boolean;
+  status: AcademicPeriodStatus;
   createdAt: Date;
   updatedAt: Date;
 }

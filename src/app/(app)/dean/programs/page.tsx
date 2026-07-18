@@ -1,7 +1,5 @@
-import { listSecretaryProgramsSummary } from "@/features/academic-structure/services/list-secretary-programs-summary";
-import { SecretaryProgramsList } from "@/features/academic-structure/components/secretary-programs-list";
+import { permanentRedirect } from "next/navigation";
 
 export default async function DeanProgramsPage() {
-  const { programs, kpi } = await listSecretaryProgramsSummary();
-  return <SecretaryProgramsList programs={programs} kpi={kpi} basePath="/dean/programs" />;
+  permanentRedirect("/dean/academic-structure/programs");
 }

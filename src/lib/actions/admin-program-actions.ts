@@ -66,7 +66,7 @@ export async function createProgramAction(formData: FormData): Promise<ActionRes
   }
 
   revalidatePath("/secretary/programs");
-  revalidatePath("/dean/programs");
+  revalidatePath("/dean/academic-structure/programs");
   return { success: true };
 }
 
@@ -97,7 +97,7 @@ export async function updateProgramAction(formData: FormData): Promise<ActionRes
   }
 
   revalidatePath("/secretary/programs");
-  revalidatePath("/dean/programs");
+  revalidatePath("/dean/academic-structure/programs");
   return { success: true };
 }
 
@@ -116,7 +116,7 @@ export async function toggleProgramActiveAction(
   }
 
   revalidatePath("/secretary/programs");
-  revalidatePath("/dean/programs");
+  revalidatePath("/dean/academic-structure/programs");
   return { success: true };
 }
 
@@ -144,7 +144,7 @@ export async function deleteProgramAction(input: {
   if (!result.success) return result;
 
   revalidatePath("/secretary/programs");
-  revalidatePath("/dean/programs");
+  revalidatePath("/dean/academic-structure/programs");
   return result;
 }
 
@@ -174,7 +174,7 @@ export async function createMajorAction(formData: FormData): Promise<ActionResul
   }
 
   revalidatePath("/secretary/programs");
-  revalidatePath("/dean/programs");
+  revalidatePath("/dean/academic-structure/programs");
   return { success: true };
 }
 
@@ -218,7 +218,7 @@ export async function toggleMajorActiveAction(
   }
 
   revalidatePath("/secretary/programs");
-  revalidatePath("/dean/programs");
+  revalidatePath("/dean/academic-structure/programs");
   return { success: true };
 }
 
@@ -239,6 +239,6 @@ export async function deleteMajorAction(id: string): Promise<ActionResult> {
   }
 
   revalidatePath("/secretary/programs");
-  revalidatePath("/dean/programs");
+  revalidatePath("/dean/academic-structure/programs");
   return { success: true };
 }

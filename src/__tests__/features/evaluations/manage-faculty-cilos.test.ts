@@ -2,28 +2,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { saveFacultyManagedCilos, loadFacultyManagedCilos } from "@/features/evaluations/services/manage-faculty-cilos";
 
 const {
-  deleteManyCilosMock,
+  updateManyCilosMock,
   createManyCilosMock,
   findManyCilosMock,
   updateCiloMock,
   updateManyQuestionBindingsMock,
   resolveAuthSessionMock,
   listFacultyCourseContextsMock,
+  prepareOutcomeWriteMock,
+  commitOutcomeWriteMock,
 } = vi.hoisted(() => ({
-  deleteManyCilosMock: vi.fn(),
+  updateManyCilosMock: vi.fn(),
   createManyCilosMock: vi.fn(),
   findManyCilosMock: vi.fn(),
   updateCiloMock: vi.fn(),
   updateManyQuestionBindingsMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   listFacultyCourseContextsMock: vi.fn(),
+  prepareOutcomeWriteMock: vi.fn(),
+  commitOutcomeWriteMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => {
   const mockTx = {
     cILO: {
       findMany: findManyCilosMock,
-      deleteMany: deleteManyCilosMock,
+      updateMany: updateManyCilosMock,
       update: updateCiloMock,
       createMany: createManyCilosMock,
     },
@@ -48,6 +52,11 @@ vi.mock("@/features/evaluations/services/list-faculty-course-contexts", () => ({
   listFacultyCourseContexts: listFacultyCourseContextsMock,
 }));
 
+vi.mock("@/features/outcomes/services/manage-outcome-writes", () => ({
+  prepareOutcomeWrite: prepareOutcomeWriteMock,
+  commitOutcomeWrite: commitOutcomeWriteMock,
+}));
+
 describe("manage-faculty-cilos", () => {
   const mockContext = {
     courseId: "course-1",
@@ -57,6 +66,8 @@ describe("manage-faculty-cilos", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    prepareOutcomeWriteMock.mockImplementation(async (input) => ({ success: true, data: { input } }));
+    commitOutcomeWriteMock.mockResolvedValue({ success: true, data: {} });
   });
 
   describe("loadFacultyManagedCilos", () => {
@@ -97,7 +108,7 @@ describe("manage-faculty-cilos", () => {
   });
 
   describe("saveFacultyManagedCilos", () => {
-    it("performs diff-upsert: updates modified, creates new, deletes removed", async () => {
+    it("archives removed CILOs while preserving their mappings", async () => {
       resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: ["FACULTY"] });
       listFacultyCourseContextsMock.mockResolvedValue({
         success: true,
@@ -127,7 +138,7 @@ describe("manage-faculty-cilos", () => {
         items: [
           { id: "cilo-existing-1", description: "Updated CILO 1" }, // Updated
           { description: "New CILO" },                              // Created
-          // "cilo-existing-2" is omitted, so it should be deleted
+          // "cilo-existing-2" is omitted, so it should be archived
         ],
       };
 
@@ -135,27 +146,9 @@ describe("manage-faculty-cilos", () => {
 
       expect(result.success).toBe(true);
 
-      // Verify deletion of omitted CILO
-      expect(deleteManyCilosMock).toHaveBeenCalledWith({
-        where: { id: { in: ["cilo-existing-2"] } },
-      });
-
-      // Verify update of existing CILO
-      expect(updateCiloMock).toHaveBeenCalledWith({
-        where: { id: "cilo-existing-1" },
-        data: { description: "Updated CILO 1" },
-      });
-
-      // Verify creation of new CILO
-      expect(createManyCilosMock).toHaveBeenCalledWith({
-        data: [
-          {
-            course_id: "course-1",
-            created_by: "faculty-1",
-            description: "New CILO",
-          },
-        ],
-      });
+      expect(prepareOutcomeWriteMock).toHaveBeenCalledWith({ kind: "CILO", action: "archive", id: "cilo-existing-2" });
+      expect(prepareOutcomeWriteMock).toHaveBeenCalledWith({ kind: "CILO", action: "update", id: "cilo-existing-1", description: "Updated CILO 1" });
+      expect(prepareOutcomeWriteMock).toHaveBeenCalledWith({ kind: "CILO", action: "create", courseId: "course-1", description: "New CILO" });
 
       // Verify template binding snapshot update for modified CILO
       expect(updateManyQuestionBindingsMock).toHaveBeenCalledWith({
@@ -189,8 +182,7 @@ describe("manage-faculty-cilos", () => {
 
       await saveFacultyManagedCilos(payload);
 
-      expect(createManyCilosMock).not.toHaveBeenCalled();
-      expect(deleteManyCilosMock).not.toHaveBeenCalled();
+      expect(prepareOutcomeWriteMock).not.toHaveBeenCalled();
     });
   });
 });

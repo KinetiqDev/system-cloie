@@ -33,6 +33,7 @@ describe("resolveFacultyCourseIds", () => {
         faculty_id: "faculty-1",
         term_instance_id: "term-1",
         is_active: true,
+        term_instance: { status: "ACTIVE" },
       },
       select: { course_id: true },
     });
@@ -50,6 +51,7 @@ describe("resolveFacultyCourseIds", () => {
       where: {
         faculty_id: "faculty-1",
         is_active: true,
+        term_instance: { status: "ACTIVE" },
       },
       select: { course_id: true },
       distinct: ["course_id"],

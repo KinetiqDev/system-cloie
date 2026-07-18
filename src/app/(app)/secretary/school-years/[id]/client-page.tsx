@@ -104,7 +104,7 @@ export function SchoolYearDetailClientPage({
                     <TableCell>{getSemesterLabel(term.semester)}</TableCell>
                     <TableCell>{term.term ? getTermLabel(term.term) : "—"}</TableCell>
                     <TableCell>
-                      {term.isActive ? (
+                      {term.status === "ACTIVE" ? (
                         <Badge variant="default">
                           <CheckCircle className="mr-1 h-3 w-3" />
                           Active
@@ -117,7 +117,7 @@ export function SchoolYearDetailClientPage({
                       {formatDateRange(term.startDate, term.endDate)}
                     </TableCell>
                     <TableCell>
-                      {!term.isActive && !schoolYear.isArchived && (
+                      {term.status === "PLANNED" && !schoolYear.isArchived && (
                         <Button
                           variant="ghost"
                           size="sm"
