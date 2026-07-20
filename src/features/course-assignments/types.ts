@@ -1,4 +1,4 @@
-import type { YearLevel, StudentSection, CourseScope } from "@prisma/client";
+import type { AcademicPeriodStatus, CourseScope, StudentSection, YearLevel } from "@prisma/client";
 
 /**
  * Course option surfaced by the course assignment route and dialogs.
@@ -96,6 +96,43 @@ export type BulkCreateCourseAssignmentsInput = {
 export type CourseAssignmentResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+export type RosterEligibilityReason =
+  | "UNKNOWN_ACCOUNT"
+  | "NON_STUDENT_ACCOUNT"
+  | "ACCOUNT_INACTIVE"
+  | "PROFILE_INCOMPLETE"
+  | "NO_ACTIVE_TERM_PLACEMENT"
+  | "PROGRAM_MISMATCH";
+
+export type RosterEligibilityProjection = {
+  eligible: boolean;
+  reason: RosterEligibilityReason | null;
+};
+
+export type RosterMutabilityReason =
+  | "INACTIVE_ASSIGNMENT"
+  | "INACTIVE_ACADEMIC_PERIOD"
+  | "PUBLISHED_EVALUATION_LOCK";
+
+export type AuthorizedRosterAssignment = {
+  assignmentId: string;
+  facultyId: string;
+  courseId: string;
+  programId: string;
+  termInstanceId: string;
+  courseScope: CourseScope;
+  isActive: boolean;
+  periodStatus: AcademicPeriodStatus;
+  hasPublishedEvaluation: boolean;
+  canManage: boolean;
+  canMutate: boolean;
+  mutabilityReason: RosterMutabilityReason | null;
+};
+
+export type RosterServiceResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; referenceId?: string };
 
 /**
  * Filter options for listing course assignments.

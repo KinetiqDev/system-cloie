@@ -831,6 +831,15 @@ async function ensureAssignment(opts: {
   });
 }
 
+async function listSeededRosterStudents(courseAssignmentId: string) {
+  const memberships = await prisma.courseAssignmentMembership.findMany({
+    where: { course_assignment_id: courseAssignmentId, is_active: true },
+    select: { student_user_id: true },
+    orderBy: { created_at: "asc" },
+  });
+  return memberships.map((membership) => membership.student_user_id);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // A. Foundation
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1361,6 +1370,9 @@ async function seedAcademicCalendar() {
   await prisma.centralDeployment.deleteMany({
     where: { term_instance_id: { in: managedTermInstanceIds } },
   });
+  await prisma.courseAssignmentMembership.deleteMany({
+    where: { term_instance_id: { in: managedTermInstanceIds } },
+  });
   await prisma.courseAssignment.deleteMany({
     where: { term_instance_id: { in: managedTermInstanceIds } },
   });
@@ -1736,13 +1748,6 @@ async function seedCourseAssignments(
 ) {
   console.log("  → Course assignments...");
 
-  const bsit = pMap.get("BSIT")!;
-  const bsba = pMap.get("BSBA")!;
-  const bsed = pMap.get("BSED")!;
-  const beed = pMap.get("BEED")!;
-  const bshm = pMap.get("BSHM")!;
-  const bssw = pMap.get("BSSW")!;
-
   const courseAssignments = [
     // BSIT courses - Faculty assignments
     { courseCode: "IT-OD-401", programCode: "BSIT", facultyId: U.FAC_BSIT, yearLevel: YearLevel.FOURTH_YEAR, section: "MORNING" },
@@ -1807,11 +1812,87 @@ async function seedCourseAssignments(
           },
         });
 
-    assignmentMap.set(ca.courseCode, assignment.id);
+    assignmentMap.set(
+      `${ca.courseCode}:${ca.programCode}:${ca.yearLevel}:${ca.section}`,
+      assignment.id
+    );
     console.log(`    ✓ Assigned ${ca.courseCode} to faculty`);
   }
 
   return assignmentMap;
+}
+
+function courseAssignmentKey(
+  courseCode: string,
+  programCode: string,
+  yearLevel: YearLevel,
+  section: string
+) {
+  return `${courseCode}:${programCode}:${yearLevel}:${section}`;
+}
+
+async function seedCourseAssignmentMemberships(
+  assignmentMap: Map<string, string>
+) {
+  console.log("  → Course-assignment memberships...");
+
+  // These are deliberate roster fixtures. StudentEnrollment is only the active-term
+  // placement prerequisite and is never queried to construct this list.
+  const membershipDefinitions = [
+    { course: "IT-OD-401", program: "BSIT", year: YearLevel.FOURTH_YEAR, section: "MORNING", students: [U.STU_BSIT, U.GRAD_BSIT] },
+    { course: "IT201", program: "BSIT", year: YearLevel.SECOND_YEAR, section: "MORNING", students: [U.STU_BSIT, U.GRAD_BSIT] },
+    { course: "GEGS101", program: "BSIT", year: YearLevel.FIRST_YEAR, section: "MORNING", students: [U.STU_BSIT] },
+    { course: "GEGS101", program: "BSBA", year: YearLevel.FIRST_YEAR, section: "MORNING", students: [U.STU_BSBA, U.STU_BSBA_G] },
+    { course: "MKT301", program: "BSBA", year: YearLevel.FOURTH_YEAR, section: "MORNING", students: [U.STU_BSBA, U.STU_BSBA_G] },
+    { course: "FIN101", program: "BSBA", year: YearLevel.SECOND_YEAR, section: "AFTERNOON", students: [U.STU_BSBA, U.STU_BSBA_G] },
+    { course: "EDUC301", program: "BSED", year: YearLevel.THIRD_YEAR, section: "MORNING", students: [U.STU_BSED] },
+    { course: "BEED301", program: "BEED", year: YearLevel.THIRD_YEAR, section: "MORNING", students: [U.STU_BEED] },
+    { course: "HM401", program: "BSHM", year: YearLevel.FOURTH_YEAR, section: "EVENING", students: [U.STU_BSHM, U.STU_BSHM_G] },
+  ] as const;
+
+  for (const definition of membershipDefinitions) {
+    const assignmentId = assignmentMap.get(
+      courseAssignmentKey(definition.course, definition.program, definition.year, definition.section)
+    );
+    if (!assignmentId) {
+      throw new Error(`Missing course assignment for roster fixture ${definition.course}`);
+    }
+
+    const assignment = await prisma.courseAssignment.findUniqueOrThrow({
+      where: { id: assignmentId },
+      select: { course_id: true, term_instance_id: true, program_id: true },
+    });
+
+    for (const studentUserId of definition.students) {
+      await prisma.courseAssignmentMembership.upsert({
+        where: {
+          course_assignment_id_student_user_id: {
+            course_assignment_id: assignmentId,
+            student_user_id: studentUserId,
+          },
+        },
+        update: {
+          course_id: assignment.course_id,
+          term_instance_id: assignment.term_instance_id,
+          program_id: assignment.program_id,
+          is_active: true,
+          updated_by: U.ADMIN,
+          removed_by: null,
+          removed_at: null,
+        },
+        create: {
+          course_assignment_id: assignmentId,
+          student_user_id: studentUserId,
+          course_id: assignment.course_id,
+          term_instance_id: assignment.term_instance_id,
+          program_id: assignment.program_id,
+          is_active: true,
+          created_by: U.ADMIN,
+          updated_by: U.ADMIN,
+        },
+      });
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2210,7 +2291,9 @@ export async function seedEvaluations(
     programName: "Bachelor of Science in Information Technology",
   };
 
-  const cbEval1AssignmentId = assignmentMap.get("IT-OD-401");
+  const cbEval1AssignmentId = assignmentMap.get(
+    courseAssignmentKey("IT-OD-401", "BSIT", YearLevel.FOURTH_YEAR, "MORNING")
+  );
   if (!cbEval1AssignmentId) {
     throw new Error("Missing course assignment for IT-OD-401");
   }
@@ -2273,8 +2356,8 @@ export async function seedEvaluations(
     skipDuplicates: true,
   });
 
-  // Assign both BSIT students
-  for (const sid of [U.STU_BSIT, U.GRAD_BSIT]) {
+  // Course-bound fixture recipients come from explicit Course-assignment memberships.
+  for (const sid of await listSeededRosterStudents(cbEval1AssignmentId)) {
     await ensureAssignment({ courseBoundId: cbEval1.id, respondentId: sid });
   }
 
@@ -2293,7 +2376,9 @@ export async function seedEvaluations(
     programName: "Bachelor of Science in Business Administration",
   };
 
-  const cbEval2AssignmentId = assignmentMap.get("MKT301");
+  const cbEval2AssignmentId = assignmentMap.get(
+    courseAssignmentKey("MKT301", "BSBA", YearLevel.FOURTH_YEAR, "MORNING")
+  );
   if (!cbEval2AssignmentId) {
     throw new Error("Missing course assignment for MKT301");
   }
@@ -2354,8 +2439,7 @@ export async function seedEvaluations(
     skipDuplicates: true,
   });
 
-  // Assign BSBA students
-  for (const sid of [U.STU_BSBA, U.STU_BSBA_G]) {
+  for (const sid of await listSeededRosterStudents(cbEval2AssignmentId)) {
     await ensureAssignment({ courseBoundId: cbEval2.id, respondentId: sid });
   }
 
@@ -2371,7 +2455,7 @@ export async function seedEvaluations(
       progCode: "BSIT",
       progName: "Bachelor of Science in Information Technology",
       ylId: y2,
-      respondents: [U.STU_BSIT, U.GRAD_BSIT],
+      section: "MORNING",
     },
     {
       id: D.CB_BSBA_FIN101,
@@ -2380,8 +2464,8 @@ export async function seedEvaluations(
       progId: bsba.id,
       progCode: "BSBA",
       progName: "Bachelor of Science in Business Administration",
-      ylId: y4,
-      respondents: [U.STU_BSBA_G, U.STU_BSBA],
+      ylId: y2,
+      section: "AFTERNOON",
     },
     {
       id: D.CB_BSED_EDUC301,
@@ -2391,7 +2475,7 @@ export async function seedEvaluations(
       progCode: "BSED",
       progName: "Bachelor of Secondary Education",
       ylId: y3,
-      respondents: [U.STU_BSED],
+      section: "MORNING",
     },
     {
       id: D.CB_BSHM_HM401,
@@ -2401,7 +2485,7 @@ export async function seedEvaluations(
       progCode: "BSHM",
       progName: "Bachelor of Science in Hospitality Management",
       ylId: y4,
-      respondents: [U.STU_BSHM_G, U.STU_BSHM],
+      section: "EVENING",
     },
     {
       id: D.CB_BEED_BEED301,
@@ -2410,8 +2494,8 @@ export async function seedEvaluations(
       progId: beed.id,
       progCode: "BEED",
       progName: "Bachelor of Elementary Education",
-      ylId: y4,
-      respondents: [U.STU_BEED],
+      ylId: y3,
+      section: "MORNING",
     },
     {
       id: D.CB_BSSW_SW301,
@@ -2420,8 +2504,8 @@ export async function seedEvaluations(
       progId: bssw.id,
       progCode: "BSSW",
       progName: "Bachelor of Science in Social Work",
-      ylId: y4,
-      respondents: [] as string[],
+      ylId: y3,
+      section: "MORNING",
     },
   ];
 
@@ -2440,7 +2524,14 @@ export async function seedEvaluations(
       programName: def.progName,
     };
 
-    const cbAssignmentId = assignmentMap.get(def.courseCode);
+    const cbAssignmentId = assignmentMap.get(
+      courseAssignmentKey(
+        def.courseCode,
+        def.progCode,
+        def.ylId,
+        def.section
+      )
+    );
     if (!cbAssignmentId) {
       throw new Error(`Missing course assignment for ${def.courseCode}`);
     }
@@ -2502,7 +2593,7 @@ export async function seedEvaluations(
       });
     }
 
-    for (const respondentId of def.respondents) {
+    for (const respondentId of await listSeededRosterStudents(cbAssignmentId)) {
       await ensureAssignment({ courseBoundId: cb.id, respondentId });
     }
   }
@@ -3318,6 +3409,7 @@ async function main() {
 
   console.log("[B.5] Course assignments...");
   const assignmentMap = await seedCourseAssignments(pMap, cMap, termInstance.id);
+  await seedCourseAssignmentMemberships(assignmentMap);
 
   console.log("[C] Outcomes (GOs, CILOs, mappings)...");
   const { ciloMap } = await seedOutcomes(pMap, cMap);

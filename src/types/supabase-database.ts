@@ -301,6 +301,100 @@ export type Database = {
           },
         ]
       }
+      course_assignment_memberships: {
+        Row: {
+          course_assignment_id: string
+          course_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          program_id: string
+          removed_at: string | null
+          removed_by: string | null
+          student_user_id: string
+          term_instance_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          course_assignment_id: string
+          course_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          program_id: string
+          removed_at?: string | null
+          removed_by?: string | null
+          student_user_id: string
+          term_instance_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Update: {
+          course_assignment_id?: string
+          course_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          program_id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          student_user_id?: string
+          term_instance_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_assignment_memberships_course_assignment_id_course__fkey"
+            columns: [
+              "course_assignment_id",
+              "course_id",
+              "term_instance_id",
+              "program_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "course_assignments"
+            referencedColumns: [
+              "id",
+              "course_id",
+              "term_instance_id",
+              "program_id",
+            ]
+          },
+          {
+            foreignKeyName: "course_assignment_memberships_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_assignment_memberships_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_assignment_memberships_student_user_id_fkey"
+            columns: ["student_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_assignment_memberships_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_assignments: {
         Row: {
           assigned_by: string | null

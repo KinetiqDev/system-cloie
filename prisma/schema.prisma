@@ -208,19 +208,50 @@ model CourseAssignment {
   updated_at        DateTime @updatedAt
 
   term_instance AcademicTermInstance @relation(fields: [term_instance_id], references: [id], onDelete: Cascade)
-  faculty       User                 @relation("faculty", fields: [faculty_id], references: [id], onDelete: Cascade)
+  faculty       User                 @relation("faculty", fields: [faculty_id], references: [id], onDelete: Restrict)
   course        Course               @relation(fields: [course_id], references: [id], onDelete: Cascade)
   program       Program              @relation(fields: [program_id], references: [id], onDelete: Restrict)
   assigner      User?                @relation("AssignmentAssigner", fields: [assigned_by], references: [id], onDelete: SetNull)
   course_bound_evaluations CourseBoundEvaluation[]
+  memberships   CourseAssignmentMembership[]
 
   // Unique constraint: one assignment per course/program/year/section per term (one faculty per class)
   // NULLS NOT DISTINCT enforced in SQL migration; mirrored here as index
+  // Required as the target of the membership composite foreign key.
+  @@unique([id, course_id, term_instance_id, program_id], map: "course_assignments_membership_scope_key")
   @@index([term_instance_id, course_id, program_id, year_level, section])
   @@index([term_instance_id, faculty_id])
   @@index([term_instance_id, course_id])
   @@index([is_active])
   @@map("course_assignments")
+}
+
+model CourseAssignmentMembership {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_assignment_id String    @db.Uuid
+  student_user_id      String    @db.Uuid
+  course_id            String    @db.Uuid
+  term_instance_id     String    @db.Uuid
+  program_id           String    @db.Uuid
+  is_active            Boolean   @default(true)
+  created_by           String    @db.Uuid
+  updated_by           String    @db.Uuid
+  removed_by           String?   @db.Uuid
+  removed_at           DateTime?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+
+  course_assignment CourseAssignment @relation(fields: [course_assignment_id, course_id, term_instance_id, program_id], references: [id, course_id, term_instance_id, program_id], onDelete: Cascade, onUpdate: Restrict)
+  student  User  @relation("CourseAssignmentMembershipStudent", fields: [student_user_id], references: [id], onDelete: Restrict)
+  creator  User  @relation("CourseAssignmentMembershipCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  updater  User  @relation("CourseAssignmentMembershipUpdater", fields: [updated_by], references: [id], onDelete: Restrict)
+  remover  User? @relation("CourseAssignmentMembershipRemover", fields: [removed_by], references: [id], onDelete: Restrict)
+
+  @@unique([course_assignment_id, student_user_id], map: "course_assignment_memberships_assignment_student_key")
+  @@index([course_assignment_id, is_active])
+  @@index([student_user_id, term_instance_id])
+  @@index([course_id, term_instance_id, program_id, is_active])
+  @@map("course_assignment_memberships")
 }
 
 // ============================================================================
@@ -254,6 +285,10 @@ model User {
   created_enrollments    StudentEnrollment[] @relation("EnrollmentCreator")
   course_assignments     CourseAssignment[] @relation("faculty")
   created_assignments    CourseAssignment[] @relation("AssignmentAssigner")
+  course_assignment_memberships CourseAssignmentMembership[] @relation("CourseAssignmentMembershipStudent")
+  created_course_assignment_memberships CourseAssignmentMembership[] @relation("CourseAssignmentMembershipCreator")
+  updated_course_assignment_memberships CourseAssignmentMembership[] @relation("CourseAssignmentMembershipUpdater")
+  removed_course_assignment_memberships CourseAssignmentMembership[] @relation("CourseAssignmentMembershipRemover")
 
   @@map("users")
 }
@@ -648,6 +683,8 @@ model EvaluationAssignment {
   respondent              User                   @relation(fields: [respondent_id], references: [id], onDelete: Restrict)
   response                Response?
 
+  @@index([course_bound_id, respondent_id])
+  @@index([central_deployment_id, respondent_id])
   @@map("evaluation_assignments")
 }
 
