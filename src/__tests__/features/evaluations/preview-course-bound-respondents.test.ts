@@ -5,12 +5,12 @@ import { ROLES } from "@/lib/constants/roles";
 
 const {
   findUniqueAssignmentMock,
-  listStudentsForClassMock,
+  membershipFindManyMock,
   resolveAuthSessionMock,
   programHeadAssignmentFindManyMock,
 } = vi.hoisted(() => ({
   findUniqueAssignmentMock: vi.fn(),
-  listStudentsForClassMock: vi.fn(),
+  membershipFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
 }));
@@ -21,6 +21,9 @@ vi.mock("@/lib/db/prisma", () => ({
       findUnique: findUniqueAssignmentMock,
       findFirst: findUniqueAssignmentMock,
     },
+    courseAssignmentMembership: {
+      findMany: membershipFindManyMock,
+    },
     programHeadAssignment: {
       findMany: programHeadAssignmentFindManyMock,
     },
@@ -29,10 +32,6 @@ vi.mock("@/lib/db/prisma", () => ({
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
-}));
-
-vi.mock("@/features/enrollments/services/list-students-for-class", () => ({
-  listStudentsForClass: listStudentsForClassMock,
 }));
 
 const MOCK_ASSIGNMENT = {
@@ -73,7 +72,16 @@ describe("previewCourseBoundRespondents", () => {
   });
 
   it("returns error if course assignment is not found", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: [ROLES.FACULTY] });
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-1",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+      profileGate: { status: "COMPLETE" },
+      email: null,
+      studentProfileId: null,
+      alumniProfileId: null,
+      industryPartnerProfileId: null,
+    });
     findUniqueAssignmentMock.mockResolvedValue(null);
 
     const result = await previewCourseBoundRespondents({ assignmentId: "assignment-1" });
@@ -84,18 +92,28 @@ describe("previewCourseBoundRespondents", () => {
   });
 
   it("returns error if course assignment belongs to a different faculty", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-2", roles: [ROLES.FACULTY] });
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-2",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+      profileGate: { status: "COMPLETE" },
+    });
     findUniqueAssignmentMock.mockResolvedValue(MOCK_ASSIGNMENT);
 
     const result = await previewCourseBoundRespondents({ assignmentId: "assignment-1" });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toBe("Only the assigned faculty member can deploy this evaluation.");
+      expect(result.error).toBe("Course assignment not found.");
     }
   });
 
   it("returns error if course assignment is inactive", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: [ROLES.FACULTY] });
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-1",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+      profileGate: { status: "COMPLETE" },
+    });
     findUniqueAssignmentMock.mockResolvedValue({
       ...MOCK_ASSIGNMENT,
       is_active: false,
@@ -108,23 +126,42 @@ describe("previewCourseBoundRespondents", () => {
     }
   });
 
-  it("returns list of respondents mapped correctly from students list", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: [ROLES.FACULTY] });
-    findUniqueAssignmentMock.mockResolvedValue(MOCK_ASSIGNMENT);
-    listStudentsForClassMock.mockResolvedValue({
-      success: true,
-      data: [
-        {
-          userId: "student-1",
-          email: "student1@school.edu",
-          firstName: "John",
-          lastName: "Doe",
-          studentIdNumber: "S2025-001",
-          majorId: null,
-          majorName: null,
-        },
-      ],
+  it("does not reveal whether an unauthorized assignment exists", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-2",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+      profileGate: { status: "COMPLETE" },
     });
+    findUniqueAssignmentMock.mockResolvedValue(MOCK_ASSIGNMENT);
+    const existingAssignment = await previewCourseBoundRespondents({ assignmentId: "assignment-1" });
+
+    findUniqueAssignmentMock.mockResolvedValue(null);
+    const missingAssignment = await previewCourseBoundRespondents({ assignmentId: "assignment-2" });
+
+    expect(existingAssignment).toEqual(missingAssignment);
+  });
+
+  it("returns active roster memberships and never uses the enrollment cohort", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-1",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+      profileGate: { status: "COMPLETE" },
+    });
+    findUniqueAssignmentMock.mockResolvedValue(MOCK_ASSIGNMENT);
+    membershipFindManyMock.mockResolvedValue([
+      {
+        id: "membership-1",
+        student_user_id: "student-1",
+        student: {
+          email: "student1@school.edu",
+          first_name: "John",
+          last_name: "Doe",
+          student_profile: { major_id: null, major: null, student_id_number: "S2025-001" },
+        },
+      },
+    ]);
 
     const result = await previewCourseBoundRespondents({ assignmentId: "assignment-1" });
     expect(result.success).toBe(true);
@@ -136,6 +173,7 @@ describe("previewCourseBoundRespondents", () => {
         lastName: "Doe",
         majorId: null,
         majorName: null,
+        membershipId: "membership-1",
         programCode: "BSCS",
         programId: "program-1",
         programName: "BS Computer Science",
@@ -146,11 +184,37 @@ describe("previewCourseBoundRespondents", () => {
       });
     }
 
-    expect(listStudentsForClassMock).toHaveBeenCalledWith({
-      termInstanceId: "term-1",
-      programId: "program-1",
-      yearLevel: YearLevel.FIRST_YEAR,
-      section: StudentSection.MORNING,
+    expect(membershipFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { course_assignment_id: "assignment-1", is_active: true },
+      })
+    );
+  });
+
+  it("returns a support reference for unexpected preview failures", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-1",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+      profileGate: { status: "COMPLETE" },
     });
+    findUniqueAssignmentMock.mockRejectedValue(new Error("database secret"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const result = await previewCourseBoundRespondents({ assignmentId: "assignment-1" });
+
+    expect(result).toMatchObject({
+      error: "Failed to load respondent preview. Please try again.",
+      referenceId: expect.any(String),
+      success: false,
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to preview course-bound respondents",
+      expect.objectContaining({
+        error: { name: "Error" },
+      })
+    );
+    expect(consoleError.mock.calls.flat().join(" ")).not.toContain("database secret");
+    consoleError.mockRestore();
   });
 });

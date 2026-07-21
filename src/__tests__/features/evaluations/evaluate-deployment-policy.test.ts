@@ -34,7 +34,7 @@ describe("canDeployCourseBoundEvaluation policy", () => {
   });
 
   describe("Program Head on-behalf deployment", () => {
-    const phSession = makeSession([ROLES.FACULTY, ROLES.PROGRAM_HEAD], "ph-user");
+    const phSession = makeSession([ROLES.PROGRAM_HEAD], "ph-user");
 
     it("allows PH to deploy on-behalf for program-specific course in their scope", () => {
       const assignment = {
@@ -48,7 +48,7 @@ describe("canDeployCourseBoundEvaluation policy", () => {
       expect(result.allowed).toBe(true);
     });
 
-    it("allows PH to deploy on-behalf for GE courses (any program)", () => {
+    it("denies PH from deploying General Education courses", () => {
       const assignment = {
         faculty_id: "faculty-1",
         program_id: null,
@@ -57,7 +57,10 @@ describe("canDeployCourseBoundEvaluation policy", () => {
 
       const result = canDeployCourseBoundEvaluation(phSession, assignment, ["prog-1"]);
 
-      expect(result.allowed).toBe(true);
+      expect(result).toEqual({
+        allowed: false,
+        reason: "Program Heads cannot publish General Education evaluations.",
+      });
     });
 
     it("denies PH when course is outside their program scope", () => {
@@ -78,7 +81,7 @@ describe("canDeployCourseBoundEvaluation policy", () => {
 
   describe("Dean and Secretary on-behalf deployment", () => {
     it("allows Dean to deploy on-behalf for any assignment", () => {
-      const session = makeSession([ROLES.FACULTY, ROLES.DEAN], "dean-user");
+      const session = makeSession([ROLES.DEAN], "dean-user");
       const assignment = {
         faculty_id: "faculty-1",
         program_id: "prog-1",
@@ -91,7 +94,7 @@ describe("canDeployCourseBoundEvaluation policy", () => {
     });
 
     it("allows Secretary to deploy on-behalf for any assignment", () => {
-      const session = makeSession([ROLES.FACULTY, ROLES.SECRETARY], "secretary-user");
+      const session = makeSession([ROLES.SECRETARY], "secretary-user");
       const assignment = {
         faculty_id: "faculty-1",
         program_id: "prog-1",

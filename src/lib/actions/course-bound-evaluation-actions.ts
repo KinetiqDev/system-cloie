@@ -3,12 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { listFacultyCourseContexts } from "@/features/evaluations/services/list-faculty-course-contexts";
-import {
-  loadFacultyManagedCilos,
-} from "@/features/evaluations/services/manage-faculty-cilos";
+import { loadFacultyManagedCilos } from "@/features/evaluations/services/manage-faculty-cilos";
 import { ROLES } from "@/lib/constants/roles";
 import { previewCourseBoundRespondents } from "@/features/evaluations/services/preview-course-bound-respondents";
 import { publishCourseBoundEvaluation } from "@/features/evaluations/services/publish-course-bound-evaluation";
+import { publishCourseBoundEvaluationSchema } from "@/features/evaluations/schemas/course-bound-publication";
 import type {
   FacultyManagedCiloContext,
   PreviewCourseBoundRespondentsInput,
@@ -34,12 +33,13 @@ export async function publishCourseBoundEvaluationAction(
     return { error: "Insufficient permissions.", success: false };
   }
 
-  const payloadWithDeployer = {
-    ...payload,
-    deployerId: session.userId,
-  };
-  const result = await publishCourseBoundEvaluation(payloadWithDeployer);
-  
+  const parsed = publishCourseBoundEvaluationSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input.", success: false };
+  }
+
+  const result = await publishCourseBoundEvaluation(parsed.data);
+
   if (result.success) {
     revalidatePath("/faculty/tools");
     revalidatePath("/program-head/cilo-reviews");

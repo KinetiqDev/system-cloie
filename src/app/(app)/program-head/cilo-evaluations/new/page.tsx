@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import { YearLevel } from "@prisma/client";
+import { CourseScope, YearLevel } from "@prisma/client";
 import { ensureRoleAccess } from "@/features/auth/policies/ensure-role-access";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { PublishCourseBoundEvaluationFormV2 } from "@/features/evaluations/components/publish-course-bound-evaluation-form-v2";
-import { getFacultyTemplatePublicationContext } from "@/features/instruments/services/manage-faculty-templates";
+import { getOnBehalfTemplatePublicationContext } from "@/features/evaluations/services/publish-course-bound-evaluation";
 import {
   previewCourseBoundRespondentsAction,
   publishCourseBoundEvaluationAction,
@@ -45,7 +45,23 @@ export default async function NewProgramHeadCiloEvaluationPage({
     redirect("/program-head/tools");
   }
 
-  const publicationContext = await getFacultyTemplatePublicationContext(params.templateId);
+  const templateOwner = await prisma.instrumentTemplate.findFirst({
+    where: {
+      id: params.templateId,
+      is_active: true,
+      template_type: "COURSE_BOUND",
+    },
+    select: { faculty_owner_id: true },
+  });
+
+  if (!templateOwner?.faculty_owner_id) {
+    redirect("/program-head/tools");
+  }
+
+  const publicationContext = await getOnBehalfTemplatePublicationContext(
+    params.templateId,
+    templateOwner.faculty_owner_id
+  );
 
   if (!publicationContext.success) {
     redirect("/program-head/tools");
@@ -67,7 +83,10 @@ export default async function NewProgramHeadCiloEvaluationPage({
 
   // Build AssignmentOption array from PH results
   const assignmentOptions: AssignmentOption[] = assignmentsResult.data.items
-    .filter((item) => item.courseId === templateCourseId)
+    .filter(
+      (item) =>
+        item.courseId === templateCourseId && item.courseScope !== CourseScope.GENERAL_EDUCATION
+    )
     .map((item) => ({
       id: item.id,
       courseId: item.courseId,
@@ -89,10 +108,7 @@ export default async function NewProgramHeadCiloEvaluationPage({
     include: {
       school_year: true,
     },
-    orderBy: [
-      { school_year: { start_date: "desc" } },
-      { semester: "asc" },
-    ],
+    orderBy: [{ school_year: { start_date: "desc" } }, { semester: "asc" }],
   });
 
   const termInstances: TermInstanceItem[] = termInstancesData.map((ti) => ({
@@ -137,23 +153,13 @@ export default async function NewProgramHeadCiloEvaluationPage({
     },
   };
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { first_name: true, last_name: true },
-  });
-
-  const deployerName = user
-    ? `${user.first_name} ${user.last_name}`.trim()
-    : undefined;
-
   return (
     <PublishCourseBoundEvaluationFormV2
       assignments={assignmentOptions}
       previewAction={previewCourseBoundRespondentsAction}
       publicationContext={formPublicationContext}
       publishAction={publishCourseBoundEvaluationAction}
-      deployerUserId={session.userId}
-      deployerName={deployerName}
+      isOnBehalf
       successRedirectPath="/program-head/tools"
     />
   );

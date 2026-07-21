@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { listStudentsForClass } from "@/features/enrollments/services/list-students-for-class";
 import { CourseScope } from "@prisma/client";
 import { canDeployCourseBoundEvaluation } from "../policies";
 import type {
@@ -11,25 +11,28 @@ import type {
 } from "../types";
 
 /**
- * Phase 9: Preview respondents using course assignment ID.
- * Resolves class identity from assignment and queries enrollments.
+ * Preview respondents from the active Course-assignment roster.
+ * StudentEnrollment is only a current eligibility input, not the roster source.
  */
 export async function previewCourseBoundRespondents({
   assignmentId,
 }: PreviewCourseBoundRespondentsInput): Promise<PreviewCourseBoundRespondentsResult> {
-  const authSession = await resolveAuthSession();
-
-  if (!authSession) {
-    return {
-      error: "Authentication required.",
-      success: false,
-    };
-  }
+  let actorId: string | undefined;
 
   try {
-    // Lookup the assignment. Filters inactive at SQL level.
+    const authSession = await resolveAuthSession();
+
+    if (!authSession) {
+      return {
+        error: "Authentication required.",
+        success: false,
+      };
+    }
+    actorId = authSession.userId;
+
+    // Resolve assignment identity before querying its roster.
     const assignment = await prisma.courseAssignment.findFirst({
-      where: { id: assignmentId, is_active: true },
+      where: { id: assignmentId },
       include: {
         term_instance: {
           include: {
@@ -61,16 +64,9 @@ export async function previewCourseBoundRespondents({
       };
     }
 
-    if (!assignment.is_active) {
-      return {
-        error: "This course assignment is inactive.",
-        success: false,
-      };
-    }
-
-    // Get PH scope if user is PH - resolves multiple program head assignments
+    // Resolve scope only for the active portal role.
     let phProgramScope: string[] = [];
-    if (authSession.roles.includes(ROLES.PROGRAM_HEAD)) {
+    if (authSession.activeRole === ROLES.PROGRAM_HEAD) {
       const headAssignments = await prisma.programHeadAssignment.findMany({
         where: { program_head_id: authSession.userId, is_active: true },
         select: { program_id: true },
@@ -91,39 +87,54 @@ export async function previewCourseBoundRespondents({
 
     if (!authCheck.allowed) {
       return {
-        error: authCheck.reason,
+        error: "Course assignment not found.",
         success: false,
       };
     }
 
-    // Use listStudentsForClass to get respondents from enrollment ledger
-    const studentsResult = await listStudentsForClass({
-      termInstanceId: assignment.term_instance_id,
-      programId: assignment.program_id,
-      yearLevel: assignment.year_level,
-      section: assignment.section,
+    if (!assignment.is_active) {
+      return {
+        error: "This course assignment is inactive.",
+        success: false,
+      };
+    }
+
+    const memberships = await prisma.courseAssignmentMembership.findMany({
+      where: { course_assignment_id: assignment.id, is_active: true },
+      orderBy: { created_at: "asc" },
+      select: {
+        id: true,
+        student_user_id: true,
+        student: {
+          select: {
+            email: true,
+            first_name: true,
+            last_name: true,
+            student_profile: {
+              select: {
+                major_id: true,
+                student_id_number: true,
+                major: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
     });
 
-    if (!studentsResult.success) {
-      return {
-        error: studentsResult.error,
-        success: false,
-      };
-    }
-
-    // Transform StudentRecord[] to PreviewRespondent[]
-    const mappedRespondents: PreviewRespondent[] = studentsResult.data.map((student) => ({
-      email: student.email,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      majorId: student.majorId,
-      majorName: student.majorName,
+    const mappedRespondents: PreviewRespondent[] = memberships.map((membership) => ({
+      email: membership.student.email,
+      firstName: membership.student.first_name,
+      lastName: membership.student.last_name,
+      majorId: membership.student.student_profile?.major_id ?? null,
+      majorName: membership.student.student_profile?.major?.name ?? null,
+      membershipId: membership.id,
       programCode: assignment.program.code,
       programId: assignment.program.id,
       programName: assignment.program.name,
       section: assignment.section,
-      studentId: student.studentIdNumber,
-      userId: student.userId,
+      studentId: membership.student.student_profile?.student_id_number ?? null,
+      userId: membership.student_user_id,
       yearLevel: assignment.year_level,
     }));
 
@@ -132,9 +143,26 @@ export async function previewCourseBoundRespondents({
       data: mappedRespondents,
     };
   } catch (error) {
-    console.error("Failed to preview respondents (V2):", error);
+    const referenceId = randomUUID();
+    console.error("Failed to preview course-bound respondents", {
+      operation: "preview_course_bound_respondents",
+      actorId: actorId ?? null,
+      assignmentId,
+      referenceId,
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              code:
+                typeof error === "object" && error !== null && "code" in error
+                  ? String(error.code)
+                  : undefined,
+            }
+          : { type: typeof error },
+    });
     return {
       error: "Failed to load respondent preview. Please try again.",
+      referenceId,
       success: false,
     };
   }
