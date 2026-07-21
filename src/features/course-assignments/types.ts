@@ -110,6 +110,72 @@ export type RosterEligibilityProjection = {
   reason: RosterEligibilityReason | null;
 };
 
+export type RosterState =
+  | "ACTIVE"
+  | "INACTIVE_ASSIGNMENT"
+  | "INACTIVE_ACADEMIC_PERIOD"
+  | "PUBLISHED_EVALUATION_LOCK";
+
+export type CourseRosterAssignmentSummary = {
+  assignmentId: string;
+  courseCode: string;
+  courseTitle: string;
+  courseScope: CourseScope;
+  programCode: string;
+  programName: string;
+  facultyName: string;
+  facultyEmail: string;
+  yearLevel: YearLevel;
+  section: StudentSection;
+  termLabel: string;
+  periodStatus: AcademicPeriodStatus;
+  isActive: boolean;
+  hasPublishedEvaluation: boolean;
+  rosterState: RosterState;
+  activeRosterCount: number;
+  evaluationEligibleCount: number;
+};
+
+export type CourseRosterDiscoveryResult = {
+  items: CourseRosterAssignmentSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  includeHistory: boolean;
+  search: string;
+  activePeriodId: string | null;
+};
+
+export type CourseRosterMember = {
+  membershipId: string;
+  studentName: string;
+  email: string;
+  programCode: string | null;
+  programName: string | null;
+  majorName: string | null;
+  yearLevel: YearLevel;
+  section: StudentSection;
+  membershipAddedAt: Date;
+  isActive: boolean;
+  eligibility: RosterEligibilityProjection;
+  removedAt: Date | null;
+  removedByName: string | null;
+};
+
+export type CourseRosterDetail = {
+  assignment: CourseRosterAssignmentSummary;
+  members: CourseRosterMember[];
+  totalMembers: number;
+  activeRosterCount: number;
+  evaluationEligibleCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  search: string;
+  includeRemoved: boolean;
+  sortDirection: "asc" | "desc";
+};
+
 export type RosterMutabilityReason =
   | "INACTIVE_ASSIGNMENT"
   | "INACTIVE_ACADEMIC_PERIOD"

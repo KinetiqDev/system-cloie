@@ -45,6 +45,7 @@ const STUDENT_MOBILE_NAV: NavItem[] = [
 
 const FACULTY_NAV: NavItem[] = [
   { name: "Dashboard", href: "/faculty/dashboard", icon: LayoutDashboard },
+  { name: "My Course Rosters", href: "/faculty/course-rosters", icon: UsersRound },
   { name: "Manage CILOs", href: "/faculty/cilos", icon: BookOpen },
   { name: "Tools", href: "/faculty/tools", icon: ClipboardList },
   { name: "Profile", href: "/faculty/profile", icon: UserCircle },

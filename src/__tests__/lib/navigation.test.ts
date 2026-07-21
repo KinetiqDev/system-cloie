@@ -30,6 +30,7 @@ describe("navigation helpers", () => {
   it("orders faculty navigation correctly", () => {
     expect(getMainNavByRoles([ROLES.FACULTY]).map((item) => item.name)).toEqual([
       "Dashboard",
+      "My Course Rosters",
       "Manage CILOs",
       "Tools",
       "Profile",

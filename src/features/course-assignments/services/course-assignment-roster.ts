@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { CourseScope, type Prisma } from "@prisma/client";
+import { CourseScope, type Prisma, type SystemRole } from "@prisma/client";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { prisma } from "@/lib/db/prisma";
@@ -13,7 +13,6 @@ import {
 import type {
   AuthorizedRosterAssignment,
   RosterEligibilityProjection,
-  RosterEligibilityReason,
   RosterServiceResult,
 } from "../types";
 
@@ -33,6 +32,41 @@ type AssignmentForRoster = Prisma.CourseAssignmentGetPayload<{
     course_bound_evaluations: { select: { published_at: true } };
   };
 }>;
+
+export type RosterEligibilityStudent = {
+  is_active: boolean;
+  roles: Array<{ role: SystemRole }>;
+  student_profile: { program_id: string; student_id_number: string | null } | null;
+  enrollments: Array<{ program_id: string }>;
+};
+
+export function projectRosterEligibility(
+  assignment: Pick<AuthorizedRosterAssignment, "courseScope" | "programId">,
+  student: RosterEligibilityStudent | null
+): RosterEligibilityProjection {
+  if (!student) return { eligible: false, reason: "UNKNOWN_ACCOUNT" };
+  if (!student.roles.some((role) => role.role === ROLES.STUDENT)) {
+    return { eligible: false, reason: "NON_STUDENT_ACCOUNT" };
+  }
+  if (!student.is_active) return { eligible: false, reason: "ACCOUNT_INACTIVE" };
+  if (
+    !student.student_profile ||
+    (student.student_profile.student_id_number?.trim().length ?? 0) < 5
+  ) {
+    return { eligible: false, reason: "PROFILE_INCOMPLETE" };
+  }
+  if (student.enrollments.length === 0) {
+    return { eligible: false, reason: "NO_ACTIVE_TERM_PLACEMENT" };
+  }
+  if (
+    assignment.courseScope === CourseScope.PROGRAM_SPECIFIC &&
+    (student.student_profile.program_id !== assignment.programId ||
+      student.enrollments[0]?.program_id !== assignment.programId)
+  ) {
+    return { eligible: false, reason: "PROGRAM_MISMATCH" };
+  }
+  return { eligible: true, reason: null };
+}
 
 function unexpectedRosterFailure(
   operation: string,
@@ -229,31 +263,10 @@ export async function resolveCurrentRosterEligibility(
       },
     });
 
-    const projection = (reason: RosterEligibilityReason): RosterServiceResult<RosterEligibilityProjection> => ({
+    return {
       success: true,
-      data: { eligible: false, reason },
-    });
-
-    if (!student) return projection("UNKNOWN_ACCOUNT");
-    if (!student.roles.some((role) => role.role === ROLES.STUDENT)) return projection("NON_STUDENT_ACCOUNT");
-    if (!student.is_active) return projection("ACCOUNT_INACTIVE");
-    if (
-      !student.student_profile ||
-      (student.student_profile.student_id_number?.trim().length ?? 0) < 5
-    ) {
-      return projection("PROFILE_INCOMPLETE");
-    }
-    if (student.enrollments.length === 0) return projection("NO_ACTIVE_TERM_PLACEMENT");
-
-    if (
-      assignment.courseScope === CourseScope.PROGRAM_SPECIFIC &&
-      (student.student_profile.program_id !== assignment.programId ||
-        student.enrollments[0]?.program_id !== assignment.programId)
-    ) {
-      return projection("PROGRAM_MISMATCH");
-    }
-
-    return { success: true, data: { eligible: true, reason: null } };
+      data: projectRosterEligibility(assignment, student),
+    };
   } catch (error) {
     return unexpectedRosterFailure("resolve_current_eligibility", actorId, assignmentId, error);
   }

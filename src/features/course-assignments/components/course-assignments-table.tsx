@@ -1,6 +1,7 @@
 "use client";
 
 import { CourseScope } from "@prisma/client";
+import Link from "next/link";
 import { useState } from "react";
 import {
   Table,
@@ -198,6 +199,7 @@ export function CourseAssignmentsTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Roster</TableHead>
               <TableHead>Course</TableHead>
               <TableHead>Scope</TableHead>
               <TableHead>Faculty</TableHead>
@@ -216,6 +218,14 @@ export function CourseAssignmentsTable({
 
               return (
                 <TableRow key={assignment.id} data-readonly={isReadOnly || undefined}>
+                  <TableCell>
+                    <Link
+                      href={`/course-rosters/${assignment.id}`}
+                      className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+                    >
+                      Open roster
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{assignment.courseCode}</span>
