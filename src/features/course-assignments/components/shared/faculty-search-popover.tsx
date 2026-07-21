@@ -10,6 +10,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import type { FacultySearchResult } from "@/features/course-assignments/types";
 
 interface FacultySearchPopoverProps {
+  id?: string;
   selectedFacultyId: string | null;
   selectedFacultyName: string | null;
   targetProgramId?: string;
@@ -19,6 +20,7 @@ interface FacultySearchPopoverProps {
 }
 
 export function FacultySearchPopover({
+  id,
   selectedFacultyId,
   selectedFacultyName,
   targetProgramId,
@@ -87,30 +89,31 @@ export function FacultySearchPopover({
     <div ref={containerRef} className="relative w-full">
       {/* Trigger button */}
       <button
+        id={id}
         type="button"
         onClick={handleOpen}
         disabled={disabled}
         className={[
           "flex h-9 w-full items-center justify-between rounded-lg border px-3 text-sm transition-colors",
-          "border-input bg-transparent hover:bg-accent/50",
-          open ? "ring-2 ring-ring ring-offset-1" : "",
+          "border-input hover:bg-accent/50 bg-transparent",
+          open ? "ring-ring ring-2 ring-offset-1" : "",
           disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
         ].join(" ")}
       >
         {selectedFacultyId ? (
           <span className="flex items-center gap-2 truncate">
-            <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <User className="text-muted-foreground h-4 w-4 shrink-0" />
             <span className="truncate font-medium">{selectedFacultyName || "Unknown Faculty"}</span>
           </span>
         ) : (
           <span className="text-muted-foreground">Search faculty...</span>
         )}
-        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
       </button>
 
       {/* Inline dropdown */}
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 rounded-lg border bg-popover shadow-md">
+        <div className="bg-popover absolute top-[calc(100%+4px)] right-0 left-0 z-50 rounded-lg border shadow-md">
           <div className="p-2">
             <Input
               ref={inputRef}
@@ -131,7 +134,7 @@ export function FacultySearchPopover({
             )}
 
             {!loading && results.length === 0 && (
-              <div className="py-6 text-center text-sm text-muted-foreground">
+              <div className="text-muted-foreground py-6 text-center text-sm">
                 {query.trim() ? `No faculty found matching "${query}"` : "No faculty available."}
               </div>
             )}
@@ -148,30 +151,28 @@ export function FacultySearchPopover({
                       type="button"
                       onClick={() => handleSelect(faculty)}
                       className={[
-                        "w-full flex items-start gap-2 rounded-md p-2 text-left transition-colors hover:bg-accent",
+                        "hover:bg-accent flex w-full items-start gap-2 rounded-md p-2 text-left transition-colors",
                         isSelected ? "bg-accent" : "",
                       ].join(" ")}
                     >
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium truncate text-sm">
+                          <span className="truncate text-sm font-medium">
                             {faculty.firstName} {faculty.lastName}
                           </span>
-                          {isSelected && (
-                            <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                          )}
+                          {isSelected && <Check className="text-primary h-3.5 w-3.5 shrink-0" />}
                         </div>
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="text-muted-foreground truncate text-xs">
                           {faculty.email}
                         </div>
-                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                        <div className="mt-1 flex flex-wrap items-center gap-1">
                           {faculty.primaryAffiliationCode && (
-                            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
                               {faculty.primaryAffiliationCode}
                             </Badge>
                           )}
                           {isDifferentProgram && (
-                            <Badge variant="destructive" className="text-xs gap-1 px-1.5 py-0">
+                            <Badge variant="destructive" className="gap-1 px-1.5 py-0 text-xs">
                               <AlertTriangle className="h-3 w-3" />
                               Different Program
                             </Badge>
@@ -185,7 +186,7 @@ export function FacultySearchPopover({
             )}
 
             {!loading && total > results.length && (
-              <div className="border-t px-2 py-1.5 text-xs text-muted-foreground text-center">
+              <div className="text-muted-foreground border-t px-2 py-1.5 text-center text-xs">
                 +{total - results.length} more — type to narrow results
               </div>
             )}

@@ -14,12 +14,16 @@ vi.mock("next/cache", () => ({
 }));
 
 vi.mock("@/features/course-assignments/services/manage-course-assignments", () => ({
-  createCourseAssignment: vi.fn(() => Promise.resolve({ success: true, data: { id: ASSIGNMENT_ID } })),
+  createCourseAssignment: vi.fn(() =>
+    Promise.resolve({ success: true, data: { id: ASSIGNMENT_ID } })
+  ),
   updateCourseAssignment: vi.fn(() => Promise.resolve({ success: true, data: undefined })),
   deactivateCourseAssignment: vi.fn(() => Promise.resolve({ success: true, data: undefined })),
   activateCourseAssignment: vi.fn(() => Promise.resolve({ success: true, data: undefined })),
   deleteCourseAssignment: vi.fn(() => Promise.resolve({ success: true, data: undefined })),
-  bulkCreateCourseAssignments: vi.fn(() => Promise.resolve({ success: true, created: 1, errors: [] })),
+  bulkCreateCourseAssignments: vi.fn(() =>
+    Promise.resolve({ success: true, created: 1, errors: [] })
+  ),
 }));
 
 vi.mock("@/features/course-assignments/services/list-course-assignments", () => ({
@@ -101,7 +105,14 @@ describe("course-assignment actions revalidate all role routes on success", () =
   });
 
   it("deleteCourseAssignmentAction revalidates /program-head, /secretary, and /dean course-assignment routes", async () => {
-    await deleteCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
+    await deleteCourseAssignmentAction({
+      assignmentId: ASSIGNMENT_ID,
+      confirmationLabel: "assignment label",
+      revision: "2026-07-21T00:00:00.000Z",
+      membershipCount: 0,
+      activeMembershipCount: 0,
+      removedMembershipCount: 0,
+    });
 
     expect(revalidatePathSpy).toHaveBeenCalledWith("/program-head/course-assignments");
     expect(revalidatePathSpy).toHaveBeenCalledWith("/secretary/course-assignments");
@@ -134,7 +145,10 @@ describe("course-assignment actions do not revalidate when the underlying operat
   });
 
   it("createCourseAssignmentAction does not revalidate on failure", async () => {
-    vi.mocked(createCourseAssignment).mockResolvedValueOnce({ success: false, error: "Course is outside your program scope." });
+    vi.mocked(createCourseAssignment).mockResolvedValueOnce({
+      success: false,
+      error: "Course is outside your program scope.",
+    });
 
     const result = await createCourseAssignmentAction({
       termInstanceId: TERM_ID,
@@ -150,7 +164,10 @@ describe("course-assignment actions do not revalidate when the underlying operat
   });
 
   it("updateCourseAssignmentAction does not revalidate on failure", async () => {
-    vi.mocked(updateCourseAssignment).mockResolvedValueOnce({ success: false, error: "Assignment not found." });
+    vi.mocked(updateCourseAssignment).mockResolvedValueOnce({
+      success: false,
+      error: "Assignment not found.",
+    });
 
     const result = await updateCourseAssignmentAction({
       assignmentId: ASSIGNMENT_ID,
@@ -164,7 +181,10 @@ describe("course-assignment actions do not revalidate when the underlying operat
   });
 
   it("deactivateCourseAssignmentAction does not revalidate on failure", async () => {
-    vi.mocked(deactivateCourseAssignment).mockResolvedValueOnce({ success: false, error: "Insufficient permissions." });
+    vi.mocked(deactivateCourseAssignment).mockResolvedValueOnce({
+      success: false,
+      error: "Insufficient permissions.",
+    });
 
     const result = await deactivateCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
 
@@ -173,7 +193,10 @@ describe("course-assignment actions do not revalidate when the underlying operat
   });
 
   it("activateCourseAssignmentAction does not revalidate on failure", async () => {
-    vi.mocked(activateCourseAssignment).mockResolvedValueOnce({ success: false, error: "Insufficient permissions." });
+    vi.mocked(activateCourseAssignment).mockResolvedValueOnce({
+      success: false,
+      error: "Insufficient permissions.",
+    });
 
     const result = await activateCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
 
@@ -182,16 +205,30 @@ describe("course-assignment actions do not revalidate when the underlying operat
   });
 
   it("deleteCourseAssignmentAction does not revalidate on failure", async () => {
-    vi.mocked(deleteCourseAssignment).mockResolvedValueOnce({ success: false, error: "Cannot delete assignment because it has published course-bound evaluations." });
+    vi.mocked(deleteCourseAssignment).mockResolvedValueOnce({
+      success: false,
+      error: "Cannot delete assignment because it has published course-bound evaluations.",
+    });
 
-    const result = await deleteCourseAssignmentAction({ assignmentId: ASSIGNMENT_ID });
+    const result = await deleteCourseAssignmentAction({
+      assignmentId: ASSIGNMENT_ID,
+      confirmationLabel: "assignment label",
+      revision: "2026-07-21T00:00:00.000Z",
+      membershipCount: 0,
+      activeMembershipCount: 0,
+      removedMembershipCount: 0,
+    });
 
     expect(result.success).toBe(false);
     expect(revalidatePathSpy).not.toHaveBeenCalled();
   });
 
   it("bulkCreateCourseAssignmentsAction does not revalidate on total failure", async () => {
-    vi.mocked(bulkCreateCourseAssignments).mockResolvedValueOnce({ success: false, created: 0, errors: [{ index: 0, error: "Course not found." }] });
+    vi.mocked(bulkCreateCourseAssignments).mockResolvedValueOnce({
+      success: false,
+      created: 0,
+      errors: [{ index: 0, error: "Course not found." }],
+    });
 
     const result = await bulkCreateCourseAssignmentsAction({
       assignments: [

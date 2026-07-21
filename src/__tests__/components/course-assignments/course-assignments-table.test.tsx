@@ -2,18 +2,21 @@ import { render, screen, fireEvent, waitFor, within, act } from "@testing-librar
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { YearLevel, StudentSection, CourseScope } from "@prisma/client";
 import type { ComponentProps } from "react";
+import type { CourseAssignmentItem } from "@/features/course-assignments/types";
 
 import { CourseAssignmentsTable } from "@/features/course-assignments/components/course-assignments-table";
 import {
   activateCourseAssignmentAction,
   deactivateCourseAssignmentAction,
   deleteCourseAssignmentAction,
+  preflightCourseAssignmentDeletionAction,
 } from "@/lib/actions/course-assignment-actions";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
   activateCourseAssignmentAction: vi.fn(),
   deactivateCourseAssignmentAction: vi.fn(),
   deleteCourseAssignmentAction: vi.fn(),
+  preflightCourseAssignmentDeletionAction: vi.fn(),
 }));
 
 function createAssignment(overrides: Partial<CourseAssignmentItem> = {}): CourseAssignmentItem {
@@ -50,6 +53,19 @@ describe("CourseAssignmentsTable", () => {
 
   beforeEach(() => {
     toastMessages = [];
+    vi.mocked(preflightCourseAssignmentDeletionAction).mockResolvedValue({
+      success: true,
+      data: {
+        id: "assignment-1",
+        label:
+          "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+          revision: "2026-07-21T00:00:00.000Z",
+          membershipCount: 2,
+          activeMembershipCount: 1,
+          removedMembershipCount: 1,
+        courseBoundEvaluationCount: 0,
+      },
+    });
     window.addEventListener("cloie-toast", toastListener);
   });
 
@@ -96,7 +112,10 @@ describe("CourseAssignmentsTable", () => {
   });
 
   it("opens an AlertDialog with assignment details when deactivating", async () => {
-    vi.mocked(deactivateCourseAssignmentAction).mockResolvedValue({ success: true });
+    vi.mocked(deactivateCourseAssignmentAction).mockResolvedValue({
+      success: true,
+      data: undefined,
+    });
     const onUpdated = vi.fn();
     const assignment = createAssignment();
 
@@ -106,7 +125,9 @@ describe("CourseAssignmentsTable", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /deactivate/i }));
 
     const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByRole("heading", { name: /Deactivate Assignment\?/i })).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("heading", { name: /Deactivate Assignment\?/i })
+    ).toBeInTheDocument();
     expect(dialog).toHaveTextContent(/you can reactivate it later/i);
     expect(dialog).toHaveTextContent(/CS101 - Intro to Computing/);
     expect(dialog).toHaveTextContent(/Test Faculty/);
@@ -115,13 +136,15 @@ describe("CourseAssignmentsTable", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: /deactivate/i }));
 
     await waitFor(() => {
-      expect(deactivateCourseAssignmentAction).toHaveBeenCalledWith({ assignmentId: assignment.id });
+      expect(deactivateCourseAssignmentAction).toHaveBeenCalledWith({
+        assignmentId: assignment.id,
+      });
     });
     expect(onUpdated).toHaveBeenCalled();
   });
 
   it("opens an AlertDialog with permanent-deletion warning when deleting", async () => {
-    vi.mocked(deleteCourseAssignmentAction).mockResolvedValue({ success: true });
+    vi.mocked(deleteCourseAssignmentAction).mockResolvedValue({ success: true, data: undefined });
     const onUpdated = vi.fn();
     const assignment = createAssignment();
 
@@ -131,20 +154,37 @@ describe("CourseAssignmentsTable", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByRole("heading", { name: /Delete Assignment\?/i })).toBeInTheDocument();
-    expect(dialog).toHaveTextContent(/permanently delete/);
-    expect(dialog).toHaveTextContent(/cannot be undone/);
+    expect(
+      within(dialog).getByRole("heading", { name: /Delete Assignment\?/i })
+    ).toBeInTheDocument();
+    expect(dialog).toHaveTextContent(/roster history/);
+    expect(dialog).toHaveTextContent(/membership history/);
 
-    fireEvent.click(within(dialog).getByRole("button", { name: /^Delete$/i }));
+    fireEvent.change(await within(dialog).findByRole("textbox"), {
+      target: {
+        value:
+          "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+      },
+    });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /delete permanently/i }));
 
     await waitFor(() => {
-      expect(deleteCourseAssignmentAction).toHaveBeenCalledWith({ assignmentId: assignment.id });
+      expect(deleteCourseAssignmentAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assignmentId: assignment.id,
+          confirmationLabel:
+            "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+          activeMembershipCount: 1,
+          removedMembershipCount: 1,
+        })
+      );
     });
     expect(onUpdated).toHaveBeenCalled();
   });
 
   it("activates an inactive assignment directly without opening a confirmation dialog", async () => {
-    vi.mocked(activateCourseAssignmentAction).mockResolvedValue({ success: true });
+    vi.mocked(activateCourseAssignmentAction).mockResolvedValue({ success: true, data: undefined });
     const onUpdated = vi.fn();
     const assignment = createAssignment({ id: "inactive-1", isActive: false });
 
@@ -161,11 +201,12 @@ describe("CourseAssignmentsTable", () => {
   });
 
   it("disables destructive menu items while the action is processing", async () => {
-    let resolveDelete: (value: { success: true }) => void = () => {};
+    let resolveDelete: (value: { success: true; data: undefined }) => void = () => {};
     vi.mocked(deleteCourseAssignmentAction).mockImplementation(
-      () => new Promise((resolve) => {
-        resolveDelete = resolve;
-      })
+      () =>
+        new Promise((resolve) => {
+          resolveDelete = resolve;
+        })
     );
 
     renderTable();
@@ -173,7 +214,13 @@ describe("CourseAssignmentsTable", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: /^Delete$/i }));
+    fireEvent.change(await within(dialog).findByRole("textbox"), {
+      target: {
+        value:
+          "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+      },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: /delete permanently/i }));
 
     await waitFor(() => {
       expect(deleteCourseAssignmentAction).toHaveBeenCalled();
@@ -185,16 +232,17 @@ describe("CourseAssignmentsTable", () => {
     expect(deleteItem).toHaveAttribute("data-disabled");
 
     await act(async () => {
-      resolveDelete({ success: true });
+      resolveDelete({ success: true, data: undefined });
     });
   });
 
   it("keeps another row's confirm dialog enabled while a different row is processing", async () => {
-    let resolveDelete: (value: { success: true }) => void = () => {};
+    let resolveDelete: (value: { success: true; data: undefined }) => void = () => {};
     vi.mocked(deleteCourseAssignmentAction).mockImplementation(
-      () => new Promise((resolve) => {
-        resolveDelete = resolve;
-      })
+      () =>
+        new Promise((resolve) => {
+          resolveDelete = resolve;
+        })
     );
 
     renderTable({
@@ -206,10 +254,19 @@ describe("CourseAssignmentsTable", () => {
 
     openRowActions("CS101");
     fireEvent.click(screen.getByRole("menuitem", { name: /delete/i }));
-    fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: /^Delete$/i }));
+    const firstDialog = await screen.findByRole("alertdialog");
+    fireEvent.change(await within(firstDialog).findByRole("textbox"), {
+      target: {
+        value:
+          "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+      },
+    });
+    fireEvent.click(within(firstDialog).getByRole("button", { name: /delete permanently/i }));
 
     await waitFor(() => {
-      expect(deleteCourseAssignmentAction).toHaveBeenCalledWith({ assignmentId: "assignment-1" });
+      expect(deleteCourseAssignmentAction).toHaveBeenCalledWith(
+        expect.objectContaining({ assignmentId: "assignment-1" })
+      );
     });
 
     openRowActions("CS102");
@@ -217,10 +274,12 @@ describe("CourseAssignmentsTable", () => {
 
     const secondDialog = await screen.findByRole("alertdialog");
     expect(within(secondDialog).getByRole("button", { name: /cancel/i })).toBeEnabled();
-    expect(within(secondDialog).getByRole("button", { name: /^Delete$/i })).toBeEnabled();
+    expect(
+      within(secondDialog).getByRole("button", { name: /delete permanently/i })
+    ).toBeDisabled();
 
     await act(async () => {
-      resolveDelete({ success: true });
+      resolveDelete({ success: true, data: undefined });
     });
   });
 
@@ -258,7 +317,9 @@ describe("CourseAssignmentsTable", () => {
 
     renderTable({ assignments: [], total: 0, mode: "all-program", onAssignFaculty: onAssign });
 
-    expect(screen.getByTestId("empty-state")).toHaveTextContent(/assign faculty to a course across any program/i);
+    expect(screen.getByTestId("empty-state")).toHaveTextContent(
+      /assign faculty to a course across any program/i
+    );
   });
 
   it("allows General Education row actions in all-program mode", () => {
@@ -300,7 +361,7 @@ describe("CourseAssignmentsTable", () => {
 
     fireEvent.click(screen.getByRole("menuitem", { name: /edit/i }));
 
-    const dialog = await screen.findByRole("dialog", { name: /edit class identity/i });
+    const dialog = await screen.findByRole("dialog", { name: /edit course assignment/i });
     expect(dialog).toHaveTextContent(/CS101 — Intro to Computing/i);
     expect(dialog).toHaveTextContent(/Test Faculty/i);
     expect(dialog).toHaveTextContent(/BSCS/i);
@@ -308,7 +369,7 @@ describe("CourseAssignmentsTable", () => {
   });
 
   it("does not reset the current page when an assignment is deleted", async () => {
-    vi.mocked(deleteCourseAssignmentAction).mockResolvedValue({ success: true });
+    vi.mocked(deleteCourseAssignmentAction).mockResolvedValue({ success: true, data: undefined });
     const onPageChange = vi.fn();
 
     renderTable({ total: 25, pageSize: 10, page: 1, onPageChange });
@@ -316,7 +377,13 @@ describe("CourseAssignmentsTable", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /delete/i }));
 
     const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: /^Delete$/i }));
+    fireEvent.change(await within(dialog).findByRole("textbox"), {
+      target: {
+        value:
+          "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+      },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: /delete permanently/i }));
 
     await waitFor(() => {
       expect(deleteCourseAssignmentAction).toHaveBeenCalled();

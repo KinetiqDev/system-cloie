@@ -18,7 +18,7 @@ export async function searchFacultyPool(
 
   // Only PH, Admin, Dean can search faculty pool
   const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
-  if (!authSession?.roles?.some((r) => allowedRoles.includes(r))) {
+  if (!authSession?.activeRole || !allowedRoles.includes(authSession.activeRole)) {
     return { success: false, error: "Access denied." };
   }
 

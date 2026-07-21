@@ -21,6 +21,7 @@ export const updateCourseAssignmentSchema = z.object({
   programId: z.string().uuid().optional(),
   yearLevel: z.nativeEnum(YearLevel).optional(),
   section: z.nativeEnum(StudentSection).optional(),
+  facultyId: z.string().uuid().optional(),
 });
 
 /**
@@ -41,6 +42,15 @@ export const activateCourseAssignmentSchema = z.object({
  * Schema for deleting a course assignment (hard delete).
  */
 export const deleteCourseAssignmentSchema = z.object({
+  assignmentId: z.string().uuid(),
+  confirmationLabel: z.string().min(1),
+  revision: z.string().datetime(),
+  membershipCount: z.number().int().nonnegative(),
+  activeMembershipCount: z.number().int().nonnegative(),
+  removedMembershipCount: z.number().int().nonnegative(),
+});
+
+export const preflightCourseAssignmentDeletionSchema = z.object({
   assignmentId: z.string().uuid(),
 });
 

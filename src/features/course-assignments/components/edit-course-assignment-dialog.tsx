@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { showToast } from "@/components/ui/toast";
 import { ClassIdentityFields } from "./shared/class-identity-fields";
+import { FacultySearchPopover } from "./shared/faculty-search-popover";
 import { updateCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
 import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 
@@ -41,6 +42,8 @@ export function EditCourseAssignmentDialog({
   const [programId, setProgramId] = useState<string>("");
   const [yearLevel, setYearLevel] = useState<YearLevel>(YearLevel.FIRST_YEAR);
   const [section, setSection] = useState<StudentSection>(StudentSection.MORNING);
+  const [facultyId, setFacultyId] = useState<string>("");
+  const [facultyName, setFacultyName] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const course = assignment
@@ -48,6 +51,7 @@ export function EditCourseAssignmentDialog({
     : undefined;
   const isGeneralEducation = course?.course_scope === CourseScope.GENERAL_EDUCATION;
   const programDisabled = !isGeneralEducation;
+  const identityLocked = (assignment?.rosterMembershipCount ?? 0) > 0;
 
   useEffect(() => {
     if (open && assignment) {
@@ -56,6 +60,8 @@ export function EditCourseAssignmentDialog({
       setProgramId(assignment.programId);
       setYearLevel(assignment.yearLevel);
       setSection(assignment.section);
+      setFacultyId(assignment.facultyId);
+      setFacultyName(assignment.facultyName ?? null);
     }
   }, [open, assignment]);
 
@@ -64,22 +70,33 @@ export function EditCourseAssignmentDialog({
 
     setIsSubmitting(true);
 
-    const result = await updateCourseAssignmentAction({
-      assignmentId: assignment.id,
-      programId,
-      yearLevel,
-      section,
-    });
+    const identityChanged =
+      programId !== assignment.programId ||
+      yearLevel !== assignment.yearLevel ||
+      section !== assignment.section;
+    const facultyChanged = facultyId !== assignment.facultyId;
+
+    if (identityChanged || facultyChanged) {
+      const result = await updateCourseAssignmentAction({
+        assignmentId: assignment.id,
+        ...(identityChanged && { programId, yearLevel, section }),
+        ...(facultyChanged && { facultyId }),
+      });
+      if (!result.success) {
+        setIsSubmitting(false);
+        const supportSuffix =
+          "referenceId" in result && result.referenceId
+            ? ` Support reference: ${result.referenceId}.`
+            : "";
+        showToast(`${result.error || "Failed to update assignment."}${supportSuffix}`, "error");
+        return;
+      }
+    }
 
     setIsSubmitting(false);
-
-    if (result.success) {
-      showToast("Assignment updated successfully.", "success");
-      onOpenChange(false);
-      onSuccess?.();
-    } else {
-      showToast(result.error || "Failed to update assignment.", "error");
-    }
+    showToast("Assignment updated successfully.", "success");
+    onOpenChange(false);
+    onSuccess?.();
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -91,18 +108,19 @@ export function EditCourseAssignmentDialog({
     assignment &&
     (programId !== assignment.programId ||
       yearLevel !== assignment.yearLevel ||
-      section !== assignment.section);
+      section !== assignment.section ||
+      facultyId !== assignment.facultyId);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Edit Class Identity</DialogTitle>
+          <DialogTitle>Edit Course Assignment</DialogTitle>
         </DialogHeader>
 
         {assignment && (
           <div className="space-y-4">
-            <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
+            <div className="bg-muted/40 space-y-1 rounded-md border p-3 text-sm">
               <p>
                 <strong>Course:</strong> {assignment.courseCode} — {assignment.courseTitle}
               </p>
@@ -112,9 +130,10 @@ export function EditCourseAssignmentDialog({
               <p>
                 <strong>Term:</strong> {assignment.termLabel}
               </p>
-              <p className="pt-1 text-xs text-muted-foreground">
-                Course, faculty, and term cannot be edited here. If one is wrong, deactivate
-                this assignment and create the correct replacement.
+              <p className="text-muted-foreground pt-1 text-xs">
+                {identityLocked
+                  ? "Course, academic period, program, year level, and section are locked because this assignment has roster membership history. Faculty reassignment remains available."
+                  : "Course and academic period cannot be edited here. Class identity locks after the first roster membership; Faculty reassignment remains available."}
               </p>
             </div>
 
@@ -126,19 +145,37 @@ export function EditCourseAssignmentDialog({
               onProgramChange={setProgramId}
               onYearLevelChange={setYearLevel}
               onSectionChange={(value) => value && setSection(value)}
+              disabled={identityLocked}
               programDisabled={programDisabled}
               suggestedYearLevel={course?.default_year_level ?? null}
             />
 
             {isGeneralEducation ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 General Education assignments can be assigned to any active program.
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Program-specific assignments are locked to the course&apos;s owning program.
               </p>
             )}
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium" htmlFor="assignment-faculty">
+                Faculty
+              </label>
+              <FacultySearchPopover
+                id="assignment-faculty"
+                selectedFacultyId={facultyId || null}
+                selectedFacultyName={facultyName}
+                targetProgramId={assignment.programId}
+                targetProgramName={assignment.programName}
+                onSelect={(faculty) => {
+                  setFacultyId(faculty.id);
+                  setFacultyName(`${faculty.firstName} ${faculty.lastName}`);
+                }}
+              />
+            </div>
           </div>
         )}
 
