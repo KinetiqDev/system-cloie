@@ -588,6 +588,8 @@ export async function getCourseRosterDetail(
       success: true,
       data: {
         assignment: summary,
+        canManage: authorization.data.canManage,
+        canMutate: authorization.data.canMutate,
         members,
         totalMembers,
         activeRosterCount,

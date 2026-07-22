@@ -22,6 +22,11 @@ import type {
   RosterEligibilityReason,
   RosterState,
 } from "../types";
+import {
+  AddRosterMember,
+  RemoveRosterMember,
+  RestoreRosterMember,
+} from "./course-roster-management";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
   UNKNOWN_ACCOUNT: "Unknown account",
@@ -327,6 +332,7 @@ export function CourseRosterDetailPage({
   if (!data)
     return <SafeRosterError message={error ?? "The roster request could not be completed."} />;
   const { assignment } = data;
+  const canWrite = data.canManage && data.canMutate && assignment.rosterState === "ACTIVE";
 
   return (
     <div className="flex flex-col gap-6">
@@ -343,7 +349,7 @@ export function CourseRosterDetailPage({
             <RosterStateBadge state={assignment.rosterState} />
           </div>
           <p className="text-body-md text-muted-foreground max-w-3xl">
-            Read-only membership and current evaluation eligibility for this Course assignment.
+            Review membership and current evaluation eligibility for this Course assignment.
           </p>
         </div>
       </div>
@@ -354,6 +360,7 @@ export function CourseRosterDetailPage({
         activeRosterCount={data.activeRosterCount}
         evaluationEligibleCount={data.evaluationEligibleCount}
       />
+      {canWrite && <AddRosterMember assignmentId={assignment.assignmentId} />}
 
       <Card>
         <CardHeader>
@@ -365,7 +372,12 @@ export function CourseRosterDetailPage({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <RosterFilters data={data} assignmentId={assignment.assignmentId} />
-          <RosterTable members={data.members} includeRemoved={data.includeRemoved} />
+          <RosterTable
+            members={data.members}
+            includeRemoved={data.includeRemoved}
+            assignment={assignment}
+            canWrite={canWrite}
+          />
           <DetailPagination data={data} assignmentId={assignment.assignmentId} />
         </CardContent>
       </Card>
@@ -431,9 +443,13 @@ function RosterFilters({ data, assignmentId }: { data: CourseRosterDetail; assig
 function RosterTable({
   members,
   includeRemoved,
+  assignment,
+  canWrite,
 }: {
   members: CourseRosterMember[];
   includeRemoved: boolean;
+  assignment: CourseRosterAssignmentSummary;
+  canWrite: boolean;
 }) {
   if (members.length === 0) {
     return (
@@ -470,6 +486,11 @@ function RosterTable({
             {includeRemoved && (
               <th scope="col" className="px-3 py-3 font-medium">
                 Removal history
+              </th>
+            )}
+            {canWrite && (
+              <th scope="col" className="px-3 py-3 font-medium">
+                Actions
               </th>
             )}
           </tr>
@@ -518,6 +539,15 @@ function RosterTable({
                       <span>{dateLabel(member.removedAt)}</span>
                       <span>By {member.removedByName ?? "Recorded actor"}</span>
                     </span>
+                  )}
+                </td>
+              )}
+              {canWrite && (
+                <td className="px-3 py-4">
+                  {member.isActive ? (
+                    <RemoveRosterMember assignment={assignment} member={member} />
+                  ) : (
+                    <RestoreRosterMember assignmentId={assignment.assignmentId} member={member} />
                   )}
                 </td>
               )}

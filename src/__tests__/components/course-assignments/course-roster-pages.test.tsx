@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 
@@ -43,6 +43,8 @@ const discovery: CourseRosterDiscoveryResult = {
 
 const detail: CourseRosterDetail = {
   assignment,
+  canManage: true,
+  canMutate: true,
   members: [
     {
       membershipId: "membership-1",
@@ -129,5 +131,57 @@ describe("course roster pages", () => {
 
     expect(screen.getByText("Removed from active roster")).toBeInTheDocument();
     expect(screen.queryByText("Evaluation-eligible")).not.toBeInTheDocument();
+  });
+
+  it("shows management controls only for mutable authorized rosters", () => {
+    render(<CourseRosterDetailPage data={detail} />);
+
+    expect(screen.getByRole("heading", { name: "Add Student to roster" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument();
+  });
+
+  it("shows ineligible removed members but disables restore", () => {
+    render(
+      <CourseRosterDetailPage
+        data={{
+          ...detail,
+          includeRemoved: true,
+          members: [
+            {
+              ...detail.members[0],
+              isActive: false,
+              eligibility: { eligible: false, reason: "ACCOUNT_INACTIVE" },
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /restore/i })).toBeDisabled();
+    expect(screen.getByText(/cannot restore: account inactive/i)).toBeInTheDocument();
+  });
+
+  it("states limited removal effect in accessible confirmation", () => {
+    render(<CourseRosterDetailPage data={detail} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /remove/i }));
+
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Grace Hopper");
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("CS101 - Computing");
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      /does not affect the Student account or term placement/i
+    );
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(
+      /future Course-bound evaluation eligibility/i
+    );
+  });
+
+  it("hides write controls for read-only or unauthorized detail data", () => {
+    render(<CourseRosterDetailPage data={{ ...detail, canManage: false, canMutate: false }} />);
+
+    expect(
+      screen.queryByRole("heading", { name: "Add Student to roster" })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /remove/i })).not.toBeInTheDocument();
   });
 });

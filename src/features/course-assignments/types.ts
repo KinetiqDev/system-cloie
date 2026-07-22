@@ -181,6 +181,8 @@ export type CourseRosterMember = {
 
 export type CourseRosterDetail = {
   assignment: CourseRosterAssignmentSummary;
+  canManage: boolean;
+  canMutate: boolean;
   members: CourseRosterMember[];
   totalMembers: number;
   activeRosterCount: number;
@@ -197,6 +199,13 @@ export type RosterMutabilityReason =
   | "INACTIVE_ASSIGNMENT"
   | "INACTIVE_ACADEMIC_PERIOD"
   | "PUBLISHED_EVALUATION_LOCK";
+
+export type CourseRosterMutationOutcome = "CREATED" | "RESTORED" | "REMOVED";
+
+export type CourseRosterMutation = {
+  outcome: CourseRosterMutationOutcome;
+  message: string;
+};
 
 export type AuthorizedRosterAssignment = {
   assignmentId: string;

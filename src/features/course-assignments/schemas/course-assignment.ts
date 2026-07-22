@@ -61,6 +61,18 @@ export const bulkCreateCourseAssignmentsSchema = z.object({
   assignments: z.array(createCourseAssignmentSchema).min(1).max(100),
 });
 
+export const addRosterMembershipSchema = z.object({
+  assignmentId: z.string().uuid(),
+  studentEmail: z.string().trim().toLowerCase().email().max(254),
+});
+
+export const restoreRosterMembershipSchema = z.object({
+  assignmentId: z.string().uuid(),
+  membershipId: z.string().uuid(),
+});
+
+export const removeRosterMembershipSchema = restoreRosterMembershipSchema;
+
 /**
  * TypeScript types derived from schemas.
  */
@@ -70,3 +82,6 @@ export type DeactivateCourseAssignmentInput = z.infer<typeof deactivateCourseAss
 export type ActivateCourseAssignmentInput = z.infer<typeof activateCourseAssignmentSchema>;
 export type DeleteCourseAssignmentInput = z.infer<typeof deleteCourseAssignmentSchema>;
 export type BulkCreateCourseAssignmentsInput = z.infer<typeof bulkCreateCourseAssignmentsSchema>;
+export type AddRosterMembershipInput = z.infer<typeof addRosterMembershipSchema>;
+export type RestoreRosterMembershipInput = z.infer<typeof restoreRosterMembershipSchema>;
+export type RemoveRosterMembershipInput = z.infer<typeof removeRosterMembershipSchema>;
