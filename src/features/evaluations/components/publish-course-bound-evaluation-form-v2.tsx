@@ -200,8 +200,9 @@ export function PublishCourseBoundEvaluationFormV2({
       });
 
       if (!result.success) {
-        setError(result.error);
-        showToast(result.error, "error");
+        const message = `${result.error}${result.referenceId ? ` Support reference: ${result.referenceId}.` : ""}`;
+        setError(message);
+        showToast(message, "error");
         return;
       }
 

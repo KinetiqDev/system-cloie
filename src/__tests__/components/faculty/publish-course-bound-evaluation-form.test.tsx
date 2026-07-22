@@ -224,6 +224,35 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     );
   });
 
+  it("shows preview support reference on unexpected failure", async () => {
+    const previewAction = vi.fn().mockResolvedValue({
+      success: false,
+      error: "Failed to load respondent preview. Please try again.",
+      referenceId: "support-ref",
+    });
+
+    render(
+      <PublishCourseBoundEvaluationFormV2
+        assignments={assignments}
+        publicationContext={publicationContext}
+        previewAction={previewAction}
+        publishAction={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/deployed evaluation name/i), {
+      target: { value: "CS101 Post-Term CILO Evaluation" },
+    });
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "assignment-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /preview respondents/i }));
+
+    expect(
+      await screen.findByText(/Failed to load respondent preview\. Please try again\. Support reference: support-ref\./i)
+    ).toBeInTheDocument();
+  });
+
   it("shows empty state when no assignments available", () => {
     render(
       <PublishCourseBoundEvaluationFormV2
