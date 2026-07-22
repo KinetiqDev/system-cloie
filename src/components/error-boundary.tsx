@@ -57,12 +57,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               {this.props.returnLabel ?? "Return to Dashboard"}
             </Button>
           </div>
-          {process.env.NODE_ENV === "development" && this.state.error && (
-            <pre className="bg-background mt-6 max-w-2xl overflow-auto rounded p-4 text-left text-sm">
-              {this.state.error.message}
-              {this.state.error.stack}
-            </pre>
-          )}
         </div>
       );
     }

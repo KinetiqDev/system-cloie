@@ -133,7 +133,6 @@ function unexpectedRosterReadFailure(
             typeof error === "object" && error !== null && "code" in error
               ? String(error.code)
               : undefined,
-          message: error.message,
         }
       : { type: typeof error };
   console.error("Course roster read failed", {
