@@ -9,7 +9,7 @@ export async function closeFacultyEvaluation(
 ): Promise<CloseFacultyEvaluationResult> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.FACULTY)) {
+  if (!session || session.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Unauthorized. Faculty role required." };
   }
 

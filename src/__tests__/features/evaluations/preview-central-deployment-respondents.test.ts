@@ -68,7 +68,7 @@ describe("previewCentralDeploymentRespondents", () => {
   });
 
   it("returns error if no active program head assignment is found", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
     findFirstPhAssignmentMock.mockResolvedValue(null);
 
     const result = await previewCentralDeploymentRespondents({
@@ -91,7 +91,7 @@ describe("previewCentralDeploymentRespondents", () => {
 
   describe("student targeting", () => {
     it("returns empty list if termInstanceId or yearLevel is missing", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+      resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
       findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
 
       const result = await previewCentralDeploymentRespondents({
@@ -105,7 +105,7 @@ describe("previewCentralDeploymentRespondents", () => {
     });
 
     it("previews students using listStudentsForClass and maps them correctly", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+      resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
       findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
       findUniqueProgramMock.mockResolvedValue({ code: "BSCS" });
       listStudentsForClassMock.mockResolvedValue({
@@ -157,7 +157,7 @@ describe("previewCentralDeploymentRespondents", () => {
 
   describe("alumni targeting", () => {
     it("previews alumni by invitation status and maps them correctly", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+      resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
       findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
 
       findManyExternalInviteMock.mockResolvedValue([
@@ -212,7 +212,7 @@ describe("previewCentralDeploymentRespondents", () => {
 
   describe("industry partner targeting", () => {
     it("previews industry partners by profile and maps them correctly", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+      resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
       findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
 
       findManyIndustryPartnerMock.mockResolvedValue([

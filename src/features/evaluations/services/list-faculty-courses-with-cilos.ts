@@ -44,7 +44,7 @@ export async function listFacultyCoursesWithCilos(
 ): Promise<FacultyCourseWithCilosResult> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.FACULTY)) {
+  if (!session || session.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty authentication is required." };
   }
 

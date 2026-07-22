@@ -38,7 +38,7 @@ export async function listProgramHeadDeployments(): Promise<
   // 1. Authenticate and check role
   const authSession = await resolveAuthSession();
 
-  if (!authSession?.roles?.includes(ROLES.PROGRAM_HEAD)) {
+  if (authSession?.activeRole !== ROLES.PROGRAM_HEAD) {
     return {
       success: false,
       error: "Program Head authentication is required.",

@@ -11,7 +11,7 @@ export async function listCourseBoundReviewItems(): Promise<CourseBoundReviewLis
     return [];
   }
 
-  const reviewerRole = pickReviewerRole(authSession.roles);
+  const reviewerRole = pickReviewerRole(authSession.activeRole);
 
   if (!reviewerRole) {
     return [];

@@ -47,7 +47,7 @@ export type ListFacultyTemplatesResult = ServiceResult<{
 export async function listFacultyTemplates(): Promise<ListFacultyTemplatesResult> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.FACULTY)) {
+  if (!session || session.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Unauthorized. Faculty role required." };
   }
 
@@ -132,7 +132,7 @@ export async function getFacultyTemplate(
 ): Promise<ServiceResult<FacultyTemplateItem>> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.FACULTY)) {
+  if (!session || session.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty authentication is required." };
   }
 

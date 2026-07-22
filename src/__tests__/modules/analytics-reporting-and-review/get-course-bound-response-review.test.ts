@@ -32,14 +32,14 @@ describe("getCourseBoundResponseReview", () => {
   });
 
   it("returns null when no reviewer role is present", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.STUDENT], userId: "user-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.STUDENT, roles: [ROLES.STUDENT], userId: "user-1" });
 
     await expect(getCourseBoundResponseReview("response-1")).resolves.toBeNull();
     expect(responseFindFirstMock).not.toHaveBeenCalled();
   });
 
   it("returns response detail with anonymized respondent label and section means", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.FACULTY], userId: "faculty-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY], userId: "faculty-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(["program-1"]);
     responseFindFirstMock.mockResolvedValue({
       assignment: {
@@ -125,7 +125,7 @@ describe("getCourseBoundResponseReview", () => {
   });
 
   it("returns null when reviewer scope resolves to empty set", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.FACULTY], userId: "faculty-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY], userId: "faculty-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue([]);
 
     await expect(getCourseBoundResponseReview("response-1")).resolves.toBeNull();
@@ -133,7 +133,7 @@ describe("getCourseBoundResponseReview", () => {
   });
 
   it("does not add program filter for deans", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.DEAN], userId: "dean-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.DEAN, roles: [ROLES.DEAN], userId: "dean-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(null);
     responseFindFirstMock.mockResolvedValue(null);
 
@@ -150,7 +150,7 @@ describe("getCourseBoundResponseReview", () => {
   });
 
   it("returns null means for empty quantitative response datasets", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.FACULTY], userId: "faculty-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY], userId: "faculty-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(["program-1"]);
     responseFindFirstMock.mockResolvedValue({
       assignment: {

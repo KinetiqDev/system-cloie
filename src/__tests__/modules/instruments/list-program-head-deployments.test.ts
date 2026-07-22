@@ -195,6 +195,7 @@ describe("listProgramHeadDeployments", () => {
   it("rejects users without PROGRAM_HEAD role", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       ...PH_SESSION,
+      activeRole: ROLES.FACULTY,
       roles: [ROLES.FACULTY],
     });
 
@@ -384,6 +385,7 @@ describe("closeCentralDeployment", () => {
   it("rejects non-PH role users", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       ...PH_SESSION,
+      activeRole: ROLES.STUDENT,
       roles: [ROLES.STUDENT],
     });
 

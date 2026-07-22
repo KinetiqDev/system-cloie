@@ -16,7 +16,7 @@ export async function listFacultyCourseContexts(
 ): Promise<ServiceResult<FacultyCourseContext[]>> {
   const authSession = await resolveAuthSession();
 
-  if (!authSession?.roles?.includes(ROLES.FACULTY)) {
+  if (authSession?.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty authentication is required." };
   }
 

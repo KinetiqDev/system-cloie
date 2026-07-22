@@ -66,7 +66,7 @@ function generateFacultyTemplateCode(sourceCode: string, userId: string) {
 async function requireFacultySession(): Promise<ServiceResult<{ userId: string }>> {
   const session = await resolveAuthSession();
 
-  if (!session?.roles.includes(ROLES.FACULTY)) {
+  if (session?.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty authentication is required." };
   }
 

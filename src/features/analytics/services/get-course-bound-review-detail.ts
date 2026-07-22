@@ -56,7 +56,7 @@ export async function getCourseBoundReviewDetail(
     return null;
   }
 
-  const reviewerRole = pickReviewerRole(authSession.roles);
+  const reviewerRole = pickReviewerRole(authSession.activeRole);
 
   if (!reviewerRole) {
     return null;

@@ -20,7 +20,7 @@ async function requirePHSession(): Promise<
 > {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
+  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
     return { success: false, error: "Unauthorized: Program Head access required." };
   }
 

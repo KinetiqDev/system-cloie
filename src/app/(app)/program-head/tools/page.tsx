@@ -9,7 +9,7 @@ import { ProgramHeadToolsPage } from "@/features/instruments/components/program-
 export default async function ProgramHeadToolsRoute() {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
+  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
     redirect("/unauthorized");
   }
 
