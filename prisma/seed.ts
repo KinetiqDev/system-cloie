@@ -837,7 +837,11 @@ async function listSeededRosterStudents(courseAssignmentId: string) {
     select: { student_user_id: true },
     orderBy: { created_at: "asc" },
   });
-  return memberships.map((membership) => membership.student_user_id);
+  const studentIds = memberships.map((membership) => membership.student_user_id);
+  if (studentIds.length === 0) {
+    throw new Error(`Missing seeded roster students for course assignment ${courseAssignmentId}`);
+  }
+  return studentIds;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2274,7 +2278,6 @@ export async function seedEvaluations(
   const bshm = pMap.get("BSHM")!;
   const bsed = pMap.get("BSED")!;
   const beed = pMap.get("BEED")!;
-  const bssw = pMap.get("BSSW")!;
 
   // ── Course-Bound 1: BSIT IT-OD-401 ──────────────────────────────────
   console.log("  → Course-bound eval: IT-OD-401...");
@@ -2494,16 +2497,6 @@ export async function seedEvaluations(
       progId: beed.id,
       progCode: "BEED",
       progName: "Bachelor of Elementary Education",
-      ylId: y3,
-      section: "MORNING",
-    },
-    {
-      id: D.CB_BSSW_SW301,
-      courseCode: "SW301",
-      deployName: "SW301 Post-Term CILO Evaluation",
-      progId: bssw.id,
-      progCode: "BSSW",
-      progName: "Bachelor of Science in Social Work",
       ylId: y3,
       section: "MORNING",
     },
