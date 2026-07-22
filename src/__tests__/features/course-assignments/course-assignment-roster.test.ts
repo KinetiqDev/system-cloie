@@ -5,6 +5,8 @@ import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import {
+  projectCourseBoundEvaluationEligibility,
+  projectRosterEligibility,
   resolveAuthorizedCourseAssignmentRoster,
   resolveCurrentRosterEligibility,
 } from "@/features/course-assignments/services/course-assignment-roster";
@@ -13,7 +15,8 @@ vi.mock("@/features/auth/services/resolve-auth-session");
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     courseAssignment: { findUnique: vi.fn() },
-    courseAssignmentMembership: { findUnique: vi.fn() },
+    evaluationAssignment: { findMany: vi.fn() },
+    courseAssignmentMembership: { findMany: vi.fn(), findUnique: vi.fn() },
     programHeadAssignment: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
   },
@@ -29,7 +32,10 @@ describe("course-assignment-roster service", () => {
       createAuthSessionSnapshot({ userId: "faculty-2", roles: [ROLES.FACULTY] })
     );
     const { prisma } = await import("@/lib/db/prisma");
-    vi.mocked(prisma.courseAssignmentMembership.findUnique).mockResolvedValue({ id: "membership-1", is_active: true } as never);
+    vi.mocked(prisma.courseAssignmentMembership.findUnique).mockResolvedValue({
+      id: "membership-1",
+      is_active: true,
+    } as never);
     vi.mocked(prisma.courseAssignment.findUnique)
       .mockResolvedValueOnce(null as never)
       .mockResolvedValueOnce({
@@ -56,7 +62,10 @@ describe("course-assignment-roster service", () => {
       createAuthSessionSnapshot({ roles: [ROLES.SECRETARY] })
     );
     const { prisma } = await import("@/lib/db/prisma");
-    vi.mocked(prisma.courseAssignmentMembership.findUnique).mockResolvedValue({ id: "membership-1", is_active: true } as never);
+    vi.mocked(prisma.courseAssignmentMembership.findUnique).mockResolvedValue({
+      id: "membership-1",
+      is_active: true,
+    } as never);
     vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
       id: "assignment-1",
       faculty_id: "faculty-1",
@@ -75,12 +84,7 @@ describe("course-assignment-roster service", () => {
       enrollments: [],
     } as never);
 
-    await expect(
-      resolveCurrentRosterEligibility(
-        "assignment-1",
-        "student-1"
-      )
-    ).resolves.toEqual({
+    await expect(resolveCurrentRosterEligibility("assignment-1", "student-1")).resolves.toEqual({
       success: true,
       data: { eligible: false, reason: "PROFILE_INCOMPLETE" },
     });
@@ -113,12 +117,10 @@ describe("course-assignment-roster service", () => {
       enrollments: [{ program_id: "program-2" }],
     } as never);
 
-    await expect(
-      resolveCurrentRosterEligibility(
-        "assignment-1",
-        "student-1"
-      )
-    ).resolves.toEqual({ success: true, data: { eligible: true, reason: null } });
+    await expect(resolveCurrentRosterEligibility("assignment-1", "student-1")).resolves.toEqual({
+      success: true,
+      data: { eligible: true, reason: null },
+    });
   });
 
   it("treats a profile without a valid Student ID as incomplete", async () => {
@@ -152,6 +154,85 @@ describe("course-assignment-roster service", () => {
       success: true,
       data: { eligible: false, reason: "PROFILE_INCOMPLETE" },
     });
+  });
+
+  it("excludes inactive roster members from Course-bound participation", () => {
+    expect(
+      projectCourseBoundEvaluationEligibility({
+        assignment: {
+          assignmentId: "assignment-1",
+          courseScope: CourseScope.PROGRAM_SPECIFIC,
+          programId: "program-1",
+          termInstanceId: "term-1",
+        },
+        membershipActive: false,
+        student: {
+          enrollments: [{ program_id: "program-1" }],
+          is_active: true,
+          roles: [{ role: ROLES.STUDENT }],
+          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        },
+      })
+    ).toEqual({ eligible: false, reason: null });
+  });
+
+  it("restores participation when current eligibility returns", () => {
+    expect(
+      projectRosterEligibility(
+        { courseScope: CourseScope.PROGRAM_SPECIFIC, programId: "program-1" },
+        {
+          enrollments: [{ program_id: "program-1" }],
+          is_active: true,
+          roles: [{ role: ROLES.STUDENT }],
+          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        }
+      )
+    ).toEqual({ eligible: true, reason: null });
+  });
+
+  it("counts only currently eligible active roster recipients", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.evaluationAssignment.findMany).mockResolvedValue([
+      {
+        respondent_id: "student-eligible",
+        course_bound: {
+          course_assignment: {
+            id: "assignment-1",
+            program_id: "program-1",
+            term_instance_id: "term-1",
+            course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+          },
+        },
+      },
+      {
+        respondent_id: "student-ineligible",
+        course_bound: {
+          course_assignment: {
+            id: "assignment-1",
+            program_id: "program-1",
+            term_instance_id: "term-1",
+            course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+          },
+        },
+      },
+    ] as never);
+    vi.mocked(prisma.courseAssignmentMembership.findMany).mockResolvedValue([
+      {
+        course_assignment_id: "assignment-1",
+        student_user_id: "student-eligible",
+        student: {
+          is_active: true,
+          roles: [{ role: ROLES.STUDENT }],
+          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+          enrollments: [{ program_id: "program-1", term_instance_id: "term-1" }],
+        },
+      },
+    ] as never);
+
+    const { countEligibleCourseBoundEvaluationAssignments } =
+      await import("@/features/course-assignments/services/course-assignment-roster");
+
+    await expect(countEligibleCourseBoundEvaluationAssignments({})).resolves.toBe(1);
   });
 
   it("maps unexpected failures to a safe message with a support reference", async () => {

@@ -1,4 +1,8 @@
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
+import {
+  resolveCourseBoundEvaluationEligibility,
+  toCourseBoundEvaluationEligibilityAssignment,
+} from "@/features/course-assignments/services/course-assignment-roster";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import type {
@@ -118,6 +122,14 @@ export async function getStudentAssignedEvaluationSession(
 
     if (!isCourseBoundEvaluationAvailable(evaluation)) {
       return null;
+    }
+
+    if (!(assignment.response?.submitted_at ?? null)) {
+      const eligibility = await resolveCourseBoundEvaluationEligibility(
+        toCourseBoundEvaluationEligibilityAssignment(evaluation.course_assignment),
+        authSession.userId
+      );
+      if (!eligibility.eligible) return null;
     }
 
     const ca = evaluation.course_assignment;

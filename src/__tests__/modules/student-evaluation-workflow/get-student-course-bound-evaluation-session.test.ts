@@ -5,8 +5,9 @@ import {
   mapStructureSnapshotToSections,
 } from "@/features/responses/services/get-student-course-bound-evaluation-session";
 
-const { findFirstMock, resolveAuthSessionMock } = vi.hoisted(() => ({
+const { findFirstMock, membershipFindUniqueMock, resolveAuthSessionMock } = vi.hoisted(() => ({
   findFirstMock: vi.fn(),
+  membershipFindUniqueMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
 }));
 
@@ -14,6 +15,9 @@ vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     evaluationAssignment: {
       findFirst: findFirstMock,
+    },
+    courseAssignmentMembership: {
+      findUnique: membershipFindUniqueMock,
     },
   },
 }));
@@ -104,6 +108,15 @@ describe("mapSavedAnswerItems", () => {
 describe("getStudentCourseBoundEvaluationSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    membershipFindUniqueMock.mockResolvedValue({
+      is_active: true,
+      student: {
+        enrollments: [{ program_id: "program-1" }],
+        is_active: true,
+        roles: [{ role: "STUDENT" }],
+        student_profile: { program_id: "program-1", student_id_number: "S0001" },
+      },
+    });
     vi.useRealTimers();
   });
 
@@ -115,6 +128,10 @@ describe("getStudentCourseBoundEvaluationSession", () => {
       course_bound: {
         activation_at: new Date("2026-05-15T00:00:00.000Z"),
         course_assignment: {
+          course_scope: "PROGRAM_SPECIFIC",
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
           course: { title: "Capstone 1" },
           program: { name: "BSIT" },
         },
@@ -152,6 +169,10 @@ describe("getStudentCourseBoundEvaluationSession", () => {
       course_bound: {
         activation_at: new Date("2026-04-01T00:00:00.000Z"),
         course_assignment: {
+          course_scope: "PROGRAM_SPECIFIC",
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
           course: { title: "Capstone 1" },
           program: { name: "BSIT" },
         },
@@ -233,5 +254,89 @@ describe("getStudentCourseBoundEvaluationSession", () => {
     );
 
     vi.useRealTimers();
+  });
+
+  it("returns null for an ineligible Student with a stored draft", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    membershipFindUniqueMock.mockResolvedValue({
+      is_active: true,
+      student: {
+        enrollments: [],
+        is_active: true,
+        roles: [{ role: "STUDENT" }],
+        student_profile: { program_id: "program-1", student_id_number: "S0001" },
+      },
+    });
+    findFirstMock.mockResolvedValue({
+      course_bound_id: "course-bound-1",
+      id: "assignment-1",
+      course_bound: {
+        activation_at: new Date("2026-04-01T00:00:00.000Z"),
+        course_assignment: {
+          course_scope: "PROGRAM_SPECIFIC",
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
+          course: { title: "Capstone 1" },
+          program: { name: "BSIT" },
+        },
+        deadline_at: new Date("2026-05-20T00:00:00.000Z"),
+        instrument: { structure_snapshot: [], template: { name: "Evaluation" } },
+        status: "ACTIVE",
+      },
+      response: { id: "draft-1", qual_items: [], quant_items: [], submitted_at: null },
+    });
+
+    await expect(getStudentCourseBoundEvaluationSession("assignment-1")).resolves.toBeNull();
+  });
+
+  it("restores access to a stored draft when eligibility returns before close", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    findFirstMock.mockResolvedValue({
+      course_bound_id: "course-bound-1",
+      id: "assignment-1",
+      course_bound: {
+        activation_at: new Date("2026-04-01T00:00:00.000Z"),
+        course_assignment: {
+          course_scope: "PROGRAM_SPECIFIC",
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
+          course: { title: "Capstone 1" },
+          program: { name: "BSIT" },
+        },
+        deadline_at: new Date("2026-05-20T00:00:00.000Z"),
+        instrument: { structure_snapshot: [], template: { name: "Evaluation" } },
+        status: "ACTIVE",
+      },
+      response: { id: "draft-1", qual_items: [], quant_items: [], submitted_at: null },
+    });
+    membershipFindUniqueMock
+      .mockResolvedValueOnce({
+        is_active: true,
+        student: {
+          enrollments: [],
+          is_active: true,
+          roles: [{ role: "STUDENT" }],
+          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        },
+      })
+      .mockResolvedValueOnce({
+        is_active: true,
+        student: {
+          enrollments: [{ program_id: "program-1" }],
+          is_active: true,
+          roles: [{ role: "STUDENT" }],
+          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        },
+      });
+
+    await expect(getStudentCourseBoundEvaluationSession("assignment-1")).resolves.toBeNull();
+    await expect(getStudentCourseBoundEvaluationSession("assignment-1")).resolves.toEqual(
+      expect.objectContaining({
+        assignmentId: "assignment-1",
+        session: expect.objectContaining({ responseId: "draft-1" }),
+      })
+    );
   });
 });

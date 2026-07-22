@@ -1,5 +1,6 @@
 import { DeploymentStatus, ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { countEligibleCourseBoundEvaluationAssignments } from "@/features/course-assignments/services/course-assignment-roster";
 import { buildReviewWordCloudTokens } from "./get-course-bound-review-detail";
 import type { WordCloudToken } from "../types";
 
@@ -75,12 +76,10 @@ export async function getFacultyDashboard(userId: string): Promise<FacultyDashbo
   });
 
   // 3. Pending responses (assigned but not submitted)
-  const pendingResponses = await prisma.evaluationAssignment.count({
-    where: {
-      response: null,
-      course_bound: {
-        course_assignment: { faculty_id: userId },
-      },
+  const pendingResponses = await countEligibleCourseBoundEvaluationAssignments({
+    OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }],
+    course_bound: {
+      course_assignment: { faculty_id: userId },
     },
   });
 

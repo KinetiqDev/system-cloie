@@ -5,11 +5,7 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 
-import {
-  canManageCourseRoster,
-  canMutateCourseRoster,
-  canViewCourseRoster,
-} from "../policies";
+import { canManageCourseRoster, canMutateCourseRoster, canViewCourseRoster } from "../policies";
 import type {
   AuthorizedRosterAssignment,
   RosterEligibilityProjection,
@@ -40,6 +36,24 @@ export type RosterEligibilityStudent = {
   enrollments: Array<{ program_id: string }>;
 };
 
+export type CourseBoundEvaluationEligibilityAssignment = Pick<
+  AuthorizedRosterAssignment,
+  "assignmentId" | "courseScope" | "programId" | "termInstanceId"
+>;
+
+type CourseBoundEvaluationAssignmentRecord = {
+  id: string;
+  program_id: string;
+  term_instance_id: string;
+  course: { course_scope: CourseScope };
+};
+
+export type CourseBoundEvaluationEligibilityInput = {
+  assignment: CourseBoundEvaluationEligibilityAssignment;
+  membershipActive: boolean;
+  student: RosterEligibilityStudent | null;
+};
+
 export function projectRosterEligibility(
   assignment: Pick<AuthorizedRosterAssignment, "courseScope" | "programId">,
   student: RosterEligibilityStudent | null
@@ -66,6 +80,137 @@ export function projectRosterEligibility(
     return { eligible: false, reason: "PROGRAM_MISMATCH" };
   }
   return { eligible: true, reason: null };
+}
+
+export function toCourseBoundEvaluationEligibilityAssignment(
+  assignment: CourseBoundEvaluationAssignmentRecord
+): CourseBoundEvaluationEligibilityAssignment {
+  return {
+    assignmentId: assignment.id,
+    courseScope: assignment.course.course_scope,
+    programId: assignment.program_id,
+    termInstanceId: assignment.term_instance_id,
+  };
+}
+
+export function projectCourseBoundEvaluationEligibility({
+  assignment,
+  membershipActive,
+  student,
+}: CourseBoundEvaluationEligibilityInput): RosterEligibilityProjection {
+  if (!membershipActive) return { eligible: false, reason: null };
+  return projectRosterEligibility(assignment, student);
+}
+
+export async function resolveCourseBoundEvaluationEligibility(
+  assignment: CourseBoundEvaluationEligibilityAssignment,
+  studentUserId: string
+): Promise<RosterEligibilityProjection> {
+  const membership = await prisma.courseAssignmentMembership.findUnique({
+    where: {
+      course_assignment_id_student_user_id: {
+        course_assignment_id: assignment.assignmentId,
+        student_user_id: studentUserId,
+      },
+    },
+    select: {
+      is_active: true,
+      student: {
+        select: {
+          is_active: true,
+          roles: { select: { role: true } },
+          student_profile: { select: { program_id: true, student_id_number: true } },
+          enrollments: {
+            where: { term_instance_id: assignment.termInstanceId, is_active: true },
+            select: { program_id: true },
+          },
+        },
+      },
+    },
+  });
+
+  return projectCourseBoundEvaluationEligibility({
+    assignment,
+    membershipActive: membership?.is_active ?? false,
+    student: membership?.student ?? null,
+  });
+}
+
+export async function countEligibleCourseBoundEvaluationAssignments(
+  where: Prisma.EvaluationAssignmentWhereInput
+) {
+  const assignments = await prisma.evaluationAssignment.findMany({
+    where,
+    select: {
+      respondent_id: true,
+      course_bound: {
+        select: {
+          course_assignment: {
+            select: {
+              id: true,
+              program_id: true,
+              term_instance_id: true,
+              course: { select: { course_scope: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const courseAssignmentIds = assignments
+    .map((assignment) => assignment.course_bound?.course_assignment)
+    .filter((assignment): assignment is NonNullable<typeof assignment> => Boolean(assignment))
+    .map((assignment) => assignment.id);
+  if (courseAssignmentIds.length === 0) return 0;
+
+  const memberships = await prisma.courseAssignmentMembership.findMany({
+    where: { course_assignment_id: { in: courseAssignmentIds }, is_active: true },
+    select: {
+      course_assignment_id: true,
+      student_user_id: true,
+      student: {
+        select: {
+          is_active: true,
+          roles: { select: { role: true } },
+          student_profile: { select: { program_id: true, student_id_number: true } },
+          enrollments: {
+            where: { is_active: true },
+            select: { program_id: true, term_instance_id: true },
+          },
+        },
+      },
+    },
+  });
+  const membershipsByKey = new Map(
+    memberships.map((membership) => [
+      `${membership.course_assignment_id}:${membership.student_user_id}`,
+      membership,
+    ])
+  );
+
+  const eligibleAssignments = assignments.filter((assignment) => {
+    const courseAssignment = assignment.course_bound?.course_assignment;
+    if (!courseAssignment) return false;
+    const membership = membershipsByKey.get(`${courseAssignment.id}:${assignment.respondent_id}`);
+    const eligibilityAssignment = toCourseBoundEvaluationEligibilityAssignment(courseAssignment);
+    return projectCourseBoundEvaluationEligibility({
+      assignment: eligibilityAssignment,
+      membershipActive: Boolean(membership),
+      student: membership
+        ? {
+            ...membership.student,
+            enrollments: membership.student.enrollments
+              .filter(
+                (enrollment) => enrollment.term_instance_id === courseAssignment.term_instance_id
+              )
+              .map((enrollment) => ({ program_id: enrollment.program_id })),
+          }
+        : null,
+    }).eligible;
+  });
+
+  return eligibleAssignments.length;
 }
 
 function unexpectedRosterFailure(
@@ -139,24 +284,37 @@ export async function resolveAuthorizedCourseAssignmentRoster(
     }
 
     const programHeadProgramIds =
-      session.activeRole === ROLES.PROGRAM_HEAD ? await resolveProgramHeadScope(session.userId) : [];
+      session.activeRole === ROLES.PROGRAM_HEAD
+        ? await resolveProgramHeadScope(session.userId)
+        : [];
     const policyContext = {
       facultyId: assignment.faculty_id,
       programId: assignment.program_id,
       courseScope: assignment.course.course_scope,
       isActive: assignment.is_active,
     };
-    const manageAuthorization = canManageCourseRoster(session, policyContext, programHeadProgramIds);
-    const authorization = options.manage ? manageAuthorization : canViewCourseRoster(session, policyContext, programHeadProgramIds);
+    const manageAuthorization = canManageCourseRoster(
+      session,
+      policyContext,
+      programHeadProgramIds
+    );
+    const authorization = options.manage
+      ? manageAuthorization
+      : canViewCourseRoster(session, policyContext, programHeadProgramIds);
 
     if (!authorization.allowed) {
-      return { success: false, error: authorization.reason === NOT_FOUND_ERROR ? NOT_FOUND_ERROR : authorization.reason };
+      return {
+        success: false,
+        error: authorization.reason === NOT_FOUND_ERROR ? NOT_FOUND_ERROR : authorization.reason,
+      };
     }
 
     const mutability = canMutateCourseRoster({
       isActive: assignment.is_active,
       periodStatus: assignment.term_instance.status,
-      hasPublishedEvaluation: assignment.course_bound_evaluations.some((evaluation) => evaluation.published_at !== null),
+      hasPublishedEvaluation: assignment.course_bound_evaluations.some(
+        (evaluation) => evaluation.published_at !== null
+      ),
     });
 
     return {
