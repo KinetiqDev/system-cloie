@@ -1,6 +1,8 @@
 import { DeploymentStatus, ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { countEligibleCourseBoundEvaluationAssignments } from "@/features/course-assignments/services/course-assignment-roster";
+import { ROLES } from "@/lib/constants/roles";
 import { buildReviewWordCloudTokens } from "./get-course-bound-review-detail";
 import type { WordCloudToken } from "../types";
 
@@ -42,7 +44,13 @@ function roundToTwo(n: number): number {
 // Main service function
 // ---------------------------------------------------------------------------
 
-export async function getFacultyDashboard(userId: string): Promise<FacultyDashboardData> {
+export async function getFacultyDashboard(userId: string): Promise<FacultyDashboardData | null> {
+  const session = await resolveAuthSession();
+
+  if (!session || session.activeRole !== ROLES.FACULTY || session.userId !== userId) {
+    return null;
+  }
+
   // Resolve faculty's program affiliation
   const affiliation = await prisma.facultyProgramAffiliation.findFirst({
     where: { faculty_id: userId, is_active: true },
@@ -77,10 +85,17 @@ export async function getFacultyDashboard(userId: string): Promise<FacultyDashbo
 
   // 3. Pending responses (assigned but not submitted)
   const pendingResponses = await countEligibleCourseBoundEvaluationAssignments({
-    OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }],
-    course_bound: {
-      course_assignment: { faculty_id: userId },
-    },
+    AND: [
+      { OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }] },
+      {
+        course_bound: {
+          course_assignment: { faculty_id: userId },
+          status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+          OR: [{ activation_at: null }, { activation_at: { lte: new Date() } }],
+          AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: new Date() } }] }],
+        },
+      },
+    ],
   });
 
   // 4. Overall quantitative mean
