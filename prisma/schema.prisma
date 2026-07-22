@@ -102,6 +102,13 @@ enum CourseBoundEvaluationExclusionCategory {
   OTHER
 }
 
+enum CourseBoundEvaluationExclusionReversalCategory {
+  EXCLUDED_IN_ERROR
+  ELIGIBILITY_CORRECTED
+  APPROVED_LATE_PARTICIPATION
+  OTHER
+}
+
 enum StudentSection {
   MORNING
   AFTERNOON
@@ -299,6 +306,7 @@ model User {
   updated_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipUpdater")
   removed_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipRemover")
   course_bound_evaluation_exclusions    CourseBoundEvaluationExclusion[] @relation("CourseBoundEvaluationExclusionActor")
+  exclusion_reversals                   CourseBoundEvaluationExclusion[] @relation("CourseBoundEvaluationExclusionReverser")
 
   @@map("users")
 }
@@ -633,22 +641,28 @@ model CourseBoundEvaluationTarget {
 }
 
 model CourseBoundEvaluationExclusion {
-  id                              String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  course_bound_evaluation_id      String                                 @db.Uuid
-  course_assignment_id            String                                 @db.Uuid
-  course_assignment_membership_id String                                 @db.Uuid
+  id                              String                                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_bound_evaluation_id      String                                          @db.Uuid
+  course_assignment_id            String                                          @db.Uuid
+  course_assignment_membership_id String                                          @db.Uuid
   category                        CourseBoundEvaluationExclusionCategory
   other_explanation               String?
-  excluded_by                     String                                 @db.Uuid
-  excluded_at                     DateTime                               @default(now())
+  excluded_by                     String                                          @db.Uuid
+  excluded_at                     DateTime                                        @default(now())
+  reversal_category               CourseBoundEvaluationExclusionReversalCategory?
+  reversal_other_explanation      String?
+  reversed_by                     String?                                         @db.Uuid
+  reversed_at                     DateTime?
 
   evaluation CourseBoundEvaluation      @relation(fields: [course_bound_evaluation_id, course_assignment_id], references: [id, course_assignment_id], onDelete: Cascade)
   membership CourseAssignmentMembership @relation(fields: [course_assignment_membership_id, course_assignment_id], references: [id, course_assignment_id], onDelete: Cascade)
   actor      User                       @relation("CourseBoundEvaluationExclusionActor", fields: [excluded_by], references: [id], onDelete: Restrict)
+  reverser   User?                      @relation("CourseBoundEvaluationExclusionReverser", fields: [reversed_by], references: [id], onDelete: Restrict)
 
   @@unique([course_bound_evaluation_id, course_assignment_membership_id], map: "course_bound_evaluation_exclusions_eval_membership_key")
   @@index([course_assignment_membership_id])
   @@index([course_bound_evaluation_id])
+  @@index([reversed_by])
   @@map("course_bound_evaluation_exclusions")
 }
 

@@ -1,6 +1,7 @@
 import {
   AcademicSemester,
   CourseBoundEvaluationExclusionCategory,
+  CourseBoundEvaluationExclusionReversalCategory,
   CourseScope,
   DeploymentStatus,
   StudentSection,
@@ -78,6 +79,17 @@ export type CourseBoundEvaluationExclusionInput = {
   membershipId: string;
   otherExplanation?: string;
 };
+
+export type LateIncludeCourseBoundEvaluationInput = {
+  evaluationId: string;
+  membershipId: string;
+  reversalCategory: CourseBoundEvaluationExclusionReversalCategory;
+  reversalOtherExplanation?: string;
+};
+
+export type LateIncludeCourseBoundEvaluationResult =
+  | { success: true; data: { message: string } }
+  | { success: false; error: string; referenceId?: string };
 
 export type PublishCourseBoundEvaluationResult =
   | {
@@ -187,6 +199,15 @@ export type FacultyEvaluationDetail = {
   targets: FacultyPublishedEvaluationTarget[];
   templateBindings: FacultyPublishedEvaluationCiloBinding[];
   totalAssignments: number;
+  exclusions: Array<{
+    category: CourseBoundEvaluationExclusionCategory;
+    membershipId: string;
+    membershipActive: boolean;
+    reversalCategory: CourseBoundEvaluationExclusionReversalCategory | null;
+    reversedAt: Date | null;
+    studentName: string;
+  }>;
+  lateInclusionOpen: boolean;
 };
 
 export type ListFacultyPublishedEvaluationsResult = ServiceResult<{

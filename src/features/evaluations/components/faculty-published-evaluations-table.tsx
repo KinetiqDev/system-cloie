@@ -31,6 +31,7 @@ import {
   getFacultyEvaluationDetailAction,
   closeFacultyEvaluationAction,
 } from "@/lib/actions/faculty-evaluation-actions";
+import { lateIncludeCourseBoundEvaluationAction } from "@/lib/actions/course-bound-evaluation-actions";
 import type { FacultyEvaluationDetail } from "../types";
 
 interface FacultyPublishedEvaluationsTableProps {
@@ -380,6 +381,7 @@ export function FacultyPublishedEvaluationsTable({
         detail={selectedDetail}
         open={detailDialogOpen}
         onOpenChange={setDetailDialogOpen}
+        lateIncludeAction={lateIncludeCourseBoundEvaluationAction}
       />
 
       <CloseEvaluationDialog

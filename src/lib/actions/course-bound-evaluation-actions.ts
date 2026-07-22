@@ -7,6 +7,8 @@ import { loadFacultyManagedCilos } from "@/features/evaluations/services/manage-
 import { ROLES } from "@/lib/constants/roles";
 import { previewCourseBoundRespondents } from "@/features/evaluations/services/preview-course-bound-respondents";
 import { publishCourseBoundEvaluation } from "@/features/evaluations/services/publish-course-bound-evaluation";
+import { lateIncludeCourseBoundEvaluationSchema } from "@/features/evaluations/schemas/late-include-course-bound-evaluation";
+import { lateIncludeCourseBoundEvaluationStudent } from "@/features/evaluations/services/late-include-course-bound-evaluation";
 import { publishCourseBoundEvaluationSchema } from "@/features/evaluations/schemas/course-bound-publication";
 import type {
   FacultyManagedCiloContext,
@@ -14,6 +16,8 @@ import type {
   PreviewCourseBoundRespondentsResult,
   PublishCourseBoundEvaluationInput,
   PublishCourseBoundEvaluationResult,
+  LateIncludeCourseBoundEvaluationInput,
+  LateIncludeCourseBoundEvaluationResult,
 } from "@/features/evaluations/types";
 
 export async function listFacultyCourseContextsAction() {
@@ -62,6 +66,27 @@ export async function previewCourseBoundRespondentsAction(
   }
 
   return await previewCourseBoundRespondents(payload);
+}
+
+export async function lateIncludeCourseBoundEvaluationAction(
+  payload: LateIncludeCourseBoundEvaluationInput
+): Promise<LateIncludeCourseBoundEvaluationResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+
+  const parsed = lateIncludeCourseBoundEvaluationSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input.", success: false };
+  }
+
+  const result = await lateIncludeCourseBoundEvaluationStudent(parsed.data);
+  if (result.success) {
+    revalidatePath("/faculty/tools");
+    revalidatePath("/student/evaluations");
+  }
+  return result;
 }
 
 export async function loadFacultyManagedCilosAction(payload: FacultyManagedCiloContext) {
