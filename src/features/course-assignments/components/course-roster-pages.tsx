@@ -27,6 +27,7 @@ import {
   RemoveRosterMember,
   RestoreRosterMember,
 } from "./course-roster-management";
+import { ImportRosterCsv } from "./course-roster-management";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
   UNKNOWN_ACCOUNT: "Unknown account",
@@ -361,6 +362,7 @@ export function CourseRosterDetailPage({
         evaluationEligibleCount={data.evaluationEligibleCount}
       />
       {canWrite && <AddRosterMember assignmentId={assignment.assignmentId} />}
+      {canWrite && <ImportRosterCsv assignmentId={assignment.assignmentId} />}
 
       <Card>
         <CardHeader>

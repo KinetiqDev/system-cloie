@@ -1,11 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 
 import {
   CourseRosterDetailPage,
   CourseRosterDiscoveryPage,
 } from "@/features/course-assignments/components/course-roster-pages";
+import { ImportRosterCsv } from "@/features/course-assignments/components/course-roster-management";
+import * as rosterActions from "@/lib/actions/course-roster-actions";
 import type {
   CourseRosterDetail,
   CourseRosterDiscoveryResult,
@@ -183,5 +185,44 @@ describe("course roster pages", () => {
       screen.queryByRole("heading", { name: "Add Student to roster" })
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /remove/i })).not.toBeInTheDocument();
+  });
+
+  it("provides accessible CSV import, template download, row results, and failed export", async () => {
+    vi.spyOn(rosterActions, "importCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        total: 2,
+        created: 1,
+        restored: 0,
+        failed: 1,
+        unprocessed: 0,
+        rows: [
+          { sourceIndex: 2, email: "ok@example.com", status: "CREATED", error: "Created." },
+          { sourceIndex: 3, email: "bad@example.com", status: "UNKNOWN_ACCOUNT", error: "No matching account was found." },
+        ],
+      },
+    });
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+
+    render(<ImportRosterCsv assignmentId="assignment-1" />);
+    expect(screen.getByLabelText("Roster CSV file")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /download template/i }));
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(click).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:test");
+
+    const input = screen.getByLabelText("Roster CSV file");
+    const file = new File(["email\nok@example.com\nbad@example.com\n"], "roster.csv", { type: "text/csv" });
+    fireEvent.change(input, { target: { files: [file] } });
+    fireEvent.submit(input.closest("form")!);
+
+    expect(await screen.findByRole("heading", { name: "Import results" })).toBeInTheDocument();
+    expect(screen.getByText(/1 created, 0 restored, 1 failed, 0 unprocessed/i)).toBeInTheDocument();
+    expect(screen.getByText("No matching account was found.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /download failed rows/i })).toBeInTheDocument();
+
+    vi.restoreAllMocks();
   });
 });

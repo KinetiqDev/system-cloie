@@ -207,6 +207,40 @@ export type CourseRosterMutation = {
   message: string;
 };
 
+export type CourseRosterImportRowStatus =
+  | "CREATED"
+  | "RESTORED"
+  | "DUPLICATE_EMAIL"
+  | "MALFORMED_EMAIL"
+  | "UNKNOWN_ACCOUNT"
+  | "NON_STUDENT_ACCOUNT"
+  | "ACCOUNT_INACTIVE"
+  | "PROFILE_INCOMPLETE"
+  | "NO_ACTIVE_TERM_PLACEMENT"
+  | "PROGRAM_MISMATCH"
+  | "ALREADY_ACTIVE"
+  | "OTHER_SECTION_CONFLICT"
+  | "READ_ONLY"
+  | "UNEXPECTED_FAILURE"
+  | "UNPROCESSED";
+
+export type CourseRosterImportRow = {
+  sourceIndex: number;
+  email: string;
+  status: CourseRosterImportRowStatus;
+  error: string;
+};
+
+export type CourseRosterImportSummary = {
+  total: number;
+  created: number;
+  restored: number;
+  failed: number;
+  unprocessed: number;
+  rows: CourseRosterImportRow[];
+  referenceId?: string;
+};
+
 export type AuthorizedRosterAssignment = {
   assignmentId: string;
   facultyId: string;

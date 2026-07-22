@@ -73,6 +73,11 @@ export const restoreRosterMembershipSchema = z.object({
 
 export const removeRosterMembershipSchema = restoreRosterMembershipSchema;
 
+export const importCourseRosterTextSchema = z.object({
+  assignmentId: z.string().uuid(),
+  csvText: z.string(),
+});
+
 /**
  * TypeScript types derived from schemas.
  */
@@ -85,3 +90,4 @@ export type BulkCreateCourseAssignmentsInput = z.infer<typeof bulkCreateCourseAs
 export type AddRosterMembershipInput = z.infer<typeof addRosterMembershipSchema>;
 export type RestoreRosterMembershipInput = z.infer<typeof restoreRosterMembershipSchema>;
 export type RemoveRosterMembershipInput = z.infer<typeof removeRosterMembershipSchema>;
+export type ImportCourseRosterTextInput = z.infer<typeof importCourseRosterTextSchema>;

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import {
   addRosterMembershipSchema,
+  importCourseRosterTextSchema,
   removeRosterMembershipSchema,
   restoreRosterMembershipSchema,
 } from "@/features/course-assignments/schemas/course-assignment";
@@ -12,6 +13,7 @@ import {
   removeRosterMembership,
   restoreRosterMembership,
 } from "@/features/course-assignments/services/manage-course-roster";
+import { importCourseRoster } from "@/features/course-assignments/services/import-course-roster";
 
 function revalidateRosterRoutes(assignmentId: string) {
   revalidatePath(`/course-rosters/${assignmentId}`);
@@ -44,4 +46,36 @@ export async function removeRosterMembershipAction(input: unknown) {
   const result = await removeRosterMembership(parsed.data.assignmentId, parsed.data.membershipId);
   if (result.success) revalidateRosterRoutes(parsed.data.assignmentId);
   return result;
+}
+
+export async function importCourseRosterAction(input: unknown) {
+  if (input instanceof FormData) {
+    const assignmentId = input.get("assignmentId");
+    const file = input.get("file");
+    if (typeof assignmentId !== "string" || !importCourseRosterTextSchema.shape.assignmentId.safeParse(assignmentId).success || !isFileLike(file)) {
+      return { success: false as const, error: "Choose a valid CSV file." };
+    }
+    const result = await importCourseRoster(assignmentId, new Uint8Array(await file.arrayBuffer()));
+    if (result.success) revalidateRosterRoutes(assignmentId);
+    return result;
+  }
+
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    "assignmentId" in input &&
+    "csvText" in input &&
+    importCourseRosterTextSchema.safeParse(input).success
+  ) {
+    const parsed = importCourseRosterTextSchema.parse(input);
+    const result = await importCourseRoster(parsed.assignmentId, parsed.csvText);
+    if (result.success) revalidateRosterRoutes(parsed.assignmentId);
+    return result;
+  }
+
+  return { success: false as const, error: "Choose a valid CSV file." };
+}
+
+function isFileLike(value: FormDataEntryValue | null): value is File {
+  return value !== null && typeof value !== "string" && typeof value.arrayBuffer === "function";
 }

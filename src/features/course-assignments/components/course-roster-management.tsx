@@ -1,8 +1,8 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { useState, useTransition } from "react";
-import { RotateCcw, UserPlus, UserRoundMinus } from "lucide-react";
+import type { ChangeEvent, FormEvent } from "react";
+import { useRef, useState, useTransition } from "react";
+import { Download, FileUp, RotateCcw, UserPlus, UserRoundMinus } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -21,10 +21,17 @@ import { Input } from "@/components/ui/input";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import {
   addRosterMembershipAction,
+  importCourseRosterAction,
   removeRosterMembershipAction,
   restoreRosterMembershipAction,
 } from "@/lib/actions/course-roster-actions";
 import type { CourseRosterAssignmentSummary, CourseRosterMember } from "../types";
+import {
+  COURSE_ROSTER_TEMPLATE,
+  exportFailedCourseRosterRows,
+  parseCourseRosterCsv,
+} from "../services/course-roster-csv";
+import type { CourseRosterImportSummary } from "../types";
 
 function MutationMessage({ message }: { message: string | null }) {
   if (!message) return null;
@@ -44,6 +51,153 @@ function resultMessage(result: {
 }) {
   if (result.success) return result.data?.message ?? "Roster updated.";
   return `${result.error ?? "The roster request could not be completed."}${result.referenceId ? ` Support reference: ${result.referenceId}.` : ""}`;
+}
+
+function downloadCsv(filename: string, content: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function ImportSummary({ result }: { result: CourseRosterImportSummary }) {
+  const failedRows = result.rows.filter((row) => !["CREATED", "RESTORED"].includes(row.status));
+  return (
+    <section
+      tabIndex={-1}
+      aria-labelledby="course-roster-import-results"
+      className="flex flex-col gap-3 rounded-lg border p-4 outline-none focus-visible:ring-3"
+    >
+      <div aria-live="polite">
+        <h3 id="course-roster-import-results" className="font-medium">
+          Import results
+        </h3>
+        <p className="text-muted-foreground text-sm">
+          {result.created} created, {result.restored} restored, {result.failed} failed, {result.unprocessed} unprocessed.
+        </p>
+      </div>
+      {result.referenceId && (
+        <Alert variant="destructive">
+          <AlertTitle>Import stopped</AlertTitle>
+          <AlertDescription>
+            Unexpected failure. Support reference: {result.referenceId}.
+          </AlertDescription>
+        </Alert>
+      )}
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-[42rem] text-left text-sm">
+          <caption className="sr-only">Course roster import row results</caption>
+          <thead className="bg-muted/40 border-b">
+            <tr>
+              <th scope="col" className="px-3 py-2">Row</th>
+              <th scope="col" className="px-3 py-2">Email</th>
+              <th scope="col" className="px-3 py-2">Result</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {result.rows.map((row) => (
+              <tr key={`${row.sourceIndex}-${row.email}`}>
+                <td className="px-3 py-2 tabular-nums">{row.sourceIndex}</td>
+                <td className="px-3 py-2">{row.email}</td>
+                <td className="px-3 py-2">
+                  <span className="font-medium">{row.status}</span>
+                  {row.error && <span className="text-muted-foreground ml-2">{row.error}</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {failedRows.length > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => downloadCsv("course-roster-failed.csv", exportFailedCourseRosterRows(result.rows))}
+        >
+          <Download data-icon="inline-start" />
+          Download failed rows
+        </Button>
+      )}
+    </section>
+  );
+}
+
+export function ImportRosterCsv({ assignmentId }: { assignmentId: string }) {
+  const [result, setResult] = useState<CourseRosterImportSummary | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  function downloadTemplate() {
+    downloadCsv("course-roster-template.csv", COURSE_ROSTER_TEMPLATE);
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const file = event.currentTarget.elements.namedItem("file");
+    if (!(file instanceof HTMLInputElement) || !file.files?.[0]) {
+      setMessage("Choose a CSV file.");
+      return;
+    }
+    const parsed = parseCourseRosterCsv(new Uint8Array(await file.files[0].arrayBuffer()));
+    if (!parsed.success) {
+      setMessage(parsed.error);
+      return;
+    }
+    const formData = new FormData();
+    formData.set("assignmentId", assignmentId);
+    formData.set("file", file.files[0]);
+    setMessage(null);
+    setResult(null);
+    startTransition(async () => {
+      const nextResult = await importCourseRosterAction(formData);
+      if (nextResult.success) {
+        setResult(nextResult.data);
+        requestAnimationFrame(() => resultsRef.current?.focus());
+      } else {
+        setMessage(`${nextResult.error}${nextResult.referenceId ? ` Support reference: ${nextResult.referenceId}.` : ""}`);
+      }
+    });
+  }
+
+  function validateFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file && !file.name.toLowerCase().endsWith(".csv")) {
+      setMessage("Choose a CSV file.");
+      event.target.value = "";
+    } else {
+      setMessage(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-4">
+      <div>
+        <h2 className="font-medium">Import Students from CSV</h2>
+        <p className="text-muted-foreground text-sm">One unquoted email column. Maximum 500 data rows.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" onClick={downloadTemplate} disabled={isPending}>
+          <Download data-icon="inline-start" />
+          Download template
+        </Button>
+      </div>
+      <form className="flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={submit}>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <label htmlFor="course-roster-csv" className="text-sm font-medium">Roster CSV file</label>
+          <Input id="course-roster-csv" name="file" type="file" accept=".csv,text/csv" required disabled={isPending} onChange={validateFile} />
+        </div>
+        <Button type="submit" disabled={isPending}>
+          <FileUp data-icon="inline-start" />
+          {isPending ? "Importing..." : "Import roster"}
+        </Button>
+      </form>
+      {message && <Alert variant="destructive" aria-live="polite"><AlertTitle>Import not started</AlertTitle><AlertDescription>{message}</AlertDescription></Alert>}
+      {result && <div ref={resultsRef} tabIndex={-1} className="outline-none focus-visible:ring-3"><ImportSummary result={result} /></div>}
+    </div>
+  );
 }
 
 export function AddRosterMember({ assignmentId }: { assignmentId: string }) {
