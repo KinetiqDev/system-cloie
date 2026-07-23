@@ -86,6 +86,18 @@ describe("course roster pages", () => {
     expect(screen.getByText("Evaluation-eligible")).toBeInTheDocument();
   });
 
+  it("states active-roster management and lifecycle read-only scope in discovery copy", () => {
+    render(<CourseRosterDiscoveryPage data={discovery} />);
+
+    expect(
+      screen.getByText(/review and manage active Course assignments you own/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/historical, inactive, completed-period, and published-evaluation-locked rosters remain review-only/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/read-only Course roster/i)).not.toBeInTheDocument();
+  });
+
   it("renders read-only lifecycle banners and default-off removed filter", () => {
     render(
       <CourseRosterDetailPage

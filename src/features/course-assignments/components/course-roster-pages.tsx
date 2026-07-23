@@ -138,7 +138,8 @@ export function CourseRosterDiscoveryPage({
         </div>
         <h1 className="text-heading-lg">My Course Rosters</h1>
         <p className="text-body-md text-muted-foreground max-w-2xl">
-          Review the Course assignments you own and open a read-only Course roster.
+          Review and manage active Course assignments you own. Historical, inactive,
+          completed-period, and published-evaluation-locked rosters remain review-only.
         </p>
       </div>
 
