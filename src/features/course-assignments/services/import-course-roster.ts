@@ -188,13 +188,36 @@ export async function importCourseRoster(
     }
 
     const uniqueEmails = [...new Set(parsed.rows.filter((row) => isRosterEmail(row.normalizedEmail)).map((row) => row.normalizedEmail))];
-    const batch = await readBatch(
-      assignmentId,
-      authorization.data.termInstanceId,
-      authorization.data.courseId,
-      authorization.data.programId,
-      uniqueEmails
-    );
+    let batch: BatchContext;
+    try {
+      batch = await readBatch(
+        assignmentId,
+        authorization.data.termInstanceId,
+        authorization.data.courseId,
+        authorization.data.programId,
+        uniqueEmails
+      );
+    } catch (error) {
+      const referenceId = unexpectedReference();
+      unexpectedImportFailure(actorId, assignmentId, parsed.rows[0].sourceIndex, referenceId);
+      console.error("Course roster import batch read failed", {
+        operation: "import_course_roster_batch",
+        actorId,
+        assignmentId,
+        referenceId,
+        error:
+          error instanceof Error
+            ? { name: error.name, code: "code" in error ? String(error.code) : undefined }
+            : { type: typeof error },
+      });
+      const results = [
+        rowResult(parsed.rows[0], "UNEXPECTED_FAILURE", `${SAFE_FAILURE_ERROR} Support reference: ${referenceId}.`),
+        ...parsed.rows.slice(1).map((row) =>
+          rowResult(row, "UNPROCESSED", `${errorMessages.UNPROCESSED} Support reference: ${referenceId}.`)
+        ),
+      ];
+      return { success: true, data: summarize(results, referenceId) };
+    }
     const seen = new Set<string>();
     const results: CourseRosterImportRow[] = [];
 

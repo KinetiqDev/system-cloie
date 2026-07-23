@@ -138,4 +138,36 @@ describe("import course roster service", () => {
     expect(result).toMatchObject({ success: true, data: { created: 0, failed: 2 } });
     expect(manageModule.addRosterMembership).not.toHaveBeenCalled();
   });
+
+  it("preserves row results when the eligibility pre-read fails", async () => {
+    const internalError = "database secret";
+    prismaMock.user.findMany.mockRejectedValue(new Error(internalError));
+
+    const result = await importCourseRoster(
+      "assignment-1",
+      "email\none@example.com\ntwo@example.com\nthree@example.com\n"
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        total: 3,
+        created: 0,
+        restored: 0,
+        failed: 1,
+        unprocessed: 2,
+        referenceId: expect.any(String),
+      },
+    });
+    if (result.success) {
+      expect(result.data.rows.map((row) => row.status)).toEqual([
+        "UNEXPECTED_FAILURE",
+        "UNPROCESSED",
+        "UNPROCESSED",
+      ]);
+      expect(result.data.rows.every((row) => row.error.includes(result.data.referenceId!))).toBe(true);
+    }
+    expect(JSON.stringify(result)).not.toContain(internalError);
+    expect(manageModule.addRosterMembership).not.toHaveBeenCalled();
+  });
 });
