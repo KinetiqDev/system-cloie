@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { prisma } from "@/lib/db/prisma";
 
-describe.skipIf(!process.env.DATABASE_URL)("seeded Course-assignment memberships", () => {
+describe.skipIf(
+  !process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1"
+)("seeded Course-assignment memberships", () => {
   it("keeps explicit roster membership separate from term placement", async () => {
     const rosterAssignment = await prisma.courseAssignment.findFirstOrThrow({
       where: { course: { code: "IT201" } },

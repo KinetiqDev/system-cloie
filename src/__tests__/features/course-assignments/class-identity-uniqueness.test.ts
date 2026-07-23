@@ -3,7 +3,9 @@ import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db/prisma";
 
-describe.skipIf(!process.env.DATABASE_URL)("CourseAssignment class identity", () => {
+describe.skipIf(
+  !process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1"
+)("CourseAssignment class identity", () => {
   it("rejects duplicate classes while allowing separate sections and GE program contexts", async () => {
     const [term, firstProgram, secondProgram, firstFaculty, secondFaculty] = await Promise.all([
       prisma.academicTermInstance.findFirst(),

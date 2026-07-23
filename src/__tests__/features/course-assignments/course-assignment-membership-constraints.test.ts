@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 
 import { prisma } from "@/lib/db/prisma";
 
-describe.skipIf(!process.env.DATABASE_URL)("CourseAssignmentMembership database invariants", () => {
+describe.skipIf(
+  !process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1"
+)("CourseAssignmentMembership database invariants", () => {
   it("enforces scope, lifecycle uniqueness, deletion protection, and assignment cascade", async () => {
     const [program, faculty, otherCourse, term] = await Promise.all([
       prisma.program.findFirstOrThrow(),
