@@ -524,6 +524,86 @@ export type Database = {
           },
         ]
       }
+      course_bound_evaluation_exclusions: {
+        Row: {
+          category: Database["public"]["Enums"]["CourseBoundEvaluationExclusionCategory"]
+          course_assignment_id: string
+          course_assignment_membership_id: string
+          course_bound_evaluation_id: string
+          excluded_at: string
+          excluded_by: string
+          id: string
+          other_explanation: string | null
+          reversal_category:
+            | Database["public"]["Enums"]["CourseBoundEvaluationExclusionReversalCategory"]
+            | null
+          reversal_other_explanation: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["CourseBoundEvaluationExclusionCategory"]
+          course_assignment_id: string
+          course_assignment_membership_id: string
+          course_bound_evaluation_id: string
+          excluded_at?: string
+          excluded_by: string
+          id?: string
+          other_explanation?: string | null
+          reversal_category?:
+            | Database["public"]["Enums"]["CourseBoundEvaluationExclusionReversalCategory"]
+            | null
+          reversal_other_explanation?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["CourseBoundEvaluationExclusionCategory"]
+          course_assignment_id?: string
+          course_assignment_membership_id?: string
+          course_bound_evaluation_id?: string
+          excluded_at?: string
+          excluded_by?: string
+          id?: string
+          other_explanation?: string | null
+          reversal_category?:
+            | Database["public"]["Enums"]["CourseBoundEvaluationExclusionReversalCategory"]
+            | null
+          reversal_other_explanation?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_bound_evaluation_exclusions_actor_fkey"
+            columns: ["excluded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_bound_evaluation_exclusions_evaluation_fkey"
+            columns: ["course_bound_evaluation_id", "course_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "course_bound_evaluations"
+            referencedColumns: ["id", "course_assignment_id"]
+          },
+          {
+            foreignKeyName: "course_bound_evaluation_exclusions_membership_fkey"
+            columns: ["course_assignment_membership_id", "course_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "course_assignment_memberships"
+            referencedColumns: ["id", "course_assignment_id"]
+          },
+          {
+            foreignKeyName: "course_bound_evaluation_exclusions_reversed_by_fkey"
+            columns: ["reversed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_bound_evaluation_targets: {
         Row: {
           course_bound_evaluation_id: string
@@ -1641,6 +1721,16 @@ export type Database = {
       academic_period_status: "PLANNED" | "ACTIVE" | "COMPLETED" | "CANCELLED"
       academic_semester: "1ST" | "2ND" | "SUMMER"
       academic_term: "FIRST_TERM" | "SECOND_TERM"
+      CourseBoundEvaluationExclusionCategory:
+        | "APPROVED_ACCOMMODATION"
+        | "NOT_TAKING_ASSESSMENT"
+        | "ADMINISTRATIVE_EXCEPTION"
+        | "OTHER"
+      CourseBoundEvaluationExclusionReversalCategory:
+        | "EXCLUDED_IN_ERROR"
+        | "ELIGIBILITY_CORRECTED"
+        | "APPROVED_LATE_PARTICIPATION"
+        | "OTHER"
       CourseScope: "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC"
       DeploymentStatus: "DRAFT" | "SCHEDULED" | "ACTIVE" | "CLOSED" | "ARCHIVED"
       DeploymentType: "COURSE_BOUND" | "CENTRAL"
@@ -1790,6 +1880,18 @@ export const Constants = {
       academic_period_status: ["PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"],
       academic_semester: ["1ST", "2ND", "SUMMER"],
       academic_term: ["FIRST_TERM", "SECOND_TERM"],
+      CourseBoundEvaluationExclusionCategory: [
+        "APPROVED_ACCOMMODATION",
+        "NOT_TAKING_ASSESSMENT",
+        "ADMINISTRATIVE_EXCEPTION",
+        "OTHER",
+      ],
+      CourseBoundEvaluationExclusionReversalCategory: [
+        "EXCLUDED_IN_ERROR",
+        "ELIGIBILITY_CORRECTED",
+        "APPROVED_LATE_PARTICIPATION",
+        "OTHER",
+      ],
       CourseScope: ["GENERAL_EDUCATION", "PROGRAM_SPECIFIC"],
       DeploymentStatus: ["DRAFT", "SCHEDULED", "ACTIVE", "CLOSED", "ARCHIVED"],
       DeploymentType: ["COURSE_BOUND", "CENTRAL"],

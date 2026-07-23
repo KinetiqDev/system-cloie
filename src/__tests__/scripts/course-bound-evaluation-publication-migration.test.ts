@@ -2,6 +2,36 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
+function parenthesesOutsideSqlStrings(sql: string) {
+  let depth = 0;
+  let insideString = false;
+
+  for (let index = 0; index < sql.length; index += 1) {
+    const character = sql[index];
+
+    if (character === "'") {
+      if (insideString && sql[index + 1] === "'") {
+        index += 1;
+      } else {
+        insideString = !insideString;
+      }
+      continue;
+    }
+
+    if (insideString) {
+      continue;
+    }
+
+    if (character === "(") {
+      depth += 1;
+    } else if (character === ")") {
+      depth -= 1;
+    }
+  }
+
+  return depth;
+}
+
 describe("course-bound evaluation publication migration", () => {
   it("keeps exclusions scoped, audited, and protected by the roster lock", async () => {
     const migration = await readFile(
@@ -36,6 +66,7 @@ describe("course-bound evaluation publication migration", () => {
     expect(reversalMigration).toContain('"reversed_at"');
     expect(reversalMigration).toContain("reversal_check");
     expect(reversalMigration).toContain('FOREIGN KEY ("reversed_by") REFERENCES "users"("id")');
+    expect(parenthesesOutsideSqlStrings(reversalMigration)).toBe(0);
 
     const rosterFoundationMigration = await readFile(
       path.join(

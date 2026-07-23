@@ -18,7 +18,7 @@ ALTER TABLE "course_bound_evaluation_exclusions"
     ("reversal_category" = 'OTHER'
       AND "reversal_other_explanation" IS NOT NULL
       AND char_length(btrim("reversal_other_explanation")) BETWEEN 5 AND 200
-      AND "reversal_other_explanation" !~* '(^|[^[:alnum:]_])(medical|diagnosis|diagnosed|illness|disease|disability|medication|therapy|treatment|doctor|hospital|disciplinary|discipline|misconduct|suspension|expulsion|cheating|plagiarism|harassment|sanction)([^[:alnum:]_]|$)')
+       AND "reversal_other_explanation" !~* '(^|[^[:alnum:]_])(medical|diagnosis|diagnosed|illness|disease|disability|medication|therapy|treatment|doctor|hospital|disciplinary|discipline|misconduct|suspension|expulsion|cheating|plagiarism|harassment|sanction)([^[:alnum:]_]|$)'
       AND "reversed_by" IS NOT NULL
       AND "reversed_at" IS NOT NULL)
     OR
