@@ -56,7 +56,7 @@ prisma/*.db-journal
 .worktrees/
 AGENTS.md
 skills-lock.json
-
+.opencode
 
 # IDE
 .idea
