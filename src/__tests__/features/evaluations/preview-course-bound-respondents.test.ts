@@ -91,6 +91,22 @@ describe("previewCourseBoundRespondents", () => {
     }
   });
 
+  it("does not preview respondents for an inactive faculty owner", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-1",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+      profileGate: { status: "INACTIVE" },
+    });
+    findUniqueAssignmentMock.mockResolvedValue(MOCK_ASSIGNMENT);
+    membershipFindManyMock.mockResolvedValue([]);
+
+    await expect(previewCourseBoundRespondents({ assignmentId: "assignment-1" })).resolves.toEqual({
+      error: "Course assignment not found.",
+      success: false,
+    });
+  });
+
   it("returns error if course assignment belongs to a different faculty", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "faculty-2",

@@ -268,9 +268,39 @@ describe("publishCourseBoundEvaluation", () => {
     });
   });
 
+  it("does not publish for an inactive faculty owner during the locked recheck", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "INACTIVE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+    transactionMock.mockImplementationOnce(async (callback) =>
+      callback({
+        $queryRaw: vi.fn(),
+        courseAssignment: { findUnique: courseAssignmentFindUniqueMock },
+        programHeadAssignment: { findMany: programHeadAssignmentFindManyMock },
+      })
+    );
+
+    await expect(
+      publishCourseBoundEvaluation({
+        assignmentId: "assignment-1",
+        deploymentName: "Inactive Faculty Evaluation",
+        templateId: "template-1",
+      })
+    ).resolves.toEqual({
+      error: "Course assignment not found.",
+      success: false,
+    });
+    expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
+  });
+
   it("publishes a course-bound evaluation from the saved faculty template context", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
@@ -351,6 +381,7 @@ describe("publishCourseBoundEvaluation", () => {
   it("retries serializable publication after a transaction conflict", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
@@ -382,6 +413,7 @@ describe("publishCourseBoundEvaluation", () => {
   it("surfaces saved template validation failures", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
@@ -406,6 +438,7 @@ describe("publishCourseBoundEvaluation", () => {
   it("rejects an empty final audience without creating an evaluation", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
@@ -433,6 +466,7 @@ describe("publishCourseBoundEvaluation", () => {
   it("records exclusions and still assigns every other active membership", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
@@ -501,6 +535,7 @@ describe("publishCourseBoundEvaluation", () => {
       const phUserId = "ph-user-1";
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.PROGRAM_HEAD,
+        profileGate: { status: "COMPLETE" },
         roles: [ROLES.PROGRAM_HEAD],
         userId: phUserId,
       });
@@ -530,6 +565,7 @@ describe("publishCourseBoundEvaluation", () => {
       const deanUserId = "dean-user-1";
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.DEAN,
+        profileGate: { status: "COMPLETE" },
         roles: [ROLES.FACULTY, ROLES.DEAN],
         userId: deanUserId,
       });
@@ -552,6 +588,7 @@ describe("publishCourseBoundEvaluation", () => {
       const otherFacultyId = "faculty-2";
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
         roles: [ROLES.FACULTY],
         userId: otherFacultyId,
       });
@@ -572,6 +609,7 @@ describe("publishCourseBoundEvaluation", () => {
     it("does not reveal whether an unauthorized assignment exists", async () => {
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
         roles: [ROLES.FACULTY],
         userId: "faculty-2",
       });
@@ -596,6 +634,7 @@ describe("publishCourseBoundEvaluation", () => {
       const deanUserId = "dean-user-1";
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.DEAN,
+        profileGate: { status: "COMPLETE" },
         roles: [ROLES.FACULTY, ROLES.DEAN],
         userId: deanUserId,
       });
@@ -623,6 +662,7 @@ describe("publishCourseBoundEvaluation", () => {
     const deanUserId = "dean-user-1";
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.DEAN,
+      profileGate: { status: "COMPLETE" },
       roles: [ROLES.FACULTY, ROLES.DEAN],
       userId: deanUserId,
     });
@@ -649,6 +689,7 @@ describe("publishCourseBoundEvaluation", () => {
   it("uses on-behalf template behavior for a faculty-qualified account in a non-faculty active role", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.PROGRAM_HEAD,
+      profileGate: { status: "COMPLETE" },
       roles: [ROLES.FACULTY, ROLES.PROGRAM_HEAD],
       userId: "faculty-1",
     });
@@ -671,6 +712,7 @@ describe("publishCourseBoundEvaluation", () => {
       const secretaryUserId = "secretary-user-1";
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.SECRETARY,
+        profileGate: { status: "COMPLETE" },
         roles: [ROLES.FACULTY, ROLES.SECRETARY],
         userId: secretaryUserId,
       });
@@ -693,6 +735,7 @@ describe("publishCourseBoundEvaluation", () => {
       const phUserId = "ph-user-1";
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.PROGRAM_HEAD,
+        profileGate: { status: "COMPLETE" },
         roles: [ROLES.PROGRAM_HEAD],
         userId: phUserId,
       });

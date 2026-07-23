@@ -31,6 +31,19 @@ describe("canDeployCourseBoundEvaluation policy", () => {
         expect(result.reason).toContain("Only the assigned faculty member");
       }
     });
+
+    it("denies inactive faculty even when they own the assignment", () => {
+      const session = createAuthSessionSnapshot({
+        profileGate: { status: "INACTIVE" },
+        roles: [ROLES.FACULTY],
+        userId: "faculty-1",
+      });
+
+      expect(canDeployCourseBoundEvaluation(session, baseAssignment)).toEqual({
+        allowed: false,
+        reason: "Course assignment not found.",
+      });
+    });
   });
 
   describe("Program Head on-behalf deployment", () => {

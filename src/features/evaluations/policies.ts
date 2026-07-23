@@ -29,6 +29,10 @@ export function canDeployCourseBoundEvaluation(
     return { allowed: false, reason: "Authentication required." };
   }
 
+  if (session.profileGate.status === "INACTIVE") {
+    return { allowed: false, reason: "Course assignment not found." };
+  }
+
   switch (session.activeRole) {
     case ROLES.SECRETARY:
     case ROLES.DEAN:
