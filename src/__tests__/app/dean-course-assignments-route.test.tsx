@@ -108,4 +108,21 @@ describe("Secretary Course Assignments route cross-role denial", () => {
 
     await expect(SecretaryCourseAssignmentsPage()).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
   });
+
+  it("uses active role instead of another role in the session", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "secretary-1",
+      email: "secretary@example.com",
+      roles: [ROLES.SECRETARY, ROLES.FACULTY],
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+    });
+
+    const SecretaryCourseAssignmentsPage = (
+      await import("../../app/(app)/secretary/course-assignments/page")
+    ).default;
+
+    await expect(SecretaryCourseAssignmentsPage()).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
+    expect(loadPageDataMock).not.toHaveBeenCalled();
+  });
 });

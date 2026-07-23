@@ -25,21 +25,13 @@ export function buildReviewerEvaluationScope({
     : {};
 }
 
-export function pickReviewerRole(roles: string[] | undefined): ReviewerRole | null {
-  if (!roles) {
-    return null;
-  }
-
-  if (roles.includes(ROLES.DEAN)) {
-    return ROLES.DEAN;
-  }
-
-  if (roles.includes(ROLES.PROGRAM_HEAD)) {
-    return ROLES.PROGRAM_HEAD;
-  }
-
-  if (roles.includes(ROLES.FACULTY)) {
-    return ROLES.FACULTY;
+export function pickReviewerRole(activeRole: string | null | undefined): ReviewerRole | null {
+  if (
+    activeRole === ROLES.DEAN ||
+    activeRole === ROLES.PROGRAM_HEAD ||
+    activeRole === ROLES.FACULTY
+  ) {
+    return activeRole;
   }
 
   return null;

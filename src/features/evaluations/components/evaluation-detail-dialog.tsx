@@ -4,11 +4,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type { FacultyEvaluationDetail } from "../types";
+import type {
+  LateIncludeCourseBoundEvaluationInput,
+  LateIncludeCourseBoundEvaluationResult,
+} from "../types";
+import { LateIncludeDialog } from "./late-include-dialog";
 
 interface EvaluationDetailDialogProps {
   detail: FacultyEvaluationDetail | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  lateIncludeAction?: (
+    payload: LateIncludeCourseBoundEvaluationInput
+  ) => Promise<LateIncludeCourseBoundEvaluationResult>;
 }
 
 function getScopeLabel(scope: string): string {
@@ -49,6 +57,7 @@ export function EvaluationDetailDialog({
   detail,
   open,
   onOpenChange,
+  lateIncludeAction,
 }: EvaluationDetailDialogProps) {
   if (!detail) return null;
 
@@ -64,14 +73,20 @@ export function EvaluationDetailDialog({
         </DialogHeader>
 
         <div className="space-y-6 pt-2">
+          {lateIncludeAction && detail.lateInclusionOpen && (
+            <LateIncludeDialog
+              action={lateIncludeAction}
+              evaluationId={detail.evaluationId}
+              exclusions={detail.exclusions}
+              status={detail.status}
+            />
+          )}
           {/* Status & Academic Period */}
           <div className="flex flex-wrap items-center gap-2">
             <Badge className={getStatusColor(detail.status)}>
               {detail.status.charAt(0) + detail.status.slice(1).toLowerCase()}
             </Badge>
-            <span className="text-muted-foreground text-sm">
-              {detail.termInstanceLabel}
-            </span>
+            <span className="text-muted-foreground text-sm">{detail.termInstanceLabel}</span>
           </div>
 
           {/* Course Info */}

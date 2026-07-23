@@ -82,7 +82,7 @@ describe("manage-faculty-cilos", () => {
     });
 
     it("loads CILOs successfully for a valid context", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: ["FACULTY"] });
+      resolveAuthSessionMock.mockResolvedValue({ activeRole: "FACULTY", userId: "faculty-1", roles: ["FACULTY"] });
       listFacultyCourseContextsMock.mockResolvedValue({
         success: true,
         data: [
@@ -109,7 +109,7 @@ describe("manage-faculty-cilos", () => {
 
   describe("saveFacultyManagedCilos", () => {
     it("archives removed CILOs while preserving their mappings", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: ["FACULTY"] });
+      resolveAuthSessionMock.mockResolvedValue({ activeRole: "FACULTY", userId: "faculty-1", roles: ["FACULTY"] });
       listFacultyCourseContextsMock.mockResolvedValue({
         success: true,
         data: [
@@ -158,7 +158,7 @@ describe("manage-faculty-cilos", () => {
     });
 
     it("filters out empty or whitespace-only CILOs", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: ["FACULTY"] });
+      resolveAuthSessionMock.mockResolvedValue({ activeRole: "FACULTY", userId: "faculty-1", roles: ["FACULTY"] });
       listFacultyCourseContextsMock.mockResolvedValue({
         success: true,
         data: [

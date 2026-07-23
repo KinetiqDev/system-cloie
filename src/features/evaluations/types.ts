@@ -1,4 +1,13 @@
-import { AcademicSemester, CourseScope, DeploymentStatus, StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
+import {
+  AcademicSemester,
+  CourseBoundEvaluationExclusionCategory,
+  CourseBoundEvaluationExclusionReversalCategory,
+  CourseScope,
+  DeploymentStatus,
+  StudentSection,
+  TargetStakeholder,
+  YearLevel,
+} from "@prisma/client";
 import { type ServiceResult } from "@/lib/utils/service-result";
 
 export type { StudentSection };
@@ -54,24 +63,45 @@ export type CourseBoundCiloQuestionBindingInput = {
 /**
  * Phase 9: Simplified input using course assignment ID.
  * All class identity (term, program, year level, section) is resolved from the assignment.
- * Issue #43: deployerId tracks who deployed (for on-behalf deployments by PH/Dean/Secretary).
+ * The authenticated session supplies the publication actor.
  */
 export type PublishCourseBoundEvaluationInput = {
   assignmentId: string;
   activationAt?: Date | null;
   deadlineAt?: Date | null;
   deploymentName: string;
-  respondentIds?: string[]; // Final list of respondent IDs after preview/exclude
+  exclusions?: CourseBoundEvaluationExclusionInput[];
   templateId: string;
-  deployerId?: string;
 };
 
-export type PublishCourseBoundEvaluationResult = ServiceResult<{
-  assignmentCount: number;
+export type CourseBoundEvaluationExclusionInput = {
+  category: CourseBoundEvaluationExclusionCategory;
+  membershipId: string;
+  otherExplanation?: string;
+};
+
+export type LateIncludeCourseBoundEvaluationInput = {
   evaluationId: string;
-  status: "ACTIVE" | "SCHEDULED";
-  targetCount: number;
-}>;
+  membershipId: string;
+  reversalCategory: CourseBoundEvaluationExclusionReversalCategory;
+  reversalOtherExplanation?: string;
+};
+
+export type LateIncludeCourseBoundEvaluationResult =
+  | { success: true; data: { message: string } }
+  | { success: false; error: string; referenceId?: string };
+
+export type PublishCourseBoundEvaluationResult =
+  | {
+      success: true;
+      data: {
+        assignmentCount: number;
+        evaluationId: string;
+        status: "ACTIVE" | "SCHEDULED";
+        targetCount: number;
+      };
+    }
+  | { success: false; error: string; referenceId?: string };
 
 // ============================================================================
 // Preview Respondents (Step 2 of publish flow)
@@ -83,6 +113,7 @@ export type PreviewRespondent = {
   lastName: string;
   majorId: string | null;
   majorName: string | null;
+  membershipId: string;
   programCode: string;
   programId: string;
   programName: string;
@@ -99,7 +130,9 @@ export type PreviewCourseBoundRespondentsInput = {
   assignmentId: string;
 };
 
-export type PreviewCourseBoundRespondentsResult = ServiceResult<PreviewRespondent[]>;
+export type PreviewCourseBoundRespondentsResult =
+  | { success: true; data: PreviewRespondent[] }
+  | { success: false; error: string; referenceId?: string };
 
 // ============================================================================
 // Faculty Published Evaluations
@@ -166,6 +199,15 @@ export type FacultyEvaluationDetail = {
   targets: FacultyPublishedEvaluationTarget[];
   templateBindings: FacultyPublishedEvaluationCiloBinding[];
   totalAssignments: number;
+  exclusions: Array<{
+    category: CourseBoundEvaluationExclusionCategory;
+    membershipId: string;
+    membershipActive: boolean;
+    reversalCategory: CourseBoundEvaluationExclusionReversalCategory | null;
+    reversedAt: Date | null;
+    studentName: string;
+  }>;
+  lateInclusionOpen: boolean;
 };
 
 export type ListFacultyPublishedEvaluationsResult = ServiceResult<{

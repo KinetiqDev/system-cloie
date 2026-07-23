@@ -3,11 +3,15 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { YearLevel, StudentSection, CourseScope } from "@prisma/client";
 
 import { EditCourseAssignmentDialog } from "@/features/course-assignments/components/edit-course-assignment-dialog";
-import { updateCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
+import {
+  searchFacultyPoolAction,
+  updateCourseAssignmentAction,
+} from "@/lib/actions/course-assignment-actions";
 import type { CourseAssignmentItem } from "@/features/course-assignments/types";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
   updateCourseAssignmentAction: vi.fn(),
+  searchFacultyPoolAction: vi.fn(),
 }));
 
 function createAssignment(overrides: Partial<CourseAssignmentItem> = {}): CourseAssignmentItem {
@@ -94,8 +98,10 @@ describe("EditCourseAssignmentDialog", () => {
     );
 
     expect(screen.getByText(/CS101 — Intro to Computing/i)).toBeInTheDocument();
-    expect(screen.getByText(/Test Faculty/i)).toBeInTheDocument();
-    expect(screen.getByText(/deactivate this assignment and create the correct replacement/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Test Faculty/i).length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getByText(/Class identity locks after the first roster membership/i)
+    ).toBeInTheDocument();
     expect(screen.getByText("BSCS — BS Computer Science")).toBeInTheDocument();
     expect(screen.getByText(/course default: 2nd year/i)).toBeInTheDocument();
   });
@@ -138,7 +144,7 @@ describe("EditCourseAssignmentDialog", () => {
   });
 
   it("calls update action when a change is submitted", async () => {
-    vi.mocked(updateCourseAssignmentAction).mockResolvedValue({ success: true });
+    vi.mocked(updateCourseAssignmentAction).mockResolvedValue({ success: true, data: undefined });
     const onSuccess = vi.fn();
     const onOpenChange = vi.fn();
 
@@ -172,6 +178,55 @@ describe("EditCourseAssignmentDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSuccess).toHaveBeenCalled();
     expect(toastMessages.some((t) => t.kind === "success")).toBe(true);
+  });
+
+  it("submits Faculty reassignment through the same transactional update action", async () => {
+    vi.mocked(updateCourseAssignmentAction).mockResolvedValue({ success: true, data: undefined });
+    vi.mocked(searchFacultyPoolAction).mockResolvedValue({
+      success: true,
+      data: {
+        items: [
+          {
+            id: "faculty-2",
+            email: "faculty-2@example.com",
+            firstName: "Elena",
+            lastName: "Torres",
+            primaryAffiliation: "BSCS",
+            primaryAffiliationCode: "BSCS",
+            affiliations: ["BSCS"],
+          },
+        ],
+        total: 1,
+      },
+    });
+    const assignment = createAssignment();
+
+    render(
+      <EditCourseAssignmentDialog
+        open
+        onOpenChange={vi.fn()}
+        assignment={assignment}
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText("Faculty"));
+    const facultySearch = await screen.findByPlaceholderText(/search by name or email/i);
+    fireEvent.change(facultySearch, { target: { value: "Elena" } });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Elena Torres/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Elena Torres/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => {
+      expect(updateCourseAssignmentAction).toHaveBeenCalledWith({
+        assignmentId: assignment.id,
+        facultyId: "faculty-2",
+      });
+    });
   });
 
   it("disables save when no changes have been made", () => {
@@ -250,7 +305,9 @@ describe("EditCourseAssignmentDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => {
-      expect(toastMessages.some((t) => t.kind === "error" && t.message === "Update failed")).toBe(true);
+      expect(toastMessages.some((t) => t.kind === "error" && t.message === "Update failed")).toBe(
+        true
+      );
     });
   });
 });

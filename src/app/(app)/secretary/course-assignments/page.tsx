@@ -11,7 +11,7 @@ export const metadata = {
 export default async function SecretaryCourseAssignmentsPage() {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.SECRETARY)) {
+  if (!session || session.activeRole !== ROLES.SECRETARY) {
     redirect("/unauthorized");
   }
 

@@ -9,12 +9,14 @@ const {
   createMock,
   findAssignmentMock,
   findResponseByAssignmentMock,
+  membershipFindUniqueMock,
   resolveAuthSessionMock,
   updateMock,
 } = vi.hoisted(() => ({
   createMock: vi.fn(),
   findAssignmentMock: vi.fn(),
   findResponseByAssignmentMock: vi.fn(),
+  membershipFindUniqueMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   updateMock: vi.fn(),
 }));
@@ -41,6 +43,9 @@ vi.mock("@/lib/db/prisma", () => {
       $transaction: vi.fn((fn) => fn(mockTx)),
       evaluationAssignment: {
         findFirst: findAssignmentMock,
+      },
+      courseAssignmentMembership: {
+        findUnique: membershipFindUniqueMock,
       },
       ...mockTx,
     },
@@ -112,6 +117,15 @@ describe("buildSubmittedResponsePatch", () => {
 describe("submitStudentCourseBoundResponse", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    membershipFindUniqueMock.mockResolvedValue({
+      is_active: true,
+      student: {
+        enrollments: [{ program_id: "program-1" }],
+        is_active: true,
+        roles: [{ role: "STUDENT" }],
+        student_profile: { program_id: "program-1", student_id_number: "S0001" },
+      },
+    });
     vi.useRealTimers();
   });
 
@@ -121,6 +135,12 @@ describe("submitStudentCourseBoundResponse", () => {
       course_bound_id: "course-bound-1",
       id: "assignment-1",
       course_bound: {
+        course_assignment: {
+          course: { course_scope: "PROGRAM_SPECIFIC" },
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
+        },
         activation_at: new Date("2026-04-01T00:00:00.000Z"),
         deadline_at: new Date("2026-05-20T00:00:00.000Z"),
         instrument: {
@@ -153,6 +173,12 @@ describe("submitStudentCourseBoundResponse", () => {
       course_bound_id: "course-bound-1",
       id: "assignment-1",
       course_bound: {
+        course_assignment: {
+          course: { course_scope: "PROGRAM_SPECIFIC" },
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
+        },
         activation_at: new Date("2026-04-01T00:00:00.000Z"),
         deadline_at: new Date("2026-05-20T00:00:00.000Z"),
         instrument: {
@@ -183,6 +209,12 @@ describe("submitStudentCourseBoundResponse", () => {
       course_bound_id: "course-bound-1",
       id: "assignment-1",
       course_bound: {
+        course_assignment: {
+          course: { course_scope: "PROGRAM_SPECIFIC" },
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
+        },
         activation_at: new Date("2026-05-01T00:00:00.000Z"),
         deadline_at: new Date("2026-05-05T00:00:00.000Z"),
         instrument: {
@@ -210,5 +242,47 @@ describe("submitStudentCourseBoundResponse", () => {
     });
 
     vi.useRealTimers();
+  });
+
+  it("rejects submission while Student is ineligible", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    membershipFindUniqueMock.mockResolvedValue({
+      is_active: true,
+      student: {
+        enrollments: [],
+        is_active: true,
+        roles: [{ role: "STUDENT" }],
+        student_profile: { program_id: "program-1", student_id_number: "S0001" },
+      },
+    });
+    findAssignmentMock.mockResolvedValue({
+      course_bound_id: "course-bound-1",
+      id: "assignment-1",
+      course_bound: {
+        course_assignment: {
+          course: { course_scope: "PROGRAM_SPECIFIC" },
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
+        },
+        activation_at: new Date("2026-04-01T00:00:00.000Z"),
+        deadline_at: new Date("2026-05-20T00:00:00.000Z"),
+        instrument: { structure_snapshot: structureSnapshot },
+        status: "ACTIVE",
+      },
+    });
+
+    await expect(
+      submitStudentCourseBoundResponse({
+        answers: {
+          "section-a:qualitative:remarks": "Clear and helpful explanations.",
+          "section-a:quantitative:q1": 5,
+        },
+        assignmentId: "assignment-1",
+      })
+    ).resolves.toEqual({
+      error: "This evaluation is not currently available.",
+      success: false,
+    });
   });
 });

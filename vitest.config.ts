@@ -5,7 +5,7 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    pool: "vmThreads",
+    pool: "threads",
     environment: "jsdom",
     globals: true,
     setupFiles: "./vitest.setup.ts",

@@ -14,7 +14,7 @@ export async function previewCentralDeploymentRespondents(
 ): Promise<PreviewCentralDeploymentResult> {
   const authSession = await resolveAuthSession();
 
-  if (!authSession?.roles?.includes(ROLES.PROGRAM_HEAD)) {
+  if (authSession?.activeRole !== ROLES.PROGRAM_HEAD) {
     return {
       error: "Program Head authentication is required.",
       success: false,

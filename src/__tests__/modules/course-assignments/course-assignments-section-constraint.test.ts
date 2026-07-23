@@ -7,7 +7,9 @@ import crypto from "crypto";
  * Integration test for CourseAssignment.section NOT NULL constraint.
  * This test verifies that the database enforces the constraint added in Issue #38.
  */
-describe.skipIf(!process.env.DATABASE_URL)("CourseAssignment.section NOT NULL constraint", () => {
+describe.skipIf(
+  !process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1"
+)("CourseAssignment.section NOT NULL constraint", () => {
   const generateUuid = () => crypto.randomUUID();
 
   it("should reject CourseAssignment creation with null section", async () => {

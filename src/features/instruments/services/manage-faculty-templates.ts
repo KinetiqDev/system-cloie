@@ -9,6 +9,8 @@ import { listTemplateLikertQuestions, type TemplateStructure } from "../types";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
+type PublicationContextDb = Prisma.TransactionClient | typeof prisma;
+
 export type FacultyTemplateBindingItem = {
   ciloId: string;
   ciloDescriptionSnapshot: string;
@@ -64,7 +66,7 @@ function generateFacultyTemplateCode(sourceCode: string, userId: string) {
 async function requireFacultySession(): Promise<ServiceResult<{ userId: string }>> {
   const session = await resolveAuthSession();
 
-  if (!session?.roles.includes(ROLES.FACULTY)) {
+  if (session?.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty authentication is required." };
   }
 
@@ -139,6 +141,7 @@ async function validateDraftBindings(input: {
   bindings: SaveFacultyTemplateDraftInput["cilo_question_bindings"];
   boundCourseId?: string | null;
   structure: TemplateStructure;
+  db?: PublicationContextDb;
 }): Promise<
   | {
       success: true;
@@ -161,7 +164,7 @@ async function validateDraftBindings(input: {
   const questionMap = new Map(
     likertQuestions.map((question) => [`${question.sectionKey}:${question.itemKey}`, question])
   );
-  const cilos = await prisma.cILO.findMany({
+  const cilos = await (input.db ?? prisma).cILO.findMany({
     where: {
       course_id: input.boundCourseId,
       id: { in: input.bindings.map((binding) => binding.ciloId) },
@@ -406,17 +409,30 @@ export async function duplicateFacultyTemplate(
 }
 
 export async function getFacultyTemplatePublicationContext(
-  templateId: string
+  templateId: string,
+  options: {
+    db?: PublicationContextDb;
+    facultyId?: string;
+    courseContext?: {
+      courseType: string;
+      majorName: string | null;
+      programCode: string;
+      programName: string;
+      scopeLabel: string;
+    };
+  } = {}
 ): Promise<ServiceResult<FacultyTemplatePublicationContext>> {
-  const auth = await requireFacultySession();
-
-  if (!auth.success) {
-    return auth;
+  let facultyId = options.facultyId;
+  if (!facultyId) {
+    const auth = await requireFacultySession();
+    if (!auth.success) return auth;
+    facultyId = auth.data.userId;
   }
+  const db = options.db ?? prisma;
 
-  const template = await prisma.instrumentTemplate.findFirst({
+  const template = await db.instrumentTemplate.findFirst({
     where: {
-      faculty_owner_id: auth.data.userId,
+      faculty_owner_id: facultyId,
       id: templateId,
       is_active: true,
       template_type: EvaluationTemplateType.COURSE_BOUND,
@@ -435,17 +451,19 @@ export async function getFacultyTemplatePublicationContext(
     return { success: false, error: "Select a course before publishing this template." };
   }
 
-  const courseContext = await resolveFacultyCourseContext({
-    boundCourseId: template.bound_course_id,
-    boundMajorId: template.bound_major_id,
-    boundProgramId: template.bound_program_id,
-  });
+  const courseContext =
+    options.courseContext ??
+    (await resolveFacultyCourseContext({
+      boundCourseId: template.bound_course_id,
+      boundMajorId: template.bound_major_id,
+      boundProgramId: template.bound_program_id,
+    }));
 
   if (!courseContext) {
     return { success: false, error: "The saved course context is no longer available." };
   }
 
-  const cilos = await prisma.cILO.findMany({
+  const cilos = await db.cILO.findMany({
     where: { course_id: template.bound_course_id, is_active: true },
     orderBy: { created_at: "asc" },
     select: { description: true, id: true },
@@ -468,6 +486,7 @@ export async function getFacultyTemplatePublicationContext(
       })),
     boundCourseId: template.bound_course_id,
     structure,
+    db,
   });
 
   if (!bindingValidation.success) {

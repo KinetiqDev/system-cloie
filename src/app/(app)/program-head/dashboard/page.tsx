@@ -6,12 +6,17 @@ import { prisma } from "@/lib/db/prisma";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
 import { StakeholderMeanPieChart } from "@/features/analytics/components/stakeholder-mean-pie-chart";
 import { QualitativeWordCloud } from "@/features/analytics/components/qualitative-word-cloud";
+import { ROLES } from "@/lib/constants/roles";
 
 export default async function ProgramHeadDashboardPage() {
   const session = await resolveAuthSession();
 
   if (!session) {
     redirect("/portal/respondents");
+  }
+
+  if (session.activeRole !== ROLES.PROGRAM_HEAD) {
+    redirect("/unauthorized");
   }
 
   // Resolve the program head's active program assignment
@@ -37,6 +42,10 @@ export default async function ProgramHeadDashboardPage() {
   }
 
   const dashboard = await getProgramHeadDashboard(assignment.program.id);
+
+  if (!dashboard) {
+    redirect("/unauthorized");
+  }
 
   return (
     <div className="space-y-8">

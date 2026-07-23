@@ -87,6 +87,21 @@ describe("list-course-assignments-for-faculty", () => {
     }
   });
 
+  it("uses active role instead of another role in the session", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue({
+      ...createAuthSessionSnapshot({
+        userId: "faculty-1",
+        email: "faculty@test.com",
+        roles: [ROLES.SECRETARY, ROLES.FACULTY],
+      }),
+      activeRole: ROLES.STUDENT,
+    });
+
+    const result = await listCourseAssignmentsForFaculty();
+
+    expect(result).toEqual({ success: false, error: "Access denied." });
+  });
+
   it("should allow faculty to view their own assignments", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockFacultySession);
 

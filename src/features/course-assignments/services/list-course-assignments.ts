@@ -34,12 +34,7 @@ export async function listCourseAssignments(
 
   // Resolve the PH's assigned program IDs for row-level scoping
   let phProgramIds: string[] | undefined;
-  if (
-    authSession &&
-    authSession.roles.includes(ROLES.PROGRAM_HEAD) &&
-    !authSession.roles.includes(ROLES.SECRETARY) &&
-    !authSession.roles.includes(ROLES.DEAN)
-  ) {
+  if (authSession && authSession.activeRole === ROLES.PROGRAM_HEAD) {
     const phAssignments = await prisma.programHeadAssignment.findMany({
       where: { program_head_id: authSession.userId, is_active: true },
       select: { program_id: true },
@@ -52,9 +47,7 @@ export async function listCourseAssignments(
   if (phProgramIds !== undefined) {
     if (filter.programId) {
       // Intersect: only allow filtering within PH scope
-      programIdCondition = phProgramIds.includes(filter.programId)
-        ? filter.programId
-        : { in: [] }; // out-of-scope → match nothing
+      programIdCondition = phProgramIds.includes(filter.programId) ? filter.programId : { in: [] }; // out-of-scope → match nothing
     } else {
       programIdCondition = { in: phProgramIds };
     }
@@ -107,6 +100,7 @@ export async function listCourseAssignments(
               school_year: true,
             },
           },
+          _count: { select: { memberships: true } },
         },
         orderBy: { created_at: "desc" },
         take: pageSize,
@@ -173,6 +167,7 @@ export async function listCourseAssignments(
             )
           : undefined,
         lastTermTaught: lastTaughtMap.get(key),
+        rosterMembershipCount: a._count?.memberships ?? 0,
       };
     });
 

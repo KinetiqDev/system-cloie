@@ -42,7 +42,7 @@ describe("closeFacultyEvaluation", () => {
   });
 
   it("returns error if evaluation does not exist or belongs to another user", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: [ROLES.FACULTY] });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, userId: "faculty-1", roles: [ROLES.FACULTY] });
     findFirstEvaluationMock.mockResolvedValue(null);
 
     const result = await closeFacultyEvaluation("eval-1");
@@ -65,7 +65,7 @@ describe("closeFacultyEvaluation", () => {
   });
 
   it("rejects closure if evaluation is already CLOSED", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: [ROLES.FACULTY] });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, userId: "faculty-1", roles: [ROLES.FACULTY] });
     findFirstEvaluationMock.mockResolvedValue({
       id: "eval-1",
       status: DeploymentStatus.CLOSED,
@@ -80,7 +80,7 @@ describe("closeFacultyEvaluation", () => {
   });
 
   it("successfully closes an ACTIVE evaluation", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: [ROLES.FACULTY] });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, userId: "faculty-1", roles: [ROLES.FACULTY] });
     findFirstEvaluationMock.mockResolvedValue({
       id: "eval-1",
       status: DeploymentStatus.ACTIVE,
@@ -102,7 +102,7 @@ describe("closeFacultyEvaluation", () => {
   });
 
   it("successfully closes a SCHEDULED evaluation", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ userId: "faculty-1", roles: [ROLES.FACULTY] });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, userId: "faculty-1", roles: [ROLES.FACULTY] });
     findFirstEvaluationMock.mockResolvedValue({
       id: "eval-1",
       status: DeploymentStatus.SCHEDULED,

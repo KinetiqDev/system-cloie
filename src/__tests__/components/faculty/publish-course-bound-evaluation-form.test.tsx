@@ -85,8 +85,20 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
           title: "Learning Outcomes",
           order: 0,
           questions: [
-            { key: "q1", prompt: "Students can apply the core concepts taught in the course.", type: "likert" as const, order: 0, required: true },
-            { key: "q2", prompt: "Students can produce maintainable software artifacts.", type: "likert" as const, order: 1, required: true },
+            {
+              key: "q1",
+              prompt: "Students can apply the core concepts taught in the course.",
+              type: "likert" as const,
+              order: 0,
+              required: true,
+            },
+            {
+              key: "q2",
+              prompt: "Students can produce maintainable software artifacts.",
+              type: "likert" as const,
+              order: 1,
+              required: true,
+            },
           ],
         },
       ],
@@ -140,6 +152,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
           lastName: "Adams",
           majorId: null,
           majorName: null,
+          membershipId: "membership-1",
           programCode: "BSCS",
           programId: "program-1",
           programName: "BS Computer Science",
@@ -205,10 +218,39 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
       expect.objectContaining({
         assignmentId: "assignment-1",
         deploymentName: "CS101 Post-Term CILO Evaluation",
-        respondentIds: ["user-1"],
+        exclusions: [],
         templateId: "template-1",
       })
     );
+  });
+
+  it("shows preview support reference on unexpected failure", async () => {
+    const previewAction = vi.fn().mockResolvedValue({
+      success: false,
+      error: "Failed to load respondent preview. Please try again.",
+      referenceId: "support-ref",
+    });
+
+    render(
+      <PublishCourseBoundEvaluationFormV2
+        assignments={assignments}
+        publicationContext={publicationContext}
+        previewAction={previewAction}
+        publishAction={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/deployed evaluation name/i), {
+      target: { value: "CS101 Post-Term CILO Evaluation" },
+    });
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "assignment-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /preview respondents/i }));
+
+    expect(
+      await screen.findByText(/Failed to load respondent preview\. Please try again\. Support reference: support-ref\./i)
+    ).toBeInTheDocument();
   });
 
   it("shows empty state when no assignments available", () => {
@@ -227,6 +269,20 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     expect(screen.getByRole("button", { name: /preview respondents/i })).toBeDisabled();
   });
 
+  it("hides template customization when publishing on behalf", () => {
+    render(
+      <PublishCourseBoundEvaluationFormV2
+        assignments={assignments}
+        isOnBehalf
+        publicationContext={publicationContext}
+        previewAction={vi.fn()}
+        publishAction={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("link", { name: /edit template/i })).not.toBeInTheDocument();
+  });
+
   it("redirects to successRedirectPath when provided on publish", async () => {
     const previewAction = vi.fn().mockResolvedValue({
       success: true,
@@ -237,6 +293,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
           lastName: "Adams",
           majorId: null,
           majorName: null,
+          membershipId: "membership-1",
           programCode: "BSCS",
           programId: "program-1",
           programName: "BS Computer Science",
@@ -291,9 +348,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.stringContaining("/program-head/tools")
-      );
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("/program-head/tools"));
     });
   });
 
@@ -307,6 +362,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
           lastName: "Brown",
           majorId: null,
           majorName: null,
+          membershipId: "membership-2",
           programCode: "BSCS",
           programId: "program-1",
           programName: "BS Computer Science",
@@ -360,9 +416,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     });
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(
-        expect.stringContaining("/faculty/tools")
-      );
+      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("/faculty/tools"));
     });
   });
 

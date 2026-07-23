@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import { canManageCourseRoster } from "@/features/course-assignments/policies";
+import { CourseScope } from "@prisma/client";
 import type { FacultyEvaluationDetail, GetFacultyEvaluationDetailResult } from "../types";
 
 export async function getFacultyEvaluationDetail(
@@ -8,20 +10,20 @@ export async function getFacultyEvaluationDetail(
 ): Promise<GetFacultyEvaluationDetailResult> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.FACULTY)) {
-    return { success: false, error: "Unauthorized. Faculty role required." };
+  if (!session) {
+    return { success: false, error: "Authentication required." };
   }
 
   const evaluation = await prisma.courseBoundEvaluation.findFirst({
     where: {
       id: evaluationId,
-      course_assignment: {
-        faculty_id: session.userId,
-      },
     },
     include: {
       course_assignment: {
         select: {
+          faculty_id: true,
+          is_active: true,
+          program_id: true,
           course: {
             select: {
               id: true,
@@ -85,6 +87,20 @@ export async function getFacultyEvaluationDetail(
           id: true,
         },
       },
+      exclusions: {
+        select: {
+          category: true,
+          course_assignment_membership_id: true,
+          reversal_category: true,
+          reversed_at: true,
+          membership: {
+            select: {
+              is_active: true,
+              student: { select: { first_name: true, last_name: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -93,6 +109,29 @@ export async function getFacultyEvaluationDetail(
       success: false,
       error: "Evaluation not found or you do not have access.",
     };
+  }
+
+  const programHeadProgramIds =
+    session.activeRole === ROLES.PROGRAM_HEAD
+      ? (
+          await prisma.programHeadAssignment.findMany({
+            where: { program_head_id: session.userId, is_active: true },
+            select: { program_id: true },
+          })
+        ).map((row) => row.program_id)
+      : [];
+  const authorization = canManageCourseRoster(
+    session,
+    {
+      facultyId: evaluation.course_assignment.faculty_id,
+      programId: evaluation.course_assignment.program_id,
+      courseScope: evaluation.course_assignment.course.course_scope as CourseScope,
+      isActive: evaluation.course_assignment.is_active,
+    },
+    programHeadProgramIds
+  );
+  if (!authorization.allowed) {
+    return { success: false, error: "Evaluation not found or you do not have access." };
   }
 
   const courseInfoSnapshot = evaluation.course_info_snapshot as {
@@ -130,8 +169,7 @@ export async function getFacultyEvaluationDetail(
     courseInfo: {
       courseCode: courseInfoSnapshot?.courseCode ?? ca.course.code,
       courseScope:
-        courseInfoSnapshot?.courseScope ??
-        ca.course.course_scope.replace(/_/g, " ").toLowerCase(),
+        courseInfoSnapshot?.courseScope ?? ca.course.course_scope.replace(/_/g, " ").toLowerCase(),
       courseTitle: courseInfoSnapshot?.courseTitle ?? ca.course.title,
       majorName: courseInfoSnapshot?.majorName ?? ca.course.major?.name ?? null,
       programCode: courseInfoSnapshot?.programCode ?? ca.program.code,
@@ -156,6 +194,17 @@ export async function getFacultyEvaluationDetail(
       sectionKey: binding.section_key,
     })),
     totalAssignments: evaluation._count.assignments,
+    exclusions: evaluation.exclusions.map((exclusion) => ({
+      category: exclusion.category,
+      membershipId: exclusion.course_assignment_membership_id,
+      membershipActive: exclusion.membership.is_active,
+      reversalCategory: exclusion.reversal_category,
+      reversedAt: exclusion.reversed_at,
+      studentName: `${exclusion.membership.student.first_name} ${exclusion.membership.student.last_name}`,
+    })),
+    lateInclusionOpen:
+      (evaluation.status === "ACTIVE" || evaluation.status === "SCHEDULED") &&
+      (!evaluation.deadline_at || evaluation.deadline_at.getTime() >= Date.now()),
   };
 
   return {

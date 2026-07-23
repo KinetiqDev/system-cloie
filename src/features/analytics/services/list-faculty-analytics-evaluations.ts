@@ -23,7 +23,7 @@ export async function listFacultyAnalyticsEvaluations(
     return { success: false, error: "Not authenticated" };
   }
 
-  if (!session.roles.includes(ROLES.FACULTY)) {
+  if (session.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty access required" };
   }
 

@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  resolveCourseBoundEvaluationEligibility,
+  toCourseBoundEvaluationEligibilityAssignment,
+} from "@/features/course-assignments/services/course-assignment-roster";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type {
   StudentEvaluationSection,
@@ -120,6 +124,14 @@ export async function getStudentCourseBoundEvaluationSession(
 
   if (!isCourseBoundEvaluationAvailable(assignment.course_bound)) {
     return null;
+  }
+
+  if (!(assignment.response?.submitted_at ?? null)) {
+    const eligibility = await resolveCourseBoundEvaluationEligibility(
+      toCourseBoundEvaluationEligibilityAssignment(assignment.course_bound.course_assignment),
+      authSession.userId
+    );
+    if (!eligibility.eligible) return null;
   }
 
   const sections = mapStructureSnapshotToSections(

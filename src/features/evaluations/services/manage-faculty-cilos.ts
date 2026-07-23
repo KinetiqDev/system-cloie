@@ -42,7 +42,7 @@ export async function loadFacultyManagedCilos(
 ): Promise<FacultyManagedCiloLoadResult> {
   const authSession = await resolveAuthSession();
 
-  if (!authSession?.roles.includes(ROLES.FACULTY)) {
+  if (authSession?.activeRole !== ROLES.FACULTY) {
     return {
       error: "Faculty authentication is required.",
       success: false,
@@ -84,7 +84,7 @@ export async function saveFacultyManagedCilos(
 ): Promise<FacultyManagedCiloSaveResult> {
   const authSession = await resolveAuthSession();
 
-  if (!authSession?.roles.includes(ROLES.FACULTY)) {
+  if (authSession?.activeRole !== ROLES.FACULTY) {
     return {
       error: "Faculty authentication is required.",
       success: false,

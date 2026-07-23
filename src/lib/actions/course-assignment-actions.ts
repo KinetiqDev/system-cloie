@@ -7,6 +7,7 @@ import {
   deactivateCourseAssignmentSchema,
   activateCourseAssignmentSchema,
   deleteCourseAssignmentSchema,
+  preflightCourseAssignmentDeletionSchema,
   bulkCreateCourseAssignmentsSchema,
 } from "@/features/course-assignments/schemas/course-assignment";
 import {
@@ -15,6 +16,7 @@ import {
   deactivateCourseAssignment,
   activateCourseAssignment,
   deleteCourseAssignment,
+  preflightCourseAssignmentDeletion,
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
 import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
@@ -29,12 +31,15 @@ import type {
   BulkCreateCourseAssignmentsInput,
   ListCourseAssignmentsFilter,
   ListOptions,
+  CourseAssignmentDeletionPreflight,
+  CourseAssignmentResult,
 } from "@/features/course-assignments/types";
 
 function revalidateCourseAssignmentRoutes() {
   revalidatePath("/program-head/course-assignments");
   revalidatePath("/secretary/course-assignments");
   revalidatePath("/dean/academic-structure/course-assignments");
+  revalidatePath("/faculty/course-rosters");
 }
 
 /**
@@ -130,6 +135,17 @@ export async function deleteCourseAssignmentAction(input: DeleteCourseAssignment
   }
 
   return result;
+}
+
+/**
+ * Load current server-owned facts for the destructive confirmation dialog.
+ */
+export async function preflightCourseAssignmentDeletionAction(
+  assignmentId: string
+): Promise<CourseAssignmentResult<CourseAssignmentDeletionPreflight>> {
+  const parsed = preflightCourseAssignmentDeletionSchema.safeParse({ assignmentId });
+  if (!parsed.success) return { success: false, error: "Invalid course assignment." };
+  return preflightCourseAssignmentDeletion(parsed.data.assignmentId);
 }
 
 /**

@@ -72,7 +72,7 @@ describe("getCourseBoundReviewDetail", () => {
   });
 
   it("returns null when reviewer scope does not permit program access", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.PROGRAM_HEAD], userId: "head-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, roles: [ROLES.PROGRAM_HEAD], userId: "head-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(["program-2"]);
     courseBoundEvaluationFindFirstMock.mockResolvedValue(null);
 
@@ -91,7 +91,7 @@ describe("getCourseBoundReviewDetail", () => {
   });
 
   it("limits faculty detail access to evaluations owned by the reviewer", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.FACULTY], userId: "faculty-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY], userId: "faculty-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(["program-1"]);
     courseBoundEvaluationFindFirstMock.mockResolvedValue(null);
 
@@ -111,7 +111,7 @@ describe("getCourseBoundReviewDetail", () => {
   });
 
   it("builds section and question means plus anonymized response cards", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.DEAN], userId: "dean-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.DEAN, roles: [ROLES.DEAN], userId: "dean-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(null);
     courseBoundEvaluationFindFirstMock.mockResolvedValue({
       id: "eval-1",
@@ -221,7 +221,7 @@ describe("getCourseBoundReviewDetail", () => {
   });
 
   it("returns null when reviewer scope resolves to empty set", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.FACULTY], userId: "faculty-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY], userId: "faculty-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue([]);
 
     await expect(getCourseBoundReviewDetail("eval-1")).resolves.toBeNull();
@@ -229,7 +229,7 @@ describe("getCourseBoundReviewDetail", () => {
   });
 
   it("does not apply program filter for dean scope", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.DEAN], userId: "dean-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.DEAN, roles: [ROLES.DEAN], userId: "dean-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(null);
     courseBoundEvaluationFindFirstMock.mockResolvedValue(null);
 
@@ -242,7 +242,7 @@ describe("getCourseBoundReviewDetail", () => {
   });
 
   it("returns null means for empty quantitative datasets", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.DEAN], userId: "dean-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.DEAN, roles: [ROLES.DEAN], userId: "dean-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(null);
     courseBoundEvaluationFindFirstMock.mockResolvedValue({
       id: "eval-1",

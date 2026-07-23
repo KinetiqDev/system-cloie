@@ -19,7 +19,7 @@ export async function getCourseBoundResponseReview(
     return null;
   }
 
-  const reviewerRole = pickReviewerRole(authSession.roles);
+  const reviewerRole = pickReviewerRole(authSession.activeRole);
 
   if (!reviewerRole) {
     return null;

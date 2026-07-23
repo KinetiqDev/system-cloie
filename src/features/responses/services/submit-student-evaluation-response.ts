@@ -1,6 +1,10 @@
 import { DeploymentType, ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  resolveCourseBoundEvaluationEligibility,
+  toCourseBoundEvaluationEligibilityAssignment,
+} from "@/features/course-assignments/services/course-assignment-roster";
 import { parseStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import {
   isCentralDeploymentAvailable,
@@ -63,6 +67,9 @@ export async function submitStudentEvaluationResponse({
       },
       course_bound: {
         include: {
+          course_assignment: {
+            include: { course: true },
+          },
           instrument: true,
         },
       },
@@ -98,6 +105,19 @@ export async function submitStudentEvaluationResponse({
       error: STUDENT_EVALUATION_UNAVAILABLE_ERROR,
       success: false,
     };
+  }
+
+  if (assignment.course_bound) {
+    const eligibility = await resolveCourseBoundEvaluationEligibility(
+      toCourseBoundEvaluationEligibilityAssignment(assignment.course_bound.course_assignment),
+      authSession.userId
+    );
+    if (!eligibility.eligible) {
+      return {
+        error: STUDENT_EVALUATION_UNAVAILABLE_ERROR,
+        success: false,
+      };
+    }
   }
 
   assertSubmissionIsAllowed({

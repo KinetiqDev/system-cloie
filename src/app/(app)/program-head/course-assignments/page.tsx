@@ -13,15 +13,16 @@ export const metadata = {
 };
 
 export default async function CourseAssignmentsPage() {
-  const [session, coursesResult, schoolYearsResult] = await Promise.all([
-    resolveAuthSession(),
+  const session = await resolveAuthSession();
+
+  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
+    redirect("/unauthorized");
+  }
+
+  const [coursesResult, schoolYearsResult] = await Promise.all([
     listProgramHeadCourses(),
     listSchoolYears(),
   ]);
-
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    redirect("/unauthorized");
-  }
 
   if (!coursesResult) {
     redirect("/unauthorized");

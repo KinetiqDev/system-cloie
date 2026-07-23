@@ -4,9 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { showToast } from "@/components/ui/toast";
 import type {
   PreviewCourseBoundRespondentsInput,
@@ -16,6 +24,7 @@ import type {
   PublishCourseBoundEvaluationResult,
 } from "@/features/evaluations/types";
 import type { TemplateStructure } from "@/features/instruments/types";
+import { isNeutralOtherExplanation } from "../exclusion-text";
 import { AssignmentPicker, type AssignmentOption } from "./assignment-picker";
 import { Info } from "lucide-react";
 
@@ -41,6 +50,16 @@ type PublicationContext = {
 };
 
 type Step = "configure" | "preview";
+type ExclusionCategory =
+  | "APPROVED_ACCOMMODATION"
+  | "NOT_TAKING_ASSESSMENT"
+  | "ADMINISTRATIVE_EXCEPTION"
+  | "OTHER";
+
+type ExclusionDraft = {
+  category: ExclusionCategory;
+  otherExplanation: string;
+};
 
 interface PublishCourseBoundEvaluationFormV2Props {
   assignments: AssignmentOption[];
@@ -51,8 +70,7 @@ interface PublishCourseBoundEvaluationFormV2Props {
   publishAction: (
     payload: PublishCourseBoundEvaluationInput
   ) => Promise<PublishCourseBoundEvaluationResult>;
-  deployerUserId?: string;
-  deployerName?: string;
+  isOnBehalf?: boolean;
   successRedirectPath?: string;
 }
 
@@ -65,8 +83,7 @@ export function PublishCourseBoundEvaluationFormV2({
   previewAction,
   publicationContext,
   publishAction,
-  deployerUserId,
-  deployerName,
+  isOnBehalf: isOnBehalfProp = false,
   successRedirectPath = "/faculty/tools",
 }: PublishCourseBoundEvaluationFormV2Props) {
   // Step state
@@ -78,15 +95,14 @@ export function PublishCourseBoundEvaluationFormV2({
   const [activationSchedule, setActivationSchedule] = useState("");
   const [deadline, setDeadline] = useState("");
 
-  // Determine if deploying on-behalf (Issue #43)
+  // The server page derives this from the active portal role.
   const selectedAssignment = assignments.find((a) => a.id === selectedAssignmentId);
-  const isOnBehalf = Boolean(
-    deployerUserId && selectedAssignment && deployerUserId !== selectedAssignment.facultyId
-  );
+  const isOnBehalf = isOnBehalfProp;
 
   // Preview state
   const [previewRespondents, setPreviewRespondents] = useState<PreviewRespondent[]>([]);
-  const [excludedRespondentIds, setExcludedRespondentIds] = useState<string[]>([]);
+  const [excludedMembershipIds, setExcludedMembershipIds] = useState<string[]>([]);
+  const [exclusionDrafts, setExclusionDrafts] = useState<Record<string, ExclusionDraft>>({});
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   // Status
@@ -116,14 +132,40 @@ export function PublishCourseBoundEvaluationFormV2({
     }
   }
 
-  const handleExcludeRespondent = (userId: string, excluded: boolean) => {
-    setExcludedRespondentIds((previous) => {
+  const handleExcludeRespondent = (membershipId: string, excluded: boolean) => {
+    setExcludedMembershipIds((previous) => {
       if (excluded) {
-        if (previous.includes(userId)) return previous;
-        return [...previous, userId];
+        if (previous.includes(membershipId)) return previous;
+        return [...previous, membershipId];
       }
-      return previous.filter((id) => id !== userId);
+      return previous.filter((id) => id !== membershipId);
     });
+    if (!excluded) {
+      setExclusionDrafts((previous) => {
+        const next = { ...previous };
+        delete next[membershipId];
+        return next;
+      });
+    } else {
+      setExclusionDrafts((previous) => ({
+        [membershipId]: previous[membershipId] ?? {
+          category: "ADMINISTRATIVE_EXCEPTION",
+          otherExplanation: "",
+        },
+        ...previous,
+      }));
+    }
+  };
+
+  const updateExclusionDraft = (membershipId: string, update: Partial<ExclusionDraft>) => {
+    setExclusionDrafts((previous) => ({
+      ...previous,
+      [membershipId]: {
+        category: previous[membershipId]?.category ?? "ADMINISTRATIVE_EXCEPTION",
+        otherExplanation: previous[membershipId]?.otherExplanation ?? "",
+        ...update,
+      },
+    }));
   };
 
   const validateConfiguration = (): boolean => {
@@ -158,13 +200,15 @@ export function PublishCourseBoundEvaluationFormV2({
       });
 
       if (!result.success) {
-        setError(result.error);
-        showToast(result.error, "error");
+        const message = `${result.error}${result.referenceId ? ` Support reference: ${result.referenceId}.` : ""}`;
+        setError(message);
+        showToast(message, "error");
         return;
       }
 
       setPreviewRespondents(result.data);
-      setExcludedRespondentIds([]);
+      setExcludedMembershipIds([]);
+      setExclusionDrafts({});
       setStep("preview");
     } catch {
       setError("Unable to load respondent preview. Please try again.");
@@ -178,17 +222,53 @@ export function PublishCourseBoundEvaluationFormV2({
     setError(null);
     setIsSubmitting(true);
 
-    // Calculate final respondent list (excluding unchecked respondents)
-    const finalRespondentIds = previewRespondents
-      .filter((r) => !excludedRespondentIds.includes(r.userId))
-      .map((r) => r.userId);
+    const excluded = previewRespondents
+      .filter((respondent) => excludedMembershipIds.includes(respondent.membershipId))
+      .map((respondent) => {
+        const draft = exclusionDrafts[respondent.membershipId] ?? {
+          category: "ADMINISTRATIVE_EXCEPTION" as const,
+          otherExplanation: "",
+        };
+        return {
+          category: draft.category,
+          membershipId: respondent.membershipId,
+          ...(draft.category === "OTHER"
+            ? { otherExplanation: draft.otherExplanation.trim() }
+            : {}),
+        };
+      });
+
+    const invalidOther = excluded.some(
+      (exclusion) =>
+        exclusion.category === "OTHER" &&
+        (!exclusion.otherExplanation ||
+          exclusion.otherExplanation.length < 5 ||
+          exclusion.otherExplanation.length > 200 ||
+          !isNeutralOtherExplanation(exclusion.otherExplanation))
+    );
+    if (invalidOther) {
+      const message =
+        "Other exclusion explanations must be 5-200 neutral characters without sensitive details.";
+      setError(message);
+      showToast(message, "error");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (excluded.length === previewRespondents.length) {
+      const message = "At least one roster member must receive this evaluation.";
+      setError(message);
+      showToast(message, "error");
+      setIsSubmitting(false);
+      return;
+    }
 
     const payload: PublishCourseBoundEvaluationInput = {
       assignmentId: selectedAssignmentId!,
       activationAt: activationSchedule ? new Date(activationSchedule) : null,
       deadlineAt: deadline ? new Date(deadline) : null,
       deploymentName: deploymentName.trim(),
-      respondentIds: finalRespondentIds,
+      exclusions: excluded,
       templateId: publicationContext.template.id,
     };
 
@@ -214,7 +294,8 @@ export function PublishCourseBoundEvaluationFormV2({
 
   const handleBack = () => {
     setStep("configure");
-    setExcludedRespondentIds([]);
+    setExcludedMembershipIds([]);
+    setExclusionDrafts({});
   };
 
   return (
@@ -228,13 +309,15 @@ export function PublishCourseBoundEvaluationFormV2({
       </div>
 
       {isOnBehalf && selectedAssignment && (
-        <Card className="bg-blue-50 border-blue-200" role="status">
-          <CardContent className="py-4 flex items-start gap-3">
-            <Info className="h-5 w-5 text-blue-800 shrink-0 mt-0.5" />
+        <Card className="border-blue-200 bg-blue-50" role="status">
+          <CardContent className="flex items-start gap-3 py-4">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-800" />
             <p className="text-sm text-blue-800">
               <strong>Note:</strong> You are deploying this evaluation on behalf of{" "}
-              <span className="font-semibold">{selectedAssignment.facultyName || "the assigned faculty member"}</span>.
-              Question customization is disabled for on-behalf deployments.
+              <span className="font-semibold">
+                {selectedAssignment.facultyName || "the assigned faculty member"}
+              </span>
+              . Question customization is disabled for on-behalf deployments.
             </p>
           </CardContent>
         </Card>
@@ -272,7 +355,11 @@ export function PublishCourseBoundEvaluationFormV2({
                 </p>
               </div>
               {!isOnBehalf && (
-                <Button render={<Link href={`/faculty/tools/${publicationContext.template.id}/edit`} />} type="button" variant="outline">
+                <Button
+                  render={<Link href={`/faculty/tools/${publicationContext.template.id}/edit`} />}
+                  type="button"
+                  variant="outline"
+                >
                   Edit Template
                 </Button>
               )}
@@ -288,23 +375,24 @@ export function PublishCourseBoundEvaluationFormV2({
                       CILO {index + 1}
                     </p>
                     <p className="text-foreground mt-2 text-sm">{cilo.description}</p>
-                    {binding && (() => {
-                      const location = questionLocationMap.get(
-                        `${binding.sectionKey}:${binding.itemKey}`
-                      );
-                      return (
-                        <div className="bg-muted mt-3 rounded-md p-3">
-                          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                            {location
-                              ? `Section ${location.sectionIndex}: ${location.sectionTitle} · Question ${location.questionIndex}`
-                              : "Bound Likert Question"}
-                          </p>
-                          <p className="text-foreground mt-1 text-sm">
-                            {binding.questionPromptSnapshot}
-                          </p>
-                        </div>
-                      );
-                    })()}
+                    {binding &&
+                      (() => {
+                        const location = questionLocationMap.get(
+                          `${binding.sectionKey}:${binding.itemKey}`
+                        );
+                        return (
+                          <div className="bg-muted mt-3 rounded-md p-3">
+                            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                              {location
+                                ? `Section ${location.sectionIndex}: ${location.sectionTitle} · Question ${location.questionIndex}`
+                                : "Bound Likert Question"}
+                            </p>
+                            <p className="text-foreground mt-1 text-sm">
+                              {binding.questionPromptSnapshot}
+                            </p>
+                          </div>
+                        );
+                      })()}
                   </li>
                 );
               })}
@@ -337,7 +425,7 @@ export function PublishCourseBoundEvaluationFormV2({
 
             {selectedAssignment && (
               <Card className="bg-muted">
-                <CardContent className="pt-6 space-y-2">
+                <CardContent className="space-y-2 pt-6">
                   <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                     Selected Class
                   </p>
@@ -345,7 +433,7 @@ export function PublishCourseBoundEvaluationFormV2({
                     {selectedAssignment.courseCode} - {selectedAssignment.courseTitle}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    {selectedAssignment.programCode} — {" "}
+                    {selectedAssignment.programCode} —{" "}
                     {selectedAssignment.yearLevel.replace("_", " ").toLowerCase()}
                     {selectedAssignment.section ? ` — ${selectedAssignment.section}` : ""}
                   </p>
@@ -400,37 +488,104 @@ export function PublishCourseBoundEvaluationFormV2({
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Respondent Preview</h3>
               <p className="text-muted-foreground text-sm">
-                {previewRespondents.length} student(s) will receive this evaluation.
+                {previewRespondents.length - excludedMembershipIds.length} of{" "}
+                {previewRespondents.length} active roster member(s) will receive this evaluation.
                 Uncheck any students you wish to exclude.
               </p>
             </div>
 
             <div className="max-h-96 space-y-2 overflow-y-auto">
-              {previewRespondents.map((respondent) => (
-                <label
-                  key={respondent.userId}
-                  className="border-border flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!excludedRespondentIds.includes(respondent.userId)}
-                    onChange={(e) =>
-                      handleExcludeRespondent(respondent.userId, !e.target.checked)
-                    }
-                    className="mt-1 h-4 w-4"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium">
-                      {respondent.firstName} {respondent.lastName}
-                    </p>
-                    <p className="text-muted-foreground text-sm">{respondent.email}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {respondent.programCode} — {respondent.yearLevel.replace("_", " ").toLowerCase()}
-                      {respondent.section ? ` — ${respondent.section}` : ""}
-                    </p>
+              {previewRespondents.map((respondent) => {
+                const isExcluded = excludedMembershipIds.includes(respondent.membershipId);
+                const exclusion = exclusionDrafts[respondent.membershipId];
+
+                return (
+                  <div
+                    key={respondent.membershipId}
+                    className="border-border hover:bg-muted flex items-start gap-3 rounded-lg border p-3"
+                  >
+                    <Checkbox
+                      aria-label={`Include ${respondent.firstName} ${respondent.lastName}`}
+                      checked={!isExcluded}
+                      id={`respondent-${respondent.membershipId}`}
+                      onCheckedChange={(checked) =>
+                        handleExcludeRespondent(respondent.membershipId, checked !== true)
+                      }
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <Label
+                        className="cursor-pointer"
+                        htmlFor={`respondent-${respondent.membershipId}`}
+                      >
+                        <p className="font-medium">
+                          {respondent.firstName} {respondent.lastName}
+                        </p>
+                        <p className="text-muted-foreground text-sm">{respondent.email}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {respondent.programCode} —{" "}
+                          {respondent.yearLevel.replace("_", " ").toLowerCase()}
+                          {respondent.section ? ` — ${respondent.section}` : ""}
+                        </p>
+                      </Label>
+                      {isExcluded && (
+                        <div className="mt-3 flex flex-col gap-2">
+                          <Label htmlFor={`exclusion-category-${respondent.membershipId}`}>
+                            Exclusion reason
+                          </Label>
+                          <Select
+                            value={exclusion?.category ?? "ADMINISTRATIVE_EXCEPTION"}
+                            onValueChange={(value) =>
+                              updateExclusionDraft(respondent.membershipId, {
+                                category: value as ExclusionCategory,
+                              })
+                            }
+                          >
+                            <SelectTrigger
+                              id={`exclusion-category-${respondent.membershipId}`}
+                              className="w-full"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="APPROVED_ACCOMMODATION">
+                                Approved accommodation
+                              </SelectItem>
+                              <SelectItem value="NOT_TAKING_ASSESSMENT">
+                                Not taking this assessment
+                              </SelectItem>
+                              <SelectItem value="ADMINISTRATIVE_EXCEPTION">
+                                Administrative exception
+                              </SelectItem>
+                              <SelectItem value="OTHER">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {exclusion?.category === "OTHER" && (
+                            <div className="flex flex-col gap-1">
+                              <Input
+                                aria-label={`Other explanation for ${respondent.firstName} ${respondent.lastName}`}
+                                maxLength={200}
+                                minLength={5}
+                                onChange={(event) =>
+                                  updateExclusionDraft(respondent.membershipId, {
+                                    otherExplanation: event.target.value,
+                                  })
+                                }
+                                placeholder="Neutral explanation (5–200 characters)"
+                                value={exclusion.otherExplanation}
+                              />
+                              <p className="text-muted-foreground text-xs">
+                                Use neutral wording only. Sensitive medical and disciplinary details
+                                are not allowed.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </label>
-              ))}
+                );
+              })}
             </div>
 
             {error && (
@@ -440,12 +595,7 @@ export function PublishCourseBoundEvaluationFormV2({
             )}
 
             <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                disabled={isSubmitting}
-              >
+              <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>
                 Back
               </Button>
               <Button

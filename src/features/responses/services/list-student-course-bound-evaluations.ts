@@ -6,6 +6,10 @@ import type {
   StudentEvaluationSection,
   StudentEvaluationSession,
 } from "@/features/responses/types";
+import {
+  resolveCourseBoundEvaluationEligibility,
+  toCourseBoundEvaluationEligibilityAssignment,
+} from "@/features/course-assignments/services/course-assignment-roster";
 import { isCourseBoundEvaluationAvailable } from "./course-bound-availability";
 import { mapStructureSnapshotToSections } from "./get-student-course-bound-evaluation-session";
 
@@ -176,56 +180,68 @@ export async function listStudentCourseBoundEvaluations(): Promise<{
 
   const now = new Date();
 
-  const items = assignments
-    .filter((assignment) => assignment.course_bound)
-    .flatMap((assignment) => {
-      const courseBound = assignment.course_bound!;
-      const response = assignment.response ?? null;
+  const items = (
+    await Promise.all(
+      assignments
+        .filter((assignment) => assignment.course_bound)
+        .map(async (assignment) => {
+          const courseBound = assignment.course_bound!;
+          const response = assignment.response ?? null;
 
-      if (!response?.submitted_at && !isCourseBoundEvaluationAvailable(courseBound, now)) {
-        return [];
-      }
+          if (!response?.submitted_at && !isCourseBoundEvaluationAvailable(courseBound, now)) {
+            return null;
+          }
 
-      const ca = courseBound.course_assignment;
+          if (!response?.submitted_at) {
+            const eligibility = await resolveCourseBoundEvaluationEligibility(
+              toCourseBoundEvaluationEligibilityAssignment(courseBound.course_assignment),
+              authSession.userId
+            );
+            if (!eligibility.eligible) return null;
+          }
 
-      const sections = mapStructureSnapshotToSections(courseBound.instrument.structure_snapshot);
-      const section = sections[0] ?? buildFallbackSection();
-      const session: StudentEvaluationSession = {
-        answeredItems: response ? response.qual_items.length + response.quant_items.length : 0,
-        responseId: response?.id ?? null,
-        submittedAt: response?.submitted_at ?? null,
-        totalItems: countSectionItems(sections),
-      };
-      const status = deriveStudentEvaluationStatus({
-        answeredItems: session.answeredItems,
-        deadlineAt: courseBound.deadline_at,
-        responseId: session.responseId,
-        submittedAt: session.submittedAt,
-        totalItems: session.totalItems,
-      }).status;
-      const href =
-        status === "SUBMITTED"
-          ? session.responseId
-            ? `/student/history/${session.responseId}`
-            : null
-          : `/student/evaluations/${assignment.id}`;
+          const ca = courseBound.course_assignment;
 
-      return buildStudentEvaluationListItem({
-        assignmentId: assignment.id,
-        courseTitle: ca.course.title,
-        deadlineAt: courseBound.deadline_at,
-        evaluationId: assignment.id,
-        evaluationTitle: courseBound.deployment_name ?? courseBound.instrument.template.name,
-        facultyName: ca.faculty
-          ? `${ca.faculty.first_name} ${ca.faculty.last_name}`
-          : null,
-        href,
-        now,
-        programLabel: ca.course.major?.name ?? ca.program.name,
-        section,
-        session,
-      });
-    });
+          const sections = mapStructureSnapshotToSections(
+            courseBound.instrument.structure_snapshot
+          );
+          const section = sections[0] ?? buildFallbackSection();
+          const session: StudentEvaluationSession = {
+            answeredItems: response ? response.qual_items.length + response.quant_items.length : 0,
+            responseId: response?.id ?? null,
+            submittedAt: response?.submitted_at ?? null,
+            totalItems: countSectionItems(sections),
+          };
+          const status = deriveStudentEvaluationStatus({
+            answeredItems: session.answeredItems,
+            deadlineAt: courseBound.deadline_at,
+            responseId: session.responseId,
+            submittedAt: session.submittedAt,
+            totalItems: session.totalItems,
+          }).status;
+          const href =
+            status === "SUBMITTED"
+              ? session.responseId
+                ? `/student/history/${session.responseId}`
+                : null
+              : `/student/evaluations/${assignment.id}`;
+
+          return buildStudentEvaluationListItem({
+            assignmentId: assignment.id,
+            courseTitle: ca.course.title,
+            deadlineAt: courseBound.deadline_at,
+            evaluationId: assignment.id,
+            evaluationTitle: courseBound.deployment_name ?? courseBound.instrument.template.name,
+            facultyName: ca.faculty ? `${ca.faculty.first_name} ${ca.faculty.last_name}` : null,
+            href,
+            now,
+            programLabel: ca.course.major?.name ?? ca.program.name,
+            section,
+            session,
+          });
+        })
+    )
+  ).filter((item): item is StudentEvaluationListItem => item !== null);
 
   return {
     active: items.filter((item) => item.status !== "SUBMITTED"),

@@ -5,6 +5,7 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { getFacultyDashboard } from "@/features/analytics/services/get-faculty-dashboard";
 import { CourseMeanPieChart } from "@/features/analytics/components/course-mean-pie-chart";
 import { QualitativeWordCloud } from "@/features/analytics/components/qualitative-word-cloud";
+import { ROLES } from "@/lib/constants/roles";
 
 export default async function FacultyDashboardPage() {
   const session = await resolveAuthSession();
@@ -13,7 +14,15 @@ export default async function FacultyDashboardPage() {
     redirect("/portal/respondents");
   }
 
+  if (session.activeRole !== ROLES.FACULTY) {
+    redirect("/unauthorized");
+  }
+
   const dashboard = await getFacultyDashboard(session.userId);
+
+  if (!dashboard) {
+    redirect("/unauthorized");
+  }
 
   return (
     <div className="space-y-8">

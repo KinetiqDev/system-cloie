@@ -1,17 +1,35 @@
-import { DeploymentStatus, EvaluationTemplateType, CourseScope } from "@prisma/client";
+import { randomUUID } from "node:crypto";
+import {
+  CourseBoundEvaluationExclusionCategory,
+  CourseScope,
+  DeploymentStatus,
+  EvaluationTemplateType,
+  Prisma,
+} from "@prisma/client";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { getFacultyTemplatePublicationContext, type FacultyTemplatePublicationContext } from "@/features/instruments/services/manage-faculty-templates";
-import { listStudentsForClass } from "@/features/enrollments/services/list-students-for-class";
+import {
+  getFacultyTemplatePublicationContext,
+  type FacultyTemplatePublicationContext,
+} from "@/features/instruments/services/manage-faculty-templates";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { type TemplateStructure } from "@/features/instruments/types";
 import { canDeployCourseBoundEvaluation } from "../policies";
+import { isNeutralOtherExplanation } from "../exclusion-text";
 import type {
   PublishCourseBoundEvaluationInput,
   PublishCourseBoundEvaluationResult,
 } from "../types";
+
+class PublicationValidationError extends Error {}
+
+type PublicationContextDb = Prisma.TransactionClient | typeof prisma;
+
+function isTransactionWriteConflict(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "P2034";
+}
 
 function buildPublicationStatus(activationAt: Date | null | undefined): "ACTIVE" | "SCHEDULED" {
   if (activationAt && activationAt.getTime() > Date.now()) {
@@ -21,20 +39,15 @@ function buildPublicationStatus(activationAt: Date | null | undefined): "ACTIVE"
   return DeploymentStatus.ACTIVE;
 }
 
-function toUniqueValues(values: string[]) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
-}
-
-
-
 /**
  * Bypasses the faculty session checks in getFacultyTemplatePublicationContext for on-behalf deployments.
  */
-async function getOnBehalfTemplatePublicationContext(
+export async function getOnBehalfTemplatePublicationContext(
   templateId: string,
-  facultyId: string
+  facultyId: string,
+  db: PublicationContextDb = prisma
 ): Promise<ServiceResult<FacultyTemplatePublicationContext>> {
-  const template = await prisma.instrumentTemplate.findFirst({
+  const template = await db.instrumentTemplate.findFirst({
     where: {
       id: templateId,
       is_active: true,
@@ -59,7 +72,7 @@ async function getOnBehalfTemplatePublicationContext(
     return { success: false, error: "This template is not bound to a course." };
   }
 
-  const cilos = await prisma.cILO.findMany({
+  const cilos = await db.cILO.findMany({
     where: { course_id: template.bound_course_id, is_active: true },
     orderBy: { created_at: "asc" },
     select: { description: true, id: true },
@@ -74,7 +87,12 @@ async function getOnBehalfTemplatePublicationContext(
     : [];
   const likertQuestions: { sectionKey: string; itemKey: string; prompt: string }[] = [];
   for (const section of structure) {
-    if (section && typeof section === "object" && "questions" in section && Array.isArray(section.questions)) {
+    if (
+      section &&
+      typeof section === "object" &&
+      "questions" in section &&
+      Array.isArray(section.questions)
+    ) {
       for (const question of section.questions) {
         if (question && typeof question === "object") {
           const q = question as unknown as Record<string, unknown>;
@@ -90,12 +108,10 @@ async function getOnBehalfTemplatePublicationContext(
     }
   }
 
-  const questionMap = new Map(
-    likertQuestions.map((q) => [`${q.sectionKey}:${q.itemKey}`, q])
-  );
+  const questionMap = new Map(likertQuestions.map((q) => [`${q.sectionKey}:${q.itemKey}`, q]));
   const ciloMap = new Map(cilos.map((c) => [c.id, c]));
   const liveCiloIds = new Set(cilos.map((cilo) => cilo.id));
-  
+
   const validatedBindings = [];
   const usedCiloIds = new Set<string>();
   const usedQuestionKeys = new Set<string>();
@@ -184,243 +200,322 @@ export async function publishCourseBoundEvaluation({
   activationAt = null,
   deadlineAt = null,
   deploymentName,
-  respondentIds: providedRespondentIds,
+  exclusions = [],
   templateId,
-  deployerId,
 }: PublishCourseBoundEvaluationInput): Promise<PublishCourseBoundEvaluationResult> {
-  const authSession = await resolveAuthSession();
-
-  if (!authSession) {
-    return { error: "Authentication required.", success: false };
-  }
-
-  if (!deploymentName.trim()) {
-    return { error: "Deployment name is required.", success: false };
-  }
-
-  // Lookup the assignment (needed for policy check). Filters inactive at SQL level.
-  const assignment = await prisma.courseAssignment.findFirst({
-    where: { id: assignmentId, is_active: true },
-    include: {
-      course: {
-        include: {
-          major: true,
-        },
-      },
-      program: true,
-    },
-  });
-
-  if (!assignment) {
-    return { error: "Course assignment not found.", success: false };
-  }
-
-  if (!assignment.is_active) {
-    return { error: "This course assignment is inactive.", success: false };
-  }
-
-  // Get PH scope if user is PH - resolves multiple program head assignments
-  let phProgramScope: string[] = [];
-  if (authSession.roles.includes(ROLES.PROGRAM_HEAD)) {
-    const headAssignments = await prisma.programHeadAssignment.findMany({
-      where: { program_head_id: authSession.userId, is_active: true },
-      select: { program_id: true },
-    });
-    phProgramScope = headAssignments.map((a) => a.program_id).filter(Boolean) as string[];
-  }
-
-  // Call policy for authorization
-  const authCheck = canDeployCourseBoundEvaluation(
-    authSession,
-    {
-      faculty_id: assignment.faculty_id,
-      program_id: assignment.program_id,
-      course_scope: assignment.course.course_scope as CourseScope,
-    },
-    phProgramScope
-  );
-
-  if (!authCheck.allowed) {
-    return { error: (authCheck as { allowed: false; reason: string }).reason, success: false };
-  }
-
-  // Determine effective template ID (force bound template for on-behalf)
-  let effectiveTemplateId = templateId;
-  const isOnBehalf = deployerId && deployerId !== assignment.faculty_id;
-
-  if (isOnBehalf) {
-    // Force bound template for on-behalf deployments (scoped to the assigned faculty)
-    const boundTemplate = await prisma.instrumentTemplate.findFirst({
-      where: {
-        bound_course_id: assignment.course_id,
-        is_active: true,
-        faculty_owner_id: assignment.faculty_id,
-      },
-      orderBy: { created_at: "desc" },
-    });
-
-    if (!boundTemplate) {
-      return {
-        error: "On-behalf deployment requires a course-bound template. Please create one first.",
-        success: false,
-      };
-    }
-
-    effectiveTemplateId = boundTemplate.id;
-  }
-
-  // Decouple on-behalf publish from faculty session check
-  let publicationContext: ServiceResult<FacultyTemplatePublicationContext>;
-  if (isOnBehalf) {
-    publicationContext = await getOnBehalfTemplatePublicationContext(
-      effectiveTemplateId,
-      assignment.faculty_id
-    );
-  } else {
-    publicationContext = await getFacultyTemplatePublicationContext(effectiveTemplateId);
-  }
-
-  if (!publicationContext.success) {
-    return publicationContext as PublishCourseBoundEvaluationResult;
-  }
-
-  const contextData = publicationContext.data;
-
-  // Verify the template's course matches the assignment's course
-  if (contextData.course.id !== assignment.course_id) {
-    return {
-      error: "The selected template is not for this course.",
-      success: false,
-    };
-  }
-
-  // Update version findFirst logic for on-behalf mode (drop faculty_owner_id constraint)
-  const latestVersion = await prisma.instrumentVersion.findFirst({
-    where: {
-      is_active: true,
-      template_id: effectiveTemplateId,
-      template: {
-        id: effectiveTemplateId,
-        is_active: true,
-        template_type: EvaluationTemplateType.COURSE_BOUND,
-      },
-    },
-    orderBy: {
-      version_number: "desc",
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (!latestVersion) {
-    return {
-      error: "Course-bound evaluation template is unavailable.",
-      success: false,
-    };
-  }
-
-  const status = buildPublicationStatus(activationAt);
+  let actorId: string | undefined;
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      const ciloSnapshots = contextData.cilos.map((cilo, index: number) => ({
-        description: cilo.description,
-        id: cilo.id,
-        label: `CILO ${index + 1}`,
-      }));
+    const authSession = await resolveAuthSession();
 
-      const evaluation = await tx.courseBoundEvaluation.create({
-        data: {
-          // Source of truth for class identity (Issue #39)
-          course_assignment_id: assignment.id,
-          term_instance_id: assignment.term_instance_id,
-          // On-behalf deployment tracking (Issue #43) - records the correct deployer
-          deployed_by: deployerId || authSession.userId,
-          activation_at: activationAt,
-          cilos_snapshot: ciloSnapshots,
-          course_info_snapshot: {
-            courseCode: assignment.course.code,
-            courseScope: contextData.course.courseType,
-            courseTitle: assignment.course.title,
-            majorName: assignment.course.major?.name ?? null,
-            programCode: assignment.program.code,
-            programName: assignment.program.name,
+    if (!authSession) {
+      return { error: "Authentication required.", success: false };
+    }
+    actorId = authSession.userId;
+
+    if (!deploymentName.trim()) {
+      return { error: "Deployment name is required.", success: false };
+    }
+
+    const status = buildPublicationStatus(activationAt);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const result = await prisma.$transaction(
+          async (tx) => {
+            await tx.$queryRaw`
+        SELECT id
+        FROM "course_assignments"
+        WHERE id = ${assignmentId}
+        FOR UPDATE
+      `;
+
+            const lockedAssignment = await tx.courseAssignment.findUnique({
+              where: { id: assignmentId },
+              include: {
+                course: { include: { major: true } },
+                program: true,
+                term_instance: true,
+                course_bound_evaluations: { select: { published_at: true } },
+              },
+            });
+
+            if (!lockedAssignment) {
+              throw new PublicationValidationError("Course assignment not found.");
+            }
+
+            const lockedPhProgramScope =
+              authSession.activeRole === ROLES.PROGRAM_HEAD
+                ? (
+                    await tx.programHeadAssignment.findMany({
+                      where: { program_head_id: authSession.userId, is_active: true },
+                      select: { program_id: true },
+                    })
+                  ).map((headAssignment) => headAssignment.program_id)
+                : [];
+            const lockedAuthCheck = canDeployCourseBoundEvaluation(
+              authSession,
+              {
+                faculty_id: lockedAssignment.faculty_id,
+                program_id: lockedAssignment.program_id,
+                course_scope: lockedAssignment.course.course_scope as CourseScope,
+              },
+              lockedPhProgramScope
+            );
+            if (!lockedAuthCheck.allowed) {
+              throw new PublicationValidationError("Course assignment not found.");
+            }
+            if (!lockedAssignment.is_active) {
+              throw new PublicationValidationError("This course assignment is inactive.");
+            }
+            if (lockedAssignment.term_instance.status !== "ACTIVE") {
+              throw new PublicationValidationError("This academic period is not active.");
+            }
+            if (
+              lockedAssignment.course_bound_evaluations.some(
+                (evaluation) => evaluation.published_at !== null
+              )
+            ) {
+              throw new PublicationValidationError(
+                "This course assignment already has a deployed evaluation."
+              );
+            }
+
+            // Resolve template identity and version after the assignment lock so a
+            // concurrent faculty reassignment cannot publish stale template context.
+            const isOnBehalf = authSession.activeRole !== ROLES.FACULTY;
+            let effectiveTemplateId = templateId;
+
+            if (isOnBehalf) {
+              const boundTemplate = await tx.instrumentTemplate.findFirst({
+                where: {
+                  bound_course_id: lockedAssignment.course_id,
+                  is_active: true,
+                  faculty_owner_id: lockedAssignment.faculty_id,
+                },
+                orderBy: { created_at: "desc" },
+                select: { id: true },
+              });
+
+              if (!boundTemplate) {
+                throw new PublicationValidationError(
+                  "On-behalf deployment requires a course-bound template. Please create one first."
+                );
+              }
+
+              effectiveTemplateId = boundTemplate.id;
+            }
+
+            let publicationContext: ServiceResult<FacultyTemplatePublicationContext>;
+            if (isOnBehalf) {
+              publicationContext = await getOnBehalfTemplatePublicationContext(
+                effectiveTemplateId,
+                lockedAssignment.faculty_id,
+                tx
+              );
+            } else {
+              publicationContext = await getFacultyTemplatePublicationContext(effectiveTemplateId, {
+                db: tx,
+                facultyId: lockedAssignment.faculty_id,
+                courseContext: {
+                  courseType: lockedAssignment.course.course_scope,
+                  majorName: lockedAssignment.course.major?.name ?? null,
+                  programCode: lockedAssignment.program.code,
+                  programName: lockedAssignment.program.name,
+                  scopeLabel: `${lockedAssignment.program.code} - ${lockedAssignment.course.title}`,
+                },
+              });
+            }
+
+            if (!publicationContext.success) {
+              throw new PublicationValidationError(publicationContext.error);
+            }
+
+            const contextData = publicationContext.data;
+            const templateMatchesAssignment =
+              contextData.course.id === lockedAssignment.course_id &&
+              (lockedAssignment.course.course_scope === CourseScope.GENERAL_EDUCATION ||
+                contextData.programId === lockedAssignment.program_id);
+            if (!templateMatchesAssignment) {
+              throw new PublicationValidationError("The selected template is not for this course.");
+            }
+
+            const latestVersion = await tx.instrumentVersion.findFirst({
+              where: {
+                is_active: true,
+                template_id: effectiveTemplateId,
+                template: {
+                  id: effectiveTemplateId,
+                  is_active: true,
+                  template_type: EvaluationTemplateType.COURSE_BOUND,
+                },
+              },
+              orderBy: { version_number: "desc" },
+              select: { id: true },
+            });
+
+            if (!latestVersion) {
+              throw new PublicationValidationError(
+                "Course-bound evaluation template is unavailable."
+              );
+            }
+
+            const memberships = await tx.courseAssignmentMembership.findMany({
+              where: { course_assignment_id: assignmentId, is_active: true },
+              select: { id: true, student_user_id: true },
+            });
+            const membershipById = new Map(
+              memberships.map((membership) => [membership.id, membership])
+            );
+            const normalizedExclusions = exclusions.map((exclusion) => ({
+              ...exclusion,
+              otherExplanation: exclusion.otherExplanation?.trim() || undefined,
+            }));
+            const excludedMembershipIds = new Set<string>();
+            for (const exclusion of normalizedExclusions) {
+              const membership = membershipById.get(exclusion.membershipId);
+              if (!membership) {
+                throw new PublicationValidationError(
+                  "Every exclusion must target an active Course-assignment roster member."
+                );
+              }
+              if (excludedMembershipIds.has(exclusion.membershipId)) {
+                throw new PublicationValidationError("A roster member can only be excluded once.");
+              }
+              if (
+                exclusion.category === CourseBoundEvaluationExclusionCategory.OTHER &&
+                (!exclusion.otherExplanation ||
+                  exclusion.otherExplanation.length < 5 ||
+                  exclusion.otherExplanation.length > 200 ||
+                  !isNeutralOtherExplanation(exclusion.otherExplanation))
+              ) {
+                throw new PublicationValidationError(
+                  "Other exclusion explanations must be 5-200 neutral characters without sensitive details."
+                );
+              }
+              if (
+                exclusion.category !== CourseBoundEvaluationExclusionCategory.OTHER &&
+                exclusion.otherExplanation
+              ) {
+                throw new PublicationValidationError(
+                  "Only an Other exclusion may include an explanation."
+                );
+              }
+              excludedMembershipIds.add(exclusion.membershipId);
+            }
+
+            const respondentIds = memberships
+              .filter((membership) => !excludedMembershipIds.has(membership.id))
+              .map((membership) => membership.student_user_id);
+            if (respondentIds.length === 0) {
+              throw new PublicationValidationError(
+                "At least one roster member must receive this evaluation."
+              );
+            }
+
+            const ciloSnapshots = contextData.cilos.map((cilo, index: number) => ({
+              description: cilo.description,
+              id: cilo.id,
+              label: `CILO ${index + 1}`,
+            }));
+
+            const evaluation = await tx.courseBoundEvaluation.create({
+              data: {
+                // Source of truth for class identity (Issue #39)
+                course_assignment_id: lockedAssignment.id,
+                term_instance_id: lockedAssignment.term_instance_id,
+                // On-behalf deployment tracking (Issue #43) - records the correct deployer
+                deployed_by: authSession.userId,
+                activation_at: activationAt,
+                cilos_snapshot: ciloSnapshots,
+                course_info_snapshot: {
+                  courseCode: lockedAssignment.course.code,
+                  courseScope: contextData.course.courseType,
+                  courseTitle: lockedAssignment.course.title,
+                  majorName: lockedAssignment.course.major?.name ?? null,
+                  programCode: lockedAssignment.program.code,
+                  programName: lockedAssignment.program.name,
+                },
+                deadline_at: deadlineAt,
+                deployment_name: deploymentName.trim(),
+                instrument_version_id: latestVersion.id,
+                published_at: new Date(),
+                status,
+              },
+            });
+
+            await tx.courseBoundCiloQuestionBinding.createMany({
+              data: contextData.bindings.map((binding) => ({
+                cilo_description_snapshot: binding.ciloDescriptionSnapshot,
+                cilo_id: binding.ciloId,
+                course_bound_evaluation_id: evaluation.id,
+                item_key: binding.itemKey,
+                question_prompt_snapshot: binding.questionPromptSnapshot,
+                section_key: binding.sectionKey,
+              })),
+            });
+
+            await tx.courseBoundEvaluationExclusion.createMany({
+              data: normalizedExclusions.map((exclusion) => ({
+                category: exclusion.category,
+                course_assignment_id: assignmentId,
+                course_assignment_membership_id: exclusion.membershipId,
+                course_bound_evaluation_id: evaluation.id,
+                excluded_by: authSession.userId,
+                ...(exclusion.otherExplanation
+                  ? { other_explanation: exclusion.otherExplanation }
+                  : {}),
+              })),
+            });
+
+            // Create single target row for the assignment's program/year
+            const targetRows = [
+              {
+                course_bound_evaluation_id: evaluation.id,
+                program_id: lockedAssignment.program_id,
+                year_level: lockedAssignment.year_level,
+              },
+            ];
+
+            await tx.courseBoundEvaluationTarget.createMany({
+              data: targetRows,
+            });
+
+            await tx.evaluationAssignment.createMany({
+              data: respondentIds.map((respondentId) => ({
+                course_bound_id: evaluation.id,
+                respondent_id: respondentId,
+              })),
+            });
+
+            return {
+              success: true,
+              data: {
+                assignmentCount: respondentIds.length,
+                evaluationId: evaluation.id,
+                status,
+                targetCount: targetRows.length,
+              },
+            };
           },
-          deadline_at: deadlineAt,
-          deployment_name: deploymentName.trim(),
-          instrument_version_id: latestVersion.id,
-          published_at: new Date(),
-          status,
-        },
-      });
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          }
+        );
 
-      await tx.courseBoundCiloQuestionBinding.createMany({
-        data: contextData.bindings.map((binding) => ({
-          cilo_description_snapshot: binding.ciloDescriptionSnapshot,
-          cilo_id: binding.ciloId,
-          course_bound_evaluation_id: evaluation.id,
-          item_key: binding.itemKey,
-          question_prompt_snapshot: binding.questionPromptSnapshot,
-          section_key: binding.sectionKey,
-        })),
-      });
-
-      // Create single target row for the assignment's program/year
-      const targetRows = [{
-        course_bound_evaluation_id: evaluation.id,
-        program_id: assignment.program_id,
-        year_level: assignment.year_level,
-      }];
-
-      await tx.courseBoundEvaluationTarget.createMany({
-        data: targetRows,
-      });
-
-      // Determine respondent IDs
-      let respondentIds: string[];
-
-      if (providedRespondentIds && providedRespondentIds.length > 0) {
-        // Use the confirmed respondent list from preview step
-        respondentIds = toUniqueValues(providedRespondentIds);
-      } else {
-        // Query students from enrollment ledger
-        const studentsResult = await listStudentsForClass({
-          termInstanceId: assignment.term_instance_id,
-          programId: assignment.program_id,
-          yearLevel: assignment.year_level,
-          section: assignment.section,
-        });
-
-        if (!studentsResult.success) {
-          throw new Error(studentsResult.error);
-        }
-
-        respondentIds = studentsResult.data.map((s) => s.userId);
+        return result as PublishCourseBoundEvaluationResult;
+      } catch (error) {
+        if (isTransactionWriteConflict(error) && attempt < 2) continue;
+        throw error;
       }
+    }
 
-      if (respondentIds.length > 0) {
-        await tx.evaluationAssignment.createMany({
-          data: respondentIds.map((respondentId) => ({
-            course_bound_id: evaluation.id,
-            respondent_id: respondentId,
-          })),
-        });
-      }
-
-      return {
-        success: true,
-        data: {
-          assignmentCount: respondentIds.length,
-          evaluationId: evaluation.id,
-          status,
-          targetCount: targetRows.length,
-        },
-      };
-    });
-
-    return result as PublishCourseBoundEvaluationResult;
+    throw new Error("Publication transaction retry limit exceeded.");
   } catch (error) {
+    if (error instanceof PublicationValidationError) {
+      return { error: error.message, success: false };
+    }
+
     if (isUniqueConstraintError(error)) {
       return {
         error: "This course assignment already has a deployed evaluation.",
@@ -428,9 +523,26 @@ export async function publishCourseBoundEvaluation({
       };
     }
 
-    console.error("Failed to publish course-bound evaluation (V2):", error);
+    const referenceId = randomUUID();
+    console.error("Failed to publish course-bound evaluation", {
+      operation: "publish_course_bound_evaluation",
+      actorId,
+      assignmentId,
+      referenceId,
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              code:
+                typeof error === "object" && error !== null && "code" in error
+                  ? String(error.code)
+                  : undefined,
+            }
+          : { type: typeof error },
+    });
     return {
-      error: "Failed to publish evaluation. Please try again.",
+      error: `Failed to publish evaluation. Please try again. Support reference: ${referenceId}.`,
+      referenceId,
       success: false,
     };
   }

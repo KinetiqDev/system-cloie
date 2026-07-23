@@ -179,7 +179,11 @@ export function CourseAssignmentFormDialog({
       onOpenChange(false);
       onSuccess?.();
     } else {
-      showToast(result.error || "Failed to create assignment.", "error");
+      const supportSuffix =
+        "referenceId" in result && result.referenceId
+          ? ` Support reference: ${result.referenceId}.`
+          : "";
+      showToast(`${result.error || "Failed to create assignment."}${supportSuffix}`, "error");
     }
   };
 

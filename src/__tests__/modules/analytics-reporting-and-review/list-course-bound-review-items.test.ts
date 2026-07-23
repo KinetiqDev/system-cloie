@@ -35,7 +35,7 @@ describe("listCourseBoundReviewItems", () => {
   });
 
   it("returns an empty list when the requester has no reviewer role", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.STUDENT], userId: "user-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.STUDENT, roles: [ROLES.STUDENT], userId: "user-1" });
 
     await expect(listCourseBoundReviewItems()).resolves.toEqual([]);
     expect(resolveReviewerProgramScopeMock).not.toHaveBeenCalled();
@@ -43,7 +43,7 @@ describe("listCourseBoundReviewItems", () => {
   });
 
   it("returns reviewer-scoped rows for faculty with overall means", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.FACULTY], userId: "faculty-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY], userId: "faculty-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(["program-1"]);
     courseBoundEvaluationFindManyMock.mockResolvedValue([
       {
@@ -107,7 +107,7 @@ describe("listCourseBoundReviewItems", () => {
   });
 
   it("does not add program filters for deans", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.DEAN], userId: "dean-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.DEAN, roles: [ROLES.DEAN], userId: "dean-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(null);
     courseBoundEvaluationFindManyMock.mockResolvedValue([]);
 
@@ -125,15 +125,39 @@ describe("listCourseBoundReviewItems", () => {
   });
 
   it("returns empty list and skips db query for empty reviewer scope", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.FACULTY], userId: "faculty-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY], userId: "faculty-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue([]);
 
     await expect(listCourseBoundReviewItems()).resolves.toEqual([]);
     expect(courseBoundEvaluationFindManyMock).not.toHaveBeenCalled();
   });
 
+  it("uses active role when session contains another reviewer role", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.DEAN, ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    resolveReviewerProgramScopeMock.mockResolvedValue(["program-1"]);
+    courseBoundEvaluationFindManyMock.mockResolvedValue([]);
+
+    await expect(listCourseBoundReviewItems()).resolves.toEqual([]);
+
+    expect(resolveReviewerProgramScopeMock).toHaveBeenCalledWith({
+      reviewerId: "faculty-1",
+      reviewerRole: ROLES.FACULTY,
+    });
+    expect(courseBoundEvaluationFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          course_assignment: expect.objectContaining({ faculty_id: "faculty-1" }),
+        }),
+      })
+    );
+  });
+
   it("returns null overall mean when submitted responses contain no quantitative ratings", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ roles: [ROLES.FACULTY], userId: "faculty-1" });
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY], userId: "faculty-1" });
     resolveReviewerProgramScopeMock.mockResolvedValue(["program-1"]);
     courseBoundEvaluationFindManyMock.mockResolvedValue([
       {

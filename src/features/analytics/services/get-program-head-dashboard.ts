@@ -1,5 +1,8 @@
 import { DeploymentStatus, ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { countEligibleCourseBoundEvaluationAssignments } from "@/features/course-assignments/services/course-assignment-roster";
+import { ROLES } from "@/lib/constants/roles";
 import { buildReviewWordCloudTokens } from "./get-course-bound-review-detail";
 import type { WordCloudToken } from "../types";
 
@@ -49,7 +52,22 @@ function roundToTwo(n: number): number {
 
 export async function getProgramHeadDashboard(
   programId: string
-): Promise<ProgramHeadDashboardData> {
+): Promise<ProgramHeadDashboardData | null> {
+  const session = await resolveAuthSession();
+
+  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
+    return null;
+  }
+
+  const assignment = await prisma.programHeadAssignment.findFirst({
+    where: { program_head_id: session.userId, program_id: programId, is_active: true },
+    select: { program_id: true },
+  });
+
+  if (!assignment) {
+    return null;
+  }
+
   // Fetch program info
   const program = await prisma.program.findUniqueOrThrow({
     where: { id: programId },
@@ -96,29 +114,39 @@ export async function getProgramHeadDashboard(
     ],
   };
 
-  const [totalResponses, pendingAssignments] = await Promise.all([
-    prisma.response.count({
-      where: {
-        status: ResponseStatus.SUBMITTED,
-        ...programResponseScope,
-      },
-    }),
-    prisma.evaluationAssignment.count({
-      where: {
-        response: null, // no response yet
-        OR: [
-          {
-            central_deployment: { program_id: programId },
+  const [totalResponses, centralPendingAssignments, courseBoundPendingAssignments] =
+    await Promise.all([
+      prisma.response.count({
+        where: {
+          status: ResponseStatus.SUBMITTED,
+          ...programResponseScope,
+        },
+      }),
+      prisma.evaluationAssignment.count({
+        where: {
+          OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }],
+          central_deployment: {
+            program_id: programId,
+            status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+            OR: [{ activation_at: null }, { activation_at: { lte: new Date() } }],
+            AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: new Date() } }] }],
           },
+        },
+      }),
+      countEligibleCourseBoundEvaluationAssignments({
+        AND: [
+          { OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }] },
           {
             course_bound: {
               course_assignment: { program_id: programId },
+              status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+              OR: [{ activation_at: null }, { activation_at: { lte: new Date() } }],
+              AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: new Date() } }] }],
             },
           },
         ],
-      },
-    }),
-  ]);
+      }),
+    ]);
 
   // 3. Overall quantitative mean
   const overallMeanResult = await prisma.quantitativeResponseItem.aggregate({
@@ -226,7 +254,7 @@ export async function getProgramHeadDashboard(
       activeDeployments,
       totalResponses,
       overallMean,
-      pendingResponses: pendingAssignments,
+      pendingResponses: centralPendingAssignments + courseBoundPendingAssignments,
     },
     stakeholderMeans,
     wordCloudTokens,

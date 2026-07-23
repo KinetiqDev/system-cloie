@@ -59,7 +59,7 @@ async function resolveProgramHeadProgramIds(userId: string): Promise<string[]> {
 export async function listProgramHeadCourses(): Promise<ProgramHeadCoursesResult | null> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
+  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
     return null;
   }
 

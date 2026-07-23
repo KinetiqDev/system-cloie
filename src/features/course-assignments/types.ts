@@ -1,4 +1,4 @@
-import type { YearLevel, StudentSection, CourseScope } from "@prisma/client";
+import type { AcademicPeriodStatus, CourseScope, StudentSection, YearLevel } from "@prisma/client";
 
 /**
  * Course option surfaced by the course assignment route and dialogs.
@@ -38,6 +38,7 @@ export type CourseAssignmentItem = {
   programName?: string;
   termLabel?: string;
   lastTermTaught?: string;
+  rosterMembershipCount?: number;
 };
 
 /**
@@ -60,6 +61,7 @@ export type UpdateCourseAssignmentInput = {
   programId?: string;
   yearLevel?: YearLevel;
   section?: StudentSection;
+  facultyId?: string;
 };
 
 /**
@@ -81,6 +83,21 @@ export type ActivateCourseAssignmentInput = {
  */
 export type DeleteCourseAssignmentInput = {
   assignmentId: string;
+  confirmationLabel: string;
+  revision: string;
+  membershipCount: number;
+  activeMembershipCount: number;
+  removedMembershipCount: number;
+};
+
+export type CourseAssignmentDeletionPreflight = {
+  id: string;
+  label: string;
+  revision: string;
+  membershipCount: number;
+  activeMembershipCount: number;
+  removedMembershipCount: number;
+  courseBoundEvaluationCount: number;
 };
 
 /**
@@ -95,7 +112,153 @@ export type BulkCreateCourseAssignmentsInput = {
  */
 export type CourseAssignmentResult<T = void> =
   | { success: true; data: T }
-  | { success: false; error: string };
+  | { success: false; error: string; referenceId?: string };
+
+export type RosterEligibilityReason =
+  | "UNKNOWN_ACCOUNT"
+  | "NON_STUDENT_ACCOUNT"
+  | "ACCOUNT_INACTIVE"
+  | "PROFILE_INCOMPLETE"
+  | "NO_ACTIVE_TERM_PLACEMENT"
+  | "PROGRAM_MISMATCH";
+
+export type RosterEligibilityProjection = {
+  eligible: boolean;
+  reason: RosterEligibilityReason | null;
+};
+
+export type RosterState =
+  | "ACTIVE"
+  | "INACTIVE_ASSIGNMENT"
+  | "INACTIVE_ACADEMIC_PERIOD"
+  | "PUBLISHED_EVALUATION_LOCK";
+
+export type CourseRosterAssignmentSummary = {
+  assignmentId: string;
+  courseCode: string;
+  courseTitle: string;
+  courseScope: CourseScope;
+  programCode: string;
+  programName: string;
+  facultyName: string;
+  facultyEmail: string;
+  yearLevel: YearLevel;
+  section: StudentSection;
+  termLabel: string;
+  periodStatus: AcademicPeriodStatus;
+  isActive: boolean;
+  hasPublishedEvaluation: boolean;
+  rosterState: RosterState;
+  activeRosterCount: number;
+  evaluationEligibleCount: number;
+};
+
+export type CourseRosterDiscoveryResult = {
+  items: CourseRosterAssignmentSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  includeHistory: boolean;
+  search: string;
+  activePeriodId: string | null;
+};
+
+export type CourseRosterMember = {
+  membershipId: string;
+  studentName: string;
+  email: string;
+  programCode: string | null;
+  programName: string | null;
+  majorName: string | null;
+  yearLevel: YearLevel;
+  section: StudentSection;
+  membershipAddedAt: Date;
+  isActive: boolean;
+  eligibility: RosterEligibilityProjection;
+  removedAt: Date | null;
+  removedByName: string | null;
+};
+
+export type CourseRosterDetail = {
+  assignment: CourseRosterAssignmentSummary;
+  canManage: boolean;
+  canMutate: boolean;
+  members: CourseRosterMember[];
+  totalMembers: number;
+  activeRosterCount: number;
+  evaluationEligibleCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  search: string;
+  includeRemoved: boolean;
+  sortDirection: "asc" | "desc";
+};
+
+export type RosterMutabilityReason =
+  | "INACTIVE_ASSIGNMENT"
+  | "INACTIVE_ACADEMIC_PERIOD"
+  | "PUBLISHED_EVALUATION_LOCK";
+
+export type CourseRosterMutationOutcome = "CREATED" | "RESTORED" | "REMOVED";
+
+export type CourseRosterMutation = {
+  outcome: CourseRosterMutationOutcome;
+  message: string;
+};
+
+export type CourseRosterImportRowStatus =
+  | "CREATED"
+  | "RESTORED"
+  | "DUPLICATE_EMAIL"
+  | "MALFORMED_EMAIL"
+  | "UNKNOWN_ACCOUNT"
+  | "NON_STUDENT_ACCOUNT"
+  | "ACCOUNT_INACTIVE"
+  | "PROFILE_INCOMPLETE"
+  | "NO_ACTIVE_TERM_PLACEMENT"
+  | "PROGRAM_MISMATCH"
+  | "ALREADY_ACTIVE"
+  | "OTHER_SECTION_CONFLICT"
+  | "READ_ONLY"
+  | "UNEXPECTED_FAILURE"
+  | "UNPROCESSED";
+
+export type CourseRosterImportRow = {
+  sourceIndex: number;
+  email: string;
+  status: CourseRosterImportRowStatus;
+  error: string;
+};
+
+export type CourseRosterImportSummary = {
+  total: number;
+  created: number;
+  restored: number;
+  failed: number;
+  unprocessed: number;
+  rows: CourseRosterImportRow[];
+  referenceId?: string;
+};
+
+export type AuthorizedRosterAssignment = {
+  assignmentId: string;
+  facultyId: string;
+  courseId: string;
+  programId: string;
+  termInstanceId: string;
+  courseScope: CourseScope;
+  isActive: boolean;
+  periodStatus: AcademicPeriodStatus;
+  hasPublishedEvaluation: boolean;
+  canManage: boolean;
+  canMutate: boolean;
+  mutabilityReason: RosterMutabilityReason | null;
+};
+
+export type RosterServiceResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; referenceId?: string };
 
 /**
  * Filter options for listing course assignments.
@@ -148,5 +311,5 @@ export type FacultySearchResult = {
 export type BulkCreateResult = {
   success: boolean;
   created: number;
-  errors: Array<{ index: number; error: string }>;
+  errors: Array<{ index: number; error: string; referenceId?: string }>;
 };
