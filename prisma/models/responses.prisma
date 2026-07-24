@@ -1,0 +1,58 @@
+enum DeploymentType {
+  COURSE_BOUND
+  CENTRAL
+}
+
+enum ResponseStatus {
+  IN_PROGRESS
+  SUBMITTED
+}
+
+model Response {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assignment_id   String         @unique @db.Uuid
+  respondent_id   String         @db.Uuid
+  deployment_type DeploymentType
+  deployment_id   String         @db.Uuid
+  status          ResponseStatus
+  submitted_at    DateTime?
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+
+  assignment  EvaluationAssignment       @relation(fields: [assignment_id], references: [id], onDelete: Cascade)
+  respondent  User                       @relation(fields: [respondent_id], references: [id], onDelete: Restrict)
+  quant_items QuantitativeResponseItem[]
+  qual_items  QualitativeResponseItem[]
+
+  @@map("responses")
+}
+
+model QuantitativeResponseItem {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  response_id              String   @db.Uuid
+  cilo_question_binding_id String?  @db.Uuid
+  section_key              String
+  item_key                 String
+  rating_value             Int
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  response              Response                        @relation(fields: [response_id], references: [id], onDelete: Cascade)
+  cilo_question_binding CourseBoundCiloQuestionBinding? @relation(fields: [cilo_question_binding_id], references: [id], onDelete: SetNull)
+
+  @@map("quantitative_response_items")
+}
+
+model QualitativeResponseItem {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  response_id  String   @db.Uuid
+  section_key  String
+  prompt_key   String
+  text_content String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  response Response @relation(fields: [response_id], references: [id], onDelete: Cascade)
+
+  @@map("qualitative_response_items")
+}

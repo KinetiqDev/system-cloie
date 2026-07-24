@@ -1,0 +1,47 @@
+model GO {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String
+  description String
+  order       Int      @default(0)
+  program_id  String   @db.Uuid
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  program       Program       @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  cilo_mappings CILOMapping[]
+
+  @@unique([program_id, code])
+  @@map("gos")
+}
+
+model CILO {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  description String
+  course_id   String   @db.Uuid
+  created_by  String   @db.Uuid
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  course                     Course                                  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  author                     User                                    @relation(fields: [created_by], references: [id], onDelete: Restrict)
+  cilo_mappings              CILOMapping[]
+  question_bindings          CourseBoundCiloQuestionBinding[]
+  template_question_bindings InstrumentTemplateCiloQuestionBinding[]
+
+  @@map("cilos")
+}
+
+model CILOMapping {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cilo_id    String   @db.Uuid
+  go_id      String   @db.Uuid
+  created_at DateTime @default(now())
+
+  cilo CILO @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
+  go   GO   @relation(fields: [go_id], references: [id], onDelete: Cascade)
+
+  @@unique([cilo_id, go_id])
+  @@map("cilo_mappings")
+}

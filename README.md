@@ -233,7 +233,7 @@ See `src/__tests__/` for example test implementations.
 pnpm db:push  # Push to dev database
 
 # Generate types
-pnpm prisma generate
+pnpm exec prisma generate --schema prisma
 
 # Seed data
 pnpm db:seed
@@ -292,4 +292,3 @@ public-hoist-pattern[]=*tailwindcss*
 ```
 
 And `next.config.ts` includes custom `resolveTailwindcssPackagePath()` for Turbopack.
-

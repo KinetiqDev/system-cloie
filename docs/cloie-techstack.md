@@ -53,7 +53,7 @@ This project uses **shadcn/ui** with the **"base-nova"** style. The underlying h
 |---------|----------|
 | UI components | `src/components/ui/` |
 | Feature modules | `src/features/<name>/` |
-| Prisma schema | `prisma/schema.prisma` |
+| Prisma schema | `prisma/schema.prisma` entrypoint + `prisma/models/` domain files |
 | Supabase migrations | `supabase/migrations/` |
 | App routes | `src/app/` (App Router) |
 | API routes | `src/app/api/` |
@@ -70,7 +70,7 @@ This project uses **shadcn/ui** with the **"base-nova"** style. The underlying h
 - **Supabase SSR**: session refresh lives in `src/lib/supabase/middleware.ts` (imported by proxy.ts).
 - **Dev auth bypass**: `POST /api/auth/dev-login` sets `cloie_dev_auth` cookie (only when `NODE_ENV=development` or `NEXT_PUBLIC_DEMO_MODE=true`).
 - **Forms**: use `customZodResolver` from `src/lib/forms/zod-resolver.ts`. Do **not** use `@hookform/resolvers/zod` — it breaks with Turbopack + Zod 4.
-- **Prisma + Supabase migrations**: edit `prisma/schema.prisma`, then `pnpm supabase:migration:diff -- <name>` to generate SQL. See `supabase/README.md`.
+- **Prisma + Supabase migrations**: edit `prisma/schema.prisma` or the relevant `prisma/models/` file, then `pnpm supabase:migration:diff -- <name>` to generate SQL. See `supabase/README.md`.
 - **Prisma constraint gotcha**: `NULLS NOT DISTINCT` unique indexes can't be expressed in Prisma schema. Real constraint lives in `supabase/migrations/`; Prisma gets a non-unique `@@index` mirror.
 - **Turbopack + Tailwind**: `.npmrc` hoists `*tailwindcss*` packages. `next.config.ts` aliases `tailwindcss` to absolute on-disk path. If `@import` breaks under pnpm + Turbopack, check these two files first.
 - **Tailwind v4**: uses `@import "tailwindcss"` syntax in `globals.css`, plus `@import "shadcn/tailwind.css"`. No `tailwind.config.ts` (v4 convention).

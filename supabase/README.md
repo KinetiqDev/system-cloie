@@ -20,9 +20,10 @@ the linked Supabase project and should never be hand-maintained. When schema cha
 the matching Supabase migration, push it, then regenerate the Supabase types so all three layers stay aligned.
 
 Some older SQL migrations in this repo still show the pre-alignment section/course-type/PLO model because they
-record historical states. Treat the newest cleanup migration plus `prisma/schema.prisma` as the current truth.
+record historical states. Treat the newest cleanup migration plus the complete Prisma schema directory, entered
+through `prisma/schema.prisma`, as the current truth.
 
-1. Edit `prisma/schema.prisma`.
+1. Edit `prisma/schema.prisma` or the relevant file under `prisma/models/`.
 2. Run `pnpm supabase:migration:diff -- your_change_name`.
 3. Review the SQL created in `supabase/migrations/`.
 4. Run `pnpm supabase:push:dry-run`.
@@ -41,4 +42,5 @@ record historical states. Treat the newest cleanup migration plus `prisma/schema
 - `supabase db pull`
 - `supabase db diff --linked`
 
-Those commands rely on Docker-backed tooling. This workflow uses `prisma migrate diff` instead.
+Those commands rely on Docker-backed tooling. This workflow uses `prisma migrate diff` instead, with `prisma/`
+as the complete schema directory.
