@@ -3,14 +3,15 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const prismaModelsDir = join(
+const prismaDir = join(
   dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
   "..",
-  "prisma",
-  "models"
+  "prisma"
 );
+const prismaModelsDir = join(prismaDir, "models");
+const prismaEntrypoint = join(prismaDir, "schema.prisma");
 
 const expectedFiles = [
   "academic-calendar.prisma",
@@ -79,6 +80,12 @@ const expectedModels = [
 ];
 
 describe("Prisma schema structure", () => {
+  it("keeps model and enum definitions out of the schema entrypoint", () => {
+    const source = readFileSync(prismaEntrypoint, "utf8");
+
+    expect([...source.matchAll(/^\s*(model|enum)\s+(\w+)/gm)]).toHaveLength(0);
+  });
+
   it("keeps every domain fragment and definition uniquely represented", () => {
     const files = readdirSync(prismaModelsDir)
       .filter((file) => file.endsWith(".prisma"))
