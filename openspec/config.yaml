@@ -1,98 +1,171 @@
 schema: spec-driven
 
 context: |
-  # CLOIE — Comprehensive Learning Outcomes and Instructional Evaluation
-  Domain: Academic evaluation system for a Philippine college (ACD).
-  Handles CILO evaluations, exit surveys, alumni/industry evaluations, and analytics reporting.
+  # System CLOIE
+  System CLOIE is a college-level, multi-program academic evaluation,
+  learning-outcomes monitoring, analytics, and reporting system for
+  Assumption College of Davao.
 
-  ## Tech Stack
-  - Framework: Next.js 16.x (App Router, Turbopack) + React 19.x
-  - Language: TypeScript 5.x (strict mode)
-  - Package Manager: pnpm (enforced via package.json#packageManager) — NEVER use npm or yarn
-  - Styling: Tailwind CSS 4.x + class-variance-authority (cva)
-  - UI Components: shadcn/ui (base-nova style) + @base-ui/react primitives — NEVER use Radix UI
-  - Forms: react-hook-form + Zod 4.x + customZodResolver from @/lib/forms/zod-resolver — NEVER use @hookform/resolvers/zod
-  - Database: PostgreSQL (Supabase-hosted) + Prisma 6.x ORM
-  - Auth: Supabase Auth + Google OAuth (SSR cookies via @supabase/ssr)
-  - State: TanStack Query (selective, for interactive server state)
-  - Charts: Recharts (quantitative dashboards)
-  - Testing: Vitest (unit/integration) + Playwright (E2E)
-  - Deployment: Vercel + Supabase
+  It manages Graduate Outcomes (GOs), Course Intended Learning Outcomes
+  (CILOs), evaluation instruments, controlled deployments, stakeholder
+  responses, attainment analytics, qualitative summaries, and evidence reports.
+
+  System CLOIE does not replace an LMS, SIS, grading system, or institutional
+  accreditation platform.
+
+  ## Sources of Truth
+  Before proposing, designing, or implementing a change:
+  1. Read CONTEXT-MAP.md.
+  2. Read the relevant src/features/<domain>/CONTEXT.md files.
+  3. Read applicable records under docs/adr/.
+  4. Inspect existing code, tests, OpenSpec artifacts, and GitHub issues.
+  5. Use terminology defined by the relevant CONTEXT.md file.
+  6. Surface conflicts with an ADR instead of silently overriding it.
+
+  OpenSpec artifacts define and approve change intent.
+  GitHub Issues are the execution-tracking units produced from approved
+  vertical slices through the Matt Pocock skills workflow.
+
+  ## Current Core Stack
+  - Framework: Next.js 16.2.x App Router with React 19.2.x and Turbopack
+  - Language: TypeScript 5.x in strict mode
+  - Package manager: pnpm 10.x; never use npm or yarn
+  - Styling: Tailwind CSS 4.x, class-variance-authority, and tailwind-merge
+  - UI: shadcn/ui base-nova style with @base-ui/react primitives
+  - Icons: lucide-react
+  - Forms: react-hook-form and Zod 4.x
+  - Form resolver: customZodResolver from @/lib/forms/zod-resolver
+  - Database: PostgreSQL hosted by Supabase
+  - ORM: Prisma 6.x
+  - Authentication: Supabase Auth with Google OAuth and SSR cookies
+  - Charts: Recharts 3.x composed through shadcn/ui chart primitives
+  - Qualitative processing: winkNLP, stopword, and the existing word-cloud component
+  - Unit/integration testing: Vitest and Testing Library
+  - E2E testing target: Playwright
+  - Deployment: Vercel and Supabase
+
+  Do not install Radix UI packages.
+  Do not install another charting library.
+  TanStack Query is not a default dependency. Add it only when a design
+  establishes a concrete need for client-owned asynchronous server state.
 
   ## Architecture
-  - Modular monolith: feature-based organization under src/features/<domain>/
-  - Server Components by default; "use client" only for hooks, browser APIs, event handlers, react-hook-form
-  - Server Actions named as <role>-<domain>-actions.ts in src/lib/actions/
-  - Server Actions return serializable results: { success: boolean; error?: string }
-  - Request/session handling via src/proxy.ts (NOT middleware.ts)
-  - Auth middleware: src/lib/supabase/middleware.ts (updateSession)
-  - Path aliases: @/* maps to ./src/*
+  - Modular monolith organized under src/features/<domain>/.
+  - Split code by domain responsibility and cohesion, not arbitrary line count.
+  - Generated files are exempt from handwritten-file LoC targets.
+  - Server Components are the default.
+  - Keep "use client" boundaries narrow and limited to state, hooks, browser APIs,
+    event handlers, charts, drag-and-drop, and react-hook-form.
+  - Fetch and authorize data in Server Components or server-only feature services.
+  - Pass serializable prepared data into Client Components.
+  - Server Actions live under src/lib/actions/ and must follow existing patterns
+    in the affected domain.
+  - Request/session handling enters through src/proxy.ts, not middleware.ts.
+  - Supabase session refresh is implemented in src/lib/supabase/middleware.ts.
+  - Path alias @/* maps to ./src/*.
 
-  ## Database Workflow (CRITICAL)
-  - Prisma schema (prisma/schema.prisma) is the single source of truth
-  - Migration workflow: edit schema → pnpm supabase:migration:diff → pnpm supabase:push:dry-run → pnpm supabase:push → pnpm supabase:types
-  - NEVER hand-edit src/types/supabase-database.ts
-  - NEVER use Docker-backed commands: supabase db pull, supabase db diff --linked
-  - Mirror SQL-only constraints (e.g., NULLS NOT DISTINCT) as @@index in Prisma (not @@unique)
+  ## Rendering and Performance
+  - Prefer route loading.tsx files, Suspense boundaries, and meaningful skeletons.
+  - Parallelize independent server reads.
+  - Avoid internal HTTP calls from Server Components when a server service can
+    be called directly.
+  - Do not move server-owned data fetching to the client merely to show loading UI.
+  - Never shared-cache sessions, authorization decisions, user profiles,
+    student identifiers, rosters, raw responses, or qualitative comments.
+  - Cache only explicitly scoped catalog or aggregate data.
+  - Every persistent cache must define its key dimensions, lifetime, tags,
+    invalidation triggers, authorization boundary, and stale-data behavior.
+  - Enabling Next.js Cache Components requires a separate reviewed change.
 
-  ## Auth / RBAC Model
-  - 7 SystemRole values: ADMIN, DEAN, PROGRAM_HEAD, FACULTY, STUDENT, ALUMNI, INDUSTRY_PARTNER
-  - Many-to-many via UserRole join table (unique on [user_id, role])
-  - Primary role resolved by hierarchy: ADMIN(100) > DEAN(80) > PROGRAM_HEAD(70) > FACULTY(50) > INDUSTRY_PARTNER(30) > ALUMNI(20) > STUDENT(10)
-  - Route protection via SessionGuard component in layout.tsx per role group
-  - Profile gates: ROLE_SELECTION_REQUIRED, STUDENT_ONBOARDING_REQUIRED, FACULTY_ONBOARDING_REQUIRED, ALUMNI_ONBOARDING_REQUIRED, INDUSTRY_PARTNER_ONBOARDING_REQUIRED, COMPLETE
-  - Scoping: ProgramHeadAssignment (program-head → program), FacultyProgramAffiliation (faculty → program)
-  - Dev auth bypass: httpOnly cookie cloie_dev_auth (development/demo only)
+  ## Database Workflow
+  - Prisma models are the application data-model source of truth.
+  - Supabase migrations are the deployed SQL history and may contain constraints
+    Prisma cannot represent.
+  - Migration workflow:
+    edit Prisma schema
+    -> pnpm supabase:migration:diff -- <name>
+    -> pnpm supabase:push:dry-run
+    -> pnpm supabase:push
+    -> pnpm supabase:types
+  - Never hand-edit src/types/supabase-database.ts.
+  - Never use Docker-backed supabase db pull or supabase db diff --linked.
+  - Preserve SQL-only constraints and their documented Prisma mirrors.
+  - Multi-file Prisma schemas must be organized by existing domain boundaries.
+  - Database migrations must remain compatible with existing production data.
 
-  ## Route Structure
-  - Public routes: (public)/ — login, onboarding
-  - Authenticated routes: (app)/ — wrapped in SessionGuard + AppShell
-  - Per-role groups: admin/, dean/, program-head/, faculty/, student/, alumni/, industry-partner/
-  - API routes: api/auth/callback, api/auth/dev-login, api/auth/logout
+  ## Identity and Access
+  - SystemRole values:
+    SECRETARY, DEAN, PROGRAM_HEAD, FACULTY, STUDENT, ALUMNI,
+    INDUSTRY_PARTNER.
+  - A CLOIE account has one active account role.
+  - UserRole.user_id is unique; do not design multi-role or role-switching behavior
+    unless an approved change intentionally replaces this invariant.
+  - Authorization must be enforced server-side.
+  - Role-owned routes and program/course scope checks must remain explicit.
+  - Never rely on hidden, disabled, or client-filtered UI as authorization.
+  - Preserve account-state handling for onboarding, deferred enrollment,
+    inactive accounts, rejected external accounts, and complete accounts.
 
-  ## Existing Feature Modules (src/features/)
-  academic-calendar, academic-structure, analytics, auth, course-assignments,
-  enrollments, evaluations, instruments, outcomes, portals, responses, users
+  ## PWA
+  - The metadata manifest and installable shell exist.
+  - Service-worker and offline-data implementation are deferred by ADR 0006.
+  - Do not add Serwist, Workbox, next-pwa, offline mutation queues, or offline
+    caches unless that ADR is reopened through a dedicated change.
 
-  ## Verification Commands
+  ## Verification
   - Lint: pnpm lint
-  - Tests: pnpm test (Vitest)
-  - Build (includes typecheck): pnpm build
-  - Single test: pnpm vitest run src/__tests__/path/to/file.test.ts
+  - Unit/integration tests: pnpm test
+  - Focused test: pnpm vitest run <path>
+  - Production build and typecheck: pnpm build
+  - E2E after Playwright setup: pnpm playwright test
 
   ## Commit Convention
-  Conventional Commits: <type>(<scope>): <description>
-  Types: feat, fix, refactor, perf, style, test, docs, build, ops, chore
-  Lowercase, no trailing period, imperative present tense.
+  Conventional Commits:
+  <type>(<scope>): <imperative description>
+
+  Allowed types:
+  feat, fix, refactor, perf, style, test, docs, build, ops, chore
+
+  Use lowercase descriptions, imperative present tense, and no trailing period.
 
 rules:
   proposal:
-    - Reference existing codebase patterns and conventions before proposing new approaches
-    - Explicitly state what already exists in the codebase vs what needs to be built
-    - Identify which existing feature modules (src/features/*) are affected
-    - Mark any changes that would affect the Prisma schema or require database migrations
-    - Mark breaking changes with **BREAKING** prefix
-    - Include a "Constitution Compliance" note confirming alignment with the 6 core principles
+    - "Read CONTEXT-MAP.md, relevant CONTEXT.md files, applicable ADRs, existing code, tests, and related GitHub issues before proposing."
+    - "Classify the change as feature, fix, refactor, performance, documentation, or infrastructure work."
+    - "State what already exists, what is changing, and what remains unchanged."
+    - "Identify affected domain contexts and feature modules."
+    - "Keep unrelated refactoring, performance work, and new behavior in separate changes unless they are inseparable."
+    - "State whether the change affects the Prisma model, SQL migrations, generated Supabase types, authorization, privacy, caching, or deployment."
+    - "Mark breaking behavior or data changes with **BREAKING**."
+    - "For refactors, name the behavioral invariants that must remain unchanged."
+    - "For performance work, identify the measured or observable problem instead of assuming caching is the solution."
+
   specs:
-    - Use Given/When/Then format for all scenarios
-    - Reference SystemRole enum values by exact name (ADMIN, DEAN, PROGRAM_HEAD, etc.)
-    - Reference existing Prisma models and relations by exact name
-    - Distinguish server-side vs client-side requirements explicitly
-    - Specify route paths matching the existing (public)/ and (app)/ route group structure
-    - Include edge cases for multi-role users (a user can hold multiple SystemRole values)
-    - Requirements MUST be testable — specify what verification looks like (Vitest unit, Playwright E2E, or manual)
+    - "Specify observable behavior rather than internal implementation."
+    - "Use Requirement and Scenario sections compatible with OpenSpec conventions."
+    - "Use Given/When/Then wording for behavioral scenarios."
+    - "Use exact domain terms and exact SystemRole values."
+    - "Cover authorization scope, account state, empty state, error state, loading state, and relevant boundary cases."
+    - "Do not add multi-role scenarios unless the proposal intentionally changes the current single-role invariant."
+    - "Every requirement must have a verifiable acceptance condition."
+
   design:
-    - Follow feature-based organization under src/features/<domain>/
-    - Server Components by default; justify any "use client" directives
-    - Use customZodResolver for all form validation (never @hookform/resolvers/zod)
-    - Use @base-ui/react primitives (never Radix UI)
-    - Specify the exact Prisma migration workflow for any schema changes
-    - Include file paths relative to project root for all new/modified files
-    - Include sequence diagrams for auth flows and multi-step user interactions
+    - "Follow existing feature boundaries and domain vocabulary."
+    - "List exact project-relative paths for files to create, modify, move, or delete."
+    - "Define Server Component and Client Component boundaries."
+    - "Justify every new use client boundary."
+    - "For charts, prepare and authorize data on the server and render through shadcn/ui chart primitives plus Recharts."
+    - "For caching, include a cache matrix covering key, scope, lifetime, tags, invalidation, authorization boundary, and stale behavior."
+    - "For schema changes, include the Prisma and Supabase migration sequence and rollback or recovery approach."
+    - "Never propose manual edits to generated Supabase database types."
+    - "Use sequence diagrams only for complex authorization, stateful, asynchronous, or multi-step interactions."
+    - "Record durable architectural decisions in an ADR when the design introduces or reverses a cross-cutting constraint."
+
   tasks:
-    - Group tasks by implementation layer (schema → server logic → UI → tests → polish)
-    - Each task should take no more than 2 hours of focused work
-    - Include verification step for each task group (lint, test, build)
-    - Database schema tasks must precede all dependent tasks
-    - Specify which pnpm commands to run for verification after each task group
-    - Include the conventional commit message for each task group
+    - "Organize implementation into dependency-ordered vertical slices, not separate schema, backend, frontend, and test phases."
+    - "Each vertical slice must deliver a testable behavior or preserve a named refactor invariant end to end."
+    - "A slice may include schema, server logic, UI, tests, and documentation when all are required for that behavior."
+    - "Make each slice suitable for conversion into a focused GitHub issue through to-tickets."
+    - "For each slice include scope, affected paths, acceptance criteria, verification commands, and a proposed Conventional Commit message."
+    - "Place required database migrations before code that depends on the migrated shape."
+    - "Finish each slice with focused tests, pnpm lint, relevant Vitest or Playwright checks, and pnpm build when the slice affects production compilation."
