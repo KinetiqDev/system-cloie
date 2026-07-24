@@ -48,7 +48,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 | Styling         | Tailwind CSS                 | v4      |
 | Components      | shadcn/ui                    | Latest  |
 | Database        | PostgreSQL (Supabase)        | 15+     |
-| ORM             | Prisma                       | 6.4.1   |
+| ORM             | Prisma                       | 6.19.2   |
 | Auth            | Supabase Auth (Google OAuth) | -       |
 | Testing         | Vitest                       | 4.1.4   |
 | Validation      | Zod                          | 4.3.6   |

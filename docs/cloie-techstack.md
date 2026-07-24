@@ -12,7 +12,7 @@
 | Forms | react-hook-form | ^7.72.1 | ✅ installed |
 | Validation | Zod | 4.3.6 | ✅ installed |
 | Database | PostgreSQL (Supabase) | 15+ | ✅ configured |
-| ORM | Prisma | 6.4.1 | ✅ installed |
+| ORM | Prisma | 6.19.2 | ✅ installed |
 | Auth | Supabase Auth (Google OAuth) | — | ✅ configured |
 | Charts | Recharts | ^3.8.1 | ✅ installed |
 | Text Processing | winkNLP + stopword | ^2.4.0 / ^3.1.5 | ✅ installed |
