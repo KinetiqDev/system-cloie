@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { YearLevel } from "@prisma/client";
+import { requireCourseAssignment } from "../../../prisma/seed/helpers/assignments";
 
 /**
  * Regression test for the seed startup assertion in seedEvaluations.
@@ -6,30 +8,12 @@ import { describe, expect, it } from "vitest";
  * The assertion at prisma/seed.ts guards against missing full course-assignment
  * identity mappings before creating course-bound evaluations.
  *
- * We extract and unit-test the assertion logic directly — no Prisma needed.
+ * We unit-test the extracted assertion logic directly — no Prisma needed.
  */
 
 /**
- * Mirrors the composite key used by prisma/seed.ts seedEvaluations:
- *   const cbAssignmentId = assignmentMap.get(courseAssignmentKey(...));
- *   if (!cbAssignmentId) {
- *     throw new Error(`Missing course assignment for ${def.courseCode}`);
- *   }
+ * The helper import must not execute seed orchestration or connect to Prisma.
  */
-function assertCourseAssignmentPresent(
-  assignmentMap: Map<string, string>,
-  courseCode: string,
-  programCode: string,
-  yearLevel: string,
-  section: string
-): string {
-  const key = `${courseCode}:${programCode}:${yearLevel}:${section}`;
-  const cbAssignmentId = assignmentMap.get(key);
-  if (!cbAssignmentId) {
-    throw new Error(`Missing course assignment for ${courseCode}`);
-  }
-  return cbAssignmentId;
-}
 
 describe("seed startup assertion — seedEvaluations assignment map guard", () => {
   it("throws with a descriptive error when courseCode is missing from assignmentMap", () => {
@@ -38,7 +22,7 @@ describe("seed startup assertion — seedEvaluations assignment map guard", () =
       ["EDUC301:BSED:THIRD_YEAR:MORNING", "assignment-educ-001"],
     ]);
 
-    expect(() => assertCourseAssignmentPresent(assignmentMap, "IT201", "BSIT", "SECOND_YEAR", "MORNING")).toThrowError(
+    expect(() => requireCourseAssignment(assignmentMap, "IT201", "BSIT", YearLevel.SECOND_YEAR, "MORNING")).toThrowError(
       "Missing course assignment for IT201"
     );
   });
@@ -46,7 +30,7 @@ describe("seed startup assertion — seedEvaluations assignment map guard", () =
   it("throws for any missing courseCode (not just IT201)", () => {
     const emptyMap = new Map<string, string>();
 
-    expect(() => assertCourseAssignmentPresent(emptyMap, "MKT301", "BSBA", "FOURTH_YEAR", "MORNING")).toThrowError(
+    expect(() => requireCourseAssignment(emptyMap, "MKT301", "BSBA", YearLevel.FOURTH_YEAR, "MORNING")).toThrowError(
       "Missing course assignment for MKT301"
     );
   });
@@ -54,7 +38,7 @@ describe("seed startup assertion — seedEvaluations assignment map guard", () =
   it("returns the assignment id when the courseCode is present", () => {
     const assignmentMap = new Map<string, string>([["IT201:BSIT:SECOND_YEAR:MORNING", "assignment-it-001"]]);
 
-    const result = assertCourseAssignmentPresent(assignmentMap, "IT201", "BSIT", "SECOND_YEAR", "MORNING");
+    const result = requireCourseAssignment(assignmentMap, "IT201", "BSIT", YearLevel.SECOND_YEAR, "MORNING");
 
     expect(result).toBe("assignment-it-001");
   });
@@ -62,7 +46,7 @@ describe("seed startup assertion — seedEvaluations assignment map guard", () =
   it("throws when assignmentMap is empty regardless of courseCode", () => {
     const emptyMap = new Map<string, string>();
 
-    expect(() => assertCourseAssignmentPresent(emptyMap, "SW301", "BSSW", "THIRD_YEAR", "MORNING")).toThrowError(
+    expect(() => requireCourseAssignment(emptyMap, "SW301", "BSSW", YearLevel.THIRD_YEAR, "MORNING")).toThrowError(
       "Missing course assignment for SW301"
     );
   });
