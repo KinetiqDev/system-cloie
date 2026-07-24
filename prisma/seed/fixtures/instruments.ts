@@ -14,18 +14,6 @@ const AGR5: LikertDescriptor[] = [
   { value: 4, label: "Agree" },
   { value: 5, label: "Strongly Agree" },
 ];
-const AGR4: LikertDescriptor[] = [
-  { value: 1, label: "Strongly Disagree" },
-  { value: 2, label: "Disagree" },
-  { value: 3, label: "Agree" },
-  { value: 4, label: "Strongly Agree" },
-];
-const EV4: LikertDescriptor[] = [
-  { value: 1, label: "Not Evident" },
-  { value: 2, label: "Partially Evident" },
-  { value: 3, label: "Evident" },
-  { value: 4, label: "Highly Evident" },
-];
 const EV5: LikertDescriptor[] = [
   { value: 1, label: "Poor" },
   { value: 2, label: "Fair" },

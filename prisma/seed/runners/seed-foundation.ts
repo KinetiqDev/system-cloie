@@ -1,10 +1,10 @@
 import { prisma } from "../../../src/lib/db/prisma";
 import { courseDefinitions, majorDefinitions, programDefinitions } from "../fixtures/academic-structure";
-import type { FoundationContext } from "../types";
+import type { CourseSeed, FoundationContext, MajorSeed, ProgramSeed } from "../types";
 
 export async function seedFoundation(): Promise<FoundationContext> {
   console.log("  → Programs...");
-  const pMap = new Map<string, { id: string; code: string }>();
+  const pMap = new Map<string, ProgramSeed>();
   for (const d of programDefinitions) {
     const p = await prisma.program.upsert({
       where: { code: d.code },
@@ -24,7 +24,7 @@ export async function seedFoundation(): Promise<FoundationContext> {
   }
 
   console.log("  → Majors...");
-  const mMap = new Map<string, { id: string }>();
+  const mMap = new Map<string, MajorSeed>();
   for (const d of majorDefinitions) {
     const prog = pMap.get(d.pc)!;
     const m = await prisma.major.upsert({
@@ -36,7 +36,7 @@ export async function seedFoundation(): Promise<FoundationContext> {
   }
 
   console.log("  → Courses...");
-  const cMap = new Map<string, { id: string; code: string; title: string }>();
+  const cMap = new Map<string, CourseSeed>();
   for (const d of courseDefinitions) {
     const c = await prisma.course.upsert({
       where: { code: d.code },

@@ -27,10 +27,10 @@ async function main() {
   const { termInstance, termInstances } = await seedAcademicCalendarRunner();
 
   console.log("[B] Users & roles...");
-  await seedUsersRunner({ pMap, mMap, cMap }, termInstance.id);
+  await seedUsersRunner({ pMap, mMap }, termInstance.id);
 
   console.log("[B.5] Course assignments...");
-  const { assignmentMap } = await seedCourseAssignmentsRunner({ pMap, mMap, cMap }, termInstance.id);
+  const { assignmentMap } = await seedCourseAssignmentsRunner({ pMap, cMap }, termInstance.id);
 
   console.log("[C] Outcomes (GOs, CILOs, mappings)...");
   const { ciloMap } = await seedOutcomesRunner({ pMap, cMap });
@@ -40,7 +40,7 @@ async function main() {
   await seedInstruments();
 
   console.log("[E] Evaluations & deployments...");
-  const evaluationContext = await seedEvaluationsRunner({ pMap, mMap, cMap }, ciloMap, termInstance.id, {
+  const evaluationContext = await seedEvaluationsRunner({ pMap, cMap }, ciloMap, termInstance.id, {
     assignmentMap,
   });
 

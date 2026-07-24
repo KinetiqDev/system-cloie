@@ -5,7 +5,7 @@ import { requireCourseAssignment } from "../../../prisma/seed/helpers/assignment
 /**
  * Regression test for the seed startup assertion in seedEvaluations.
  *
- * The assertion at prisma/seed.ts guards against missing full course-assignment
+ * The assertion at prisma/seed/helpers/assignments.ts guards against missing full course-assignment
  * identity mappings before creating course-bound evaluations.
  *
  * We unit-test the extracted assertion logic directly — no Prisma needed.

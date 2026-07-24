@@ -10,9 +10,9 @@ import {
   programHeadAssignments,
   studentDefinitions,
 } from "../fixtures/users";
-import type { FoundationContext, UserContext } from "../types";
+import type { FoundationContext } from "../types";
 
-export async function seedUsers({ pMap, mMap }: FoundationContext, termInstanceId: string): Promise<UserContext> {
+export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" | "mMap">, termInstanceId: string) {
   console.log("  → Users & roles...");
   for (const u of allUsers) {
     await prisma.user.upsert({
@@ -142,6 +142,4 @@ export async function seedUsers({ pMap, mMap }: FoundationContext, termInstanceI
       },
     });
   }
-
-  return { students };
 }

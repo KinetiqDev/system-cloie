@@ -5,7 +5,7 @@ import { U } from "../constants/ids";
 import type { CourseAssignmentContext, FoundationContext } from "../types";
 
 export async function seedCourseAssignments(
-  { pMap, cMap }: FoundationContext,
+  { pMap, cMap }: Pick<FoundationContext, "pMap" | "cMap">,
   termInstanceId: string
 ): Promise<CourseAssignmentContext> {
   console.log("  → Course assignments...");

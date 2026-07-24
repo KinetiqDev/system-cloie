@@ -1,12 +1,12 @@
-import { DeploymentStatus, Prisma, TargetStakeholder, YearLevel } from "@prisma/client";
+import { DeploymentStatus, Prisma, YearLevel } from "@prisma/client";
 import { prisma } from "../../../src/lib/db/prisma";
-import { D, U } from "../constants/ids";
+import { U } from "../constants/ids";
 import { centralAssignDefs, centralDeploymentDefs, newCourseBoundDefs } from "../fixtures/evaluations";
 import { ensureAssignment, listSeededRosterStudents, requireCourseAssignment } from "../helpers/assignments";
 import type { CourseAssignmentContext, EvaluationContext, FoundationContext, OutcomeContext } from "../types";
 
 export async function seedEvaluations(
-  { pMap, cMap }: FoundationContext,
+  { pMap, cMap }: Pick<FoundationContext, "pMap" | "cMap">,
   ciloMap: OutcomeContext["ciloMap"],
   termInstanceId: string,
   { assignmentMap }: CourseAssignmentContext
@@ -23,9 +23,6 @@ export async function seedEvaluations(
   const indVer = await prisma.instrumentVersion.findFirstOrThrow({
     where: { template: { code: "INDUSTRY_EVAL" }, version_number: 1 },
   });
-  // YearLevel is now an enum, not a database table
-  const y2 = YearLevel.SECOND_YEAR;
-  const y3 = YearLevel.THIRD_YEAR;
   const y4 = YearLevel.FOURTH_YEAR;
 
   const bsit = pMap.get("BSIT")!;

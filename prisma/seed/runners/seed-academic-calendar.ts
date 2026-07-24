@@ -65,7 +65,6 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
     });
   }
   return {
-    schoolYear: sy2026_2027,
     termInstance: terms[D.TI_2026_2027_2ND],
     termInstances: {
       ti2026First: terms[D.TI_2026_2027_1ST],

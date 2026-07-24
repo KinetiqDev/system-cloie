@@ -1,4 +1,4 @@
-import { DeploymentType, ResponseStatus } from "@prisma/client";
+import { DeploymentType } from "@prisma/client";
 import { prisma } from "../../../src/lib/db/prisma";
 import { U } from "../constants/ids";
 import { responseSequences } from "../fixtures/responses";

@@ -34,7 +34,6 @@ export interface FoundationContext {
 }
 
 export interface AcademicCalendarContext {
-  schoolYear: { id: string };
   termInstance: { id: string };
   termInstances: {
     ti2026First: { id: string };
@@ -42,17 +41,6 @@ export interface AcademicCalendarContext {
     ti2027First: { id: string };
     ti2027SecondCancelled: { id: string };
   };
-}
-
-export interface UserContext {
-  students: Array<{
-    uid: string;
-    pid: string;
-    mid: string | null;
-    ylid: string;
-    sn: string;
-    sec: string;
-  }>;
 }
 
 export interface CourseAssignmentContext {
