@@ -1,0 +1,48 @@
+model Program {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  name        String
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  majors                       Major[]
+  courses                      Course[]
+  student_profiles             StudentAcademicProfile[]
+  gos                          GO[]
+  faculty_program_affiliations FacultyProgramAffiliation[]
+  program_head_assignments     ProgramHeadAssignment[]
+  course_bound_targets         CourseBoundEvaluationTarget[]
+  central_deployments          CentralDeployment[]
+  external_stakeholder_invites ExternalStakeholderInvite[]
+  instrument_templates         InstrumentTemplate[]
+  bound_instrument_templates   InstrumentTemplate[]          @relation("BoundInstrumentTemplateProgram")
+  industry_partner_profiles    IndustryPartnerProfile[]
+  alumni_profiles              AlumniProfile[]
+  student_enrollments          StudentEnrollment[]
+  course_assignments           CourseAssignment[]
+
+  @@map("programs")
+}
+
+model Major {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  program_id String   @db.Uuid
+  name       String
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  program                    Program                  @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  courses                    Course[]
+  student_profiles           StudentAcademicProfile[]
+  alumni_profiles            AlumniProfile[]
+  central_deployments        CentralDeployment[]
+  bound_instrument_templates InstrumentTemplate[]     @relation("BoundInstrumentTemplateMajor")
+  student_enrollments        StudentEnrollment[]
+
+  @@unique([program_id, name])
+  @@unique([id, program_id])
+  @@map("majors")
+}

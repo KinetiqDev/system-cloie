@@ -1,0 +1,71 @@
+enum EvaluationTemplateType {
+  PROGRAM_WIDE
+  COURSE_BOUND
+}
+
+model InstrumentTemplate {
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                  String                 @unique // CILO_EVAL, EXIT_SURVEY, ALUMNI_EVAL, INDUSTRY_EVAL
+  name                  String
+  description           String?
+  template_type         EvaluationTemplateType @default(PROGRAM_WIDE)
+  structure             Json // JSON defining sections and items
+  is_active             Boolean                @default(true)
+  is_faculty_accessible Boolean                @default(false)
+  program_id            String?                @db.Uuid
+  faculty_owner_id      String?                @db.Uuid
+  source_template_id    String?                @db.Uuid
+  bound_course_id       String?                @db.Uuid
+  bound_program_id      String?                @db.Uuid
+  bound_major_id        String?                @db.Uuid
+  created_at            DateTime               @default(now())
+  updated_at            DateTime               @updatedAt
+
+  program                         Program?                                @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  faculty_owner                   User?                                   @relation("FacultyOwnedInstrumentTemplates", fields: [faculty_owner_id], references: [id], onDelete: Cascade)
+  source_template                 InstrumentTemplate?                     @relation("InstrumentTemplateCopies", fields: [source_template_id], references: [id], onDelete: SetNull)
+  derived_templates               InstrumentTemplate[]                    @relation("InstrumentTemplateCopies")
+  bound_course                    Course?                                 @relation("BoundInstrumentTemplateCourse", fields: [bound_course_id], references: [id], onDelete: SetNull)
+  bound_program                   Program?                                @relation("BoundInstrumentTemplateProgram", fields: [bound_program_id], references: [id], onDelete: Restrict)
+  bound_major                     Major?                                  @relation("BoundInstrumentTemplateMajor", fields: [bound_major_id], references: [id], onDelete: SetNull)
+  versions                        InstrumentVersion[]
+  template_cilo_question_bindings InstrumentTemplateCiloQuestionBinding[]
+
+  @@map("instrument_templates")
+}
+
+model InstrumentVersion {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  template_id        String   @db.Uuid
+  version_number     Int
+  structure_snapshot Json // Frozen JSON of the structure for this version
+  is_active          Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  template      InstrumentTemplate      @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  course_bounds CourseBoundEvaluation[]
+  central_insts CentralDeployment[]
+
+  @@unique([template_id, version_number])
+  @@map("instrument_versions")
+}
+
+model InstrumentTemplateCiloQuestionBinding {
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  template_id               String   @db.Uuid
+  cilo_id                   String?  @db.Uuid
+  cilo_description_snapshot String
+  section_key               String
+  item_key                  String
+  question_prompt_snapshot  String
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  template InstrumentTemplate @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  cilo     CILO?              @relation(fields: [cilo_id], references: [id], onDelete: SetNull)
+
+  @@unique([template_id, cilo_id], map: "itcqb_template_cilo_key")
+  @@unique([template_id, section_key, item_key], map: "itcqb_template_question_key")
+  @@map("instrument_template_cilo_question_bindings")
+}

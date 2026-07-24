@@ -46,7 +46,7 @@ describe("supabase workflow helpers", () => {
     expect(
       buildMigrationArgs({
         mode: "baseline",
-        schemaPath: "prisma/schema.prisma",
+        schemaPath: "prisma",
         outputPath: "supabase/migrations/20260419000100_init_public_schema.sql",
       })
     ).toEqual([
@@ -54,7 +54,7 @@ describe("supabase workflow helpers", () => {
       "diff",
       "--from-empty",
       "--to-schema-datamodel",
-      "prisma/schema.prisma",
+      "prisma",
       "--script",
       "--output",
       "supabase/migrations/20260419000100_init_public_schema.sql",
@@ -65,7 +65,7 @@ describe("supabase workflow helpers", () => {
     expect(
       buildMigrationArgs({
         mode: "diff",
-        schemaPath: "prisma/schema.prisma",
+        schemaPath: "prisma",
         databaseUrl: "postgresql://direct-url",
         outputPath: "supabase/migrations/20260419001000_add_student_profile_columns.sql",
       })
@@ -75,7 +75,7 @@ describe("supabase workflow helpers", () => {
       "--from-url",
       "postgresql://direct-url",
       "--to-schema-datamodel",
-      "prisma/schema.prisma",
+      "prisma",
       "--script",
       "--output",
       "supabase/migrations/20260419001000_add_student_profile_columns.sql",

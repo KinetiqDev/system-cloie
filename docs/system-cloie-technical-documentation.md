@@ -995,7 +995,7 @@ The software requirements for the development and implementation of CLOIE includ
 * **Form Handling:** React Hook Form  
 * **Schema Validation:** Zod 4.3.6 using a custom Zod resolver for React Hook Form  
 * **State / Data Handling:** Next.js Server Components, Server Actions, Prisma services, and Supabase client/server utilities  
-* **ORM:** Prisma 6.4.1  
+* **ORM:** Prisma 6.19.2
 * **Relational Database:** PostgreSQL  
 * **Backend / Managed Platform:** Supabase for hosted PostgreSQL, authentication, generated database types, and deployment-supporting backend services  
 * **Authentication:** Supabase Auth with Google OAuth, with a development authentication bypass for local demo users  

@@ -1,0 +1,164 @@
+enum DeploymentStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  ARCHIVED
+}
+
+enum TargetStakeholder {
+  STUDENT
+  ALUMNI
+  INDUSTRY_PARTNER
+}
+
+enum CourseBoundEvaluationExclusionCategory {
+  APPROVED_ACCOMMODATION
+  NOT_TAKING_ASSESSMENT
+  ADMINISTRATIVE_EXCEPTION
+  OTHER
+}
+
+enum CourseBoundEvaluationExclusionReversalCategory {
+  EXCLUDED_IN_ERROR
+  ELIGIBILITY_CORRECTED
+  APPROVED_LATE_PARTICIPATION
+  OTHER
+}
+
+model CourseBoundEvaluation {
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instrument_version_id String           @db.Uuid
+  deployment_name       String
+  cilos_snapshot        Json // Snapshot of CILOs at time of publishing
+  course_info_snapshot  Json // Snapshot of course info at time of publishing
+  activation_at         DateTime?
+  deadline_at           DateTime?
+  status                DeploymentStatus
+  published_at          DateTime?
+  created_at            DateTime         @default(now())
+  updated_at            DateTime         @updatedAt
+  term_instance_id String @db.Uuid
+
+  course_assignment_id String @unique @db.Uuid
+  deployed_by String? @db.Uuid
+  deployer    User?   @relation("CourseBoundEvaluationDeployer", fields: [deployed_by], references: [id], onDelete: SetNull)
+
+  instrument             InstrumentVersion                @relation(fields: [instrument_version_id], references: [id], onDelete: Restrict)
+  term_instance          AcademicTermInstance             @relation(fields: [term_instance_id], references: [id], onDelete: Restrict)
+  course_assignment      CourseAssignment                 @relation(fields: [course_assignment_id], references: [id], onDelete: Restrict)
+  assignments            EvaluationAssignment[]           @relation("CourseBoundAssignments")
+  targets                CourseBoundEvaluationTarget[]
+  cilo_question_bindings CourseBoundCiloQuestionBinding[]
+  exclusions             CourseBoundEvaluationExclusion[]
+
+  @@unique([id, course_assignment_id], map: "course_bound_evaluations_id_assignment_key")
+  @@index([deployed_by])
+  @@map("course_bound_evaluations")
+}
+
+model CourseBoundCiloQuestionBinding {
+  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_bound_evaluation_id String   @db.Uuid
+  cilo_id                    String?  @db.Uuid
+  cilo_description_snapshot  String
+  section_key                String
+  item_key                   String
+  question_prompt_snapshot   String
+  created_at                 DateTime @default(now())
+  updated_at                 DateTime @updatedAt
+
+  course_bound_evaluation CourseBoundEvaluation      @relation(fields: [course_bound_evaluation_id], references: [id], onDelete: Cascade)
+  cilo                    CILO?                      @relation(fields: [cilo_id], references: [id], onDelete: SetNull)
+  quantitative_items      QuantitativeResponseItem[]
+
+  @@unique([course_bound_evaluation_id, cilo_id], map: "course_bound_cilo_question_bindings_eval_cilo_key")
+  @@unique([course_bound_evaluation_id, section_key, item_key], map: "course_bound_cilo_question_bindings_eval_question_key")
+  @@map("course_bound_cilo_question_bindings")
+}
+
+model CourseBoundEvaluationTarget {
+  id                         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_bound_evaluation_id String     @db.Uuid
+  program_id                 String     @db.Uuid
+  year_level                 YearLevel?
+  created_at                 DateTime   @default(now())
+  updated_at                 DateTime   @updatedAt
+
+  course_bound_evaluation CourseBoundEvaluation @relation(fields: [course_bound_evaluation_id], references: [id], onDelete: Cascade)
+  program                 Program               @relation(fields: [program_id], references: [id], onDelete: Restrict)
+
+  @@unique([course_bound_evaluation_id, program_id, year_level])
+  @@map("course_bound_evaluation_targets")
+}
+
+model CourseBoundEvaluationExclusion {
+  id                              String                                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_bound_evaluation_id      String                                          @db.Uuid
+  course_assignment_id            String                                          @db.Uuid
+  course_assignment_membership_id String                                          @db.Uuid
+  category                        CourseBoundEvaluationExclusionCategory
+  other_explanation               String?
+  excluded_by                     String                                          @db.Uuid
+  excluded_at                     DateTime                                        @default(now())
+  reversal_category               CourseBoundEvaluationExclusionReversalCategory?
+  reversal_other_explanation      String?
+  reversed_by                     String?                                         @db.Uuid
+  reversed_at                     DateTime?
+
+  evaluation CourseBoundEvaluation      @relation(fields: [course_bound_evaluation_id, course_assignment_id], references: [id, course_assignment_id], onDelete: Cascade)
+  membership CourseAssignmentMembership @relation(fields: [course_assignment_membership_id, course_assignment_id], references: [id, course_assignment_id], onDelete: Cascade)
+  actor      User                       @relation("CourseBoundEvaluationExclusionActor", fields: [excluded_by], references: [id], onDelete: Restrict)
+  reverser   User?                      @relation("CourseBoundEvaluationExclusionReverser", fields: [reversed_by], references: [id], onDelete: Restrict)
+
+  @@unique([course_bound_evaluation_id, course_assignment_membership_id], map: "course_bound_evaluation_exclusions_eval_membership_key")
+  @@index([course_assignment_membership_id])
+  @@index([course_bound_evaluation_id])
+  @@index([reversed_by])
+  @@map("course_bound_evaluation_exclusions")
+}
+
+model CentralDeployment {
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instrument_version_id String            @db.Uuid
+  deployment_name       String
+  program_id            String?           @db.Uuid
+  major_id              String?           @db.Uuid
+  year_level            YearLevel?
+  target_stakeholder    TargetStakeholder
+  term                  AcademicTerm?
+  activation_at         DateTime?
+  deadline_at           DateTime?
+  status                DeploymentStatus
+  created_at            DateTime          @default(now())
+  updated_at            DateTime          @updatedAt
+
+
+  term_instance_id String               @db.Uuid
+  term_instance    AcademicTermInstance @relation(fields: [term_instance_id], references: [id], onDelete: Restrict)
+
+  instrument  InstrumentVersion      @relation(fields: [instrument_version_id], references: [id], onDelete: Restrict)
+  program     Program?               @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  major       Major?                 @relation(fields: [major_id], references: [id], onDelete: SetNull)
+  assignments EvaluationAssignment[] @relation("CentralDeployments")
+
+  @@index([term_instance_id])
+  @@map("central_deployments")
+}
+
+model EvaluationAssignment {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_bound_id       String?  @db.Uuid
+  central_deployment_id String?  @db.Uuid
+  respondent_id         String   @db.Uuid
+  assigned_at           DateTime @default(now())
+
+  course_bound       CourseBoundEvaluation? @relation("CourseBoundAssignments", fields: [course_bound_id], references: [id], onDelete: Cascade)
+  central_deployment CentralDeployment?     @relation("CentralDeployments", fields: [central_deployment_id], references: [id], onDelete: Cascade)
+  respondent         User                   @relation(fields: [respondent_id], references: [id], onDelete: Restrict)
+  response           Response?
+
+  @@index([course_bound_id, respondent_id])
+  @@index([central_deployment_id, respondent_id])
+  @@map("evaluation_assignments")
+}

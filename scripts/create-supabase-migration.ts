@@ -120,7 +120,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     resolveLocalBin("prisma"),
     buildMigrationArgs({
       mode,
-      schemaPath: "prisma/schema.prisma",
+      schemaPath: "prisma",
       outputPath,
       databaseUrl,
     }),

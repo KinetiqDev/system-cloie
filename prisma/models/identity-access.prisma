@@ -1,0 +1,178 @@
+enum SystemRole {
+  SECRETARY
+  DEAN
+  PROGRAM_HEAD
+  FACULTY
+  STUDENT
+  ALUMNI
+  INDUSTRY_PARTNER
+}
+
+enum InviteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REVOKED
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("verification_status")
+}
+
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auth_user_id String?  @unique @db.Uuid
+  email        String   @unique
+  first_name   String
+  last_name    String
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  roles                                 UserRole[]
+  student_profile                       StudentAcademicProfile?
+  deployed_evaluations                  CourseBoundEvaluation[]          @relation("CourseBoundEvaluationDeployer")
+  evaluation_assignments                EvaluationAssignment[]
+  responses                             Response[]
+  created_cilos                         CILO[]
+  faculty_program_affiliations          FacultyProgramAffiliation[]
+  program_head_assignments              ProgramHeadAssignment[]
+  created_external_invites              ExternalStakeholderInvite[]      @relation("ExternalInviteCreator")
+  industry_partner_profile              IndustryPartnerProfile?
+  alumni_profile                        AlumniProfile?
+  faculty_owned_templates               InstrumentTemplate[]             @relation("FacultyOwnedInstrumentTemplates")
+  archived_school_years                 SchoolYear[]                     @relation("ArchivedSchoolYears")
+  enrollments                           StudentEnrollment[]
+  created_enrollments                   StudentEnrollment[]              @relation("EnrollmentCreator")
+  course_assignments                    CourseAssignment[]               @relation("faculty")
+  created_assignments                   CourseAssignment[]               @relation("AssignmentAssigner")
+  course_assignment_memberships         CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipStudent")
+  created_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipCreator")
+  updated_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipUpdater")
+  removed_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipRemover")
+  course_bound_evaluation_exclusions    CourseBoundEvaluationExclusion[] @relation("CourseBoundEvaluationExclusionActor")
+  exclusion_reversals                   CourseBoundEvaluationExclusion[] @relation("CourseBoundEvaluationExclusionReverser")
+
+  @@map("users")
+}
+
+model UserRole {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String     @unique @db.Uuid
+  role        SystemRole
+  assigned_at DateTime   @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_roles")
+}
+
+model StudentAcademicProfile {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String   @unique @db.Uuid
+  program_id        String   @db.Uuid
+  major_id          String?  @db.Uuid
+  student_id_number String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  // Phase 9: academic_year, year_level, section removed - now in StudentEnrollment ledger
+  // Keeping program_id, major_id, student_id_number as static cohort identifiers
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  major   Major?  @relation(fields: [major_id], references: [id], onDelete: SetNull)
+
+  @@map("student_academic_profiles")
+}
+
+model IndustryPartnerProfile {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String             @unique @db.Uuid
+  company_name        String
+  position            String?
+  program_id          String?            @db.Uuid
+  verification_status VerificationStatus @default(PENDING)
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
+
+  user    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  program Program? @relation(fields: [program_id], references: [id], onDelete: Restrict)
+
+  @@map("industry_partner_profiles")
+}
+
+model AlumniProfile {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String             @unique @db.Uuid
+  graduation_year     Int
+  program_id          String             @db.Uuid
+  major_id            String?            @db.Uuid
+  verification_status VerificationStatus @default(PENDING)
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  major   Major?  @relation(fields: [major_id, program_id], references: [id, program_id], onDelete: Restrict)
+
+  @@map("alumni_profiles")
+}
+
+model ExternalStakeholderInvite {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String
+  role         SystemRole
+  program_id   String?      @db.Uuid
+  invited_by   String?      @db.Uuid
+  invitee_name String?
+  company_name String?
+  note         String?
+  status       InviteStatus @default(DRAFT)
+  sent_at      DateTime?
+  accepted_at  DateTime?
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+
+  inviter User?    @relation("ExternalInviteCreator", fields: [invited_by], references: [id], onDelete: SetNull)
+  program Program? @relation(fields: [program_id], references: [id], onDelete: Restrict)
+
+  @@unique([email, role, program_id])
+  @@index([role, status])
+  @@map("external_stakeholder_invites")
+}
+
+model FacultyProgramAffiliation {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  faculty_id String   @db.Uuid
+  program_id String   @db.Uuid
+  is_primary Boolean  @default(false)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  faculty User    @relation(fields: [faculty_id], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [program_id], references: [id], onDelete: Restrict)
+
+  @@unique([faculty_id, program_id])
+  @@map("faculty_program_affiliations")
+}
+
+model ProgramHeadAssignment {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  program_head_id String   @db.Uuid
+  program_id      String   @db.Uuid
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  program_head User    @relation(fields: [program_head_id], references: [id], onDelete: Cascade)
+  program      Program @relation(fields: [program_id], references: [id], onDelete: Restrict)
+
+  @@unique([program_head_id, program_id])
+  @@map("program_head_assignments")
+}
