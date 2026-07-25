@@ -324,8 +324,8 @@ describe("CourseAssignmentsPageShell (all-program mode)", () => {
         expect.objectContaining({ isActive: true }),
         { page: 0 }
       );
+      expect(screen.getByText("CS101")).toBeInTheDocument();
+      expect(screen.queryByTestId("empty-state")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("CS101")).toBeInTheDocument();
-    expect(screen.queryByTestId("empty-state")).not.toBeInTheDocument();
   });
 });
