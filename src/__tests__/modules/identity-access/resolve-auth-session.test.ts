@@ -1,12 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
 
-const { getUserMock, findUniqueMock, findFirstTermInstanceMock, findUniqueStudentEnrollmentMock, findFirstFacultyAffiliationMock } = vi.hoisted(() => ({
+const {
+  getUserMock,
+  findUniqueMock,
+  findFirstTermInstanceMock,
+  findUniqueStudentEnrollmentMock,
+  findFirstFacultyAffiliationMock,
+  readDemoAuthCookieMock,
+} = vi.hoisted(() => ({
   getUserMock: vi.fn(),
   findUniqueMock: vi.fn(),
   findFirstTermInstanceMock: vi.fn(),
   findUniqueStudentEnrollmentMock: vi.fn(),
   findFirstFacultyAffiliationMock: vi.fn(),
+  readDemoAuthCookieMock: vi.fn(),
 }));
 
 vi.mock("next/headers", () => ({
@@ -19,6 +27,13 @@ vi.mock("next/headers", () => ({
 
 vi.mock("@/features/auth/services/dev-auth", () => ({
   readDevAuthCookie: vi.fn(async () => null),
+}));
+
+vi.mock("@/features/auth/services/demo-auth", () => ({
+  getDemoAuthConfig: vi.fn(() => ({
+    allowedUsers: new Set(["demo-faculty@cloie.test"]),
+  })),
+  readDemoAuthCookie: readDemoAuthCookieMock,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -53,6 +68,7 @@ describe("resolveAuthSession", () => {
     findFirstTermInstanceMock.mockResolvedValue({ id: "term-1" });
     findUniqueStudentEnrollmentMock.mockResolvedValue({ is_active: true });
     findFirstFacultyAffiliationMock.mockResolvedValue({ id: "affiliation-1" });
+    readDemoAuthCookieMock.mockResolvedValue(null);
   });
 
   it("returns null when Supabase returns an auth error", async () => {
@@ -64,6 +80,30 @@ describe("resolveAuthSession", () => {
 
     await expect(resolveAuthSession()).resolves.toBeNull();
     expect(findUniqueMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves the dedicated demo cookie before consulting Supabase", async () => {
+    const { resolveAuthSession } = await import("@/features/auth/services/resolve-auth-session");
+    readDemoAuthCookieMock.mockResolvedValue({ userId: "demo-user" });
+    findUniqueMock.mockResolvedValue({
+      id: "demo-user",
+      email: "demo-faculty@cloie.test",
+      is_active: true,
+      roles: [{ role: ROLES.FACULTY }],
+      student_profile: null,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    await expect(resolveAuthSession()).resolves.toMatchObject({
+      userId: "demo-user",
+      email: "demo-faculty@cloie.test",
+      roles: [ROLES.FACULTY],
+    });
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(findUniqueMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "demo-user" } })
+    );
   });
 
   it("returns role-selection state when the authenticated user has no DB roles", async () => {
@@ -240,7 +280,8 @@ describe("resolveAuthSession", () => {
   });
 
   it("does not allow the demo flag to bypass profile gates outside development", async () => {
-    const { resolveAuthSessionFromDevUser } = await import("@/features/auth/services/resolve-auth-session");
+    const { resolveAuthSessionFromDevUser } =
+      await import("@/features/auth/services/resolve-auth-session");
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "true");
     findUniqueMock.mockResolvedValue({
@@ -256,6 +297,79 @@ describe("resolveAuthSession", () => {
         status: "FACULTY_ONBOARDING_REQUIRED",
         intent: "faculty",
       },
+    });
+  });
+
+  it("re-resolves dedicated demo identity and preserves profile gates", async () => {
+    const { resolveAuthSessionFromDemoUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    findUniqueMock.mockResolvedValue({
+      id: "user-9",
+      email: "demo-faculty@cloie.test",
+      is_active: true,
+      roles: [{ role: ROLES.FACULTY }],
+      student_profile: null,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+    findFirstFacultyAffiliationMock.mockResolvedValue(null);
+
+    await expect(
+      resolveAuthSessionFromDemoUser({ id: "user-9", email: null })
+    ).resolves.toMatchObject({
+      userId: "user-9",
+      profileGate: {
+        status: "FACULTY_ONBOARDING_REQUIRED",
+        intent: "faculty",
+      },
+    });
+    expect(findUniqueMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "user-9" } })
+    );
+  });
+
+  it("rejects dedicated demo identity when the current Prisma email is not allowlisted", async () => {
+    const { resolveAuthSessionFromDemoUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    findUniqueMock.mockResolvedValue({
+      id: "user-10",
+      email: "unlisted@cloie.test",
+      is_active: true,
+      roles: [{ role: ROLES.FACULTY }],
+      student_profile: null,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    await expect(
+      resolveAuthSessionFromDemoUser({ id: "user-10", email: null })
+    ).resolves.toBeNull();
+  });
+
+  it.each(Object.values(ROLES))("resolves a dedicated demo session for %s", async (role) => {
+    const { resolveAuthSessionFromDemoUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    findUniqueMock.mockResolvedValue({
+      id: "user-role",
+      email: "demo-faculty@cloie.test",
+      is_active: true,
+      roles: [{ role }],
+      student_profile: role === ROLES.STUDENT ? { id: "student-profile" } : null,
+      alumni_profile:
+        role === ROLES.ALUMNI ? { id: "alumni-profile", verification_status: "APPROVED" } : null,
+      industry_partner_profile:
+        role === ROLES.INDUSTRY_PARTNER
+          ? { id: "industry-profile", verification_status: "APPROVED" }
+          : null,
+    });
+
+    await expect(
+      resolveAuthSessionFromDemoUser({ id: "user-role", email: null })
+    ).resolves.toMatchObject({
+      userId: "user-role",
+      roles: [role],
+      activeRole: role,
+      profileGate: { status: "COMPLETE" },
     });
   });
 });

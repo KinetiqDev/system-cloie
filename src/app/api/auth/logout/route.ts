@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/utils/site-url";
 import { DEV_AUTH_COOKIE_NAME } from "@/features/auth/services/dev-auth";
+import { DEMO_AUTH_COOKIE_NAME } from "@/features/auth/services/demo-auth";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
   await supabase.auth.signOut();
   const cookieStore = await cookies();
   cookieStore.delete(DEV_AUTH_COOKIE_NAME);
+  cookieStore.delete(DEMO_AUTH_COOKIE_NAME);
 
   // Return to portal page after logout
   return NextResponse.redirect(`${siteUrl}/portal/respondents`);
