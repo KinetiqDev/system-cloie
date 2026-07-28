@@ -144,4 +144,21 @@ describe("demo login route", () => {
     expect(response.status).toBe(404);
     expect(setCookieMock).not.toHaveBeenCalled();
   });
+
+  it("does not issue a cookie when the resolved account is inactive", async () => {
+    resolveSessionMock.mockResolvedValue({
+      activeRole: "FACULTY",
+      profileGate: { status: "INACTIVE" },
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/auth/demo-login", {
+        method: "POST",
+        body: JSON.stringify({ identifier: "demo-faculty@cloie.test" }),
+      })
+    );
+
+    expect(response.status).toBe(404);
+    expect(setCookieMock).not.toHaveBeenCalled();
+  });
 });

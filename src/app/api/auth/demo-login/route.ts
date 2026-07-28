@@ -11,6 +11,8 @@ import {
 import { resolveAuthSessionFromDemoUser } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
 
+const DEMO_USER_UNAVAILABLE_ERROR = "Demo user is unavailable.";
+
 function getRequestedIdentifier(body: unknown): string | null {
   if (!body || typeof body !== "object") {
     return null;
@@ -56,12 +58,12 @@ export async function POST(request: Request) {
   });
 
   if (!user || !user.is_active) {
-    return NextResponse.json({ error: "Demo user is unavailable." }, { status: 404 });
+    return NextResponse.json({ error: DEMO_USER_UNAVAILABLE_ERROR }, { status: 404 });
   }
 
   const session = await resolveAuthSessionFromDemoUser({ id: user.id, email: user.email });
-  if (!session) {
-    return NextResponse.json({ error: "Demo user is unavailable." }, { status: 404 });
+  if (!session || session.profileGate.status === "INACTIVE") {
+    return NextResponse.json({ error: DEMO_USER_UNAVAILABLE_ERROR }, { status: 404 });
   }
 
   const cookieStore = await cookies();
