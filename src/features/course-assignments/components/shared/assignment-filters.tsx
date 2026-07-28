@@ -4,6 +4,7 @@ import { CourseScope, YearLevel, StudentSection } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
 import { YEAR_LEVEL_OPTIONS, STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
 import { X } from "lucide-react";
@@ -86,6 +87,7 @@ export function AssignmentFilters({
     <div className="flex flex-wrap gap-3 items-end">
       <div className="min-w-[200px]">
         <TermInstancePicker
+          id="assignment-term-instance"
           termInstances={termInstances}
           value={filters.termInstanceId ?? ""}
           onChange={(value) => updateFilter("termInstanceId", value || null)}
@@ -94,11 +96,12 @@ export function AssignmentFilters({
       </div>
 
       <div className="min-w-[180px]">
+        <Label htmlFor="assignment-course">Course</Label>
         <Select
           value={filters.courseId ?? "all"}
           onValueChange={(value) => updateFilter("courseId", value === "all" ? null : value)}
         >
-          <SelectTrigger>
+          <SelectTrigger id="assignment-course">
             <SelectValue placeholder="All Courses">
               {filters.courseId
                 ? (() => {
@@ -120,11 +123,12 @@ export function AssignmentFilters({
       </div>
 
       <div className="min-w-[180px]">
+        <Label htmlFor="assignment-faculty">Faculty</Label>
         <Select
           value={filters.facultyId ?? "all"}
           onValueChange={(value) => updateFilter("facultyId", value === "all" ? null : value)}
         >
-          <SelectTrigger>
+          <SelectTrigger id="assignment-faculty">
             <SelectValue placeholder="All Faculty">
               {filters.facultyId
                 ? (() => {
@@ -146,11 +150,12 @@ export function AssignmentFilters({
       </div>
 
       <div className="min-w-[150px]">
+        <Label htmlFor="assignment-program">Program</Label>
         <Select
           value={filters.programId ?? "all"}
           onValueChange={(value) => updateFilter("programId", value === "all" ? null : value)}
         >
-          <SelectTrigger>
+          <SelectTrigger id="assignment-program">
             <SelectValue placeholder="All Programs">
               {filters.programId
                 ? (() => {
@@ -172,13 +177,14 @@ export function AssignmentFilters({
       </div>
 
       <div className="min-w-[140px]">
+        <Label htmlFor="assignment-year-level">Year level</Label>
         <Select
           value={filters.yearLevel ?? "all"}
           onValueChange={(value) =>
             updateFilter("yearLevel", value === "all" ? null : (value as YearLevel))
           }
         >
-          <SelectTrigger>
+          <SelectTrigger id="assignment-year-level">
             <SelectValue placeholder="All Years">
               {filters.yearLevel
                 ? (YEAR_LEVEL_OPTIONS.find((o) => o.value === filters.yearLevel)?.label ?? null)
@@ -197,13 +203,14 @@ export function AssignmentFilters({
       </div>
 
       <div className="min-w-[140px]">
+        <Label htmlFor="assignment-section">Section</Label>
         <Select
           value={filters.section ?? "all"}
           onValueChange={(value) =>
             updateFilter("section", value === "all" ? null : (value as StudentSection))
           }
         >
-          <SelectTrigger>
+          <SelectTrigger id="assignment-section">
             <SelectValue placeholder="All Sections">
               {filters.section
                 ? (STUDENT_SECTION_OPTIONS.find((o) => o.value === filters.section)?.label ?? null)
@@ -222,13 +229,14 @@ export function AssignmentFilters({
       </div>
 
       <div className="min-w-[140px]">
+        <Label htmlFor="assignment-status">Status</Label>
         <Select
           value={filters.isActive === null ? "all" : String(filters.isActive)}
           onValueChange={(value) =>
             updateFilter("isActive", value === "all" ? null : value === "true")
           }
         >
-          <SelectTrigger>
+          <SelectTrigger id="assignment-status">
             <SelectValue placeholder="All Statuses">
               {getStatusLabel(filters.isActive)}
             </SelectValue>
@@ -242,6 +250,7 @@ export function AssignmentFilters({
       </div>
 
       <div className="min-w-[170px]">
+        <Label htmlFor="assignment-scope">Course scope</Label>
         <Select
           value={filters.courseScope ?? "all"}
           onValueChange={(value) =>
@@ -251,7 +260,7 @@ export function AssignmentFilters({
             )
           }
         >
-          <SelectTrigger>
+          <SelectTrigger id="assignment-scope">
             <SelectValue placeholder="All Scopes">{getScopeLabel(filters.courseScope)}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -263,7 +272,9 @@ export function AssignmentFilters({
       </div>
 
       <div className="min-w-[200px]">
+        <Label htmlFor="assignment-search">Search</Label>
         <Input
+          id="assignment-search"
           placeholder="Search..."
           value={filters.searchQuery}
           onChange={(e) => updateFilter("searchQuery", e.target.value)}

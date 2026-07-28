@@ -248,6 +248,7 @@ export function CourseAssignmentFormDialog({
             <div className="space-y-2">
               <Label>Academic Term</Label>
               <TermInstancePicker
+                id="course-assignment-term-instance"
                 termInstances={termInstances}
                 value={termInstanceId ?? ""}
                 onChange={(val) => setTermInstanceId(val || null)}

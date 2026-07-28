@@ -144,9 +144,9 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
           <Image
             src="/logos/cloie-logo.png"
             alt="CLOIE Logo"
-            width={48}
-            height={48}
-            className="shrink-0 object-contain"
+            width={486}
+            height={513}
+            className="h-12 w-auto shrink-0 object-contain"
             priority
           />
         </div>

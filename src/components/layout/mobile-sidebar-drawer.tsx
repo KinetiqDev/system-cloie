@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -14,9 +13,11 @@ import {
   getDeanStandaloneNav,
   getHighestNavRole,
   getMainNavByRoles,
-  isNavItemActive,
+  getDeanActiveItem,
+  getDeepestMatchingNavItem,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
+import { NavigationLink } from "./navigation-link";
 
 interface MobileSidebarDrawerProps {
   roles?: Role[];
@@ -30,6 +31,8 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
   const drawerRef = useRef<HTMLElement>(null);
   const dean = getHighestNavRole(roles) === ROLES.DEAN;
   const activeGroup = dean ? getDeanActiveGroup(pathname) : null;
+  const mainNav = getMainNavByRoles(roles);
+  const activeItem = dean ? getDeanActiveItem(pathname) : getDeepestMatchingNavItem(pathname, mainNav);
   const restoreFocusRef = useRef(true);
 
   useEffect(() => {
@@ -37,8 +40,8 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
     const previousOverflow = document.body.style.overflow;
     const trigger = triggerRef.current;
     document.body.style.overflow = "hidden";
-    const focusable = drawerRef.current?.querySelector<HTMLElement>("nav a,nav button");
-    focusable?.focus();
+    const firstNavigationLink = drawerRef.current?.querySelector<HTMLElement>("nav a[href]");
+    firstNavigationLink?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -47,18 +50,29 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
         setIsOpen(false);
         return;
       }
-      if (event.key !== "Tab" || !drawerRef.current) return;
-      const first = drawerRef.current.querySelector<HTMLElement>("nav a,nav button:not([disabled])");
-      const last = Array.from(drawerRef.current.querySelectorAll<HTMLElement>("nav a,nav button:not([disabled])")).at(-1);
-      const close = drawerRef.current.querySelector<HTMLElement>("button[aria-label='Close navigation menu']");
-      if (!first || !last || !close) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        close.focus();
-      } else if (!event.shiftKey && (document.activeElement === close || document.activeElement === last)) {
-        event.preventDefault();
-        first.focus();
-      }
+       if (event.key !== "Tab" || !drawerRef.current) return;
+       const closeButton = drawerRef.current.querySelector<HTMLElement>(
+         "button[aria-label='Close navigation menu']"
+       );
+       const navigationLinks = Array.from(
+         drawerRef.current.querySelectorAll<HTMLElement>("nav a[href]")
+       );
+       const firstNavigationLink = navigationLinks[0];
+       const lastInteractive = navigationLinks.at(-1);
+       if (!closeButton || !firstNavigationLink || !lastInteractive) return;
+       if (event.shiftKey && document.activeElement === closeButton) {
+         event.preventDefault();
+         lastInteractive.focus();
+       } else if (event.shiftKey && document.activeElement === firstNavigationLink) {
+         event.preventDefault();
+         closeButton.focus();
+       } else if (!event.shiftKey && document.activeElement === closeButton) {
+         event.preventDefault();
+         firstNavigationLink.focus();
+       } else if (!event.shiftKey && document.activeElement === lastInteractive) {
+         event.preventDefault();
+         closeButton.focus();
+       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => {
@@ -66,15 +80,15 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
       document.removeEventListener("keydown", handleKeyDown);
       if (restoreFocusRef.current) trigger?.focus();
     };
-  }, [activeGroup?.href, isOpen]);
+  }, [isOpen]);
 
   const close = (restoreFocus = true) => {
     restoreFocusRef.current = restoreFocus;
     setIsOpen(false);
   };
   const renderLink = (item: { name: string; href: string; icon: LucideIcon }) => {
-    const active = isNavItemActive(pathname, item.href);
-    return <Link key={item.href} href={item.href} onClick={() => close(false)} aria-current={active ? "page" : undefined} className={cn("flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2 focus-visible:outline-ring", active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary")}><item.icon className="size-5 shrink-0" aria-hidden="true" />{item.name}</Link>;
+    const active = activeItem === item;
+    return <NavigationLink key={item.href} href={item.href} onClick={() => close(false)} aria-current={active ? "page" : undefined} className={cn("flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2 focus-visible:outline-ring", active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary")}><item.icon className="size-5 shrink-0" aria-hidden="true" />{item.name}</NavigationLink>;
   };
 
   return (
@@ -84,13 +98,14 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
       </button>
       {isOpen && <div className={cn("fixed inset-0 z-50 bg-black/50", dean ? "md:hidden" : "lg:hidden")} onClick={() => close()} aria-hidden="true" />}
       {isOpen && <aside ref={drawerRef} role="dialog" aria-modal="true" aria-label="Navigation menu" className={cn("bg-surface fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] flex-col shadow-xl", dean ? "md:hidden" : "lg:hidden")}>
-        <div className="border-border flex min-h-16 shrink-0 items-center justify-between border-b px-5"><div className="flex items-center gap-3"><Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={28} height={28} className="rounded" /><span className="text-title-md text-primary font-bold tracking-tight">System CLOIE</span></div><button type="button" onClick={() => close()} className="text-text-muted hover:bg-surface-muted flex min-h-11 min-w-11 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-ring" aria-label="Close navigation menu"><X className="size-5" aria-hidden="true" /></button></div>
+         <div className="border-border flex min-h-16 shrink-0 items-center justify-between border-b px-5"><div className="flex items-center gap-3"><Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={486} height={513} className="h-7 w-auto rounded" /><span className="text-title-md text-primary font-bold tracking-tight">System CLOIE</span></div><button type="button" onClick={() => close()} className="text-text-muted hover:bg-surface-muted flex min-h-11 min-w-11 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-ring" aria-label="Close navigation menu"><X className="size-5" aria-hidden="true" /></button></div>
         <nav className="flex-1 overflow-y-auto px-4 py-6" aria-label="Expanded navigation">
           {dean ? <div className="flex flex-col gap-1">
             {renderLink(getDeanStandaloneNav()[0])}
             {getDeanNavGroups().map((group) => {
               const expanded = activeGroup?.href === group.href;
-              return <div key={group.href}><Link href={group.href} onClick={() => close(false)} className={cn("flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium", isNavItemActive(pathname, group.href) ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover")}><group.icon className="size-5" aria-hidden="true" />{group.name}</Link>{expanded && <div className="mt-1 ml-4 flex flex-col gap-1 border-l border-border pl-2">{group.items.map(renderLink)}</div>}</div>;
+               const active = activeItem?.href === group.href && activeItem.name === group.name;
+               return <div key={group.href}><NavigationLink href={group.href} onClick={() => close(false)} aria-current={active ? "page" : undefined} className={cn("flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium", active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover")}><group.icon className="size-5" aria-hidden="true" />{group.name}</NavigationLink>{expanded && <div className="mt-1 ml-4 flex flex-col gap-1 border-l border-border pl-2">{group.items.map(renderLink)}</div>}</div>;
             })}
             {renderLink(getDeanStandaloneNav()[1])}
           </div> : <div className="flex flex-col gap-1">{getMainNavByRoles(roles).map((item) => renderLink(item))}</div>}

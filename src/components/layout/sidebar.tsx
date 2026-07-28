@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -12,11 +11,13 @@ import {
   getHighestNavRole,
   getMainNavByRoles,
   getSecondaryNavByRoles,
-  isNavItemActive,
+  getDeepestMatchingNavItem,
+  getDeanActiveItem,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { NavigationLink } from "./navigation-link";
 
 interface SidebarProps {
   user?: {
@@ -32,6 +33,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
 
   const mainNav = getMainNavByRoles(roles);
   const secondaryNav = getSecondaryNavByRoles(roles);
+  const activeItem = getDeepestMatchingNavItem(pathname, mainNav);
 
   if (getHighestNavRole(roles) === ROLES.DEAN) {
     return <DeanSidebar user={user} />;
@@ -44,9 +46,9 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
           <Image
             src="/logos/cloie-logo.png"
             alt="System CLOIE Logo"
-            width={32}
-            height={32}
-            className="rounded"
+            width={486}
+            height={513}
+            className="h-8 w-auto rounded"
           />
           <span className="text-title-lg text-primary font-bold tracking-tight">System CLOIE</span>
         </div>
@@ -55,11 +57,12 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
       <div className="flex flex-1 flex-col overflow-y-auto px-4 py-6">
         <nav className="space-y-1">
           {mainNav.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = activeItem?.href === item.href;
             return (
-              <Link
+              <NavigationLink
                 key={item.href}
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "group text-body-md flex items-center justify-between rounded-md px-3 py-2.5 font-medium transition-colors",
                   isActive
@@ -86,7 +89,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
                     {item.badgeCount}
                   </span>
                 )}
-              </Link>
+              </NavigationLink>
             );
           })}
         </nav>
@@ -99,14 +102,14 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
               </span>
             </div>
             {secondaryNav.map((item) => (
-              <Link
+              <NavigationLink
                 key={item.name}
                 href={item.href}
                 className="text-body-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary flex items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors"
               >
                 <item.icon className="text-text-muted size-4 shrink-0" />
                 {item.name}
-              </Link>
+              </NavigationLink>
             ))}
           </nav>
         )}
@@ -134,14 +137,15 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
 function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
   const pathname = usePathname();
   const activeGroup = getDeanActiveGroup(pathname);
+  const activeItem = getDeanActiveItem(pathname);
   const groups = getDeanNavGroups();
   const [dashboard, profile] = getDeanStandaloneNav();
   const [openGroup, setOpenGroup] = useState<{ href: string; pathname: string } | null>(null);
 
   const renderLink = (item: typeof dashboard, compact = false) => {
-    const active = isNavItemActive(pathname, item.href);
+    const active = activeItem === item;
     return (
-      <Link
+      <NavigationLink
         key={item.href}
         href={item.href}
         aria-current={active ? "page" : undefined}
@@ -154,29 +158,29 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
       >
         <item.icon className="size-5 shrink-0" aria-hidden="true" />
         <span className={cn(compact && "md:hidden lg:inline")}>{item.name}</span>
-      </Link>
+      </NavigationLink>
     );
   };
 
   return (
     <aside className="border-border bg-surface fixed inset-y-0 left-0 z-50 hidden w-16 flex-col border-r md:flex lg:w-64">
       <div className="border-border flex h-16 shrink-0 items-center justify-center border-b px-3 lg:justify-start lg:px-6">
-        <Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={32} height={32} className="size-8 rounded" />
+        <Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={486} height={513} className="h-8 w-auto rounded" />
         <span className="text-title-lg text-primary ml-3 hidden font-bold tracking-tight lg:inline">System CLOIE</span>
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6 lg:px-4" aria-label="Dean navigation">
         {renderLink(dashboard, true)}
           {groups.map((group) => {
-            const active = pathname === group.href;
+            const active = activeItem?.href === group.href && activeItem.name === group.name;
             const expanded =
               activeGroup?.href === group.href ||
               (openGroup?.href === group.href && openGroup.pathname === pathname);
             return (
               <div key={group.href}>
                 <div className="flex items-center gap-1">
-                  <Link href={group.href} aria-current={pathname === group.href ? "page" : undefined} title={group.name} className={cn("flex min-h-11 flex-1 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2 focus-visible:outline-ring md:min-w-11", active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary")}>
+                  <NavigationLink href={group.href} aria-current={active ? "page" : undefined} title={group.name} className={cn("flex min-h-11 flex-1 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2 focus-visible:outline-ring md:min-w-11", active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary")}>
                     <group.icon className="size-5 shrink-0" aria-hidden="true" /><span className="md:hidden lg:inline">{group.name}</span>
-                  </Link>
+                  </NavigationLink>
                   <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${group.name}`} aria-expanded={expanded} disabled={activeGroup !== null} onClick={() => setOpenGroup(expanded ? null : { href: group.href, pathname })} className="hidden min-h-11 min-w-11 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-ring md:flex lg:min-w-11">
                     <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} aria-hidden="true" />
                   </button>

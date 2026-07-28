@@ -324,7 +324,10 @@ function Coverage({ rate, ready, active }: { rate: number; ready: number; active
 
 function StatusBadge({ notReady }: { notReady: number }) {
   return (
-    <Badge variant={notReady === 0 ? "secondary" : "destructive"}>
+    <Badge
+      variant={notReady === 0 ? "secondary" : "outline"}
+      className={notReady === 0 ? undefined : "border-danger/40 bg-danger-soft text-text-primary"}
+    >
       {notReady === 0 ? "Ready" : "Needs attention"}
     </Badge>
   );

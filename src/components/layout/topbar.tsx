@@ -38,7 +38,7 @@ export function Topbar({ user, mobileNavMode = "bottom-nav", roles }: TopbarProp
   return (
     <header className="border-border bg-surface sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b px-4 sm:px-6">
       {/* Left side: branding (mobile) or hamburger trigger */}
-      <div className={showHamburger && mobileNavMode === "dean-tabs" ? "flex items-center gap-3 md:hidden" : "flex items-center gap-3 lg:hidden"}>
+      <div className="flex items-center gap-3 lg:hidden">
         {showHamburger ? (
           <MobileSidebarDrawer roles={roles} user={user} />
         ) : (
@@ -46,9 +46,9 @@ export function Topbar({ user, mobileNavMode = "bottom-nav", roles }: TopbarProp
             <Image
               src="/logos/cloie-logo.png"
               alt="System CLOIE Logo"
-              width={28}
-              height={28}
-              className="rounded"
+              width={486}
+              height={513}
+              className="h-7 w-auto rounded"
             />
             <span className="text-title-md text-primary font-bold tracking-tight">System CLOIE</span>
           </>
