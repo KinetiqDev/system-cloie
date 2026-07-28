@@ -33,8 +33,7 @@ async function resolveAuthSessionFromAuthenticatedUser(
   user: AuthenticatedUser,
   isDevAuth: boolean = false
 ) {
-  const isDemoAllowed =
-    process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  const isDemoAllowed = process.env.NODE_ENV === "development";
   const isDemoUser = isDevAuth && isDemoAllowed && user.email ? DEMO_USER_EMAIL_SET.has(user.email) : false;
   const dbUser: AuthSessionUserRecord = await prisma.user.findUnique({
     where: isDevAuth ? { id: user.id } : { auth_user_id: user.id },

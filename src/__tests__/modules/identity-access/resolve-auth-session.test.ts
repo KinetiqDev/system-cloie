@@ -238,4 +238,24 @@ describe("resolveAuthSession", () => {
       profileGate: { status: "COMPLETE" },
     });
   });
+
+  it("does not allow the demo flag to bypass profile gates outside development", async () => {
+    const { resolveAuthSessionFromDevUser } = await import("@/features/auth/services/resolve-auth-session");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "true");
+    findUniqueMock.mockResolvedValue({
+      roles: [{ role: ROLES.FACULTY }],
+      student_profile: null,
+    });
+    findFirstFacultyAffiliationMock.mockResolvedValue(null);
+
+    await expect(
+      resolveAuthSessionFromDevUser({ id: "user-8", email: "demo-faculty@cloie.test" })
+    ).resolves.toMatchObject({
+      profileGate: {
+        status: "FACULTY_ONBOARDING_REQUIRED",
+        intent: "faculty",
+      },
+    });
+  });
 });
