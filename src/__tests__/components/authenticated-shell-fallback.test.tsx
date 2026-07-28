@@ -14,5 +14,6 @@ describe("AuthenticatedShellFallback", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByText(/Logout|No email provided|@/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Dedicated demo environment")).not.toBeInTheDocument();
   });
 });
