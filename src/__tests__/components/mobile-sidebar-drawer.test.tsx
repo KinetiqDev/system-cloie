@@ -55,6 +55,22 @@ describe("Dean mobile navigation drawer", () => {
     expect(close).toHaveFocus();
   });
 
+  it("wraps from the last interactive element back to the first", async () => {
+    render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+    const dialog = screen.getByRole("dialog");
+    const interactive = dialog.querySelectorAll<HTMLElement>(
+      "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+    );
+    const last = interactive[interactive.length - 1];
+    const first = interactive[0];
+    last.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(first).toHaveFocus();
+  });
+
   it("closes on backdrop and navigation link activation", async () => {
     render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
     fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));

@@ -28,5 +28,11 @@ describe("NavigationLink", () => {
       "animate-pulse",
       "opacity-100"
     );
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Loading");
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "aria-describedby",
+      status.id
+    );
   });
 });

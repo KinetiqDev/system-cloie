@@ -40,8 +40,13 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
     const previousOverflow = document.body.style.overflow;
     const trigger = triggerRef.current;
     document.body.style.overflow = "hidden";
+    const focusableSelector =
+      "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+    const closeButton = drawerRef.current?.querySelector<HTMLElement>(
+      "button[aria-label='Close navigation menu']"
+    );
     const firstNavigationLink = drawerRef.current?.querySelector<HTMLElement>("nav a[href]");
-    firstNavigationLink?.focus();
+    (firstNavigationLink ?? closeButton)?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -51,27 +56,22 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
         return;
       }
        if (event.key !== "Tab" || !drawerRef.current) return;
-       const closeButton = drawerRef.current.querySelector<HTMLElement>(
-         "button[aria-label='Close navigation menu']"
+       const focusable = Array.from(
+         drawerRef.current.querySelectorAll<HTMLElement>(focusableSelector)
        );
-       const navigationLinks = Array.from(
-         drawerRef.current.querySelectorAll<HTMLElement>("nav a[href]")
-       );
-       const firstNavigationLink = navigationLinks[0];
-       const lastInteractive = navigationLinks.at(-1);
-       if (!closeButton || !firstNavigationLink || !lastInteractive) return;
-       if (event.shiftKey && document.activeElement === closeButton) {
+       const orderedFocusable = closeButton
+         ? [closeButton, ...focusable.filter((element) => element !== closeButton)]
+         : focusable;
+       const activeIndex = orderedFocusable.indexOf(document.activeElement as HTMLElement);
+       if (activeIndex === -1 || orderedFocusable.length === 0) return;
+       const nextIndex = event.shiftKey
+         ? (activeIndex - 1 + orderedFocusable.length) % orderedFocusable.length
+         : (activeIndex + 1) % orderedFocusable.length;
+       const next = orderedFocusable[nextIndex];
+       if (!next) return;
+       if (event.shiftKey || activeIndex === orderedFocusable.length - 1 || activeIndex === 0) {
          event.preventDefault();
-         lastInteractive.focus();
-       } else if (event.shiftKey && document.activeElement === firstNavigationLink) {
-         event.preventDefault();
-         closeButton.focus();
-       } else if (!event.shiftKey && document.activeElement === closeButton) {
-         event.preventDefault();
-         firstNavigationLink.focus();
-       } else if (!event.shiftKey && document.activeElement === lastInteractive) {
-         event.preventDefault();
-         closeButton.focus();
+         next.focus();
        }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -108,7 +108,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
                return <div key={group.href}><NavigationLink href={group.href} onClick={() => close(false)} aria-current={active ? "page" : undefined} className={cn("flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium", active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover")}><group.icon className="size-5" aria-hidden="true" />{group.name}</NavigationLink>{expanded && <div className="mt-1 ml-4 flex flex-col gap-1 border-l border-border pl-2">{group.items.map(renderLink)}</div>}</div>;
             })}
             {renderLink(getDeanStandaloneNav()[1])}
-          </div> : <div className="flex flex-col gap-1">{getMainNavByRoles(roles).map((item) => renderLink(item))}</div>}
+           </div> : <div className="flex flex-col gap-1">{mainNav.map((item) => renderLink(item))}</div>}
         </nav>
         {user && <div className="border-border border-t p-4"><div className="text-body-sm font-semibold">{user.name || "User"}</div><div className="text-caption text-text-muted truncate">{user.email || ""}</div></div>}
       </aside>}

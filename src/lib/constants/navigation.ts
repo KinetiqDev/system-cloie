@@ -230,7 +230,7 @@ export function getDeanActiveGroup(pathname: string): NavGroup | null {
 export function getDeanActiveItem(pathname: string): (NavItem | NavGroup) | null {
   const items = [
     ...getDeanNavGroups(),
-    ...getDeanPrimaryNav(),
+    ...getDeanStandaloneNav(),
     ...getDeanNavGroups().flatMap((group) => group.items),
   ];
   return getDeepestMatchingNavItem(pathname, items);

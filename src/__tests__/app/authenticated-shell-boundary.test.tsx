@@ -30,7 +30,7 @@ function deferred<T>() {
 }
 
 describe("AuthenticatedAppShell", () => {
-  it("does not resolve protected content until the server session resolves", async () => {
+  it("defers the protected shell until the server session resolves", async () => {
     const session = deferred<{
       email: string;
       roles: [typeof ROLES.FACULTY];
@@ -39,6 +39,7 @@ describe("AuthenticatedAppShell", () => {
     resolveAuthSessionMock.mockReturnValue(session.promise);
 
     const boundary = AuthenticatedAppShell({ children: <div>Protected sentinel</div> });
+    expect(boundary).toBeInstanceOf(Promise);
     let settled = false;
     void boundary.then(() => {
       settled = true;
@@ -46,7 +47,6 @@ describe("AuthenticatedAppShell", () => {
 
     await Promise.resolve();
     expect(settled).toBe(false);
-    expect(screen.queryByText("Protected sentinel")).not.toBeInTheDocument();
 
     session.resolve({
       email: "faculty@example.com",
