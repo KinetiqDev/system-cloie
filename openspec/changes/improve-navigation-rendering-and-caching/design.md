@@ -166,7 +166,7 @@ Required evidence per slice:
 
 ### 8.1 Browser-evidence authentication contract
 
-Production-build browser evidence SHALL use a disposable environment with real Supabase-authenticated test accounts for the required CLOIE account roles, or a separately reviewed test-only authentication mechanism that cannot be enabled in a deployed environment. `cloie_dev_auth` and `POST /api/auth/dev-login` SHALL NOT be used after `pnpm build` and `pnpm start`.
+Production-build browser evidence SHALL use either a disposable environment with real Supabase-authenticated test accounts or the separately reviewed signed demo session from `openspec/changes/add-dedicated-demo-auth/` in an isolated dedicated demo deployment. The primary public Production deployment remains OAuth-only, and demo configuration SHALL fail closed there. `cloie_dev_auth` and `POST /api/auth/dev-login` SHALL NOT be used after `pnpm build` and `pnpm start`. Signed demo-session evidence SHALL be labeled as route/rendering evidence and SHALL NOT be treated as OAuth exchange or callback evidence.
 
 Each baseline and final record SHALL identify the environment, test role, account state, route, viewport, throttle, and authentication setup without recording credentials or session tokens. The record SHALL include a Chrome DevTools performance trace using Fast 3G and 4x CPU throttling, its selected LCP element, LCP breakdown, and relevant document, fetch, and script requests. Lighthouse is used for accessibility and best-practice checks; it is not the sole performance proof.
 
@@ -183,7 +183,7 @@ Each baseline and final record SHALL identify the environment, test role, accoun
 
 ## Migration Plan
 
-1. Baseline representative route network and bundle behavior in a production build using seeded development identities; record scope and metrics in tests or change evidence.
+1. Baseline representative route network and bundle behavior in a production build using the dedicated isolated demo deployment and signed demo identities, or a separate disposable OAuth environment when authentication latency is in scope; record scope, authentication mode, and metrics in tests or change evidence.
 2. Land rendering boundaries and navigation accessibility without changing data semantics. Rollback is file-level removal of new loading/error/dynamic wrappers.
 3. Convert Course Assignments and Secretary Users to server-first, bounded reads with route tests. Keep existing action read path temporarily only where a client interaction still requires it; remove it after parity tests pass.
 4. Replace Dean internal handler calls and optimize representative services one feature at a time. Roll back by restoring the previous service entry point if authorization or output parity fails.
