@@ -7,6 +7,8 @@ import {
   getHighestNavRole,
   getMainNavByRoles,
   getMobileNavByRoles,
+  getMobileNavMode,
+  isNavItemActive,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
 
@@ -85,6 +87,10 @@ describe("navigation helpers", () => {
     );
   });
 
+  it("uses the drawer as the only Dean mobile navigation surface", () => {
+    expect(getMobileNavMode([ROLES.DEAN])).toBe("hamburger");
+  });
+
   it("marks deepest Dean route active and keeps its parent group discoverable", () => {
     expect(getDeanActiveItem("/dean/academic-structure/courses/abc/edit")?.name).toBe("Courses");
     expect(getDeanActiveGroup("/dean/academic-structure/courses/abc/edit")?.name).toBe("Academic Structure");
@@ -92,5 +98,20 @@ describe("navigation helpers", () => {
       "Learning Outcomes",
       "Enrollments",
     ]);
+  });
+
+  it.each([
+    ["/dean/academic-structure", "Academic Structure"],
+    ["/dean/academic-structure/", "Academic Structure"],
+    ["/dean/academic-structure/courses/abc/edit", "Courses"],
+    ["/dean/college-oversight/enrollments/abc", "Enrollments"],
+    ["/dean/profile/details", "Profile"],
+  ])("selects one deepest destination for %s", (pathname, expectedName) => {
+    expect(getDeanActiveItem(pathname)?.name).toBe(expectedName);
+  });
+
+  it("matches route prefixes only at segment boundaries", () => {
+    expect(isNavItemActive("/dean/dashboard/details", "/dean/dashboard")).toBe(true);
+    expect(isNavItemActive("/dean/dashboarding", "/dean/dashboard")).toBe(false);
   });
 });

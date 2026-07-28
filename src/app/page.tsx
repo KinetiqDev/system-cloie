@@ -15,9 +15,9 @@ export default function Home() {
             <Image
               src="/logos/cloie-logo.png"
               alt="CLOIE"
-              width={36}
-              height={36}
-              className="shrink-0 object-contain"
+               width={486}
+               height={513}
+               className="h-9 w-auto shrink-0 object-contain"
             />
             <div className="space-y-0">
               <p className="text-title-md font-bold text-primary">System CLOIE</p>
@@ -45,9 +45,9 @@ export default function Home() {
               <Image
                 src="/logos/cloie-logo.png"
                 alt="CLOIE"
-                width={80}
-                height={80}
-                className="object-contain"
+                 width={486}
+                 height={513}
+                 className="h-20 w-auto object-contain"
                 priority
               />
             </div>

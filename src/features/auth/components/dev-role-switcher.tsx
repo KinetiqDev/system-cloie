@@ -225,6 +225,9 @@ export function DevRoleSwitcher({ activeEmail }: DevRoleSwitcherProps) {
               <Search className="text-text-muted pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2" />
               <input
                 type="text"
+                id="dev-role-search"
+                name="dev-role-search"
+                aria-label="Search roles"
                 placeholder="Search roles..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

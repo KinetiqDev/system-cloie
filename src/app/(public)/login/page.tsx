@@ -33,9 +33,9 @@ export default async function LoginPage({
           <Image
             src="/logos/cloie-logo.png"
             alt="CLOIE Logo"
-            width={56}
-            height={56}
-            className="shrink-0 object-contain"
+            width={486}
+            height={513}
+            className="h-14 w-auto shrink-0 object-contain"
             priority
           />
         </div>

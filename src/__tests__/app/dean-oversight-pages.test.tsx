@@ -5,8 +5,9 @@ import DeanLearningOutcomesPage from "@/app/(app)/dean/college-oversight/learnin
 import DeanEnrollmentsPage from "@/app/(app)/dean/college-oversight/enrollments/page";
 import DeanEnrollmentRosterPage from "@/app/(app)/dean/college-oversight/enrollments/roster/page";
 
-const { fetchDeanReadMock } = vi.hoisted(() => ({
+const { fetchDeanReadMock, getDeanDashboardMock } = vi.hoisted(() => ({
   fetchDeanReadMock: vi.fn(),
+  getDeanDashboardMock: vi.fn(),
 }));
 const notFoundMock = vi.hoisted(() =>
   vi.fn(() => {
@@ -24,6 +25,10 @@ vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMo
 vi.mock("@/features/dean/services/fetch-dean-read", () => ({
   fetchDeanRead: fetchDeanReadMock,
   DeanPageReadNotFoundError: class DeanPageReadNotFoundError extends Error {},
+}));
+
+vi.mock("@/features/dean/services/read-dean-oversight", () => ({
+  getDeanDashboard: getDeanDashboardMock,
 }));
 
 const PERIOD_ID = "11111111-1111-4111-8111-111111111111";
@@ -126,7 +131,7 @@ describe("Dean oversight pages", () => {
   });
 
   it("renders Dashboard KPIs, count-only risks, coverage matrix, and same-period links", async () => {
-    fetchDeanReadMock.mockResolvedValue({
+    getDeanDashboardMock.mockResolvedValue({
       state: "ready",
       data: {
         activePeriod: { id: PERIOD_ID, label: period.label },
@@ -173,6 +178,15 @@ describe("Dean oversight pages", () => {
     expect(
       screen.queryByText(/student|evaluation|export|analytics|reports/i)
     ).not.toBeInTheDocument();
+  });
+
+  it("reads the dashboard directly from the Dean read service", async () => {
+    getDeanDashboardMock.mockResolvedValue({ state: "no-eligible-period" });
+
+    render(await DeanDashboardPage());
+
+    expect(getDeanDashboardMock).toHaveBeenCalledTimes(1);
+    expect(fetchDeanReadMock).not.toHaveBeenCalled();
   });
 
   it("renders explicit no-active-period state without misleading zeros", async () => {

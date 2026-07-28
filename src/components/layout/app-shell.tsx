@@ -38,7 +38,7 @@ export function AppShell({ children, user, roles, activeRole }: AppShellProps) {
         </main>
 
         {/* Mobile Bottom Navigation — only for Student/Alumni/Industry Partner */}
-        {(mobileNavMode === "bottom-nav" || mobileNavMode === "dean-tabs") && <MobileNav roles={activeRoles} />}
+        {mobileNavMode === "bottom-nav" && <MobileNav roles={activeRoles} />}
       </div>
 
       <DevRoleSwitcher activeEmail={user?.email} />

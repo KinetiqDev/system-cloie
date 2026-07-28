@@ -208,17 +208,32 @@ export function isNavItemActive(pathname: string, href: string): boolean {
   return normalizedPath === normalizedHref || normalizedPath.startsWith(`${normalizedHref}/`);
 }
 
+function normalizedHrefLength(href: string): number {
+  return (href.replace(/\/$/, "") || "/").length;
+}
+
+export function getDeepestMatchingNavItem<T extends Pick<NavItem, "href">>(
+  pathname: string,
+  items: T[]
+): T | null {
+  return (
+    items
+      .filter((item) => isNavItemActive(pathname, item.href))
+      .sort((left, right) => normalizedHrefLength(right.href) - normalizedHrefLength(left.href))[0] ?? null
+  );
+}
+
 export function getDeanActiveGroup(pathname: string): NavGroup | null {
   return getDeanNavGroups().find((group) => isNavItemActive(pathname, group.href)) ?? null;
 }
 
-export function getDeanActiveItem(pathname: string): NavItem | null {
-  const items = [...getDeanPrimaryNav(), ...getDeanNavGroups().flatMap((group) => group.items)];
-  return (
-    items
-      .filter((item) => isNavItemActive(pathname, item.href))
-      .sort((left, right) => right.href.length - left.href.length)[0] ?? null
-  );
+export function getDeanActiveItem(pathname: string): (NavItem | NavGroup) | null {
+  const items = [
+    ...getDeanNavGroups(),
+    ...getDeanStandaloneNav(),
+    ...getDeanNavGroups().flatMap((group) => group.items),
+  ];
+  return getDeepestMatchingNavItem(pathname, items);
 }
 
 export function getSecondaryNavByRoles(roles: Role[]): NavItem[] {
@@ -226,7 +241,7 @@ export function getSecondaryNavByRoles(roles: Role[]): NavItem[] {
   return [];
 }
 
-export type MobileNavMode = "bottom-nav" | "hamburger" | "dean-tabs";
+export type MobileNavMode = "bottom-nav" | "hamburger";
 
 /**
  * Admin, Dean, Program Head, and Faculty use a hamburger sidebar on mobile.
@@ -241,7 +256,7 @@ export function getMobileNavMode(roles: Role[]): MobileNavMode {
     case ROLES.FACULTY:
       return "hamburger";
     case ROLES.DEAN:
-      return "dean-tabs";
+      return "hamburger";
     default:
       return "bottom-nav";
   }
