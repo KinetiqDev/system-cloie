@@ -16,16 +16,31 @@ describe("production browser evidence auth boundary", () => {
   it("accepts only a redirect to the public portal for protected content", () => {
     const baseUrl = new URL("http://127.0.0.1:3000");
 
-    expect(() =>
-      assertUnauthenticatedRedirect(
-        new Response(null, {
-          status: 307,
-          headers: { location: "/portal/respondents" },
-        }),
-        "/faculty/dashboard",
-        baseUrl
-      )
-    ).not.toThrow();
+    for (const status of [301, 302, 303, 307, 308]) {
+      expect(() =>
+        assertUnauthenticatedRedirect(
+          new Response(null, {
+            status,
+            headers: { location: "/portal/respondents" },
+          }),
+          "/faculty/dashboard",
+          baseUrl
+        )
+      ).not.toThrow();
+    }
+
+    for (const status of [300, 304, 305, 306, 399]) {
+      expect(() =>
+        assertUnauthenticatedRedirect(
+          new Response(null, {
+            status,
+            headers: { location: "/portal/respondents" },
+          }),
+          "/faculty/dashboard",
+          baseUrl
+        )
+      ).toThrow("expected an unauthenticated redirect");
+    }
 
     expect(() =>
       assertUnauthenticatedRedirect(

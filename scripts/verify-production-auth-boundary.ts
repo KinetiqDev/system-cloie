@@ -11,6 +11,8 @@ const PROTECTED_CONTENT_MARKERS = [
   "Unique Course and Academic Program contexts in active period",
   "Evaluation insights and response analytics",
 ];
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export function getEvidenceBaseUrl(environment: Environment = process.env): URL {
   const configuredUrl = environment.PRODUCTION_EVIDENCE_BASE_URL ?? environment.NEXT_PUBLIC_SITE_URL;
@@ -29,7 +31,7 @@ export function getEvidenceBaseUrl(environment: Environment = process.env): URL 
 }
 
 export function assertUnauthenticatedRedirect(response: Response, route: string, baseUrl: URL): void {
-  if (response.status < 300 || response.status >= 400) {
+  if (!REDIRECT_STATUSES.has(response.status)) {
     throw new Error(`${route} returned ${response.status}; expected an unauthenticated redirect.`);
   }
 
@@ -61,6 +63,7 @@ export async function verifyProductionAuthBoundary(
   for (const route of PROTECTED_ROUTES) {
     const response = await fetch(new URL(route, baseUrl), {
       redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       headers: {
         "cache-control": "no-cache",
       },
@@ -74,6 +77,7 @@ export async function verifyProductionAuthBoundary(
   const devLoginResponse = await fetch(new URL("/api/auth/dev-login", baseUrl), {
     method: "POST",
     redirect: "manual",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: "redacted" }),
   });
