@@ -998,7 +998,7 @@ The software requirements for the development and implementation of CLOIE includ
 * **ORM:** Prisma 6.19.2
 * **Relational Database:** PostgreSQL  
 * **Backend / Managed Platform:** Supabase for hosted PostgreSQL, authentication, generated database types, and deployment-supporting backend services  
-* **Authentication:** Supabase Auth with Google OAuth, with a development authentication bypass for local demo users  
+* **Authentication:** Supabase Auth with Google OAuth for primary Production, a development authentication bypass for local demo users, and a separately reviewed signed demo session limited to an isolated production-mode demo deployment
 * **Charts and Visualization:** Recharts for quantitative dashboard charts and @isoterik/react-word-cloud for qualitative word cloud visualization  
 * **Text Processing / Qualitative Analytics Support:** winkNLP, stopword, and application-level preprocessing for tokenization, normalization, stopword filtering, word frequency analysis, and word cloud generation  
 * **Testing Tools: Vitest** 4.1.4, Testing Library, jsdom, and browser-flow verification support through Playwright-related tooling  
@@ -1134,7 +1134,7 @@ Summary of **CBA**
 | System CLOIE Functional, Integration, and UAT Testing Plan |  |  |  |  |  |
 | ----- | :---- | ----- | :---- | :---- | :---- |
 | **Test Case ID** | **Test Case** | **Testing Resource** | **Testing Approach** | **Test Schedule** | **Risks and Issues** |
-|  TC-01 | Authentication,session handling, and post-login role routing  | Andy Zane Egut | Automated unit/integration tests plus manual login validation  | System Testing Week 1  | Supabase OAuth or dev-auth cookie setup may block testing |
+|  TC-01 | Authentication, session handling, and post-login role routing  | Andy Zane Egut | Automated unit/integration tests plus manual OAuth and dedicated-demo validation  | System Testing Week 1  | OAuth setup may block identity-provider testing; dedicated demo evidence must use isolated resettable data |
 |  TC-02  | Role-based access control and protected route restrictions   | Andy Zane Egut |  Automated policy tests and manual negative access checks  | System Testing Week 1   | Incorrect role precedence may expose wrong portal links |
 | TC-03  | Academic structure and course catalog management  | Abbegail Abebon | Academic structure and course catalog management  | System Testing Week 1   | Seed data may not include enough program/major combinations  |
 | TC-04  | Program Head and Dean visibility scope  | Abbegail Abebon | Manual scoped data checks with automated service tests  | System Testing Week 2  | Program-scoped records may be hard to distinguish without clear fixtures  |

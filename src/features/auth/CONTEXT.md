@@ -52,6 +52,14 @@ _Avoid_: Role-less login as the main entry point
 A CLOIE account whose identity is proven through Google OAuth rather than a CLOIE-managed password.
 _Avoid_: Password account, email-code account
 
+**Dedicated demo deployment**:
+An isolated production-mode CLOIE deployment with resettable demo data and explicitly enabled signed demo sessions for demonstrations and route-performance evidence.
+_Avoid_: Primary Production, development server, public demo bypass
+
+**Demo-authenticated account**:
+A seeded CLOIE account selected through the dedicated demo deployment role switcher and represented by a short-lived signed demo session; its identity does not change the account's normal authorization or account-state rules.
+_Avoid_: Real OAuth account, multi-role account, development-only account
+
 **Account email**:
 The trimmed lowercase email address used to match a Google-authenticated identity to a CLOIE account.
 _Avoid_: Gmail alias, display email when discussing identity matching

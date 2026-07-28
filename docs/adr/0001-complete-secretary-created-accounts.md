@@ -13,7 +13,7 @@ CLOIE accounts are created through two paths:
 
 The Secretary-created path historically captured only base identity plus a loose program affiliation, leaving role-specific records incomplete (for example, placeholder company names for Industry Partners, missing student academic profiles, or pending external verification). That forced follow-up edits and made the created accounts inconsistent with the participation requirements already modeled by Identity and Access.
 
-GOogle OAuth is the only authentication mechanism. There are no CLOIE-managed passwords, magic links, or invitation workflows.
+Google OAuth is the only primary Production authentication mechanism. There are no CLOIE-managed passwords, magic links, or invitation workflows for real accounts. A separately reviewed signed demo session is permitted only in the isolated dedicated demo deployment defined by ADR 0008.
 
 ## Decision
 
@@ -45,7 +45,7 @@ Secretary-created accounts must be **complete for their selected CLOIE account r
 
 - The Secretary add-user form remains a single page with dynamic role-specific sections instead of separate per-role pages.
 - No new database tables or profile fields are needed; the existing role-specific tables are sufficient.
-- Google OAuth login will match on the exact normalized email address the Secretary registered, so spelling and casing must match.
+- Google OAuth login will match on the exact normalized email address the Secretary registered, so spelling and casing must match. Dedicated demo-session identity selection is limited to the allowlisted seeded catalog and does not alter this OAuth matching rule.
 - A Secretary-created account bypasses self-service onboarding and external verification for Alumni and Industry Partners; access control must continue to treat these as institution-verified.
 - Tests must cover every supported role, duplicate-email rejection, institutional-domain enforcement, conditional major behavior, active-term vs. deferred enrollment, and the dynamic form field visibility/reset behavior.
 

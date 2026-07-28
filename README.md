@@ -119,7 +119,8 @@ export const config = {
 Dual authentication system:
 
 1. **Production**: Supabase Auth (Google OAuth) with domain restriction (`@acd.edu.ph`, `@acdeducation.com`)
-2. **Development**: Cookie-based bypass (`cloie_dev_auth`) for testing
+2. **Development**: Cookie-based bypass (`cloie_dev_auth`) for local testing
+3. **Dedicated demo deployment**: Explicitly gated signed demo sessions for production-mode role demonstrations and rendering evidence; never the primary public Production deployment
 
 See `src/features/auth/services/dev-auth.ts` for dev auth implementation.
 
@@ -270,6 +271,10 @@ Prettier config includes `prettier-plugin-tailwindcss` for automatic class sorti
 ### Dev Auth Bypass
 
 Set the `cloie_dev_auth` cookie to bypass Supabase auth in development. Demo users use `@cloie.test` emails (see `src/lib/constants/demo-users.ts`).
+
+### Dedicated Demo Deployment
+
+The role switcher may be enabled for a production-mode demo deployment through the separately reviewed signed demo-session flow. This deployment must use an isolated, resettable database and server-only `CLOIE_DEMO_*` configuration. The primary public Production deployment remains OAuth-only. Signed demo sessions are valid for route, rendering, UI, and LCP evidence; they do not measure Google OAuth or Supabase Auth callback latency. See `docs/adr/0008-dedicated-demo-deployment-authentication.md`.
 
 ### Domain Restriction
 
