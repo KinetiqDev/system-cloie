@@ -130,8 +130,7 @@ export function DevRoleSwitcher({ activeEmail }: DevRoleSwitcherProps) {
     router.refresh();
   };
 
-  const isDemoMode =
-    process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  const isDemoMode = process.env.NODE_ENV === "development";
 
   useEffect(() => {
     if (!isDemoMode) return;

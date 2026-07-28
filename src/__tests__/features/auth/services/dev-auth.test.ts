@@ -15,7 +15,6 @@ describe("readDevAuthCookie", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "true");
     getCookieMock.mockReturnValue({
       value: JSON.stringify({ email: "demo@acd.edu.ph", userId: "demo-user" }),
     });

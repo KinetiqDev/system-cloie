@@ -29,7 +29,6 @@ describe("dev login route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PUBLIC_DEMO_MODE", "true");
   });
 
   it("rejects demo mode outside development", async () => {
