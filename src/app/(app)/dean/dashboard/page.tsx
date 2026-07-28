@@ -3,9 +3,7 @@ import { ArrowUpRight, CheckCircle2, CircleAlert, Gauge, Layers3 } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { GET as getDashboard } from "@/app/api/dean/dashboard/route";
-import type { DeanDashboardData, DeanReadState } from "@/features/dean/services/read-dean-oversight";
-import { fetchDeanRead } from "@/features/dean/services/fetch-dean-read";
+import { getDeanDashboard, type DeanDashboardData, type DeanReadState } from "@/features/dean/services/read-dean-oversight";
 
 const risks = [
   {
@@ -33,10 +31,7 @@ function percentage(ready: number, active: number) {
 }
 
 export default async function DeanDashboardPage() {
-  const result = await fetchDeanRead<DeanReadState<DeanDashboardData>>(
-    getDashboard,
-    "/api/dean/dashboard"
-  );
+  const result: DeanReadState<DeanDashboardData> = await getDeanDashboard();
 
   if (result.state === "no-eligible-period") {
     return (
