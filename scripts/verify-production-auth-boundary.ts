@@ -7,9 +7,12 @@ const PROTECTED_ROUTES = [
 ] as const;
 
 const PROTECTED_CONTENT_MARKERS = [
-  "Manage faculty assignments for all programs",
-  "Unique Course and Academic Program contexts in active period",
-  "Evaluation insights and response analytics",
+  // E-mail addresses (seeded demo accounts) indicate unauthorised data exposure.
+  "demo-",
+  // Seeded user IDs (well-known UUID pattern) indicate account data exposure.
+  "77777777-7777-4777-8777-777777777777",
+  // Course identifiers in unprotected responses indicate data leakage.
+  "IT-OD-401",
 ];
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -30,21 +33,34 @@ export function getEvidenceBaseUrl(environment: Environment = process.env): URL 
   return baseUrl;
 }
 
-export function assertUnauthenticatedRedirect(response: Response, route: string, baseUrl: URL): void {
-  if (!REDIRECT_STATUSES.has(response.status)) {
-    throw new Error(`${route} returned ${response.status}; expected an unauthenticated redirect.`);
-  }
+export async function assertUnauthenticatedRedirect(response: Response, route: string, baseUrl: URL): Promise<void> {
+  // App Router pages redirect at the RSC layer (NEXT_REDIRECT) rather than
+  // returning an HTTP redirect status.  Accept both patterns.
+  if (REDIRECT_STATUSES.has(response.status)) {
+    // HTTP-level redirect (middleware or server-side redirect).
+    const location = response.headers.get("location");
+    if (!location) {
+      throw new Error(`${route} did not return a Location header for an unauthenticated request.`);
+    }
+    const destination = new URL(location, baseUrl);
+    if (destination.origin !== baseUrl.origin || destination.pathname !== "/portal/respondents") {
+      throw new Error(`${route} redirected to ${destination.pathname}; expected /portal/respondents.`);
+    }
+  } else {
+    // RSC-level redirect (App Router default in production builds).
+    const body = await response.clone().text();
+    if (!body.includes("NEXT_REDIRECT") || !body.includes("/portal/respondents")) {
+      throw new Error(
+        `${route} returned ${response.status} but the response does not contain an RSC redirect to /portal/respondents.`
+      );
+    }
 
-  const location = response.headers.get("location");
-
-  if (!location) {
-    throw new Error(`${route} did not return a Location header for an unauthenticated request.`);
-  }
-
-  const destination = new URL(location, baseUrl);
-
-  if (destination.origin !== baseUrl.origin || destination.pathname !== "/portal/respondents") {
-    throw new Error(`${route} redirected to ${destination.pathname}; expected /portal/respondents.`);
+    // Also check for the meta-refresh fallback (used by non-JS clients).
+    if (!body.includes(`http-equiv="refresh"`) || !body.includes("url=/portal/respondents")) {
+      throw new Error(
+        `${route} returned ${response.status} but is missing the meta-refresh fallback to /portal/respondents.`
+      );
+    }
   }
 }
 
@@ -77,7 +93,7 @@ export async function verifyProductionAuthBoundary(
       },
     });
 
-    assertUnauthenticatedRedirect(response, route, baseUrl);
+    await assertUnauthenticatedRedirect(response, route, baseUrl);
     await assertNoProtectedContent(response, route);
     console.log(`PASS unauthenticated protected route: ${route}`);
   }
