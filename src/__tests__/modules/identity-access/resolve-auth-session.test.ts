@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CourseScope } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 
 const {
@@ -328,6 +329,67 @@ describe("resolveAuthSession", () => {
     );
   });
 
+  it.each([
+    [
+      "an inactive account",
+      {
+        roles: [{ role: ROLES.FACULTY }],
+        student_profile: null,
+        alumni_profile: null,
+        industry_partner_profile: null,
+        is_active: false,
+      },
+      { status: "INACTIVE" },
+    ],
+    [
+      "a Student without active enrollment",
+      {
+        roles: [{ role: ROLES.STUDENT }],
+        student_profile: { id: "student-profile" },
+        alumni_profile: null,
+        industry_partner_profile: null,
+        is_active: true,
+      },
+      { status: "DEFERRED_ENROLLMENT" },
+    ],
+    [
+      "a rejected Alumni account",
+      {
+        roles: [{ role: ROLES.ALUMNI }],
+        student_profile: null,
+        alumni_profile: { id: "alumni-profile", verification_status: "REJECTED" },
+        industry_partner_profile: null,
+        is_active: true,
+      },
+      { status: "REJECTED_EXTERNAL_ACCOUNT" },
+    ],
+    [
+      "a rejected Industry Partner account",
+      {
+        roles: [{ role: ROLES.INDUSTRY_PARTNER }],
+        student_profile: null,
+        alumni_profile: null,
+        industry_partner_profile: { id: "industry-profile", verification_status: "REJECTED" },
+        is_active: true,
+      },
+      { status: "REJECTED_EXTERNAL_ACCOUNT" },
+    ],
+  ])("preserves the normal gate for dedicated demo %s", async (_description, user, profileGate) => {
+    const { resolveAuthSessionFromDemoUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    findUniqueMock.mockResolvedValue({
+      id: "demo-denial-user",
+      email: "demo-faculty@cloie.test",
+      ...user,
+    });
+    findUniqueStudentEnrollmentMock.mockResolvedValue(null);
+    findFirstFacultyAffiliationMock.mockResolvedValue(null);
+
+    await expect(
+      resolveAuthSessionFromDemoUser({ id: "demo-denial-user", email: null })
+    ).resolves.toMatchObject({ profileGate });
+  });
+
   it("rejects dedicated demo identity when the current Prisma email is not allowlisted", async () => {
     const { resolveAuthSessionFromDemoUser } =
       await import("@/features/auth/services/resolve-auth-session");
@@ -397,5 +459,99 @@ describe("resolveAuthSession", () => {
       activeRole: role,
       profileGate: { status: "COMPLETE" },
     });
+  });
+});
+
+describe("dedicated demo authorization boundaries", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    findFirstTermInstanceMock.mockResolvedValue({ id: "term-1" });
+    findUniqueStudentEnrollmentMock.mockResolvedValue({ is_active: true });
+    findFirstFacultyAffiliationMock.mockResolvedValue(null);
+    readDemoAuthCookieMock.mockResolvedValue(null);
+  });
+
+  it("denies program scope to a dedicated demo Program Head outside their assignments", async () => {
+    const { resolveAuthSessionFromDemoUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    const { canManageCourseAssignment } = await import(
+      "@/features/course-assignments/policies"
+    );
+    findUniqueMock.mockResolvedValue({
+      id: "demo-ph",
+      email: "demo-faculty@cloie.test",
+      is_active: true,
+      roles: [{ role: ROLES.PROGRAM_HEAD }],
+      student_profile: null,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+    findFirstFacultyAffiliationMock.mockResolvedValue(null);
+
+    const session = await resolveAuthSessionFromDemoUser({ id: "demo-ph", email: null });
+
+    expect(session).not.toBeNull();
+    expect(session!.activeRole).toBe(ROLES.PROGRAM_HEAD);
+    expect(session!.profileGate.status).toBe("COMPLETE");
+
+    const decision = canManageCourseAssignment(session!, "program-other", []);
+    expect(decision).toEqual({ allowed: false, reason: "Course is outside your program scope." });
+  });
+
+  it("denies course roster view to a dedicated demo Faculty without matching assignment", async () => {
+    const { resolveAuthSessionFromDemoUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    const { canViewCourseRoster } = await import(
+      "@/features/course-assignments/policies"
+    );
+    findUniqueMock.mockResolvedValue({
+      id: "demo-faculty",
+      email: "demo-faculty@cloie.test",
+      is_active: true,
+      roles: [{ role: ROLES.FACULTY }],
+      student_profile: null,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const session = await resolveAuthSessionFromDemoUser({ id: "demo-faculty", email: null });
+
+    expect(session).not.toBeNull();
+    expect(session!.activeRole).toBe(ROLES.FACULTY);
+    expect(session!.profileGate.status).toBe("FACULTY_ONBOARDING_REQUIRED");
+
+    const decision = canViewCourseRoster(session!, {
+      facultyId: "different-faculty",
+      programId: "program-1",
+      courseScope: CourseScope.PROGRAM_SPECIFIC,
+      isActive: true,
+    });
+    expect(decision).toEqual({ allowed: false, reason: "Course assignment not found." });
+  });
+
+  it("denies course assignment creation to a dedicated demo Faculty", async () => {
+    const { resolveAuthSessionFromDemoUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    const { canManageCourseAssignment } = await import(
+      "@/features/course-assignments/policies"
+    );
+    findUniqueMock.mockResolvedValue({
+      id: "demo-faculty",
+      email: "demo-faculty@cloie.test",
+      is_active: true,
+      roles: [{ role: ROLES.FACULTY }],
+      student_profile: null,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const session = await resolveAuthSessionFromDemoUser({ id: "demo-faculty", email: null });
+
+    expect(session).not.toBeNull();
+    expect(session!.activeRole).toBe(ROLES.FACULTY);
+
+    const decision = canManageCourseAssignment(session!, "program-1", []);
+    expect(decision).toEqual({ allowed: false, reason: "Insufficient permissions." });
   });
 });

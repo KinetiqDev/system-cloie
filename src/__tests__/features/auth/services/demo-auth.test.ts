@@ -22,6 +22,8 @@ import {
 const SECRET = "a".repeat(32);
 const USER_EMAIL = "demo-faculty@cloie.test";
 const USER_ID = "11111111-1111-4111-8111-111111111111";
+const DEMO_PROJECT_REF = "demoprojectref";
+const PRIMARY_PROJECT_REF = "primaryprojectref";
 
 describe("dedicated demo authentication", () => {
   beforeEach(() => {
@@ -31,6 +33,14 @@ describe("dedicated demo authentication", () => {
     vi.stubEnv("CLOIE_DEPLOYMENT_KIND", DEMO_DEPLOYMENT_KIND);
     vi.stubEnv("CLOIE_DEMO_SESSION_SECRET", SECRET);
     vi.stubEnv("CLOIE_DEMO_ALLOWED_USERS", USER_EMAIL);
+    vi.stubEnv("CLOIE_DEMO_SUPABASE_PROJECT_REF", DEMO_PROJECT_REF);
+    vi.stubEnv("CLOIE_PRIMARY_SUPABASE_PROJECT_REF", PRIMARY_PROJECT_REF);
+    vi.stubEnv("SUPABASE_PROJECT_REF", DEMO_PROJECT_REF);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", `https://${DEMO_PROJECT_REF}.supabase.co`);
+    vi.stubEnv(
+      "DATABASE_URL",
+      `postgresql://postgres.${DEMO_PROJECT_REF}:secret@aws-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
+    );
   });
 
   it("fails closed when disabled, incomplete, or attached to primary Production", () => {
@@ -47,6 +57,21 @@ describe("dedicated demo authentication", () => {
 
     vi.stubEnv("CLOIE_DEMO_SESSION_SECRET", SECRET);
     vi.stubEnv("CLOIE_DEPLOYMENT_KIND", "production");
+    expect(getDemoAuthConfig()).toBeNull();
+
+    vi.stubEnv("CLOIE_DEPLOYMENT_KIND", DEMO_DEPLOYMENT_KIND);
+    vi.stubEnv("SUPABASE_PROJECT_REF", PRIMARY_PROJECT_REF);
+    expect(getDemoAuthConfig()).toBeNull();
+
+    vi.stubEnv("SUPABASE_PROJECT_REF", DEMO_PROJECT_REF);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", `https://${PRIMARY_PROJECT_REF}.supabase.co`);
+    expect(getDemoAuthConfig()).toBeNull();
+
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", `https://${DEMO_PROJECT_REF}.supabase.co`);
+    vi.stubEnv(
+      "DATABASE_URL",
+      `postgresql://postgres.${PRIMARY_PROJECT_REF}:secret@aws-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
+    );
     expect(getDemoAuthConfig()).toBeNull();
   });
 

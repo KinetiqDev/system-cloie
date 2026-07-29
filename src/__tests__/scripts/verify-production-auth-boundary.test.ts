@@ -207,14 +207,27 @@ describe("demo-login production boundary", () => {
 
   it("requires the dedicated deployment to reject every seeded catalog account outside its allowlist", async () => {
     const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (_input, init) => {
+      if (init?.method === "POST" && String(_input).endsWith("/api/auth/dev-login")) {
+        return new Response(null, { status: 404 });
+      }
+
+      if (init?.headers && "cookie" in init.headers) {
+        return new Response("<main>Faculty Dashboard</main>", { status: 200 });
+      }
+
       const identifier = JSON.parse(String(init?.body)).identifier;
-      return new Response(null, {
-        status: identifier === "demo-faculty@cloie.test" ? 200 : 404,
-        headers:
-          identifier === "demo-faculty@cloie.test"
-            ? { "set-cookie": "cloie_demo_auth=opaque-session; Path=/; HttpOnly" }
-            : undefined,
-      });
+      return new Response(
+        identifier === "demo-faculty@cloie.test"
+          ? JSON.stringify({ destination: "/faculty/dashboard" })
+          : null,
+        {
+          status: identifier === "demo-faculty@cloie.test" ? 200 : 404,
+          headers:
+            identifier === "demo-faculty@cloie.test"
+              ? { "set-cookie": "cloie_demo_auth=opaque-session; Path=/; HttpOnly" }
+              : undefined,
+        }
+      );
     });
 
     await expect(
@@ -223,7 +236,7 @@ describe("demo-login production boundary", () => {
       })
     ).resolves.toBeUndefined();
 
-    expect(fetchMock).toHaveBeenCalledTimes(23);
+    expect(fetchMock).toHaveBeenCalledTimes(25);
     fetchMock.mockRestore();
   });
 

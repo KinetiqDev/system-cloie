@@ -92,7 +92,7 @@ export function assertDemoLoginUnavailable(response: Response): void {
   }
 }
 
-export function assertDemoLoginAvailable(response: Response): void {
+export function assertDemoLoginAvailable(response: Response): string {
   if (response.status !== 200) {
     throw new Error(
       `POST /api/auth/demo-login returned ${response.status}; expected 200 on the dedicated demo deployment.`
@@ -104,6 +104,8 @@ export function assertDemoLoginAvailable(response: Response): void {
   if (cookieName !== "cloie_demo_auth" || !sessionValue) {
     throw new Error("POST /api/auth/demo-login did not set the dedicated demo session cookie.");
   }
+
+  return `${cookieName}=${sessionValue}`;
 }
 
 export async function requestDemoLogin(baseUrl: URL, identifier: string): Promise<Response> {
@@ -119,6 +121,25 @@ export async function requestDemoLogin(baseUrl: URL, identifier: string): Promis
 export async function assertDemoCatalogUnavailable(baseUrl: URL): Promise<void> {
   for (const identifier of DEMO_USER_EMAILS) {
     assertDemoLoginUnavailable(await requestDemoLogin(baseUrl, identifier));
+  }
+}
+
+async function assertDedicatedDemoSessionAccepted(response: Response, baseUrl: URL): Promise<void> {
+  const sessionCookie = assertDemoLoginAvailable(response);
+  const body = (await response.clone().json()) as { destination?: unknown };
+  if (typeof body.destination !== "string" || !body.destination.startsWith("/")) {
+    throw new Error("POST /api/auth/demo-login did not return a valid authenticated destination.");
+  }
+
+  const destinationResponse = await fetch(new URL(body.destination, baseUrl), {
+    redirect: "manual",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: { cookie: sessionCookie, "cache-control": "no-cache" },
+  });
+  if (destinationResponse.status < 200 || destinationResponse.status >= 300) {
+    throw new Error(
+      `Dedicated demo session could not open ${body.destination}; received ${destinationResponse.status}.`
+    );
   }
 }
 
@@ -141,16 +162,29 @@ export async function verifyDedicatedDemoAuthBoundary(
     );
   }
 
+  const devLoginResponse = await fetch(new URL("/api/auth/dev-login", baseUrl), {
+    method: "POST",
+    redirect: "manual",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: "redacted" }),
+  });
+  if (devLoginResponse.status !== 404) {
+    throw new Error(
+      `POST /api/auth/dev-login returned ${devLoginResponse.status}; expected 404 outside development.`
+    );
+  }
+
   for (const identifier of DEMO_USER_EMAILS) {
     const response = await requestDemoLogin(baseUrl, identifier);
     if (allowedUsers.has(identifier)) {
-      assertDemoLoginAvailable(response);
+      await assertDedicatedDemoSessionAccepted(response, baseUrl);
     } else {
       assertDemoLoginUnavailable(response);
     }
   }
 
-  console.log("PASS dedicated demo login accepts only configured catalog fixtures");
+  console.log("PASS dedicated demo login accepts only configured catalog fixtures and sessions");
 }
 
 export async function verifyProductionAuthBoundary(
