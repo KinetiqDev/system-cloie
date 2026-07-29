@@ -14,11 +14,11 @@ describe("production browser evidence auth boundary", () => {
     );
   });
 
-  it("accepts only a redirect to the public portal for protected content", () => {
+  it("accepts only a redirect to the public portal for protected content", async () => {
     const baseUrl = new URL("http://127.0.0.1:3000");
 
     for (const status of [301, 302, 303, 307, 308]) {
-      expect(() =>
+      await expect(
         assertUnauthenticatedRedirect(
           new Response(null, {
             status,
@@ -27,11 +27,22 @@ describe("production browser evidence auth boundary", () => {
           "/faculty/dashboard",
           baseUrl
         )
-      ).not.toThrow();
+      ).resolves.toBeUndefined();
     }
+
+    await expect(
+      assertUnauthenticatedRedirect(
+        new Response(
+          `NEXT_REDIRECT /portal/respondents\n<meta http-equiv="refresh" content="0;url=/portal/respondents">`,
+          { status: 200 }
+        ),
+        "/faculty/dashboard",
+        baseUrl
+      )
+    ).resolves.toBeUndefined();
 
     for (const status of [300, 304, 305, 306, 399]) {
-      expect(() =>
+      await expect(
         assertUnauthenticatedRedirect(
           new Response(null, {
             status,
@@ -40,10 +51,10 @@ describe("production browser evidence auth boundary", () => {
           "/faculty/dashboard",
           baseUrl
         )
-      ).toThrow("expected an unauthenticated redirect");
+      ).rejects.toThrow("does not contain an RSC redirect to /portal/respondents");
     }
 
-    expect(() =>
+    await expect(
       assertUnauthenticatedRedirect(
         new Response("protected content", {
           status: 200,
@@ -51,9 +62,20 @@ describe("production browser evidence auth boundary", () => {
         "/faculty/dashboard",
         baseUrl
       )
-    ).toThrow("expected an unauthenticated redirect");
+    ).rejects.toThrow("does not contain an RSC redirect to /portal/respondents");
 
-    expect(() =>
+    await expect(
+      assertUnauthenticatedRedirect(
+        new Response(
+          `NEXT_REDIRECT /dashboard\n<meta http-equiv="refresh" content="0;url=/dashboard">`,
+          { status: 200 }
+        ),
+        "/faculty/dashboard",
+        baseUrl
+      )
+    ).rejects.toThrow("does not contain an RSC redirect to /portal/respondents");
+
+    await expect(
       assertUnauthenticatedRedirect(
         new Response(null, {
           status: 307,
@@ -62,9 +84,9 @@ describe("production browser evidence auth boundary", () => {
         "/faculty/dashboard",
         baseUrl
       )
-    ).toThrow("expected /portal/respondents");
+    ).rejects.toThrow("expected /portal/respondents");
 
-    expect(() =>
+    await expect(
       assertUnauthenticatedRedirect(
         new Response(null, {
           status: 307,
@@ -73,16 +95,32 @@ describe("production browser evidence auth boundary", () => {
         "/faculty/dashboard",
         baseUrl
       )
-    ).toThrow("expected /portal/respondents");
+    ).rejects.toThrow("expected /portal/respondents");
+
+    await expect(
+      assertUnauthenticatedRedirect(
+        new Response("NEXT_REDIRECT /portal/respondents", { status: 200 }),
+        "/faculty/dashboard",
+        baseUrl
+      )
+    ).rejects.toThrow("missing the meta-refresh fallback");
   });
 
   it("rejects protected content in an unauthenticated redirect response", async () => {
-    await expect(
-      assertNoProtectedContent(
-        new Response("<p>Manage faculty assignments for all programs</p>", { status: 307 }),
-        "/secretary/course-assignments"
-      )
-    ).rejects.toThrow("contained protected content marker");
+    const protectedFixtures = [
+      // Seeded demo email (matches the "demo-" prefix marker).
+      "<p>Contact demo-faculty@cloie.test for access.</p>",
+      // Seeded user UUID (matches the well-known UUID pattern marker).
+      "<span data-user-id=\"77777777-7777-4777-8777-777777777777\">user</span>",
+      // Seeded course code (matches the course identifier marker).
+      "<td>IT-OD-401</td>",
+    ];
+
+    for (const body of protectedFixtures) {
+      await expect(
+        assertNoProtectedContent(new Response(body, { status: 307 }), "/secretary/course-assignments")
+      ).rejects.toThrow("contained protected content marker");
+    }
 
     await expect(
       assertNoProtectedContent(new Response("<main>Respondent Portal</main>", { status: 307 }), "/faculty/dashboard")
@@ -92,18 +130,11 @@ describe("production browser evidence auth boundary", () => {
 
 describe("demo-login production boundary", () => {
   it("rejects a non-404 demo-login response on primary production", () => {
-    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 200 }))).toThrow(
-      "expected 404"
-    );
-    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 201 }))).toThrow(
-      "expected 404"
-    );
-    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 400 }))).toThrow(
-      "expected 404"
-    );
-    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 500 }))).toThrow(
-      "expected 404"
-    );
+    for (const status of [200, 201, 400, 500]) {
+      expect(() => assertDemoLoginUnavailable(new Response(null, { status }))).toThrow(
+        "expected 404"
+      );
+    }
   });
 
   it("accepts a 404 demo-login response (route is disabled on this deployment)", () => {
