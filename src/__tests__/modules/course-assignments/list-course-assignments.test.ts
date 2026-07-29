@@ -200,4 +200,21 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
       })
     );
   });
+
+  it("searches only approved assignment display fields", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+    await listCourseAssignments({ q: "faculty" });
+
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.arrayContaining([
+            { faculty: { email: { contains: "faculty", mode: "insensitive" } } },
+            { course: { code: { contains: "faculty", mode: "insensitive" } } },
+          ]),
+        }),
+      })
+    );
+  });
 });

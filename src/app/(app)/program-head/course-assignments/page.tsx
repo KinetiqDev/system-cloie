@@ -4,24 +4,34 @@ import { listSchoolYears } from "@/features/academic-calendar/services/list-scho
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
-import { CourseAssignmentsClientPage } from "./client-page";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import type { AssignableCourse } from "@/features/course-assignments/types";
+import { loadCourseAssignmentListPage } from "@/features/course-assignments/services/load-course-assignment-list-page";
+import { CourseAssignmentsPageShell } from "@/features/course-assignments/components/course-assignments-page-shell";
 
 export const metadata = {
   title: "Course Assignments — Program Head | CLOIE",
 };
 
-export default async function CourseAssignmentsPage() {
+export default async function CourseAssignmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await resolveAuthSession();
 
   if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
     redirect("/unauthorized");
   }
 
-  const [coursesResult, schoolYearsResult] = await Promise.all([
+  const [coursesResult, schoolYearsResult, listPage] = await Promise.all([
     listProgramHeadCourses(),
     listSchoolYears(),
+    loadCourseAssignmentListPage({
+      pathname: "/program-head/course-assignments",
+      rawSearchParams: await searchParams,
+      role: "program-head",
+    }),
   ]);
 
   if (!coursesResult) {
@@ -68,11 +78,19 @@ export default async function CourseAssignmentsPage() {
   }));
 
   return (
-    <CourseAssignmentsClientPage
+    <CourseAssignmentsPageShell
+      key={JSON.stringify(listPage.state)}
+      pageTitle="Course Assignments"
+      pageDescription="Manage faculty assignments for courses in your program"
+      mode="program-head"
       availableCourses={availableCourses}
       availablePrograms={coursesResult.programs}
       availableFaculty={availableFaculty}
       termInstances={termInstances}
+      initialData={listPage.result.success ? listPage.result.data : null}
+      initialFilters={listPage.initialFilters}
+      initialPage={listPage.state.page}
+      initialError={listPage.result.success ? null : listPage.result.error}
     />
   );
 }

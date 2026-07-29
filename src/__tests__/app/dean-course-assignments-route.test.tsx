@@ -3,31 +3,31 @@ import { ROLES } from "@/lib/constants/roles";
 
 const REDIRECT_ERROR = "NEXT_REDIRECT";
 
-const {
-  redirectMock,
-  permanentRedirectMock,
-  resolveAuthSessionMock,
-  loadPageDataMock,
-} = vi.hoisted(() => ({
-  redirectMock: vi.fn((path: string) => {
-    throw new Error(`${REDIRECT_ERROR}:${path}`);
-  }),
-  permanentRedirectMock: vi.fn((path: string) => {
-    throw new Error(`${REDIRECT_ERROR}:${path}`);
-  }),
-  resolveAuthSessionMock: vi.fn(),
-  loadPageDataMock: vi.fn(),
-}));
+const { redirectMock, permanentRedirectMock, resolveAuthSessionMock, loadPageDataMock } =
+  vi.hoisted(() => ({
+    redirectMock: vi.fn((path: string) => {
+      throw new Error(`${REDIRECT_ERROR}:${path}`);
+    }),
+    permanentRedirectMock: vi.fn((path: string) => {
+      throw new Error(`${REDIRECT_ERROR}:${path}`);
+    }),
+    resolveAuthSessionMock: vi.fn(),
+    loadPageDataMock: vi.fn(),
+  }));
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
   permanentRedirect: permanentRedirectMock,
 }));
 
-vi.mock("@/features/auth/services/resolve-auth-session", () => ({ resolveAuthSession: resolveAuthSessionMock }));
-vi.mock("@/features/course-assignments/services/load-all-program-course-assignments-page", () => ({ loadAllProgramCourseAssignmentsPageData: loadPageDataMock }));
+vi.mock("@/features/auth/services/resolve-auth-session", () => ({
+  resolveAuthSession: resolveAuthSessionMock,
+}));
+vi.mock("@/features/course-assignments/services/load-all-program-course-assignments-page", () => ({
+  loadAllProgramCourseAssignmentsPageData: loadPageDataMock,
+}));
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
-  listCourseAssignmentsAction: vi.fn(),
+  loadCourseAssignmentsForSheetAction: vi.fn(),
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
@@ -106,7 +106,9 @@ describe("Secretary Course Assignments route cross-role denial", () => {
       await import("../../app/(app)/secretary/course-assignments/page")
     ).default;
 
-    await expect(SecretaryCourseAssignmentsPage()).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
+    await expect(
+      SecretaryCourseAssignmentsPage({ searchParams: Promise.resolve({}) })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
   });
 
   it("uses active role instead of another role in the session", async () => {
@@ -122,7 +124,9 @@ describe("Secretary Course Assignments route cross-role denial", () => {
       await import("../../app/(app)/secretary/course-assignments/page")
     ).default;
 
-    await expect(SecretaryCourseAssignmentsPage()).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
+    await expect(
+      SecretaryCourseAssignmentsPage({ searchParams: Promise.resolve({}) })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
     expect(loadPageDataMock).not.toHaveBeenCalled();
   });
 });
