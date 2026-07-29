@@ -13,13 +13,13 @@
 
 - [x] 3.1 Rename or extract the production-facing role switcher around the existing interaction, preserving search, drag positioning, responsive visibility, and accessible labels while keeping development behavior compatible during migration. Verify: focused Testing Library component tests.
 - [x] 3.2 Pass a server-derived demo capability into the authenticated application shell and render the switcher only in a valid dedicated demo deployment; add a non-sensitive visible demo-environment indicator. Verify: shell/component tests and primary/demo capability boundary tests.
-- [ ] 3.3 Update the switcher to call the dedicated demo login route in demo deployments and retain the development login route only for local development. Verify: focused interaction tests and browser smoke verification against a production build.
+- [x] 3.3 Update the switcher to call the dedicated demo login route in demo deployments and retain the development login route only for local development. Verify: focused interaction tests and browser smoke verification against a production build.
 
 ## 4. Isolated Demo Operations
 
-- [ ] 4.1 Document and validate a dedicated demo deployment using an isolated database or Supabase project, seeded role fixtures, no primary institutional data, and server-only environment variables. Verify: configuration checklist and deployment-boundary script.
-- [ ] 4.2 Add an idempotent demo-data reset/provisioning procedure that restores known fixtures without targeting the primary Production database. Verify: dry-run/target validation and disposable-database integration tests when applicable.
-- [ ] 4.3 Add primary/deployed boundary verification proving the primary deployment cannot expose demo login, the development login remains unavailable outside development, and the dedicated demo deployment can authenticate only configured fixture accounts. Verify: `pnpm verify:production-auth-boundary`, focused Vitest tests, and production `pnpm build`.
+- [x] 4.1 Document and validate a dedicated demo deployment using an isolated database or Supabase project, seeded role fixtures, no primary institutional data, and server-only environment variables. Verify: configuration checklist and deployment-boundary script.
+- [x] 4.2 Add an idempotent demo-data reset/provisioning procedure that restores known fixtures without targeting the primary Production database. Verify: dry-run/target validation and disposable-database integration tests when applicable.
+- [x] 4.3 Add primary/deployed boundary verification proving the primary deployment cannot expose demo login, the development login remains unavailable outside development, and the dedicated demo deployment can authenticate only configured fixture accounts. Verify: `pnpm verify:production-auth-boundary`, focused Vitest tests, and production `pnpm build`.
 
 ## 5. Evidence And Documentation Reconciliation
 
@@ -30,5 +30,5 @@
 ## 6. Final Verification
 
 - [x] 6.1 Run focused auth, route, shell, and boundary tests, then `pnpm test`, `pnpm lint`, and `pnpm build`; confirm no Prisma schema, Supabase migration, or generated-type change was introduced.
-- [ ] 6.2 Capture dedicated-demo production-build traces for representative role routes under Fast 3G and 4x CPU throttling, recording LCP breakdown and document/fetch/script metadata while identifying `signed demo session` as the authentication mode. Verify: Chrome DevTools performance/network evidence and sanitized evidence records.
+- [x] 6.2 Capture dedicated-demo production-build traces for representative role routes under Fast 3G and 4x CPU throttling, recording LCP breakdown and document/fetch/script metadata while identifying `signed demo session` as the authentication mode. Verify: Chrome DevTools performance/network evidence and sanitized evidence records.
 - [x] 6.3 Review the final implementation against the dedicated-demo ADR, OpenSpec scenarios, and GitHub acceptance criteria; record residual OAuth-testing and deployment-operation follow-ups.
