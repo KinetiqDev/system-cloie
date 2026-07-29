@@ -38,12 +38,14 @@ The visible, non-sensitive demo-environment indicator belongs to issue #199. It 
 
 Set these values only in the dedicated demo deployment's server environment:
 
-| Variable                    | Contract                                                            |
-| --------------------------- | ------------------------------------------------------------------- |
-| `CLOIE_DEMO_ENABLED`        | Explicit enable flag; absent or false disables the flow.            |
-| `CLOIE_DEPLOYMENT_KIND`     | Must identify the dedicated isolated demo deployment.               |
-| `CLOIE_DEMO_SESSION_SECRET` | Long random server-only HMAC signing secret.                        |
-| `CLOIE_DEMO_ALLOWED_USERS`  | Non-empty server-side allowlist of seeded demo catalog identifiers. |
+| Variable                             | Contract                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------- |
+| `CLOIE_DEMO_ENABLED`                 | Explicit enable flag; absent or false disables the flow.                  |
+| `CLOIE_DEPLOYMENT_KIND`              | Must identify the dedicated isolated demo deployment.                     |
+| `CLOIE_DEMO_SESSION_SECRET`          | Long random server-only HMAC signing secret.                              |
+| `CLOIE_DEMO_ALLOWED_USERS`           | Non-empty server-side allowlist of seeded demo catalog identifiers.       |
+| `CLOIE_DEMO_SUPABASE_PROJECT_REF`    | Exact Supabase project ref allowed for the destructive demo reset.        |
+| `CLOIE_PRIMARY_SUPABASE_PROJECT_REF` | Exact primary Production Supabase project ref that the reset must reject. |
 
 The configuration loader must fail closed when any required value is absent, malformed, or attached to the primary Production deployment. Do not expose any of these values through `NEXT_PUBLIC_*`, browser bundles, logs, or evidence. `CLOIE_DEMO_ALLOWED_USERS` must contain only the intended seeded demo catalog. The demo cookie is separate from `cloie_dev_auth`, httpOnly, secure for HTTPS, same-site, path-scoped, short-lived, and HMAC-SHA256 signed.
 
@@ -53,12 +55,12 @@ Before accepting an authenticated trace, verify the deployment marker, database 
 
 1. Create or select the isolated demo Supabase project or disposable PostgreSQL database. Confirm that its database URL is not the primary Production target.
 2. Configure the normal application environment plus the four server-only `CLOIE_DEMO_*` values. Do not configure them on primary Production.
-3. Apply the existing Prisma schema to the isolated target with `pnpm db:push`.
-4. Run the idempotent Prisma seed with `pnpm db:seed`. The seed restores the known catalog and supporting academic fixtures through the existing upsert-based runners.
+3. Confirm `SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_SUPABASE_URL`, `DATABASE_URL`, and `DIRECT_URL` all identify `CLOIE_DEMO_SUPABASE_PROJECT_REF`, and that it differs from `CLOIE_PRIMARY_SUPABASE_PROJECT_REF`.
+4. Run `pnpm demo:reset`. It validates that positive identity before it can invoke Prisma, force-resets the isolated database, applies the schema, and seeds known fixtures.
 5. Build and start the production server with `pnpm build` and `pnpm start`.
-6. Run the production-auth boundary verification before browser work.
+6. Verify the deployment boundary before browser work: run `pnpm verify:production-auth-boundary` against primary Production and `pnpm verify:dedicated-demo-auth-boundary` against the dedicated demo deployment.
 
-Reset before repeatable traces and after demonstrations. For a clean baseline, discard or clear the isolated demo database, run `pnpm db:push`, then run `pnpm db:seed` again. Never run the reset, schema push, seed, or a demo connection string against the primary Production database. If the target cannot be positively identified as isolated, stop.
+Reset before repeatable traces and after demonstrations with `pnpm demo:reset`. Do not use `pnpm db:push` or `pnpm db:seed` as a demo reset procedure: they do not establish target identity and do not remove arbitrary mutations. The reset command fails before running Prisma unless every configured project identifier agrees with the dedicated demo project and rejects the configured primary Production project.
 
 ## Rollback And Incident Disable
 

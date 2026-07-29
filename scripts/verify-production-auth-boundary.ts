@@ -1,3 +1,5 @@
+import { DEMO_USER_EMAILS } from "../src/lib/constants/demo-users";
+
 type Environment = Record<string, string | undefined>;
 
 const PROTECTED_ROUTES = [
@@ -18,10 +20,13 @@ const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const REQUEST_TIMEOUT_MS = 30_000;
 
 export function getEvidenceBaseUrl(environment: Environment = process.env): URL {
-  const configuredUrl = environment.PRODUCTION_EVIDENCE_BASE_URL ?? environment.NEXT_PUBLIC_SITE_URL;
+  const configuredUrl =
+    environment.PRODUCTION_EVIDENCE_BASE_URL ?? environment.NEXT_PUBLIC_SITE_URL;
 
   if (!configuredUrl) {
-    throw new Error("Set PRODUCTION_EVIDENCE_BASE_URL or NEXT_PUBLIC_SITE_URL before running the check.");
+    throw new Error(
+      "Set PRODUCTION_EVIDENCE_BASE_URL or NEXT_PUBLIC_SITE_URL before running the check."
+    );
   }
 
   const baseUrl = new URL(configuredUrl);
@@ -33,7 +38,11 @@ export function getEvidenceBaseUrl(environment: Environment = process.env): URL 
   return baseUrl;
 }
 
-export async function assertUnauthenticatedRedirect(response: Response, route: string, baseUrl: URL): Promise<void> {
+export async function assertUnauthenticatedRedirect(
+  response: Response,
+  route: string,
+  baseUrl: URL
+): Promise<void> {
   // App Router pages redirect at the RSC layer (NEXT_REDIRECT) rather than
   // returning an HTTP redirect status.  Accept both patterns.
   if (REDIRECT_STATUSES.has(response.status)) {
@@ -44,7 +53,9 @@ export async function assertUnauthenticatedRedirect(response: Response, route: s
     }
     const destination = new URL(location, baseUrl);
     if (destination.origin !== baseUrl.origin || destination.pathname !== "/portal/respondents") {
-      throw new Error(`${route} redirected to ${destination.pathname}; expected /portal/respondents.`);
+      throw new Error(
+        `${route} redirected to ${destination.pathname}; expected /portal/respondents.`
+      );
     }
   } else {
     // RSC-level redirect (App Router default in production builds).
@@ -81,6 +92,67 @@ export function assertDemoLoginUnavailable(response: Response): void {
   }
 }
 
+export function assertDemoLoginAvailable(response: Response): void {
+  if (response.status !== 200) {
+    throw new Error(
+      `POST /api/auth/demo-login returned ${response.status}; expected 200 on the dedicated demo deployment.`
+    );
+  }
+
+  const sessionCookie = response.headers.get("set-cookie")?.split(";")[0];
+  const [cookieName, sessionValue] = sessionCookie?.split("=") ?? [];
+  if (cookieName !== "cloie_demo_auth" || !sessionValue) {
+    throw new Error("POST /api/auth/demo-login did not set the dedicated demo session cookie.");
+  }
+}
+
+export async function requestDemoLogin(baseUrl: URL, identifier: string): Promise<Response> {
+  return fetch(new URL("/api/auth/demo-login", baseUrl), {
+    method: "POST",
+    redirect: "manual",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: { "cache-control": "no-cache", "content-type": "application/json" },
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+export async function assertDemoCatalogUnavailable(baseUrl: URL): Promise<void> {
+  for (const identifier of DEMO_USER_EMAILS) {
+    assertDemoLoginUnavailable(await requestDemoLogin(baseUrl, identifier));
+  }
+}
+
+export async function verifyDedicatedDemoAuthBoundary(
+  baseUrl: URL = getEvidenceBaseUrl(),
+  environment: Environment = process.env
+): Promise<void> {
+  const allowedUsers = new Set(
+    environment.CLOIE_DEMO_ALLOWED_USERS?.split(/[\n,]/)
+      .map((identifier) => identifier.trim().toLowerCase())
+      .filter(Boolean)
+  );
+  if (!allowedUsers.size) {
+    throw new Error("Set CLOIE_DEMO_ALLOWED_USERS before verifying the dedicated demo deployment.");
+  }
+  const demoCatalog = new Set<string>(DEMO_USER_EMAILS);
+  if ([...allowedUsers].some((identifier) => !demoCatalog.has(identifier))) {
+    throw new Error(
+      "CLOIE_DEMO_ALLOWED_USERS contains an identifier outside the seeded demo catalog."
+    );
+  }
+
+  for (const identifier of DEMO_USER_EMAILS) {
+    const response = await requestDemoLogin(baseUrl, identifier);
+    if (allowedUsers.has(identifier)) {
+      assertDemoLoginAvailable(response);
+    } else {
+      assertDemoLoginUnavailable(response);
+    }
+  }
+
+  console.log("PASS dedicated demo login accepts only configured catalog fixtures");
+}
+
 export async function verifyProductionAuthBoundary(
   baseUrl: URL = getEvidenceBaseUrl()
 ): Promise<void> {
@@ -107,21 +179,15 @@ export async function verifyProductionAuthBoundary(
   });
 
   if (devLoginResponse.status !== 404) {
-    throw new Error(`POST /api/auth/dev-login returned ${devLoginResponse.status}; expected 404 outside development.`);
+    throw new Error(
+      `POST /api/auth/dev-login returned ${devLoginResponse.status}; expected 404 outside development.`
+    );
   }
 
   console.log("PASS development-only login endpoint is unavailable");
 
-  const demoLoginResponse = await fetch(new URL("/api/auth/demo-login", baseUrl), {
-    method: "POST",
-    redirect: "manual",
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ identifier: "unknown@cloie.test" }),
-  });
-
-  assertDemoLoginUnavailable(demoLoginResponse);
-  console.log(`PASS dedicated demo login endpoint is unavailable (status ${demoLoginResponse.status})`);
+  await assertDemoCatalogUnavailable(baseUrl);
+  console.log("PASS dedicated demo login endpoint is unavailable for every seeded catalog account");
 }
 
 if (process.argv[1]?.endsWith("verify-production-auth-boundary.ts")) {

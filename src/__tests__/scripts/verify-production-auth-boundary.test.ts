@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  assertDemoCatalogUnavailable,
+  assertDemoLoginAvailable,
   assertDemoLoginUnavailable,
   assertUnauthenticatedRedirect,
   assertNoProtectedContent,
+  requestDemoLogin,
+  verifyDedicatedDemoAuthBoundary,
   getEvidenceBaseUrl,
 } from "../../../scripts/verify-production-auth-boundary";
 
@@ -111,19 +115,25 @@ describe("production browser evidence auth boundary", () => {
       // Seeded demo email (matches the "demo-" prefix marker).
       "<p>Contact demo-faculty@cloie.test for access.</p>",
       // Seeded user UUID (matches the well-known UUID pattern marker).
-      "<span data-user-id=\"77777777-7777-4777-8777-777777777777\">user</span>",
+      '<span data-user-id="77777777-7777-4777-8777-777777777777">user</span>',
       // Seeded course code (matches the course identifier marker).
       "<td>IT-OD-401</td>",
     ];
 
     for (const body of protectedFixtures) {
       await expect(
-        assertNoProtectedContent(new Response(body, { status: 307 }), "/secretary/course-assignments")
+        assertNoProtectedContent(
+          new Response(body, { status: 307 }),
+          "/secretary/course-assignments"
+        )
       ).rejects.toThrow("contained protected content marker");
     }
 
     await expect(
-      assertNoProtectedContent(new Response("<main>Respondent Portal</main>", { status: 307 }), "/faculty/dashboard")
+      assertNoProtectedContent(
+        new Response("<main>Respondent Portal</main>", { status: 307 }),
+        "/faculty/dashboard"
+      )
     ).resolves.toBeUndefined();
   });
 });
@@ -139,5 +149,89 @@ describe("demo-login production boundary", () => {
 
   it("accepts a 404 demo-login response (route is disabled on this deployment)", () => {
     expect(() => assertDemoLoginUnavailable(new Response(null, { status: 404 }))).not.toThrow();
+  });
+
+  it("requires every seeded demo catalog account to be unavailable on primary production", async () => {
+    const fetchMock = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response(null, { status: 404 }));
+
+    await expect(
+      assertDemoCatalogUnavailable(new URL("https://primary.example.test"))
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledTimes(23);
+    fetchMock.mockRestore();
+  });
+
+  it("posts the requested catalog identifier without retaining a cookie", async () => {
+    const fetchMock = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response(null, { status: 404 }));
+
+    await requestDemoLogin(new URL("https://demo.example.test"), "demo-faculty@cloie.test");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL("/api/auth/demo-login", "https://demo.example.test"),
+      expect.objectContaining({
+        method: "POST",
+        redirect: "manual",
+        headers: { "cache-control": "no-cache", "content-type": "application/json" },
+        body: JSON.stringify({ identifier: "demo-faculty@cloie.test" }),
+      })
+    );
+    fetchMock.mockRestore();
+  });
+
+  it("accepts only a signed demo-session response on the dedicated deployment", () => {
+    expect(() =>
+      assertDemoLoginAvailable(
+        new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: {
+            "set-cookie": "cloie_demo_auth=opaque-session; Path=/; HttpOnly; Secure; SameSite=Lax",
+          },
+        })
+      )
+    ).not.toThrow();
+
+    expect(() => assertDemoLoginAvailable(new Response(null, { status: 200 }))).toThrow(
+      "did not set the dedicated demo session cookie"
+    );
+    expect(() =>
+      assertDemoLoginAvailable(
+        new Response(null, { status: 200, headers: { "set-cookie": "cloie_dev_auth=value" } })
+      )
+    ).toThrow("did not set the dedicated demo session cookie");
+  });
+
+  it("requires the dedicated deployment to reject every seeded catalog account outside its allowlist", async () => {
+    const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (_input, init) => {
+      const identifier = JSON.parse(String(init?.body)).identifier;
+      return new Response(null, {
+        status: identifier === "demo-faculty@cloie.test" ? 200 : 404,
+        headers:
+          identifier === "demo-faculty@cloie.test"
+            ? { "set-cookie": "cloie_demo_auth=opaque-session; Path=/; HttpOnly" }
+            : undefined,
+      });
+    });
+
+    await expect(
+      verifyDedicatedDemoAuthBoundary(new URL("https://demo.example.test"), {
+        CLOIE_DEMO_ALLOWED_USERS: "demo-faculty@cloie.test",
+      })
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledTimes(23);
+    fetchMock.mockRestore();
+  });
+
+  it("rejects a dedicated-demo allowlist identifier outside the seeded catalog", async () => {
+    await expect(
+      verifyDedicatedDemoAuthBoundary(new URL("https://demo.example.test"), {
+        CLOIE_DEMO_ALLOWED_USERS: "person@example.test",
+      })
+    ).rejects.toThrow("outside the seeded demo catalog");
   });
 });

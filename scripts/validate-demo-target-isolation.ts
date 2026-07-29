@@ -13,7 +13,12 @@
  *  - CLOIE_DEMO_ENABLED        Must be "true".
  *  - CLOIE_DEMO_SESSION_SECRET Must be present and at least 32 chars.
  *  - CLOIE_DEMO_ALLOWED_USERS  Must be non-empty.
- *  - DATABASE_URL              Warns if it matches known production patterns.
+ *  - CLOIE_DEMO_SUPABASE_PROJECT_REF
+ *                            Explicit identity of the dedicated demo project.
+ *  - CLOIE_PRIMARY_SUPABASE_PROJECT_REF
+ *                            Explicit identity of the primary Production project.
+ *  - SUPABASE_PROJECT_REF, NEXT_PUBLIC_SUPABASE_URL, DATABASE_URL, DIRECT_URL
+ *                            Must all resolve to the dedicated demo project.
  */
 
 import { loadEnvConfig } from "@next/env";
@@ -25,6 +30,44 @@ export type ValidationResult = {
   errors: string[];
   warnings: string[];
 };
+
+function getProjectRefFromDatabaseUrl(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const { hostname, username } = new URL(value);
+    const poolerMatch = hostname.match(/^[a-z0-9-]+\.pooler\.supabase\.com$/i);
+    const directMatch = hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
+    const [user, projectRef] = username.split(".");
+
+    if (poolerMatch && user === "postgres" && projectRef) {
+      return projectRef;
+    }
+
+    if (directMatch && username === "postgres") {
+      return directMatch[1] ?? null;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function getProjectRefFromSupabaseUrl(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const hostname = new URL(value).hostname;
+    return hostname.endsWith(".supabase.co") ? (hostname.split(".")[0] ?? null) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function validateDemoTargetIsolation(
   env: Record<string, string | undefined> = process.env
@@ -41,17 +84,13 @@ export function validateDemoTargetIsolation(
 
   // ── Demo must be explicitly enabled ────────────────────────────────────
   if (env.CLOIE_DEMO_ENABLED !== "true") {
-    errors.push(
-      `CLOIE_DEMO_ENABLED is "${env.CLOIE_DEMO_ENABLED ?? "<unset>"}"; expected "true".`
-    );
+    errors.push(`CLOIE_DEMO_ENABLED is "${env.CLOIE_DEMO_ENABLED ?? "<unset>"}"; expected "true".`);
   }
 
   // ── Session secret must be present and strong ──────────────────────────
   const secret = env.CLOIE_DEMO_SESSION_SECRET;
   if (!secret || secret.length < 32) {
-    errors.push(
-      "CLOIE_DEMO_SESSION_SECRET must be at least 32 characters."
-    );
+    errors.push("CLOIE_DEMO_SESSION_SECRET must be at least 32 characters.");
   }
 
   // ── Allowlist must be non-empty ────────────────────────────────────────
@@ -67,13 +106,36 @@ export function validateDemoTargetIsolation(
     );
   }
 
-  // ── Reject if the database URL looks like production (heuristic) ───────
-  const dbUrl = env.DATABASE_URL ?? "";
-  const productionPatterns = ["prod", "production"];
-  if (productionPatterns.some((pattern) => dbUrl.toLowerCase().includes(pattern))) {
-    errors.push(
-      "DATABASE_URL contains a production-like identifier. Verify this is the isolated demo database, not the primary Production database. If the target is indeed isolated, rename or explicitly exclude the identifier."
-    );
+  // The reset target must be positively identified rather than inferred from
+  // a URL name, because Supabase project references are opaque identifiers.
+  const demoProjectRef = env.CLOIE_DEMO_SUPABASE_PROJECT_REF;
+  const primaryProjectRef = env.CLOIE_PRIMARY_SUPABASE_PROJECT_REF;
+  if (!demoProjectRef) {
+    errors.push("CLOIE_DEMO_SUPABASE_PROJECT_REF must identify the dedicated demo project.");
+  }
+  if (!primaryProjectRef) {
+    errors.push("CLOIE_PRIMARY_SUPABASE_PROJECT_REF must identify the primary Production project.");
+  }
+  if (demoProjectRef && primaryProjectRef && demoProjectRef === primaryProjectRef) {
+    errors.push("The dedicated demo and primary Production project references must differ.");
+  }
+
+  const targetRefs = [
+    ["SUPABASE_PROJECT_REF", env.SUPABASE_PROJECT_REF],
+    ["NEXT_PUBLIC_SUPABASE_URL", getProjectRefFromSupabaseUrl(env.NEXT_PUBLIC_SUPABASE_URL)],
+    ["DATABASE_URL", getProjectRefFromDatabaseUrl(env.DATABASE_URL)],
+    ["DIRECT_URL", getProjectRefFromDatabaseUrl(env.DIRECT_URL)],
+  ] as const;
+
+  for (const [source, projectRef] of targetRefs) {
+    if (!projectRef) {
+      errors.push(`${source} must identify the configured dedicated demo project.`);
+    } else if (demoProjectRef && projectRef !== demoProjectRef) {
+      errors.push(`${source} does not identify the configured dedicated demo project.`);
+    }
+    if (primaryProjectRef && projectRef === primaryProjectRef) {
+      errors.push(`${source} identifies the primary Production project.`);
+    }
   }
 
   return { valid: errors.length === 0, errors, warnings };
@@ -94,7 +156,9 @@ function main(): void {
     console.log("\n✓ Demo target isolation validated. Proceed with reset/provisioning.");
     process.exit(0);
   } else {
-    console.error(`\n✖ Demo target isolation FAILED (${result.errors.length} error(s)). Do not proceed.`);
+    console.error(
+      `\n✖ Demo target isolation FAILED (${result.errors.length} error(s)). Do not proceed.`
+    );
     process.exit(1);
   }
 }
