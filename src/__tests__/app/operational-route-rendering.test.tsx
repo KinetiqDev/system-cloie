@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import SecretaryDashboardLoading from "@/app/(app)/secretary/dashboard/loading";
 import SecretaryCoursesLoading from "@/app/(app)/secretary/courses/loading";
+import SecretaryCourseNewLoading from "@/app/(app)/secretary/courses/new/loading";
 import SecretaryCourseEditLoading from "@/app/(app)/secretary/courses/[id]/edit/loading";
 import SecretaryProgramsLoading from "@/app/(app)/secretary/programs/loading";
 import SecretaryProgramEditLoading from "@/app/(app)/secretary/programs/[id]/edit/loading";
@@ -56,7 +57,8 @@ const loadingRoutes = [
   [SecretaryCourseEditLoading, "Loading form"],
   [SecretaryProgramsLoading, "Loading records"],
   [SecretaryProgramEditLoading, "Loading form"],
-  [SecretaryUsersLoading, "Loading records"],
+  [SecretaryCourseNewLoading, "Loading form"],
+  [SecretaryUsersLoading, "Loading users"],
   [SecretaryUsersNewLoading, "Loading form"],
   [SecretaryInstrumentsLoading, "Loading records"],
   [SecretaryInstrumentEditLoading, "Loading form"],
@@ -131,6 +133,24 @@ describe("operational route loading boundaries", () => {
 
     expect(status.querySelectorAll(".rounded-lg").length).toBeGreaterThan(0);
     expect(status.querySelector(".border-b")).not.toBeInTheDocument();
+  });
+
+  it("reserves four KPI cards before the Secretary Users filter and results geometry", () => {
+    render(<SecretaryUsersLoading />);
+
+    const status = screen.getByRole("status", { name: "Loading users" });
+    const kpiGrid = status.firstElementChild?.querySelector(':scope > [class~="md:grid-cols-4"]');
+
+    expect(kpiGrid).toBeInTheDocument();
+    expect(kpiGrid?.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(8);
+  });
+
+  it("matches the centered course form container for the new Course route", () => {
+    render(<SecretaryCourseNewLoading />);
+
+    const status = screen.getByRole("status", { name: "Loading form" });
+
+    expect(status.firstElementChild).toHaveClass("mx-auto", "max-w-3xl");
   });
 });
 

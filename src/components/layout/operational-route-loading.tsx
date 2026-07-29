@@ -4,7 +4,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 export type OperationalLoadingVariant =
   | "dashboard"
   | "list"
+  | "users"
   | "form"
+  | "courseForm"
   | "detail"
   | "responseReview"
   | "schoolYearDetail"
@@ -14,7 +16,9 @@ export type OperationalLoadingVariant =
 const loadingLabels: Record<OperationalLoadingVariant, string> = {
   dashboard: "Loading dashboard",
   list: "Loading records",
+  users: "Loading users",
   form: "Loading form",
+  courseForm: "Loading form",
   detail: "Loading review details",
   responseReview: "Loading response review",
   schoolYearDetail: "Loading school year details",
@@ -62,10 +66,9 @@ function DashboardSkeleton() {
   );
 }
 
-function ListSkeleton() {
+function ListRecordsSkeleton() {
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader />
+    <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Skeleton className="h-9 w-48" />
         <div className="flex gap-3">
@@ -85,7 +88,10 @@ function ListSkeleton() {
             ))}
           </div>
           {[1, 2, 3, 4].map((item) => (
-            <div key={item} className="flex flex-col gap-3 rounded-lg border p-4 md:grid md:grid-cols-4">
+            <div
+              key={item}
+              className="flex flex-col gap-3 rounded-lg border p-4 md:grid md:grid-cols-4"
+            >
               <Skeleton className="h-4 w-40" />
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-4 w-24" />
@@ -94,13 +100,41 @@ function ListSkeleton() {
           ))}
         </CardContent>
       </Card>
+    </>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader />
+      <ListRecordsSkeleton />
     </div>
   );
 }
 
-function FormSkeleton() {
+function UsersSkeleton() {
   return (
-    <div className="flex max-w-4xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
+      <PageHeader />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {[1, 2, 3, 4].map((item) => (
+          <Card key={item}>
+            <CardHeader className="flex flex-col gap-3">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-9 w-20" />
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+      <ListRecordsSkeleton />
+    </div>
+  );
+}
+
+function FormSkeleton({ className = "flex max-w-4xl flex-col gap-6" }: { className?: string }) {
+  return (
+    <div className={className}>
       <PageHeader />
       <Card>
         <CardHeader className="flex flex-col gap-3">
@@ -267,15 +301,14 @@ function RolloverSkeleton() {
 
 export function OperationalRouteLoading({ variant }: { variant: OperationalLoadingVariant }) {
   return (
-    <div
-      className="min-w-0"
-      role="status"
-      aria-busy="true"
-      aria-label={loadingLabels[variant]}
-    >
+    <div className="min-w-0" role="status" aria-busy="true" aria-label={loadingLabels[variant]}>
       {variant === "dashboard" && <DashboardSkeleton />}
       {variant === "list" && <ListSkeleton />}
+      {variant === "users" && <UsersSkeleton />}
       {variant === "form" && <FormSkeleton />}
+      {variant === "courseForm" && (
+        <FormSkeleton className="mx-auto flex max-w-3xl flex-col gap-6" />
+      )}
       {variant === "detail" && <DetailSkeleton />}
       {variant === "responseReview" && <ResponseReviewSkeleton />}
       {variant === "schoolYearDetail" && <SchoolYearDetailSkeleton />}
