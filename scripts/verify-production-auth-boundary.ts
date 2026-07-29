@@ -57,6 +57,14 @@ export async function assertNoProtectedContent(response: Response, route: string
   }
 }
 
+export function assertDemoLoginUnavailable(response: Response): void {
+  if (response.status !== 404) {
+    throw new Error(
+      `POST /api/auth/demo-login returned ${response.status}; expected 404 (unavailable on this deployment).`
+    );
+  }
+}
+
 export async function verifyProductionAuthBoundary(
   baseUrl: URL = getEvidenceBaseUrl()
 ): Promise<void> {
@@ -87,6 +95,17 @@ export async function verifyProductionAuthBoundary(
   }
 
   console.log("PASS development-only login endpoint is unavailable");
+
+  const demoLoginResponse = await fetch(new URL("/api/auth/demo-login", baseUrl), {
+    method: "POST",
+    redirect: "manual",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ identifier: "unknown@cloie.test" }),
+  });
+
+  assertDemoLoginUnavailable(demoLoginResponse);
+  console.log(`PASS dedicated demo login endpoint is unavailable (status ${demoLoginResponse.status})`);
 }
 
 if (process.argv[1]?.endsWith("verify-production-auth-boundary.ts")) {

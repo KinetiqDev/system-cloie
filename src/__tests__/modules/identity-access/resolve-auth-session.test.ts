@@ -346,6 +346,32 @@ describe("resolveAuthSession", () => {
     ).resolves.toBeNull();
   });
 
+  it("derives the active role from the server-side Prisma record, not client input", async () => {
+    // Even if the demo cookie resolves a user with FACULTY roles,
+    // the session's activeRole must come from the DB — the client
+    // never supplies or overrides the role.
+    const { resolveAuthSessionFromDemoUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    findUniqueMock.mockResolvedValue({
+      id: "user-11",
+      email: "demo-faculty@cloie.test",
+      is_active: true,
+      roles: [{ role: ROLES.FACULTY }],
+      student_profile: null,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const session = await resolveAuthSessionFromDemoUser({ id: "user-11", email: null });
+
+    expect(session).not.toBeNull();
+    expect(session!.activeRole).toBe(ROLES.FACULTY);
+    expect(session!.roles).toEqual([ROLES.FACULTY]);
+    // A DEAN role is not present, so the session must not claim it.
+    expect(session!.roles).not.toContain(ROLES.DEAN);
+    expect(session!.activeRole).not.toBe(ROLES.DEAN);
+  });
+
   it.each(Object.values(ROLES))("resolves a dedicated demo session for %s", async (role) => {
     const { resolveAuthSessionFromDemoUser } =
       await import("@/features/auth/services/resolve-auth-session");
