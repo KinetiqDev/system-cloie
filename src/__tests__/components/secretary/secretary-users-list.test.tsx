@@ -1,7 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SecretaryUsersList } from "@/features/users/components/secretary-users-list";
 import { SystemRole, YearLevel } from "@prisma/client";
+
+const replaceMock = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/secretary/users",
+  useRouter: () => ({ replace: replaceMock }),
+}));
 
 describe("SecretaryUsersList", () => {
   const mockUsers = [
@@ -62,6 +69,10 @@ describe("SecretaryUsersList", () => {
     render(
       <SecretaryUsersList
         users={mockUsers}
+        total={2}
+        page={1}
+        pageSize={15}
+        query={{ page: 1, sort: "lastName", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
@@ -78,6 +89,10 @@ describe("SecretaryUsersList", () => {
     render(
       <SecretaryUsersList
         users={mockUsers}
+        total={2}
+        page={1}
+        pageSize={15}
+        query={{ page: 1, sort: "lastName", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
@@ -93,6 +108,10 @@ describe("SecretaryUsersList", () => {
     render(
       <SecretaryUsersList
         users={mockUsers}
+        total={2}
+        page={1}
+        pageSize={15}
+        query={{ page: 1, sort: "lastName", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
@@ -103,10 +122,34 @@ describe("SecretaryUsersList", () => {
     expect(screen.getByText("Add User")).toBeInTheDocument();
   });
 
-  it("filters users by search term", () => {
+  it("gives server-side sort controls accessible names", () => {
     render(
       <SecretaryUsersList
         users={mockUsers}
+        total={2}
+        page={1}
+        pageSize={15}
+        query={{ page: 1, sort: "lastName", direction: "asc" }}
+        kpi={mockKPI}
+        programs={mockPrograms}
+        yearLevels={mockYearLevels}
+        currentUserId="admin-1"
+      />
+    );
+
+    expect(screen.getByRole("combobox", { name: "Sort users" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Sort direction" })).toBeInTheDocument();
+  });
+
+  it("navigates to the server-filtered search URL", () => {
+    replaceMock.mockClear();
+    render(
+      <SecretaryUsersList
+        users={mockUsers}
+        total={2}
+        page={1}
+        pageSize={15}
+        query={{ page: 1, sort: "lastName", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
@@ -117,7 +160,6 @@ describe("SecretaryUsersList", () => {
     const searchInput = screen.getByPlaceholderText(/search by name or email/i);
     fireEvent.change(searchInput, { target: { value: "John" } });
 
-    expect(screen.getAllByText("John Doe")).toHaveLength(2);
-    expect(screen.queryByText("Jane Smith")).not.toBeInTheDocument();
+    expect(replaceMock).toHaveBeenCalledWith("/secretary/users?q=John");
   });
 });

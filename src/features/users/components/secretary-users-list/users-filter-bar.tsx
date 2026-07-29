@@ -12,6 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SystemRole } from "@prisma/client";
+import type {
+  SecretaryUsersSortDirection,
+  SecretaryUsersSortField,
+} from "../../schemas/secretary-users-list";
 
 const ALL_ROLES: SystemRole[] = [
   SystemRole.SECRETARY,
@@ -40,7 +44,17 @@ interface UsersFilterBarProps {
   onMajorChange: (value: string | null) => void;
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  programs: Array<{ id: string; code: string; name: string; majors: Array<{ id: string; name: string }> }>;
+  onClearFilters: () => void;
+  sort: SecretaryUsersSortField;
+  direction: SecretaryUsersSortDirection;
+  onSortChange: (value: string | null) => void;
+  onDirectionChange: (value: string | null) => void;
+  programs: Array<{
+    id: string;
+    code: string;
+    name: string;
+    majors: Array<{ id: string; name: string }>;
+  }>;
 }
 
 export function UsersFilterBar({
@@ -52,6 +66,11 @@ export function UsersFilterBar({
   onMajorChange,
   searchTerm,
   onSearchChange,
+  onClearFilters,
+  sort,
+  direction,
+  onSortChange,
+  onDirectionChange,
   programs,
 }: UsersFilterBarProps) {
   const selectedProgramMajors = useMemo(() => {
@@ -65,13 +84,6 @@ export function UsersFilterBar({
     programFilter !== "__all__" ||
     majorFilter !== "__all__" ||
     searchTerm.trim().length > 0;
-
-  const handleClearFilters = () => {
-    onRoleChange("__all__");
-    onProgramChange("__all__");
-    onMajorChange("__all__");
-    onSearchChange("");
-  };
 
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -98,7 +110,7 @@ export function UsersFilterBar({
           <SelectValue>
             {programFilter === "__all__"
               ? "All Programs"
-              : programs.find((p) => p.code === programFilter)?.code ?? programFilter}
+              : (programs.find((p) => p.code === programFilter)?.code ?? programFilter)}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -118,7 +130,7 @@ export function UsersFilterBar({
             <SelectValue>
               {majorFilter === "__all__"
                 ? "All Majors"
-                : selectedProgramMajors.find((m) => m.name === majorFilter)?.name ?? majorFilter}
+                : (selectedProgramMajors.find((m) => m.name === majorFilter)?.name ?? majorFilter)}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -131,6 +143,37 @@ export function UsersFilterBar({
           </SelectContent>
         </Select>
       )}
+
+      <Select value={sort} onValueChange={onSortChange}>
+        <SelectTrigger aria-label="Sort users" className="w-full md:w-[160px]">
+          <SelectValue>
+            Sort:{" "}
+            {sort === "firstName"
+              ? "First name"
+              : sort === "lastName"
+                ? "Last name"
+                : sort === "email"
+                  ? "Email"
+                  : "Status"}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="lastName">Sort: Last name</SelectItem>
+          <SelectItem value="firstName">Sort: First name</SelectItem>
+          <SelectItem value="email">Sort: Email</SelectItem>
+          <SelectItem value="isActive">Sort: Status</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={direction} onValueChange={onDirectionChange}>
+        <SelectTrigger aria-label="Sort direction" className="w-full md:w-[130px]">
+          <SelectValue>{direction === "asc" ? "Ascending" : "Descending"}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="asc">Ascending</SelectItem>
+          <SelectItem value="desc">Descending</SelectItem>
+        </SelectContent>
+      </Select>
 
       {/* Search */}
       <div className="relative w-full md:ml-auto md:max-w-xs">
@@ -154,12 +197,7 @@ export function UsersFilterBar({
 
       {/* Clear filters */}
       {hasActiveFilters && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleClearFilters}
-          className="h-9 shrink-0"
-        >
+        <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-9 shrink-0">
           Clear all
         </Button>
       )}
