@@ -52,11 +52,7 @@ prisma/*.db
 prisma/*.db-journal
 
 # agent / ai
-.agents
-.worktrees/
-AGENTS.md
 skills-lock.json
-.opencode
 
 # IDE
 .idea
