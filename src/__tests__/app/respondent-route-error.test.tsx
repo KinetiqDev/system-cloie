@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import StudentError from "@/app/(app)/student/error";
 import AlumniError from "@/app/(app)/alumni/error";
@@ -12,6 +12,10 @@ const errorBoundaries = [
 ] as const;
 
 describe("respondent route error boundaries", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it.each(errorBoundaries)(
     "offers local recovery without exposing exception details",
     (ErrorBoundary, returnHref) => {
@@ -38,12 +42,11 @@ describe("respondent route error boundaries", () => {
       );
       expect(screen.queryByText(internalMessage)).not.toBeInTheDocument();
       expect(screen.queryByText(digest)).not.toBeInTheDocument();
+      expect(consoleError).toHaveBeenCalledTimes(1);
       expect(consoleError).toHaveBeenCalledWith("Respondent route error");
-      expect(consoleError).not.toHaveBeenCalledWith("Respondent route error:", expect.anything());
 
       fireEvent.click(screen.getByRole("button", { name: "Try Again" }));
       expect(reset).toHaveBeenCalledOnce();
-      consoleError.mockRestore();
     }
   );
 });

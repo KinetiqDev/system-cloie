@@ -44,6 +44,7 @@ import DeanEditInstrumentLoading from "@/app/(app)/dean/academic-structure/instr
 import DeanEditProgramLoading from "@/app/(app)/dean/academic-structure/programs/[id]/edit/loading";
 import DeanDashboardLoading from "@/app/(app)/dean/dashboard/loading";
 import DeanAcademicStructureLoading from "@/app/(app)/dean/academic-structure/loading";
+import DeanCollegeOversightLoading from "@/app/(app)/dean/college-oversight/loading";
 import SecretaryError from "@/app/(app)/secretary/error";
 import FacultyError from "@/app/(app)/faculty/error";
 import ProgramHeadError from "@/app/(app)/program-head/error";
@@ -93,6 +94,7 @@ const loadingRoutes = [
   [DeanEditProgramLoading, "Loading form"],
   [DeanDashboardLoading, "Loading dashboard"],
   [DeanAcademicStructureLoading, "Loading records"],
+  [DeanCollegeOversightLoading, "Loading records"],
 ] as const;
 
 const errorBoundaries = [
