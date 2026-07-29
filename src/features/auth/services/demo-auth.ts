@@ -1,6 +1,10 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { DEMO_USER_EMAIL_SET } from "@/lib/constants/demo-users";
+import {
+  getProjectRefFromDatabaseUrl,
+  getProjectRefFromSupabaseUrl,
+} from "@/lib/supabase/project-identity";
 
 export const DEMO_AUTH_COOKIE_NAME = "cloie_demo_auth";
 export const DEMO_DEPLOYMENT_KIND = "dedicated-demo";
@@ -17,6 +21,23 @@ export type DemoAuthConfig = {
   sessionSecret: string;
   allowedUsers: ReadonlySet<string>;
 };
+
+function hasDedicatedDemoProjectIdentity(environment: NodeJS.ProcessEnv): boolean {
+  const demoProjectRef = environment.CLOIE_DEMO_SUPABASE_PROJECT_REF;
+  const primaryProjectRef = environment.CLOIE_PRIMARY_SUPABASE_PROJECT_REF;
+  const runningProjectRef = environment.SUPABASE_PROJECT_REF;
+  const supabaseUrlProjectRef = getProjectRefFromSupabaseUrl(environment.NEXT_PUBLIC_SUPABASE_URL);
+  const databaseProjectRef = getProjectRefFromDatabaseUrl(environment.DATABASE_URL);
+
+  return !!(
+    demoProjectRef &&
+    primaryProjectRef &&
+    runningProjectRef === demoProjectRef &&
+    supabaseUrlProjectRef === demoProjectRef &&
+    databaseProjectRef === demoProjectRef &&
+    demoProjectRef !== primaryProjectRef
+  );
+}
 
 function decodeBase64Url(value: string): Buffer | null {
   try {
@@ -70,6 +91,10 @@ export function getDemoAuthConfig(): DemoAuthConfig | null {
   }
 
   if (process.env.CLOIE_DEPLOYMENT_KIND !== DEMO_DEPLOYMENT_KIND) {
+    return null;
+  }
+
+  if (!hasDedicatedDemoProjectIdentity(process.env)) {
     return null;
   }
 
