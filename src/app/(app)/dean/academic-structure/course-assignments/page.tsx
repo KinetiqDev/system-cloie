@@ -14,11 +14,12 @@ export default async function DeanCourseAssignmentsPage({
 }) {
   const session = await resolveAuthSession();
   if (!session || session.activeRole !== ROLES.DEAN) redirect("/unauthorized");
+  const resolvedSearchParams = await searchParams;
   const [pageData, listPage] = await Promise.all([
     loadAllProgramCourseAssignmentsPageData(),
     loadCourseAssignmentListPage({
       pathname: "/dean/academic-structure/course-assignments",
-      rawSearchParams: await searchParams,
+      rawSearchParams: resolvedSearchParams,
       role: "all-program",
     }),
   ]);

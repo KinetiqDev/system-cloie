@@ -24,12 +24,13 @@ export default async function CourseAssignmentsPage({
     redirect("/unauthorized");
   }
 
+  const resolvedSearchParams = await searchParams;
   const [coursesResult, schoolYearsResult, listPage] = await Promise.all([
     listProgramHeadCourses(),
     listSchoolYears(),
     loadCourseAssignmentListPage({
       pathname: "/program-head/course-assignments",
-      rawSearchParams: await searchParams,
+      rawSearchParams: resolvedSearchParams,
       role: "program-head",
     }),
   ]);
