@@ -65,3 +65,10 @@ Accepted. It is efficient for repeated role switching, does not issue Supabase J
 ## Operational Rule
 
 Use `signed demo session` only for route rendering, UI, navigation, server-read, hydration, and LCP evidence. Use real Supabase OAuth accounts for OAuth exchange, callback, session-refresh, and identity-provider evidence.
+
+## References
+
+- OpenSpec change: `openspec/changes/add-dedicated-demo-auth/`
+- Parent feature: [GitHub issue #196](https://github.com/Tugeru/project-cloie/issues/196)
+- Contract issue: [GitHub issue #197](https://github.com/Tugeru/project-cloie/issues/197)
+- Operator runbook: `docs/runbooks/dedicated-demo-deployment.md`

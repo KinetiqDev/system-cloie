@@ -48,7 +48,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 | Styling         | Tailwind CSS                 | v4      |
 | Components      | shadcn/ui                    | Latest  |
 | Database        | PostgreSQL (Supabase)        | 15+     |
-| ORM             | Prisma                       | 6.19.2   |
+| ORM             | Prisma                       | 6.19.2  |
 | Auth            | Supabase Auth (Google OAuth) | -       |
 | Testing         | Vitest                       | 4.1.4   |
 | Validation      | Zod                          | 4.3.6   |
@@ -116,13 +116,13 @@ export const config = {
 
 #### Authentication Pattern
 
-Dual authentication system:
+CLOIE has three intentionally separate authentication modes:
 
-1. **Production**: Supabase Auth (Google OAuth) with domain restriction (`@acd.edu.ph`, `@acdeducation.com`)
-2. **Development**: Cookie-based bypass (`cloie_dev_auth`) for local testing
-3. **Dedicated demo deployment**: Explicitly gated signed demo sessions for production-mode role demonstrations and rendering evidence; never the primary public Production deployment
+1. **Primary Production**: Supabase Auth with Google OAuth and domain restriction (`@acd.edu.ph`, `@acdeducation.com`).
+2. **Local development**: The `cloie_dev_auth` cookie and `POST /api/auth/dev-login` are available only while running local development mode.
+3. **Dedicated demo deployment**: A separately gated, short-lived signed demo session for production-mode role demonstrations and route/rendering evidence. It requires an isolated resettable database and is never enabled on the primary public Production deployment.
 
-See `src/features/auth/services/dev-auth.ts` for dev auth implementation.
+See `src/features/auth/services/dev-auth.ts` for local development auth and [`docs/runbooks/dedicated-demo-deployment.md`](docs/runbooks/dedicated-demo-deployment.md) for the dedicated demo operator contract.
 
 #### Server Actions Pattern
 
@@ -268,13 +268,17 @@ Prettier config includes `prettier-plugin-tailwindcss` for automatic class sorti
 
 ## Development Tips
 
-### Dev Auth Bypass
+### Primary Production OAuth
 
-Set the `cloie_dev_auth` cookie to bypass Supabase auth in development. Demo users use `@cloie.test` emails (see `src/lib/constants/demo-users.ts`).
+Primary Production uses Supabase Auth with Google OAuth. The callback restricts institutional accounts to `@acd.edu.ph` and `@acdeducation.com`. Dedicated demo variables and local development auth must not be configured on this deployment.
+
+### Local Development Auth
+
+Set the `cloie_dev_auth` cookie, or use `POST /api/auth/dev-login`, only while running the local development server. Demo users use `@cloie.test` emails (see `src/lib/constants/demo-users.ts`). This path is unavailable in production builds and is independent of dedicated demo authentication.
 
 ### Dedicated Demo Deployment
 
-The role switcher may be enabled for a production-mode demo deployment through the separately reviewed signed demo-session flow. This deployment must use an isolated, resettable database and server-only `CLOIE_DEMO_*` configuration. The primary public Production deployment remains OAuth-only. Signed demo sessions are valid for route, rendering, UI, and LCP evidence; they do not measure Google OAuth or Supabase Auth callback latency. See `docs/adr/0008-dedicated-demo-deployment-authentication.md`.
+The signed demo-session flow is available only on an explicitly marked, isolated production-mode demo deployment. It uses server-only `CLOIE_DEMO_*` configuration, seeded Prisma users, and a resettable demo database. Signed demo sessions are valid for route, rendering, UI, navigation, server-read, hydration, and LCP evidence; they do not measure Google OAuth or Supabase Auth callback latency. The non-sensitive visible demo-environment indicator is an implementation task for issue #199, not part of this documentation issue. See [`docs/runbooks/dedicated-demo-deployment.md`](docs/runbooks/dedicated-demo-deployment.md) and `docs/adr/0008-dedicated-demo-deployment-authentication.md`.
 
 ### Domain Restriction
 

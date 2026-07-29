@@ -86,3 +86,17 @@ export const DEMO_USERS = [
 export const DEMO_USER_EMAILS = DEMO_USERS.map((user) => user.email);
 
 export const DEMO_USER_EMAIL_SET: Set<string> = new Set(DEMO_USER_EMAILS);
+
+export const DEDICATED_DEMO_USERS = [
+  { email: "demo-secretary@cloie.test", label: "Secretary", role: SystemRole.SECRETARY },
+  { email: "demo-dean@cloie.test", label: "College Dean", role: SystemRole.DEAN },
+  { email: "demo-ph@cloie.test", label: "Program Head", role: SystemRole.PROGRAM_HEAD },
+  { email: "demo-faculty@cloie.test", label: "Faculty Member", role: SystemRole.FACULTY },
+  { email: "demo-student@cloie.test", label: "Student", role: SystemRole.STUDENT },
+  { email: "demo-alumni@cloie.test", label: "Alumni", role: SystemRole.ALUMNI },
+  {
+    email: "demo-industry@cloie.test",
+    label: "Industry Partner",
+    role: SystemRole.INDUSTRY_PARTNER,
+  },
+] as const;

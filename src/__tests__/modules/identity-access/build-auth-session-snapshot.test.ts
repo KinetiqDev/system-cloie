@@ -71,6 +71,23 @@ describe("buildAuthSessionSnapshot", () => {
     });
   });
 
+  it("does not bypass profile gates for dedicated demo sessions", () => {
+    const session = buildAuthSessionSnapshot({
+      userId: "demo-user",
+      email: "demo-faculty@cloie.test",
+      roles: [ROLES.FACULTY],
+      studentProfileId: null,
+      hasFacultyAffiliation: false,
+      isDemoUser: true,
+      isDedicatedDemo: true,
+    });
+
+    expect(session.profileGate).toEqual({
+      status: "FACULTY_ONBOARDING_REQUIRED",
+      intent: "faculty",
+    });
+  });
+
   it("regression check: uses only the first role if multiple roles are provided (ignores stack priority resolution)", () => {
     const session = buildAuthSessionSnapshot({
       userId: "user-regression",

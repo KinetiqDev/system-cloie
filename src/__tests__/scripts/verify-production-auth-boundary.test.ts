@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertDemoLoginUnavailable,
   assertUnauthenticatedRedirect,
   assertNoProtectedContent,
   getEvidenceBaseUrl,
@@ -86,5 +87,26 @@ describe("production browser evidence auth boundary", () => {
     await expect(
       assertNoProtectedContent(new Response("<main>Respondent Portal</main>", { status: 307 }), "/faculty/dashboard")
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("demo-login production boundary", () => {
+  it("rejects a non-404 demo-login response on primary production", () => {
+    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 200 }))).toThrow(
+      "expected 404"
+    );
+    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 201 }))).toThrow(
+      "expected 404"
+    );
+    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 400 }))).toThrow(
+      "expected 404"
+    );
+    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 500 }))).toThrow(
+      "expected 404"
+    );
+  });
+
+  it("accepts a 404 demo-login response (route is disabled on this deployment)", () => {
+    expect(() => assertDemoLoginUnavailable(new Response(null, { status: 404 }))).not.toThrow();
   });
 });

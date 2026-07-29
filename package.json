@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:production-auth-boundary": "tsx scripts/verify-production-auth-boundary.ts",
+    "verify:demo-target-isolation": "tsx scripts/validate-demo-target-isolation.ts",
     "test:db": "vitest run src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts",
     "db:push": "prisma db push --schema prisma",
     "db:seed": "prisma generate --schema prisma && prisma db seed",
