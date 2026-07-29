@@ -24,9 +24,9 @@ pnpm install
 cp .env.example .env.local
 # Edit .env.local with your credentials.
 # See .env.example for the full variable reference.
-# The essentials: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
-# DATABASE_URL, DIRECT_URL, SUPABASE_PROJECT_REF, SUPABASE_ACCESS_TOKEN,
-# and SUPABASE_DB_PASSWORD.
+# The essentials: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+# `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`,
+# and `SUPABASE_DB_PASSWORD`.
 
 # 3. Link and push database
 pnpm supabase:link       # Link to your Supabase project

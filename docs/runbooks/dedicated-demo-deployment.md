@@ -32,7 +32,7 @@ The implementation issues reference this seam:
 
 The signed session supplies identity only. Every request re-resolves the current Prisma user and applies the existing role, account-state, profile-gate, program scope, Course Assignment ownership, respondent eligibility, and mutation authorization rules. The client never supplies the authorization role or scope as authority.
 
-The visible, non-sensitive demo-environment indicator belongs to issue #199. It is not part of this contract's implementation.
+The authenticated shell renders a visible, non-sensitive demo-environment indicator only when the server-derived dedicated-demo capability is valid. It never exposes the signing secret, allowlist, or project-reference controls.
 
 ## Environment Contract
 
@@ -47,7 +47,7 @@ Set these values only in the dedicated demo deployment's server environment:
 | `CLOIE_DEMO_SUPABASE_PROJECT_REF`    | Exact Supabase project ref allowed for the destructive demo reset.        |
 | `CLOIE_PRIMARY_SUPABASE_PROJECT_REF` | Exact primary Production Supabase project ref that the reset must reject. |
 
-The configuration loader must fail closed when any required value is absent, malformed, or attached to the primary Production deployment. Do not expose any of these values through `NEXT_PUBLIC_*`, browser bundles, logs, or evidence. `CLOIE_DEMO_ALLOWED_USERS` must contain only the intended seeded demo catalog. The demo cookie is separate from `cloie_dev_auth`, httpOnly, secure for HTTPS, same-site, path-scoped, short-lived, and HMAC-SHA256 signed.
+The configuration loader must fail closed when any required value is absent, malformed, or attached to the primary Production deployment. Runtime demo authentication requires `SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_SUPABASE_URL`, and `DATABASE_URL` to identify `CLOIE_DEMO_SUPABASE_PROJECT_REF`, which must differ from `CLOIE_PRIMARY_SUPABASE_PROJECT_REF`. Do not expose the signing secret, allowlist, or project-reference controls through `NEXT_PUBLIC_*`, browser bundles, logs, or evidence. `CLOIE_DEMO_ALLOWED_USERS` must contain only the intended seeded demo catalog. The demo cookie is separate from `cloie_dev_auth`, httpOnly, secure for HTTPS, same-site, path-scoped, short-lived, and HMAC-SHA256 signed.
 
 Before accepting an authenticated trace, verify the deployment marker, database target, seed state, and production build. Use the procedure in [`docs/testing/production-browser-evidence.md`](../testing/production-browser-evidence.md) and label the authentication mode exactly as `signed demo session`.
 
