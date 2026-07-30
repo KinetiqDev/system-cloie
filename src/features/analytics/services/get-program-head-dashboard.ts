@@ -179,9 +179,11 @@ export async function getProgramHeadDashboardForScope(
       },
     },
   });
-  const overallMean = overallMeanResult._avg?.rating_value
-    ? roundToTwo(overallMeanResult._avg.rating_value)
-    : null;
+  const averageRating = overallMeanResult._avg?.rating_value;
+  const overallMean =
+    averageRating === null || averageRating === undefined
+      ? null
+      : roundToTwo(averageRating);
 
   // ── Pie Chart: Mean per stakeholder type ─────────────────────────────────
 

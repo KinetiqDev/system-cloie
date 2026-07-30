@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { SecretaryUsersList } from "@/features/users/components/secretary-users-list";
 import { SystemRole, YearLevel } from "@prisma/client";
 
@@ -11,6 +11,14 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("SecretaryUsersList", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const mockUsers = [
     {
       id: "user-1",
@@ -141,7 +149,7 @@ describe("SecretaryUsersList", () => {
     expect(screen.getByRole("combobox", { name: "Sort direction" })).toBeInTheDocument();
   });
 
-  it("navigates to the server-filtered search URL", () => {
+  it("navigates to the server-filtered search URL after debounce", async () => {
     replaceMock.mockClear();
     render(
       <SecretaryUsersList
@@ -159,6 +167,12 @@ describe("SecretaryUsersList", () => {
 
     const searchInput = screen.getByPlaceholderText(/search by name or email/i);
     fireEvent.change(searchInput, { target: { value: "John" } });
+
+    expect(replaceMock).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
 
     expect(replaceMock).toHaveBeenCalledWith("/secretary/users?q=John");
   });

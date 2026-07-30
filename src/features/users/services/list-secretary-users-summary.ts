@@ -97,6 +97,9 @@ function resolveMajorLabel(user: PrismaUserPageRow): string {
 
 /**
  * Capitalizes a StudentSection enum value into a display label (e.g., "MORNING" → "Morning").
+ *
+ * Section is stored on StudentEnrollment, not StudentAcademicProfile, so
+ * the resolution requires an enrollment join which is deferred.
  */
 function resolveSectionLabel(): string {
   return "—";

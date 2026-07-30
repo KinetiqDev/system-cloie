@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -54,6 +54,8 @@ export function SecretaryUsersList({
   const pathname = usePathname();
   const { toggleActive, isPending: isMutating } = useToggleUserActive();
 
+  const [searchDraft, setSearchDraft] = useState(query.q ?? "");
+
   const totalPages = Math.ceil(total / pageSize);
 
   const navigateWithQuery = (next: Partial<SecretaryUsersListQuery>) => {
@@ -62,7 +64,17 @@ export function SecretaryUsersList({
     startTransition(() => router.replace(search ? `${pathname}?${search}` : pathname));
   };
 
-  const handleUserUpdated = () => window.location.reload();
+  useEffect(() => {
+    const nextQ = searchDraft.trim() || undefined;
+    if (nextQ === (query.q || undefined) && query.page === 1) return;
+    const timer = setTimeout(
+      () => navigateWithQuery({ q: nextQ, page: 1 }),
+      300
+    );
+    return () => clearTimeout(timer);
+  }, [searchDraft]);
+
+  const handleUserUpdated = () => router.refresh();
   const handleToggleActive = (userId: string, currentActive: boolean) => {
     toggleActive(userId, currentActive, handleUserUpdated);
   };
@@ -114,8 +126,8 @@ export function SecretaryUsersList({
         onMajorChange={(value) =>
           navigateWithQuery({ major: value && value !== "__all__" ? value : undefined, page: 1 })
         }
-        searchTerm={query.q ?? ""}
-        onSearchChange={(value) => navigateWithQuery({ q: value.trim() || undefined, page: 1 })}
+        searchTerm={searchDraft}
+        onSearchChange={setSearchDraft}
         onClearFilters={() =>
           navigateWithQuery({
             role: undefined,
