@@ -1,10 +1,17 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { BarChart3, Clock, FileCheck, Layers } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { getFacultyDashboard } from "@/features/analytics/services/get-faculty-dashboard";
-import { CourseMeanPieChart } from "@/features/analytics/components/course-mean-pie-chart";
-import { QualitativeWordCloud } from "@/features/analytics/components/qualitative-word-cloud";
+import {
+  getFacultyDashboardMetrics,
+  getFacultyDashboardVisualizations,
+} from "@/features/analytics/services/get-faculty-dashboard";
+import { FacultyDashboardVisualizations } from "@/features/analytics/components/faculty-dashboard-visualizations";
+import {
+  CourseMeanPieChartFallback,
+  QualitativeWordCloudFallback,
+} from "@/features/analytics/components/faculty-dashboard-visualization-fallbacks";
 import { ROLES } from "@/lib/constants/roles";
 
 export default async function FacultyDashboardPage() {
@@ -18,7 +25,10 @@ export default async function FacultyDashboardPage() {
     redirect("/unauthorized");
   }
 
-  const dashboard = await getFacultyDashboard(session.userId);
+  const visualizationsPromise = getFacultyDashboardVisualizations(session.userId);
+  // Keep the early-started read observed if the primary metrics read fails first.
+  void visualizationsPromise.catch(() => undefined);
+  const dashboard = await getFacultyDashboardMetrics(session.userId);
 
   if (!dashboard) {
     redirect("/unauthorized");
@@ -61,19 +71,33 @@ export default async function FacultyDashboardPage() {
         />
       </div>
 
-      {/* Charts row */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Pie Chart — Mean per Course */}
-        <CourseMeanPieChart data={dashboard.courseMeans} />
-
-        {/* Word Cloud — Qualitative Responses */}
-        <QualitativeWordCloud
-          title="Qualitative Response Insights"
-          tokens={dashboard.wordCloudTokens}
-        />
-      </div>
+      {/* Visualizations are below the primary metrics and stream independently. */}
+      <Suspense
+        fallback={
+          <div className="grid gap-6 lg:grid-cols-2">
+            <CourseMeanPieChartFallback />
+            <QualitativeWordCloudFallback />
+          </div>
+        }
+      >
+        <FacultyDashboardVisualizationsSection visualizationsPromise={visualizationsPromise} />
+      </Suspense>
     </div>
   );
+}
+
+async function FacultyDashboardVisualizationsSection({
+  visualizationsPromise,
+}: {
+  visualizationsPromise: ReturnType<typeof getFacultyDashboardVisualizations>;
+}) {
+  const visualizations = await visualizationsPromise;
+
+  if (!visualizations) {
+    return null;
+  }
+
+  return <FacultyDashboardVisualizations {...visualizations} />;
 }
 
 // ---------------------------------------------------------------------------
