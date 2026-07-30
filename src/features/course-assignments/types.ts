@@ -272,6 +272,7 @@ export type ListCourseAssignmentsFilter = {
   section?: StudentSection;
   isActive?: boolean;
   courseScope?: CourseScope;
+  q?: string;
 };
 
 /**

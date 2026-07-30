@@ -14,8 +14,7 @@ vi.mock("@/lib/actions/course-assignment-actions", () => ({
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
-  listCourseAssignmentsAction: vi.fn(),
-  listCourseAssignmentsForProgramHeadAction: vi.fn(),
+  loadCourseAssignmentsForSheetAction: vi.fn(),
   updateCourseAssignmentAction: vi.fn(),
   activateCourseAssignmentAction: vi.fn(),
   deactivateCourseAssignmentAction: vi.fn(),
@@ -372,7 +371,9 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     clickSelectByPlaceholder("Select a course...");
 
     expect(await screen.findByRole("option", { name: /cs101 — intro/i })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /ge101 — general education/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: /ge101 — general education/i })
+    ).not.toBeInTheDocument();
   });
 
   it("locks the program to the selected Course's owning program", async () => {

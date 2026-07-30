@@ -49,6 +49,11 @@ The system SHALL render the initial authorized records for converted role-owned 
 - **WHEN** a user changes a converted list filter or page control
 - **THEN** the system represents the supported filter and page state in the route URL and renders results through the server-authorized route boundary
 
+#### Scenario: All-program user selects all assignment statuses
+
+- **WHEN** a Secretary or Dean selects `All Statuses` on the Course Assignments route
+- **THEN** the route uses the canonical `isActive=all` URL state, applies no active-status predicate to the list read, and preserves the selection after server navigation
+
 #### Scenario: Program Head list scope is requested
 
 - **WHEN** a Program Head opens or filters Course Assignments
