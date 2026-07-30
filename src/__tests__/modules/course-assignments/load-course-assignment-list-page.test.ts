@@ -50,6 +50,17 @@ describe("loadCourseAssignmentListPage", () => {
     expect(result.initialFilters.searchQuery).toBe("faculty");
   });
 
+  it("passes no status predicate when all statuses are explicitly selected", async () => {
+    const result = await loadCourseAssignmentListPage({
+      pathname: "/secretary/course-assignments",
+      rawSearchParams: { isActive: "all" },
+      role: "all-program",
+    });
+
+    expect(listMock).toHaveBeenCalledWith({}, { page: 0, pageSize: 20 });
+    expect(result.initialFilters.isActive).toBeNull();
+  });
+
   it("redirects a valid page beyond the available result set", async () => {
     listMock.mockResolvedValueOnce({
       success: true,

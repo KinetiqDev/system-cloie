@@ -37,7 +37,6 @@ export interface CourseAssignmentsPageShellProps {
   pageTitle: string;
   pageDescription: string;
   mode: CourseAssignmentsPageMode;
-  defaultIsActive?: boolean | null;
   availableCourses: AssignableCourse[];
   availablePrograms: ProgramOption[];
   availableFaculty: FacultyOption[];
@@ -88,6 +87,9 @@ export function CourseAssignmentsPageShell({
         ...(nextFilters.courseScope && { courseScope: nextFilters.courseScope }),
         ...(nextFilters.searchQuery.trim() && { q: nextFilters.searchQuery.trim() }),
       },
+      ...(role === "all-program" && nextFilters.isActive === null
+        ? { isActiveMode: "all" as const }
+        : {}),
     };
     router.push(courseAssignmentListPath(pathname, nextState, role));
   };

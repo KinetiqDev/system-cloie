@@ -60,6 +60,22 @@ describe("course assignment list URL state", () => {
     );
   });
 
+  it("preserves an explicit all-statuses selection for all-program routes", () => {
+    const state = parseCourseAssignmentListState({ isActive: "all" }, "all-program");
+
+    expect(state).toEqual({
+      page: 1,
+      filters: {},
+      isActiveMode: "all",
+    });
+    expect(serializeCourseAssignmentListState(state, "all-program").toString()).toBe(
+      "isActive=all"
+    );
+    expect(isCanonicalCourseAssignmentListState({ isActive: "all" }, state, "all-program")).toBe(
+      true
+    );
+  });
+
   it("uses the first non-empty duplicate and detects non-canonical input", () => {
     const raw = {
       page: ["", "2", "3"],

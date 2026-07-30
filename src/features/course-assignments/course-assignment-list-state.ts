@@ -7,6 +7,7 @@ export type CourseAssignmentListRole = "all-program" | "program-head";
 export type CourseAssignmentListUrlState = {
   page: number;
   filters: ListCourseAssignmentsFilter;
+  isActiveMode?: "all";
 };
 
 export function toAssignmentFiltersState(state: CourseAssignmentListUrlState): {
@@ -27,7 +28,7 @@ export function toAssignmentFiltersState(state: CourseAssignmentListUrlState): {
     programId: state.filters.programId ?? null,
     yearLevel: state.filters.yearLevel ?? null,
     section: state.filters.section ?? null,
-    isActive: state.filters.isActive ?? null,
+    isActive: state.isActiveMode === "all" ? null : (state.filters.isActive ?? null),
     courseScope: state.filters.courseScope ?? null,
     searchQuery: state.filters.q ?? "",
   };
@@ -105,34 +106,31 @@ export function parseCourseAssignmentListState(
   role: CourseAssignmentListRole
 ): CourseAssignmentListUrlState {
   const page = parseOptional(rawSearchParams.page, pageSchema) ?? 1;
+  const termInstanceId = parseOptional(rawSearchParams.termInstanceId, uuidSchema);
+  const courseId = parseOptional(rawSearchParams.courseId, uuidSchema);
+  const facultyId = parseOptional(rawSearchParams.facultyId, uuidSchema);
+  const programId = parseOptional(rawSearchParams.programId, uuidSchema);
+  const yearLevel = parseOptional(rawSearchParams.yearLevel, yearLevelSchema);
+  const section = parseOptional(rawSearchParams.section, sectionSchema);
+  const courseScope = parseOptional(rawSearchParams.courseScope, courseScopeSchema);
+  const isActive = parseBoolean(rawSearchParams.isActive);
+  const isActiveCandidate = firstNonEmptyValue(rawSearchParams.isActive);
+  const q = parseQuery(rawSearchParams.q);
   const filters: ListCourseAssignmentsFilter = {
-    ...(parseOptional(rawSearchParams.termInstanceId, uuidSchema) && {
-      termInstanceId: parseOptional(rawSearchParams.termInstanceId, uuidSchema),
-    }),
-    ...(parseOptional(rawSearchParams.courseId, uuidSchema) && {
-      courseId: parseOptional(rawSearchParams.courseId, uuidSchema),
-    }),
-    ...(parseOptional(rawSearchParams.facultyId, uuidSchema) && {
-      facultyId: parseOptional(rawSearchParams.facultyId, uuidSchema),
-    }),
-    ...(role === "all-program" &&
-      parseOptional(rawSearchParams.programId, uuidSchema) && {
-        programId: parseOptional(rawSearchParams.programId, uuidSchema),
-      }),
-    ...(parseOptional(rawSearchParams.yearLevel, yearLevelSchema) && {
-      yearLevel: parseOptional(rawSearchParams.yearLevel, yearLevelSchema),
-    }),
-    ...(parseOptional(rawSearchParams.section, sectionSchema) && {
-      section: parseOptional(rawSearchParams.section, sectionSchema),
-    }),
-    ...(parseOptional(rawSearchParams.courseScope, courseScopeSchema) && {
-      courseScope: parseOptional(rawSearchParams.courseScope, courseScopeSchema),
-    }),
-    ...(parseBoolean(rawSearchParams.isActive) !== undefined && {
-      isActive: parseBoolean(rawSearchParams.isActive),
-    }),
-    ...(parseQuery(rawSearchParams.q) && { q: parseQuery(rawSearchParams.q) }),
+    ...(termInstanceId !== undefined && { termInstanceId }),
+    ...(courseId !== undefined && { courseId }),
+    ...(facultyId !== undefined && { facultyId }),
+    ...(role === "all-program" && programId !== undefined && { programId }),
+    ...(yearLevel !== undefined && { yearLevel }),
+    ...(section !== undefined && { section }),
+    ...(courseScope !== undefined && { courseScope }),
+    ...(isActive !== undefined && { isActive }),
+    ...(q !== undefined && { q }),
   };
+
+  if (role === "all-program" && isActiveCandidate === "all") {
+    return { page, filters, isActiveMode: "all" };
+  }
 
   if (filters.isActive === undefined) {
     filters.isActive = roleDefaultIsActive(role);
@@ -157,7 +155,9 @@ export function serializeCourseAssignmentListState(
   if (filters.yearLevel) params.set("yearLevel", filters.yearLevel);
   if (filters.section) params.set("section", filters.section);
   if (filters.courseScope) params.set("courseScope", filters.courseScope);
-  if (filters.isActive !== undefined && filters.isActive !== defaultIsActive) {
+  if (role === "all-program" && state.isActiveMode === "all") {
+    params.set("isActive", "all");
+  } else if (filters.isActive !== undefined && filters.isActive !== defaultIsActive) {
     params.set("isActive", String(filters.isActive));
   }
   if (filters.q) params.set("q", filters.q);

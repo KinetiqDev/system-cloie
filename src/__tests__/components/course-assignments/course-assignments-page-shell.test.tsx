@@ -36,6 +36,9 @@ vi.mock("@/features/course-assignments/components/shared/assignment-filters", ()
       <button type="button" onClick={() => onFiltersChange({ ...filters, isActive: false })}>
         Set inactive
       </button>
+      <button type="button" onClick={() => onFiltersChange({ ...filters, isActive: null })}>
+        Set all statuses
+      </button>
     </div>
   ),
 }));
@@ -105,5 +108,42 @@ describe("CourseAssignmentsPageShell", () => {
     renderShell();
     fireEvent.click(screen.getByRole("button", { name: "Set inactive" }));
     expect(pushMock).toHaveBeenCalledWith("/secretary/course-assignments?isActive=false");
+  });
+
+  it("preserves an explicit all-statuses selection in the route URL", () => {
+    renderShell();
+    fireEvent.click(screen.getByRole("button", { name: "Set all statuses" }));
+    expect(pushMock).toHaveBeenCalledWith("/secretary/course-assignments?isActive=all");
+  });
+
+  it("renders the initial server-read error without exposing a client read path", () => {
+    render(
+      <CourseAssignmentsPageShell
+        pageTitle="Course Assignments"
+        pageDescription="Manage assignments"
+        mode="all-program"
+        availableCourses={[]}
+        availablePrograms={[]}
+        availableFaculty={[]}
+        termInstances={termInstances}
+        initialData={null}
+        initialFilters={{
+          termInstanceId: null,
+          courseId: null,
+          facultyId: null,
+          programId: null,
+          yearLevel: null,
+          section: null,
+          isActive: true,
+          courseScope: null,
+          searchQuery: "",
+        }}
+        initialPage={1}
+        initialError="Failed to list course assignments."
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Failed to list course assignments.");
+    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
   });
 });

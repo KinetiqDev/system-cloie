@@ -35,7 +35,6 @@ export default async function SecretaryCourseAssignmentsPage({
       pageTitle="Course Assignments"
       pageDescription="Manage faculty assignments for all programs, including General Education courses"
       mode="all-program"
-      defaultIsActive={true}
       initialData={listPage.result.success ? listPage.result.data : null}
       initialFilters={listPage.initialFilters}
       initialPage={listPage.state.page}

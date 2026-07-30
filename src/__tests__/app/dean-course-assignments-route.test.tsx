@@ -9,18 +9,17 @@ const {
   resolveAuthSessionMock,
   loadPageDataMock,
   loadListPageMock,
-} =
-  vi.hoisted(() => ({
-    redirectMock: vi.fn((path: string) => {
-      throw new Error(`${REDIRECT_ERROR}:${path}`);
-    }),
-    permanentRedirectMock: vi.fn((path: string) => {
-      throw new Error(`${REDIRECT_ERROR}:${path}`);
-    }),
-    resolveAuthSessionMock: vi.fn(),
-    loadPageDataMock: vi.fn(),
-    loadListPageMock: vi.fn(),
-  }));
+} = vi.hoisted(() => ({
+  redirectMock: vi.fn((path: string) => {
+    throw new Error(`${REDIRECT_ERROR}:${path}`);
+  }),
+  permanentRedirectMock: vi.fn((path: string) => {
+    throw new Error(`${REDIRECT_ERROR}:${path}`);
+  }),
+  resolveAuthSessionMock: vi.fn(),
+  loadPageDataMock: vi.fn(),
+  loadListPageMock: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
@@ -177,9 +176,9 @@ describe("Dean Course Assignments route", () => {
       await import("../../app/(app)/dean/academic-structure/course-assignments/page")
     ).default;
 
-    await expect(
-      DeanCourseAssignmentsPage({ searchParams: Promise.resolve({}) })
-    ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
+    await expect(DeanCourseAssignmentsPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      `${REDIRECT_ERROR}:/unauthorized`
+    );
     expect(loadPageDataMock).not.toHaveBeenCalled();
     expect(loadListPageMock).not.toHaveBeenCalled();
   });
@@ -194,9 +193,9 @@ describe("Dean Course Assignments route", () => {
       await import("../../app/(app)/dean/academic-structure/course-assignments/page")
     ).default;
 
-    await expect(
-      DeanCourseAssignmentsPage({ searchParams: Promise.resolve({}) })
-    ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
+    await expect(DeanCourseAssignmentsPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      `${REDIRECT_ERROR}:/unauthorized`
+    );
     expect(loadPageDataMock).not.toHaveBeenCalled();
     expect(loadListPageMock).not.toHaveBeenCalled();
   });
@@ -248,5 +247,72 @@ describe("Secretary Course Assignments route cross-role denial", () => {
       SecretaryCourseAssignmentsPage({ searchParams: Promise.resolve({}) })
     ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
     expect(loadPageDataMock).not.toHaveBeenCalled();
+  });
+
+  it("renders the authorized initial Secretary page from the server loader", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "secretary-1",
+      email: "secretary@example.com",
+      roles: [ROLES.SECRETARY],
+      activeRole: ROLES.SECRETARY,
+      profileGate: { status: "COMPLETE" },
+    });
+    loadListPageMock.mockResolvedValueOnce({
+      state: { page: 1, filters: { isActive: true } },
+      initialFilters: {
+        termInstanceId: null,
+        courseId: null,
+        facultyId: null,
+        programId: null,
+        yearLevel: null,
+        section: null,
+        isActive: true,
+        courseScope: null,
+        searchQuery: "",
+      },
+      result: {
+        success: true,
+        data: {
+          items: [
+            {
+              id: "assignment-secretary",
+              termInstanceId: "term-1",
+              facultyId: "faculty-1",
+              courseId: "course-1",
+              programId: "program-1",
+              yearLevel: "FIRST_YEAR",
+              section: "MORNING",
+              assignedBy: null,
+              isActive: true,
+              createdAt: new Date("2026-01-01"),
+              updatedAt: new Date("2026-01-01"),
+              courseCode: "CS101",
+              courseTitle: "Intro to Computing",
+              courseScope: "PROGRAM_SPECIFIC",
+              facultyName: "Secretary Faculty",
+            },
+          ],
+          total: 1,
+          page: 0,
+          pageSize: 20,
+        },
+      },
+    });
+
+    const SecretaryCourseAssignmentsPage = (
+      await import("../../app/(app)/secretary/course-assignments/page")
+    ).default;
+    const page = await SecretaryCourseAssignmentsPage({
+      searchParams: Promise.resolve({}),
+    });
+
+    expect(loadListPageMock).toHaveBeenCalledWith({
+      pathname: "/secretary/course-assignments",
+      rawSearchParams: {},
+      role: "all-program",
+    });
+    expect(page.props.initialData.items[0].courseCode).toBe("CS101");
+    expect(page.props.initialPage).toBe(1);
+    expect(page.props.initialError).toBeNull();
   });
 });
