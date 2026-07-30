@@ -3,7 +3,7 @@ import { BarChart3, Clock, FileCheck, Layers } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { prisma } from "@/lib/db/prisma";
-import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
+import { getProgramHeadDashboardForScope } from "@/features/analytics/services/get-program-head-dashboard";
 import { StakeholderMeanPieChart } from "@/features/analytics/components/stakeholder-mean-pie-chart";
 import { QualitativeWordCloud } from "@/features/analytics/components/qualitative-word-cloud";
 import { ROLES } from "@/lib/constants/roles";
@@ -41,7 +41,11 @@ export default async function ProgramHeadDashboardPage() {
     );
   }
 
-  const dashboard = await getProgramHeadDashboard(assignment.program.id);
+  const dashboard = await getProgramHeadDashboardForScope({
+    programId: assignment.program.id,
+    programCode: assignment.program.code,
+    programLabel: assignment.program.name,
+  });
 
   if (!dashboard) {
     redirect("/unauthorized");

@@ -7,7 +7,7 @@ import type {
   StudentEvaluationSession,
 } from "@/features/responses/types";
 import {
-  resolveCourseBoundEvaluationEligibility,
+  resolveCourseBoundEvaluationEligibilities,
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
 import { isCourseBoundEvaluationAvailable } from "./course-bound-availability";
@@ -179,6 +179,18 @@ export async function listStudentCourseBoundEvaluations(): Promise<{
   });
 
   const now = new Date();
+  const courseBoundEligibilityAssignments = assignments.flatMap((assignment) => {
+    const courseBound = assignment.course_bound;
+
+    if (!courseBound || assignment.response?.submitted_at) return [];
+    if (!isCourseBoundEvaluationAvailable(courseBound, now)) return [];
+
+    return [toCourseBoundEvaluationEligibilityAssignment(courseBound.course_assignment)];
+  });
+  const courseBoundEligibilities = await resolveCourseBoundEvaluationEligibilities(
+    courseBoundEligibilityAssignments,
+    authSession.userId
+  );
 
   const items = (
     await Promise.all(
@@ -193,11 +205,8 @@ export async function listStudentCourseBoundEvaluations(): Promise<{
           }
 
           if (!response?.submitted_at) {
-            const eligibility = await resolveCourseBoundEvaluationEligibility(
-              toCourseBoundEvaluationEligibilityAssignment(courseBound.course_assignment),
-              authSession.userId
-            );
-            if (!eligibility.eligible) return null;
+            const eligibility = courseBoundEligibilities.get(courseBound.course_assignment.id);
+            if (!eligibility?.eligible) return null;
           }
 
           const ca = courseBound.course_assignment;

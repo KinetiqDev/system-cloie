@@ -1,4 +1,5 @@
 import type { Role } from "@/lib/constants/roles";
+import type { VerificationStatus } from "@prisma/client";
 import { resolveProfileGate } from "@/features/users/services/resolve-profile-gate";
 
 export type AuthSessionSnapshot = {
@@ -9,6 +10,8 @@ export type AuthSessionSnapshot = {
   studentProfileId: string | null;
   alumniProfileId: string | null;
   industryPartnerProfileId: string | null;
+  alumniVerificationStatus: VerificationStatus | null;
+  industryPartnerVerificationStatus: VerificationStatus | null;
   profileGate: ReturnType<typeof resolveProfileGate>;
 };
 
@@ -20,8 +23,8 @@ export function buildAuthSessionSnapshot(input: {
   alumniProfileId?: string | null;
   industryPartnerProfileId?: string | null;
   isActive?: boolean;
-  alumniVerificationStatus?: string | null;
-  industryPartnerVerificationStatus?: string | null;
+  alumniVerificationStatus?: VerificationStatus | null;
+  industryPartnerVerificationStatus?: VerificationStatus | null;
   hasActiveEnrollment?: boolean;
   hasFacultyAffiliation?: boolean;
   isDemoUser?: boolean;
@@ -37,6 +40,8 @@ export function buildAuthSessionSnapshot(input: {
     studentProfileId: input.studentProfileId,
     alumniProfileId: input.alumniProfileId ?? null,
     industryPartnerProfileId: input.industryPartnerProfileId ?? null,
+    alumniVerificationStatus: input.alumniVerificationStatus ?? null,
+    industryPartnerVerificationStatus: input.industryPartnerVerificationStatus ?? null,
     profileGate:
       input.isDemoUser && !input.isDedicatedDemo
         ? { status: "COMPLETE" }

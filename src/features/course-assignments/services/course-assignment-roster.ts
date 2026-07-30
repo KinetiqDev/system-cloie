@@ -136,6 +136,62 @@ export async function resolveCourseBoundEvaluationEligibility(
   });
 }
 
+export async function resolveCourseBoundEvaluationEligibilities(
+  assignments: CourseBoundEvaluationEligibilityAssignment[],
+  studentUserId: string
+): Promise<Map<string, RosterEligibilityProjection>> {
+  if (assignments.length === 0) return new Map();
+
+  const assignmentIds = [...new Set(assignments.map((assignment) => assignment.assignmentId))];
+  const memberships = await prisma.courseAssignmentMembership.findMany({
+    where: {
+      course_assignment_id: { in: assignmentIds },
+      student_user_id: studentUserId,
+    },
+    select: {
+      course_assignment_id: true,
+      is_active: true,
+      student: {
+        select: {
+          is_active: true,
+          roles: { select: { role: true } },
+          student_profile: { select: { program_id: true, student_id_number: true } },
+          enrollments: {
+            where: { is_active: true },
+            select: { program_id: true, term_instance_id: true },
+          },
+        },
+      },
+    },
+  });
+
+  const membershipsByAssignmentId = new Map(
+    memberships.map((membership) => [membership.course_assignment_id, membership])
+  );
+
+  return new Map(
+    assignments.map((assignment) => {
+      const membership = membershipsByAssignmentId.get(assignment.assignmentId);
+
+      return [
+        assignment.assignmentId,
+        projectCourseBoundEvaluationEligibility({
+          assignment,
+          membershipActive: membership?.is_active ?? false,
+          student: membership
+            ? {
+                ...membership.student,
+                enrollments: membership.student.enrollments
+                  .filter((enrollment) => enrollment.term_instance_id === assignment.termInstanceId)
+                  .map((enrollment) => ({ program_id: enrollment.program_id })),
+              }
+            : null,
+        }),
+      ];
+    })
+  );
+}
+
 export async function countEligibleCourseBoundEvaluationAssignments(
   where: Prisma.EvaluationAssignmentWhereInput
 ) {
