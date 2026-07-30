@@ -126,6 +126,8 @@ describe("resolveAuthSession", () => {
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
   });
@@ -149,6 +151,8 @@ describe("resolveAuthSession", () => {
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
       profileGate: {
         status: "STUDENT_ONBOARDING_REQUIRED",
         intent: "student",
@@ -175,6 +179,29 @@ describe("resolveAuthSession", () => {
       studentProfileId: "profile-1",
       alumniProfileId: null,
       industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
+      profileGate: { status: "COMPLETE" },
+    });
+  });
+
+  it("includes external verification statuses in the request snapshot", async () => {
+    const { resolveAuthSession } = await import("@/features/auth/services/resolve-auth-session");
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "user-alumni", email: "alumni@example.com" } },
+      error: null,
+    });
+    findUniqueMock.mockResolvedValue({
+      roles: [{ role: ROLES.ALUMNI }],
+      student_profile: null,
+      alumni_profile: { id: "alumni-profile", verification_status: "PENDING" },
+      industry_partner_profile: null,
+    });
+
+    await expect(resolveAuthSession()).resolves.toMatchObject({
+      alumniProfileId: "alumni-profile",
+      alumniVerificationStatus: "PENDING",
+      industryPartnerVerificationStatus: null,
       profileGate: { status: "COMPLETE" },
     });
   });
@@ -199,6 +226,8 @@ describe("resolveAuthSession", () => {
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
       profileGate: {
         status: "FACULTY_ONBOARDING_REQUIRED",
         intent: "faculty",
@@ -225,6 +254,8 @@ describe("resolveAuthSession", () => {
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
   });
@@ -249,6 +280,8 @@ describe("resolveAuthSession", () => {
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
       profileGate: {
         status: "FACULTY_ONBOARDING_REQUIRED",
         intent: "faculty",
@@ -276,6 +309,8 @@ describe("resolveAuthSession", () => {
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
       profileGate: { status: "COMPLETE" },
     });
   });

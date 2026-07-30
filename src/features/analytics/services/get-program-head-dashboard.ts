@@ -32,6 +32,12 @@ export type ProgramHeadDashboardData = {
   wordCloudTokens: WordCloudToken[];
 };
 
+export type ProgramHeadDashboardScope = {
+  programId: string;
+  programCode: string;
+  programLabel: string;
+};
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -68,11 +74,26 @@ export async function getProgramHeadDashboard(
     return null;
   }
 
-  // Fetch program info
   const program = await prisma.program.findUniqueOrThrow({
     where: { id: programId },
     select: { code: true, name: true },
   });
+
+  return getProgramHeadDashboardForScope({
+    programId,
+    programCode: program.code,
+    programLabel: program.name,
+  });
+}
+
+/**
+ * Reads dashboard data after the caller has validated the active assignment.
+ * Keep authorization in getProgramHeadDashboard for independently reachable callers.
+ */
+export async function getProgramHeadDashboardForScope(
+  scope: ProgramHeadDashboardScope
+): Promise<ProgramHeadDashboardData> {
+  const { programId, programCode, programLabel } = scope;
 
   // ── KPI Queries ──────────────────────────────────────────────────────────
 
@@ -248,8 +269,8 @@ export async function getProgramHeadDashboard(
   // ── Return ───────────────────────────────────────────────────────────────
 
   return {
-    programLabel: program.name,
-    programCode: program.code,
+    programLabel,
+    programCode,
     kpi: {
       activeDeployments,
       totalResponses,
