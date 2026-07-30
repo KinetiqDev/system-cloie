@@ -3,14 +3,14 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
-import { GET as getEligiblePeriods } from "@/app/api/dean/eligible-periods/route";
-import { GET as getLearningOutcomes } from "@/app/api/dean/learning-outcomes/route";
 import {
+  DeanReadModelNotFoundError,
+  getDeanLearningOutcomes,
+  listDeanEligiblePeriods,
   type DeanPeriodSummary,
   type DeanReadState,
   type DeanLearningOutcomesData,
 } from "@/features/dean/services/read-dean-oversight";
-import { DeanPageReadNotFoundError, fetchDeanRead } from "@/features/dean/services/fetch-dean-read";
 
 type SearchParams = { period?: string; risk?: string; program?: string };
 const validRisks = new Set<NonNullable<DeanLearningOutcomesData["risk"]>>([
@@ -28,10 +28,7 @@ export default async function DeanLearningOutcomesPage({
   if (params.risk && !validRisks.has(params.risk as NonNullable<DeanLearningOutcomesData["risk"]>))
     notFound();
 
-  const { periods } = await fetchDeanRead<{ periods: DeanPeriodSummary[] }>(
-    getEligiblePeriods,
-    "/api/dean/eligible-periods"
-  );
+  const periods: DeanPeriodSummary[] = await listDeanEligiblePeriods();
   const activePeriodId = periods.find((period) => period.status === "ACTIVE")?.id;
   const selectedPeriodId = params.period ?? activePeriodId;
   const risk =
@@ -66,14 +63,9 @@ export default async function DeanLearningOutcomesPage({
 
   let result: DeanReadState<DeanLearningOutcomesData>;
   try {
-    const query = new URLSearchParams({ period: selectedPeriodId });
-    if (risk) query.set("risk", risk);
-    result = await fetchDeanRead<DeanReadState<DeanLearningOutcomesData>>(
-      getLearningOutcomes,
-      `/api/dean/learning-outcomes?${query}`
-    );
+    result = await getDeanLearningOutcomes(selectedPeriodId, risk);
   } catch (error) {
-    if (error instanceof DeanPageReadNotFoundError) notFound();
+    if (error instanceof DeanReadModelNotFoundError) notFound();
     throw error;
   }
   if (result.state === "no-eligible-period")

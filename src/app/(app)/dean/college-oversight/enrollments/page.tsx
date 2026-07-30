@@ -3,14 +3,16 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GET as getEligiblePeriods } from "@/app/api/dean/eligible-periods/route";
-import { GET as getEnrollments } from "@/app/api/dean/enrollments/route";
 import type {
   DeanEnrollmentsData,
   DeanPeriodSummary,
   DeanReadState,
 } from "@/features/dean/services/read-dean-oversight";
-import { DeanPageReadNotFoundError, fetchDeanRead } from "@/features/dean/services/fetch-dean-read";
+import {
+  DeanReadModelNotFoundError,
+  getDeanEnrollments,
+  listDeanEligiblePeriods,
+} from "@/features/dean/services/read-dean-oversight";
 import { z } from "zod";
 
 type SearchParams = { period?: string };
@@ -24,10 +26,7 @@ export default async function DeanEnrollmentsPage({
   const params = await searchParams;
   const parsedParams = searchParamsSchema.safeParse(params);
   if (!parsedParams.success) notFound();
-  const { periods } = await fetchDeanRead<{ periods: DeanPeriodSummary[] }>(
-    getEligiblePeriods,
-    "/api/dean/eligible-periods"
-  );
+  const periods: DeanPeriodSummary[] = await listDeanEligiblePeriods();
   const selectedPeriodId =
     parsedParams.data.period ??
     periods.find((period) => period.status === "ACTIVE")?.id ??
@@ -46,12 +45,9 @@ export default async function DeanEnrollmentsPage({
   }
   let result: DeanReadState<DeanEnrollmentsData>;
   try {
-    result = await fetchDeanRead<DeanReadState<DeanEnrollmentsData>>(
-      getEnrollments,
-      `/api/dean/enrollments?period=${encodeURIComponent(selectedPeriodId)}`
-    );
+    result = await getDeanEnrollments(selectedPeriodId);
   } catch (error) {
-    if (error instanceof DeanPageReadNotFoundError) notFound();
+    if (error instanceof DeanReadModelNotFoundError) notFound();
     throw error;
   }
   if (result.state === "no-eligible-period") {
