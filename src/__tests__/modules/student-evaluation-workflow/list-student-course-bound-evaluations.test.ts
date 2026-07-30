@@ -5,8 +5,14 @@ import {
   listStudentCourseBoundEvaluations,
 } from "@/features/responses/services/list-student-course-bound-evaluations";
 
-const { findManyMock, membershipFindUniqueMock, resolveAuthSessionMock } = vi.hoisted(() => ({
+const {
+  findManyMock,
+  membershipFindManyMock,
+  membershipFindUniqueMock,
+  resolveAuthSessionMock,
+} = vi.hoisted(() => ({
   findManyMock: vi.fn(),
+  membershipFindManyMock: vi.fn(),
   membershipFindUniqueMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
 }));
@@ -17,6 +23,7 @@ vi.mock("@/lib/db/prisma", () => ({
       findMany: findManyMock,
     },
     courseAssignmentMembership: {
+      findMany: membershipFindManyMock,
       findUnique: membershipFindUniqueMock,
     },
   },
@@ -196,6 +203,20 @@ describe("listStudentCourseBoundEvaluations", () => {
         student_profile: { program_id: "program-1", student_id_number: "S0001" },
       },
     });
+    membershipFindManyMock.mockResolvedValue([
+      {
+        course_assignment_id: "course-assignment-active",
+        is_active: true,
+        student: {
+          enrollments: [
+            { program_id: "program-1", term_instance_id: "term-1" },
+          ],
+          is_active: true,
+          roles: [{ role: "STUDENT" }],
+          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        },
+      },
+    ]);
     vi.useRealTimers();
   });
 
@@ -379,15 +400,7 @@ describe("listStudentCourseBoundEvaluations", () => {
 
   it("hides pending assignments for an ineligible Student but preserves submitted history", async () => {
     resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
-    membershipFindUniqueMock.mockResolvedValue({
-      is_active: true,
-      student: {
-        enrollments: [],
-        is_active: true,
-        roles: [{ role: "STUDENT" }],
-        student_profile: { program_id: "program-1", student_id_number: "S0001" },
-      },
-    });
+    membershipFindManyMock.mockResolvedValue([]);
     findManyMock.mockResolvedValue([
       {
         course_bound_id: "eval-pending",
@@ -444,6 +457,104 @@ describe("listStudentCourseBoundEvaluations", () => {
     await expect(listStudentCourseBoundEvaluations()).resolves.toEqual({
       active: [],
       submitted: [expect.objectContaining({ assignmentId: "assignment-submitted" })],
+    });
+  });
+
+  it("batches active eligibility reads and filters enrollments by each assignment term", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    membershipFindManyMock.mockResolvedValue([
+      {
+        course_assignment_id: "course-assignment-term-1",
+        is_active: true,
+        student: {
+          enrollments: [
+            { program_id: "program-1", term_instance_id: "term-2" },
+          ],
+          is_active: true,
+          roles: [{ role: "STUDENT" }],
+          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        },
+      },
+      {
+        course_assignment_id: "course-assignment-term-2",
+        is_active: true,
+        student: {
+          enrollments: [{ program_id: "program-3", term_instance_id: "term-2" }],
+          is_active: true,
+          roles: [{ role: "STUDENT" }],
+          student_profile: { program_id: "program-3", student_id_number: "S0001" },
+        },
+      },
+      {
+        course_assignment_id: "unrelated-course-assignment",
+        is_active: true,
+        student: {
+          enrollments: [{ program_id: "program-1", term_instance_id: "term-1" }],
+          is_active: true,
+          roles: [{ role: "STUDENT" }],
+          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        },
+      },
+    ]);
+    findManyMock.mockResolvedValue([
+      {
+        course_bound_id: "eval-term-1",
+        id: "assignment-term-1",
+        course_bound: {
+          activation_at: new Date("2026-04-01T00:00:00.000Z"),
+          course_assignment: {
+            id: "course-assignment-term-1",
+            program_id: "program-1",
+            term_instance_id: "term-1",
+            course: { course_scope: "PROGRAM_SPECIFIC", title: "Capstone 1" },
+            program: { name: "BSIT" },
+          },
+          deadline_at: new Date("2026-05-20T00:00:00.000Z"),
+          instrument: {
+            structure_snapshot: [{ key: "section-a", title: "Section A" }],
+            template: { name: "Term 1 Evaluation" },
+          },
+          status: "ACTIVE",
+        },
+        response: null,
+      },
+      {
+        course_bound_id: "eval-term-2",
+        id: "assignment-term-2",
+        course_bound: {
+          activation_at: new Date("2026-04-01T00:00:00.000Z"),
+          course_assignment: {
+            id: "course-assignment-term-2",
+            program_id: "program-2",
+            term_instance_id: "term-2",
+            course: { course_scope: "GENERAL_EDUCATION", title: "Ethics" },
+            program: { name: "BSBA" },
+          },
+          deadline_at: new Date("2026-05-20T00:00:00.000Z"),
+          instrument: {
+            structure_snapshot: [{ key: "section-b", title: "Section B" }],
+            template: { name: "Term 2 Evaluation" },
+          },
+          status: "ACTIVE",
+        },
+        response: null,
+      },
+    ]);
+
+    await expect(listStudentCourseBoundEvaluations()).resolves.toMatchObject({
+      active: [expect.objectContaining({ assignmentId: "assignment-term-2" })],
+      submitted: [],
+    });
+
+    expect(membershipFindManyMock).toHaveBeenCalledTimes(1);
+    expect(membershipFindManyMock).toHaveBeenCalledWith({
+      where: {
+        course_assignment_id: {
+          in: ["course-assignment-term-1", "course-assignment-term-2"],
+        },
+        student_user_id: "user-1",
+      },
+      select: expect.any(Object),
     });
   });
 });
