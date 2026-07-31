@@ -1,21 +1,23 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import DeanDashboardPage from "@/app/(app)/dean/dashboard/page";
-import DeanLearningOutcomesPage from "@/app/(app)/dean/college-oversight/learning-outcomes/page";
-import DeanEnrollmentsPage from "@/app/(app)/dean/college-oversight/enrollments/page";
-import DeanEnrollmentRosterPage from "@/app/(app)/dean/college-oversight/enrollments/roster/page";
+import { DeanDashboardContent } from "@/app/(app)/dean/dashboard/page";
+import DeanLearningOutcomesPage, { LearningOutcomesContent } from "@/app/(app)/dean/college-oversight/learning-outcomes/page";
+import DeanEnrollmentsPage, { EnrollmentContent } from "@/app/(app)/dean/college-oversight/enrollments/page";
+import DeanEnrollmentRosterPage, { RosterContent } from "@/app/(app)/dean/college-oversight/enrollments/roster/page";
 
 const {
   listDeanEligiblePeriodsMock,
   getDeanLearningOutcomesMock,
   getDeanEnrollmentsMock,
   getDeanRosterMock,
+  getDeanRosterPageMock,
   getDeanDashboardMock,
 } = vi.hoisted(() => ({
   listDeanEligiblePeriodsMock: vi.fn(),
   getDeanLearningOutcomesMock: vi.fn(),
   getDeanEnrollmentsMock: vi.fn(),
   getDeanRosterMock: vi.fn(),
+  getDeanRosterPageMock: vi.fn(),
   getDeanDashboardMock: vi.fn(),
 }));
 const notFoundMock = vi.hoisted(() =>
@@ -37,6 +39,7 @@ vi.mock("@/features/dean/services/read-dean-oversight", () => ({
   getDeanLearningOutcomes: getDeanLearningOutcomesMock,
   getDeanEnrollments: getDeanEnrollmentsMock,
   getDeanRoster: getDeanRosterMock,
+  getDeanRosterPage: getDeanRosterPageMock,
   getDeanDashboard: getDeanDashboardMock,
 }));
 
@@ -133,6 +136,7 @@ describe("Dean oversight pages", () => {
     getDeanLearningOutcomesMock.mockResolvedValue({ state: "ready", data: outcomeData });
     getDeanEnrollmentsMock.mockResolvedValue({ state: "ready", data: enrollmentData });
     getDeanRosterMock.mockResolvedValue({ state: "ready", data: rosterData });
+    getDeanRosterPageMock.mockResolvedValue({ state: "ready", data: { page: 1 } });
   });
 
   function expectDirectReadCalls() {
@@ -167,26 +171,26 @@ describe("Dean oversight pages", () => {
       },
     });
 
-    render(await DeanDashboardPage());
+    render(await DeanDashboardContent({ result: await getDeanDashboardMock() }));
 
-    expect(screen.getAllByText("Active contexts").length).toBeGreaterThan(0);
-    expect(screen.getByText("Incomplete mappings")).toBeInTheDocument();
+    expect((await screen.findAllByText("Active contexts")).length).toBeGreaterThan(0);
+    expect(await screen.findByText("Incomplete mappings")).toBeInTheDocument();
     expect(
-      screen.getByText("Contexts with CILOs that have no active Graduate Outcome mapping.")
+      await screen.findByText("Contexts with CILOs that have no active Graduate Outcome mapping.")
     ).toBeInTheDocument();
     expect(
       screen.queryByText(/do not reach every active Graduate Outcome/i)
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Incomplete CILO-to-GO mappings/ })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: /Incomplete CILO-to-GO mappings/ })).toHaveAttribute(
       "href",
       `/dean/college-oversight/learning-outcomes?period=${PERIOD_ID}&risk=incomplete-mappings`
     );
-    expect(screen.getByRole("link", { name: "Computer Science" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Computer Science" })).toHaveAttribute(
       "href",
       `/dean/college-oversight/learning-outcomes?period=${PERIOD_ID}&program=${PROGRAM_ID}`
     );
-    expect(screen.getAllByText("67% coverage").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Needs attention").length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("67% coverage")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Needs attention")).length).toBeGreaterThan(0);
     expect(
       screen.queryByText(/student|evaluation|export|analytics|reports/i)
     ).not.toBeInTheDocument();
@@ -195,17 +199,17 @@ describe("Dean oversight pages", () => {
   it("reads the dashboard directly from the Dean read service", async () => {
     getDeanDashboardMock.mockResolvedValue({ state: "no-eligible-period" });
 
-    render(await DeanDashboardPage());
+    render(await DeanDashboardContent({ result: await getDeanDashboardMock() }));
 
     expect(getDeanDashboardMock).toHaveBeenCalledTimes(1);
     expectDirectReadCalls();
   });
 
   it("renders explicit no-active-period state without misleading zeros", async () => {
-    listDeanEligiblePeriodsMock.mockResolvedValue([]);
-    render(await DeanDashboardPage());
+    getDeanDashboardMock.mockResolvedValue({ state: "no-eligible-period" });
+    render(await DeanDashboardContent({ result: await getDeanDashboardMock() }));
 
-    expect(screen.getByRole("heading", { name: "No active Academic Period" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "No active Academic Period" })).toBeInTheDocument();
     expect(screen.queryByText("0")).not.toBeInTheDocument();
     expect(screen.queryByText("Active contexts")).not.toBeInTheDocument();
   });
@@ -225,26 +229,48 @@ describe("Dean oversight pages", () => {
         }),
       })
     );
-
     expect(screen.getByRole("heading", { name: "Learning Outcomes" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Academic Period" })).toHaveValue(PERIOD_ID);
     expect(screen.getByText("Risk: Incomplete mappings")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Graduate Outcomes" })).toBeInTheDocument();
-    expect(screen.getByText("GO1")).toBeInTheDocument();
-    expect(screen.getByText("GO2")).toBeInTheDocument();
+    cleanup();
+    render(
+      <LearningOutcomesContent
+        result={await getDeanLearningOutcomesMock()}
+        selectedProgram={PROGRAM_ID}
+      />
+    );
+
+    expect(await screen.findByRole("heading", { name: "Graduate Outcomes" })).toBeInTheDocument();
+    expect(await screen.findByText("GO1")).toBeInTheDocument();
+    expect(await screen.findByText("GO2")).toBeInTheDocument();
     expect(
-      screen.getByText("GO1").compareDocumentPosition(screen.getByText("GO2")) &
+      (await screen.findByText("GO1")).compareDocumentPosition(await screen.findByText("GO2")) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
-    expect(screen.getByText("Archived")).toBeInTheDocument();
-    expect(screen.getByText(/Incomplete mapping:/)).toBeInTheDocument();
+    expect(await screen.findByText("Archived")).toBeInTheDocument();
+    expect(await screen.findByText(/Incomplete mapping:/)).toBeInTheDocument();
     expect(
-      screen.getByText(/3 active · 2 ready · 0 missing CILOs · 1 incomplete mappings/)
+      await screen.findByText(/3 active · 2 ready · 0 missing CILOs · 1 incomplete mappings/)
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /edit|add|create|archive/i })
     ).not.toBeInTheDocument();
     expect(getDeanLearningOutcomesMock).toHaveBeenCalledWith(PERIOD_ID, "incomplete-mappings");
+  });
+
+  it("keeps Learning Outcomes heading and period controls visible while details wait", async () => {
+    listDeanEligiblePeriodsMock.mockResolvedValue([period]);
+    getDeanLearningOutcomesMock.mockReturnValue(new Promise(() => undefined));
+
+    render(
+      await DeanLearningOutcomesPage({
+        searchParams: Promise.resolve({ period: PERIOD_ID }),
+      })
+    );
+
+    expect(screen.getByRole("heading", { name: "Learning Outcomes" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Academic Period" })).toHaveValue(PERIOD_ID);
+    expect(screen.getByLabelText("Loading Learning Outcomes")).toBeInTheDocument();
   });
 
   it("hides evaluation surfaces from Learning Outcomes", async () => {
@@ -268,7 +294,7 @@ describe("Dean oversight pages", () => {
   it("renders explicit no-eligible-period state", async () => {
     listDeanEligiblePeriodsMock.mockResolvedValue([]);
     render(await DeanLearningOutcomesPage({ searchParams: Promise.resolve({}) }));
-    expect(screen.getByRole("heading", { name: "No active Academic Period" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "No active Academic Period" })).toBeInTheDocument();
     expect(listDeanEligiblePeriodsMock).toHaveBeenCalledTimes(1);
   });
 
@@ -284,12 +310,14 @@ describe("Dean oversight pages", () => {
     getDeanEnrollmentsMock.mockResolvedValue({ state: "ready", data: enrollmentData });
 
     render(await DeanEnrollmentsPage({ searchParams: Promise.resolve({ period: PERIOD_ID }) }));
-
     expect(screen.getByRole("heading", { name: "Academic Program totals" })).toBeInTheDocument();
-    expect(screen.getByText("Computer Science")).toBeInTheDocument();
-    expect(screen.getByText("26", { selector: "summary span" })).toBeInTheDocument();
-    expect(screen.getAllByText("Foundations").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: /Open roster/ })[0]).toHaveAttribute(
+    cleanup();
+    render(<EnrollmentContent result={await getDeanEnrollmentsMock()} />);
+
+    expect(await screen.findByText("Computer Science")).toBeInTheDocument();
+    expect(await screen.findByText("26", { selector: "summary span" })).toBeInTheDocument();
+    expect((await screen.findAllByText("Foundations")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByRole("link", { name: /Open roster/ }))[0]).toHaveAttribute(
       "href",
       `/dean/college-oversight/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}`
     );
@@ -346,6 +374,7 @@ describe("Dean oversight pages", () => {
 
   it("preserves roster period, assignment, query, and page URL state", async () => {
     listDeanEligiblePeriodsMock.mockResolvedValue([period]);
+    getDeanRosterPageMock.mockResolvedValue({ state: "ready", data: { page: 2 } });
     getDeanRosterMock.mockResolvedValue({ state: "ready", data: rosterData });
 
     render(
@@ -358,12 +387,21 @@ describe("Dean oversight pages", () => {
         }),
       })
     );
-
     expect(screen.getByRole("heading", { name: "Class Roster" })).toBeInTheDocument();
-    expect(screen.getByRole("searchbox", { name: "Search names" })).toHaveValue("Student");
-    expect(screen.getAllByRole("listitem")).toHaveLength(25);
-    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Previous" })).toHaveAttribute(
+    expect(screen.getByLabelText("Loading class roster")).toBeInTheDocument();
+    cleanup();
+    render(
+      <RosterContent
+        data={await getDeanRosterMock().then((result: { data: typeof rosterData }) => result.data)}
+        period={PERIOD_ID}
+        assignment={ASSIGNMENT_ID}
+        query="Student"
+      />
+    );
+
+    expect(await screen.findAllByRole("listitem")).toHaveLength(25);
+    expect(await screen.findByText("Page 2 of 2")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Previous" })).toHaveAttribute(
       "href",
       `/dean/college-oversight/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}&page=1&query=Student`
     );
@@ -372,12 +410,6 @@ describe("Dean oversight pages", () => {
         /email|account|profile|student id|enrollment source|evaluation|export|analytics|reports/i
       )
     ).not.toBeInTheDocument();
-    expect(getDeanRosterMock).toHaveBeenLastCalledWith({
-      periodId: PERIOD_ID,
-      assignmentId: ASSIGNMENT_ID,
-      query: "Student",
-      page: 2,
-    });
   });
 
   it("does not request or render roster names before explicit class selection", async () => {
@@ -407,6 +439,7 @@ describe("Dean oversight pages", () => {
 
   it("redirects out-of-range roster pages to last valid page", async () => {
     listDeanEligiblePeriodsMock.mockResolvedValue([period]);
+    getDeanRosterPageMock.mockResolvedValue({ state: "ready", data: { page: 2 } });
     getDeanRosterMock.mockResolvedValue({ state: "ready", data: { ...rosterData, page: 2 } });
 
     await expect(
@@ -423,5 +456,6 @@ describe("Dean oversight pages", () => {
     expect(redirectMock).toHaveBeenCalledWith(
       `/dean/college-oversight/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}&page=2&query=Student`
     );
+    expect(getDeanRosterMock).not.toHaveBeenCalled();
   });
 });

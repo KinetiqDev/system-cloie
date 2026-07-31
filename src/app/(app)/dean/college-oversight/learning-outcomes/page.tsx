@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import {
   type DeanReadState,
   type DeanLearningOutcomesData,
 } from "@/features/dean/services/read-dean-oversight";
+import { DeanLearningOutcomesLoading } from "@/features/dean/components/dean-oversight-loading";
 
 type SearchParams = { period?: string; risk?: string; program?: string };
 const validRisks = new Set<NonNullable<DeanLearningOutcomesData["risk"]>>([
@@ -61,27 +63,9 @@ export default async function DeanLearningOutcomesPage({
   )
     notFound();
 
-  let result: DeanReadState<DeanLearningOutcomesData>;
-  try {
-    result = await getDeanLearningOutcomes(selectedPeriodId, risk);
-  } catch (error) {
-    if (error instanceof DeanReadModelNotFoundError) notFound();
-    throw error;
-  }
-  if (result.state === "no-eligible-period")
-    return (
-      <EmptyPage
-        title="Learning Outcomes"
-        heading="No eligible Academic Period"
-        message="No eligible Academic Period is available for oversight."
-      />
-    );
-
-  const { data } = result;
-  const selectedProgram = params.program;
-  const programs = selectedProgram
-    ? data.programs.filter((program) => program.id === selectedProgram)
-    : data.programs;
+  const selectedPeriod = periods.find((period) => period.id === selectedPeriodId);
+  const detailPromise = getDeanLearningOutcomes(selectedPeriodId, risk);
+  void detailPromise.catch(() => undefined);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -91,11 +75,11 @@ export default async function DeanLearningOutcomesPage({
           mapping gaps.
         </p>
       </div>
-      <PeriodControls periods={periods} selectedPeriodId={data.period.id} risk={risk} />
+      <PeriodControls periods={periods} selectedPeriodId={selectedPeriodId} risk={risk} />
       <div className="text-text-secondary flex flex-wrap items-center gap-2 text-sm">
         <span>Selected period</span>
-        <Badge variant="outline">{data.period.label}</Badge>
-        {data.period.status === "COMPLETED" && (
+        <Badge variant="outline">{selectedPeriod?.label ?? "Selected period"}</Badge>
+        {selectedPeriod?.status === "COMPLETED" && (
           <Badge variant="secondary">Completed snapshot</Badge>
         )}
         {risk && <Badge variant="secondary">Risk: {riskLabel(risk)}</Badge>}
@@ -109,24 +93,64 @@ export default async function DeanLearningOutcomesPage({
             Programs sorted by not-ready context count, then name.
           </p>
         </div>
-        {programs.length === 0 ? (
-          <Card>
-            <CardContent className="text-text-secondary py-6 text-sm">
-              No Academic Programs match this period and risk filter.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {programs.map((program) => (
-              <ProgramDetail
-                key={program.id}
-                program={program}
-                open={selectedProgram === program.id}
-              />
-            ))}
-          </div>
-        )}
+        <Suspense fallback={<DeanLearningOutcomesLoading />}>
+          <LearningOutcomesDetails
+            detailPromise={detailPromise}
+            selectedProgram={params.program}
+          />
+        </Suspense>
       </section>
+    </div>
+  );
+}
+
+export async function LearningOutcomesDetails({
+  detailPromise,
+  selectedProgram,
+}: {
+  detailPromise: ReturnType<typeof getDeanLearningOutcomes>;
+  selectedProgram?: string;
+}) {
+  let result: DeanReadState<DeanLearningOutcomesData>;
+  try {
+    result = await detailPromise;
+  } catch (error) {
+    if (error instanceof DeanReadModelNotFoundError) notFound();
+    throw error;
+  }
+  return <LearningOutcomesContent result={result} selectedProgram={selectedProgram} />;
+}
+
+export function LearningOutcomesContent({
+  result,
+  selectedProgram,
+}: {
+  result: DeanReadState<DeanLearningOutcomesData>;
+  selectedProgram?: string;
+}) {
+  if (result.state === "no-eligible-period")
+    return (
+      <Card>
+        <CardContent className="text-text-secondary py-6 text-sm">
+          No eligible Academic Period is available for oversight.
+        </CardContent>
+      </Card>
+    );
+
+  const programs = selectedProgram
+    ? result.data.programs.filter((program) => program.id === selectedProgram)
+    : result.data.programs;
+  return programs.length === 0 ? (
+    <Card>
+      <CardContent className="text-text-secondary py-6 text-sm">
+        No Academic Programs match this period and risk filter.
+      </CardContent>
+    </Card>
+  ) : (
+    <div className="flex flex-col gap-3">
+      {programs.map((program) => (
+        <ProgramDetail key={program.id} program={program} open={selectedProgram === program.id} />
+      ))}
     </div>
   );
 }
