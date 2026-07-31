@@ -77,10 +77,6 @@ export function DeanRosterLoading() {
         <Skeleton className="h-4 w-64 max-w-full" />
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <Skeleton className="h-11 flex-1" />
-          <Skeleton className="h-11 w-24" />
-        </div>
         <div className="flex flex-col gap-2">
           {Array.from({ length: 5 }, (_, index) => (
             <Skeleton key={index} className="h-11 w-full" />

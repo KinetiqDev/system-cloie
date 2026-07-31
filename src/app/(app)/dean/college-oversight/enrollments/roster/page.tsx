@@ -72,13 +72,7 @@ export default async function DeanEnrollmentRosterPage({
     );
   }
   if (pageResult.data.page !== page) {
-    const canonicalQuery = new URLSearchParams({
-      period,
-      assignment,
-      page: String(pageResult.data.page),
-    });
-    if (query) canonicalQuery.set("query", query);
-    redirect(`/dean/college-oversight/enrollments/roster?${canonicalQuery}`);
+    canonicalRosterRedirect(period, assignment, pageResult.data.page, query);
   }
   const rosterPromise = getDeanRoster({ periodId: period, assignmentId: assignment, query, page });
   void rosterPromise.catch(() => undefined);
@@ -153,13 +147,7 @@ export async function RosterDetails({
 
   const { data } = result;
   if (data.page !== page) {
-    const canonicalQuery = new URLSearchParams({
-      period,
-      assignment,
-      page: String(data.page),
-    });
-    if (query) canonicalQuery.set("query", query);
-    redirect(`/dean/college-oversight/enrollments/roster?${canonicalQuery}`);
+    canonicalRosterRedirect(period, assignment, data.page, query);
   }
   return <RosterContent data={data} period={period} assignment={assignment} query={query} />;
 }
@@ -249,6 +237,17 @@ function RosterSearchForm({
       </button>
     </form>
   );
+}
+
+function canonicalRosterRedirect(
+  period: string,
+  assignment: string,
+  page: number,
+  query?: string
+): never {
+  const canonicalQuery = new URLSearchParams({ period, assignment, page: String(page) });
+  if (query) canonicalQuery.set("query", query);
+  redirect(`/dean/college-oversight/enrollments/roster?${canonicalQuery}`);
 }
 
 function PeriodSummary({

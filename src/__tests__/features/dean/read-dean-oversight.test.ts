@@ -18,6 +18,7 @@ import {
   DeanReadModelNotFoundError,
   getDeanEnrollments,
   getDeanRoster,
+  getDeanRosterPage,
 } from "@/features/dean/services/read-dean-oversight";
 
 const PERIOD_ID = "11111111-1111-4111-8111-111111111111";
@@ -192,5 +193,32 @@ describe("Dean oversight read model", () => {
     expect(prismaMock.studentEnrollment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ skip: 25, take: 25 })
     );
+  });
+
+  it("shares the roster page-size and count projection with the detail read", async () => {
+    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
+    prismaMock.courseAssignment.findFirst.mockResolvedValue(assignment());
+    prismaMock.studentEnrollment.count.mockResolvedValue(26);
+    prismaMock.studentEnrollment.findMany.mockResolvedValue([
+      { student: { first_name: "Ada", last_name: "Lovelace" } },
+    ]);
+
+    const pageResult = await getDeanRosterPage({
+      periodId: PERIOD_ID,
+      assignmentId: ASSIGNMENT_ID,
+      page: 2,
+    });
+    const rosterResult = await getDeanRoster({
+      periodId: PERIOD_ID,
+      assignmentId: ASSIGNMENT_ID,
+      page: 2,
+    });
+
+    expect(pageResult).toEqual({ state: "ready", data: { page: 2 } });
+    expect(rosterResult).toMatchObject({
+      state: "ready",
+      data: { page: 2, pageSize: 25, totalCount: 26, totalPages: 2 },
+    });
+    expect(prismaMock.studentEnrollment.findMany).toHaveBeenCalledTimes(1);
   });
 });

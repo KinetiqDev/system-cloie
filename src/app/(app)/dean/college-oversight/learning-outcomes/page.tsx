@@ -64,6 +64,7 @@ export default async function DeanLearningOutcomesPage({
     notFound();
 
   const selectedPeriod = periods.find((period) => period.id === selectedPeriodId);
+  if (!selectedPeriod) notFound();
   const detailPromise = getDeanLearningOutcomes(selectedPeriodId, risk);
   void detailPromise.catch(() => undefined);
   return (

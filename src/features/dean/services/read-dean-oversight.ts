@@ -1,4 +1,5 @@
 import type { AcademicPeriodStatus, Prisma, StudentSection, YearLevel } from "@prisma/client";
+import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import {
@@ -119,6 +120,8 @@ export type DeanRosterData = {
   totalPages: number;
 };
 
+const ROSTER_PAGE_SIZE = 25;
+
 function periodSummary(period: PeriodRecord): DeanPeriodSummary {
   return {
     id: period.id,
@@ -238,7 +241,7 @@ async function assignmentRows(periodId: string, includeArchived: boolean) {
   );
 }
 
-async function rosterContext(periodId: string, assignmentId: string) {
+const rosterContext = cache(async (periodId: string, assignmentId: string) => {
   const period = await requirePeriod(periodId, "active-or-completed");
   if (!period) return null;
   const assignment = await prisma.courseAssignment.findFirst({
@@ -270,7 +273,7 @@ async function rosterContext(periodId: string, assignmentId: string) {
     throw new DeanReadModelNotFoundError("Course assignment is not in selected program");
   }
   return { period, assignment };
-}
+});
 
 function rosterStudentWhere(
   periodId: string,
@@ -305,6 +308,21 @@ function rosterStudentWhere(
     ...searchFilter,
   };
 }
+
+const rosterPageRead = cache(
+  async (periodId: string, assignmentId: string, query?: string) => {
+    const context = await rosterContext(periodId, assignmentId);
+    if (!context) return null;
+    const totalCount = await prisma.studentEnrollment.count({
+      where: rosterStudentWhere(context.period.id, context.assignment, query),
+    });
+    return {
+      ...context,
+      totalCount,
+      totalPages: Math.max(1, Math.ceil(totalCount / ROSTER_PAGE_SIZE)),
+    };
+  }
+);
 
 export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardData>> {
   const period = await prisma.academicTermInstance.findFirst({
@@ -545,13 +563,11 @@ export async function getDeanRoster(input: {
   query?: string;
   page: number;
 }): Promise<DeanReadState<DeanRosterData>> {
-  const context = await rosterContext(input.periodId, input.assignmentId);
-  if (!context) return { state: "no-eligible-period" };
-  const { period, assignment } = context;
+  const pageRead = await rosterPageRead(input.periodId, input.assignmentId, input.query);
+  if (!pageRead) return { state: "no-eligible-period" };
+  const { period, assignment, totalCount, totalPages } = pageRead;
   const studentWhere = rosterStudentWhere(period.id, assignment, input.query);
-  const totalCount = await prisma.studentEnrollment.count({ where: studentWhere });
-  const totalPages = Math.max(1, Math.ceil(totalCount / 25));
-  const page = Math.min(input.page, Math.max(1, totalPages));
+  const page = Math.min(input.page, totalPages);
   const students = await prisma.studentEnrollment.findMany({
     where: studentWhere,
     select: { student: { select: { first_name: true, last_name: true } } },
@@ -560,8 +576,8 @@ export async function getDeanRoster(input: {
       { student: { last_name: "asc" } },
       { student_user_id: "asc" },
     ],
-    skip: (page - 1) * 25,
-    take: 25,
+    skip: (page - 1) * ROSTER_PAGE_SIZE,
+    take: ROSTER_PAGE_SIZE,
   });
   return {
     state: "ready",
@@ -586,7 +602,7 @@ export async function getDeanRoster(input: {
         displayName: `${student.first_name} ${student.last_name}`,
       })),
       page,
-      pageSize: 25,
+      pageSize: ROSTER_PAGE_SIZE,
       totalCount,
       totalPages,
     },
@@ -599,11 +615,7 @@ export async function getDeanRosterPage(input: {
   query?: string;
   page: number;
 }): Promise<DeanReadState<{ page: number }>> {
-  const context = await rosterContext(input.periodId, input.assignmentId);
-  if (!context) return { state: "no-eligible-period" };
-  const totalCount = await prisma.studentEnrollment.count({
-    where: rosterStudentWhere(context.period.id, context.assignment, input.query),
-  });
-  const totalPages = Math.max(1, Math.ceil(totalCount / 25));
-  return { state: "ready", data: { page: Math.min(input.page, totalPages) } };
+  const pageRead = await rosterPageRead(input.periodId, input.assignmentId, input.query);
+  if (!pageRead) return { state: "no-eligible-period" };
+  return { state: "ready", data: { page: Math.min(input.page, pageRead.totalPages) } };
 }

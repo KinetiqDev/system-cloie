@@ -46,6 +46,7 @@ export default async function DeanEnrollmentsPage({
     redirect(`/dean/college-oversight/enrollments?period=${encodeURIComponent(selectedPeriodId)}`);
   }
   const selectedPeriod = periods.find((period) => period.id === selectedPeriodId);
+  if (!selectedPeriod) notFound();
   const detailPromise = getDeanEnrollments(selectedPeriodId);
   void detailPromise.catch(() => undefined);
   return (

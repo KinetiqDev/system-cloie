@@ -1,6 +1,10 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import { Suspense } from "react";
+import React from "react";
+import { renderToReadableStream } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DeanDashboardContent } from "@/app/(app)/dean/dashboard/page";
+import DeanDashboardPage, { DeanDashboardContent } from "@/app/(app)/dean/dashboard/page";
+import { DeanDashboardLoading } from "@/features/dean/components/dean-oversight-loading";
 import DeanLearningOutcomesPage, { LearningOutcomesContent } from "@/app/(app)/dean/college-oversight/learning-outcomes/page";
 import DeanEnrollmentsPage, { EnrollmentContent } from "@/app/(app)/dean/college-oversight/enrollments/page";
 import DeanEnrollmentRosterPage, { RosterContent } from "@/app/(app)/dean/college-oversight/enrollments/roster/page";
@@ -144,7 +148,60 @@ describe("Dean oversight pages", () => {
     expect(getDeanLearningOutcomesMock).not.toHaveBeenCalled();
     expect(getDeanEnrollmentsMock).not.toHaveBeenCalled();
     expect(getDeanRosterMock).not.toHaveBeenCalled();
+    expect(getDeanRosterPageMock).not.toHaveBeenCalled();
   }
+
+  it("starts the dashboard read inside its local Suspense boundary", () => {
+    getDeanDashboardMock.mockReturnValue(new Promise(() => undefined));
+
+    const page = DeanDashboardPage();
+    const suspense = page.props.children[1];
+
+    expect(getDeanDashboardMock).toHaveBeenCalledTimes(1);
+    expect(suspense.type).toBe(Suspense);
+    expect(suspense.props.fallback.type).toBe(DeanDashboardLoading);
+  });
+
+  it("streams the dashboard shell before its pending read resolves", async () => {
+    let resolveDashboard!: (value: unknown) => void;
+    getDeanDashboardMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveDashboard = resolve;
+      })
+    );
+
+    const stream = await renderToReadableStream(React.createElement(DeanDashboardPage));
+    const reader = stream.getReader();
+    const firstChunk = await reader.read();
+    const decoder = new TextDecoder();
+    let html = decoder.decode(firstChunk.value);
+
+    expect(html).toContain("Dean Dashboard");
+    expect(html).toContain("Loading readiness details");
+
+    resolveDashboard({
+      state: "ready",
+      data: {
+        activePeriod: { id: PERIOD_ID, label: period.label },
+        kpis: {
+          activeContexts: 3,
+          readyContexts: 2,
+          missingCiloContexts: 0,
+          incompleteMappingContexts: 1,
+        },
+        risks: { missingCilos: 0, incompleteMappings: 1, notReady: 1 },
+        programs: [],
+      },
+    });
+
+    while (!firstChunk.done) {
+      const chunk = await reader.read();
+      html += decoder.decode(chunk.value);
+      if (chunk.done) break;
+    }
+    expect(html).toContain("Readiness at a glance");
+    expect(html).toContain("id=\"S:0\"");
+  });
 
   it("renders Dashboard KPIs, count-only risks, coverage matrix, and same-period links", async () => {
     getDeanDashboardMock.mockResolvedValue({
@@ -303,6 +360,30 @@ describe("Dean oversight pages", () => {
       DeanLearningOutcomesPage({ searchParams: Promise.resolve({ risk: "scores" }) })
     ).rejects.toThrow("NOT_FOUND");
     expect(listDeanEligiblePeriodsMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an eligible-period ID that is not in the preflight period list", async () => {
+    const unavailablePeriodId = "55555555-5555-4555-8555-555555555555";
+    listDeanEligiblePeriodsMock.mockResolvedValue([period]);
+    getDeanLearningOutcomesMock.mockRejectedValue(new Error("should not reach detail read"));
+
+    await expect(
+      DeanLearningOutcomesPage({
+        searchParams: Promise.resolve({ period: unavailablePeriodId }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+    expect(getDeanLearningOutcomesMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unavailable enrollment period before the detail boundary", async () => {
+    const unavailablePeriodId = "55555555-5555-4555-8555-555555555555";
+    listDeanEligiblePeriodsMock.mockResolvedValue([period]);
+    getDeanEnrollmentsMock.mockRejectedValue(new Error("should not reach detail read"));
+
+    await expect(
+      DeanEnrollmentsPage({ searchParams: Promise.resolve({ period: unavailablePeriodId }) })
+    ).rejects.toThrow("NOT_FOUND");
+    expect(getDeanEnrollmentsMock).not.toHaveBeenCalled();
   });
 
   it("expands Academic Program totals into class rows with explicit roster links", async () => {
