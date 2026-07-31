@@ -7,6 +7,7 @@ import { listAcademicPeriodSummaries } from "@/features/academic-calendar/servic
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import {
   readPeriodReadiness,
+  readPeriodReadinessTotals,
   type PeriodReadiness,
   type ReadinessContext,
 } from "@/features/academic-calendar/services/read-period-readiness";
@@ -315,20 +316,18 @@ function rosterStudentWhere(
   };
 }
 
-const rosterPageRead = cache(
-  async (periodId: string, assignmentId: string, query?: string) => {
-    const context = await rosterContext(periodId, assignmentId);
-    if (!context) return null;
-    const totalCount = await prisma.studentEnrollment.count({
-      where: rosterStudentWhere(context.period.id, context.assignment, query),
-    });
-    return {
-      ...context,
-      totalCount,
-      totalPages: Math.max(1, Math.ceil(totalCount / ROSTER_PAGE_SIZE)),
-    };
-  }
-);
+const rosterPageRead = cache(async (periodId: string, assignmentId: string, query?: string) => {
+  const context = await rosterContext(periodId, assignmentId);
+  if (!context) return null;
+  const totalCount = await prisma.studentEnrollment.count({
+    where: rosterStudentWhere(context.period.id, context.assignment, query),
+  });
+  return {
+    ...context,
+    totalCount,
+    totalPages: Math.max(1, Math.ceil(totalCount / ROSTER_PAGE_SIZE)),
+  };
+});
 
 export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardData>> {
   const period = await prisma.academicTermInstance.findFirst({
@@ -337,12 +336,9 @@ export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardDat
   });
   if (!period) return { state: "no-eligible-period" };
 
-  const readiness = await readPeriodReadiness(period.id);
-  const missingCilos = readiness.programTotals.reduce(
-    (sum, total) => sum + total.missingCiloContexts,
-    0
-  );
-  const incompleteMappings = readiness.programTotals.reduce(
+  const programTotals = await readPeriodReadinessTotals(period.id);
+  const missingCilos = programTotals.reduce((sum, total) => sum + total.missingCiloContexts, 0);
+  const incompleteMappings = programTotals.reduce(
     (sum, total) => sum + total.incompleteMappingContexts,
     0
   );
@@ -351,16 +347,13 @@ export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardDat
     data: {
       activePeriod: { id: period.id, label: periodSummary(period).label },
       kpis: {
-        activeContexts: readiness.programTotals.reduce(
-          (sum, total) => sum + total.activeContexts,
-          0
-        ),
-        readyContexts: readiness.programTotals.reduce((sum, total) => sum + total.readyContexts, 0),
+        activeContexts: programTotals.reduce((sum, total) => sum + total.activeContexts, 0),
+        readyContexts: programTotals.reduce((sum, total) => sum + total.readyContexts, 0),
         missingCiloContexts: missingCilos,
         incompleteMappingContexts: incompleteMappings,
       },
       risks: { missingCilos, incompleteMappings, notReady: missingCilos + incompleteMappings },
-      programs: readiness.programTotals.map(
+      programs: programTotals.map(
         ({
           programId,
           programName,
@@ -457,7 +450,7 @@ export async function getDeanLearningOutcomes(
           yearLevel: assignment.year_level,
           section: assignment.section,
           ciloId: cilo.id,
-            ciloStatement: cilo.description,
+          ciloStatement: cilo.description,
           ciloIsArchived: cilo.isArchived,
           reason: "incomplete-mapping",
           missingGraduateOutcomeIds: cilo.missingGraduateOutcomeIds,

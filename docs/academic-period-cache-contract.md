@@ -15,6 +15,26 @@ The projection contains only:
 It contains no session, account, role, authorization, enrollment, roster,
 student, respondent, response, or qualitative data.
 
+## Candidate Inventory
+
+The change-wide freshness inventory is explicit about which shared read models
+are eligible for persistent reuse. Only the Academic Period summary projection
+is converted by Issue #188; the other candidates remain request-scoped until
+their projections and mutation coverage are measured.
+
+| Read model                                                                                  | Cache status        | Exact API               | Key and serialization                                                         | Freshness/stale behavior                                  | Deployment sharing                                                               | Mutation-to-tag matrix                                                                               | Owner and authorization boundary                                              |
+| ------------------------------------------------------------------------------------------- | ------------------- | ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Program catalog summary                                                                     | Not converted       | Not established         | Not established                                                               | Not established                                           | Not established                                                                  | Not established; program lifecycle writes remain request/path invalidation                           | Owning feature; Secretary/Dean authorize before reading                       |
+| Course catalog summary                                                                      | Not converted       | Not established         | Not established                                                               | Not established                                           | Not established                                                                  | Not established; course, CILO, and assignment-count writes remain request/path invalidation          | Owning feature; caller authorizes program or all-program scope                |
+| Academic Period summary list                                                                | Converted           | `unstable_cache`        | `academic-period-summaries-v1`; serialized `id`, `label`, `status` projection | 300 seconds; tag refresh uses `revalidateTag(tag, "max")` | Built-in deployment cache; multi-instance sharing requires platform coordination | `academic-periods` for school-year/period writes; `active-academic-period` for lifecycle transitions | `src/lib/cache/academic-periods.ts`; Dean authorizes before cached invocation |
+| Instrument catalog metadata                                                                 | Not converted       | Not established         | Not established                                                               | Not established                                           | Not established                                                                  | Not established; template/version writes remain request/path invalidation                            | Owning feature; caller authorizes before reading                              |
+| Dean completed-period snapshot                                                              | Request-scoped      | No persistent cache API | Period ID and immutable snapshot projection are read per request              | Immutable snapshot read; no stale active-period reuse     | Not applicable                                                                   | Explicit correction write controls snapshot freshness                                                | Dean read service authorizes before reading                                   |
+| Session, profiles, affiliations, enrollments, rosters, assignments, responses, and comments | Never shared-cached | None                    | Request-scoped values only                                                    | Request-time resolution                                   | Not applicable                                                                   | Request/route invalidation only                                                                      | Owning service authorizes every request                                       |
+
+Rows marked `Not converted` are deliberately ineligible for persistent reuse
+until the listed contract dimensions and automated invalidation coverage are
+established. Existing request-time reads remain the source of truth.
+
 ## Cache Mechanism
 
 - Next.js version: `16.2.4`
@@ -33,10 +53,10 @@ occurs in `listDeanEligiblePeriods()` before the cached function is invoked.
 
 ## Tags
 
-| Tag | Meaning | Invalidated by |
-| --- | --- | --- |
-| `academic-periods` | Any eligible Academic Period summary changed | School Year create/update/archive; Academic Period create/update/delete; lifecycle transition |
-| `active-academic-period` | The active-period membership or status changed | Activation, completion, or cancellation lifecycle transitions |
+| Tag                      | Meaning                                        | Invalidated by                                                                                |
+| ------------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `academic-periods`       | Any eligible Academic Period summary changed   | School Year create/update/archive; Academic Period create/update/delete; lifecycle transition |
+| `active-academic-period` | The active-period membership or status changed | Activation, completion, or cancellation lifecycle transitions                                 |
 
 The cache owns tag invalidation through
 `invalidateAcademicPeriodReadModelTags()`. It is called only after a
