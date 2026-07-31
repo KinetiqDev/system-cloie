@@ -79,15 +79,16 @@ export default function Home() {
               badge="Any Google account"
             />
           </div>
-
-          {/* Footer Divider + System Name */}
-          <div className="mt-14 border-t border-border pt-6">
-            <p className="text-body-sm text-text-muted">
-              System for Comprehensive Learning Outcomes and Instructional Evaluation
-            </p>
-          </div>
         </div>
       </main>
+
+      <footer className="relative z-10 border-t border-border/80 bg-background/80">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-center px-4 py-4 sm:px-6 lg:px-8">
+          <p className="text-body-sm text-text-muted">
+            © {new Date().getFullYear()} System CLOIE. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
