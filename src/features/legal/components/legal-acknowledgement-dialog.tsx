@@ -16,7 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { getSiteUrl } from "@/lib/utils/site-url";
-import { LEGAL_VERSIONS, privacyNotice, termsOfUse } from "../content";
+import { LEGAL_ACKNOWLEDGEMENT_CONTENT } from "../acknowledgement-content";
+import { LEGAL_VERSIONS } from "../legal-versions";
 import type { RoleIntent } from "@/features/auth/services/role-intent";
 
 type LegalAcknowledgementDialogProps = {
@@ -95,33 +96,36 @@ export function LegalAcknowledgementDialog({
         </DialogHeader>
 
         <div className="min-h-0 overflow-y-auto pr-1">
-          <div className="flex flex-col gap-5 text-sm leading-6 text-text-secondary">
+          <div className="text-text-secondary flex flex-col gap-5 text-sm leading-6">
             <section aria-labelledby="privacy-summary-heading">
-              <h2 id="privacy-summary-heading" className="font-semibold text-text-primary">
-                {privacyNotice.shortTitle}
+              <h2 id="privacy-summary-heading" className="text-text-primary font-semibold">
+                {LEGAL_ACKNOWLEDGEMENT_CONTENT.privacy.shortTitle}
               </h2>
-              <p className="mt-2">{privacyNotice.summary.paragraphs[0]}</p>
-              <p className="mt-2">{privacyNotice.summary.paragraphs[1]}</p>
+              {LEGAL_ACKNOWLEDGEMENT_CONTENT.privacy.paragraphs.map((paragraph) => (
+                <p key={paragraph} className="mt-2">
+                  {paragraph}
+                </p>
+              ))}
               <Link
                 href="/privacy"
-                className="mt-2 inline-block font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="text-primary focus-visible:ring-ring mt-2 inline-block font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
               >
                 Read the full Privacy Notice
               </Link>
             </section>
 
             <section aria-labelledby="terms-summary-heading">
-              <h2 id="terms-summary-heading" className="font-semibold text-text-primary">
-                {termsOfUse.shortTitle}
+              <h2 id="terms-summary-heading" className="text-text-primary font-semibold">
+                {LEGAL_ACKNOWLEDGEMENT_CONTENT.terms.shortTitle}
               </h2>
-              {termsOfUse.summary.paragraphs.map((paragraph) => (
+              {LEGAL_ACKNOWLEDGEMENT_CONTENT.terms.paragraphs.map((paragraph) => (
                 <p key={paragraph} className="mt-2">
                   {paragraph}
                 </p>
               ))}
               <Link
                 href="/terms"
-                className="mt-2 inline-block font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="text-primary focus-visible:ring-ring mt-2 inline-block font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
               >
                 Read the full Terms of Use
               </Link>
@@ -136,7 +140,7 @@ export function LegalAcknowledgementDialog({
         </div>
 
         <DialogFooter className="-mx-4 -mb-4 flex-col items-stretch gap-3 sm:flex-col">
-          <div className="flex w-full min-w-0 items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
+          <div className="border-border bg-muted/40 flex w-full min-w-0 items-start gap-3 rounded-lg border p-3">
             <Checkbox
               id="legal-acknowledgement"
               checked={acknowledged}
@@ -145,11 +149,16 @@ export function LegalAcknowledgementDialog({
               aria-required="true"
             />
             <Label htmlFor="legal-acknowledgement" className="cursor-pointer text-sm leading-6">
-              {privacyNotice.summary.acknowledgementLabel}
+              {LEGAL_ACKNOWLEDGEMENT_CONTENT.acknowledgementLabel}
             </Label>
           </div>
           <div className="flex w-full shrink-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button type="button" onClick={handleContinue} disabled={!acknowledged || isSubmitting}>

@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { LEGAL_VERSIONS } from "../content";
-import { isRoleIntent, type RoleIntent } from "@/features/auth/services/role-intent";
+import { LEGAL_VERSIONS } from "../legal-versions";
+import { isRoleIntent, roleToIntent, type RoleIntent } from "@/features/auth/services/role-intent";
 
 export const LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME = "cloie_legal_ack";
 export const LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS = 15 * 60;
@@ -101,7 +101,7 @@ export function verifyLegalAcknowledgementTicket(
 
   try {
     const payload = JSON.parse(payloadBytes.toString("utf8")) as unknown;
-    if (!isPayload(payload) || payload.intent !== roleIntentCanonical(intent)) {
+    if (!isPayload(payload) || payload.intent !== roleToIntent(intent)) {
       return { valid: false, reason: "intent-or-version-mismatch" };
     }
     if (
@@ -117,16 +117,11 @@ export function verifyLegalAcknowledgementTicket(
   }
 }
 
-function roleIntentCanonical(intent: string): RoleIntent | null {
-  if (!isRoleIntent(intent)) return null;
-  return intent.trim().toLowerCase().replaceAll("_", "-") as RoleIntent;
-}
-
 export function getLegalAcknowledgementCookieOptions() {
   return {
     httpOnly: true,
     maxAge: LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS,
-    path: "/",
+    path: "/api/auth",
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV !== "development",
   };
@@ -144,5 +139,10 @@ export function clearLegalAcknowledgementCookie(response: {
 export function readCookieValue(cookieHeader: string | null, name: string): string | null {
   if (!cookieHeader) return null;
   const entry = cookieHeader.split(";").find((part) => part.trim().startsWith(`${name}=`));
-  return entry ? decodeURIComponent(entry.trim().slice(name.length + 1)) : null;
+  if (!entry) return null;
+  try {
+    return decodeURIComponent(entry.trim().slice(name.length + 1));
+  } catch {
+    return null;
+  }
 }

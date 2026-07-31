@@ -1,13 +1,12 @@
 import type { LegalDocument } from "./types";
+import { LEGAL_ACKNOWLEDGEMENT_CONTENT } from "./acknowledgement-content";
+import { LEGAL_VERSIONS } from "./legal-versions";
 
 const pendingDate = "Pending institutional approval";
 const draftApprovalNote =
   "This draft must be reviewed and approved by Assumption College of Davao's authorized institutional representative, Data Protection Officer, and ICTC before production use.";
 
-export const LEGAL_VERSIONS = {
-  privacy: "1.0",
-  terms: "1.0",
-} as const;
+export { LEGAL_VERSIONS } from "./legal-versions";
 
 export const privacyNotice: LegalDocument = {
   kind: "privacy",
@@ -22,13 +21,11 @@ export const privacyNotice: LegalDocument = {
   approvalNote: draftApprovalNote,
   summary: {
     paragraphs: [
-      "System CLOIE uses Google Sign-In through Supabase Auth to securely authenticate your account. When you continue, System CLOIE may receive your name, email address, and a unique authentication identifier from Google. It does not access your Google password, Gmail, Google Drive, Google Calendar, contacts, or other unrelated Google account content.",
-      "Your information is used to create or match your account, verify your role and eligibility, provide access to assigned evaluations, prevent duplicate submissions, and support academic quality assurance, accreditation, and program improvement.",
+      ...LEGAL_ACKNOWLEDGEMENT_CONTENT.privacy.paragraphs,
       "System CLOIE may also process academic profile information, evaluation ratings, qualitative comments, submission records, and limited technical or security data. Evaluation results are intended to appear in aggregated or de-identified reports, but submissions are not completely anonymous because the system retains an internal link between the respondent and the assigned evaluation for verification, security, and data-integrity purposes.",
       "Your information will be accessible only to authorized institutional personnel and approved service providers, retained only as necessary, and protected through role-based access controls and other safeguards. Avoid including names or unnecessary sensitive information in open-ended comments.",
     ],
-    acknowledgementLabel:
-      "I acknowledge that I have read and understood the System CLOIE Privacy Notice and agree to the System CLOIE Terms of Use.",
+    acknowledgementLabel: LEGAL_ACKNOWLEDGEMENT_CONTENT.acknowledgementLabel,
   },
   sections: [
     {
@@ -466,13 +463,8 @@ export const termsOfUse: LegalDocument = {
   approvalNote:
     "This draft must be reviewed and approved by Assumption College of Davao's authorized institutional representative, ICTC, and Data Protection Officer before production use.",
   summary: {
-    paragraphs: [
-      "By using System CLOIE, you agree to use only your authorized account and assigned role, provide honest and relevant evaluation responses, protect confidential information, and follow applicable ACD policies.",
-      "You must not impersonate another user, submit an evaluation on someone else's behalf, manipulate results, bypass access restrictions, disclose confidential records, attempt to identify respondents, retaliate against participants, or disrupt the system.",
-      "System-generated reports support academic review, quality assurance, accreditation, and program improvement. They do not replace authorized institutional judgment and must not be treated as guaranteed error-free until properly reviewed.",
-    ],
-    acknowledgementLabel:
-      "I acknowledge that I have read and understood the System CLOIE Privacy Notice and agree to comply with the System CLOIE Terms of Use.",
+    paragraphs: [...LEGAL_ACKNOWLEDGEMENT_CONTENT.terms.paragraphs],
+    acknowledgementLabel: LEGAL_ACKNOWLEDGEMENT_CONTENT.acknowledgementLabel,
   },
   sections: [
     {

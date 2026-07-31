@@ -54,10 +54,7 @@ export async function GET(request: Request) {
   }
 
   const intentParam = searchParams.get("intent");
-  const ticket = readCookieValue(
-    request.headers.get("cookie"),
-    LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME
-  );
+  const ticket = readCookieValue(request.headers.get("cookie"), LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME);
   const ticketVerification = verifyLegalAcknowledgementTicket(ticket, intentParam ?? "");
 
   if (!intentParam || !isRoleIntent(intentParam) || !ticketVerification.valid) {
@@ -229,56 +226,50 @@ export async function GET(request: Request) {
     }
   } else {
     // New user signup
-    if (intentParam) {
-      if (targetRole) {
-        // Pre-provisioned roles cannot be self-claimed
-        const isPreProvisioned =
-          targetRole === SystemRole.SECRETARY ||
-          targetRole === SystemRole.DEAN ||
-          targetRole === SystemRole.PROGRAM_HEAD;
-        if (isPreProvisioned) {
-          await supabase.auth.signOut();
-          return redirectWithClearedTicket(`${siteUrl}/status/pre-provisioning-required`);
-        }
-
-        // Validate domain for self-service roles
-        const validation = validateRoleDomain(normalizedEmail, targetRole);
-        if (!validation.valid) {
-          await supabase.auth.signOut();
-          return redirectWithClearedTicket(
-            `${siteUrl}/status/invalid-domain?role=${encodeURIComponent(intentParam ?? "")}`
-          );
-        }
-
-        // Create domain user and their single role record
-        const meta = data.user.user_metadata || {};
-        const parsed = getNameParts(meta);
-        const googleFirstName = parsed?.first ?? "User";
-        const googleLastName = parsed?.last ?? "Name";
-
-        dbUser = await prisma.user.create({
-          data: {
-            auth_user_id: authUserId,
-            email: normalizedEmail,
-            first_name: googleFirstName,
-            last_name: googleLastName,
-            roles: {
-              create: {
-                role: targetRole,
-              },
-            },
-          },
-          include: { roles: true },
-        });
-      } else {
-        await supabase.auth.signOut();
-        return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
-      }
-    } else {
-      // No intent and no user: redirect to portal
+    if (!targetRole) {
       await supabase.auth.signOut();
-      return redirectWithClearedTicket(`${siteUrl}/portal/respondents`);
+      return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
     }
+
+    // Pre-provisioned roles cannot be self-claimed
+    const isPreProvisioned =
+      targetRole === SystemRole.SECRETARY ||
+      targetRole === SystemRole.DEAN ||
+      targetRole === SystemRole.PROGRAM_HEAD;
+    if (isPreProvisioned) {
+      await supabase.auth.signOut();
+      return redirectWithClearedTicket(`${siteUrl}/status/pre-provisioning-required`);
+    }
+
+    // Validate domain for self-service roles
+    const validation = validateRoleDomain(normalizedEmail, targetRole);
+    if (!validation.valid) {
+      await supabase.auth.signOut();
+      return redirectWithClearedTicket(
+        `${siteUrl}/status/invalid-domain?role=${encodeURIComponent(intentParam)}`
+      );
+    }
+
+    // Create domain user and their single role record
+    const meta = data.user.user_metadata || {};
+    const parsed = getNameParts(meta);
+    const googleFirstName = parsed?.first ?? "User";
+    const googleLastName = parsed?.last ?? "Name";
+
+    dbUser = await prisma.user.create({
+      data: {
+        auth_user_id: authUserId,
+        email: normalizedEmail,
+        first_name: googleFirstName,
+        last_name: googleLastName,
+        roles: {
+          create: {
+            role: targetRole,
+          },
+        },
+      },
+      include: { roles: true },
+    });
   }
 
   const session = await resolveAuthSessionFromUser({
