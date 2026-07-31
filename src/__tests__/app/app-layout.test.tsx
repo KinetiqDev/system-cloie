@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { describe, expect, it } from "vitest";
-import AppLayout from "@/app/(app)/layout";
+import AppLayout, { dynamic } from "@/app/(app)/layout";
 import { AuthenticatedShellFallback } from "@/components/layout/authenticated-shell-fallback";
 
 describe("authenticated application layout", () => {
@@ -12,5 +12,9 @@ describe("authenticated application layout", () => {
     expect(result.props.fallback.type).toBe(AuthenticatedShellFallback);
     expect(result.props.children.type).toBeDefined();
     expect(result.props.children.props.children).toBe(protectedContent);
+  });
+
+  it("keeps authenticated routes request-time rendered", () => {
+    expect(dynamic).toBe("force-dynamic");
   });
 });

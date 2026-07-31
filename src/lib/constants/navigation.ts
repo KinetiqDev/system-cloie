@@ -124,9 +124,7 @@ const INDUSTRY_PARTNER_NAV: NavItem[] = [
   { name: "Profile", href: "/industry-partner/profile", icon: UserCircle },
 ];
 
-const DEFAULT_NAV: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-];
+const DEFAULT_NAV: NavItem[] = [{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard }];
 
 const ROLE_NAV_PRECEDENCE = [
   ROLES.SECRETARY,
@@ -219,7 +217,9 @@ export function getDeepestMatchingNavItem<T extends Pick<NavItem, "href">>(
   return (
     items
       .filter((item) => isNavItemActive(pathname, item.href))
-      .sort((left, right) => normalizedHrefLength(right.href) - normalizedHrefLength(left.href))[0] ?? null
+      .sort(
+        (left, right) => normalizedHrefLength(right.href) - normalizedHrefLength(left.href)
+      )[0] ?? null
   );
 }
 
@@ -228,11 +228,8 @@ export function getDeanActiveGroup(pathname: string): NavGroup | null {
 }
 
 export function getDeanActiveItem(pathname: string): (NavItem | NavGroup) | null {
-  const items = [
-    ...getDeanNavGroups(),
-    ...getDeanStandaloneNav(),
-    ...getDeanNavGroups().flatMap((group) => group.items),
-  ];
+  const groups = getDeanNavGroups();
+  const items = [...groups, ...getDeanStandaloneNav(), ...groups.flatMap((group) => group.items)];
   return getDeepestMatchingNavItem(pathname, items);
 }
 

@@ -11,7 +11,11 @@ vi.mock("next/image", () => ({
   default: (props: React.ComponentProps<"img">) => <img alt={props.alt ?? ""} {...props} />,
 }));
 vi.mock("next/link", () => ({
-  default: ({ children, prefetch, ...props }: React.ComponentProps<"a"> & { prefetch?: boolean }) => {
+  default: ({
+    children,
+    prefetch,
+    ...props
+  }: React.ComponentProps<"a"> & { prefetch?: boolean }) => {
     void prefetch;
     return <a {...props}>{children}</a>;
   },
@@ -40,19 +44,35 @@ describe("Dean mobile navigation drawer", () => {
     expect(document.body.style.overflow).toBe("");
   });
 
-  it("wraps keyboard focus at drawer edges", async () => {
+  it("wraps backward focus from the first interactive element", async () => {
     render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
     fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
     await waitFor(() => expect(screen.getByRole("link", { name: "Dashboard" })).toHaveFocus());
 
     const close = screen.getByRole("button", { name: "Close navigation menu" });
     close.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
-    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveFocus();
-
-    screen.getByRole("link", { name: "Dashboard" }).focus();
     fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
-    expect(close).toHaveFocus();
+    const interactive = screen
+      .getByRole("dialog")
+      .querySelectorAll<HTMLElement>(
+        "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+      );
+    const last = interactive[interactive.length - 1];
+    expect(last).toHaveFocus();
+  });
+
+  it("does not intercept forward focus before the last interactive element", async () => {
+    render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Close navigation menu" })).toBeInTheDocument()
+    );
+
+    const close = screen.getByRole("button", { name: "Close navigation menu" });
+    close.focus();
+    const event = new KeyboardEvent("keydown", { key: "Tab", cancelable: true });
+    document.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("wraps from the last interactive element back to the first", async () => {
