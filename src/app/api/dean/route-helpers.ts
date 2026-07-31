@@ -31,6 +31,9 @@ export async function requireDean(): Promise<Response | null> {
 }
 
 export function handleDeanReadError(error: unknown, endpoint: string): Response {
+  if (error instanceof Error && error.name === "DeanReadModelUnauthorizedError") {
+    return deanJson({ error: error.message }, 403);
+  }
   if (error instanceof DeanRouteBadRequestError || error instanceof DeanReadModelBadRequestError) {
     return deanJson({ error: error.message }, 400);
   }

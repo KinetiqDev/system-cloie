@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
+  addTermInstance,
   deleteTermInstance,
   updateTermInstance,
   verifySecretaryAccess,
@@ -8,6 +9,8 @@ import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
 
+const invalidateAcademicPeriodReadModelTagsMock = vi.hoisted(() => vi.fn());
+
 vi.mock("@/features/auth/services/resolve-auth-session");
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -15,14 +18,19 @@ vi.mock("@/lib/db/prisma", () => ({
       findUnique: vi.fn(),
       findFirst: vi.fn(),
       update: vi.fn(),
+      create: vi.fn(),
       delete: vi.fn(),
     },
+    schoolYear: { findUnique: vi.fn() },
     studentEnrollment: { count: vi.fn() },
     courseAssignment: { count: vi.fn() },
     courseBoundEvaluation: { count: vi.fn() },
     centralDeployment: { count: vi.fn() },
     academicPeriodReadinessSnapshot: { count: vi.fn() },
   },
+}));
+vi.mock("@/lib/cache/academic-periods", () => ({
+  invalidateAcademicPeriodReadModelTags: invalidateAcademicPeriodReadModelTagsMock,
 }));
 
 describe("manage-term-instances / verifySecretaryAccess", () => {
@@ -250,6 +258,43 @@ describe("manage-term-instances / deleteTermInstance", () => {
     expect(prisma.academicTermInstance.delete).toHaveBeenCalledWith({
       where: { id: "ti-1" },
     });
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith();
+  });
+
+  it("invalidates the shared period projection after adding a term", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    vi.mocked(prisma.schoolYear.findUnique).mockResolvedValue({
+      id: "school-year-1",
+      is_archived: false,
+    } as never);
+    vi.mocked(prisma.academicTermInstance.create).mockResolvedValue({ id: "new-period" } as never);
+
+    const result = await addTermInstance({
+      schoolYearId: "school-year-1",
+      semester: "SUMMER",
+    });
+
+    expect(result).toEqual({ success: true, data: { id: "new-period" } });
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith();
+  });
+
+  it("invalidates the shared period projection after updating a term", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "ti-1",
+      status: "PLANNED",
+      school_year: { is_archived: false },
+    } as never);
+    vi.mocked(prisma.academicTermInstance.update).mockResolvedValue({ id: "ti-1" } as never);
+
+    const result = await updateTermInstance({
+      id: "ti-1",
+      startDate: new Date("2026-08-01"),
+      endDate: new Date("2026-12-31"),
+    });
+
+    expect(result).toEqual({ success: true, data: { id: "ti-1" } });
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith();
   });
 
   it("should check every dependent table", async () => {

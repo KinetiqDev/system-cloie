@@ -7,6 +7,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { canTransitionPeriod } from "../policies";
 import { persistPeriodReadinessSnapshot } from "./read-period-readiness";
+import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
 
 type Tx = PrismaTypes.TransactionClient;
 
@@ -45,61 +46,72 @@ export async function transitionPeriodStatus(
   }
 
   try {
-    return await prisma.$transaction(async (tx) => {
-      const existing = await tx.academicTermInstance.findUnique({
-        where: { id: periodId },
-        select: { id: true, end_date: true, status: true },
-      });
+    let activePeriodChanged = false;
+    const result = await prisma.$transaction(
+      async (tx): Promise<ServiceResult<{ id: string; status: AcademicPeriodStatus }>> => {
+        const existing = await tx.academicTermInstance.findUnique({
+          where: { id: periodId },
+          select: { id: true, end_date: true, status: true },
+        });
 
-      if (!existing) {
-        return { success: false, error: "Academic period not found" };
-      }
+        if (!existing) {
+          return { success: false, error: "Academic period not found" };
+        }
 
-      const decision = canTransitionPeriod(existing.status, target);
-      if (!decision.allowed) {
-        return { success: false, error: decision.reason };
-      }
+        const decision = canTransitionPeriod(existing.status, target);
+        if (!decision.allowed) {
+          return { success: false, error: decision.reason };
+        }
 
-    if (target === "ACTIVE") {
-      const priorActive = await tx.academicTermInstance.findFirst({
-        where: { status: "ACTIVE", id: { not: periodId } },
-        select: { id: true, end_date: true },
-      });
+        activePeriodChanged = existing.status === "ACTIVE" || target === "ACTIVE";
 
-      if (priorActive) {
-        if (!priorActive.end_date) {
+        if (target === "ACTIVE") {
+          const priorActive = await tx.academicTermInstance.findFirst({
+            where: { status: "ACTIVE", id: { not: periodId } },
+            select: { id: true, end_date: true },
+          });
+
+          if (priorActive) {
+            if (!priorActive.end_date) {
+              return {
+                success: false,
+                error:
+                  "Current active period is missing end_date; cannot complete it before activating a new period",
+              };
+            }
+            const completed = await tx.academicTermInstance.updateMany({
+              where: { id: priorActive.id, status: "ACTIVE" },
+              data: { status: "COMPLETED" },
+            });
+            if (completed.count !== 1) throw new LifecycleConflictError();
+            await onPeriodCompleted(priorActive.id, tx);
+          }
+        }
+
+        if (target === "COMPLETED" && !existing.end_date) {
           return {
             success: false,
-            error:
-              "Current active period is missing end_date; cannot complete it before activating a new period",
+            error: "Cannot complete a period without an end_date",
           };
         }
-        const completed = await tx.academicTermInstance.updateMany({
-          where: { id: priorActive.id, status: "ACTIVE" },
-          data: { status: "COMPLETED" },
+
+        const updated = await tx.academicTermInstance.updateMany({
+          where: { id: periodId, status: existing.status },
+          data: { status: target },
         });
-        if (completed.count !== 1) throw new LifecycleConflictError();
-        await onPeriodCompleted(priorActive.id, tx);
-      }
+        if (updated.count !== 1) throw new LifecycleConflictError();
+
+        if (target === "COMPLETED") await onPeriodCompleted(periodId, tx);
+
+        return { success: true, data: { id: periodId, status: target } };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+    if (result.success) {
+      invalidateAcademicPeriodReadModelTags({ activePeriodChanged });
     }
 
-    if (target === "COMPLETED" && !existing.end_date) {
-      return {
-        success: false,
-        error: "Cannot complete a period without an end_date",
-      };
-    }
-
-    const updated = await tx.academicTermInstance.updateMany({
-      where: { id: periodId, status: existing.status },
-      data: { status: target },
-    });
-    if (updated.count !== 1) throw new LifecycleConflictError();
-
-    if (target === "COMPLETED") await onPeriodCompleted(periodId, tx);
-
-      return { success: true, data: { id: periodId, status: target } };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    return result;
   } catch (error) {
     if (
       error instanceof LifecycleConflictError ||

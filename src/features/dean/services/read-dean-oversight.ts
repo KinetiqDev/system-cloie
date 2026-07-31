@@ -1,6 +1,9 @@
 import type { AcademicPeriodStatus, Prisma, StudentSection, YearLevel } from "@prisma/client";
 import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
+import { ROLES } from "@/lib/constants/roles";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { listAcademicPeriodSummaries } from "@/features/academic-calendar/services/read-academic-period-summaries";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import {
   readPeriodReadiness,
@@ -10,14 +13,32 @@ import {
 
 export class DeanReadModelNotFoundError extends Error {}
 export class DeanReadModelBadRequestError extends Error {}
+export class DeanReadModelUnauthorizedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DeanReadModelUnauthorizedError";
+  }
+}
 
 export type DeanReadState<T> = { state: "ready"; data: T } | { state: "no-eligible-period" };
 
-export type DeanPeriodSummary = { id: string; label: string; status: AcademicPeriodStatus };
+export type DeanPeriodSummary = {
+  id: string;
+  label: string;
+  status: AcademicPeriodStatus;
+};
 
 type PeriodRecord = Prisma.AcademicTermInstanceGetPayload<{
   include: { school_year: { select: { code: true } } };
 }>;
+
+function periodSummary(period: PeriodRecord): DeanPeriodSummary {
+  return {
+    id: period.id,
+    label: formatTermInstanceLabel(period.school_year.code, period.semester, period.term),
+    status: period.status,
+  };
+}
 
 type AssignmentRow = {
   id: string;
@@ -122,29 +143,14 @@ export type DeanRosterData = {
 
 const ROSTER_PAGE_SIZE = 25;
 
-function periodSummary(period: PeriodRecord): DeanPeriodSummary {
-  return {
-    id: period.id,
-    label: formatTermInstanceLabel(period.school_year.code, period.semester, period.term),
-    status: period.status,
-  };
-}
-
 export async function listDeanEligiblePeriods(): Promise<DeanPeriodSummary[]> {
-  const [active, completed] = await Promise.all([
-    prisma.academicTermInstance.findFirst({
-      where: { status: "ACTIVE" },
-      include: { school_year: { select: { code: true } } },
-    }),
-    prisma.academicTermInstance.findMany({
-      where: { status: "COMPLETED" },
-      include: { school_year: { select: { code: true } } },
-      orderBy: [{ end_date: "desc" }, { created_at: "desc" }],
-    }),
-  ]);
-  return [active, ...completed]
-    .filter((period): period is PeriodRecord => Boolean(period))
-    .map(periodSummary);
+  const session = await resolveAuthSession();
+  if (!session) throw new DeanReadModelUnauthorizedError("Authentication required.");
+  if (session.activeRole !== ROLES.DEAN) {
+    throw new DeanReadModelUnauthorizedError("College Dean access required.");
+  }
+
+  return listAcademicPeriodSummaries();
 }
 
 function archivedLabel(

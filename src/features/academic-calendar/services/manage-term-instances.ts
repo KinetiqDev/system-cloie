@@ -12,6 +12,7 @@ import type {
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { transitionPeriodStatus } from "./manage-academic-period-lifecycle";
+import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
 
 /**
  * Verify secretary access.
@@ -71,6 +72,7 @@ export async function addTermInstance(
       },
     });
 
+    invalidateAcademicPeriodReadModelTags();
     return { success: true, data: { id: termInstance.id } };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -121,6 +123,7 @@ export async function updateTermInstance(
     },
   });
 
+  invalidateAcademicPeriodReadModelTags();
   return { success: true, data: { id: updated.id } };
 }
 
@@ -167,6 +170,7 @@ export async function deleteTermInstance(id: string): Promise<ServiceResult> {
     where: { id },
   });
 
+  invalidateAcademicPeriodReadModelTags();
   return { success: true, data: undefined };
 }
 
