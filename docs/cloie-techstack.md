@@ -68,7 +68,8 @@ This project uses **shadcn/ui** with the **"base-nova"** style. The underlying h
 
 - **Request entry point** is `src/proxy.ts`, not `middleware.ts`. It rewrites Server Action POSTs for `x-forwarded-host` then calls `updateSession()`.
 - **Supabase SSR**: session refresh lives in `src/lib/supabase/middleware.ts` (imported by proxy.ts).
-- **Dev auth bypass**: `POST /api/auth/dev-login` and `cloie_dev_auth` are development-only. `NEXT_PUBLIC_DEMO_MODE` does not enable them outside development.
+- **Development auth bypass**: `POST /api/auth/dev-login` and `cloie_dev_auth` are development-only. `NEXT_PUBLIC_DEMO_MODE` does not enable them outside development.
+- **Dedicated demo deployment auth**: a separately reviewed signed demo session may expose the role switcher only in an isolated production-mode demo deployment. Primary Production remains OAuth-only. See ADR 0008.
 - **Forms**: use `customZodResolver` from `src/lib/forms/zod-resolver.ts`. Do **not** use `@hookform/resolvers/zod` — it breaks with Turbopack + Zod 4.
 - **Prisma + Supabase migrations**: edit `prisma/schema.prisma` or the relevant `prisma/models/` file, then `pnpm supabase:migration:diff -- <name>` to generate SQL. See `supabase/README.md`.
 - **Prisma constraint gotcha**: `NULLS NOT DISTINCT` unique indexes can't be expressed in Prisma schema. Real constraint lives in `supabase/migrations/`; Prisma gets a non-unique `@@index` mirror.

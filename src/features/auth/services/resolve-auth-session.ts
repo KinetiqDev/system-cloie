@@ -4,6 +4,7 @@ import { DEMO_USER_EMAIL_SET } from "@/lib/constants/demo-users";
 import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { readDevAuthCookie } from "./dev-auth";
+import { getDemoAuthConfig, readDemoAuthCookie } from "./demo-auth";
 import { buildAuthSessionSnapshot } from "./build-auth-session-snapshot";
 
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
@@ -16,6 +17,7 @@ type AuthenticatedUser = {
 
 type AuthSessionUserRecord = {
   id: string;
+  email: string;
   is_active: boolean;
   roles: Array<{ role: Role }>;
   student_profile: { id: string } | null;
@@ -29,14 +31,30 @@ function isKnownRole(roleName: string): roleName is Role {
   return KNOWN_ROLES.has(roleName as Role);
 }
 
+function resolveAuthSessionFromAuthenticatedUser(
+  user: AuthenticatedUser,
+  mode: "oauth" | "dev"
+): Promise<ReturnType<typeof buildAuthSessionSnapshot>>;
+function resolveAuthSessionFromAuthenticatedUser(
+  user: AuthenticatedUser,
+  mode: "dedicated-demo"
+): Promise<ReturnType<typeof buildAuthSessionSnapshot> | null>;
 async function resolveAuthSessionFromAuthenticatedUser(
   user: AuthenticatedUser,
-  isDevAuth: boolean = false
+  mode: "oauth" | "dev" | "dedicated-demo"
 ) {
+  const isDevAuth = mode === "dev";
+  const isDedicatedDemo = mode === "dedicated-demo";
   const isDemoAllowed = process.env.NODE_ENV === "development";
-  const isDemoUser = isDevAuth && isDemoAllowed && user.email ? DEMO_USER_EMAIL_SET.has(user.email) : false;
+  const isDemoUser =
+    isDevAuth && isDemoAllowed && user.email ? DEMO_USER_EMAIL_SET.has(user.email) : false;
+  const demoConfig = isDedicatedDemo ? getDemoAuthConfig() : null;
+  if (isDedicatedDemo && !demoConfig) {
+    return null;
+  }
+
   const dbUser: AuthSessionUserRecord = await prisma.user.findUnique({
-    where: isDevAuth ? { id: user.id } : { auth_user_id: user.id },
+    where: isDevAuth || isDedicatedDemo ? { id: user.id } : { auth_user_id: user.id },
     include: {
       roles: true,
       student_profile: true,
@@ -44,6 +62,12 @@ async function resolveAuthSessionFromAuthenticatedUser(
       industry_partner_profile: true,
     },
   });
+
+  if (isDedicatedDemo) {
+    if (!dbUser || !demoConfig?.allowedUsers.has(dbUser.email.trim().toLowerCase())) {
+      return null;
+    }
+  }
 
   const roles: Role[] =
     dbUser?.roles
@@ -79,36 +103,56 @@ async function resolveAuthSessionFromAuthenticatedUser(
 
   return buildAuthSessionSnapshot({
     userId: dbUser?.id ?? user.id,
-    email: user.email,
+    email: isDedicatedDemo ? (dbUser?.email ?? null) : user.email,
     roles,
     studentProfileId,
     alumniProfileId,
     industryPartnerProfileId,
     isActive: dbUser?.is_active ?? true,
     alumniVerificationStatus: dbUser?.alumni_profile?.verification_status ?? null,
-    industryPartnerVerificationStatus: dbUser?.industry_partner_profile?.verification_status ?? null,
+    industryPartnerVerificationStatus:
+      dbUser?.industry_partner_profile?.verification_status ?? null,
     hasActiveEnrollment,
     hasFacultyAffiliation,
     isDemoUser,
+    isDedicatedDemo,
   });
 }
 
 export async function resolveAuthSessionFromUser(user: AuthenticatedUser) {
-  return resolveAuthSessionFromAuthenticatedUser(user, false);
+  return resolveAuthSessionFromAuthenticatedUser(user, "oauth");
 }
 
 export async function resolveAuthSessionFromDevUser(user: AuthenticatedUser) {
-  return resolveAuthSessionFromAuthenticatedUser(user, true);
+  return resolveAuthSessionFromAuthenticatedUser(user, "dev");
+}
+
+export async function resolveAuthSessionFromDemoUser(user: AuthenticatedUser) {
+  return resolveAuthSessionFromAuthenticatedUser(user, "dedicated-demo");
 }
 
 export const resolveAuthSession = cache(async function resolveAuthSession() {
   const devAuthUser = await readDevAuthCookie();
 
   if (devAuthUser) {
-    return resolveAuthSessionFromAuthenticatedUser({
-      id: devAuthUser.userId,
-      email: devAuthUser.email,
-    }, true);
+    return resolveAuthSessionFromAuthenticatedUser(
+      {
+        id: devAuthUser.userId,
+        email: devAuthUser.email,
+      },
+      "dev"
+    );
+  }
+
+  const demoAuthUser = await readDemoAuthCookie();
+  if (demoAuthUser) {
+    return resolveAuthSessionFromAuthenticatedUser(
+      {
+        id: demoAuthUser.userId,
+        email: null,
+      },
+      "dedicated-demo"
+    );
   }
 
   const supabase = await createClient();
@@ -121,8 +165,11 @@ export const resolveAuthSession = cache(async function resolveAuthSession() {
     return null;
   }
 
-  return resolveAuthSessionFromAuthenticatedUser({
-    id: user.id,
-    email: user.email ?? null,
-  }, false);
+  return resolveAuthSessionFromAuthenticatedUser(
+    {
+      id: user.id,
+      email: user.email ?? null,
+    },
+    "oauth"
+  );
 });

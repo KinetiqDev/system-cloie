@@ -3,6 +3,8 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
 import { DevRoleSwitcher } from "@/features/auth/components/dev-role-switcher";
+import { DemoRoleSwitcher } from "@/features/auth/components/demo-role-switcher";
+import type { RoleSwitcherUser } from "@/features/auth/components/role-switcher";
 import type { Role } from "@/lib/constants/roles";
 import { getMobileNavMode } from "@/lib/constants/navigation";
 
@@ -15,9 +17,18 @@ interface AppShellProps {
   };
   roles?: Role[];
   activeRole?: Role | null;
+  demoEnabled?: boolean;
+  demoUsers?: readonly RoleSwitcherUser[];
 }
 
-export function AppShell({ children, user, roles, activeRole }: AppShellProps) {
+export function AppShell({
+  children,
+  user,
+  roles,
+  activeRole,
+  demoEnabled = false,
+  demoUsers = [],
+}: AppShellProps) {
   const activeRoles = activeRole ? [activeRole] : roles ?? [];
   const mobileNavMode = getMobileNavMode(activeRoles);
   const isDean = activeRole === "DEAN";
@@ -38,10 +49,20 @@ export function AppShell({ children, user, roles, activeRole }: AppShellProps) {
         </main>
 
         {/* Mobile Bottom Navigation — only for Student/Alumni/Industry Partner */}
-        {(mobileNavMode === "bottom-nav" || mobileNavMode === "dean-tabs") && <MobileNav roles={activeRoles} />}
+        {mobileNavMode === "bottom-nav" && <MobileNav roles={activeRoles} />}
       </div>
 
       <DevRoleSwitcher activeEmail={user?.email} />
+      <DemoRoleSwitcher enabled={demoEnabled} activeEmail={user?.email} users={demoUsers} />
+      {demoEnabled && (
+        <div
+          role="status"
+          aria-label="Dedicated demo environment"
+          className="border-border bg-surface/95 text-text-secondary fixed top-3 right-3 z-[60] rounded-full border px-3 py-1 text-[10px] font-semibold tracking-wide shadow-sm"
+        >
+          Dedicated demo environment
+        </div>
+      )}
     </div>
   );
 }

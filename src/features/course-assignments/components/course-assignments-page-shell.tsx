@@ -1,16 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { YearLevel, StudentSection } from "@prisma/client";
+import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { CourseAssignmentsTable } from "./course-assignments-table";
 import { AssignmentFilters } from "./shared/assignment-filters";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
-import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
 import type { AssignmentFiltersState } from "./shared/assignment-filters";
-import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
+import type {
+  AssignableCourse,
+  ListCourseAssignmentsResult,
+} from "@/features/course-assignments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
+import {
+  courseAssignmentListPath,
+  type CourseAssignmentListRole,
+} from "../course-assignment-list-state";
 
 interface ProgramOption {
   id: string;
@@ -31,115 +37,70 @@ export interface CourseAssignmentsPageShellProps {
   pageTitle: string;
   pageDescription: string;
   mode: CourseAssignmentsPageMode;
-  defaultIsActive: boolean | null;
   availableCourses: AssignableCourse[];
   availablePrograms: ProgramOption[];
   availableFaculty: FacultyOption[];
   termInstances: TermInstanceItem[];
+  initialData: ListCourseAssignmentsResult | null;
+  initialFilters: AssignmentFiltersState;
+  initialPage: number;
+  initialError?: string | null;
 }
 
 export function CourseAssignmentsPageShell({
   pageTitle,
   pageDescription,
   mode,
-  defaultIsActive,
   availableCourses,
   availablePrograms,
   availableFaculty,
   termInstances,
+  initialData,
+  initialFilters,
+  initialPage,
+  initialError = null,
 }: CourseAssignmentsPageShellProps) {
-  const [filters, setFilters] = useState<AssignmentFiltersState>({
-    termInstanceId: null,
-    courseId: null,
-    facultyId: null,
-    programId: null,
-    yearLevel: null,
-    section: null,
-    isActive: defaultIsActive,
-    courseScope: null,
-    searchQuery: "",
-  });
-  const [page, setPage] = useState(0);
-  const [assignments, setAssignments] = useState<CourseAssignmentItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
   const [createOpen, setCreateOpen] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [filters, setFilters] = useState<AssignmentFiltersState>(initialFilters);
+  const role: CourseAssignmentListRole = mode;
+  const assignments = initialData?.items ?? [];
+  const total = initialData?.total ?? 0;
+  const page = initialData?.page ?? initialPage - 1;
+  const pageSize = initialData?.pageSize ?? 20;
+  const loadError = initialError;
 
-  const refreshAssignments = useCallback(() => {
-    setRefreshTrigger((prev) => prev + 1);
-  }, []);
+  const refreshAssignments = () => router.refresh();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchAssignments() {
-      setLoading(true);
-      try {
-        const result = await listCourseAssignmentsAction(
-          {
-            ...(filters.termInstanceId && { termInstanceId: filters.termInstanceId }),
-            ...(filters.courseId && { courseId: filters.courseId }),
-            ...(filters.facultyId && { facultyId: filters.facultyId }),
-            ...(filters.programId && { programId: filters.programId }),
-            ...(filters.yearLevel && { yearLevel: filters.yearLevel as YearLevel }),
-            ...(filters.section && { section: filters.section as StudentSection }),
-            ...(filters.isActive !== null && { isActive: filters.isActive }),
-            ...(filters.courseScope && { courseScope: filters.courseScope }),
-          },
-          { page }
-        );
-
-        if (!cancelled) {
-          if (result.success) {
-            const lastValidPage = Math.max(
-              0,
-              Math.ceil(result.data.total / result.data.pageSize) - 1
-            );
-
-            if (result.data.total > 0 && page > lastValidPage) {
-              setLoadError(null);
-              setPage(lastValidPage);
-              return;
-            }
-
-            setLoadError(null);
-            setAssignments(result.data.items);
-            setTotal(result.data.total);
-          } else {
-            setLoadError(result.error);
-            setAssignments([]);
-            setTotal(0);
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          setLoadError("Failed to load course assignments.");
-          setAssignments([]);
-          setTotal(0);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchAssignments();
-
-    return () => {
-      cancelled = true;
+  const navigateWithState = (nextFilters: AssignmentFiltersState, nextPage: number) => {
+    const nextState = {
+      page: nextPage + 1,
+      filters: {
+        ...(nextFilters.termInstanceId && { termInstanceId: nextFilters.termInstanceId }),
+        ...(nextFilters.courseId && { courseId: nextFilters.courseId }),
+        ...(nextFilters.facultyId && { facultyId: nextFilters.facultyId }),
+        ...(nextFilters.programId && { programId: nextFilters.programId }),
+        ...(nextFilters.yearLevel && { yearLevel: nextFilters.yearLevel }),
+        ...(nextFilters.section && { section: nextFilters.section }),
+        ...(nextFilters.isActive !== null && { isActive: nextFilters.isActive }),
+        ...(nextFilters.courseScope && { courseScope: nextFilters.courseScope }),
+        ...(nextFilters.searchQuery.trim() && { q: nextFilters.searchQuery.trim() }),
+      },
+      ...(role === "all-program" && nextFilters.isActive === null
+        ? { isActiveMode: "all" as const }
+        : {}),
     };
-  }, [filters, page, refreshTrigger]);
+    router.push(courseAssignmentListPath(pathname, nextState, role));
+  };
 
   const handleFiltersChange = (next: AssignmentFiltersState) => {
     setFilters(next);
-    setPage(0);
+    navigateWithState(next, 0);
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto space-y-6 py-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
@@ -163,7 +124,10 @@ export function CourseAssignmentsPageShell({
       />
 
       {loadError && (
-        <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div
+          role="alert"
+          className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-4 py-3 text-sm"
+        >
           {loadError}
         </div>
       )}
@@ -172,11 +136,12 @@ export function CourseAssignmentsPageShell({
         assignments={assignments}
         total={total}
         page={page}
-        loading={loading}
+        pageSize={pageSize}
+        loading={false}
         mode={mode}
         availableCourses={availableCourses}
         availablePrograms={availablePrograms}
-        onPageChange={setPage}
+        onPageChange={(nextPage) => navigateWithState(filters, nextPage)}
         onAssignmentUpdated={refreshAssignments}
         onAssignFaculty={() => setCreateOpen(true)}
       />

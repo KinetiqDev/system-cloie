@@ -38,6 +38,13 @@ export interface TermInstanceItem {
   updatedAt: Date;
 }
 
+/** Minimal institution-shared projection for authorized period selectors. */
+export interface AcademicPeriodSummary {
+  id: string;
+  label: string;
+  status: AcademicPeriodStatus;
+}
+
 /**
  * Context returned by resolveActiveTerm().
  */

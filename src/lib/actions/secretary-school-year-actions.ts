@@ -26,6 +26,7 @@ import {
   deleteTermInstanceSchema,
 } from "@/features/academic-calendar/schemas/term-instance";
 import type { ServiceResult } from "@/lib/utils/service-result";
+import { revalidateAcademicPeriodReadModelRoutes } from "@/lib/cache/academic-periods";
 
 // ============================================================================
 // Authorization Helper
@@ -68,6 +69,7 @@ export async function createSchoolYearAction(
 
   if (result.success) {
     revalidatePath("/secretary/school-years");
+    revalidateAcademicPeriodReadModelRoutes();
   }
 
   return result;
@@ -99,6 +101,7 @@ export async function updateSchoolYearAction(
   if (result.success) {
     revalidatePath("/secretary/school-years");
     revalidatePath(`/secretary/school-years/${result.data.id}`);
+    revalidateAcademicPeriodReadModelRoutes();
   }
 
   return result;
@@ -120,6 +123,7 @@ export async function archiveSchoolYearAction(
   if (result.success) {
     revalidatePath("/secretary/school-years");
     revalidatePath(`/secretary/school-years/${result.data.id}`);
+    revalidateAcademicPeriodReadModelRoutes();
   }
 
   return result;
@@ -159,6 +163,7 @@ export async function addTermInstanceAction(
   if (result.success) {
     revalidatePath("/secretary/school-years");
     revalidatePath(`/secretary/school-years/${schoolYearId}`);
+    revalidateAcademicPeriodReadModelRoutes();
   }
 
   return result;
@@ -189,6 +194,7 @@ export async function updateTermInstanceAction(
 
   if (result.success) {
     revalidatePath("/secretary/school-years");
+    revalidateAcademicPeriodReadModelRoutes();
   }
 
   return result;
@@ -209,6 +215,7 @@ export async function deleteTermInstanceAction(
 
   if (result.success) {
     revalidatePath("/secretary/school-years");
+    revalidateAcademicPeriodReadModelRoutes();
   }
 
   return result;
@@ -239,6 +246,7 @@ export async function setActiveTermInstanceAction(
     revalidatePath("/secretary/dashboard");
     revalidatePath("/program-head/dashboard");
     revalidatePath("/faculty/dashboard");
+    revalidateAcademicPeriodReadModelRoutes();
   }
 
   return result;

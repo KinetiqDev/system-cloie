@@ -3,7 +3,7 @@ import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import {
-  resolveCourseBoundEvaluationEligibility,
+  resolveCourseBoundEvaluationEligibilities,
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
 import type {
@@ -221,6 +221,18 @@ export async function listStudentAssignedEvaluations(): Promise<{
   });
 
   const now = new Date();
+  const courseBoundEligibilityAssignments = assignments.flatMap((assignment) => {
+    const courseBound = assignment.course_bound;
+
+    if (!courseBound || assignment.response?.submitted_at) return [];
+    if (!isCourseBoundEvaluationAvailable(courseBound, now)) return [];
+
+    return [toCourseBoundEvaluationEligibilityAssignment(courseBound.course_assignment)];
+  });
+  const courseBoundEligibilities = await resolveCourseBoundEvaluationEligibilities(
+    courseBoundEligibilityAssignments,
+    authSession.userId
+  );
 
   const items = (
     await Promise.all(
@@ -235,11 +247,8 @@ export async function listStudentAssignedEvaluations(): Promise<{
           }
 
           if (!response?.submitted_at) {
-            const eligibility = await resolveCourseBoundEvaluationEligibility(
-              toCourseBoundEvaluationEligibilityAssignment(courseBound.course_assignment),
-              authSession.userId
-            );
-            if (!eligibility.eligible) return null;
+            const eligibility = courseBoundEligibilities.get(courseBound.course_assignment.id);
+            if (!eligibility?.eligible) return null;
           }
 
           const ca = courseBound.course_assignment;

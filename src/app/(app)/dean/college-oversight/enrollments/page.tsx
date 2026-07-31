@@ -1,17 +1,21 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GET as getEligiblePeriods } from "@/app/api/dean/eligible-periods/route";
-import { GET as getEnrollments } from "@/app/api/dean/enrollments/route";
 import type {
   DeanEnrollmentsData,
   DeanPeriodSummary,
   DeanReadState,
 } from "@/features/dean/services/read-dean-oversight";
-import { DeanPageReadNotFoundError, fetchDeanRead } from "@/features/dean/services/fetch-dean-read";
+import {
+  DeanReadModelNotFoundError,
+  getDeanEnrollments,
+  listDeanEligiblePeriods,
+} from "@/features/dean/services/read-dean-oversight";
 import { z } from "zod";
+import { DeanEnrollmentsLoading } from "@/features/dean/components/dean-oversight-loading";
 
 type SearchParams = { period?: string };
 const searchParamsSchema = z.object({ period: z.string().uuid().optional() });
@@ -24,10 +28,7 @@ export default async function DeanEnrollmentsPage({
   const params = await searchParams;
   const parsedParams = searchParamsSchema.safeParse(params);
   if (!parsedParams.success) notFound();
-  const { periods } = await fetchDeanRead<{ periods: DeanPeriodSummary[] }>(
-    getEligiblePeriods,
-    "/api/dean/eligible-periods"
-  );
+  const periods: DeanPeriodSummary[] = await listDeanEligiblePeriods();
   const selectedPeriodId =
     parsedParams.data.period ??
     periods.find((period) => period.status === "ACTIVE")?.id ??
@@ -44,34 +45,18 @@ export default async function DeanEnrollmentsPage({
   if (!parsedParams.data.period) {
     redirect(`/dean/college-oversight/enrollments?period=${encodeURIComponent(selectedPeriodId)}`);
   }
-  let result: DeanReadState<DeanEnrollmentsData>;
-  try {
-    result = await fetchDeanRead<DeanReadState<DeanEnrollmentsData>>(
-      getEnrollments,
-      `/api/dean/enrollments?period=${encodeURIComponent(selectedPeriodId)}`
-    );
-  } catch (error) {
-    if (error instanceof DeanPageReadNotFoundError) notFound();
-    throw error;
-  }
-  if (result.state === "no-eligible-period") {
-    return (
-      <EmptyPage
-        heading="No eligible Academic Period"
-        message="No active or completed Academic Period is available for enrollment oversight."
-      />
-    );
-  }
-
-  const { data } = result;
+  const selectedPeriod = periods.find((period) => period.id === selectedPeriodId);
+  if (!selectedPeriod) notFound();
+  const detailPromise = getDeanEnrollments(selectedPeriodId);
+  void detailPromise.catch(() => undefined);
   return (
     <div className="flex flex-col gap-6">
       <PageIntro />
-      <PeriodControls periods={periods} selectedPeriodId={data.period.id} />
+      <PeriodControls periods={periods} selectedPeriodId={selectedPeriodId} />
       <div className="text-text-secondary flex flex-wrap items-center gap-2 text-sm">
         <span className="text-text-primary font-medium">Selected period</span>
-        <Badge variant="outline">{data.period.label}</Badge>
-        {data.period.status === "COMPLETED" && <Badge variant="secondary">Archived view</Badge>}
+        <Badge variant="outline">{selectedPeriod?.label ?? "Selected period"}</Badge>
+        {selectedPeriod?.status === "COMPLETED" && <Badge variant="secondary">Archived view</Badge>}
       </div>
       <section aria-labelledby="enrollment-programs" className="flex flex-col gap-3">
         <div>
@@ -83,20 +68,54 @@ export default async function DeanEnrollmentsPage({
             opened.
           </p>
         </div>
-        {data.programs.length === 0 ? (
-          <Card>
-            <CardContent className="text-text-secondary py-6 text-sm">
-              No Course and class enrollment records in this period.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {data.programs.map((program) => (
-              <ProgramDetail key={program.id} program={program} periodId={data.period.id} />
-            ))}
-          </div>
-        )}
+        <Suspense fallback={<DeanEnrollmentsLoading />}>
+          <EnrollmentDetails detailPromise={detailPromise} />
+        </Suspense>
       </section>
+    </div>
+  );
+}
+
+export async function EnrollmentDetails({
+  detailPromise,
+}: {
+  detailPromise: ReturnType<typeof getDeanEnrollments>;
+}) {
+  let result: DeanReadState<DeanEnrollmentsData>;
+  try {
+    result = await detailPromise;
+  } catch (error) {
+    if (error instanceof DeanReadModelNotFoundError) notFound();
+    throw error;
+  }
+  return <EnrollmentContent result={result} />;
+}
+
+export function EnrollmentContent({
+  result,
+}: {
+  result: DeanReadState<DeanEnrollmentsData>;
+}) {
+  if (result.state === "no-eligible-period") {
+    return (
+      <Card>
+        <CardContent className="text-text-secondary py-6 text-sm">
+          No active or completed Academic Period is available for enrollment oversight.
+        </CardContent>
+      </Card>
+    );
+  }
+  return result.data.programs.length === 0 ? (
+    <Card>
+      <CardContent className="text-text-secondary py-6 text-sm">
+        No Course and class enrollment records in this period.
+      </CardContent>
+    </Card>
+  ) : (
+    <div className="flex flex-col gap-3">
+      {result.data.programs.map((program) => (
+        <ProgramDetail key={program.id} program={program} periodId={result.data.period.id} />
+      ))}
     </div>
   );
 }

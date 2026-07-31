@@ -7,8 +7,20 @@ import { MobileSidebarDrawer } from "@/components/layout/mobile-sidebar-drawer";
 const pathnameMock = vi.hoisted(() => vi.fn(() => "/dean/academic-structure"));
 
 vi.mock("next/navigation", () => ({ usePathname: pathnameMock }));
-vi.mock("next/image", () => ({ default: (props: React.ComponentProps<"img">) => <img {...props} /> }));
-vi.mock("next/link", () => ({ default: ({ children, ...props }: React.ComponentProps<"a">) => <a {...props}>{children}</a> }));
+vi.mock("next/image", () => ({
+  default: (props: React.ComponentProps<"img">) => <img alt={props.alt ?? ""} {...props} />,
+}));
+vi.mock("next/link", () => ({
+  default: ({
+    children,
+    prefetch,
+    ...props
+  }: React.ComponentProps<"a"> & { prefetch?: boolean }) => {
+    void prefetch;
+    return <a {...props}>{children}</a>;
+  },
+  useLinkStatus: () => ({ pending: false }),
+}));
 
 describe("Dean mobile navigation drawer", () => {
   it("opens with first navigation link focused and locks scroll", async () => {
@@ -32,19 +44,51 @@ describe("Dean mobile navigation drawer", () => {
     expect(document.body.style.overflow).toBe("");
   });
 
-  it("wraps keyboard focus at drawer edges", async () => {
+  it("wraps backward focus from the first interactive element", async () => {
     render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
     fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
     await waitFor(() => expect(screen.getByRole("link", { name: "Dashboard" })).toHaveFocus());
 
     const close = screen.getByRole("button", { name: "Close navigation menu" });
     close.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
-    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveFocus();
-
-    screen.getByRole("link", { name: "Dashboard" }).focus();
     fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
-    expect(close).toHaveFocus();
+    const interactive = screen
+      .getByRole("dialog")
+      .querySelectorAll<HTMLElement>(
+        "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+      );
+    const last = interactive[interactive.length - 1];
+    expect(last).toHaveFocus();
+  });
+
+  it("does not intercept forward focus before the last interactive element", async () => {
+    render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Close navigation menu" })).toBeInTheDocument()
+    );
+
+    const close = screen.getByRole("button", { name: "Close navigation menu" });
+    close.focus();
+    const event = new KeyboardEvent("keydown", { key: "Tab", cancelable: true });
+    document.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("wraps from the last interactive element back to the first", async () => {
+    render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+    const dialog = screen.getByRole("dialog");
+    const interactive = dialog.querySelectorAll<HTMLElement>(
+      "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+    );
+    const last = interactive[interactive.length - 1];
+    const first = interactive[0];
+    last.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(first).toHaveFocus();
   });
 
   it("closes on backdrop and navigation link activation", async () => {
@@ -59,5 +103,18 @@ describe("Dean mobile navigation drawer", () => {
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("dialog").previousSibling as HTMLElement);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("marks only the deepest Dean destination current in the drawer", async () => {
+    pathnameMock.mockReturnValue("/dean/academic-structure/courses/course-1/edit");
+    render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    expect(screen.getByRole("dialog").querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Courses" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Academic Structure" })).not.toHaveAttribute(
+      "aria-current"
+    );
   });
 });

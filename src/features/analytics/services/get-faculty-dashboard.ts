@@ -32,6 +32,20 @@ export type FacultyDashboardData = {
   wordCloudTokens: WordCloudToken[];
 };
 
+export type FacultyDashboardMetrics = Pick<
+  FacultyDashboardData,
+  "programLabel" | "programCode" | "kpi"
+>;
+
+export type FacultyDashboardVisualizations = Pick<
+  FacultyDashboardData,
+  "courseMeans" | "wordCloudTokens"
+>;
+
+type AuthorizedFacultyScope = {
+  userId: string;
+};
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -40,112 +54,164 @@ function roundToTwo(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+function prepareFacultyWordCloudTokens(tokens: WordCloudToken[]): WordCloudToken[] {
+  return tokens
+    .filter(
+      (token) =>
+        /^[a-z][a-z-]*$/.test(token.text) &&
+        Number.isFinite(token.value) &&
+        token.value > 0
+    )
+    .map(({ text, value }) => ({ text, value }));
+}
+
+function redactPotentialIdentifiers(text: string): string {
+  return text
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, " ")
+    .replace(/\b[A-Za-z]*\d[A-Za-z\d-]*\b/g, " ")
+    .replace(/\b\d{4,}\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // ---------------------------------------------------------------------------
-// Main service function
+// Authorization
 // ---------------------------------------------------------------------------
 
-export async function getFacultyDashboard(userId: string): Promise<FacultyDashboardData | null> {
+async function authorizeFacultyDashboard(userId: string): Promise<AuthorizedFacultyScope | null> {
   const session = await resolveAuthSession();
 
   if (!session || session.activeRole !== ROLES.FACULTY || session.userId !== userId) {
     return null;
   }
 
-  // Resolve faculty's program affiliation
-  const affiliation = await prisma.facultyProgramAffiliation.findFirst({
-    where: { faculty_id: userId, is_active: true },
-    include: { program: { select: { code: true, name: true } } },
-  });
+  return { userId };
+}
 
-  const programLabel = affiliation?.program.name ?? "No Program";
-  const programCode = affiliation?.program.code ?? "—";
+// ---------------------------------------------------------------------------
+// Read models
+// ---------------------------------------------------------------------------
 
-  // ── KPI Queries ──────────────────────────────────────────────────────────
+async function readFacultyDashboardMetrics(
+  scope: AuthorizedFacultyScope
+): Promise<FacultyDashboardMetrics> {
+  const now = new Date();
 
-  // 1. Active evaluations published by this faculty
-  const activeEvaluations = await prisma.courseBoundEvaluation.count({
-    where: {
-      course_assignment: { faculty_id: userId },
-      status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
-    },
-  });
-
-  // 2. Total submitted responses to this faculty's evaluations
-  const totalResponses = await prisma.response.count({
-    where: {
-      status: ResponseStatus.SUBMITTED,
-      deployment_type: "COURSE_BOUND",
-      assignment: {
-        course_bound: {
-          course_assignment: { faculty_id: userId },
-        },
-      },
-    },
-  });
-
-  // 3. Pending responses (assigned but not submitted)
-  const pendingResponses = await countEligibleCourseBoundEvaluationAssignments({
-    AND: [
-      { OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }] },
-      {
-        course_bound: {
-          course_assignment: { faculty_id: userId },
+  const [affiliation, activeEvaluations, totalResponses, pendingResponses, overallMeanResult] =
+    await Promise.all([
+      prisma.facultyProgramAffiliation.findFirst({
+        where: { faculty_id: scope.userId, is_active: true },
+        include: { program: { select: { code: true, name: true } } },
+      }),
+      prisma.courseBoundEvaluation.count({
+        where: {
+          course_assignment: { faculty_id: scope.userId },
           status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
-          OR: [{ activation_at: null }, { activation_at: { lte: new Date() } }],
-          AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: new Date() } }] }],
         },
-      },
-    ],
-  });
-
-  // 4. Overall quantitative mean
-  const overallMeanResult = await prisma.quantitativeResponseItem.aggregate({
-    _avg: { rating_value: true },
-    where: {
-      response: {
-        status: ResponseStatus.SUBMITTED,
-        deployment_type: "COURSE_BOUND",
-        assignment: {
-          course_bound: {
-            course_assignment: { faculty_id: userId },
+      }),
+      prisma.response.count({
+        where: {
+          status: ResponseStatus.SUBMITTED,
+          deployment_type: "COURSE_BOUND",
+          assignment: {
+            course_bound: {
+              course_assignment: { faculty_id: scope.userId },
+            },
           },
         },
-      },
-    },
-  });
-  const overallMean = overallMeanResult._avg?.rating_value
-    ? roundToTwo(overallMeanResult._avg.rating_value)
-    : null;
-
-  // ── Pie Chart: Mean per course ───────────────────────────────────────────
-
-  const evaluationsWithResponses = await prisma.courseBoundEvaluation.findMany({
-    where: {
-      course_assignment: { faculty_id: userId },
-      status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.CLOSED] },
-    },
-    select: {
-      course_assignment: {
-        select: {
-          course: { select: { code: true, title: true } },
-        },
-      },
-      assignments: {
+      }),
+      countEligibleCourseBoundEvaluationAssignments({
+        AND: [
+          { OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }] },
+          {
+            course_bound: {
+              course_assignment: { faculty_id: scope.userId },
+              status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+              OR: [{ activation_at: null }, { activation_at: { lte: now } }],
+              AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: now } }] }],
+            },
+          },
+        ],
+      }),
+      prisma.quantitativeResponseItem.aggregate({
+        _avg: { rating_value: true },
         where: {
-          response: { status: ResponseStatus.SUBMITTED },
-        },
-        select: {
           response: {
-            select: {
-              quant_items: { select: { rating_value: true } },
+            status: ResponseStatus.SUBMITTED,
+            deployment_type: "COURSE_BOUND",
+            assignment: {
+              course_bound: {
+                course_assignment: { faculty_id: scope.userId },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+  const averageRating = overallMeanResult._avg?.rating_value;
+  const overallMean =
+    averageRating === null || averageRating === undefined
+      ? null
+      : roundToTwo(averageRating);
+
+  return {
+    programLabel: affiliation?.program.name ?? "No Program",
+    programCode: affiliation?.program.code ?? "—",
+    kpi: {
+      activeEvaluations,
+      totalResponses,
+      overallMean,
+      pendingResponses,
+    },
+  };
+}
+
+async function readFacultyDashboardVisualizations(
+  scope: AuthorizedFacultyScope
+): Promise<FacultyDashboardVisualizations> {
+  const [evaluationsWithResponses, qualResponses] = await Promise.all([
+    prisma.courseBoundEvaluation.findMany({
+      where: {
+        course_assignment: { faculty_id: scope.userId },
+        status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.CLOSED] },
+      },
+      select: {
+        course_assignment: {
+          select: {
+            course: { select: { code: true, title: true } },
+          },
+        },
+        assignments: {
+          where: {
+            response: { status: ResponseStatus.SUBMITTED },
+          },
+          select: {
+            response: {
+              select: {
+                quant_items: { select: { rating_value: true } },
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+    prisma.qualitativeResponseItem.findMany({
+      where: {
+        response: {
+          status: ResponseStatus.SUBMITTED,
+          deployment_type: "COURSE_BOUND",
+          assignment: {
+            course_bound: {
+              course_assignment: { faculty_id: scope.userId },
+            },
+          },
+        },
+      },
+      select: { text_content: true },
+    }),
+  ]);
 
-  // Aggregate by course
   const courseMap = new Map<
     string,
     {
@@ -189,39 +255,49 @@ export async function getFacultyDashboard(userId: string): Promise<FacultyDashbo
     }
   }
 
-  // ── Word Cloud: Qualitative responses ────────────────────────────────────
-
-  const qualResponses = await prisma.qualitativeResponseItem.findMany({
-    where: {
-      response: {
-        status: ResponseStatus.SUBMITTED,
-        deployment_type: "COURSE_BOUND",
-        assignment: {
-          course_bound: {
-            course_assignment: { faculty_id: userId },
-          },
-        },
-      },
-    },
-    select: { text_content: true },
-  });
-
-  const texts = qualResponses.map((r) => r.text_content).filter((t) => t.trim().length > 0);
-
-  const wordCloudTokens = buildReviewWordCloudTokens(texts);
-
-  // ── Return ───────────────────────────────────────────────────────────────
+  const texts = qualResponses
+    .map((response) => response.text_content)
+    .map(redactPotentialIdentifiers)
+    .filter((text) => text.trim().length > 0);
 
   return {
-    programLabel,
-    programCode,
-    kpi: {
-      activeEvaluations,
-      totalResponses,
-      overallMean,
-      pendingResponses,
-    },
     courseMeans,
-    wordCloudTokens,
+    wordCloudTokens: prepareFacultyWordCloudTokens(buildReviewWordCloudTokens(texts)),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Public service functions
+// ---------------------------------------------------------------------------
+
+export async function getFacultyDashboardMetrics(
+  userId: string
+): Promise<FacultyDashboardMetrics | null> {
+  const scope = await authorizeFacultyDashboard(userId);
+  return scope ? readFacultyDashboardMetrics(scope) : null;
+}
+
+export async function getFacultyDashboardVisualizations(
+  userId: string
+): Promise<FacultyDashboardVisualizations | null> {
+  const scope = await authorizeFacultyDashboard(userId);
+  return scope ? readFacultyDashboardVisualizations(scope) : null;
+}
+
+export async function getFacultyDashboard(userId: string): Promise<FacultyDashboardData | null> {
+  const scope = await authorizeFacultyDashboard(userId);
+
+  if (!scope) {
+    return null;
+  }
+
+  const [metrics, visualizations] = await Promise.all([
+    readFacultyDashboardMetrics(scope),
+    readFacultyDashboardVisualizations(scope),
+  ]);
+
+  return {
+    ...metrics,
+    ...visualizations,
   };
 }

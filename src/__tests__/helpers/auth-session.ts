@@ -16,6 +16,8 @@ export function createAuthSessionSnapshot(
     studentProfileId: overrides.studentProfileId ?? null,
     alumniProfileId: overrides.alumniProfileId ?? null,
     industryPartnerProfileId: overrides.industryPartnerProfileId ?? null,
+    alumniVerificationStatus: overrides.alumniVerificationStatus ?? null,
+    industryPartnerVerificationStatus: overrides.industryPartnerVerificationStatus ?? null,
     profileGate: overrides.profileGate ?? { status: "COMPLETE" },
   };
 }

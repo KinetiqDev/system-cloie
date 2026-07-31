@@ -244,16 +244,15 @@ export function CourseAssignmentFormDialog({
         <WizardStepper steps={STEPS} currentStep={step} />
 
         {step === "term" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Academic Term</Label>
-              <TermInstancePicker
-                termInstances={termInstances}
-                value={termInstanceId ?? ""}
-                onChange={(val) => setTermInstanceId(val || null)}
-              />
-            </div>
-          </div>
+           <div className="space-y-4">
+             <TermInstancePicker
+                 id="course-assignment-term-instance"
+                 termInstances={termInstances}
+                 value={termInstanceId ?? ""}
+                 onChange={(val) => setTermInstanceId(val || null)}
+                 label="Academic Term"
+             />
+           </div>
         )}
 
         {step === "course" && (

@@ -68,6 +68,30 @@ describe("SessionGuard", () => {
     });
   });
 
+  it("preserves the inactive-account destination", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.SECRETARY,
+      profileGate: { status: "INACTIVE" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/status/inactive");
+
+    await expect(SessionGuard({ children: <div>Protected</div> })).rejects.toThrow(
+      `${REDIRECT_ERROR}:/status/inactive`
+    );
+  });
+
+  it("preserves the rejected external-account destination", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.ALUMNI,
+      profileGate: { status: "REJECTED_EXTERNAL_ACCOUNT" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/status/rejected");
+
+    await expect(SessionGuard({ children: <div>Protected</div> })).rejects.toThrow(
+      `${REDIRECT_ERROR}:/status/rejected`
+    );
+  });
+
   it("redirects users with ROLE_SELECTION_REQUIRED status (where intent is absent) correctly", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: null,
@@ -150,5 +174,23 @@ describe("SessionGuard", () => {
 
     render(result);
     expect(screen.getByText("Allowed Content")).toBeInTheDocument();
+  });
+
+  it("allows deferred enrollment to enter the student route", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      roles: [ROLES.STUDENT],
+      activeRole: ROLES.STUDENT,
+      studentProfileId: "profile-1",
+      profileGate: { status: "DEFERRED_ENROLLMENT" },
+    });
+
+    const result = await SessionGuard({
+      children: <div>Deferred Content</div>,
+      allowedRoles: [ROLES.STUDENT],
+    });
+
+    render(result);
+    expect(screen.getByText("Deferred Content")).toBeInTheDocument();
+    expect(resolvePostLoginDestinationMock).not.toHaveBeenCalled();
   });
 });

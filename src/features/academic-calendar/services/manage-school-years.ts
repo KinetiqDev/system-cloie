@@ -11,6 +11,7 @@ import type {
 } from "../schemas/school-year";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
 
 /**
  * Verify admin authentication.
@@ -46,6 +47,7 @@ export async function createSchoolYear(
       },
     });
 
+    invalidateAcademicPeriodReadModelTags();
     return {
       success: true,
       data: { id: schoolYear.id, code: schoolYear.code },
@@ -91,6 +93,7 @@ export async function updateSchoolYear(
     },
   });
 
+  invalidateAcademicPeriodReadModelTags();
   return { success: true, data: { id: updated.id } };
 }
 
@@ -143,7 +146,7 @@ export async function archiveSchoolYear(
     },
   });
 
+  invalidateAcademicPeriodReadModelTags();
   return { success: true, data: { id: archived.id } };
 }
-
 

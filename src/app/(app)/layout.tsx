@@ -1,23 +1,14 @@
 import * as React from "react";
-import { AppShell } from "@/components/layout/app-shell";
-import { SessionGuard } from "@/features/auth/components/session-guard";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { Suspense } from "react";
+import { AuthenticatedShellFallback } from "@/components/layout/authenticated-shell-fallback";
+import { AuthenticatedAppShell } from "@/features/auth/components/authenticated-app-shell";
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await resolveAuthSession();
+export const dynamic = "force-dynamic";
 
-  const user = session
-    ? {
-        name: session.email?.split("@")[0] || "User", // Fallback name since AuthSessionSnapshot doesn't have it yet
-        email: session.email,
-      }
-    : undefined;
-
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SessionGuard>
-      <AppShell user={user} roles={session?.roles} activeRole={session?.activeRole}>
-        {children}
-      </AppShell>
-    </SessionGuard>
+    <Suspense fallback={<AuthenticatedShellFallback />}>
+      <AuthenticatedAppShell>{children}</AuthenticatedAppShell>
+    </Suspense>
   );
 }

@@ -52,6 +52,7 @@ describe("auth logout route", () => {
     expect(response.headers.get("location")).toBe("https://cloie.example.com/portal/respondents");
     expect(signOutMock).toHaveBeenCalled();
     expect(deleteCookieMock).toHaveBeenCalledWith("cloie_dev_auth");
+    expect(deleteCookieMock).toHaveBeenCalledWith("cloie_demo_auth");
   });
 
   it("falls back to the request origin when NEXT_PUBLIC_SITE_URL is not set", async () => {

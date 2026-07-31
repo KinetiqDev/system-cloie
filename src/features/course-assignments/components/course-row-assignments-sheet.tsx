@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus } from "lucide-react";
-import { listCourseAssignmentsAction } from "@/lib/actions/course-assignment-actions";
+import { loadCourseAssignmentsForSheetAction } from "@/lib/actions/course-assignment-actions";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
 import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
@@ -48,13 +48,13 @@ export function CourseRowAssignmentsSheet({
 
   const loadAssignments = useCallback(async () => {
     if (!termInstanceId) return;
-    
+
     setLoading(true);
-    const result = await listCourseAssignmentsAction({
+    const result = await loadCourseAssignmentsForSheetAction({
       termInstanceId,
       courseId,
     });
-    
+
     if (result.success) {
       setAssignments(result.data.items);
     }
@@ -86,7 +86,7 @@ export function CourseRowAssignmentsSheet({
 
           <div className="mt-6 space-y-4">
             {!termInstanceId ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-muted-foreground py-8 text-center">
                 Please select a term to view assignments.
               </div>
             ) : loading ? (
@@ -96,7 +96,7 @@ export function CourseRowAssignmentsSheet({
                 <Skeleton className="h-16 w-full" />
               </div>
             ) : assignments.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-muted-foreground py-8 text-center">
                 No faculty assigned yet for this course in the selected term.
               </div>
             ) : (
@@ -104,16 +104,16 @@ export function CourseRowAssignmentsSheet({
                 {assignments.map((assignment) => (
                   <div
                     key={assignment.id}
-                    className="flex items-center justify-between p-3 rounded-md border"
+                    className="flex items-center justify-between rounded-md border p-3"
                   >
                     <div>
                       <p className="font-medium">{assignment.facultyName}</p>
-                      <p className="text-sm text-muted-foreground">{assignment.facultyEmail}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <p className="text-muted-foreground text-sm">{assignment.facultyEmail}</p>
+                      <div className="mt-1 flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
                           {assignment.programCode}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {getYearLevelDisplay(assignment.yearLevel)}
                           {assignment.section ? ` • ${getSectionLabel(assignment.section)}` : ""}
                         </span>
@@ -127,9 +127,9 @@ export function CourseRowAssignmentsSheet({
               </div>
             )}
 
-            {termInstanceId && (
-              isGeneralEducation ? (
-                <p className="text-center text-xs text-muted-foreground">
+            {termInstanceId &&
+              (isGeneralEducation ? (
+                <p className="text-muted-foreground text-center text-xs">
                   General Education assignments are managed by Secretary/Dean.
                 </p>
               ) : (
@@ -141,8 +141,7 @@ export function CourseRowAssignmentsSheet({
                   <Plus className="mr-2 h-4 w-4" />
                   Assign Faculty
                 </Button>
-              )
-            )}
+              ))}
           </div>
         </DialogContent>
       </Dialog>

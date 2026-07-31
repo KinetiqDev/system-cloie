@@ -42,6 +42,21 @@ describe("buildAuthSessionSnapshot", () => {
     expect(session.profileGate).toEqual({ status: "COMPLETE" });
   });
 
+  it("exposes external verification statuses already resolved for the request", () => {
+    const session = buildAuthSessionSnapshot({
+      userId: "alumni-1",
+      email: "alumni@example.com",
+      roles: [ROLES.ALUMNI],
+      studentProfileId: null,
+      alumniProfileId: "alumni-profile-1",
+      alumniVerificationStatus: "PENDING",
+    });
+
+    expect(session.alumniVerificationStatus).toBe("PENDING");
+    expect(session.industryPartnerVerificationStatus).toBeNull();
+    expect(session.profileGate).toEqual({ status: "COMPLETE" });
+  });
+
   it("allows faculty users without student profiles", () => {
     const session = buildAuthSessionSnapshot({
       userId: "user-5",
@@ -65,6 +80,23 @@ describe("buildAuthSessionSnapshot", () => {
     });
 
     expect(session.activeRole).toBe(ROLES.FACULTY);
+    expect(session.profileGate).toEqual({
+      status: "FACULTY_ONBOARDING_REQUIRED",
+      intent: "faculty",
+    });
+  });
+
+  it("does not bypass profile gates for dedicated demo sessions", () => {
+    const session = buildAuthSessionSnapshot({
+      userId: "demo-user",
+      email: "demo-faculty@cloie.test",
+      roles: [ROLES.FACULTY],
+      studentProfileId: null,
+      hasFacultyAffiliation: false,
+      isDemoUser: true,
+      isDedicatedDemo: true,
+    });
+
     expect(session.profileGate).toEqual({
       status: "FACULTY_ONBOARDING_REQUIRED",
       intent: "faculty",

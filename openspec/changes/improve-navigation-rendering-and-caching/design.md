@@ -80,7 +80,7 @@ The Course Assignment route contract is defined before any role route migrates:
 | `page` | one-based positive integer, maximum `10000` | omitted means page 1; invalid, zero, negative, or out-of-range values redirect to the canonical available page | never changes authorization scope |
 | `termInstanceId`, `courseId`, `facultyId`, `programId` | one UUID value each | omitted means no filter; invalid values are removed through canonical redirect | Program Head ignores `programId` and derives managed-program scope from the validated Program Head assignment |
 | `yearLevel`, `section`, `courseScope` | one current enum value | omitted means no filter; unsupported values are removed through canonical redirect | values filter only within server-authorized scope |
-| `isActive` | `true` or `false` | role route default applies when omitted; invalid values are removed through canonical redirect | does not bypass academic-period lifecycle rules |
+| `isActive` | `true`, `false`, or `all` | role route default applies when omitted; `all` is the canonical explicit all-statuses selection for all-program routes; invalid values are removed through canonical redirect | does not bypass academic-period lifecycle rules |
 | `q` | trimmed text, maximum 100 characters | omitted means no text filter; empty or overlength values are removed through canonical redirect | server applies only to approved Course Assignment display fields |
 
 All values are parsed server-side through one schema. Duplicate values use the first non-empty value and redirect to the normalized one-value URL. Unknown query keys are removed. The validated result is the only list-service input. Program Head scope is never accepted from URL input, and Program Head General Education visibility and management remain governed by the existing server policy.
@@ -166,7 +166,7 @@ Required evidence per slice:
 
 ### 8.1 Browser-evidence authentication contract
 
-Production-build browser evidence SHALL use a disposable environment with real Supabase-authenticated test accounts for the required CLOIE account roles, or a separately reviewed test-only authentication mechanism that cannot be enabled in a deployed environment. `cloie_dev_auth` and `POST /api/auth/dev-login` SHALL NOT be used after `pnpm build` and `pnpm start`.
+Production-build browser evidence SHALL use either a disposable environment with real Supabase-authenticated test accounts or the separately reviewed signed demo session from `openspec/changes/add-dedicated-demo-auth/` in an isolated dedicated demo deployment. The primary public Production deployment remains OAuth-only, and demo configuration SHALL fail closed there. `cloie_dev_auth` and `POST /api/auth/dev-login` SHALL NOT be used after `pnpm build` and `pnpm start`. Signed demo-session evidence SHALL be labeled as route/rendering evidence and SHALL NOT be treated as OAuth exchange or callback evidence.
 
 Each baseline and final record SHALL identify the environment, test role, account state, route, viewport, throttle, and authentication setup without recording credentials or session tokens. The record SHALL include a Chrome DevTools performance trace using Fast 3G and 4x CPU throttling, its selected LCP element, LCP breakdown, and relevant document, fetch, and script requests. Lighthouse is used for accessibility and best-practice checks; it is not the sole performance proof.
 
@@ -183,7 +183,7 @@ Each baseline and final record SHALL identify the environment, test role, accoun
 
 ## Migration Plan
 
-1. Baseline representative route network and bundle behavior in a production build using seeded development identities; record scope and metrics in tests or change evidence.
+1. Baseline representative route network and bundle behavior in a production build using the dedicated isolated demo deployment and signed demo identities, or a separate disposable OAuth environment when authentication latency is in scope; record scope, authentication mode, and metrics in tests or change evidence.
 2. Land rendering boundaries and navigation accessibility without changing data semantics. Rollback is file-level removal of new loading/error/dynamic wrappers.
 3. Convert Course Assignments and Secretary Users to server-first, bounded reads with route tests. Keep existing action read path temporarily only where a client interaction still requires it; remove it after parity tests pass.
 4. Replace Dean internal handler calls and optimize representative services one feature at a time. Roll back by restoring the previous service entry point if authorization or output parity fails.

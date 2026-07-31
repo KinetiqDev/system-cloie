@@ -32,6 +32,11 @@ describe("dev login route", () => {
   });
 
   it("rejects demo mode outside development", async () => {
+    vi.stubEnv("CLOIE_DEMO_ENABLED", "true");
+    vi.stubEnv("CLOIE_DEPLOYMENT_KIND", "dedicated-demo");
+    vi.stubEnv("CLOIE_DEMO_SESSION_SECRET", "a".repeat(32));
+    vi.stubEnv("CLOIE_DEMO_ALLOWED_USERS", "demo-faculty@cloie.test");
+
     const response = await POST(
       new Request("http://localhost/api/auth/dev-login", {
         method: "POST",

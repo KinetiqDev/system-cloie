@@ -67,6 +67,17 @@ export async function listCourseAssignments(
     ...(filter.courseScope && {
       course: { course_scope: filter.courseScope },
     }),
+    ...(filter.q && {
+      OR: [
+        { course: { code: { contains: filter.q, mode: "insensitive" } } },
+        { course: { title: { contains: filter.q, mode: "insensitive" } } },
+        { faculty: { first_name: { contains: filter.q, mode: "insensitive" } } },
+        { faculty: { last_name: { contains: filter.q, mode: "insensitive" } } },
+        { faculty: { email: { contains: filter.q, mode: "insensitive" } } },
+        { program: { code: { contains: filter.q, mode: "insensitive" } } },
+        { program: { name: { contains: filter.q, mode: "insensitive" } } },
+      ],
+    }),
   };
 
   try {

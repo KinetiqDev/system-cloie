@@ -7,7 +7,8 @@
 - Environment: `<disposable local/preview environment; no secrets>`
 - Server command: `pnpm build && pnpm start`
 - Base URL: `<origin only>`
-- Authentication setup: `Supabase OAuth via existing Google callback; disposable account; no credentials or tokens recorded`
+- Authentication mode: `<signed demo session | Supabase OAuth>`
+- Authentication setup: `<dedicated isolated demo deployment or disposable OAuth account; no credentials, cookies, or tokens recorded>`
 - No-session check: `<PASS/FAIL; link to private check output if applicable>`
 
 ## Route Context
@@ -51,4 +52,5 @@ Record `document`, `fetch`, and `script` requests only. Omit cookies, authorizat
 
 ## Limitations
 
+- Signed demo-session evidence does not measure Google OAuth exchange, callback, or Supabase Auth session-refresh latency.
 - `<Unresolved issue, data-shape limitation, or explicitly deferred work>`

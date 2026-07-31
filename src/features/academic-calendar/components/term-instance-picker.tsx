@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { AcademicSemester, AcademicTerm } from "@prisma/client";
 import {
   Select,
@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
-import { ALLOWED_SEMESTER_TERM_PAIRS } from "@/lib/constants/academic-period";
 import { SEMESTER_OPTIONS, TERM_OPTIONS } from "@/lib/constants/academic";
 import type { TermInstanceItem } from "../types";
 
@@ -24,6 +23,7 @@ interface TermInstancePickerProps {
   disabled?: boolean;
   showOnlyActive?: boolean;
   allowClear?: boolean;
+  id?: string;
 }
 
 /**
@@ -39,7 +39,10 @@ export function TermInstancePicker({
   disabled = false,
   showOnlyActive = false,
   allowClear = false,
+  id,
 }: TermInstancePickerProps) {
+  const generatedId = useId();
+  const pickerId = id ?? `term-instance-picker-${generatedId.replaceAll(":", "")}`;
   const filteredInstances = showOnlyActive
     ? termInstances.filter((t) => t.status === "ACTIVE")
     : termInstances;
@@ -65,13 +68,13 @@ export function TermInstancePicker({
 
   return (
     <div className="space-y-2">
-      {label && <Label>{label}</Label>}
+      {label && <Label htmlFor={pickerId}>{label}</Label>}
       <Select
         value={value}
         onValueChange={(val) => onChange(val ?? "")}
         disabled={disabled}
       >
-        <SelectTrigger>
+        <SelectTrigger id={pickerId}>
           <SelectValue placeholder={placeholder}>
             {value
               ? (() => {

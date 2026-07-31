@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
@@ -8,9 +7,10 @@ import {
   getHighestNavRole,
   getDeanPrimaryNav,
   getMobileNavByRoles,
-  isNavItemActive,
+  getDeepestMatchingNavItem,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
+import { NavigationLink } from "./navigation-link";
 
 interface MobileNavProps {
   roles?: Role[];
@@ -21,13 +21,14 @@ export function MobileNav({ roles = [] }: MobileNavProps) {
 
   const mainNav =
     getHighestNavRole(roles) === ROLES.DEAN ? getDeanPrimaryNav() : getMobileNavByRoles(roles);
+  const activeItem = getDeepestMatchingNavItem(pathname, mainNav);
 
   return (
     <nav className="border-border bg-surface pb-safe fixed inset-x-0 bottom-0 z-50 flex h-16 items-center justify-between border-t px-2 md:hidden" aria-label="Primary navigation">
       {mainNav.map((item) => {
-        const isActive = isNavItemActive(pathname, item.href);
+        const isActive = activeItem?.href === item.href;
         return (
-          <Link
+          <NavigationLink
             key={item.href}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
@@ -45,7 +46,7 @@ export function MobileNav({ roles = [] }: MobileNavProps) {
             >
               {item.name}
             </span>
-          </Link>
+          </NavigationLink>
         );
       })}
     </nav>

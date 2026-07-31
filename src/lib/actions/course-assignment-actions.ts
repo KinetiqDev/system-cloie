@@ -19,8 +19,8 @@ import {
   preflightCourseAssignmentDeletion,
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
-import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import { listCourseAssignmentsForFaculty } from "@/features/course-assignments/services/list-course-assignments-for-faculty";
+import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import { searchFacultyPool } from "@/features/course-assignments/services/search-faculty-pool";
 import type {
   CreateCourseAssignmentInput,
@@ -168,23 +168,14 @@ export async function bulkCreateCourseAssignmentsAction(input: BulkCreateCourseA
 }
 
 /**
- * List course assignments for the current role (Program Head scoped, Secretary/Dean unscoped).
+ * Load assignments for the explicitly opened course-assignment sheet.
+ * The role-owned list routes read their initial page in Server Components.
  */
-export async function listCourseAssignmentsAction(
+export async function loadCourseAssignmentsForSheetAction(
   filter: ListCourseAssignmentsFilter,
   options?: ListOptions
 ) {
   return listCourseAssignments(filter, options);
-}
-
-/**
- * @deprecated Use listCourseAssignmentsAction instead. Kept for callers that haven't migrated.
- */
-export async function listCourseAssignmentsForProgramHeadAction(
-  filter: ListCourseAssignmentsFilter,
-  options?: ListOptions
-) {
-  return listCourseAssignmentsAction(filter, options);
 }
 
 /**

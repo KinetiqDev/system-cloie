@@ -29,6 +29,7 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
 vi.mock("@/features/dean/services/read-dean-oversight", () => ({
   DeanReadModelNotFoundError: class DeanReadModelNotFoundError extends Error {},
   DeanReadModelBadRequestError: class DeanReadModelBadRequestError extends Error {},
+  DeanReadModelUnauthorizedError: class DeanReadModelUnauthorizedError extends Error {},
   getDeanDashboard: getDashboardMock,
   getDeanLearningOutcomes: getLearningOutcomesMock,
   getDeanEnrollments: getEnrollmentsMock,

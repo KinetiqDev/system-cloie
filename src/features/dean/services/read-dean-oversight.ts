@@ -1,29 +1,52 @@
-import type { AcademicPeriodStatus, Prisma } from "@prisma/client";
+import type { AcademicPeriodStatus, Prisma, StudentSection, YearLevel } from "@prisma/client";
+import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
+import { ROLES } from "@/lib/constants/roles";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { listAcademicPeriodSummaries } from "@/features/academic-calendar/services/read-academic-period-summaries";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import {
   readPeriodReadiness,
+  readPeriodReadinessTotals,
   type PeriodReadiness,
   type ReadinessContext,
 } from "@/features/academic-calendar/services/read-period-readiness";
 
 export class DeanReadModelNotFoundError extends Error {}
 export class DeanReadModelBadRequestError extends Error {}
+export class DeanReadModelUnauthorizedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DeanReadModelUnauthorizedError";
+  }
+}
 
 export type DeanReadState<T> = { state: "ready"; data: T } | { state: "no-eligible-period" };
 
-export type DeanPeriodSummary = { id: string; label: string; status: AcademicPeriodStatus };
+export type DeanPeriodSummary = {
+  id: string;
+  label: string;
+  status: AcademicPeriodStatus;
+};
 
 type PeriodRecord = Prisma.AcademicTermInstanceGetPayload<{
   include: { school_year: { select: { code: true } } };
 }>;
 
+function periodSummary(period: PeriodRecord): DeanPeriodSummary {
+  return {
+    id: period.id,
+    label: formatTermInstanceLabel(period.school_year.code, period.semester, period.term),
+    status: period.status,
+  };
+}
+
 type AssignmentRow = {
   id: string;
   course_id: string;
   program_id: string;
-  year_level: string;
-  section: string;
+  year_level: YearLevel;
+  section: StudentSection;
   course: {
     code: string;
     title: string;
@@ -119,29 +142,16 @@ export type DeanRosterData = {
   totalPages: number;
 };
 
-function periodSummary(period: PeriodRecord): DeanPeriodSummary {
-  return {
-    id: period.id,
-    label: formatTermInstanceLabel(period.school_year.code, period.semester, period.term),
-    status: period.status,
-  };
-}
+const ROSTER_PAGE_SIZE = 25;
 
 export async function listDeanEligiblePeriods(): Promise<DeanPeriodSummary[]> {
-  const [active, completed] = await Promise.all([
-    prisma.academicTermInstance.findFirst({
-      where: { status: "ACTIVE" },
-      include: { school_year: { select: { code: true } } },
-    }),
-    prisma.academicTermInstance.findMany({
-      where: { status: "COMPLETED" },
-      include: { school_year: { select: { code: true } } },
-      orderBy: [{ end_date: "desc" }, { created_at: "desc" }],
-    }),
-  ]);
-  return [active, ...completed]
-    .filter((period): period is PeriodRecord => Boolean(period))
-    .map(periodSummary);
+  const session = await resolveAuthSession();
+  if (!session) throw new DeanReadModelUnauthorizedError("Authentication required.");
+  if (session.activeRole !== ROLES.DEAN) {
+    throw new DeanReadModelUnauthorizedError("College Dean access required.");
+  }
+
+  return listAcademicPeriodSummaries();
 }
 
 function archivedLabel(
@@ -238,6 +248,87 @@ async function assignmentRows(periodId: string, includeArchived: boolean) {
   );
 }
 
+const rosterContext = cache(async (periodId: string, assignmentId: string) => {
+  const period = await requirePeriod(periodId, "active-or-completed");
+  if (!period) return null;
+  const assignment = await prisma.courseAssignment.findFirst({
+    where: {
+      id: assignmentId,
+      term_instance_id: period.id,
+      is_active: true,
+      ...(period.status === "ACTIVE"
+        ? { course: { is_active: true }, program: { is_active: true } }
+        : {}),
+    },
+    select: {
+      id: true,
+      program_id: true,
+      year_level: true,
+      section: true,
+      course: {
+        select: { code: true, title: true, is_active: true, course_scope: true, program_id: true },
+      },
+      program: { select: { name: true, is_active: true } },
+    },
+  });
+  if (!assignment)
+    throw new DeanReadModelNotFoundError("Course assignment is not in selected period");
+  if (
+    assignment.course.course_scope === "PROGRAM_SPECIFIC" &&
+    assignment.course.program_id !== assignment.program_id
+  ) {
+    throw new DeanReadModelNotFoundError("Course assignment is not in selected program");
+  }
+  return { period, assignment };
+});
+
+function rosterStudentWhere(
+  periodId: string,
+  assignment: {
+    program_id: string;
+    year_level: YearLevel;
+    section: StudentSection;
+  },
+  query?: string
+): Prisma.StudentEnrollmentWhereInput {
+  const searchTerms = query?.split(/\s+/).filter(Boolean) ?? [];
+  const searchFilter: Prisma.StudentEnrollmentWhereInput =
+    searchTerms.length > 0
+      ? {
+          AND: searchTerms.map((term) => ({
+            student: {
+              OR: [
+                { first_name: { contains: term, mode: "insensitive" } },
+                { last_name: { contains: term, mode: "insensitive" } },
+              ],
+            },
+          })),
+        }
+      : {};
+
+  return {
+    term_instance_id: periodId,
+    program_id: assignment.program_id,
+    year_level: assignment.year_level,
+    section: assignment.section,
+    is_active: true,
+    ...searchFilter,
+  };
+}
+
+const rosterPageRead = cache(async (periodId: string, assignmentId: string, query?: string) => {
+  const context = await rosterContext(periodId, assignmentId);
+  if (!context) return null;
+  const totalCount = await prisma.studentEnrollment.count({
+    where: rosterStudentWhere(context.period.id, context.assignment, query),
+  });
+  return {
+    ...context,
+    totalCount,
+    totalPages: Math.max(1, Math.ceil(totalCount / ROSTER_PAGE_SIZE)),
+  };
+});
+
 export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardData>> {
   const period = await prisma.academicTermInstance.findFirst({
     where: { status: "ACTIVE" },
@@ -245,12 +336,9 @@ export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardDat
   });
   if (!period) return { state: "no-eligible-period" };
 
-  const readiness = await readPeriodReadiness(period.id);
-  const missingCilos = readiness.programTotals.reduce(
-    (sum, total) => sum + total.missingCiloContexts,
-    0
-  );
-  const incompleteMappings = readiness.programTotals.reduce(
+  const programTotals = await readPeriodReadinessTotals(period.id);
+  const missingCilos = programTotals.reduce((sum, total) => sum + total.missingCiloContexts, 0);
+  const incompleteMappings = programTotals.reduce(
     (sum, total) => sum + total.incompleteMappingContexts,
     0
   );
@@ -259,16 +347,13 @@ export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardDat
     data: {
       activePeriod: { id: period.id, label: periodSummary(period).label },
       kpis: {
-        activeContexts: readiness.programTotals.reduce(
-          (sum, total) => sum + total.activeContexts,
-          0
-        ),
-        readyContexts: readiness.programTotals.reduce((sum, total) => sum + total.readyContexts, 0),
+        activeContexts: programTotals.reduce((sum, total) => sum + total.activeContexts, 0),
+        readyContexts: programTotals.reduce((sum, total) => sum + total.readyContexts, 0),
         missingCiloContexts: missingCilos,
         incompleteMappingContexts: incompleteMappings,
       },
       risks: { missingCilos, incompleteMappings, notReady: missingCilos + incompleteMappings },
-      programs: readiness.programTotals.map(
+      programs: programTotals.map(
         ({
           programId,
           programName,
@@ -365,7 +450,7 @@ export async function getDeanLearningOutcomes(
           yearLevel: assignment.year_level,
           section: assignment.section,
           ciloId: cilo.id,
-            ciloStatement: cilo.description,
+          ciloStatement: cilo.description,
           ciloIsArchived: cilo.isArchived,
           reason: "incomplete-mapping",
           missingGraduateOutcomeIds: cilo.missingGraduateOutcomeIds,
@@ -477,63 +562,11 @@ export async function getDeanRoster(input: {
   query?: string;
   page: number;
 }): Promise<DeanReadState<DeanRosterData>> {
-  const period = await requirePeriod(input.periodId, "active-or-completed");
-  if (!period) return { state: "no-eligible-period" };
-  const assignment = await prisma.courseAssignment.findFirst({
-    where: {
-      id: input.assignmentId,
-      term_instance_id: period.id,
-      is_active: true,
-      ...(period.status === "ACTIVE"
-        ? { course: { is_active: true }, program: { is_active: true } }
-        : {}),
-    },
-    select: {
-      id: true,
-      program_id: true,
-      year_level: true,
-      section: true,
-      course: {
-        select: { code: true, title: true, is_active: true, course_scope: true, program_id: true },
-      },
-      program: { select: { name: true, is_active: true } },
-    },
-  });
-  if (!assignment)
-    throw new DeanReadModelNotFoundError("Course assignment is not in selected period");
-  if (
-    assignment.course.course_scope === "PROGRAM_SPECIFIC" &&
-    assignment.course.program_id !== assignment.program_id
-  ) {
-    throw new DeanReadModelNotFoundError("Course assignment is not in selected program");
-  }
-
-  const searchTerms = input.query?.split(/\s+/).filter(Boolean) ?? [];
-  const searchFilter: Prisma.StudentEnrollmentWhereInput =
-    searchTerms.length > 0
-      ? {
-          AND: searchTerms.map((term) => ({
-            student: {
-              OR: [
-                { first_name: { contains: term, mode: "insensitive" } },
-                { last_name: { contains: term, mode: "insensitive" } },
-              ],
-            },
-          })),
-        }
-      : {};
-
-  const studentWhere: Prisma.StudentEnrollmentWhereInput = {
-    term_instance_id: period.id,
-    program_id: assignment.program_id,
-    year_level: assignment.year_level,
-    section: assignment.section,
-    is_active: true,
-    ...searchFilter,
-  };
-  const totalCount = await prisma.studentEnrollment.count({ where: studentWhere });
-  const totalPages = Math.max(1, Math.ceil(totalCount / 25));
-  const page = Math.min(input.page, Math.max(1, totalPages));
+  const pageRead = await rosterPageRead(input.periodId, input.assignmentId, input.query);
+  if (!pageRead) return { state: "no-eligible-period" };
+  const { period, assignment, totalCount, totalPages } = pageRead;
+  const studentWhere = rosterStudentWhere(period.id, assignment, input.query);
+  const page = Math.min(input.page, totalPages);
   const students = await prisma.studentEnrollment.findMany({
     where: studentWhere,
     select: { student: { select: { first_name: true, last_name: true } } },
@@ -542,8 +575,8 @@ export async function getDeanRoster(input: {
       { student: { last_name: "asc" } },
       { student_user_id: "asc" },
     ],
-    skip: (page - 1) * 25,
-    take: 25,
+    skip: (page - 1) * ROSTER_PAGE_SIZE,
+    take: ROSTER_PAGE_SIZE,
   });
   return {
     state: "ready",
@@ -568,9 +601,20 @@ export async function getDeanRoster(input: {
         displayName: `${student.first_name} ${student.last_name}`,
       })),
       page,
-      pageSize: 25,
+      pageSize: ROSTER_PAGE_SIZE,
       totalCount,
       totalPages,
     },
   };
+}
+
+export async function getDeanRosterPage(input: {
+  periodId: string;
+  assignmentId: string;
+  query?: string;
+  page: number;
+}): Promise<DeanReadState<{ page: number }>> {
+  const pageRead = await rosterPageRead(input.periodId, input.assignmentId, input.query);
+  if (!pageRead) return { state: "no-eligible-period" };
+  return { state: "ready", data: { page: Math.min(input.page, pageRead.totalPages) } };
 }

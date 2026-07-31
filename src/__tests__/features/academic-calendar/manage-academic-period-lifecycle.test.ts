@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+
+const invalidateAcademicPeriodReadModelTagsMock = vi.hoisted(() => vi.fn());
 import { transitionPeriodStatus } from "@/features/academic-calendar/services/manage-academic-period-lifecycle";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -8,6 +10,9 @@ import { persistPeriodReadinessSnapshot } from "@/features/academic-calendar/ser
 vi.mock("@/features/auth/services/resolve-auth-session");
 vi.mock("@/features/academic-calendar/services/read-period-readiness", () => ({
   persistPeriodReadinessSnapshot: vi.fn(),
+}));
+vi.mock("@/lib/cache/academic-periods", () => ({
+  invalidateAcademicPeriodReadModelTags: invalidateAcademicPeriodReadModelTagsMock,
 }));
 vi.mock("@/lib/db/prisma", () => {
   const prisma = {
@@ -109,6 +114,9 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
         data: expect.objectContaining({ status: "ACTIVE" }),
       })
     );
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
+      activePeriodChanged: true,
+    });
   });
 
   it("activates a period and atomically completes prior active when end_date present", async () => {
@@ -175,6 +183,9 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
       })
     );
     expect(persistPeriodReadinessSnapshot).toHaveBeenCalledWith("p-active", prisma);
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
+      activePeriodChanged: true,
+    });
   });
 
   it("rejects completing without end_date", async () => {
@@ -205,6 +216,9 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
         data: expect.objectContaining({ status: "CANCELLED" }),
       })
     );
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
+      activePeriodChanged: false,
+    });
   });
 
   it("rejects stale transitions without overwriting the current status", async () => {
