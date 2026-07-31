@@ -41,6 +41,7 @@ vi.mock("lucide-react", () => ({
   Briefcase: () => <span>Briefcase</span>,
   Building2: () => <span>Building2</span>,
   UserCog: () => <span>UserCog</span>,
+  XIcon: () => <span>XIcon</span>,
 }));
 
 describe("RoleSelectionCard Rendering", () => {

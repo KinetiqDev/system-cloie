@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SystemRole } from "@prisma/client";
+import {
+  createLegalAcknowledgementTicket,
+  LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME,
+} from "@/features/legal/services/legal-acknowledgement-ticket";
 
 const {
   exchangeCodeForSessionMock,
@@ -87,6 +91,7 @@ describe("auth callback route", () => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://cloie.test");
+    vi.stubEnv("CLOIE_LEGAL_TICKET_SECRET", "legal-ticket-test-secret-012345678901");
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: "STUDENT",
@@ -97,6 +102,14 @@ describe("auth callback route", () => {
       profileGate: { status: "COMPLETE" },
     });
   });
+
+  function callbackRequest(url: string, intent?: string) {
+    return new Request(url, {
+      headers: intent
+        ? { cookie: `${LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME}=${createLegalAcknowledgementTicket(intent as never)}` }
+        : undefined,
+    });
+  }
 
   it("redirects auth failures to the login error page", async () => {
     const response = await GET(new Request("https://cloie.test/api/auth/callback"));
@@ -112,9 +125,7 @@ describe("auth callback route", () => {
     });
     findUniqueUserMock.mockResolvedValue(null); // not found
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&intent=student")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student"));
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/invalid-domain");
@@ -127,12 +138,10 @@ describe("auth callback route", () => {
     });
     findUniqueUserMock.mockResolvedValue(null);
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc"));
 
-    expect(signOutMock).toHaveBeenCalledTimes(1);
-    expect(response.headers.get("location")).toBe("https://cloie.test/portal/respondents");
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://cloie.test/");
   });
 
   it("redirects existing users with no intent to their stored role dashboard", async () => {
@@ -152,11 +161,10 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc"));
 
-    expect(response.headers.get("location")).toBe("https://cloie.test/faculty/dashboard");
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://cloie.test/");
   });
 
   it("links an existing unlinked admin-created user by normalized email and does not overwrite name", async () => {
@@ -195,9 +203,7 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&intent=faculty")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty"));
 
     expect(updateUserMock).toHaveBeenCalledWith({
       where: { id: "domain-user-1" },
@@ -237,9 +243,7 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&intent=alumni")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=alumni", "alumni"));
 
     expect(createUserMock).toHaveBeenCalledWith({
       data: {
@@ -280,9 +284,7 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&intent=alumni")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=alumni", "alumni"));
 
     expect(createUserMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -307,9 +309,7 @@ describe("auth callback route", () => {
       roles: [{ role: SystemRole.FACULTY }],
     });
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&intent=student")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student"));
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/role-mismatch");
@@ -332,9 +332,7 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&next=%2Fdashboard&intent=faculty")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&next=%2Fdashboard&intent=faculty", "faculty"));
 
     expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
       requestedPath: "/dashboard",
@@ -365,8 +363,12 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
 
-    const request = new Request("https://internal.example/api/auth/callback?code=abc", {
-      headers: { "x-forwarded-host": "app.example.com" },
+    const ticketRequest = callbackRequest(
+      "https://internal.example/api/auth/callback?code=abc&intent=faculty",
+      "faculty"
+    );
+    const request = new Request(ticketRequest, {
+      headers: { "x-forwarded-host": "app.example.com", cookie: ticketRequest.headers.get("cookie") ?? "" },
     });
     const response = await GET(request);
 
@@ -385,17 +387,10 @@ describe("auth callback route", () => {
       roles: [{ role: SystemRole.STUDENT }],
     });
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&next=profile")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&next=profile"));
 
-    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
-      requestedPath: "profile",
-      intent: null,
-      activeRole: "STUDENT",
-      profileGate: { status: "COMPLETE" },
-    });
-    expect(response.headers.get("location")).toContain("/student/dashboard");
+    expect(resolvePostLoginDestinationMock).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://cloie.test/");
   });
 
   it("assigns role to roleless existing user when they log in with a valid self-service intent", async () => {
@@ -420,9 +415,7 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&intent=student")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student"));
 
     expect(createUserRoleMock).toHaveBeenCalledWith({
       data: {
@@ -445,9 +438,7 @@ describe("auth callback route", () => {
       roles: [],
     });
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&intent=secretary")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary"));
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/pre-provisioning-required");
@@ -465,9 +456,7 @@ describe("auth callback route", () => {
       roles: [],
     });
 
-    const response = await GET(
-      new Request("https://cloie.test/api/auth/callback?code=abc&intent=student")
-    );
+    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student"));
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/invalid-domain");
@@ -502,9 +491,7 @@ describe("auth callback route", () => {
       });
       resolvePostLoginDestinationMock.mockReturnValue("/secretary/dashboard");
 
-      const response = await GET(
-        new Request("https://cloie.test/api/auth/callback?code=abc&intent=secretary")
-      );
+      const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary"));
 
       expect(createUserMock).toHaveBeenCalled();
       expect(response.headers.get("location")).toBe("https://cloie.test/secretary/dashboard");
@@ -541,9 +528,7 @@ describe("auth callback route", () => {
       });
       resolvePostLoginDestinationMock.mockReturnValue("/secretary/dashboard");
 
-      const response = await GET(
-        new Request("https://cloie.test/api/auth/callback?code=abc&intent=secretary")
-      );
+      const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary"));
 
       expect(updateUserMock).toHaveBeenCalled();
       expect(upsertUserRoleMock).toHaveBeenCalled();
@@ -560,9 +545,7 @@ describe("auth callback route", () => {
       // Normal signup logic falls through, which will block new admin signup
       findUniqueUserMock.mockResolvedValue(null);
 
-      const response = await GET(
-        new Request("https://cloie.test/api/auth/callback?code=abc&intent=secretary")
-      );
+      const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary"));
 
       expect(signOutMock).toHaveBeenCalled();
       expect(response.headers.get("location")).toContain("/status/pre-provisioning-required");

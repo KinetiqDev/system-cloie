@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, ElementType } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { getSiteUrl } from "@/lib/utils/site-url";
 import { Button } from "@/components/ui/button";
 import { 
-  Loader2, 
   ShieldAlert, 
   CheckCircle2, 
   Lock,
@@ -18,6 +15,8 @@ import {
   UserCog
 } from "lucide-react";
 import { RoleCardConfig } from "../lib/role-card-config";
+import { roleToIntentOrThrow } from "@/features/auth/services/role-intent";
+import { LegalAcknowledgementDialog } from "@/features/legal/components/legal-acknowledgement-dialog";
 
 const ICON_MAP: Record<string, ElementType> = {
   ShieldCheck,
@@ -34,35 +33,9 @@ interface RoleSelectionCardProps {
 }
 
 export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const Icon = ICON_MAP[config.iconName] || ShieldCheck;
-
-  const handleSignIn = async () => {
-    try {
-      setIsLoading(true);
-      const supabase = createClient();
-
-      const intentParam = `?intent=${config.role.toLowerCase().replace("_", "-")}`;
-      const redirectTo = `${getSiteUrl()}/api/auth/callback${intentParam}`;
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-        },
-      });
-
-      if (error) {
-        console.error("[GoogleSignIn] Auth error:", error.message);
-        alert(`Sign-in error: ${error.message}`);
-        setIsLoading(false);
-      }
-    } catch (err) {
-      console.error("[GoogleSignIn] Unexpected error:", err);
-      alert(`Unexpected sign-in error: ${err}`);
-      setIsLoading(false);
-    }
-  };
+  const intent = roleToIntentOrThrow(config.role);
 
   const isSelfService = config.category === "self_service_internal" || config.category === "self_service_external";
   const needsAcdEmail = config.category === "self_service_internal" || config.category === "provisioned_faculty" || config.category === "pre_provisioned_admin";
@@ -106,23 +79,24 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
 
         {/* Action Area */}
         <Button 
-          onClick={handleSignIn} 
-          disabled={isLoading}
+          onClick={() => setIsDialogOpen(true)}
           className="w-full bg-white text-text-primary border border-border hover:bg-surface-hover shadow-sm"
         >
-          {isLoading ? (
-            <Loader2 className="size-4 animate-spin mr-2" />
-          ) : (
-            <img 
+          <img
               src="/logos/google-logo.svg" 
               alt="" 
               className="h-4 w-auto mr-2" 
               aria-hidden="true" 
-            />
-          )}
-          {isLoading ? "Connecting..." : `Continue as ${config.title}`}
+          />
+          {`Continue as ${config.title}`}
         </Button>
       </div>
+      <LegalAcknowledgementDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        roleTitle={config.title}
+        intent={intent}
+      />
     </div>
   );
 }

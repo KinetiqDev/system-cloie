@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GoogleSignInButton } from "@/features/auth/components/google-signin-button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -68,7 +67,9 @@ export default async function LoginPage({
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8">
-          <GoogleSignInButton />
+          <p className="text-center text-body-sm text-text-secondary">
+            Choose a role from the public portal to review the legal documents before Google sign-in.
+          </p>
 
           <div className="text-center">
             <a
