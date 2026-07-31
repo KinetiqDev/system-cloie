@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GET as getEligiblePeriods } from "@/app/api/dean/eligible-periods/route";
-import { GET as getRoster } from "@/app/api/dean/enrollments/roster/route";
 import type {
   DeanPeriodSummary,
   DeanReadState,
   DeanRosterData,
 } from "@/features/dean/services/read-dean-oversight";
-import { DeanPageReadNotFoundError, fetchDeanRead } from "@/features/dean/services/fetch-dean-read";
+import { DeanRosterLoading } from "@/features/dean/components/dean-oversight-loading";
+import {
+  DeanReadModelNotFoundError,
+  getDeanRosterPage,
+  getDeanRoster,
+  listDeanEligiblePeriods,
+} from "@/features/dean/services/read-dean-oversight";
 import { z } from "zod";
 
 type SearchParams = { period?: string; assignment?: string; query?: string; page?: string };
@@ -31,10 +36,7 @@ export default async function DeanEnrollmentRosterPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const { periods } = await fetchDeanRead<{ periods: DeanPeriodSummary[] }>(
-    getEligiblePeriods,
-    "/api/dean/eligible-periods"
-  );
+  const periods: DeanPeriodSummary[] = await listDeanEligiblePeriods();
   if (periods.length === 0)
     return (
       <EmptyRoster
@@ -54,19 +56,14 @@ export default async function DeanEnrollmentRosterPage({
   if (!parsedParams.success) notFound();
   const { period, assignment, query, page } = parsedParams.data;
 
-  const requestQuery = new URLSearchParams({ period, assignment, page: String(page) });
-  if (query) requestQuery.set("query", query);
-  let result: DeanReadState<DeanRosterData>;
+  let pageResult: DeanReadState<{ page: number }>;
   try {
-    result = await fetchDeanRead<DeanReadState<DeanRosterData>>(
-      getRoster,
-      `/api/dean/enrollments/roster?${requestQuery}`
-    );
+    pageResult = await getDeanRosterPage({ periodId: period, assignmentId: assignment, query, page });
   } catch (error) {
-    if (error instanceof DeanPageReadNotFoundError) notFound();
+    if (error instanceof DeanReadModelNotFoundError) notFound();
     throw error;
   }
-  if (result.state === "no-eligible-period") {
+  if (pageResult.state === "no-eligible-period") {
     return (
       <EmptyRoster
         heading="No eligible Academic Period"
@@ -74,17 +71,12 @@ export default async function DeanEnrollmentRosterPage({
       />
     );
   }
-
-  const { data } = result;
-  if (data.page !== page) {
-    const canonicalQuery = new URLSearchParams({
-      period,
-      assignment,
-      page: String(data.page),
-    });
-    if (query) canonicalQuery.set("query", query);
-    redirect(`/dean/college-oversight/enrollments/roster?${canonicalQuery}`);
+  if (pageResult.data.page !== page) {
+    canonicalRosterRedirect(period, assignment, pageResult.data.page, query);
   }
+  const rosterPromise = getDeanRoster({ periodId: period, assignmentId: assignment, query, page });
+  void rosterPromise.catch(() => undefined);
+  const selectedPeriod = periods.find((item) => item.id === period);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
@@ -102,6 +94,77 @@ export default async function DeanEnrollmentRosterPage({
           </p>
         </div>
       </div>
+      <PeriodSummary periods={periods} selectedPeriodId={period} />
+      {selectedPeriod?.status === "COMPLETED" && (
+        <span className="sr-only">Archived roster view</span>
+      )}
+      <RosterSearchForm period={period} assignment={assignment} query={query} />
+      <Suspense fallback={<DeanRosterLoading />}>
+        <RosterDetails
+          rosterPromise={rosterPromise}
+          period={period}
+          assignment={assignment}
+          query={query}
+          page={page}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+export async function RosterDetails({
+  rosterPromise,
+  period,
+  assignment,
+  query,
+  page,
+}: {
+  rosterPromise: ReturnType<typeof getDeanRoster>;
+  period: string;
+  assignment: string;
+  query?: string;
+  page: number;
+}) {
+  let result: DeanReadState<DeanRosterData>;
+  try {
+    result = await rosterPromise;
+  } catch (error) {
+    if (error instanceof DeanReadModelNotFoundError) notFound();
+    throw error;
+  }
+  if (result.state === "no-eligible-period") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>No eligible Academic Period</CardTitle>
+          <CardDescription>
+            No active or completed Academic Period is available for roster oversight.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const { data } = result;
+  if (data.page !== page) {
+    canonicalRosterRedirect(period, assignment, data.page, query);
+  }
+  return <RosterContent data={data} period={period} assignment={assignment} query={query} />;
+}
+
+export function RosterContent({
+  data,
+  period,
+  assignment,
+  query,
+}: {
+  data: DeanRosterData;
+  period: string;
+  assignment: string;
+  query?: string;
+}) {
+  return (
+    <>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Badge variant="outline">{data.assignment.courseCode}</Badge>
         <span className="text-text-primary font-medium">{data.assignment.courseName}</span>
@@ -109,7 +172,6 @@ export default async function DeanEnrollmentRosterPage({
           {data.assignment.programName} · {data.assignment.yearLevel} · {data.assignment.section}
         </span>
       </div>
-      <PeriodSummary periods={periods} selectedPeriodId={period} />
       <Card>
         <CardHeader>
           <CardTitle>Names</CardTitle>
@@ -119,31 +181,6 @@ export default async function DeanEnrollmentRosterPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <form method="get" className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <input type="hidden" name="period" value={period} />
-            <input type="hidden" name="assignment" value={assignment} />
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <label htmlFor="roster-query" className="text-sm font-medium">
-                Search names
-              </label>
-              <input
-                id="roster-query"
-                name="query"
-                type="search"
-                defaultValue={query}
-                maxLength={100}
-                placeholder="Search by first or last name"
-                className="border-input bg-background focus-visible:ring-ring h-11 rounded-lg border px-3 text-base outline-none focus-visible:ring-3"
-              />
-            </div>
-            <button
-              type="submit"
-              className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium outline-none focus-visible:ring-3"
-            >
-              <Search aria-hidden="true" />
-              Search
-            </button>
-          </form>
           {data.students.length === 0 ? (
             <p className="text-text-secondary rounded-lg border border-dashed px-4 py-8 text-center text-sm">
               No names match this search.
@@ -160,8 +197,57 @@ export default async function DeanEnrollmentRosterPage({
           <Pagination data={data} periodId={period} assignmentId={assignment} query={query} />
         </CardContent>
       </Card>
-    </div>
+    </>
   );
+}
+
+function RosterSearchForm({
+  period,
+  assignment,
+  query,
+}: {
+  period: string;
+  assignment: string;
+  query?: string;
+}) {
+  return (
+    <form method="get" className="flex flex-col gap-2 sm:flex-row sm:items-end">
+      <input type="hidden" name="period" value={period} />
+      <input type="hidden" name="assignment" value={assignment} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <label htmlFor="roster-query" className="text-sm font-medium">
+          Search names
+        </label>
+        <input
+          id="roster-query"
+          name="query"
+          type="search"
+          defaultValue={query}
+          maxLength={100}
+          placeholder="Search by first or last name"
+          className="border-input bg-background focus-visible:ring-ring h-11 rounded-lg border px-3 text-base outline-none focus-visible:ring-3"
+        />
+      </div>
+      <button
+        type="submit"
+        className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium outline-none focus-visible:ring-3"
+      >
+        <Search aria-hidden="true" />
+        Search
+      </button>
+    </form>
+  );
+}
+
+function canonicalRosterRedirect(
+  period: string,
+  assignment: string,
+  page: number,
+  query?: string
+): never {
+  const canonicalQuery = new URLSearchParams({ period, assignment, page: String(page) });
+  if (query) canonicalQuery.set("query", query);
+  redirect(`/dean/college-oversight/enrollments/roster?${canonicalQuery}`);
 }
 
 function PeriodSummary({

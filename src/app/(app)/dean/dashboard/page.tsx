@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ArrowUpRight, CheckCircle2, CircleAlert, Gauge, Layers3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { getDeanDashboard, type DeanDashboardData, type DeanReadState } from "@/features/dean/services/read-dean-oversight";
+import { DeanDashboardLoading } from "@/features/dean/components/dean-oversight-loading";
 
 const risks = [
   {
@@ -30,24 +32,48 @@ function percentage(ready: number, active: number) {
   return active === 0 ? 0 : Math.round((ready / active) * 100);
 }
 
-export default async function DeanDashboardPage() {
-  const result: DeanReadState<DeanDashboardData> = await getDeanDashboard();
+export default function DeanDashboardPage() {
+  const dashboardPromise = getDeanDashboard();
+  void dashboardPromise.catch(() => undefined);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageIntro />
+      <Suspense fallback={<DeanDashboardLoading />}>
+        <DeanDashboardDetails dashboardPromise={dashboardPromise} />
+      </Suspense>
+    </div>
+  );
+}
+
+export async function DeanDashboardDetails({
+  dashboardPromise,
+}: {
+  dashboardPromise: ReturnType<typeof getDeanDashboard>;
+}) {
+  const result: DeanReadState<DeanDashboardData> = await dashboardPromise;
+
+  return <DeanDashboardContent result={result} />;
+}
+
+export function DeanDashboardContent({
+  result,
+}: {
+  result: DeanReadState<DeanDashboardData>;
+}) {
 
   if (result.state === "no-eligible-period") {
     return (
-      <div className="flex flex-col gap-6">
-        <PageIntro />
-        <Card>
-          <CardHeader>
-            <h2 className="font-heading text-base leading-snug font-medium">
-              No active Academic Period
-            </h2>
-            <CardDescription>
-              Dashboard readiness appears when Secretary activates an Academic Period.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <h2 className="font-heading text-base leading-snug font-medium">
+            No active Academic Period
+          </h2>
+          <CardDescription>
+            Dashboard readiness appears when Secretary activates an Academic Period.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
@@ -55,7 +81,6 @@ export default async function DeanDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageIntro />
       <div className="text-text-secondary flex flex-wrap items-center gap-2 text-sm">
         <span className="text-text-primary font-medium">Active Academic Period</span>
         <Badge variant="outline">{activePeriod.label}</Badge>
