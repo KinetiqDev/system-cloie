@@ -46,7 +46,7 @@ Alternative considered: importing Markdown through a loader or parsing it at bui
 
 ### 2. Use a separate legal route layout
 
-Add `src/app/(legal)/layout.tsx` rather than reusing `src/app/(public)/layout.tsx`. The current public layout is a centered login-style shell and is unsuitable for long-form documents. The legal layout will provide the shared header, public navigation, document content frame, and footer while preserving the URL paths `/privacy` and `/terms`.
+Add `src/app/(legal)/layout.tsx` rather than reusing `src/app/(public)/layout.tsx`. The current public layout is a centered login-style shell and is unsuitable for long-form documents. The legal route group keeps the public routes isolated, while `LegalPageShell` provides the shared header, public navigation, document content frame, and footer while preserving the URL paths `/privacy` and `/terms`.
 
 Both route pages remain Server Components and export static `metadata` values. They will not call `cookies()`, `headers()`, `resolveAuthSession()`, or other request-time APIs.
 
@@ -58,14 +58,15 @@ The shared legal shell will use:
 
 - a full-width CLOIE header and public navigation;
 - a document header containing title, approval status, version, effective date, and last-updated metadata;
-- a desktop table of contents in a sticky side column;
-- a constrained long-form content column targeting readable line length;
-- a normal-flow table of contents above the content on mobile;
-- a footer with Privacy Notice, Terms of Use, and portal links.
+  - a desktop table of contents in a sticky side column;
+  - a constrained long-form content column targeting readable line length;
+  - a persistent mobile "On this page" trigger fixed above the safe area;
+  - a mobile Base UI Drawer containing the scrollable table of contents;
+  - a footer with Privacy Notice, Terms of Use, and portal links.
 
 Use existing semantic design tokens and typography utilities. Use `Card` only for bounded metadata or summary surfaces where hierarchy is useful; do not wrap the entire document in a card. Use `Separator` for document-region boundaries. Use native `overflow-x-auto` for wide legal tables rather than adding `ScrollArea` solely for the pages.
 
-Alternative considered: rendering the document as a stack of cards. Rejected because card repetition would fragment a legal document and reduce scanability. Alternative considered: making the full page a Client Component to highlight the active section. Rejected for the baseline because static TOC anchors provide the required navigation without shipping client state for a nonessential enhancement.
+Alternative considered: rendering the document as a stack of cards. Rejected because card repetition would fragment a legal document and reduce scanability. Alternative considered: a normal-flow mobile table of contents. Rejected after mobile review because it disappears during deep reading; the fixed trigger keeps navigation reachable without making the full legal page a Client Component. Only the drawer trigger/content owns client state, while the document routes and content remain Server Components.
 
 ### 4. Keep the acknowledgement dialog as a narrow Client Component boundary
 
@@ -143,10 +144,10 @@ No legal fact, contact detail, retention period, or approval status will be inve
 
 Legal content is static application content and may be statically rendered by Next.js. No persistent cache is introduced.
 
-| Data | Cache key | Scope | Lifetime | Tags | Authorization boundary | Stale behavior |
-|---|---|---|---|---|---|---|
-| Legal document content | build output | public, versioned application content | deployment lifetime | none | public | updated on deployment |
-| Legal acknowledgement ticket | httpOnly browser cookie | one browser auth attempt | short expiry, target 10-15 minutes | none | same-origin callback plus signature | reject when stale or invalid |
+| Data                         | Cache key               | Scope                                 | Lifetime                           | Tags | Authorization boundary              | Stale behavior               |
+| ---------------------------- | ----------------------- | ------------------------------------- | ---------------------------------- | ---- | ----------------------------------- | ---------------------------- |
+| Legal document content       | build output            | public, versioned application content | deployment lifetime                | none | public                              | updated on deployment        |
+| Legal acknowledgement ticket | httpOnly browser cookie | one browser auth attempt              | short expiry, target 10-15 minutes | none | same-origin callback plus signature | reject when stale or invalid |
 
 Sessions, account roles, authorization decisions, profiles, responses, and other private data remain uncached.
 
@@ -187,11 +188,14 @@ The callback must verify the legal ticket before creating or linking a domain ac
 - `src/features/legal/components/legal-page-shell.tsx`
 - `src/features/legal/components/legal-page-header.tsx`
 - `src/features/legal/components/legal-document-nav.tsx`
+- `src/features/legal/components/mobile-legal-document-nav.tsx`
 - `src/features/legal/components/legal-document-content.tsx`
 - `src/features/legal/components/legal-section.tsx`
-- `src/features/legal/components/legal-summary.tsx`
 - `src/features/legal/components/legal-acknowledgement-dialog.tsx`
 - `src/features/legal/components/legal-footer.tsx`
+- `src/features/legal/components/mobile-legal-document-nav.tsx`
+- `src/features/legal/acknowledgement-content.ts`
+- `src/features/legal/legal-versions.ts`
 - `src/features/legal/services/legal-acknowledgement-ticket.ts`
 - `src/app/api/auth/legal-acknowledgement/route.ts`
 - `src/features/auth/services/role-intent.ts`

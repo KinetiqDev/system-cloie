@@ -6,6 +6,7 @@
 - [x] 1.4 Add legal route/content tests covering public rendering, native-content source boundaries, headings/anchors, metadata, draft status, cross-links, mobile-safe structure, and absence of Markdown imports.
 - [x] 1.5 Add public Privacy Notice and Terms of Use links to the appropriate landing or portal navigation surface without forcing legal pages through the centered login layout.
 - [x] 1.6 Verify Slice 1 with `pnpm vitest run src/__tests__/app/privacy-page.test.tsx src/__tests__/app/terms-page.test.tsx src/__tests__/features/legal/legal-content.test.ts`, `pnpm lint`, and `pnpm build`.
+- [x] 1.7 Replace the mobile top-only table of contents with a persistent safe-area-aware trigger and scrollable Base UI Drawer; preserve desktop sticky navigation, anchor behavior, keyboard access, and no-overflow behavior.
 
 Acceptance criteria:
 
@@ -22,7 +23,7 @@ Proposed commit: `feat(legal): add native privacy and terms pages`
 - [x] 2.2 Create `src/features/legal/components/legal-acknowledgement-dialog.tsx` as the narrow Client Component boundary with focus-safe Dialog composition, concise summaries, full-page links, labelled required Checkbox, `Cancel`, `Agree and Continue with Google`, loading state, error state, and reset behavior.
 - [x] 2.3 Integrate the dialog into `src/features/portals/components/role-selection-card.tsx` so role actions open the dialog and no longer start OAuth directly.
 - [x] 2.4 Update `src/features/auth/components/google-signin-button.tsx` and `src/app/(public)/login/page.tsx` so the error-only role-less login path does not undermine the role-selection entry contract; preserve development and dedicated-demo paths unchanged.
-- [x] 2.5 Add dialog and role-card tests covering all configured roles, modal content, disabled/checked behavior, cancel/Escape behavior, focus recovery, duplicate-click protection, and exact OAuth intent preservation.
+- [x] 2.5 Add dialog and role-card tests covering all configured roles, modal content, disabled/checked behavior, cancel behavior, duplicate-click protection, and exact OAuth intent preservation; rely on the Base UI Dialog primitive for Escape and focus recovery.
 - [x] 2.6 Verify Slice 2 with `pnpm vitest run src/__tests__/features/legal/legal-acknowledgement-dialog.test.tsx src/__tests__/features/portals/portal-login-flow.test.tsx` and `pnpm lint`.
 
 Acceptance criteria:
