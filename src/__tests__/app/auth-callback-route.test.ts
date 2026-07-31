@@ -84,8 +84,6 @@ vi.mock("@/lib/db/prisma", () => ({
 import { GET } from "@/app/api/auth/callback/route";
 
 const VALID_UUID_1 = "00000000-0000-0000-0000-000000000001";
-const VALID_UUID_2 = "00000000-0000-0000-0000-000000000002";
-
 describe("auth callback route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -103,11 +101,14 @@ describe("auth callback route", () => {
     });
   });
 
-  function callbackRequest(url: string, intent?: string) {
+  function callbackRequest(url: string, intent?: string, includeTicket = true) {
     return new Request(url, {
-      headers: intent
-        ? { cookie: `${LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME}=${createLegalAcknowledgementTicket(intent as never)}` }
-        : undefined,
+      headers:
+        intent && includeTicket
+          ? {
+              cookie: `${LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME}=${createLegalAcknowledgementTicket(intent as never)}`,
+            }
+          : undefined,
     });
   }
 
@@ -125,7 +126,9 @@ describe("auth callback route", () => {
     });
     findUniqueUserMock.mockResolvedValue(null); // not found
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+    );
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/invalid-domain");
@@ -144,7 +147,32 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toBe("https://cloie.test/");
   });
 
-  it("redirects existing users with no intent to their stored role dashboard", async () => {
+  it("rejects a valid intent without an acknowledgement ticket before exchanging OAuth code", async () => {
+    const response = await GET(
+      callbackRequest(
+        "https://cloie.test/api/auth/callback?code=abc&intent=student",
+        "student",
+        false
+      )
+    );
+
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://cloie.test/");
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
+  });
+
+  it("rejects a malformed acknowledgement cookie without throwing", async () => {
+    const response = await GET(
+      new Request("https://cloie.test/api/auth/callback?code=abc&intent=student", {
+        headers: { cookie: `${LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME}=%` },
+      })
+    );
+
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://cloie.test/");
+  });
+
+  it("rejects existing users with no intent before exchanging OAuth code", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,
       data: { user: { id: VALID_UUID_1, email: "user@acd.edu.ph" } },
@@ -203,7 +231,9 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
+    );
 
     expect(updateUserMock).toHaveBeenCalledWith({
       where: { id: "domain-user-1" },
@@ -243,7 +273,9 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=alumni", "alumni"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=alumni", "alumni")
+    );
 
     expect(createUserMock).toHaveBeenCalledWith({
       data: {
@@ -284,7 +316,9 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=alumni", "alumni"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=alumni", "alumni")
+    );
 
     expect(createUserMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -309,7 +343,9 @@ describe("auth callback route", () => {
       roles: [{ role: SystemRole.FACULTY }],
     });
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+    );
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/role-mismatch");
@@ -332,7 +368,12 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&next=%2Fdashboard&intent=faculty", "faculty"));
+    const response = await GET(
+      callbackRequest(
+        "https://cloie.test/api/auth/callback?code=abc&next=%2Fdashboard&intent=faculty",
+        "faculty"
+      )
+    );
 
     expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
       requestedPath: "/dashboard",
@@ -346,6 +387,7 @@ describe("auth callback route", () => {
     });
     expect(resolveAuthSessionMock).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toContain("/faculty/dashboard");
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
   });
 
   it("ignores forwarded host overrides and keeps the trusted redirect base", async () => {
@@ -368,7 +410,10 @@ describe("auth callback route", () => {
       "faculty"
     );
     const request = new Request(ticketRequest, {
-      headers: { "x-forwarded-host": "app.example.com", cookie: ticketRequest.headers.get("cookie") ?? "" },
+      headers: {
+        "x-forwarded-host": "app.example.com",
+        cookie: ticketRequest.headers.get("cookie") ?? "",
+      },
     });
     const response = await GET(request);
 
@@ -387,7 +432,9 @@ describe("auth callback route", () => {
       roles: [{ role: SystemRole.STUDENT }],
     });
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&next=profile"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&next=profile")
+    );
 
     expect(resolvePostLoginDestinationMock).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe("https://cloie.test/");
@@ -415,7 +462,9 @@ describe("auth callback route", () => {
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+    );
 
     expect(createUserRoleMock).toHaveBeenCalledWith({
       data: {
@@ -438,7 +487,9 @@ describe("auth callback route", () => {
       roles: [],
     });
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary")
+    );
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/pre-provisioning-required");
@@ -456,7 +507,9 @@ describe("auth callback route", () => {
       roles: [],
     });
 
-    const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student"));
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+    );
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/invalid-domain");
@@ -491,7 +544,12 @@ describe("auth callback route", () => {
       });
       resolvePostLoginDestinationMock.mockReturnValue("/secretary/dashboard");
 
-      const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary"));
+      const response = await GET(
+        callbackRequest(
+          "https://cloie.test/api/auth/callback?code=abc&intent=secretary",
+          "secretary"
+        )
+      );
 
       expect(createUserMock).toHaveBeenCalled();
       expect(response.headers.get("location")).toBe("https://cloie.test/secretary/dashboard");
@@ -528,7 +586,12 @@ describe("auth callback route", () => {
       });
       resolvePostLoginDestinationMock.mockReturnValue("/secretary/dashboard");
 
-      const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary"));
+      const response = await GET(
+        callbackRequest(
+          "https://cloie.test/api/auth/callback?code=abc&intent=secretary",
+          "secretary"
+        )
+      );
 
       expect(updateUserMock).toHaveBeenCalled();
       expect(upsertUserRoleMock).toHaveBeenCalled();
@@ -545,7 +608,12 @@ describe("auth callback route", () => {
       // Normal signup logic falls through, which will block new admin signup
       findUniqueUserMock.mockResolvedValue(null);
 
-      const response = await GET(callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary"));
+      const response = await GET(
+        callbackRequest(
+          "https://cloie.test/api/auth/callback?code=abc&intent=secretary",
+          "secretary"
+        )
+      );
 
       expect(signOutMock).toHaveBeenCalled();
       expect(response.headers.get("location")).toContain("/status/pre-provisioning-required");

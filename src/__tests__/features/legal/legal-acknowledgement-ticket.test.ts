@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createLegalAcknowledgementTicket,
   LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS,
+  readCookieValue,
   verifyLegalAcknowledgementTicket,
 } from "@/features/legal/services/legal-acknowledgement-ticket";
 
@@ -31,12 +32,25 @@ describe("legal acknowledgement ticket", () => {
     expect(verifyLegalAcknowledgementTicket(null, "student", 1001).valid).toBe(false);
     expect(verifyLegalAcknowledgementTicket(`${ticket}x`, "student", 1001).valid).toBe(false);
     expect(verifyLegalAcknowledgementTicket(ticket, "faculty", 1001).valid).toBe(false);
-    expect(verifyLegalAcknowledgementTicket(ticket, "student", 1000 + LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS).valid).toBe(false);
+    expect(
+      verifyLegalAcknowledgementTicket(
+        ticket,
+        "student",
+        1000 + LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS
+      ).valid
+    ).toBe(false);
   });
 
   it("fails closed when the signing secret is absent or too short", () => {
     vi.stubEnv("CLOIE_LEGAL_TICKET_SECRET", "short");
     expect(() => createLegalAcknowledgementTicket("student", 1000)).toThrow();
-    expect(verifyLegalAcknowledgementTicket(null, "student", 1000)).toEqual({ valid: false, reason: "not-configured" });
+    expect(verifyLegalAcknowledgementTicket(null, "student", 1000)).toEqual({
+      valid: false,
+      reason: "not-configured",
+    });
+  });
+
+  it("ignores malformed percent-encoded cookie values", () => {
+    expect(readCookieValue("cloie_legal_ack=%", "cloie_legal_ack")).toBeNull();
   });
 });
