@@ -5,6 +5,54 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer components {
+  .legal-prose {
+    @apply text-base leading-relaxed text-text-secondary;
+  }
+
+  .legal-prose h2 {
+    @apply mt-0 text-xl font-bold leading-tight text-text-primary;
+  }
+
+  .legal-prose-blocks {
+    @apply flex flex-col gap-4;
+  }
+
+  .legal-prose-blocks ul,
+  .legal-prose-blocks ol {
+    @apply flex flex-col gap-2 pl-6;
+  }
+
+  .legal-prose-blocks ul {
+    @apply list-disc;
+  }
+
+  .legal-prose-blocks ol {
+    @apply list-decimal;
+  }
+
+  .legal-prose-blocks li {
+    @apply pl-2;
+  }
+
+  .legal-prose table {
+    @apply min-w-full border-collapse text-left text-sm leading-6;
+  }
+
+  .legal-prose th,
+  .legal-prose td {
+    @apply border-b border-border px-4 py-2.5 align-top;
+  }
+
+  .legal-prose th {
+    @apply bg-muted font-semibold text-text-primary;
+  }
+
+  .legal-prose tr:last-child td {
+    @apply border-b-0;
+  }
+}
+
 /* ========================================
  * CLOIE Design System — Tailwind v4 Theme
  * Registers all design tokens for utility class generation.

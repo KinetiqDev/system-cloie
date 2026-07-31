@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Building2, Users } from "lucide-react";
 import { PortalChoiceCard } from "@/features/portals";
 
@@ -83,10 +84,19 @@ export default function Home() {
       </main>
 
       <footer className="relative z-10 border-t border-border/80 bg-background/80">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-center px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:flex-row sm:gap-4 sm:px-6 lg:px-8">
           <p className="text-body-sm text-text-muted">
             © {new Date().getFullYear()} System CLOIE. All rights reserved.
           </p>
+          <span className="hidden text-border sm:inline" aria-hidden="true">|</span>
+          <nav aria-label="Legal links" className="flex gap-4 text-body-sm">
+            <Link className="text-text-muted underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="/privacy">
+              Privacy Notice
+            </Link>
+            <Link className="text-text-muted underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="/terms">
+              Terms of Use
+            </Link>
+          </nav>
         </div>
       </footer>
     </div>
