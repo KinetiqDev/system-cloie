@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getSiteUrl } from "@/lib/utils/site-url";
+import { getSiteUrlFromRequest } from "@/lib/utils/site-url";
 import { resolveAuthSessionFromUser } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
 import { resolveSelfServiceEligibility } from "@/features/auth/services/self-service-eligibility";
@@ -39,9 +39,9 @@ function getNameParts(meta: Record<string, unknown>): { first: string; last: str
 }
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const siteUrl = getSiteUrl(origin);
+  const siteUrl = getSiteUrlFromRequest(request);
 
   const redirectWithClearedTicket = (destination: string) => {
     const response = NextResponse.redirect(destination);

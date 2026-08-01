@@ -1,7 +1,31 @@
 const DEFAULT_DEV_URL = "http://localhost:3000";
 
 function trimTrailingSlash(url: string): string {
-  return url.replace(/\/+$/, "");
+  return url.trim().replace(/\/+$/, "");
+}
+
+/**
+ * Returns the canonical site URL for a server-side request.
+ *
+ * The site origin is derived from the request headers a reverse proxy
+ * preserves — `Host` and `x-forwarded-proto` — rather than from
+ * `request.url`, which Next.js reconstructs from `x-forwarded-proto` and its
+ * own bind address when deployed behind a TLS-terminating proxy (e.g.
+ * `cloudflared tunnel`), producing `https://localhost:3000/...` even though
+ * the browser is on a different origin. Falls back to the request URL when
+ * those headers are absent (e.g. unit tests constructing bare `Request`s).
+ */
+export function getSiteUrlFromRequest(request: Request): string {
+  const url = new URL(request.url);
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  let proto: string;
+  if (forwardedProto) {
+    proto = forwardedProto.split(",")[0]!.trim() === "https" ? "https" : "http";
+  } else {
+    proto = url.protocol.replace(":", "");
+  }
+  const host = request.headers.get("host") ?? url.host;
+  return getSiteUrl(`${proto}://${host}`);
 }
 
 /**

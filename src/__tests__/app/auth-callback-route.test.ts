@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment node
+ */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SystemRole } from "@prisma/client";
 import {
@@ -431,6 +434,23 @@ describe("auth callback route", () => {
     const response = await GET(request);
 
     expect(response.headers.get("location")).toBe("https://public.example/faculty/dashboard");
+  });
+
+  it("derives the redirect base from the Host header when accessed through a reverse proxy", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
+    const response = await GET(
+      new Request("https://localhost:3000/api/auth/callback?code=abc&intent=student", {
+        headers: {
+          host: "dom-pubmed-herbal-transparent.trycloudflare.com",
+          "x-forwarded-proto": "https",
+        },
+      })
+    );
+
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe(
+      "https://dom-pubmed-herbal-transparent.trycloudflare.com/"
+    );
   });
 
   it("sanitizes malformed next values before redirecting", async () => {
