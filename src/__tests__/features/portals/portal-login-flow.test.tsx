@@ -1,7 +1,11 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLE_CARDS } from "@/features/portals/lib/role-card-config";
 import { RoleSelectionCard } from "@/features/portals/components/role-selection-card";
+
+const { dialogPropsMock } = vi.hoisted(() => ({
+  dialogPropsMock: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn(() => ({
@@ -9,6 +13,13 @@ vi.mock("@/lib/supabase/client", () => ({
       signInWithOAuth: vi.fn(),
     },
   })),
+}));
+
+vi.mock("@/features/legal/components/legal-acknowledgement-dialog", () => ({
+  LegalAcknowledgementDialog: (props: { intent: string; open: boolean }) => {
+    dialogPropsMock(props);
+    return props.open ? <div role="dialog" data-intent={props.intent} /> : null;
+  },
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -45,6 +56,10 @@ vi.mock("lucide-react", () => ({
 }));
 
 describe("RoleSelectionCard Rendering", () => {
+  beforeEach(() => {
+    dialogPropsMock.mockClear();
+  });
+
   it("renders a 'Continue as' button for all configured roles", () => {
     for (const card of ROLE_CARDS) {
       const { unmount } = render(<RoleSelectionCard config={card} />);
@@ -52,5 +67,29 @@ describe("RoleSelectionCard Rendering", () => {
       expect(button).toBeInTheDocument();
       unmount();
     }
+  });
+
+  it.each([
+    ["SECRETARY", "secretary"],
+    ["DEAN", "dean"],
+    ["PROGRAM_HEAD", "program-head"],
+    ["FACULTY", "faculty"],
+    ["STUDENT", "student"],
+    ["ALUMNI", "alumni"],
+    ["INDUSTRY_PARTNER", "industry-partner"],
+  ] as const)("preserves the %s intent when opening its acknowledgement dialog", (role, intent) => {
+    const card = ROLE_CARDS.find((candidate) => candidate.role === role);
+    expect(card).toBeDefined();
+
+    const { unmount } = render(<RoleSelectionCard config={card!} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: new RegExp(`Continue as ${card!.title}`, "i") })
+    );
+
+    expect(dialogPropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ open: true, intent })
+    );
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-intent", intent);
+    unmount();
   });
 });

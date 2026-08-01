@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/utils/site-url";
 import { resolveAuthSessionFromUser } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
-import { validateRoleDomain } from "@/features/auth/services/validate-role-domain";
+import { resolveSelfServiceEligibility } from "@/features/auth/services/self-service-eligibility";
 import { SystemRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { isRoleIntent, intentToRole } from "@/features/auth/services/role-intent";
@@ -194,23 +194,14 @@ export async function GET(request: Request) {
     } else {
       // User exists but has no roles (i.e. roleless user)
       if (targetRole) {
-        // Pre-provisioned roles cannot be self-claimed
-        const isPreProvisioned =
-          targetRole === SystemRole.SECRETARY ||
-          targetRole === SystemRole.DEAN ||
-          targetRole === SystemRole.PROGRAM_HEAD;
-        if (isPreProvisioned) {
+        const eligibilityFailure = resolveSelfServiceEligibility({
+          email: normalizedEmail,
+          targetRole,
+          intent: intentParam,
+        });
+        if (eligibilityFailure) {
           await supabase.auth.signOut();
-          return redirectWithClearedTicket(`${siteUrl}/status/pre-provisioning-required`);
-        }
-
-        // Validate domain for self-service roles
-        const validation = validateRoleDomain(normalizedEmail, targetRole);
-        if (!validation.valid) {
-          await supabase.auth.signOut();
-          return redirectWithClearedTicket(
-            `${siteUrl}/status/invalid-domain?role=${encodeURIComponent(intentParam ?? "")}`
-          );
+          return redirectWithClearedTicket(`${siteUrl}${eligibilityFailure.destination}`);
         }
 
         // Create user role record
@@ -231,23 +222,14 @@ export async function GET(request: Request) {
       return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
     }
 
-    // Pre-provisioned roles cannot be self-claimed
-    const isPreProvisioned =
-      targetRole === SystemRole.SECRETARY ||
-      targetRole === SystemRole.DEAN ||
-      targetRole === SystemRole.PROGRAM_HEAD;
-    if (isPreProvisioned) {
+    const eligibilityFailure = resolveSelfServiceEligibility({
+      email: normalizedEmail,
+      targetRole,
+      intent: intentParam,
+    });
+    if (eligibilityFailure) {
       await supabase.auth.signOut();
-      return redirectWithClearedTicket(`${siteUrl}/status/pre-provisioning-required`);
-    }
-
-    // Validate domain for self-service roles
-    const validation = validateRoleDomain(normalizedEmail, targetRole);
-    if (!validation.valid) {
-      await supabase.auth.signOut();
-      return redirectWithClearedTicket(
-        `${siteUrl}/status/invalid-domain?role=${encodeURIComponent(intentParam)}`
-      );
+      return redirectWithClearedTicket(`${siteUrl}${eligibilityFailure.destination}`);
     }
 
     // Create domain user and their single role record

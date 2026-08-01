@@ -1,8 +1,15 @@
 import Link from "next/link";
 import type { LegalDocument } from "../types";
-import { MobileLegalDocumentNav } from "./mobile-legal-document-nav";
+import {
+  MobileLegalDocumentNav,
+  type LegalNavigationDocument,
+} from "./mobile-legal-document-nav";
 
 export function LegalDocumentNav({ document }: { document: LegalDocument }) {
+  const navigation: LegalNavigationDocument = {
+    shortTitle: document.shortTitle,
+    sections: document.sections.map((section) => ({ id: section.id, title: section.title })),
+  };
   return (
     <>
       <aside className="hidden lg:sticky lg:top-6 lg:block lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto">
@@ -23,7 +30,7 @@ export function LegalDocumentNav({ document }: { document: LegalDocument }) {
         </nav>
       </aside>
 
-      <MobileLegalDocumentNav document={document} />
+      <MobileLegalDocumentNav navigation={navigation} />
     </>
   );
 }

@@ -33,6 +33,11 @@ describe("native legal content", () => {
     expect(source.join("\n")).not.toContain("docs/privacy-and-ToS/");
   });
 
+  it("barrel re-exports the canonical LEGAL_VERSIONS module", async () => {
+    const { LEGAL_VERSIONS: canonical } = await import("@/features/legal/legal-versions");
+    expect(LEGAL_VERSIONS).toBe(canonical);
+  });
+
   it("keeps ticket signing code outside the client acknowledgement boundary", async () => {
     const [ticketSource, dialogSource] = await import("fs/promises").then((fs) =>
       Promise.all([

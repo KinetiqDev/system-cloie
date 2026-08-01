@@ -6,8 +6,6 @@ const pendingDate = "Pending institutional approval";
 const draftApprovalNote =
   "This draft must be reviewed and approved by Assumption College of Davao's authorized institutional representative, Data Protection Officer, and ICTC before production use.";
 
-export { LEGAL_VERSIONS } from "./legal-versions";
-
 export const privacyNotice: LegalDocument = {
   kind: "privacy",
   title: "System CLOIE Privacy Notice",

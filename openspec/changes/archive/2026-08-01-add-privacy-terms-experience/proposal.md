@@ -39,6 +39,6 @@ System CLOIE currently has draft Privacy Notice and Terms of Use content in repo
 - Affected contexts: Identity and Access and the public role selection portal; the legal experience is a supporting cross-context capability.
 - Affected routes: `/(legal)/privacy`, `/(legal)/terms`, public portal navigation, and role-card authentication actions.
 - Expected files include `src/features/legal/**`, `src/app/(legal)/**`, `src/features/portals/components/role-selection-card.tsx`, `src/features/auth/components/google-signin-button.tsx`, relevant public layouts, and authentication regression tests.
-- A server-issued short-lived acknowledgement ticket may be added if implementation requires callback-level enforcement; it must be server-only, signed, expiring, intent-bound, and must not replace server-side role authorization.
-- No Prisma model, SQL migration, generated Supabase type, cache, or deployment configuration change is required for the baseline client-gated experience.
+- A server-issued short-lived acknowledgement ticket is issued after the acknowledgement is checked; it is server-only, signed, expiring, intent-bound, and must not replace server-side role authorization.
+- No Prisma model, SQL migration, generated Supabase type, cache, or deployment configuration change is required for the signed-ticket acknowledgement flow.
 - If institutional auditability requires durable acceptance records, that is a follow-up schema change with its own migration, retention, versioning, and privacy review.

@@ -13,9 +13,21 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import type { LegalDocument } from "../types";
+export type LegalNavigationSection = {
+  id: string;
+  title: string;
+};
 
-export function MobileLegalDocumentNav({ document }: { document: LegalDocument }) {
+export type LegalNavigationDocument = {
+  shortTitle: string;
+  sections: LegalNavigationSection[];
+};
+
+export function MobileLegalDocumentNav({
+  navigation,
+}: {
+  navigation: LegalNavigationDocument;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -28,7 +40,7 @@ export function MobileLegalDocumentNav({ document }: { document: LegalDocument }
                 variant="outline"
                 size="lg"
                 className="bg-surface min-h-11 w-full justify-between"
-                aria-label={`Open ${document.shortTitle} section navigation`}
+                aria-label={`Open ${navigation.shortTitle} section navigation`}
               />
             }
           >
@@ -37,7 +49,7 @@ export function MobileLegalDocumentNav({ document }: { document: LegalDocument }
               <span>On this page</span>
             </span>
             <span className="text-text-muted" aria-hidden="true">
-              {document.sections.length} sections
+              {navigation.sections.length} sections
             </span>
           </DrawerTrigger>
 
@@ -47,7 +59,7 @@ export function MobileLegalDocumentNav({ document }: { document: LegalDocument }
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <DrawerTitle>On this page</DrawerTitle>
                   <DrawerDescription>
-                    Jump to a section in the {document.shortTitle}.
+                    Jump to a section in the {navigation.shortTitle}.
                   </DrawerDescription>
                 </div>
                 <DrawerClose
@@ -60,11 +72,11 @@ export function MobileLegalDocumentNav({ document }: { document: LegalDocument }
               </div>
             </DrawerHeader>
             <nav
-              aria-label={`${document.shortTitle} sections`}
+              aria-label={`${navigation.shortTitle} sections`}
               className="min-h-0 flex-1 overflow-y-auto px-4 pb-4"
             >
               <ol className="border-border flex flex-col gap-1 border-l pl-4 text-sm">
-                {document.sections.map((section) => (
+                {navigation.sections.map((section) => (
                   <li key={section.id}>
                     <Link
                       href={`#${section.id}`}

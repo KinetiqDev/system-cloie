@@ -23,16 +23,27 @@ function getSecret(): string | null {
   return secret && secret.length >= 32 ? secret : null;
 }
 
+const BASE64URL_COMPONENT_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 function encode(value: string): string {
   return Buffer.from(value, "utf8").toString("base64url");
 }
 
+/**
+ * Rejects components that are not valid unpadded base64url:
+ * every character must be in the base64url alphabet, and the length must
+ * not be congruent to 1 mod 4 (unpadded base64url encodes 3 bytes as 2, 3,
+ * or 4 characters, so a length of 4n+1 can never decode to whole bytes).
+ */
+function isBase64UrlComponent(value: string): boolean {
+  if (value.length === 0 || value.length % 4 === 1) return false;
+  return BASE64URL_COMPONENT_PATTERN.test(value);
+}
+
 function decode(value: string): Buffer | null {
-  try {
-    return Buffer.from(value, "base64url");
-  } catch {
-    return null;
-  }
+  if (!isBase64UrlComponent(value)) return null;
+  const decoded = Buffer.from(value, "base64url");
+  return decoded.toString("base64url") === value ? decoded : null;
 }
 
 function sign(encodedPayload: string, secret: string): string {
@@ -83,21 +94,28 @@ export function verifyLegalAcknowledgementTicket(
   if (!value || !isRoleIntent(intent)) return { valid: false, reason: "missing-or-invalid-intent" };
 
   const [encodedPayload, encodedSignature, ...extraParts] = value.split(".");
-  if (!encodedPayload || !encodedSignature || extraParts.length > 0) {
+  if (
+    !encodedPayload ||
+    !encodedSignature ||
+    extraParts.length > 0 ||
+    !isBase64UrlComponent(encodedPayload) ||
+    !isBase64UrlComponent(encodedSignature)
+  ) {
     return { valid: false, reason: "malformed" };
   }
 
+  const payloadBytes = decode(encodedPayload);
   const signature = decode(encodedSignature);
   const expectedSignature = decode(sign(encodedPayload, secret));
-  if (!signature || !expectedSignature || signature.length !== expectedSignature.length) {
+  if (!payloadBytes || !signature || !expectedSignature) {
+    return { valid: false, reason: "malformed" };
+  }
+  if (signature.length !== expectedSignature.length) {
     return { valid: false, reason: "invalid-signature" };
   }
   if (!timingSafeEqual(signature, expectedSignature)) {
     return { valid: false, reason: "invalid-signature" };
   }
-
-  const payloadBytes = decode(encodedPayload);
-  if (!payloadBytes) return { valid: false, reason: "malformed" };
 
   try {
     const payload = JSON.parse(payloadBytes.toString("utf8")) as unknown;

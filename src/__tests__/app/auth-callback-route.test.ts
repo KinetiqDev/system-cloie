@@ -172,6 +172,19 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toBe("https://cloie.test/");
   });
 
+  it("rejects an expired acknowledgement ticket before exchanging the OAuth code", async () => {
+    const expiredTicket = createLegalAcknowledgementTicket("student", 1000);
+    const response = await GET(
+      new Request("https://cloie.test/api/auth/callback?code=abc&intent=student", {
+        headers: { cookie: `${LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME}=${expiredTicket}` },
+      })
+    );
+
+    expect(exchangeCodeForSessionMock).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://cloie.test/");
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
+  });
+
   it("rejects existing users with no intent before exchanging OAuth code", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,
@@ -438,6 +451,36 @@ describe("auth callback route", () => {
 
     expect(resolvePostLoginDestinationMock).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe("https://cloie.test/");
+  });
+
+  it("never redirects to a raw malformed next value even with a valid ticket", async () => {
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: { user: { id: VALID_UUID_1, email: "user@acd.edu.ph" } },
+    });
+    findUniqueUserMock.mockResolvedValue({
+      id: "domain-user-1",
+      auth_user_id: VALID_UUID_1,
+      email: "user@acd.edu.ph",
+      roles: [{ role: SystemRole.FACULTY }],
+    });
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: "FACULTY",
+      profileGate: { status: "COMPLETE" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
+
+    const response = await GET(
+      callbackRequest(
+        "https://cloie.test/api/auth/callback?code=abc&next=//evil.example&intent=faculty",
+        "faculty"
+      )
+    );
+
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ requestedPath: "//evil.example" })
+    );
+    expect(response.headers.get("location")).toBe("https://cloie.test/faculty/dashboard");
   });
 
   it("assigns role to roleless existing user when they log in with a valid self-service intent", async () => {

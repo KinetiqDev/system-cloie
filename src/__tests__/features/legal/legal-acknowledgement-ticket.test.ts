@@ -53,4 +53,53 @@ describe("legal acknowledgement ticket", () => {
   it("ignores malformed percent-encoded cookie values", () => {
     expect(readCookieValue("cloie_legal_ack=%", "cloie_legal_ack")).toBeNull();
   });
+
+  it("rejects ticket components containing characters outside the base64url alphabet", () => {
+    const ticket = createLegalAcknowledgementTicket("student", 1000);
+    const [payload, signature] = ticket.split(".");
+
+    expect(
+      verifyLegalAcknowledgementTicket(`${payload!.slice(0, -1)}!.${signature}`, "student", 1001)
+    ).toEqual({ valid: false, reason: "malformed" });
+    expect(
+      verifyLegalAcknowledgementTicket(`${payload}.${signature!.slice(0, -1)}!`, "student", 1001)
+    ).toEqual({ valid: false, reason: "malformed" });
+  });
+
+  it("rejects base64url components with lengths congruent to 1 mod 4", () => {
+    const ticket = createLegalAcknowledgementTicket("student", 1000);
+    const [payload, signature] = ticket.split(".");
+
+    expect(signature!.length % 4).not.toBe(1);
+    const impossibleLength = signature!.slice(0, -2);
+    expect(impossibleLength.length % 4).toBe(1);
+    expect(
+      verifyLegalAcknowledgementTicket(`${payload}.${impossibleLength}`, "student", 1001)
+    ).toEqual({ valid: false, reason: "malformed" });
+  });
+
+  it("rejects non-canonical base64url components with non-zero unused pad bits", () => {
+    const ticket = createLegalAcknowledgementTicket("student", 1000);
+    const [payload, signature] = ticket.split(".");
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const lastCharacter = signature!.at(-1)!;
+    const lastIndex = alphabet.indexOf(lastCharacter);
+    const nonCanonicalLastIndex = (lastIndex & 0b111100) | 1;
+    const nonCanonicalSignature =
+      signature!.slice(0, -1) + alphabet[nonCanonicalLastIndex];
+
+    expect(nonCanonicalSignature).not.toBe(signature);
+    expect(
+      verifyLegalAcknowledgementTicket(`${payload}.${nonCanonicalSignature}`, "student", 1001)
+    ).toEqual({ valid: false, reason: "malformed" });
+
+    const payloadLastCharacter = payload!.at(-1)!;
+    const payloadLastIndex = alphabet.indexOf(payloadLastCharacter);
+    const nonCanonicalPayload =
+      payload!.slice(0, -1) + alphabet[(payloadLastIndex & 0b111100) | 1];
+    expect(nonCanonicalPayload).not.toBe(payload);
+    expect(
+      verifyLegalAcknowledgementTicket(`${nonCanonicalPayload}.${signature}`, "student", 1001)
+    ).toEqual({ valid: false, reason: "malformed" });
+  });
 });
