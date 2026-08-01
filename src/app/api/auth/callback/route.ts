@@ -3,25 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/utils/site-url";
 import { resolveAuthSessionFromUser } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
-import { validateRoleDomain } from "@/features/auth/services/validate-role-domain";
+import { resolveSelfServiceEligibility } from "@/features/auth/services/self-service-eligibility";
 import { SystemRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-
-const VALID_SELF_SERVICE_INTENTS: Record<string, SystemRole> = {
-  student: SystemRole.STUDENT,
-  alumni: SystemRole.ALUMNI,
-  "industry-partner": SystemRole.INDUSTRY_PARTNER,
-  "industry_partner": SystemRole.INDUSTRY_PARTNER,
-  faculty: SystemRole.FACULTY,
-};
-
-const VALID_INTENTS: Record<string, SystemRole> = {
-  ...VALID_SELF_SERVICE_INTENTS,
-  secretary: SystemRole.SECRETARY,
-  dean: SystemRole.DEAN,
-  "program-head": SystemRole.PROGRAM_HEAD,
-  "program_head": SystemRole.PROGRAM_HEAD,
-};
+import { isRoleIntent, intentToRole } from "@/features/auth/services/role-intent";
+import {
+  clearLegalAcknowledgementCookie,
+  LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME,
+  readCookieValue,
+  verifyLegalAcknowledgementTicket,
+} from "@/features/legal/services/legal-acknowledgement-ticket";
 
 function getNameParts(meta: Record<string, unknown>): { first: string; last: string } | null {
   const given = typeof meta.given_name === "string" ? meta.given_name.trim() : "";
@@ -52,20 +43,33 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const siteUrl = getSiteUrl(origin);
 
+  const redirectWithClearedTicket = (destination: string) => {
+    const response = NextResponse.redirect(destination);
+    clearLegalAcknowledgementCookie(response);
+    return response;
+  };
+
   if (!code) {
-    return NextResponse.redirect(`${siteUrl}/login?error=auth-failure`);
+    return redirectWithClearedTicket(`${siteUrl}/login?error=auth-failure`);
+  }
+
+  const intentParam = searchParams.get("intent");
+  const ticket = readCookieValue(request.headers.get("cookie"), LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME);
+  const ticketVerification = verifyLegalAcknowledgementTicket(ticket, intentParam ?? "");
+
+  if (!intentParam || !isRoleIntent(intentParam) || !ticketVerification.valid) {
+    return redirectWithClearedTicket(`${siteUrl}/`);
   }
 
   const supabase = await createClient();
   const { error, data } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    return NextResponse.redirect(`${siteUrl}/login?error=auth-failure`);
+    return redirectWithClearedTicket(`${siteUrl}/login?error=auth-failure`);
   }
 
   const email = data.user.email || "";
   const normalizedEmail = email.trim().toLowerCase();
-  const intentParam = searchParams.get("intent");
   const authUserId = data.user.id;
 
   let dbUser = null;
@@ -158,7 +162,7 @@ export async function GET(request: Request) {
   }
 
   // 3. Perform validations based on role intent or stored role
-  const targetRole = intentParam ? VALID_INTENTS[intentParam.toLowerCase()] : null;
+  const targetRole = intentToRole(intentParam);
 
   if (dbUser) {
     const userRole = dbUser.roles[0]?.role;
@@ -167,7 +171,7 @@ export async function GET(request: Request) {
       // Reject on role mismatch if intent was explicitly requested
       if (targetRole && userRole !== targetRole) {
         await supabase.auth.signOut();
-        return NextResponse.redirect(`${siteUrl}/status/role-mismatch`);
+        return redirectWithClearedTicket(`${siteUrl}/status/role-mismatch`);
       }
 
       // ACD-domain validation for internal roles
@@ -184,29 +188,20 @@ export async function GET(request: Request) {
           isBootstrapEmail; // Bypass for bootstrap admin
         if (!isACD) {
           await supabase.auth.signOut();
-          return NextResponse.redirect(`${siteUrl}/status/invalid-domain`);
+          return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
         }
       }
     } else {
       // User exists but has no roles (i.e. roleless user)
       if (targetRole) {
-        // Pre-provisioned roles cannot be self-claimed
-        const isPreProvisioned =
-          targetRole === SystemRole.SECRETARY ||
-          targetRole === SystemRole.DEAN ||
-          targetRole === SystemRole.PROGRAM_HEAD;
-        if (isPreProvisioned) {
+        const eligibilityFailure = resolveSelfServiceEligibility({
+          email: normalizedEmail,
+          targetRole,
+          intent: intentParam,
+        });
+        if (eligibilityFailure) {
           await supabase.auth.signOut();
-          return NextResponse.redirect(`${siteUrl}/status/pre-provisioning-required`);
-        }
-
-        // Validate domain for self-service roles
-        const validation = validateRoleDomain(normalizedEmail, targetRole);
-        if (!validation.valid) {
-          await supabase.auth.signOut();
-          return NextResponse.redirect(
-            `${siteUrl}/status/invalid-domain?role=${encodeURIComponent(intentParam ?? "")}`
-          );
+          return redirectWithClearedTicket(`${siteUrl}${eligibilityFailure.destination}`);
         }
 
         // Create user role record
@@ -222,56 +217,41 @@ export async function GET(request: Request) {
     }
   } else {
     // New user signup
-    if (intentParam) {
-      if (targetRole) {
-        // Pre-provisioned roles cannot be self-claimed
-        const isPreProvisioned =
-          targetRole === SystemRole.SECRETARY ||
-          targetRole === SystemRole.DEAN ||
-          targetRole === SystemRole.PROGRAM_HEAD;
-        if (isPreProvisioned) {
-          await supabase.auth.signOut();
-          return NextResponse.redirect(`${siteUrl}/status/pre-provisioning-required`);
-        }
-
-        // Validate domain for self-service roles
-        const validation = validateRoleDomain(normalizedEmail, targetRole);
-        if (!validation.valid) {
-          await supabase.auth.signOut();
-          return NextResponse.redirect(
-            `${siteUrl}/status/invalid-domain?role=${encodeURIComponent(intentParam ?? "")}`
-          );
-        }
-
-        // Create domain user and their single role record
-        const meta = data.user.user_metadata || {};
-        const parsed = getNameParts(meta);
-        const googleFirstName = parsed?.first ?? "User";
-        const googleLastName = parsed?.last ?? "Name";
-
-        dbUser = await prisma.user.create({
-          data: {
-            auth_user_id: authUserId,
-            email: normalizedEmail,
-            first_name: googleFirstName,
-            last_name: googleLastName,
-            roles: {
-              create: {
-                role: targetRole,
-              },
-            },
-          },
-          include: { roles: true },
-        });
-      } else {
-        await supabase.auth.signOut();
-        return NextResponse.redirect(`${siteUrl}/status/invalid-domain`);
-      }
-    } else {
-      // No intent and no user: redirect to portal
+    if (!targetRole) {
       await supabase.auth.signOut();
-      return NextResponse.redirect(`${siteUrl}/portal/respondents`);
+      return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
     }
+
+    const eligibilityFailure = resolveSelfServiceEligibility({
+      email: normalizedEmail,
+      targetRole,
+      intent: intentParam,
+    });
+    if (eligibilityFailure) {
+      await supabase.auth.signOut();
+      return redirectWithClearedTicket(`${siteUrl}${eligibilityFailure.destination}`);
+    }
+
+    // Create domain user and their single role record
+    const meta = data.user.user_metadata || {};
+    const parsed = getNameParts(meta);
+    const googleFirstName = parsed?.first ?? "User";
+    const googleLastName = parsed?.last ?? "Name";
+
+    dbUser = await prisma.user.create({
+      data: {
+        auth_user_id: authUserId,
+        email: normalizedEmail,
+        first_name: googleFirstName,
+        last_name: googleLastName,
+        roles: {
+          create: {
+            role: targetRole,
+          },
+        },
+      },
+      include: { roles: true },
+    });
   }
 
   const session = await resolveAuthSessionFromUser({
@@ -286,6 +266,5 @@ export async function GET(request: Request) {
     profileGate: session?.profileGate ?? { status: "ROLE_SELECTION_REQUIRED" },
   });
 
-  return NextResponse.redirect(`${siteUrl}${nextUrl}`);
+  return redirectWithClearedTicket(`${siteUrl}${nextUrl}`);
 }
-

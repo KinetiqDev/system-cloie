@@ -176,5 +176,14 @@ describe("resolvePostLoginDestination", () => {
         profileGate: { status: "COMPLETE" },
       })
     ).toBe("/faculty/dashboard");
+
+    expect(
+      resolvePostLoginDestination({
+        requestedPath: "//evil.example",
+        intent: "faculty",
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
+      })
+    ).toBe("/faculty/dashboard");
   });
 });
