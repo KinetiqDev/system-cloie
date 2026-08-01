@@ -20,7 +20,7 @@ export function getSiteUrlFromRequest(request: Request): string {
   const forwardedProto = request.headers.get("x-forwarded-proto");
   let proto: string;
   if (forwardedProto) {
-    proto = forwardedProto.includes("https") ? "https" : "http";
+    proto = forwardedProto.split(",")[0]!.trim() === "https" ? "https" : "http";
   } else {
     proto = url.protocol.replace(":", "");
   }

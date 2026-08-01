@@ -78,4 +78,11 @@ describe("getSiteUrlFromRequest (server)", () => {
     });
     expect(getSiteUrlFromRequest(request)).toBe("http://tunnel.example.com");
   });
+
+  it("reads only the first element of a comma-separated x-forwarded-proto chain", () => {
+    const request = new Request("https://localhost:3000/api/auth/callback", {
+      headers: { host: "tunnel.example.com", "x-forwarded-proto": "http, https" },
+    });
+    expect(getSiteUrlFromRequest(request)).toBe("http://tunnel.example.com");
+  });
 });

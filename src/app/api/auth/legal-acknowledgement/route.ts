@@ -36,7 +36,7 @@ function isSameSiteOrigin(origin: string | null, siteHost: string | null): boole
   if (!origin) return true;
   if (!siteHost) return false;
   try {
-    return new URL(origin).host === siteHost;
+    return new URL(origin).host === siteHost.toLowerCase();
   } catch {
     return false;
   }

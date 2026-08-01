@@ -126,6 +126,23 @@ describe("legal acknowledgement route", () => {
     expect(response.headers.get("set-cookie")).toBeNull();
   });
 
+  it("accepts a same-site origin when the Host header has different casing", async () => {
+    const response = await POST(
+      new Request("https://cloie.test/api/auth/legal-acknowledgement", {
+        method: "POST",
+        headers: {
+          ...JSON_HEADERS,
+          host: "CLOIE.TEST",
+          origin: "https://cloie.test",
+        },
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("cloie_legal_ack=");
+  });
+
   it("accepts requests without an origin header (non-browser clients)", async () => {
     const response = await POST(
       acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {
