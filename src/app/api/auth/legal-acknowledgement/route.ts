@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { isRoleIntent, roleToIntent } from "@/features/auth/services/role-intent";
 import { LEGAL_VERSIONS } from "@/features/legal/legal-versions";
-import { getSiteUrl } from "@/lib/utils/site-url";
 import {
   createLegalAcknowledgementTicket,
   getLegalAcknowledgementCookieOptions,
@@ -18,18 +17,26 @@ function hasJsonContentType(request: Request): boolean {
 /**
  * CSRF boundary for the ticket-issuing endpoint.
  *
- * When the `Origin` header is present it MUST match the canonical site
- * origin (the same base `getSiteUrl` resolves for callback redirects), and
- * the request is rejected otherwise. An absent `Origin` is allowed: browsers
- * always send `Origin` on POST requests, so a missing header means the
- * request is not a browser-initiated cross-site POST and cannot be CSRF
- * forged. `Origin: null` (sandboxed iframes, opaque origins) fails to parse
- * and is rejected.
+ * When the `Origin` header is present it MUST share the request's site host
+ * (the `Host` header, which reverse proxies preserve), and the request is
+ * rejected otherwise. An absent `Origin` is allowed: browsers always send
+ * `Origin` on POST requests, so a missing header means the request is not a
+ * browser-initiated cross-site POST and cannot be CSRF forged. `Origin: null`
+ * (sandboxed iframes, opaque origins) fails to parse and is rejected.
+ *
+ * The comparison is host-only, mirroring Next.js's own server-action CSRF
+ * check, and deliberately does not rely on `request.url`: behind a
+ * TLS-terminating proxy (e.g. `cloudflared tunnel`) Next.js reconstructs
+ * `request.url` from `x-forwarded-proto` and its own bind address
+ * (`https://localhost:3000/...`), which never matches the origin the browser
+ * actually sees. The `Host` header is the one piece of request metadata the
+ * proxy does not rewrite.
  */
-function isSameSiteOrigin(origin: string | null, requestOrigin: string): boolean {
+function isSameSiteOrigin(origin: string | null, siteHost: string | null): boolean {
   if (!origin) return true;
+  if (!siteHost) return false;
   try {
-    return new URL(origin).origin === new URL(getSiteUrl(requestOrigin)).origin;
+    return new URL(origin).host === siteHost;
   } catch {
     return false;
   }
@@ -43,7 +50,8 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isSameSiteOrigin(request.headers.get("origin"), new URL(request.url).origin)) {
+  const siteHost = request.headers.get("host") ?? new URL(request.url).host;
+  if (!isSameSiteOrigin(request.headers.get("origin"), siteHost)) {
     return NextResponse.json(
       { error: "Legal acknowledgement must originate from this site." },
       { status: 403 }

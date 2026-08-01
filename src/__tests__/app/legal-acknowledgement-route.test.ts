@@ -14,7 +14,6 @@ function acknowledgementRequest(url: string, init: RequestInit = {}): Request {
 describe("legal acknowledgement route", () => {
   beforeEach(() => {
     vi.stubEnv("CLOIE_LEGAL_TICKET_SECRET", "legal-ticket-test-secret-012345678901");
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://cloie.test");
   });
 
   it("issues a secure acknowledgement cookie for current versions", async () => {
@@ -91,6 +90,40 @@ describe("legal acknowledgement route", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("set-cookie")).toContain("cloie_legal_ack=");
+  });
+
+  it("accepts a same-site acknowledgement behind a reverse proxy (Host header matches Origin)", async () => {
+    const response = await POST(
+      new Request("https://localhost:3000/api/auth/legal-acknowledgement", {
+        method: "POST",
+        headers: {
+          ...JSON_HEADERS,
+          host: "dom-pubmed-herbal-transparent.trycloudflare.com",
+          origin: "https://dom-pubmed-herbal-transparent.trycloudflare.com",
+        },
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toContain("cloie_legal_ack=");
+  });
+
+  it("rejects an origin that matches the request URL but not the Host header", async () => {
+    const response = await POST(
+      new Request("https://localhost:3000/api/auth/legal-acknowledgement", {
+        method: "POST",
+        headers: {
+          ...JSON_HEADERS,
+          host: "dom-pubmed-herbal-transparent.trycloudflare.com",
+          origin: "https://localhost:3000",
+        },
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+      })
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("accepts requests without an origin header (non-browser clients)", async () => {
