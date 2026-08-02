@@ -113,6 +113,7 @@ The gate is enforced by `describe.skipIf(!process.env.DATABASE_URL || process.en
 - When adding new shadcn components: `npx shadcn@latest add <component>` — they will automatically use Base UI.
 - Do not install Radix UI packages — stick to Base UI exclusively.
 - Styling is handled via **Tailwind CSS** + **class-variance-authority** (cva) for variants.
+- Design system reference: `docs/design.md` (visual language, tokens, page types, allowed/forbidden patterns). Canonical token values live in `src/styles/tokens.css` + `src/app/globals.css`.
 
 ## Turbopack + Tailwind (Easy To Break)
 
