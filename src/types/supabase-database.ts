@@ -516,7 +516,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "course_bound_cilo_question_bindings_course_bound_evaluatio_fkey"
+            foreignKeyName: "course_bound_cilo_question_bindings_course_bound_evaluation_id_"
             columns: ["course_bound_evaluation_id"]
             isOneToOne: false
             referencedRelation: "course_bound_evaluations"
@@ -966,7 +966,7 @@ export type Database = {
           description: string
           id?: string
           is_active?: boolean
-          order?: number
+          order: number
           program_id: string
           updated_at: string
         }
