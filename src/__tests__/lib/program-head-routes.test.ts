@@ -9,4 +9,10 @@ describe("Program Head routes", () => {
   it("builds child paths without duplicate separators", () => {
     expect(buildProgramHeadProgramPath("program-1", "/courses")).toBe("/program-head/programs/program-1/courses");
   });
+
+  it("encodes dynamic Program IDs in canonical paths", () => {
+    expect(buildProgramHeadDashboardPath("program/1")).toBe(
+      "/program-head/programs/program%2F1/dashboard"
+    );
+  });
 });

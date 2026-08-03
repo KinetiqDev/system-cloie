@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
+import { CourseScope, YearLevel } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 
 const REDIRECT_ERROR = "NEXT_REDIRECT";
@@ -94,71 +94,16 @@ describe("Program Head Course Assignments route", () => {
     });
   });
 
-  it("passes URL state to the server loader and renders its initial records", async () => {
-    loadListPageMock.mockResolvedValueOnce({
-      state: { page: 1, filters: { courseScope: CourseScope.GENERAL_EDUCATION } },
-      initialFilters: {
-        termInstanceId: null,
-        courseId: null,
-        facultyId: null,
-        programId: null,
-        yearLevel: null,
-        section: null,
-        isActive: null,
-        courseScope: CourseScope.GENERAL_EDUCATION,
-        searchQuery: "",
-      },
-      result: {
-        success: true,
-        data: {
-          items: [
-            {
-              id: "assignment-ge",
-              termInstanceId: "term-1",
-              facultyId: "faculty-1",
-              courseId: "course-ge",
-              programId: "program-1",
-              yearLevel: YearLevel.FIRST_YEAR,
-              section: StudentSection.MORNING,
-              assignedBy: null,
-              isActive: true,
-              createdAt: new Date("2026-01-01"),
-              updatedAt: new Date("2026-01-01"),
-              courseCode: "GEN101",
-              courseTitle: "General Education",
-              courseScope: CourseScope.GENERAL_EDUCATION,
-              facultyName: "Faculty Member",
-            },
-          ],
-          total: 1,
-          page: 0,
-          pageSize: 20,
-        },
-      },
-    });
-
+  it("redirects the static route to entry without loading assignment data", async () => {
     const CourseAssignmentsPage = (
       await import("../../app/(app)/program-head/course-assignments/page")
     ).default;
-    const page = await CourseAssignmentsPage({
-      searchParams: Promise.resolve({
-        courseScope: CourseScope.GENERAL_EDUCATION,
-        programId: "attacker-program-id",
-      }),
-    });
 
-    expect(loadListPageMock).toHaveBeenCalledWith({
-      pathname: "/program-head/course-assignments",
-      rawSearchParams: {
-        courseScope: CourseScope.GENERAL_EDUCATION,
-        programId: "attacker-program-id",
-      },
-      role: "program-head",
-    });
-    expect(page.props.initialData.items[0].courseCode).toBe("GEN101");
-    expect(page.props.initialFilters.courseScope).toBe(CourseScope.GENERAL_EDUCATION);
-    expect(page.props.initialPage).toBe(1);
-    expect(page.props.initialError).toBeNull();
+    await expect(Promise.resolve().then(() => CourseAssignmentsPage())).rejects.toThrow(
+      `${REDIRECT_ERROR}:/program-head`
+    );
+    expect(listProgramHeadCoursesMock).not.toHaveBeenCalled();
+    expect(loadListPageMock).not.toHaveBeenCalled();
   });
 
   it("does not load any role-owned data for a non-Program Head", async () => {
@@ -173,9 +118,9 @@ describe("Program Head Course Assignments route", () => {
       await import("../../app/(app)/program-head/course-assignments/page")
     ).default;
 
-    await expect(
-      CourseAssignmentsPage({ searchParams: Promise.resolve({}) })
-    ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
+    await expect(Promise.resolve().then(() => CourseAssignmentsPage())).rejects.toThrow(
+      `${REDIRECT_ERROR}:/program-head`
+    );
     expect(listProgramHeadCoursesMock).not.toHaveBeenCalled();
     expect(loadListPageMock).not.toHaveBeenCalled();
   });

@@ -18,10 +18,17 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+const redirectMock = vi.hoisted(() =>
+  vi.fn((path: string) => {
+    throw new Error(`NEXT_REDIRECT:${path}`);
+  })
+);
+
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
+  redirect: redirectMock,
 }));
 
 vi.mock("@/features/analytics/services/list-course-bound-review-items", () => ({
@@ -159,25 +166,14 @@ describe("reviewer course-bound pages", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders program-head list and detail flow using shared review components", async () => {
+  it("redirects the static Program Head review route to entry", async () => {
     const ProgramHeadListPage = (await import("../../app/(app)/program-head/cilo-reviews/page"))
       .default;
-    const ProgramHeadDetailPage = (
-      await import("../../app/(app)/program-head/cilo-reviews/[evaluationId]/page")
-    ).default;
 
-    render(await ProgramHeadListPage());
-    expect(listCourseBoundReviewItemsMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("Published list: Program CILO Reviews")).toBeInTheDocument();
-
-    const detail = await ProgramHeadDetailPage({
-      params: Promise.resolve({ evaluationId: "eval-1" }),
-    });
-    render(detail);
-    expect(getCourseBoundReviewDetailMock).toHaveBeenCalledWith("eval-1");
-    expect(
-      screen.getByText("Tabs base path: /program-head/cilo-reviews/eval-1")
-    ).toBeInTheDocument();
+    await expect(Promise.resolve().then(() => ProgramHeadListPage())).rejects.toThrow(
+      "NEXT_REDIRECT:/program-head"
+    );
+    expect(listCourseBoundReviewItemsMock).not.toHaveBeenCalled();
   });
 
   it("returns 404 for deferred Dean review surfaces", async () => {
@@ -191,35 +187,14 @@ describe("reviewer course-bound pages", () => {
     );
   });
 
-  it("renders role response pages and routes missing payloads to notFound", async () => {
+  it("redirects the static Program Head response route to entry", async () => {
     const ProgramHeadResponsePage = (
       await import("../../app/(app)/program-head/cilo-reviews/[evaluationId]/responses/[responseId]/page")
     ).default;
-    const DeanResponsePage = (
-      await import("../../app/(app)/dean/cilo-reviews/[evaluationId]/responses/[responseId]/page")
-    ).default;
 
-    render(
-      await ProgramHeadResponsePage({
-        params: Promise.resolve({ evaluationId: "eval-1", responseId: "response-1" }),
-      })
+    await expect(Promise.resolve().then(() => ProgramHeadResponsePage())).rejects.toThrow(
+      "NEXT_REDIRECT:/program-head"
     );
-    expect(getCourseBoundResponseReviewMock).toHaveBeenCalledWith("response-1");
-    expect(
-      screen.getByText("Response detail: Post-Term CILO Evaluation Tool (Respondent R-827493)")
-    ).toBeInTheDocument();
-
-    await expect(
-      DeanResponsePage({
-        params: Promise.resolve({ evaluationId: "eval-1", responseId: "response-1" }),
-      })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
-
-    getCourseBoundResponseReviewMock.mockResolvedValueOnce(null);
-    await expect(
-      ProgramHeadResponsePage({
-        params: Promise.resolve({ evaluationId: "eval-1", responseId: "missing" }),
-      })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(getCourseBoundResponseReviewMock).not.toHaveBeenCalled();
   });
 });

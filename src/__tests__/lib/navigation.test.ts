@@ -8,6 +8,8 @@ import {
   getMainNavByRoles,
   getMobileNavByRoles,
   getMobileNavMode,
+  getProgramHeadNav,
+  getProgramHeadProgramIdFromPathname,
   isNavItemActive,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
@@ -55,6 +57,47 @@ describe("navigation helpers", () => {
     expect(getMobileNavByRoles([ROLES.DEAN]).map((item) => item.href)).not.toContain(
       "/dean/cilo-reviews"
     );
+  });
+
+  it("preserves the selected Program in Program Head management navigation", () => {
+    const hrefs = getProgramHeadNav("/program-head/programs/program-2/outcomes/mapping").map(
+      (item) => item.href
+    );
+
+    expect(hrefs).toEqual([
+      "/program-head/programs/program-2/dashboard",
+      "/program-head/programs/program-2/courses",
+      "/program-head/programs/program-2/course-assignments",
+      "/program-head/programs/program-2/outcomes",
+      "/program-head/programs/program-2/tools",
+      "/program-head/programs/program-2/analytics",
+      "/program-head/programs/program-2/reports",
+      "/program-head/profile",
+    ]);
+  });
+
+  it("returns Program Head management navigation to entry when no context is selected", () => {
+    expect(getProgramHeadNav("/program-head/profile").map((item) => item.href)).toEqual([
+      "/program-head",
+      "/program-head",
+      "/program-head",
+      "/program-head",
+      "/program-head",
+      "/program-head",
+      "/program-head",
+      "/program-head/profile",
+    ]);
+  });
+
+  it("extracts only the canonical dynamic Program segment", () => {
+    expect(getProgramHeadProgramIdFromPathname("/program-head/programs/program-2/tools/new")).toBe(
+      "program-2"
+    );
+    expect(getProgramHeadProgramIdFromPathname("/program-head/programs/program-2x")).toBe(
+      "program-2x"
+    );
+    expect(getProgramHeadProgramIdFromPathname("/program-head/profile")).toBeNull();
+    expect(getProgramHeadProgramIdFromPathname("/program-head/programs/%E0%A4%A")).toBeNull();
   });
 
   it("exposes grouped canonical Dean navigation", () => {

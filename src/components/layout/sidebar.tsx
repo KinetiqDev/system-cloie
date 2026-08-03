@@ -31,7 +31,7 @@ interface SidebarProps {
 export function Sidebar({ user, roles = [] }: SidebarProps) {
   const pathname = usePathname();
 
-  const mainNav = getMainNavByRoles(roles);
+  const mainNav = getMainNavByRoles(roles, pathname);
   const secondaryNav = getSecondaryNavByRoles(roles);
   const activeItem = getDeepestMatchingNavItem(pathname, mainNav);
 
@@ -57,7 +57,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
       <div className="flex flex-1 flex-col overflow-y-auto px-4 py-6">
         <nav className="space-y-1">
           {mainNav.map((item) => {
-            const isActive = activeItem?.href === item.href;
+            const isActive = activeItem === item;
             return (
               <NavigationLink
                 key={item.href}
