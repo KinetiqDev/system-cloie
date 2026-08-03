@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut } from "lucide-react";
 import Image from "next/image";
@@ -22,9 +23,10 @@ interface TopbarProps {
   };
   mobileNavMode?: MobileNavMode;
   roles?: Role[];
+  children?: React.ReactNode;
 }
 
-export function Topbar({ user, mobileNavMode = "bottom-nav", roles }: TopbarProps) {
+export function Topbar({ user, mobileNavMode = "bottom-nav", roles, children }: TopbarProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -57,6 +59,7 @@ export function Topbar({ user, mobileNavMode = "bottom-nav", roles }: TopbarProp
       <div className="hidden lg:flex" /> {/* Empty spacer for desktop */}
       {/* Right side actions */}
       <div className="flex items-center gap-3">
+        {children}
         {/* Profile avatar + dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger className="hover:bg-surface-muted flex items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors focus:outline-none">

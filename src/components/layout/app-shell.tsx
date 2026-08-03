@@ -2,9 +2,9 @@ import * as React from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
-import { DevRoleSwitcher } from "@/features/auth/components/dev-role-switcher";
-import { DemoRoleSwitcher } from "@/features/auth/components/demo-role-switcher";
-import type { RoleSwitcherUser } from "@/features/auth/components/role-switcher";
+import { DevRoleSwitcher, DevRoleSwitcherDesktop } from "@/features/auth/components/dev-role-switcher";
+import { DemoRoleSwitcher, DemoRoleSwitcherDesktop } from "@/features/auth/components/demo-role-switcher";
+import type { RoleSwitcherUser } from "@/features/auth/components/role-switcher-list";
 import type { Role } from "@/lib/constants/roles";
 import { getMobileNavMode } from "@/lib/constants/navigation";
 
@@ -41,7 +41,10 @@ export function AppShell({
       {/* Main Content Area */}
       <div className={isDean ? "flex min-w-0 flex-1 flex-col md:pl-16 lg:pl-64" : "flex min-w-0 flex-1 flex-col lg:pl-64"}>
         {/* Top App Bar — includes hamburger trigger for admin/dean/ph/faculty */}
-        <Topbar user={user} mobileNavMode={mobileNavMode} roles={activeRoles} />
+        <Topbar user={user} mobileNavMode={mobileNavMode} roles={activeRoles}>
+          <DevRoleSwitcherDesktop activeEmail={user?.email} />
+          <DemoRoleSwitcherDesktop enabled={demoEnabled} activeEmail={user?.email} users={demoUsers} />
+        </Topbar>
 
         {/* Page Content */}
         <main className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-1 flex-col overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-8">

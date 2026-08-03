@@ -13,10 +13,13 @@ vi.mock("@/components/layout/mobile-nav", () => ({
 }));
 vi.mock("@/features/auth/components/dev-role-switcher", () => ({
   DevRoleSwitcher: () => null,
+  DevRoleSwitcherDesktop: () => null,
 }));
 vi.mock("@/features/auth/components/demo-role-switcher", () => ({
   DemoRoleSwitcher: ({ enabled }: { enabled: boolean }) =>
     enabled ? <div>Demo role switcher</div> : null,
+  DemoRoleSwitcherDesktop: ({ enabled }: { enabled: boolean }) =>
+    enabled ? <div>Demo role switcher desktop</div> : null,
 }));
 
 import { AppShell } from "@/components/layout/app-shell";

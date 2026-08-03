@@ -37,9 +37,12 @@ describe("demo configuration secrecy", () => {
     // re-exports or references them, cookie names could appear in browser bundles.
     // This test verifies the cookie name is not used in any client component.
     const clientFiles = [
-      "src/features/auth/components/role-switcher.tsx",
-      "src/features/auth/components/demo-role-switcher.tsx",
       "src/features/auth/components/dev-role-switcher.tsx",
+      "src/features/auth/components/demo-role-switcher.tsx",
+      "src/features/auth/components/role-switcher-dropdown.tsx",
+      "src/features/auth/components/role-switcher-list.tsx",
+      "src/features/auth/components/mobile-role-switcher.tsx",
+      "src/features/auth/components/use-role-switch.ts",
     ];
 
     for (const file of clientFiles) {
@@ -51,8 +54,12 @@ describe("demo configuration secrecy", () => {
 
   it("does not import demo-auth service (contains secret handling) from a 'use client' module", async () => {
     const clientFiles = [
-      "src/features/auth/components/role-switcher.tsx",
+      "src/features/auth/components/dev-role-switcher.tsx",
       "src/features/auth/components/demo-role-switcher.tsx",
+      "src/features/auth/components/role-switcher-dropdown.tsx",
+      "src/features/auth/components/role-switcher-list.tsx",
+      "src/features/auth/components/mobile-role-switcher.tsx",
+      "src/features/auth/components/use-role-switch.ts",
     ];
 
     for (const file of clientFiles) {

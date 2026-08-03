@@ -2,7 +2,12 @@
 
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { RoleSwitcherUser } from "./role-switcher";
+
+export type RoleSwitcherUser = {
+  email: string;
+  label: string;
+  role: string;
+};
 
 export type RoleSwitcherListProps = {
   activeEmail?: string | null;

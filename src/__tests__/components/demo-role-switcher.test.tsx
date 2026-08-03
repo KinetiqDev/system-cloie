@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DEDICATED_DEMO_USERS,
   DemoRoleSwitcher,
+  DemoRoleSwitcherDesktop,
 } from "@/features/auth/components/demo-role-switcher";
 
 const { pushMock, refreshMock } = vi.hoisted(() => ({
@@ -28,20 +29,15 @@ describe("DemoRoleSwitcher", () => {
   it("does not render without the server capability", () => {
     render(<DemoRoleSwitcher enabled={false} />);
 
-    expect(screen.queryByRole("button", { name: /demo roles/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("renders the seven required roles and filters the catalog", () => {
+  it("renders the seven required roles in the desktop dropdown", () => {
     installLocalStorage();
-    render(<DemoRoleSwitcher enabled />);
+    render(<DemoRoleSwitcherDesktop enabled />);
 
-    expect(screen.queryByRole("textbox", { name: "Search roles" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /demo roles/i }));
+    fireEvent.click(screen.getByRole("button", { name: /demo/i }));
 
-    expect(screen.getByRole("button", { name: /demo roles/i }).closest("div.fixed")).toHaveClass(
-      "hidden",
-      "lg:block"
-    );
     expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(7);
     expect(screen.getByText("College Dean")).toBeInTheDocument();
 
@@ -53,7 +49,7 @@ describe("DemoRoleSwitcher", () => {
     expect(screen.queryByRole("button", { name: "Switch to Student" })).not.toBeInTheDocument();
   });
 
-  it("uses the dedicated route, destination, refresh, and keyboard repositioning", async () => {
+  it("uses the dedicated route, destination, and refresh", async () => {
     installLocalStorage();
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ success: true, destination: "/student/dashboard" }), {
@@ -61,9 +57,9 @@ describe("DemoRoleSwitcher", () => {
         headers: { "Content-Type": "application/json" },
       })
     );
-    render(<DemoRoleSwitcher enabled />);
+    render(<DemoRoleSwitcherDesktop enabled />);
 
-    fireEvent.click(screen.getByRole("button", { name: /demo roles/i }));
+    fireEvent.click(screen.getByRole("button", { name: /demo/i }));
     fireEvent.click(screen.getByRole("button", { name: "Switch to Student" }));
 
     await waitFor(() => {
@@ -77,16 +73,6 @@ describe("DemoRoleSwitcher", () => {
       expect(refreshMock).toHaveBeenCalled();
     });
 
-    const handle = screen.getByRole("button", {
-      name: /reposition role switcher/i,
-    });
-    fireEvent.keyDown(handle, { key: "ArrowLeft" });
-    fireEvent.keyDown(handle, { key: "Enter" });
-    expect(window.localStorage.setItem).toHaveBeenCalledWith(
-      "cloie-demo-switcher-pos",
-      expect.stringContaining('"x"')
-    );
-
     fetchMock.mockRestore();
   });
 
@@ -98,8 +84,8 @@ describe("DemoRoleSwitcher", () => {
         resolveResponse = resolve;
       })
     );
-    render(<DemoRoleSwitcher enabled />);
-    fireEvent.click(screen.getByRole("button", { name: /demo roles/i }));
+    render(<DemoRoleSwitcherDesktop enabled />);
+    fireEvent.click(screen.getByRole("button", { name: /demo/i }));
 
     const secretary = screen.getByRole("button", { name: "Switch to Secretary" });
     const student = screen.getByRole("button", { name: "Switch to Student" });
@@ -121,14 +107,41 @@ describe("DemoRoleSwitcher", () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: "Demo user unavailable." }), { status: 404 })
     );
-    render(<DemoRoleSwitcher enabled />);
-    fireEvent.click(screen.getByRole("button", { name: /demo roles/i }));
+    render(<DemoRoleSwitcherDesktop enabled />);
+    fireEvent.click(screen.getByRole("button", { name: /demo/i }));
     fireEvent.click(screen.getByRole("button", { name: "Switch to Secretary" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Demo user unavailable.");
 
     fetchMock.mockResolvedValueOnce(new Response("not json", { status: 500 }));
     fireEvent.click(screen.getByRole("button", { name: "Switch to Secretary" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Role switch failed.");
+
+    fetchMock.mockRestore();
+  });
+
+  it("uses the dedicated route from the mobile drawer", async () => {
+    installLocalStorage();
+    const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ success: true, destination: "/student/dashboard" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    render(<DemoRoleSwitcher enabled />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open role switcher" }));
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Student" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/auth/demo-login",
+        expect.objectContaining({
+          body: JSON.stringify({ identifier: "demo-student@cloie.test" }),
+        })
+      );
+      expect(pushMock).toHaveBeenCalledWith("/student/dashboard");
+      expect(refreshMock).toHaveBeenCalled();
+    });
 
     fetchMock.mockRestore();
   });
