@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback, useRef } from "react";
+import { useState, useTransition, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -33,6 +33,7 @@ import {
 import { deleteGOAction, reorderGOsAction } from "@/lib/actions/program-head-outcome-actions";
 import { GOFormDialog } from "./go-form-dialog";
 import type { ProgramGOItem } from "../services/manage-program-head-outcomes";
+import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
 
 type ProgramHeadOutcomesPageProps = {
   gos: ProgramGOItem[];
@@ -63,7 +64,7 @@ function SortableGORow({
       ref={setNodeRef}
       style={style}
       className={`bg-surface border-border flex items-start gap-3 rounded-xl border p-4 shadow-sm transition-shadow ${
-        isDragging ? "shadow-lg opacity-90" : "hover:shadow-md"
+        isDragging ? "opacity-90 shadow-lg" : "hover:shadow-md"
       }`}
     >
       {/* Drag Handle */}
@@ -123,7 +124,10 @@ function SortableGORow({
   );
 }
 
-export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHeadOutcomesPageProps) {
+export function ProgramHeadOutcomesPage({
+  gos: initialGOs,
+  program,
+}: ProgramHeadOutcomesPageProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [orderedGOs, setOrderedGOs] = useState<ProgramGOItem[]>(initialGOs);
@@ -131,7 +135,22 @@ export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHea
   const [editingGO, setEditingGO] = useState<ProgramGOItem | null>(null);
   const [deletingGO, setDeletingGO] = useState<ProgramGOItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [reorderError, setReorderError] = useState<string | null>(null);
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reorderGenerationRef = useRef(0);
+
+  useEffect(
+    () => () => {
+      if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
+    },
+    []
+  );
+
+  useEffect(() => {
+    // Reconcile optimistic drag state after router.refresh() returns authoritative server props.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrderedGOs(initialGOs);
+  }, [initialGOs]);
 
   const totalGOs = orderedGOs.length;
   const withMappings = orderedGOs.filter((go) => go._count.cilo_mappings > 0).length;
@@ -146,26 +165,41 @@ export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHea
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
-      setOrderedGOs((prev) => {
-        const oldIndex = prev.findIndex((g) => g.id === active.id);
-        const newIndex = prev.findIndex((g) => g.id === over.id);
-        const reordered = arrayMove(prev, oldIndex, newIndex);
+      const oldIndex = orderedGOs.findIndex((g) => g.id === active.id);
+      const newIndex = orderedGOs.findIndex((g) => g.id === over.id);
+      const reordered = arrayMove(orderedGOs, oldIndex, newIndex);
+      const generation = ++reorderGenerationRef.current;
+      setOrderedGOs(reordered);
+      setReorderError(null);
 
-        if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
-        reorderTimerRef.current = setTimeout(() => {
-          reorderGOsAction(reordered.map((g) => g.id));
-        }, 600);
-
-        return reordered;
-      });
+      if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
+      reorderTimerRef.current = setTimeout(() => {
+        startTransition(async () => {
+          try {
+            const result = await reorderGOsAction(
+              program.id,
+              reordered.map((g) => g.id)
+            );
+            if (!result.success && reorderGenerationRef.current === generation) {
+              setReorderError(result.error);
+              router.refresh();
+            }
+          } catch {
+            if (reorderGenerationRef.current === generation) {
+              setReorderError("Graduate Outcome order could not be saved. Try again.");
+              router.refresh();
+            }
+          }
+        });
+      }, 600);
     },
-    []
+    [orderedGOs, program.id, router]
   );
 
   function handleDelete(go: ProgramGOItem) {
     setDeleteError(null);
     startTransition(async () => {
-      const result = await deleteGOAction(go.id);
+      const result = await deleteGOAction(program.id, go.id);
 
       if (!result.success) {
         setDeleteError(result.error);
@@ -188,12 +222,15 @@ export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHea
           <p className="text-text-muted mt-1 text-sm">{program.name}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Link href="/program-head/outcomes/mapping">
-            <Button variant="outline" size="sm" className="gap-2">
-              <ListChecks className="h-4 w-4" />
-              CILO Mappings
-            </Button>
-          </Link>
+          <Button
+            render={<Link href={buildProgramHeadOutcomeMappingPath(program.id)} />}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <ListChecks className="h-4 w-4" />
+            CILO Mappings
+          </Button>
           <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
             Add GO
@@ -224,13 +261,16 @@ export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHea
               </div>
             </>
           )}
-          <p className="text-text-muted ml-auto hidden text-xs sm:block">
-            Drag rows to reorder
-          </p>
+          <p className="text-text-muted ml-auto hidden text-xs sm:block">Drag rows to reorder</p>
         </div>
       )}
 
       {/* GO List */}
+      {reorderError && (
+        <div role="alert" className="bg-danger-soft text-danger mb-4 rounded-md p-3 text-sm">
+          {reorderError}
+        </div>
+      )}
       {orderedGOs.length === 0 ? (
         <div className="border-border rounded-xl border border-dashed px-6 py-16 text-center">
           <div className="bg-surface-alt mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
@@ -269,12 +309,18 @@ export function ProgramHeadOutcomesPage({ gos: initialGOs, program }: ProgramHea
       )}
 
       {/* Create Dialog */}
-      <GOFormDialog mode="create" open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <GOFormDialog
+        mode="create"
+        programId={program.id}
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
 
       {/* Edit Dialog */}
       {editingGO && (
         <GOFormDialog
           mode="edit"
+          programId={program.id}
           go={editingGO}
           open={!!editingGO}
           onOpenChange={(open) => {

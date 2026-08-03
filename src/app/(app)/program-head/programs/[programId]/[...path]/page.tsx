@@ -11,8 +11,6 @@ function isReservedProgramHeadPath(path: string[]): boolean {
     [
       "courses",
       "course-assignments",
-      "outcomes",
-      "outcomes/mapping",
       "tools",
       "tools/new",
       "tools/publish",
@@ -44,8 +42,8 @@ export default async function SelectedProgramMigrationPage({
       <CardHeader>
         <CardTitle>Program workspace is being migrated</CardTitle>
         <CardDescription>
-          This selected Program route is reserved for the next Program Head management slice.
-          No cross-Program data is loaded here.
+          This selected Program route is reserved for the next Program Head management slice. No
+          cross-Program data is loaded here.
         </CardDescription>
       </CardHeader>
       <CardContent>

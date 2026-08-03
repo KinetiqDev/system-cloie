@@ -10,3 +10,11 @@ export function buildProgramHeadProgramPath(programId: string, childPath = ""): 
 
   return normalizedChildPath ? `${basePath}/${normalizedChildPath}` : basePath;
 }
+
+export function buildProgramHeadOutcomesPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "outcomes");
+}
+
+export function buildProgramHeadOutcomeMappingPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "outcomes/mapping");
+}

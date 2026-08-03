@@ -15,28 +15,49 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
-import { createGOSchema, updateGOSchema, type CreateGOInput, type UpdateGOInput } from "../schemas/go";
 import {
-  createGOAction,
-  updateGOAction,
-} from "@/lib/actions/program-head-outcome-actions";
+  createGOSchema,
+  updateGOSchema,
+  type CreateGOInput,
+  type UpdateGOInput,
+} from "../schemas/go";
+import { createGOAction, updateGOAction } from "@/lib/actions/program-head-outcome-actions";
 import type { ProgramGOItem } from "../services/manage-program-head-outcomes";
 
 type GOFormDialogProps =
-  | { mode: "create"; go?: undefined; open: boolean; onOpenChange: (open: boolean) => void }
-  | { mode: "edit"; go: ProgramGOItem; open: boolean; onOpenChange: (open: boolean) => void };
+  | {
+      mode: "create";
+      programId: string;
+      go?: undefined;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    }
+  | {
+      mode: "edit";
+      programId: string;
+      go: ProgramGOItem;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    };
 
-function CreateForm({ onClose }: { onClose: () => void }) {
+function CreateForm({ programId, onClose }: { programId: string; onClose: () => void }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { register, handleSubmit, formState: { errors }, reset, setError } = useForm<CreateGOInput>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setError,
+  } = useForm<CreateGOInput>({
     resolver: customZodResolver(createGOSchema),
-    defaultValues: { code: "", description: "" },
+    defaultValues: { programId, code: "", description: "" },
   });
 
   function onSubmit(data: CreateGOInput) {
     startTransition(async () => {
       const formData = new FormData();
+      formData.set("programId", data.programId);
       formData.set("code", data.code);
       formData.set("description", data.description);
       const result = await createGOAction(formData);
@@ -53,7 +74,9 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {errors.root && (
-        <div className="bg-danger-soft text-danger rounded-md p-3 text-sm">{errors.root.message}</div>
+        <div className="bg-danger-soft text-danger rounded-md p-3 text-sm">
+          {errors.root.message}
+        </div>
       )}
       <div className="space-y-1.5">
         <Label htmlFor="create-go-code">GO Code</Label>
@@ -78,7 +101,9 @@ function CreateForm({ onClose }: { onClose: () => void }) {
         {errors.description && <p className="text-danger text-xs">{errors.description.message}</p>}
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
         <Button type="submit" disabled={isPending}>
           {isPending ? "Saving..." : "Create GO"}
         </Button>
@@ -87,17 +112,32 @@ function CreateForm({ onClose }: { onClose: () => void }) {
   );
 }
 
-function EditForm({ go, onClose }: { go: ProgramGOItem; onClose: () => void }) {
+function EditForm({
+  programId,
+  go,
+  onClose,
+}: {
+  programId: string;
+  go: ProgramGOItem;
+  onClose: () => void;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { register, handleSubmit, formState: { errors }, reset, setError } = useForm<UpdateGOInput>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    setError,
+  } = useForm<UpdateGOInput>({
     resolver: customZodResolver(updateGOSchema),
-    defaultValues: { id: go.id, code: go.code, description: go.description },
+    defaultValues: { programId, id: go.id, code: go.code, description: go.description },
   });
 
   function onSubmit(data: UpdateGOInput) {
     startTransition(async () => {
       const formData = new FormData();
+      formData.set("programId", data.programId);
       formData.set("id", data.id);
       formData.set("code", data.code);
       formData.set("description", data.description);
@@ -114,9 +154,12 @@ function EditForm({ go, onClose }: { go: ProgramGOItem; onClose: () => void }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <input type="hidden" {...register("programId")} />
       <input type="hidden" {...register("id")} />
       {errors.root && (
-        <div className="bg-danger-soft text-danger rounded-md p-3 text-sm">{errors.root.message}</div>
+        <div className="bg-danger-soft text-danger rounded-md p-3 text-sm">
+          {errors.root.message}
+        </div>
       )}
       <div className="space-y-1.5">
         <Label htmlFor="edit-go-code">GO Code</Label>
@@ -141,7 +184,9 @@ function EditForm({ go, onClose }: { go: ProgramGOItem; onClose: () => void }) {
         {errors.description && <p className="text-danger text-xs">{errors.description.message}</p>}
       </div>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
         <Button type="submit" disabled={isPending}>
           {isPending ? "Saving..." : "Save Changes"}
         </Button>
@@ -150,7 +195,7 @@ function EditForm({ go, onClose }: { go: ProgramGOItem; onClose: () => void }) {
   );
 }
 
-export function GOFormDialog({ mode, go, open, onOpenChange }: GOFormDialogProps) {
+export function GOFormDialog({ mode, programId, go, open, onOpenChange }: GOFormDialogProps) {
   function handleOpenChange(nextOpen: boolean) {
     onOpenChange(nextOpen);
   }
@@ -169,9 +214,9 @@ export function GOFormDialog({ mode, go, open, onOpenChange }: GOFormDialogProps
           </DialogDescription>
         </DialogHeader>
         {mode === "create" ? (
-          <CreateForm onClose={() => onOpenChange(false)} />
+          <CreateForm programId={programId} onClose={() => onOpenChange(false)} />
         ) : (
-          <EditForm go={go} onClose={() => onOpenChange(false)} />
+          <EditForm programId={programId} go={go} onClose={() => onOpenChange(false)} />
         )}
       </DialogContent>
     </Dialog>

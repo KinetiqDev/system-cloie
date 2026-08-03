@@ -14,11 +14,36 @@ const goFields = {
     .max(1000, "Description must be 1000 characters or fewer."),
 };
 
-export const createGOSchema = z.object(goFields);
+export const createGOSchema = z.object({
+  programId: z.string().uuid("Invalid Program ID."),
+  ...goFields,
+});
 
 export const updateGOSchema = z.object({
+  programId: z.string().uuid("Invalid Program ID."),
   id: z.string().uuid("Invalid GO ID."),
   ...goFields,
+});
+
+export const programHeadGOActionSchema = z.object({
+  programId: z.string().uuid("Invalid Program ID."),
+  id: z.string().uuid("Invalid GO ID."),
+});
+
+export const reorderGOsSchema = z.object({
+  programId: z.string().uuid("Invalid Program ID."),
+  orderedIds: z.array(z.string().uuid("Invalid GO ID.")),
+});
+
+export const createMappingSchema = z.object({
+  programId: z.string().uuid("Invalid Program ID."),
+  ciloId: z.string().uuid("Invalid CILO ID."),
+  goId: z.string().uuid("Invalid GO ID."),
+});
+
+export const removeMappingSchema = z.object({
+  programId: z.string().uuid("Invalid Program ID."),
+  id: z.string().uuid("Invalid mapping ID."),
 });
 
 export type CreateGOInput = z.infer<typeof createGOSchema>;
