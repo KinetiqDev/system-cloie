@@ -1,8 +1,7 @@
 import { DeploymentStatus, ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { countEligibleCourseBoundEvaluationAssignments } from "@/features/course-assignments/services/course-assignment-roster";
-import { ROLES } from "@/lib/constants/roles";
 import { buildReviewWordCloudTokens } from "./get-course-bound-review-detail";
 import type { WordCloudToken } from "../types";
 
@@ -32,7 +31,7 @@ export type ProgramHeadDashboardData = {
   wordCloudTokens: WordCloudToken[];
 };
 
-export type ProgramHeadDashboardScope = {
+type ProgramHeadDashboardScope = {
   programId: string;
   programCode: string;
   programLabel: string;
@@ -59,30 +58,16 @@ function roundToTwo(n: number): number {
 export async function getProgramHeadDashboard(
   programId: string
 ): Promise<ProgramHeadDashboardData | null> {
-  const session = await resolveAuthSession();
+  const contextResult = await resolveProgramHeadContext(programId);
 
-  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
+  if (!contextResult.success) {
     return null;
   }
-
-  const assignment = await prisma.programHeadAssignment.findFirst({
-    where: { program_head_id: session.userId, program_id: programId, is_active: true },
-    select: { program_id: true },
-  });
-
-  if (!assignment) {
-    return null;
-  }
-
-  const program = await prisma.program.findUniqueOrThrow({
-    where: { id: programId },
-    select: { code: true, name: true },
-  });
 
   return getProgramHeadDashboardForScope({
-    programId,
-    programCode: program.code,
-    programLabel: program.name,
+    programId: contextResult.data.selectedProgram.id,
+    programCode: contextResult.data.selectedProgram.code,
+    programLabel: contextResult.data.selectedProgram.name,
   });
 }
 
@@ -90,7 +75,7 @@ export async function getProgramHeadDashboard(
  * Reads dashboard data after the caller has validated the active assignment.
  * Keep authorization in getProgramHeadDashboard for independently reachable callers.
  */
-export async function getProgramHeadDashboardForScope(
+async function getProgramHeadDashboardForScope(
   scope: ProgramHeadDashboardScope
 ): Promise<ProgramHeadDashboardData> {
   const { programId, programCode, programLabel } = scope;

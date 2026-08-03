@@ -9,5 +9,5 @@ export default function ProgramHeadError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return <OperationalRouteError error={error} reset={reset} returnHref="/program-head/dashboard" />;
+  return <OperationalRouteError error={error} reset={reset} returnHref="/program-head" />;
 }
