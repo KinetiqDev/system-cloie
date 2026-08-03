@@ -18,3 +18,7 @@ export function buildProgramHeadOutcomesPath(programId: string): string {
 export function buildProgramHeadOutcomeMappingPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "outcomes/mapping");
 }
+
+export function buildProgramHeadCoursesPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "courses");
+}

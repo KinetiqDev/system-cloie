@@ -9,7 +9,6 @@ function isReservedProgramHeadPath(path: string[]): boolean {
 
   return (
     [
-      "courses",
       "course-assignments",
       "tools",
       "tools/new",

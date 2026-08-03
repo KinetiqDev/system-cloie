@@ -3,9 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
-import { Archive, Edit, Plus, Search, Users } from "lucide-react";
-import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
-import { CourseRowAssignmentsSheet } from "@/features/course-assignments/components/course-row-assignments-sheet";
+import { Archive, Edit, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,14 +42,12 @@ import type {
   ProgramHeadCourseItem,
   ProgramHeadCourseSummary,
 } from "../services/resolve-program-head-courses";
-import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
 type ProgramHeadCoursesCatalogProps = {
+  program: { id: string; code: string; name: string };
   courses: ProgramHeadCourseItem[];
   summary: ProgramHeadCourseSummary;
-  programs: Array<{ id: string; code: string; name: string }>;
   majors: Array<{ id: string; name: string; program_id: string }>;
-  termInstances: TermInstanceItem[];
 };
 
 type CourseFormMode = "create" | "edit";
@@ -154,15 +150,25 @@ function StatCard({
 function MajorSelect({
   majors,
   defaultValue,
+  onChange,
 }: {
   majors: Array<{ id: string; name: string; program_id: string }>;
   defaultValue?: string;
+  onChange: (value: string) => void;
 }) {
   const [value, setValue] = useState(defaultValue ?? "");
 
   return (
-    <Select name="major_id" value={value} onValueChange={(v) => setValue(v ?? "")}>
-      <SelectTrigger>
+    <Select
+      name="major_id"
+      value={value}
+      onValueChange={(v) => {
+        const nextValue = v ?? "";
+        setValue(nextValue);
+        onChange(nextValue);
+      }}
+    >
+      <SelectTrigger id="major_id">
         <SelectValue>
           {value ? (majors.find((m) => m.id === value)?.name ?? "Select major") : "Select major"}
         </SelectValue>
@@ -180,12 +186,14 @@ function MajorSelect({
 
 function CourseFormDialog({
   mode,
+  programId,
   majors,
   course,
   open,
   onOpenChange,
 }: {
   mode: CourseFormMode;
+  programId: string;
   majors: Array<{ id: string; name: string; program_id: string }>;
   course?: ProgramHeadCourseItem;
   open: boolean;
@@ -197,6 +205,7 @@ function CourseFormDialog({
   const [scopeType, setScopeType] = useState<"program-wide" | "major-specific">(
     course?.major_id ? "major-specific" : "program-wide"
   );
+  const [majorId, setMajorId] = useState(course?.major_id ?? "");
   const [yearLevel, setYearLevel] = useState<YearLevel | "">(
     course?.default_year_level ?? ""
   );
@@ -216,10 +225,17 @@ function CourseFormDialog({
 
     // Set course_scope always to PROGRAM_SPECIFIC for PH
     formData.set("course_scope", CourseScope.PROGRAM_SPECIFIC);
+    formData.set("programId", programId);
+    formData.set("course_type", scopeType);
 
     // Clear major_id if program-wide
     if (scopeType === "program-wide") {
       formData.delete("major_id");
+    } else if (!majorId) {
+      setError("Select a major for a major-specific course.");
+      return;
+    } else {
+      formData.set("major_id", majorId);
     }
 
     // Append temporal fields
@@ -263,11 +279,12 @@ function CourseFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="scope-type">Course Scope</Label>
+            <input type="hidden" name="course_type" value={scopeType} />
             <Select
               value={scopeType}
               onValueChange={(v) => setScopeType(v as "program-wide" | "major-specific")}
             >
-              <SelectTrigger>
+            <SelectTrigger id="scope-type">
                 <SelectValue>
                   {scopeType === "program-wide" ? "Program-Wide" : "Major-Specific"}
                 </SelectValue>
@@ -284,7 +301,11 @@ function CourseFormDialog({
           {scopeType === "major-specific" && majors.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="major_id">Major</Label>
-              <MajorSelect majors={majors} defaultValue={course?.major_id ?? undefined} />
+            <MajorSelect
+              majors={majors}
+              defaultValue={course?.major_id ?? undefined}
+              onChange={setMajorId}
+            />
             </div>
           )}
 
@@ -423,11 +444,10 @@ function CourseFormDialog({
 }
 
 export function ProgramHeadCoursesCatalog({
+  program,
   courses,
   summary,
-  programs,
   majors,
-  termInstances,
 }: ProgramHeadCoursesCatalogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -438,18 +458,17 @@ export function ProgramHeadCoursesCatalog({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDialogKey, setCreateDialogKey] = useState(0);
   const [editingCourse, setEditingCourse] = useState<ProgramHeadCourseItem | null>(null);
-  const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
 
   const PAGE_SIZE = 15;
   const filteredCourses = filterCourses(courses, activeTab, search, majorFilter);
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const programLabel = programs.map((p) => p.name).join(", ") || "No Program";
+  const programLabel = program.name;
 
   function handleToggleActive(id: string, currentActive: boolean) {
     startTransition(async () => {
-      await toggleProgramHeadCourseActiveAction(id, !currentActive);
+      await toggleProgramHeadCourseActiveAction(program.id, id, !currentActive);
       router.refresh();
     });
   }
@@ -490,18 +509,6 @@ export function ProgramHeadCoursesCatalog({
 
       {/* Content Container */}
       <div className="bg-surface-alt rounded-xl p-2">
-        {/* Header with Term Picker */}
-        <div className="flex flex-wrap items-center justify-between gap-4 px-4 pt-3 pb-2">
-          <div className="w-64">
-            <TermInstancePicker
-              termInstances={termInstances}
-              value={selectedTermId ?? ""}
-              onChange={setSelectedTermId}
-              placeholder="Select term..."
-            />
-          </div>
-        </div>
-
         {/* Tab pill selector */}
         <div className="mb-4 flex flex-wrap gap-2 px-4 pt-3 pb-2">
           {([
@@ -645,25 +652,6 @@ export function ProgramHeadCoursesCatalog({
                         <TableCell className="text-right whitespace-nowrap">
                           {!course.isReadOnly && (
                             <div className="flex items-center justify-end gap-1">
-                              <CourseRowAssignmentsSheet
-                                courseId={course.id}
-                                courseCode={course.code}
-                                courseTitle={course.title}
-                                termInstanceId={selectedTermId}
-                                termInstances={termInstances}
-                                availablePrograms={programs}
-                                availableCourses={courses}
-                                triggerRender={
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    title="Assign Faculty"
-                                  >
-                                    <Users className="h-4 w-4" />
-                                  </Button>
-                                }
-                              />
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -731,6 +719,7 @@ export function ProgramHeadCoursesCatalog({
       <CourseFormDialog
         key={`create-${createDialogKey}`}
         mode="create"
+        programId={program.id}
         majors={majors}
         open={createDialogOpen}
         onOpenChange={(open) => {
@@ -744,6 +733,7 @@ export function ProgramHeadCoursesCatalog({
         <CourseFormDialog
           key={editingCourse.id}
           mode="edit"
+          programId={program.id}
           majors={majors}
           course={editingCourse}
           open={!!editingCourse}

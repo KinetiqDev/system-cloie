@@ -1,40 +1,29 @@
-import { CourseScope } from "@prisma/client";
-import { ROLES } from "@/lib/constants/roles";
+import { CourseScope, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  revalidateProgramHeadAssignment,
+  resolveProgramHeadContext,
+} from "@/features/auth/services/resolve-program-head-context";
 import type {
   CreateProgramHeadCourseInput,
+  ToggleProgramHeadCourseInput,
   UpdateProgramHeadCourseInput,
 } from "../schemas/program-head-course";
-
-import { type ServiceResult } from "@/lib/utils/service-result";
+import type { ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
-async function resolveAndValidatePHScope(
-  userId: string
-): Promise<ServiceResult<{ programIds: string[] }>> {
-  const assignments = await prisma.programHeadAssignment.findMany({
-    where: { program_head_id: userId, is_active: true },
-    select: { program_id: true },
-  });
+type CourseWriteResult = ServiceResult<{ id: string }>;
 
-  const programIds = [...new Set(assignments.map((a) => a.program_id))];
-
-  if (programIds.length === 0) {
-    return {
-      success: false,
-      error: "No active program assignment found for this Program Head.",
-    };
-  }
-
-  return { success: true, data: { programIds } };
+function assignmentFailure(): ServiceResult<never> {
+  return { success: false, error: "Selected Program is no longer assigned." };
 }
 
 async function validateMajorBelongsToProgram(
+  db: typeof prisma | Prisma.TransactionClient,
   majorId: string,
-  programIds: string[]
+  programId: string
 ): Promise<ServiceResult<{ programId: string }>> {
-  const major = await prisma.major.findUnique({
+  const major = await db.major.findUnique({
     where: { id: majorId },
     select: { id: true, program_id: true, is_active: true },
   });
@@ -47,217 +36,184 @@ async function validateMajorBelongsToProgram(
     return { success: false, error: "Selected major is not active." };
   }
 
-  if (!programIds.includes(major.program_id)) {
-    return {
-      success: false,
-      error: "Selected major does not belong to your assigned program.",
-    };
+  if (major.program_id !== programId) {
+    return { success: false, error: "Selected major does not belong to the selected program." };
   }
 
   return { success: true, data: { programId: major.program_id } };
 }
 
+async function withSelectedAssignment<T>(
+  userId: string,
+  programId: string,
+  callback: (tx: Prisma.TransactionClient) => Promise<ServiceResult<T>>
+): Promise<ServiceResult<T>> {
+  return prisma.$transaction(async (tx) => {
+    const selectedProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
+    if (!selectedProgram) return assignmentFailure();
+    return callback(tx);
+  });
+}
+
 export async function createProgramHeadCourse(
   input: CreateProgramHeadCourseInput
-): Promise<ServiceResult<{ id: string }>> {
-  const session = await resolveAuthSession();
-
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
-
-  // Determine program_id and major_id based on input
-  let programId: string;
-  let majorId: string | null = null;
-
-  if (input.major_id) {
-    const majorResult = await validateMajorBelongsToProgram(input.major_id, programIds);
-
-    if (!majorResult.success) {
-      return majorResult;
-    }
-
-    programId = majorResult.data.programId;
-    majorId = input.major_id;
-  } else {
-    // Program-wide course: use first assigned program
-    // (In multi-program PH scenario, we default to first — UI should present selector)
-    programId = programIds[0];
-  }
+): Promise<CourseWriteResult> {
+  const contextResult = await resolveProgramHeadContext(input.programId);
+  if (!contextResult.success) return contextResult;
 
   try {
-    const course = await prisma.course.create({
-      data: {
-        code: input.code,
-        title: input.title,
-        description: input.description ?? null,
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
-        program_id: programId,
-        major_id: majorId,
-        default_year_level: input.default_year_level ?? null,
-        default_semester: input.default_semester ?? null,
-        default_term: input.default_term ?? null,
-      },
-    });
+    return await withSelectedAssignment(
+      contextResult.data.userId,
+      contextResult.data.selectedProgram.id,
+      async (tx) => {
+        let majorId: string | null = null;
+        if (input.major_id) {
+          const majorResult = await validateMajorBelongsToProgram(
+            tx,
+            input.major_id,
+            contextResult.data.selectedProgram.id
+          );
+          if (!majorResult.success) return majorResult;
+          majorId = input.major_id;
+        }
 
-    return { success: true, data: { id: course.id } };
+        const course = await tx.course.create({
+          data: {
+            code: input.code,
+            title: input.title,
+            description: input.description ?? null,
+            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            program_id: contextResult.data.selectedProgram.id,
+            major_id: majorId,
+            default_year_level: input.default_year_level ?? null,
+            default_semester: input.default_semester ?? null,
+            default_term: input.default_term ?? null,
+          },
+        });
+
+        return { success: true, data: { id: course.id } };
+      }
+    );
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: `A course with code "${input.code}" already exists.`,
-      };
+      return { success: false, error: `A course with code "${input.code}" already exists.` };
     }
-
     throw error;
   }
 }
 
 export async function updateProgramHeadCourse(
   input: UpdateProgramHeadCourseInput
-): Promise<ServiceResult<{ id: string }>> {
-  const session = await resolveAuthSession();
-
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
-
-  // Verify the existing course belongs to PH's program
-  const existingCourse = await prisma.course.findUnique({
-    where: { id: input.id },
-    select: { id: true, program_id: true, course_scope: true },
-  });
-
-  if (!existingCourse) {
-    return { success: false, error: "Course not found." };
-  }
-
-  if (existingCourse.course_scope === CourseScope.GENERAL_EDUCATION) {
-    return {
-      success: false,
-      error: "General education courses cannot be modified by Program Heads.",
-    };
-  }
-
-  if (!existingCourse.program_id || !programIds.includes(existingCourse.program_id)) {
-    return {
-      success: false,
-      error: "You do not have permission to modify this course.",
-    };
-  }
-
-  // Validate major if specified
-  let majorId: string | null = null;
-
-  if (input.major_id) {
-    const majorResult = await validateMajorBelongsToProgram(input.major_id, programIds);
-
-    if (!majorResult.success) {
-      return majorResult;
-    }
-
-    majorId = input.major_id;
-  }
+): Promise<CourseWriteResult> {
+  const contextResult = await resolveProgramHeadContext(input.programId);
+  if (!contextResult.success) return contextResult;
 
   try {
-    const course = await prisma.course.update({
-      where: { id: input.id },
-      data: {
-        code: input.code,
-        title: input.title,
-        description: input.description ?? null,
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
-        program_id: existingCourse.program_id,
-        major_id: majorId,
-        default_year_level: input.default_year_level ?? null,
-        default_semester: input.default_semester ?? null,
-        default_term: input.default_term ?? null,
-      },
-    });
+    return await withSelectedAssignment(
+      contextResult.data.userId,
+      contextResult.data.selectedProgram.id,
+      async (tx) => {
+        const existingCourse = await tx.course.findUnique({
+          where: { id: input.id },
+          select: { id: true, program_id: true, course_scope: true },
+        });
 
-    return { success: true, data: { id: course.id } };
+        if (!existingCourse) return { success: false, error: "Course not found." };
+        if (existingCourse.course_scope === CourseScope.GENERAL_EDUCATION) {
+          return {
+            success: false,
+            error: "General education courses cannot be modified by Program Heads.",
+          };
+        }
+        if (existingCourse.program_id !== contextResult.data.selectedProgram.id) {
+          return { success: false, error: "You do not have permission to modify this course." };
+        }
+
+        let majorId: string | null = null;
+        if (input.major_id) {
+          const majorResult = await validateMajorBelongsToProgram(
+            tx,
+            input.major_id,
+            contextResult.data.selectedProgram.id
+          );
+          if (!majorResult.success) return majorResult;
+          majorId = input.major_id;
+        }
+
+        const updateResult = await tx.course.updateMany({
+          where: {
+            id: input.id,
+            program_id: contextResult.data.selectedProgram.id,
+            course_scope: CourseScope.PROGRAM_SPECIFIC,
+          },
+          data: {
+            code: input.code,
+            title: input.title,
+            description: input.description ?? null,
+            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            program_id: contextResult.data.selectedProgram.id,
+            major_id: majorId,
+            default_year_level: input.default_year_level ?? null,
+            default_semester: input.default_semester ?? null,
+            default_term: input.default_term ?? null,
+          },
+        });
+
+        if (updateResult.count !== 1) {
+          return { success: false, error: "You do not have permission to modify this course." };
+        }
+
+        return { success: true, data: { id: input.id } };
+      }
+    );
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: `A course with code "${input.code}" already exists.`,
-      };
+      return { success: false, error: `A course with code "${input.code}" already exists.` };
     }
-
     throw error;
   }
 }
 
 export async function toggleProgramHeadCourseActive(
-  id: string,
-  is_active: boolean
+  input: ToggleProgramHeadCourseInput
 ): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
+  const contextResult = await resolveProgramHeadContext(input.programId);
+  if (!contextResult.success) return contextResult;
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
+  return withSelectedAssignment(
+    contextResult.data.userId,
+    contextResult.data.selectedProgram.id,
+    async (tx) => {
+      const existingCourse = await tx.course.findUnique({
+        where: { id: input.id },
+        select: { id: true, program_id: true, course_scope: true },
+      });
 
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
+      if (!existingCourse) return { success: false, error: "Course not found." };
+      if (existingCourse.course_scope === CourseScope.GENERAL_EDUCATION) {
+        return {
+          success: false,
+          error: "General education courses cannot be modified by Program Heads.",
+        };
+      }
+      if (existingCourse.program_id !== contextResult.data.selectedProgram.id) {
+        return { success: false, error: "You do not have permission to modify this course." };
+      }
 
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
+      const updateResult = await tx.course.updateMany({
+        where: {
+          id: input.id,
+          program_id: contextResult.data.selectedProgram.id,
+          course_scope: CourseScope.PROGRAM_SPECIFIC,
+        },
+        data: { is_active: input.is_active },
+      });
 
-  const { programIds } = scopeResult.data;
+      if (updateResult.count !== 1) {
+        return { success: false, error: "You do not have permission to modify this course." };
+      }
 
-  const existingCourse = await prisma.course.findUnique({
-    where: { id },
-    select: { id: true, program_id: true, course_scope: true },
-  });
-
-  if (!existingCourse) {
-    return { success: false, error: "Course not found." };
-  }
-
-  if (existingCourse.course_scope === CourseScope.GENERAL_EDUCATION) {
-    return {
-      success: false,
-      error: "General education courses cannot be modified by Program Heads.",
-    };
-  }
-
-  if (!existingCourse.program_id || !programIds.includes(existingCourse.program_id)) {
-    return {
-      success: false,
-      error: "You do not have permission to modify this course.",
-    };
-  }
-
-  await prisma.course.update({
-    where: { id },
-    data: { is_active },
-  });
-
-  return { success: true, data: undefined };
+      return { success: true, data: undefined };
+    }
+  );
 }
