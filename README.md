@@ -296,7 +296,7 @@ pnpm vitest run src/__tests__/path/file.test.ts  # Single file
 
 ### Database Invariant Tests
 
-Four suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a hosted database:
+Five suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a hosted database:
 
 ```bash
 RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db
@@ -308,6 +308,7 @@ Point `DATABASE_URL` at a disposable test database — never a shared Supabase p
 - `src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts`
 - `src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts`
 - `src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts`
+- `src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts`
 
 ### Testing Patterns
 

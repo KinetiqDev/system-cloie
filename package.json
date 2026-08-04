@@ -16,7 +16,7 @@
     "verify:dedicated-demo-auth-boundary": "tsx scripts/verify-dedicated-demo-auth-boundary.ts",
     "verify:demo-target-isolation": "tsx scripts/validate-demo-target-isolation.ts",
     "demo:reset": "tsx scripts/reset-demo-database.ts",
-    "test:db": "vitest run src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts src/__tests__/features/academic-calendar/read-period-readiness-totals-parity.test.ts",
+    "test:db": "vitest run src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts src/__tests__/features/academic-calendar/read-period-readiness-totals-parity.test.ts src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts",
     "db:push": "prisma db push --schema prisma",
     "db:seed": "prisma generate --schema prisma && prisma db seed",
     "db:studio": "prisma studio --schema prisma",
