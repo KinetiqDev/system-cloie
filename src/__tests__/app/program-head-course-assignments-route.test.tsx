@@ -10,6 +10,8 @@ const {
   listProgramHeadCoursesMock,
   listSchoolYearsMock,
   loadListPageMock,
+  resolveProgramHeadContextMock,
+  loadProgramHeadPageDataMock,
   prismaFindManyMock,
 } = vi.hoisted(() => ({
   redirectMock: vi.fn((path: string) => {
@@ -19,6 +21,8 @@ const {
   listProgramHeadCoursesMock: vi.fn(),
   listSchoolYearsMock: vi.fn(),
   loadListPageMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+  loadProgramHeadPageDataMock: vi.fn(),
   prismaFindManyMock: vi.fn(),
 }));
 
@@ -34,6 +38,12 @@ vi.mock("@/features/academic-calendar/services/list-school-years", () => ({
 }));
 vi.mock("@/features/course-assignments/services/load-course-assignment-list-page", () => ({
   loadCourseAssignmentListPage: loadListPageMock,
+}));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+}));
+vi.mock("@/features/course-assignments/services/load-all-program-course-assignments-page", () => ({
+  loadProgramHeadCourseAssignmentsPageData: loadProgramHeadPageDataMock,
 }));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -92,7 +102,54 @@ describe("Program Head Course Assignments route", () => {
       },
       result: { success: true, data: { items: [], total: 0, page: 0, pageSize: 20 } },
     });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "ph-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "program-1", code: "BSED", name: "BS Education" },
+      },
+    });
+    loadProgramHeadPageDataMock.mockResolvedValue({
+      availableCourses: [],
+      availablePrograms: [{ id: "program-1", code: "BSED", name: "BS Education" }],
+      availableFaculty: [],
+      termInstances: [],
+    });
   });
+
+  it("loads only the selected canonical Program route", async () => {
+    const Page = (await import("../../app/(app)/program-head/programs/[programId]/course-assignments/page")).default;
+
+    await Page({
+      params: Promise.resolve({ programId: "program-1" }),
+      searchParams: Promise.resolve({ programId: "program-2", q: "faculty" }),
+    });
+
+    expect(loadListPageMock).toHaveBeenCalledWith({
+      pathname: "/program-head/programs/program-1/course-assignments",
+      rawSearchParams: { programId: "program-2", q: "faculty" },
+      role: "program-head",
+      programId: "program-1",
+    });
+  });
+
+  it.each(["not-a-uuid", "00000000-0000-4000-8000-000000000000"])(
+    "does not load selected data for a malformed or unassigned Program ID (%s)",
+    async (programId) => {
+      resolveProgramHeadContextMock.mockResolvedValueOnce({
+        success: false,
+        error: "Selected Program is not assigned.",
+      });
+      const Page = (await import("../../app/(app)/program-head/programs/[programId]/course-assignments/page")).default;
+
+      await expect(
+        Page({ params: Promise.resolve({ programId }), searchParams: Promise.resolve({}) })
+      ).rejects.toThrow();
+      expect(loadProgramHeadPageDataMock).not.toHaveBeenCalled();
+      expect(loadListPageMock).not.toHaveBeenCalled();
+    }
+  );
 
   it("redirects the static route to entry without loading assignment data", async () => {
     const CourseAssignmentsPage = (

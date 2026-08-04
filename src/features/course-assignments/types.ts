@@ -51,6 +51,7 @@ export type CreateCourseAssignmentInput = {
   programId: string;
   yearLevel: YearLevel;
   section: StudentSection;
+  selectedProgramId?: string;
 };
 
 /**
@@ -59,6 +60,7 @@ export type CreateCourseAssignmentInput = {
 export type UpdateCourseAssignmentInput = {
   assignmentId: string;
   programId?: string;
+  selectedProgramId?: string;
   yearLevel?: YearLevel;
   section?: StudentSection;
   facultyId?: string;
@@ -69,6 +71,7 @@ export type UpdateCourseAssignmentInput = {
  */
 export type DeactivateCourseAssignmentInput = {
   assignmentId: string;
+  programId?: string;
 };
 
 /**
@@ -76,6 +79,7 @@ export type DeactivateCourseAssignmentInput = {
  */
 export type ActivateCourseAssignmentInput = {
   assignmentId: string;
+  programId?: string;
 };
 
 /**
@@ -83,6 +87,7 @@ export type ActivateCourseAssignmentInput = {
  */
 export type DeleteCourseAssignmentInput = {
   assignmentId: string;
+  programId?: string;
   confirmationLabel: string;
   revision: string;
   membershipCount: number;
@@ -105,6 +110,7 @@ export type CourseAssignmentDeletionPreflight = {
  */
 export type BulkCreateCourseAssignmentsInput = {
   assignments: CreateCourseAssignmentInput[];
+  selectedProgramId?: string;
 };
 
 /**
@@ -113,6 +119,8 @@ export type BulkCreateCourseAssignmentsInput = {
 export type CourseAssignmentResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string; referenceId?: string };
+
+export type CourseAssignmentMutationData = { programIds: string[] };
 
 export type RosterEligibilityReason =
   | "UNKNOWN_ACCOUNT"
@@ -281,6 +289,7 @@ export type ListCourseAssignmentsFilter = {
 export type ListOptions = {
   page?: number;
   pageSize?: number;
+  programId?: string;
 };
 
 /**

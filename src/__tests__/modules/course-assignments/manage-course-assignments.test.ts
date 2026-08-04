@@ -13,7 +13,14 @@ import {
 } from "@/features/course-assignments/services/manage-course-assignments";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 
+const resolveProgramHeadContextMock = vi.hoisted(() => vi.fn());
+const revalidateProgramHeadAssignmentMock = vi.hoisted(() => vi.fn());
+
 vi.mock("@/features/auth/services/resolve-auth-session");
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignment: revalidateProgramHeadAssignmentMock,
+}));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     courseAssignment: {
@@ -66,6 +73,19 @@ describe("manage-course-assignments", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "ph-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "program-1", code: "P1", name: "Program 1" },
+      },
+    });
+    revalidateProgramHeadAssignmentMock.mockResolvedValue({
+      id: "program-1",
+      code: "P1",
+      name: "Program 1",
+    });
     const { prisma } = await import("@/lib/db/prisma");
     vi.mocked(prisma.courseAssignmentMembership.count).mockResolvedValue(0);
     vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
@@ -73,6 +93,7 @@ describe("manage-course-assignments", () => {
         $queryRaw: vi.fn().mockResolvedValue([]),
         courseAssignment: prisma.courseAssignment,
         courseAssignmentMembership: prisma.courseAssignmentMembership,
+        course: prisma.course,
         programHeadAssignment: prisma.programHeadAssignment,
         user: prisma.user,
       } as never)
@@ -99,6 +120,7 @@ describe("manage-course-assignments", () => {
         facultyId: "faculty-1",
         courseId: "course-1",
         programId: "program-1",
+        selectedProgramId: "program-1",
         yearLevel: YearLevel.FIRST_YEAR,
         section: StudentSection.MORNING,
       });
@@ -120,6 +142,7 @@ describe("manage-course-assignments", () => {
         facultyId: "faculty-1",
         courseId: "course-1",
         programId: "program-1",
+        selectedProgramId: "program-1",
         yearLevel: YearLevel.FIRST_YEAR,
         section: StudentSection.MORNING,
       });
@@ -145,6 +168,7 @@ describe("manage-course-assignments", () => {
         facultyId: "faculty-1",
         courseId: "course-1",
         programId: "program-1",
+        selectedProgramId: "program-1",
         yearLevel: YearLevel.FIRST_YEAR,
         section: StudentSection.MORNING,
       });
@@ -169,6 +193,7 @@ describe("manage-course-assignments", () => {
         facultyId: "faculty-1",
         courseId: "ge-course",
         programId: "program-1",
+        selectedProgramId: "program-1",
         yearLevel: YearLevel.FIRST_YEAR,
         section: StudentSection.MORNING,
       });
@@ -231,14 +256,15 @@ describe("manage-course-assignments", () => {
         facultyId: "faculty-1",
         courseId: "course-1",
         programId: "program-2",
+        selectedProgramId: "program-1",
         yearLevel: YearLevel.FIRST_YEAR,
         section: StudentSection.MORNING,
       });
 
       expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toContain("must match");
-      }
+       if (!result.success) {
+         expect(result.error).toContain("must match");
+       }
     });
 
     it("should reject assignment creation when programId differs from the Course's owning program", async () => {
@@ -258,14 +284,15 @@ describe("manage-course-assignments", () => {
         facultyId: "faculty-1",
         courseId: "course-1",
         programId: "program-2",
+        selectedProgramId: "program-1",
         yearLevel: YearLevel.FIRST_YEAR,
         section: StudentSection.MORNING,
       });
 
       expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toContain("must match");
-      }
+       if (!result.success) {
+         expect(result.error).toContain("Selected Program");
+       }
     });
 
     it("should allow Program Head to assign a cross-program faculty member", async () => {
@@ -286,6 +313,7 @@ describe("manage-course-assignments", () => {
         facultyId: "faculty-other-program",
         courseId: "course-1",
         programId: "program-1",
+        selectedProgramId: "program-1",
         yearLevel: YearLevel.FIRST_YEAR,
         section: StudentSection.MORNING,
       });
@@ -323,6 +351,73 @@ describe("manage-course-assignments", () => {
   });
 
   describe("updateCourseAssignment", () => {
+    it("rejects a resource from another Program in the selected context", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-beed",
+        program_id: "program-2",
+        course: { program_id: "program-2" },
+      } as never);
+
+      const result = await updateCourseAssignment({
+        assignmentId: "assignment-beed",
+        selectedProgramId: "program-1",
+        facultyId: "faculty-2",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment is outside the selected Program.",
+      });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects a General Education reassignment outside the selected Program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-ge",
+        program_id: "program-1",
+        course: { program_id: null },
+      } as never);
+
+      const result = await updateCourseAssignment({
+        assignmentId: "assignment-ge",
+        selectedProgramId: "program-1",
+        programId: "program-2",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment is outside the selected Program.",
+      });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects a write when the selected Program assignment is revoked in the transaction", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      revalidateProgramHeadAssignmentMock.mockResolvedValueOnce(null);
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-bsed",
+        program_id: "program-1",
+        course: { program_id: "program-1" },
+      } as never);
+
+      const result = await updateCourseAssignment({
+        assignmentId: "assignment-bsed",
+        selectedProgramId: "program-1",
+        facultyId: "faculty-2",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment is outside the selected Program.",
+      });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
+    });
+
     it.each([
       { label: "Secretary", session: mockAdminSession },
       { label: "Dean", session: mockDeanSession },
@@ -525,6 +620,46 @@ describe("manage-course-assignments", () => {
 
       expect(result.success).toBe(true);
     });
+
+    it("blocks a Program Head from deactivating an assignment in another selected Program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-beed",
+        program_id: "program-2",
+        course: { program_id: "program-2" },
+      } as never);
+
+      const result = await deactivateCourseAssignment({
+        assignmentId: "assignment-beed",
+        programId: "program-1",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment is outside the selected Program.",
+      });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
+    });
+
+    it("blocks deactivation when the selected Program assignment is revoked in the transaction", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      revalidateProgramHeadAssignmentMock.mockResolvedValueOnce(null);
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-bsed",
+        program_id: "program-1",
+        course: { program_id: "program-1" },
+      } as never);
+
+      const result = await deactivateCourseAssignment({
+        assignmentId: "assignment-bsed",
+        programId: "program-1",
+      });
+
+      expect(result).toEqual({ success: false, error: "Course assignment is outside the selected Program." });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
+    });
   });
 
   describe("activateCourseAssignment", () => {
@@ -549,6 +684,46 @@ describe("manage-course-assignments", () => {
           data: expect.objectContaining({ is_active: true }),
         })
       );
+    });
+
+    it("blocks a Program Head from activating an assignment in another selected Program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-beed",
+        program_id: "program-2",
+        course: { program_id: "program-2" },
+      } as never);
+
+      const result = await activateCourseAssignment({
+        assignmentId: "assignment-beed",
+        programId: "program-1",
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment is outside the selected Program.",
+      });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
+    });
+
+    it("blocks activation when the selected Program assignment is revoked in the transaction", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      revalidateProgramHeadAssignmentMock.mockResolvedValueOnce(null);
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-bsed",
+        program_id: "program-1",
+        course: { program_id: "program-1" },
+      } as never);
+
+      const result = await activateCourseAssignment({
+        assignmentId: "assignment-bsed",
+        programId: "program-1",
+      });
+
+      expect(result).toEqual({ success: false, error: "Course assignment is outside the selected Program." });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
     });
   });
 
@@ -607,6 +782,71 @@ describe("manage-course-assignments", () => {
       }
     );
 
+    it("blocks a Program Head from deleting an assignment in another selected Program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      const { prisma } = await import("@/lib/db/prisma");
+      const tx = {
+        courseAssignment: {
+          findUnique: vi.fn().mockResolvedValue({
+            ...lifecycleAssignment,
+            program_id: "program-2",
+            course: { ...lifecycleAssignment.course, program_id: "program-2" },
+          }),
+          delete: vi.fn(),
+        },
+        courseAssignmentMembership: { count: vi.fn().mockResolvedValue(0) },
+        $queryRaw: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => callback(tx as never));
+
+      const result = await deleteCourseAssignment({
+        assignmentId: "assignment-beed",
+        programId: "program-1",
+        confirmationLabel: "unused",
+        revision: lifecycleAssignment.updated_at.toISOString(),
+        membershipCount: 0,
+        activeMembershipCount: 0,
+        removedMembershipCount: 0,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment is outside the selected Program.",
+      });
+      expect(tx.courseAssignment.delete).not.toHaveBeenCalled();
+    });
+
+    it("blocks deletion when the selected Program assignment is revoked in the transaction", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      revalidateProgramHeadAssignmentMock.mockResolvedValueOnce(null);
+      const { prisma } = await import("@/lib/db/prisma");
+      const tx = {
+        courseAssignment: {
+          findUnique: vi.fn().mockResolvedValue(lifecycleAssignment),
+          delete: vi.fn(),
+        },
+        courseAssignmentMembership: { count: vi.fn().mockResolvedValue(0) },
+        $queryRaw: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => callback(tx as never));
+
+      const result = await deleteCourseAssignment({
+        assignmentId: "assignment-1",
+        programId: "program-1",
+        confirmationLabel: "unused",
+        revision: lifecycleAssignment.updated_at.toISOString(),
+        membershipCount: 0,
+        activeMembershipCount: 0,
+        removedMembershipCount: 0,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment is outside the selected Program.",
+      });
+      expect(tx.courseAssignment.delete).not.toHaveBeenCalled();
+    });
+
     it.each([
       { label: "Secretary", session: mockAdminSession },
       { label: "Dean", session: mockDeanSession },
@@ -647,6 +887,33 @@ describe("manage-course-assignments", () => {
   });
 
   describe("bulkCreateCourseAssignments", () => {
+    it("blocks Program Head bulk creation when the selected Program assignment is revoked", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
+      revalidateProgramHeadAssignmentMock.mockResolvedValueOnce(null);
+      const { prisma } = await import("@/lib/db/prisma");
+
+      const result = await bulkCreateCourseAssignments(
+        [
+          {
+            termInstanceId: "term-1",
+            facultyId: "faculty-1",
+            courseId: "course-1",
+            programId: "program-1",
+            yearLevel: YearLevel.FIRST_YEAR,
+            section: StudentSection.MORNING,
+          },
+        ],
+        "program-1"
+      );
+
+      expect(result).toEqual({
+        success: false,
+        created: 0,
+        errors: [{ index: 0, error: "Selected Program is no longer assigned." }],
+      });
+      expect(prisma.courseAssignment.create).not.toHaveBeenCalled();
+    });
+
     it("uses active role instead of any retained role for authorization", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue({
         ...mockAdminSession,

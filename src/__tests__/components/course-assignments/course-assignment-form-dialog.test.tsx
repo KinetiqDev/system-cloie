@@ -73,6 +73,14 @@ const mockCourses = [
     course_scope: CourseScope.GENERAL_EDUCATION,
     program_id: null,
   },
+  {
+    id: "course-4",
+    code: "ED201",
+    title: "Education Foundations",
+    default_year_level: YearLevel.FIRST_YEAR,
+    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    program_id: "prog-2",
+  },
 ];
 
 const mockTermInstances = [
@@ -340,7 +348,7 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     window.addEventListener("cloie-toast", toastListener);
     vi.mocked(createCourseAssignmentAction).mockResolvedValue({
       success: true,
-      data: { id: "assignment-1" },
+      data: { id: "assignment-1", programIds: ["prog-1"] },
     });
   });
 
@@ -457,6 +465,25 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     });
   });
 
+  it("only offers courses owned by the selected Program Head context", async () => {
+    render(
+      <CourseAssignmentFormDialog
+        open
+        onOpenChange={vi.fn()}
+        availableCourses={mockCourses}
+        availablePrograms={mockPrograms}
+        termInstances={mockTermInstances}
+        defaultTermInstanceId="term-1"
+        selectedProgramId="prog-1"
+      />
+    );
+
+    clickSelectByPlaceholder("Select a course...");
+
+    expect(await screen.findByRole("option", { name: /cs101 — intro/i })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /ed201 — education foundations/i })).not.toBeInTheDocument();
+  });
+
   it("shows cross-program warning and a summary before confirming", async () => {
     facultyMockState.crossProgram = true;
 
@@ -487,7 +514,7 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
     vi.clearAllMocks();
     vi.mocked(createCourseAssignmentAction).mockResolvedValue({
       success: true,
-      data: { id: "assignment-1" },
+      data: { id: "assignment-1", programIds: ["prog-1"] },
     });
   });
 

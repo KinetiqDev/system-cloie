@@ -11,6 +11,7 @@ export const createCourseAssignmentSchema = z.object({
   programId: z.string().uuid(),
   yearLevel: z.nativeEnum(YearLevel),
   section: z.nativeEnum(StudentSection),
+  selectedProgramId: z.string().uuid().optional(),
 });
 
 /**
@@ -19,6 +20,7 @@ export const createCourseAssignmentSchema = z.object({
 export const updateCourseAssignmentSchema = z.object({
   assignmentId: z.string().uuid(),
   programId: z.string().uuid().optional(),
+  selectedProgramId: z.string().uuid().optional(),
   yearLevel: z.nativeEnum(YearLevel).optional(),
   section: z.nativeEnum(StudentSection).optional(),
   facultyId: z.string().uuid().optional(),
@@ -29,6 +31,7 @@ export const updateCourseAssignmentSchema = z.object({
  */
 export const deactivateCourseAssignmentSchema = z.object({
   assignmentId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
 });
 
 /**
@@ -36,6 +39,7 @@ export const deactivateCourseAssignmentSchema = z.object({
  */
 export const activateCourseAssignmentSchema = z.object({
   assignmentId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
 });
 
 /**
@@ -43,6 +47,7 @@ export const activateCourseAssignmentSchema = z.object({
  */
 export const deleteCourseAssignmentSchema = z.object({
   assignmentId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
   confirmationLabel: z.string().min(1),
   revision: z.string().datetime(),
   membershipCount: z.number().int().nonnegative(),
@@ -52,6 +57,7 @@ export const deleteCourseAssignmentSchema = z.object({
 
 export const preflightCourseAssignmentDeletionSchema = z.object({
   assignmentId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
 });
 
 /**
@@ -59,6 +65,7 @@ export const preflightCourseAssignmentDeletionSchema = z.object({
  */
 export const bulkCreateCourseAssignmentsSchema = z.object({
   assignments: z.array(createCourseAssignmentSchema).min(1).max(100),
+  selectedProgramId: z.string().uuid().optional(),
 });
 
 export const addRosterMembershipSchema = z.object({

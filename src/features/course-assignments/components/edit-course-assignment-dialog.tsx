@@ -29,6 +29,7 @@ interface EditCourseAssignmentDialogProps {
   availableCourses: AssignableCourse[];
   availablePrograms: Program[];
   onSuccess?: () => void;
+  selectedProgramId?: string;
 }
 
 export function EditCourseAssignmentDialog({
@@ -38,6 +39,7 @@ export function EditCourseAssignmentDialog({
   availableCourses,
   availablePrograms,
   onSuccess,
+  selectedProgramId,
 }: EditCourseAssignmentDialogProps) {
   const [programId, setProgramId] = useState<string>("");
   const [yearLevel, setYearLevel] = useState<YearLevel>(YearLevel.FIRST_YEAR);
@@ -81,6 +83,7 @@ export function EditCourseAssignmentDialog({
         assignmentId: assignment.id,
         ...(identityChanged && { programId, yearLevel, section }),
         ...(facultyChanged && { facultyId }),
+        ...(selectedProgramId && { selectedProgramId }),
       });
       if (!result.success) {
         setIsSubmitting(false);

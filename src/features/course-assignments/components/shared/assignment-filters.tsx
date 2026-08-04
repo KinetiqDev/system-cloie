@@ -29,6 +29,7 @@ interface AssignmentFiltersProps {
   availablePrograms: Array<{ id: string; code: string; name: string }>;
   availableFaculty: Array<{ id: string; firstName: string; lastName: string; email: string }>;
   termInstances: TermInstanceItem[];
+  showProgramFilter?: boolean;
 }
 
 export function AssignmentFilters({
@@ -38,6 +39,7 @@ export function AssignmentFilters({
   availablePrograms,
   availableFaculty,
   termInstances,
+  showProgramFilter = true,
 }: AssignmentFiltersProps) {
   const hasActiveFilters =
     filters.termInstanceId ||
@@ -149,7 +151,7 @@ export function AssignmentFilters({
         </Select>
       </div>
 
-      <div className="min-w-[150px]">
+      {showProgramFilter && <div className="min-w-[150px]">
         <Label htmlFor="assignment-program">Program</Label>
         <Select
           value={filters.programId ?? "all"}
@@ -174,7 +176,7 @@ export function AssignmentFilters({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </div>}
 
       <div className="min-w-[140px]">
         <Label htmlFor="assignment-year-level">Year level</Label>

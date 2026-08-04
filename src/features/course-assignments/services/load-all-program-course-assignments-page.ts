@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db/prisma";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import type { AssignableCourse } from "@/features/course-assignments/types";
+import { CourseScope } from "@prisma/client";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 
 export type FacultyOption = {
   id: string;
@@ -27,7 +29,9 @@ export type AllProgramCourseAssignmentsPageData = {
  * (Secretary and Dean). Keeps route files thin and avoids duplicating
  * dropdown-loading queries across role-owned dashboard routes.
  */
-export async function loadAllProgramCourseAssignmentsPageData(): Promise<AllProgramCourseAssignmentsPageData> {
+export async function loadAllProgramCourseAssignmentsPageData(
+  selectedProgramId?: string
+): Promise<AllProgramCourseAssignmentsPageData> {
   const [schoolYears, programs, courses, faculty] = await Promise.all([
     prisma.schoolYear.findMany({
       include: {
@@ -41,12 +45,20 @@ export async function loadAllProgramCourseAssignmentsPageData(): Promise<AllProg
       orderBy: { created_at: "desc" },
     }),
     prisma.program.findMany({
-      where: { is_active: true },
+      where: {
+        is_active: true,
+        ...(selectedProgramId ? { id: selectedProgramId } : {}),
+      },
       select: { id: true, code: true, name: true },
       orderBy: { code: "asc" },
     }),
     prisma.course.findMany({
-      where: { is_active: true },
+      where: {
+        is_active: true,
+        ...(selectedProgramId
+          ? { program_id: selectedProgramId, course_scope: CourseScope.PROGRAM_SPECIFIC }
+          : {}),
+      },
       select: {
         id: true,
         code: true,
@@ -111,4 +123,15 @@ export async function loadAllProgramCourseAssignmentsPageData(): Promise<AllProg
     availableFaculty,
     termInstances,
   };
+}
+
+export async function loadProgramHeadCourseAssignmentsPageData(
+  programId: string
+): Promise<AllProgramCourseAssignmentsPageData> {
+  const contextResult = await resolveProgramHeadContext(programId);
+  if (!contextResult.success) {
+    throw new Error(contextResult.error);
+  }
+
+  return loadAllProgramCourseAssignmentsPageData(contextResult.data.selectedProgram.id);
 }
