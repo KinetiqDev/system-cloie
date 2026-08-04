@@ -40,7 +40,7 @@ export function RoleSwitcherDropdown({
       onSwitchSuccess: () => setOpen(false),
     });
 
-  const storageKey = `dropdown-${title.toLowerCase().replaceAll(" ", "-")}`;
+  const searchInputId = `dropdown-${title.toLowerCase().replaceAll(" ", "-")}`;
 
   return (
     <div className="hidden lg:inline-flex">
@@ -69,7 +69,7 @@ export function RoleSwitcherDropdown({
               search={search}
               onSearchChange={setSearch}
               onSwitch={handleRoleClick}
-              storageKey={storageKey}
+              searchInputId={searchInputId}
               users={filteredUsers}
             />
           </div>

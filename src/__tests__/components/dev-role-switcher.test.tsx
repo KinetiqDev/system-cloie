@@ -35,7 +35,7 @@ describe("DevRoleSwitcher", () => {
 
     render(<DevRoleSwitcher />);
 
-    expect(screen.getByRole("button", { name: "Open role switcher" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Dev Roles switcher" })).toBeInTheDocument();
     vi.unstubAllEnvs();
   });
 
@@ -69,7 +69,7 @@ describe("DevRoleSwitcher", () => {
     );
 
     render(<DevRoleSwitcher />);
-    fireEvent.click(screen.getByRole("button", { name: "Open role switcher" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Dev Roles switcher" }));
     fireEvent.click(screen.getByRole("button", { name: /switch to secretary/i }));
 
     await vi.waitFor(() => {

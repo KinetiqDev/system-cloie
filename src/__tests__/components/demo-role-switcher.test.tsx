@@ -129,7 +129,7 @@ describe("DemoRoleSwitcher", () => {
     );
     render(<DemoRoleSwitcher enabled />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Open role switcher" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Demo Roles switcher" }));
     fireEvent.click(screen.getByRole("button", { name: "Switch to Student" }));
 
     await waitFor(() => {

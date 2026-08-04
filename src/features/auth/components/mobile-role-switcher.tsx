@@ -41,7 +41,7 @@ export function MobileRoleSwitcher({
       onSwitchSuccess: () => setOpen(false),
     });
 
-  const storageKey = `mobile-${title.toLowerCase().replaceAll(" ", "-")}`;
+  const searchInputId = `mobile-${title.toLowerCase().replaceAll(" ", "-")}`;
 
   return (
     <div className="lg:hidden">
@@ -51,7 +51,7 @@ export function MobileRoleSwitcher({
             <Button
               size="sm"
               className={`fixed right-4 bottom-20 z-40 gap-1.5 rounded-full px-3 shadow-lg transition-opacity ${open ? "opacity-0" : ""}`}
-              aria-label="Open role switcher"
+              aria-label={`Open ${title} switcher`}
             >
               <Users className="size-3.5" />
               <span className="text-xs font-semibold">{title}</span>
@@ -72,7 +72,7 @@ export function MobileRoleSwitcher({
                 search={search}
                 onSearchChange={setSearch}
                 onSwitch={handleRoleClick}
-                storageKey={storageKey}
+                searchInputId={searchInputId}
                 users={filteredUsers}
               />
             </div>

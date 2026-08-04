@@ -16,7 +16,7 @@ export type RoleSwitcherListProps = {
   search: string;
   onSearchChange: (value: string) => void;
   onSwitch: (user: RoleSwitcherUser) => void;
-  storageKey: string;
+  searchInputId: string;
   users: readonly RoleSwitcherUser[];
 };
 
@@ -27,7 +27,7 @@ export function RoleSwitcherList({
   search,
   onSearchChange,
   onSwitch,
-  storageKey,
+  searchInputId,
   users,
 }: RoleSwitcherListProps) {
   return (
@@ -47,8 +47,8 @@ export function RoleSwitcherList({
         />
         <input
           type="text"
-          id={`${storageKey}-search`}
-          name={`${storageKey}-search`}
+          id={`${searchInputId}-search`}
+          name={`${searchInputId}-search`}
           aria-label="Search roles"
           placeholder="Search roles..."
           value={search}
