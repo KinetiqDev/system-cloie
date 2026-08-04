@@ -28,7 +28,7 @@ import { isNeutralOtherExplanation } from "../exclusion-text";
 import { AssignmentPicker, type AssignmentOption } from "./assignment-picker";
 import { Info } from "lucide-react";
 
-type PublicationContext = {
+export type PublicationContext = {
   bindings: Array<{
     ciloDescriptionSnapshot: string;
     ciloId: string;
@@ -67,11 +67,13 @@ interface PublishCourseBoundEvaluationFormV2Props {
     payload: PreviewCourseBoundRespondentsInput
   ) => Promise<PreviewCourseBoundRespondentsResult>;
   publicationContext: PublicationContext;
+  publicationContextsByAssignmentId?: Record<string, PublicationContext>;
   publishAction: (
     payload: PublishCourseBoundEvaluationInput
   ) => Promise<PublishCourseBoundEvaluationResult>;
   isOnBehalf?: boolean;
   successRedirectPath?: string;
+  programId?: string;
 }
 
 /**
@@ -82,9 +84,11 @@ export function PublishCourseBoundEvaluationFormV2({
   assignments,
   previewAction,
   publicationContext,
+  publicationContextsByAssignmentId,
   publishAction,
   isOnBehalf: isOnBehalfProp = false,
   successRedirectPath = "/faculty/tools",
+  programId,
 }: PublishCourseBoundEvaluationFormV2Props) {
   // Step state
   const [step, setStep] = useState<Step>("configure");
@@ -97,6 +101,9 @@ export function PublishCourseBoundEvaluationFormV2({
 
   // The server page derives this from the active portal role.
   const selectedAssignment = assignments.find((a) => a.id === selectedAssignmentId);
+  const selectedPublicationContext = selectedAssignmentId
+    ? (publicationContextsByAssignmentId?.[selectedAssignmentId] ?? publicationContext)
+    : publicationContext;
   const isOnBehalf = isOnBehalfProp;
 
   // Preview state
@@ -114,7 +121,7 @@ export function PublishCourseBoundEvaluationFormV2({
   const fallbackPublishErrorMessage = "Unable to publish evaluation right now. Please try again.";
 
   const bindingByCiloId = new Map(
-    publicationContext.bindings.map((binding) => [binding.ciloId, binding])
+    selectedPublicationContext.bindings.map((binding) => [binding.ciloId, binding])
   );
 
   // Build a lookup from sectionKey:itemKey → { sectionIndex, sectionTitle, questionIndex }
@@ -122,7 +129,7 @@ export function PublishCourseBoundEvaluationFormV2({
     string,
     { sectionIndex: number; sectionTitle: string; questionIndex: number }
   >();
-  for (const [sIdx, section] of publicationContext.template.structure.entries()) {
+  for (const [sIdx, section] of selectedPublicationContext.template.structure.entries()) {
     for (const [qIdx, question] of section.questions.entries()) {
       questionLocationMap.set(`${section.key}:${question.key}`, {
         sectionIndex: sIdx + 1,
@@ -197,6 +204,7 @@ export function PublishCourseBoundEvaluationFormV2({
     try {
       const result = await previewAction({
         assignmentId: selectedAssignmentId!,
+        programId,
       });
 
       if (!result.success) {
@@ -269,7 +277,8 @@ export function PublishCourseBoundEvaluationFormV2({
       deadlineAt: deadline ? new Date(deadline) : null,
       deploymentName: deploymentName.trim(),
       exclusions: excluded,
-      templateId: publicationContext.template.id,
+      programId,
+      templateId: selectedPublicationContext.template.id,
     };
 
     try {
@@ -330,7 +339,7 @@ export function PublishCourseBoundEvaluationFormV2({
               Template
             </p>
             <h2 className="text-foreground text-lg font-semibold">
-              {publicationContext.template.name}
+              {selectedPublicationContext.template.name}
             </h2>
           </div>
 
@@ -340,7 +349,7 @@ export function PublishCourseBoundEvaluationFormV2({
                 Course
               </p>
               <p className="text-foreground text-sm">
-                {publicationContext.course.code} - {publicationContext.course.title}
+                {selectedPublicationContext.course.code} - {selectedPublicationContext.course.title}
               </p>
             </div>
           </div>
@@ -356,7 +365,9 @@ export function PublishCourseBoundEvaluationFormV2({
               </div>
               {!isOnBehalf && (
                 <Button
-                  render={<Link href={`/faculty/tools/${publicationContext.template.id}/edit`} />}
+                  render={
+                    <Link href={`/faculty/tools/${selectedPublicationContext.template.id}/edit`} />
+                  }
                   type="button"
                   variant="outline"
                 >
@@ -366,7 +377,7 @@ export function PublishCourseBoundEvaluationFormV2({
             </div>
 
             <ol className="space-y-3">
-              {publicationContext.cilos.map((cilo, index) => {
+              {selectedPublicationContext.cilos.map((cilo, index) => {
                 const binding = bindingByCiloId.get(cilo.id);
 
                 return (

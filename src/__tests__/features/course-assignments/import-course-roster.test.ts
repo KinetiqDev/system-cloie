@@ -170,4 +170,19 @@ describe("import course roster service", () => {
     expect(JSON.stringify(result)).not.toContain(internalError);
     expect(manageModule.addRosterMembership).not.toHaveBeenCalled();
   });
+
+  it("carries selected Program scope through authorization and each membership write", async () => {
+    const programId = "program-1";
+    await importCourseRoster("assignment-1", "email\none@example.com\n", programId);
+
+    expect(rosterModule.resolveAuthorizedCourseAssignmentRoster).toHaveBeenCalledWith(
+      "assignment-1",
+      { manage: true, programId }
+    );
+    expect(manageModule.addRosterMembership).toHaveBeenCalledWith(
+      "assignment-1",
+      "one@example.com",
+      programId
+    );
+  });
 });

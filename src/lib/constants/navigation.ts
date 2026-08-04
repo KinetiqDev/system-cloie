@@ -14,11 +14,16 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ROLES, type Role } from "@/lib/constants/roles";
+import {
+  buildProgramHeadProgramPath,
+  PROGRAM_HEAD_ENTRY_PATH,
+} from "@/lib/constants/program-head-routes";
 
 export interface NavItem {
   name: string;
   href: string;
   icon: LucideIcon;
+  programHeadChildPath?: string;
   badgeCount?: number;
 }
 
@@ -62,15 +67,44 @@ const SECRETARY_NAV: NavItem[] = [
 ];
 
 const PROGRAM_HEAD_NAV: NavItem[] = [
-  { name: "Dashboard", href: "/program-head/dashboard", icon: LayoutDashboard },
-  { name: "Courses", href: "/program-head/courses", icon: BookOpen },
-  { name: "Course Assignments", href: "/program-head/course-assignments", icon: UsersRound },
-  { name: "Outcomes", href: "/program-head/outcomes", icon: Layers3 },
-  { name: "Tools", href: "/program-head/tools", icon: FileText },
-  { name: "Analytics", href: "/program-head/analytics", icon: BarChart3 },
-  { name: "Reports", href: "/program-head/reports", icon: FileText },
+  { name: "Dashboard", href: "/program-head/dashboard", icon: LayoutDashboard, programHeadChildPath: "dashboard" },
+  { name: "Courses", href: "/program-head/courses", icon: BookOpen, programHeadChildPath: "courses" },
+  { name: "Course Assignments", href: "/program-head/course-assignments", icon: UsersRound, programHeadChildPath: "course-assignments" },
+  { name: "Outcomes", href: "/program-head/outcomes", icon: Layers3, programHeadChildPath: "outcomes" },
+  { name: "Tools", href: "/program-head/tools", icon: FileText, programHeadChildPath: "tools" },
+  { name: "Analytics", href: "/program-head/analytics", icon: BarChart3, programHeadChildPath: "analytics" },
+  { name: "Reports", href: "/program-head/reports", icon: FileText, programHeadChildPath: "reports" },
   { name: "Profile", href: "/program-head/profile", icon: UserCircle },
 ];
+
+export function getProgramHeadProgramIdFromPathname(pathname: string): string | null {
+  const match = pathname.match(/^\/program-head\/programs\/([^/]+)(?:\/|$)/);
+
+  if (!match?.[1]) return null;
+
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+}
+
+export function getProgramHeadNav(pathname = PROGRAM_HEAD_ENTRY_PATH): NavItem[] {
+  const programId = getProgramHeadProgramIdFromPathname(pathname);
+
+  return PROGRAM_HEAD_NAV.map((item) => {
+    const childPath = item.programHeadChildPath;
+
+    return {
+      ...item,
+      href: childPath && programId
+        ? buildProgramHeadProgramPath(programId, childPath)
+        : childPath
+          ? PROGRAM_HEAD_ENTRY_PATH
+          : item.href,
+    };
+  });
+}
 
 const DEAN_PRIMARY_NAV: NavItem[] = [
   { name: "Dashboard", href: "/dean/dashboard", icon: LayoutDashboard },
@@ -140,7 +174,7 @@ export function getHighestNavRole(roles: Role[]) {
   return ROLE_NAV_PRECEDENCE.find((role) => roles.includes(role)) ?? null;
 }
 
-export function getMainNavByRoles(roles: Role[]): NavItem[] {
+export function getMainNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_PATH): NavItem[] {
   const highestRole = getHighestNavRole(roles);
 
   switch (highestRole) {
@@ -149,7 +183,7 @@ export function getMainNavByRoles(roles: Role[]): NavItem[] {
     case ROLES.DEAN:
       return DEAN_PRIMARY_NAV;
     case ROLES.PROGRAM_HEAD:
-      return PROGRAM_HEAD_NAV;
+      return getProgramHeadNav(pathname);
     case ROLES.FACULTY:
       return FACULTY_NAV;
     case ROLES.STUDENT:
@@ -163,7 +197,7 @@ export function getMainNavByRoles(roles: Role[]): NavItem[] {
   }
 }
 
-export function getMobileNavByRoles(roles: Role[]): NavItem[] {
+export function getMobileNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_PATH): NavItem[] {
   const highestRole = getHighestNavRole(roles);
 
   switch (highestRole) {
@@ -172,7 +206,7 @@ export function getMobileNavByRoles(roles: Role[]): NavItem[] {
     case ROLES.DEAN:
       return DEAN_PRIMARY_NAV;
     case ROLES.PROGRAM_HEAD:
-      return PROGRAM_HEAD_NAV;
+      return getProgramHeadNav(pathname);
     case ROLES.FACULTY:
       return FACULTY_NAV;
     case ROLES.STUDENT:

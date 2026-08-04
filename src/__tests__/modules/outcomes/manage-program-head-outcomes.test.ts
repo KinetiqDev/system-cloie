@@ -10,6 +10,8 @@ const {
   programFindUniqueMock,
   programHeadAssignmentFindManyMock,
   programHeadAssignmentFindFirstMock,
+  resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignmentMock,
   resolveAuthSessionMock,
   transactionMock,
   courseFindManyMock,
@@ -21,6 +23,8 @@ const {
   programFindUniqueMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
   programHeadAssignmentFindFirstMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+  revalidateProgramHeadAssignmentMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   transactionMock: vi.fn(),
   courseFindManyMock: vi.fn(),
@@ -52,6 +56,11 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
 }));
 
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignment: revalidateProgramHeadAssignmentMock,
+}));
+
 const PH_SESSION = {
   userId: "ph-user-1",
   email: "ph@acd.edu.ph",
@@ -79,16 +88,51 @@ describe("manage-program-head-outcomes", () => {
     resolveAuthSessionMock.mockResolvedValue(PH_SESSION);
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: PROGRAM_ID }]);
     programHeadAssignmentFindFirstMock.mockResolvedValue({ id: "assignment-1" });
-    transactionMock.mockImplementation(async (callback) => callback({
-      gO: {
-        findMany: goFindManyMock,
-        findUnique: goFindUniqueMock,
-        create: goCreateMock,
-        update: goUpdateMock,
-      },
-      program: { findUnique: programFindUniqueMock },
-      programHeadAssignment: { findFirst: programHeadAssignmentFindFirstMock },
-    }));
+    resolveProgramHeadContextMock.mockImplementation(async (programId: string) => {
+      const session = await resolveAuthSessionMock();
+      if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
+        return { success: false, error: "Program Head authentication is required." };
+      }
+      const assignments = await programHeadAssignmentFindManyMock();
+      if (
+        !assignments.some(
+          (assignment: { program_id: string }) => assignment.program_id === programId
+        )
+      ) {
+        return {
+          success: false,
+          error: "No active program assignment found for this Program Head.",
+        };
+      }
+      return {
+        success: true,
+        data: {
+          userId: session.userId,
+          authorizedPrograms: [{ id: programId, code: "BSIT", name: "BS Information Technology" }],
+          selectedProgram: { id: programId, code: "BSIT", name: "BS Information Technology" },
+        },
+      };
+    });
+    revalidateProgramHeadAssignmentMock.mockImplementation(async (tx, input) => {
+      const assignment = await tx.programHeadAssignment.findFirst({
+        where: { program_head_id: input.userId, program_id: input.programId, is_active: true },
+      });
+      return assignment
+        ? { id: input.programId, code: "BSIT", name: "BS Information Technology" }
+        : null;
+    });
+    transactionMock.mockImplementation(async (callback) =>
+      callback({
+        gO: {
+          findMany: goFindManyMock,
+          findUnique: goFindUniqueMock,
+          create: goCreateMock,
+          update: goUpdateMock,
+        },
+        program: { findUnique: programFindUniqueMock },
+        programHeadAssignment: { findFirst: programHeadAssignmentFindFirstMock },
+      })
+    );
 
     const mod = await import("@/features/outcomes/services/manage-program-head-outcomes");
     listProgramGOs = mod.listProgramGOs;
@@ -121,7 +165,7 @@ describe("manage-program-head-outcomes", () => {
       },
     ]);
 
-    const result = await listProgramGOs();
+    const result = await listProgramGOs(PROGRAM_ID);
 
     expect(result).toEqual({
       success: true,
@@ -142,6 +186,99 @@ describe("manage-program-head-outcomes", () => {
     });
   });
 
+  it("lists only the deliberately selected Program when multiple assignments exist", async () => {
+    const selectedProgramId = "program-2";
+    programHeadAssignmentFindManyMock.mockResolvedValue([
+      { program_id: PROGRAM_ID },
+      { program_id: selectedProgramId },
+    ]);
+    programFindUniqueMock.mockResolvedValue({
+      id: selectedProgramId,
+      code: "BSED",
+      name: "Secondary Education",
+    });
+    goFindManyMock.mockResolvedValue([]);
+
+    const result = await listProgramGOs(selectedProgramId);
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        gos: [],
+        program: { id: selectedProgramId, code: "BSED", name: "Secondary Education" },
+      },
+    });
+    expect(goFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { program_id: selectedProgramId } })
+    );
+  });
+
+  it("includes assigned General Education courses but only selected-Program mappings", async () => {
+    const selectedProgramId = "program-2";
+    programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: selectedProgramId }]);
+    courseFindManyMock.mockResolvedValue([
+      {
+        id: "course-ge",
+        code: "GE101",
+        title: "General Education",
+        cilos: [
+          {
+            id: "cilo-ge",
+            description: "Communicate effectively",
+            cilo_mappings: [
+              { id: "mapping-1", go: { id: "go-bsed", code: "GO-1", description: "BSED outcome" } },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await listCILOMappingsForProgram(selectedProgramId);
+
+    expect(result).toEqual({
+      success: true,
+      data: [
+        {
+          courseId: "course-ge",
+          courseCode: "GE101",
+          courseTitle: "General Education",
+          cilos: [
+            {
+              id: "cilo-ge",
+              description: "Communicate effectively",
+              mappedGOs: [
+                {
+                  mappingId: "mapping-1",
+                  id: "go-bsed",
+                  code: "GO-1",
+                  description: "BSED outcome",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(courseFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              course_scope: "GENERAL_EDUCATION",
+              course_assignments: {
+                some: {
+                  program_id: selectedProgramId,
+                  is_active: true,
+                  term_instance: { status: "ACTIVE" },
+                },
+              },
+            }),
+          ]),
+        }),
+      })
+    );
+  });
+
   // ─── createGO ────────────────────────────────────────────────────────
 
   it("PH can create a GO within assigned program", async () => {
@@ -150,6 +287,7 @@ describe("manage-program-head-outcomes", () => {
     goCreateMock.mockResolvedValue({ id: GO_ID });
 
     const result = await createGO({
+      programId: PROGRAM_ID,
       code: "GO-1",
       description: "Critical Thinking",
     });
@@ -170,6 +308,7 @@ describe("manage-program-head-outcomes", () => {
     programHeadAssignmentFindManyMock.mockResolvedValue([]);
 
     const result = await createGO({
+      programId: PROGRAM_ID,
       code: "GO-1",
       description: "Critical Thinking",
     });
@@ -187,6 +326,7 @@ describe("manage-program-head-outcomes", () => {
     goCreateMock.mockRejectedValue(createPrismaUniqueConstraintError());
 
     const result = await createGO({
+      programId: PROGRAM_ID,
       code: "GO-1",
       description: "Duplicate GO",
     });
@@ -211,6 +351,7 @@ describe("manage-program-head-outcomes", () => {
     goUpdateMock.mockResolvedValue({ id: GO_ID });
 
     const result = await updateGO({
+      programId: PROGRAM_ID,
       id: GO_ID,
       code: "GO-1-UPDATED",
       description: "Updated description",
@@ -233,6 +374,29 @@ describe("manage-program-head-outcomes", () => {
     });
 
     const result = await updateGO({
+      programId: PROGRAM_ID,
+      id: GO_ID,
+      code: "GO-1",
+      description: "Attempt update",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "You do not have permission to modify this Graduate Outcome.",
+    });
+    expect(goUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a BEED GO from a selected BSED context", async () => {
+    const selectedProgramId = "program-2";
+    programHeadAssignmentFindManyMock.mockResolvedValue([
+      { program_id: PROGRAM_ID },
+      { program_id: selectedProgramId },
+    ]);
+    goFindUniqueMock.mockResolvedValue({ id: GO_ID, program_id: PROGRAM_ID });
+
+    const result = await updateGO({
+      programId: selectedProgramId,
       id: GO_ID,
       code: "GO-1",
       description: "Attempt update",
@@ -258,7 +422,7 @@ describe("manage-program-head-outcomes", () => {
     });
     goUpdateMock.mockResolvedValue({ id: GO_ID });
 
-    const result = await deleteGO(GO_ID);
+    const result = await deleteGO(PROGRAM_ID, GO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
     expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: false } });
@@ -275,7 +439,7 @@ describe("manage-program-head-outcomes", () => {
     });
     goUpdateMock.mockResolvedValue({ id: GO_ID });
 
-    const result = await deleteGO(GO_ID);
+    const result = await deleteGO(PROGRAM_ID, GO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
     expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: false } });
@@ -286,7 +450,7 @@ describe("manage-program-head-outcomes", () => {
   it("reorder validates all IDs belong to PH's program", async () => {
     goFindManyMock.mockResolvedValue([{ id: "go-1", order: 0 }]);
 
-    const result = await reorderGOs(["go-1", "go-2"]);
+    const result = await reorderGOs(PROGRAM_ID, ["go-1", "go-2"]);
 
     expect(result).toEqual({
       success: false,
@@ -301,7 +465,7 @@ describe("manage-program-head-outcomes", () => {
       { id: "go-2", order: 1 },
     ]);
 
-    const result = await reorderGOs(["go-2", "go-1"]);
+    const result = await reorderGOs(PROGRAM_ID, ["go-2", "go-1"]);
 
     expect(result).toEqual({ success: true, data: undefined });
     expect(transactionMock).toHaveBeenCalled();
@@ -313,6 +477,7 @@ describe("manage-program-head-outcomes", () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
     const result = await createGO({
+      programId: PROGRAM_ID,
       code: "GO-1",
       description: "Test",
     });
@@ -331,6 +496,7 @@ describe("manage-program-head-outcomes", () => {
     });
 
     const result = await createGO({
+      programId: PROGRAM_ID,
       code: "GO-1",
       description: "Test",
     });

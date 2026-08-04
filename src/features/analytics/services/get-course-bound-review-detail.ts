@@ -4,6 +4,7 @@ import { eng } from "stopword";
 import { prisma } from "@/lib/db/prisma";
 import { resolveReviewerProgramScope } from "@/features/academic-structure/services/resolve-reviewer-program-scope";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type { CourseBoundReviewDetail, WordCloudToken } from "../types";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import {
@@ -48,7 +49,8 @@ export function buildReviewWordCloudTokens(texts: string[]): WordCloudToken[] {
 }
 
 export async function getCourseBoundReviewDetail(
-  evaluationId: string
+  evaluationId: string,
+  programId?: string
 ): Promise<CourseBoundReviewDetail | null> {
   const authSession = await resolveAuthSession();
 
@@ -62,7 +64,14 @@ export async function getCourseBoundReviewDetail(
     return null;
   }
 
+  if (reviewerRole === "PROGRAM_HEAD") {
+    if (!programId || !(await resolveProgramHeadContext(programId)).success) {
+      return null;
+    }
+  }
+
   const programScope = await resolveReviewerProgramScope({
+    ...(reviewerRole === "PROGRAM_HEAD" && programId ? { programId } : {}),
     reviewerId: authSession.userId,
     reviewerRole,
   });

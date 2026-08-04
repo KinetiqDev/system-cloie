@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const NOT_FOUND_ERROR = "NEXT_NOT_FOUND";
 
-const { notFoundMock, redirectMock, listMock, detailMock } = vi.hoisted(() => ({
+const { notFoundMock, redirectMock, listMock, detailMock, contextMock, sessionMock } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error(NOT_FOUND_ERROR);
   }),
@@ -11,6 +11,8 @@ const { notFoundMock, redirectMock, listMock, detailMock } = vi.hoisted(() => ({
   }),
   listMock: vi.fn(),
   detailMock: vi.fn(),
+  contextMock: vi.fn(),
+  sessionMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
@@ -18,10 +20,17 @@ vi.mock("@/features/course-assignments/services/read-course-rosters", () => ({
   listAuthorizedCourseRosterAssignments: listMock,
   getCourseRosterDetail: detailMock,
 }));
+vi.mock("@/features/auth/services/resolve-auth-session", () => ({
+  resolveAuthSession: sessionMock,
+}));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: contextMock,
+}));
 
 describe("Course roster routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionMock.mockResolvedValue(null);
   });
 
   it("passes Faculty discovery defaults and URL filters to the server read seam", async () => {
@@ -72,6 +81,51 @@ describe("Course roster routes", () => {
       })
     ).rejects.toThrow(NOT_FOUND_ERROR);
     expect(detailMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects a Program Head from the generic detail URL to the entry route", async () => {
+    sessionMock.mockResolvedValue({ activeRole: "PROGRAM_HEAD" });
+    const Page = (await import("../../app/(app)/course-rosters/[assignmentId]/page")).default;
+
+    await expect(
+      Page({
+        params: Promise.resolve({ assignmentId: "11111111-1111-4111-8111-111111111111" }),
+        searchParams: Promise.resolve({}),
+      })
+    ).rejects.toThrow("NEXT_REDIRECT:/program-head");
+    expect(detailMock).not.toHaveBeenCalled();
+  });
+
+  it("passes selected Program scope to the Program Head roster wrapper", async () => {
+    contextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "head-1",
+        authorizedPrograms: [{ id: "program-1", code: "BSED", name: "Education" }],
+        selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
+      },
+    });
+    detailMock.mockResolvedValue({
+      success: true,
+      data: { page: 1, search: "", includeRemoved: false, sortDirection: "asc" },
+    });
+    const Page =
+      (await import(
+        "../../app/(app)/program-head/programs/[programId]/course-rosters/[assignmentId]/page"
+      )).default;
+
+    await Page({
+      params: Promise.resolve({
+        programId: "11111111-1111-4111-8111-111111111111",
+        assignmentId: "22222222-2222-4222-8222-222222222222",
+      }),
+      searchParams: Promise.resolve({}),
+    });
+
+    expect(detailMock).toHaveBeenCalledWith(
+      "22222222-2222-4222-8222-222222222222",
+      expect.objectContaining({ programId: "11111111-1111-4111-8111-111111111111" })
+    );
   });
 
   it("redirects an out-of-range discovery page to the canonical page", async () => {

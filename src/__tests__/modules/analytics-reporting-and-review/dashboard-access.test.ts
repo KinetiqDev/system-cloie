@@ -6,20 +6,24 @@ import {
 } from "@/features/analytics/services/get-faculty-dashboard";
 import {
   getProgramHeadDashboard,
-  getProgramHeadDashboardForScope,
 } from "@/features/analytics/services/get-program-head-dashboard";
 import { ROLES } from "@/lib/constants/roles";
 
-const { resolveAuthSessionMock, countEligibleMock, buildWordCloudTokensMock, prismaMock } =
-  vi.hoisted(() => ({
+const {
+  resolveAuthSessionMock,
+  resolveProgramHeadContextMock,
+  countEligibleMock,
+  buildWordCloudTokensMock,
+  prismaMock,
+} = vi.hoisted(() => ({
     resolveAuthSessionMock: vi.fn(),
+    resolveProgramHeadContextMock: vi.fn(),
     countEligibleMock: vi.fn(),
     buildWordCloudTokensMock: vi.fn<
       (texts: string[]) => Array<{ text: string; value: number }>
     >(() => []),
     prismaMock: {
       program: { findUniqueOrThrow: vi.fn() },
-      programHeadAssignment: { findFirst: vi.fn() },
       centralDeployment: { count: vi.fn(), findMany: vi.fn() },
       courseBoundEvaluation: { count: vi.fn(), findMany: vi.fn() },
       response: { count: vi.fn() },
@@ -33,6 +37,9 @@ const { resolveAuthSessionMock, countEligibleMock, buildWordCloudTokensMock, pri
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
 }));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+}));
 vi.mock("@/features/course-assignments/services/course-assignment-roster", () => ({
   countEligibleCourseBoundEvaluationAssignments: countEligibleMock,
 }));
@@ -44,6 +51,7 @@ vi.mock("@/lib/db/prisma", () => ({ prisma: prismaMock }));
 describe("analytics dashboard access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "unauthorized" });
   });
 
   it("rejects Faculty dashboard when Faculty is not active role", async () => {
@@ -63,8 +71,6 @@ describe("analytics dashboard access", () => {
       activeRole: ROLES.PROGRAM_HEAD,
       roles: [ROLES.PROGRAM_HEAD],
     });
-    prismaMock.programHeadAssignment.findFirst.mockResolvedValue(null);
-
     await expect(getProgramHeadDashboard("program-2")).resolves.toBeNull();
     expect(prismaMock.program.findUniqueOrThrow).not.toHaveBeenCalled();
   });
@@ -80,7 +86,7 @@ describe("analytics dashboard access", () => {
     resolveAuthSessionMock.mockResolvedValue(session);
 
     await expect(getProgramHeadDashboard("program-1")).resolves.toBeNull();
-    expect(prismaMock.programHeadAssignment.findFirst).not.toHaveBeenCalled();
+    expect(resolveProgramHeadContextMock).toHaveBeenCalledWith("program-1");
   });
 
   it("rejects Program Head dashboard when no active assignment exists", async () => {
@@ -89,8 +95,6 @@ describe("analytics dashboard access", () => {
       activeRole: ROLES.PROGRAM_HEAD,
       roles: [ROLES.PROGRAM_HEAD],
     });
-    prismaMock.programHeadAssignment.findFirst.mockResolvedValue(null);
-
     await expect(getProgramHeadDashboard("program-1")).resolves.toBeNull();
     expect(prismaMock.program.findUniqueOrThrow).not.toHaveBeenCalled();
   });
@@ -101,10 +105,13 @@ describe("analytics dashboard access", () => {
       activeRole: ROLES.PROGRAM_HEAD,
       roles: [ROLES.PROGRAM_HEAD],
     });
-    prismaMock.programHeadAssignment.findFirst.mockResolvedValue({ program_id: "program-1" });
-    prismaMock.program.findUniqueOrThrow.mockResolvedValue({
-      code: "BSIT",
-      name: "Information Technology",
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "program-head-1",
+        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
+        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
+      },
     });
     prismaMock.centralDeployment.count.mockResolvedValue(0);
     prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
@@ -132,7 +139,15 @@ describe("analytics dashboard access", () => {
     });
   });
 
-  it("reads the dashboard from a validated scope without rechecking the assignment", async () => {
+  it("reads the dashboard only after the public resolver validates the selected Program", async () => {
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "program-head-1",
+        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
+        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
+      },
+    });
     prismaMock.centralDeployment.count.mockResolvedValue(0);
     prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
     prismaMock.response.count.mockResolvedValue(0);
@@ -145,19 +160,67 @@ describe("analytics dashboard access", () => {
     countEligibleMock.mockResolvedValue(0);
 
     await expect(
-      getProgramHeadDashboardForScope({
-        programId: "program-1",
-        programCode: "BSIT",
-        programLabel: "Information Technology",
-      })
+      getProgramHeadDashboard("program-1")
     ).resolves.toMatchObject({
       programCode: "BSIT",
       programLabel: "Information Technology",
       kpi: { pendingResponses: 0 },
     });
 
-    expect(prismaMock.programHeadAssignment.findFirst).not.toHaveBeenCalled();
+    expect(resolveProgramHeadContextMock).toHaveBeenCalledWith("program-1");
     expect(prismaMock.program.findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+
+  it("constrains every dashboard analytics query to the selected Program for a multi-Program head", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "program-head-1",
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+    });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "program-head-1",
+        authorizedPrograms: [
+          { id: "program-beed", code: "BEED", name: "Elementary Education" },
+          { id: "program-bsed", code: "BSED", name: "Secondary Education" },
+        ],
+        selectedProgram: { id: "program-bsed", code: "BSED", name: "Secondary Education" },
+      },
+    });
+    prismaMock.centralDeployment.count.mockResolvedValue(0);
+    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
+    prismaMock.response.count.mockResolvedValue(0);
+    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
+    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
+      _avg: { rating_value: null },
+    });
+    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
+    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
+    countEligibleMock.mockResolvedValue(0);
+
+    await expect(getProgramHeadDashboard("program-bsed")).resolves.toMatchObject({
+      programCode: "BSED",
+      kpi: { pendingResponses: 0 },
+    });
+
+    const queryMocks = [
+      prismaMock.centralDeployment.count,
+      prismaMock.courseBoundEvaluation.count,
+      prismaMock.response.count,
+      prismaMock.evaluationAssignment.count,
+      prismaMock.quantitativeResponseItem.aggregate,
+      prismaMock.centralDeployment.findMany,
+      prismaMock.qualitativeResponseItem.findMany,
+      countEligibleMock,
+    ];
+
+    for (const queryMock of queryMocks) {
+      expect(queryMock.mock.calls.length).toBeGreaterThan(0);
+      const serialized = JSON.stringify(queryMock.mock.calls);
+      expect(serialized).toContain("program-bsed");
+      expect(serialized).not.toContain("program-beed");
+    }
   });
 
   it("preserves Faculty KPI values in the primary metrics read model", async () => {

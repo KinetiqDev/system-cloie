@@ -20,6 +20,9 @@ vi.mock("@/lib/db/prisma", () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    program: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -55,6 +58,7 @@ describe("editUserBySecretary service", () => {
     }> = {}
   ) {
     return {
+      $queryRaw: vi.fn().mockResolvedValue(undefined),
       user: { update: vi.fn() },
       facultyProgramAffiliation: {
         findFirst:
@@ -66,8 +70,15 @@ describe("editUserBySecretary service", () => {
       programHeadAssignment: {
         findFirst: vi.fn().mockResolvedValue(null),
         findUnique: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+        upsert: vi.fn(),
+        updateMany: vi.fn(),
         update: vi.fn(),
         create: vi.fn(),
+        delete: vi.fn(),
+      },
+      userRole: {
+        findUnique: vi.fn().mockResolvedValue({ role: SystemRole.PROGRAM_HEAD }),
       },
       alumniProfile: {
         upsert: vi.fn(),
@@ -88,6 +99,7 @@ describe("editUserBySecretary service", () => {
       },
       program: {
         findUnique: vi.fn().mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] }),
+        findMany: vi.fn().mockResolvedValue([]),
       },
     };
   }
@@ -381,7 +393,7 @@ describe("editUserBySecretary service", () => {
   it.each([
     [SystemRole.STUDENT, `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=null:section=null`],
     [SystemRole.FACULTY, `FACULTY:id=${USER_ID}:program=${PROG_NEW}`],
-    [SystemRole.PROGRAM_HEAD, `PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`],
+    [SystemRole.PROGRAM_HEAD, `PROGRAM_HEAD:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`],
     [SystemRole.ALUMNI, `ALUMNI:id=${USER_ID}:program=${PROG_NEW}:major=null:graduationYear=2020:verificationStatus=APPROVED`],
     [SystemRole.INDUSTRY_PARTNER, `INDUSTRY_PARTNER:id=${USER_ID}:company=CLOIE Labs:position=null:program=null:verificationStatus=APPROVED`],
   ])("binds protected %s confirmation to target and exact proposal", async (role, payload) => {
@@ -394,7 +406,9 @@ describe("editUserBySecretary service", () => {
       faculty_program_affiliations:
         role === SystemRole.FACULTY ? [{ id: "aff-1", program_id: PROG_OLD }] : [],
       program_head_assignments:
-        role === SystemRole.PROGRAM_HEAD ? [{ id: "assignment-1", program_id: PROG_OLD }] : [],
+        role === SystemRole.PROGRAM_HEAD
+          ? [{ id: "assignment-1", program_id: PROG_OLD, is_active: true }]
+          : [],
       alumni_profile:
         role === SystemRole.ALUMNI
           ? { program_id: PROG_OLD, major_id: null, graduation_year: 2019, verification_status: VerificationStatus.PENDING }
@@ -411,7 +425,7 @@ describe("editUserBySecretary service", () => {
         : role === SystemRole.FACULTY
           ? { id: USER_ID, first_name: "Jane", last_name: "Smith", faculty: { program_id: PROG_NEW } }
           : role === SystemRole.PROGRAM_HEAD
-            ? { id: USER_ID, first_name: "Jane", last_name: "Smith", program_head: { program_id: PROG_NEW } }
+            ? { id: USER_ID, first_name: "Jane", last_name: "Smith", program_head: { program_ids: [PROG_NEW] } }
             : role === SystemRole.ALUMNI
               ? { id: USER_ID, first_name: "Jane", last_name: "Smith", alumni: { graduation_year: 2020, program_id: PROG_NEW, verification_status: VerificationStatus.APPROVED } }
               : { id: USER_ID, first_name: "Jane", last_name: "Smith", industry_partner: { company_name: "CLOIE Labs", verification_status: VerificationStatus.APPROVED } };
@@ -711,16 +725,25 @@ describe("editUserBySecretary service", () => {
     });
   });
 
-  describe("Program Head assignment", () => {
-    const programHeadInput = {
+  describe("Program Head assignment set", () => {
+    const PROG_A = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22"; // BEED
+    const PROG_B = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a23"; // BSED
+    const PROG_C = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a24"; // CED
+
+    const programHeadSetInput = (programIds: string[]) => ({
       id: USER_ID,
       first_name: "Jane",
       last_name: "Smith",
-      program_head: { program_id: PROG_NEW },
-    };
+      program_head: { program_ids: programIds },
+    });
 
     function setProgramHeadRecord(
-      assignments: Array<{ id: string; program_id: string; is_active: boolean }>
+      assignments: Array<{
+        id: string;
+        program_id: string;
+        is_active: boolean;
+        program?: { name?: string; code?: string } | null;
+      }>
     ) {
       (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: USER_ID,
@@ -729,124 +752,315 @@ describe("editUserBySecretary service", () => {
         student_profile: null,
         enrollments: [],
         faculty_program_affiliations: [],
-        program_head_assignments: assignments.filter((assignment) => assignment.is_active),
+        program_head_assignments: assignments,
+        alumni_profile: null,
+        industry_partner_profile: null,
       });
     }
 
-    it("requires confirmation when changing assignment", async () => {
-      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
+    function setTxAssignments(
+      rows: Array<{ id: string; program_id: string; is_active: boolean }>
+    ) {
+      mockTx.programHeadAssignment.findMany.mockResolvedValue(rows);
+    }
 
-      const result = await editUserBySecretary(programHeadInput);
+    function makeSetToken(before: string[], after: string[]): string {
+      return makeToken(
+        `PROGRAM_HEAD:id=${USER_ID}:before=${[...before].sort().join(",")}:after=${[...after].sort().join(",")}`
+      );
+    }
+
+    it("requires confirmation and signs the exact before/after sets when the set changes", async () => {
+      setProgramHeadRecord([
+        { id: "a1", program_id: PROG_A, is_active: true, program: { name: "BEED" } },
+      ]);
+
+      const result = await editUserBySecretary(programHeadSetInput([PROG_A, PROG_B]));
 
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.protectedConfirmationRequired).toBe(true);
-        expect(result.data.protectedPayload).toBe(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`);
+        expect(result.data.protectedPayload).toBe(
+          `PROGRAM_HEAD:id=${USER_ID}:before=${PROG_A}:after=${PROG_A},${PROG_B}`
+        );
+        expect(result.data.confirmationReview?.oldValues).toEqual({ programs: "BEED" });
       }
     });
 
-    it("replaces active assignment with a new row", async () => {
-      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
-      mockTx.programHeadAssignment.findFirst.mockResolvedValue({
-        id: "assignment-old",
-        program_id: PROG_OLD,
-      });
-      const token = makeToken(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`);
+    it("does not require confirmation when the set is unchanged and leaves rows untouched", async () => {
+      setProgramHeadRecord([{ id: "a1", program_id: PROG_A, is_active: true }]);
+      setTxAssignments([{ id: "a1", program_id: PROG_A, is_active: true }]);
 
-      const result = await editUserBySecretary({ ...programHeadInput, confirmationToken: token });
+      const result = await editUserBySecretary(programHeadSetInput([PROG_A]));
 
       expect(result.success).toBe(true);
-      expect(mockTx.programHeadAssignment.update).toHaveBeenCalledWith({
-        where: { id: "assignment-old" },
-        data: { is_active: false },
-      });
-      expect(mockTx.programHeadAssignment.create).toHaveBeenCalledWith({
-        data: { program_head_id: USER_ID, program_id: PROG_NEW, is_active: true },
-      });
+      expect(mockTx.programHeadAssignment.upsert).not.toHaveBeenCalled();
+      expect(mockTx.programHeadAssignment.updateMany).not.toHaveBeenCalled();
+      expect(mockTx.programHeadAssignment.delete).not.toHaveBeenCalled();
     });
 
-    it("reactivates an existing inactive assignment without duplicating it", async () => {
-      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
-      mockTx.programHeadAssignment.findFirst.mockResolvedValue({
-        id: "assignment-old",
-        program_id: PROG_OLD,
-      });
-      mockTx.programHeadAssignment.findUnique.mockResolvedValue({
-        id: "assignment-old-target",
-        program_id: PROG_NEW,
-        is_active: false,
-      });
+    it("adds, retains, and removes assignments as one protected save", async () => {
+      setProgramHeadRecord([
+        { id: "a1", program_id: PROG_A, is_active: true, program: { name: "BEED" } },
+        { id: "a2", program_id: PROG_C, is_active: true, program: { name: "CED" } },
+      ]);
+      setTxAssignments([
+        { id: "a1", program_id: PROG_A, is_active: true },
+        { id: "a2", program_id: PROG_C, is_active: true },
+      ]);
+      mockTx.program.findMany.mockResolvedValue([{ id: PROG_B, is_active: true }]);
+
       const result = await editUserBySecretary({
-        ...programHeadInput,
-        confirmationToken: makeToken(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`),
+        ...programHeadSetInput([PROG_A, PROG_B]),
+        confirmationToken: makeSetToken([PROG_A, PROG_C], [PROG_A, PROG_B]),
       });
 
       expect(result.success).toBe(true);
-      expect(mockTx.programHeadAssignment.update).toHaveBeenCalledWith({
-        where: { id: "assignment-old-target" },
-        data: { is_active: true },
+      // PROG_A retained through the compound-key upsert
+      expect(mockTx.programHeadAssignment.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            program_head_id_program_id: { program_head_id: USER_ID, program_id: PROG_A },
+          },
+          update: { is_active: true },
+        })
+      );
+      // PROG_B created once with an active row
+      expect(mockTx.programHeadAssignment.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: { program_head_id: USER_ID, program_id: PROG_B, is_active: true },
+        })
+      );
+      // PROG_C deactivated, never deleted or recreated
+      expect(mockTx.programHeadAssignment.updateMany).toHaveBeenCalledWith({
+        where: { program_head_id: USER_ID, is_active: true, program_id: { notIn: [PROG_A, PROG_B] } },
+        data: { is_active: false },
       });
+      expect(mockTx.programHeadAssignment.delete).not.toHaveBeenCalled();
       expect(mockTx.programHeadAssignment.create).not.toHaveBeenCalled();
     });
 
-    it("completes legacy account by creating its first assignment", async () => {
-      setProgramHeadRecord([]);
-      mockTx.programHeadAssignment.findFirst.mockResolvedValue(null);
-      const first = await editUserBySecretary(programHeadInput);
-      expect(first.success).toBe(true);
-      if (!first.success || !first.data.token) return;
+    it("reactivates a historical row without creating a duplicate", async () => {
+      setProgramHeadRecord([
+        { id: "a2", program_id: PROG_B, is_active: true },
+        { id: "a1", program_id: PROG_A, is_active: false },
+      ]);
+      setTxAssignments([
+        { id: "a2", program_id: PROG_B, is_active: true },
+        { id: "a1", program_id: PROG_A, is_active: false },
+      ]);
+      mockTx.program.findMany.mockResolvedValue([{ id: PROG_A, is_active: true }]);
 
       const result = await editUserBySecretary({
-        ...programHeadInput,
+        ...programHeadSetInput([PROG_A, PROG_B]),
+        confirmationToken: makeSetToken([PROG_B], [PROG_A, PROG_B]),
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.programHeadAssignment.upsert).toHaveBeenCalledTimes(2);
+      // Historical PROG_A row reactivated via the compound key, not recreated
+      expect(mockTx.programHeadAssignment.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            program_head_id_program_id: { program_head_id: USER_ID, program_id: PROG_A },
+          },
+          update: { is_active: true },
+        })
+      );
+      expect(mockTx.programHeadAssignment.delete).not.toHaveBeenCalled();
+    });
+
+    it("deactivates every assignment when the Secretary saves an empty set", async () => {
+      setProgramHeadRecord([
+        { id: "a1", program_id: PROG_A, is_active: true, program: { name: "BEED" } },
+        { id: "a2", program_id: PROG_B, is_active: true, program: { name: "BSED" } },
+      ]);
+      setTxAssignments([
+        { id: "a1", program_id: PROG_A, is_active: true },
+        { id: "a2", program_id: PROG_B, is_active: true },
+      ]);
+
+      const review = await editUserBySecretary(programHeadSetInput([]));
+      expect(review.success).toBe(true);
+      if (review.success) {
+        expect(review.data.protectedConfirmationRequired).toBe(true);
+        expect(review.data.confirmationReview?.oldValues).toEqual({
+          programs: "BEED, BSED",
+        });
+        // An empty after-set is named explicitly, never shown blank.
+        expect(review.data.confirmationReview?.newValues).toEqual({ programs: "None" });
+      }
+      if (!review.success || !review.data?.token) return;
+
+      const result = await editUserBySecretary({
+        ...programHeadSetInput([]),
+        confirmationToken: review.data.token,
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.programHeadAssignment.updateMany).toHaveBeenCalledWith({
+        where: { program_head_id: USER_ID, is_active: true },
+        data: { is_active: false },
+      });
+      expect(mockTx.programHeadAssignment.upsert).not.toHaveBeenCalled();
+      // Zero active assignments does not revoke the Program Head role
+      expect(mockTx.userRole.findUnique).toHaveBeenCalled();
+      // The transaction serializes with assignment-set administration
+      expect(mockTx.$queryRaw).toHaveBeenCalled();
+    });
+
+    it("completes a legacy Program Head account by creating its first assignment", async () => {
+      setProgramHeadRecord([]);
+      setTxAssignments([]);
+      mockTx.program.findMany.mockResolvedValue([{ id: PROG_NEW, is_active: true }]);
+      const first = await editUserBySecretary(programHeadSetInput([PROG_NEW]));
+      expect(first.success).toBe(true);
+      if (!first.success) return;
+      expect(first.data.protectedConfirmationRequired).toBe(true);
+      expect(first.data.token).toBeDefined();
+      if (!first.data.token) return;
+
+      const result = await editUserBySecretary({
+        ...programHeadSetInput([PROG_NEW]),
         confirmationToken: first.data.token,
       });
 
       expect(result.success).toBe(true);
-      expect(mockTx.programHeadAssignment.create).toHaveBeenCalledWith({
-        data: { program_head_id: USER_ID, program_id: PROG_NEW, is_active: true },
-      });
+      expect(mockTx.programHeadAssignment.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            program_head_id_program_id: { program_head_id: USER_ID, program_id: PROG_NEW },
+          },
+          create: { program_head_id: USER_ID, program_id: PROG_NEW, is_active: true },
+        })
+      );
     });
 
-    it("does not touch course data or other users during reassignment", async () => {
-      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
-      mockTx.programHeadAssignment.findFirst.mockResolvedValue({
-        id: "assignment-old",
-        program_id: PROG_OLD,
-      });
+    it("rejects a newly selected Program that is archived or inactive", async () => {
+      setProgramHeadRecord([{ id: "a1", program_id: PROG_A, is_active: true }]);
+      setTxAssignments([{ id: "a1", program_id: PROG_A, is_active: true }]);
+      mockTx.program.findMany.mockResolvedValue([{ id: PROG_B, is_active: false }]);
+
       const result = await editUserBySecretary({
-        ...programHeadInput,
-        confirmationToken: makeToken(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`),
+        ...programHeadSetInput([PROG_A, PROG_B]),
+        confirmationToken: makeSetToken([PROG_A], [PROG_A, PROG_B]),
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(/archived or inactive/i);
+      expect(mockTx.programHeadAssignment.upsert).not.toHaveBeenCalled();
+      expect(mockTx.programHeadAssignment.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("rejects a stale confirmation after another administrator changed the set", async () => {
+      setProgramHeadRecord([{ id: "a1", program_id: PROG_A, is_active: true }]);
+      const review = await editUserBySecretary(programHeadSetInput([PROG_B]));
+      expect(review.success).toBe(true);
+      if (!review.success) return;
+      expect(review.data.protectedConfirmationRequired).toBe(true);
+      expect(review.data.token).toBeDefined();
+      if (!review.data.token) return;
+
+      // Another administrator changes the active set before the review is confirmed
+      setProgramHeadRecord([{ id: "a3", program_id: PROG_C, is_active: true }]);
+
+      const result = await editUserBySecretary({
+        ...programHeadSetInput([PROG_B]),
+        confirmationToken: review.data.token,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(/invalid or expired confirmation token/i);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("rejects a set that changed between the confirmation check and the transaction", async () => {
+      // The pre-transaction read still matches the token, but the transaction
+      // re-read discovers an intervening assignment administration change.
+      setProgramHeadRecord([{ id: "a1", program_id: PROG_A, is_active: true }]);
+      setTxAssignments([{ id: "a3", program_id: PROG_C, is_active: true }]);
+
+      const result = await editUserBySecretary({
+        ...programHeadSetInput([PROG_A, PROG_B]),
+        confirmationToken: makeSetToken([PROG_A], [PROG_A, PROG_B]),
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(/changed since your review/i);
+      expect(mockTx.programHeadAssignment.upsert).not.toHaveBeenCalled();
+      expect(mockTx.programHeadAssignment.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("rejects the save when the target no longer has the Program Head role in the transaction", async () => {
+      setProgramHeadRecord([{ id: "a1", program_id: PROG_A, is_active: true }]);
+      setTxAssignments([{ id: "a1", program_id: PROG_A, is_active: true }]);
+      mockTx.userRole.findUnique.mockResolvedValue(null);
+
+      const result = await editUserBySecretary({
+        ...programHeadSetInput([PROG_A, PROG_B]),
+        confirmationToken: makeSetToken([PROG_A], [PROG_A, PROG_B]),
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error).toMatch(/no longer has the Program Head role/i);
+      expect(mockTx.programHeadAssignment.upsert).not.toHaveBeenCalled();
+      expect(mockTx.programHeadAssignment.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("does not touch course data or other users during an assignment-set save", async () => {
+      setProgramHeadRecord([
+        { id: "a1", program_id: PROG_A, is_active: true },
+        { id: "a2", program_id: PROG_C, is_active: true },
+      ]);
+      setTxAssignments([
+        { id: "a1", program_id: PROG_A, is_active: true },
+        { id: "a2", program_id: PROG_C, is_active: true },
+      ]);
+      mockTx.program.findMany.mockResolvedValue([{ id: PROG_B, is_active: true }]);
+
+      const result = await editUserBySecretary({
+        ...programHeadSetInput([PROG_A, PROG_B]),
+        confirmationToken: makeSetToken([PROG_A, PROG_C], [PROG_A, PROG_B]),
       });
 
       expect(result.success).toBe(true);
-      expect(mockTx.programHeadAssignment.update).toHaveBeenCalledTimes(1);
-      expect(mockTx.programHeadAssignment.create).toHaveBeenCalledTimes(1);
+      expect(mockTx.programHeadAssignment.upsert).toHaveBeenCalledTimes(2);
+      expect(mockTx.programHeadAssignment.updateMany).toHaveBeenCalledTimes(1);
+      expect(mockTx.programHeadAssignment.delete).not.toHaveBeenCalled();
       expect(mockTx).not.toHaveProperty("courseAssignment");
       expect(mockTx).not.toHaveProperty("courseBoundEvaluation");
     });
 
-    it("rolls back Program Head assignment changes when the transaction fails", async () => {
-      setProgramHeadRecord([{ id: "assignment-old", program_id: PROG_OLD, is_active: true }]);
+    it("rolls back assignment-set changes when the transaction fails", async () => {
+      setProgramHeadRecord([{ id: "a1", program_id: PROG_A, is_active: true }]);
+      // The failure happens during the lifecycle write (updateMany), after the
+      // set has been validated, so rollback is exercised for the assignment
+      // operations themselves rather than the identity update.
       const failingTx = {
-        user: { update: vi.fn().mockRejectedValue(new Error("DB write failed")) },
+        user: { update: vi.fn() },
+        $queryRaw: vi.fn().mockResolvedValue(undefined),
+        userRole: { findUnique: vi.fn().mockResolvedValue({ role: SystemRole.PROGRAM_HEAD }) },
         programHeadAssignment: {
-          findFirst: vi.fn().mockResolvedValue({ id: "assignment-old", program_id: PROG_OLD }),
-          findUnique: vi.fn().mockResolvedValue(null),
-          update: vi.fn(),
-          create: vi.fn(),
+          findMany: vi.fn().mockResolvedValue([{ id: "a1", program_id: PROG_A, is_active: true }]),
+          updateMany: vi.fn().mockRejectedValue(new Error("DB write failed")),
+          upsert: vi.fn(),
+          delete: vi.fn(),
         },
+        program: { findMany: vi.fn().mockResolvedValue([{ id: PROG_B, is_active: true }]) },
       };
       (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) =>
         cb(failingTx)
       );
 
       const result = await editUserBySecretary({
-        ...programHeadInput,
-        confirmationToken: makeToken(`PROGRAM_HEAD:id=${USER_ID}:program=${PROG_NEW}`),
+        ...programHeadSetInput([PROG_A, PROG_B]),
+        confirmationToken: makeSetToken([PROG_A], [PROG_A, PROG_B]),
       });
 
       expect(result.success).toBe(false);
       if (!result.success) expect(result.error).toMatch(/db write failed/i);
+      // No activation attempted after the failed deactivation write
+      expect(failingTx.programHeadAssignment.upsert).not.toHaveBeenCalled();
     });
   });
 

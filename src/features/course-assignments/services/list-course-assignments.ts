@@ -5,6 +5,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { canViewCourseAssignments } from "../policies";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type {
   ListCourseAssignmentsFilter,
   ListOptions,
@@ -32,25 +33,21 @@ export async function listCourseAssignments(
   const page = options?.page ?? 0;
   const pageSize = options?.pageSize ?? DEFAULT_TABLE_PAGE_SIZE;
 
-  // Resolve the PH's assigned program IDs for row-level scoping
-  let phProgramIds: string[] | undefined;
+  let selectedProgramId: string | undefined;
   if (authSession && authSession.activeRole === ROLES.PROGRAM_HEAD) {
-    const phAssignments = await prisma.programHeadAssignment.findMany({
-      where: { program_head_id: authSession.userId, is_active: true },
-      select: { program_id: true },
-    });
-    phProgramIds = [...new Set(phAssignments.map((a) => a.program_id))];
+    if (!options?.programId) {
+      return { success: false, error: "Selected Program is required." };
+    }
+
+    const contextResult = await resolveProgramHeadContext(options.programId);
+    if (!contextResult.success) return contextResult;
+    selectedProgramId = contextResult.data.selectedProgram.id;
   }
 
-  // Build program_id condition: PH scope must never be overridden by the filter.
   let programIdCondition: Prisma.CourseAssignmentWhereInput["program_id"];
-  if (phProgramIds !== undefined) {
-    if (filter.programId) {
-      // Intersect: only allow filtering within PH scope
-      programIdCondition = phProgramIds.includes(filter.programId) ? filter.programId : { in: [] }; // out-of-scope → match nothing
-    } else {
-      programIdCondition = { in: phProgramIds };
-    }
+  if (selectedProgramId !== undefined) {
+    // The selected route is the scope. Query parameters cannot widen it.
+    programIdCondition = selectedProgramId;
   } else if (filter.programId) {
     // All-program managers can filter freely across programs.
     programIdCondition = filter.programId;
@@ -130,6 +127,7 @@ export async function listCourseAssignments(
           faculty_id: { in: [...new Set(facultyCourseIds.map((x) => x.facultyId))] },
           course_id: { in: [...new Set(facultyCourseIds.map((x) => x.courseId))] },
           is_active: false,
+          ...(selectedProgramId ? { program_id: selectedProgramId } : {}),
         },
         include: {
           term_instance: {

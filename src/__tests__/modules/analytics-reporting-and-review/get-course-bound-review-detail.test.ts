@@ -9,10 +9,12 @@ import {
 const {
   courseBoundEvaluationFindFirstMock,
   resolveAuthSessionMock,
+  resolveProgramHeadContextMock,
   resolveReviewerProgramScopeMock,
 } = vi.hoisted(() => ({
   courseBoundEvaluationFindFirstMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
   resolveReviewerProgramScopeMock: vi.fn(),
 }));
 
@@ -26,6 +28,10 @@ vi.mock("@/lib/db/prisma", () => ({
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
+}));
+
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
 }));
 
 vi.mock("@/features/academic-structure/services/resolve-reviewer-program-scope", () => ({
@@ -73,10 +79,21 @@ describe("getCourseBoundReviewDetail", () => {
 
   it("returns null when reviewer scope does not permit program access", async () => {
     resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, roles: [ROLES.PROGRAM_HEAD], userId: "head-1" });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        authorizedPrograms: [
+          { code: "BSED", id: "program-1", name: "Bachelor of Secondary Education" },
+          { code: "BSIT", id: "program-2", name: "BS Information Technology" },
+        ],
+        selectedProgram: { code: "BSIT", id: "program-2", name: "BS Information Technology" },
+        userId: "head-1",
+      },
+    });
     resolveReviewerProgramScopeMock.mockResolvedValue(["program-2"]);
     courseBoundEvaluationFindFirstMock.mockResolvedValue(null);
 
-    await expect(getCourseBoundReviewDetail("eval-1")).resolves.toBeNull();
+    await expect(getCourseBoundReviewDetail("eval-1", "program-2")).resolves.toBeNull();
 
     expect(courseBoundEvaluationFindFirstMock).toHaveBeenCalledWith(
       expect.objectContaining({

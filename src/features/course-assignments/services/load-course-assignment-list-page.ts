@@ -15,10 +15,12 @@ export async function loadCourseAssignmentListPage({
   pathname,
   rawSearchParams,
   role,
+  programId,
 }: {
   pathname: string;
   rawSearchParams: CourseAssignmentSearchParams;
   role: CourseAssignmentListRole;
+  programId?: string;
 }) {
   const state = parseCourseAssignmentListState(rawSearchParams, role);
 
@@ -29,6 +31,7 @@ export async function loadCourseAssignmentListPage({
   const result = await listCourseAssignments(state.filters, {
     ...toCourseAssignmentListOptions(state),
     pageSize: DEFAULT_TABLE_PAGE_SIZE,
+    ...(role === "program-head" && programId ? { programId } : {}),
   });
 
   if (result.success) {

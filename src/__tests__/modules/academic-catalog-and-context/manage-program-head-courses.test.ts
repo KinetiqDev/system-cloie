@@ -1,22 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CourseScope } from "@prisma/client";
-import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
 
 const {
   courseCreateMock,
   courseFindUniqueMock,
-  courseUpdateMock,
+  courseUpdateManyMock,
   majorFindUniqueMock,
-  programHeadAssignmentFindManyMock,
-  resolveAuthSessionMock,
+  resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignmentMock,
+  transactionMock,
 } = vi.hoisted(() => ({
   courseCreateMock: vi.fn(),
   courseFindUniqueMock: vi.fn(),
-  courseUpdateMock: vi.fn(),
+  courseUpdateManyMock: vi.fn(),
   majorFindUniqueMock: vi.fn(),
-  programHeadAssignmentFindManyMock: vi.fn(),
-  resolveAuthSessionMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+  revalidateProgramHeadAssignmentMock: vi.fn(),
+  transactionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -24,33 +25,37 @@ vi.mock("@/lib/db/prisma", () => ({
     course: {
       create: courseCreateMock,
       findUnique: courseFindUniqueMock,
-      update: courseUpdateMock,
+      updateMany: courseUpdateManyMock,
     },
-    major: {
-      findUnique: majorFindUniqueMock,
-    },
-    programHeadAssignment: {
-      findMany: programHeadAssignmentFindManyMock,
-    },
+    major: { findUnique: majorFindUniqueMock },
+    $transaction: transactionMock,
   },
 }));
 
-vi.mock("@/features/auth/services/resolve-auth-session", () => ({
-  resolveAuthSession: resolveAuthSessionMock,
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignment: revalidateProgramHeadAssignmentMock,
 }));
 
-const PH_SESSION = {
-  userId: "ph-user-1",
-  email: "ph@acd.edu.ph",
-  roles: [ROLES.PROGRAM_HEAD],
-  activeRole: ROLES.PROGRAM_HEAD,
-  studentProfileId: null,
-  profileGate: null,
-};
+const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const BSED_ID = "11111111-1111-4111-8111-111111111111";
+const BEED_ID = "22222222-2222-4222-8222-222222222222";
+const MAJOR_ID = "33333333-3333-4333-8333-333333333333";
+const OTHER_MAJOR_ID = "44444444-4444-4444-8444-444444444444";
+const COURSE_ID = "55555555-5555-4555-8555-555555555555";
 
-const PROGRAM_ID = "program-1";
-const MAJOR_ID = "major-1";
-const COURSE_ID = "course-1";
+const BSED = { id: BSED_ID, code: "BSED", name: "Secondary Education" };
+const BEED = { id: BEED_ID, code: "BEED", name: "Elementary Education" };
+
+function input(overrides: Record<string, unknown> = {}) {
+  return {
+    programId: BSED_ID,
+    code: "IT-301",
+    title: "Web Development",
+    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    ...overrides,
+  } as never;
+}
 
 describe("manage-program-head-courses", () => {
   let createProgramHeadCourse: typeof import("@/features/academic-structure/services/manage-program-head-courses").createProgramHeadCourse;
@@ -59,10 +64,27 @@ describe("manage-program-head-courses", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-
-    // Default: PH is authenticated with an active program assignment
-    resolveAuthSessionMock.mockResolvedValue(PH_SESSION);
-    programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: PROGRAM_ID }]);
+    resolveProgramHeadContextMock.mockImplementation(async (programId: string) => ({
+      success: true,
+      data: {
+        userId: USER_ID,
+        authorizedPrograms: [BEED, BSED],
+        selectedProgram: programId === BEED_ID ? BEED : BSED,
+      },
+    }));
+    revalidateProgramHeadAssignmentMock.mockResolvedValue(BSED);
+    transactionMock.mockImplementation(async (callback) =>
+      callback({
+        course: {
+          create: courseCreateMock,
+          findUnique: courseFindUniqueMock,
+          updateMany: courseUpdateManyMock,
+        },
+        major: { findUnique: majorFindUniqueMock },
+      })
+    );
+    courseCreateMock.mockResolvedValue({ id: COURSE_ID });
+    courseUpdateManyMock.mockResolvedValue({ count: 1 });
 
     const mod = await import("@/features/academic-structure/services/manage-program-head-courses");
     createProgramHeadCourse = mod.createProgramHeadCourse;
@@ -70,282 +92,165 @@ describe("manage-program-head-courses", () => {
     toggleProgramHeadCourseActive = mod.toggleProgramHeadCourseActive;
   });
 
-  // ─── createProgramHeadCourse ──────────────────────────────────────
-
-  it("PH can create a program-specific course within assigned program", async () => {
-    courseCreateMock.mockResolvedValue({ id: COURSE_ID });
-
-    const result = await createProgramHeadCourse({
-      code: "IT-301",
-      title: "Web Development",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+  it("creates a program-wide course for the explicitly selected Program", async () => {
+    await expect(createProgramHeadCourse(input())).resolves.toEqual({
+      success: true,
+      data: { id: COURSE_ID },
     });
-
-    expect(result).toEqual({ success: true, data: { id: COURSE_ID } });
+    expect(resolveProgramHeadContextMock).toHaveBeenCalledWith(BSED_ID);
+    expect(revalidateProgramHeadAssignmentMock).toHaveBeenCalledWith(
+      expect.anything(),
+      { userId: USER_ID, programId: BSED_ID }
+    );
     expect(courseCreateMock).toHaveBeenCalledWith({
-      data: {
-        code: "IT-301",
-        title: "Web Development",
-        description: null,
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
-        program_id: PROGRAM_ID,
-        major_id: null,
-        default_semester: null,
-        default_term: null,
-        default_year_level: null,
-      },
+      data: expect.objectContaining({ program_id: BSED_ID, major_id: null }),
     });
   });
 
-  it("PH can create a major-specific course within assigned program (major must belong to program)", async () => {
+  it("never uses another authorized Program's assignment order for creation", async () => {
+    await createProgramHeadCourse(input({ programId: BEED_ID }));
+    expect(courseCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({ program_id: BEED_ID }),
+    });
+    expect(courseCreateMock).not.toHaveBeenCalledWith({
+      data: expect.objectContaining({ program_id: BSED_ID }),
+    });
+  });
+
+  it("requires a major to belong to the selected Program", async () => {
     majorFindUniqueMock.mockResolvedValue({
-      id: MAJOR_ID,
-      program_id: PROGRAM_ID,
+      id: OTHER_MAJOR_ID,
+      program_id: BEED_ID,
       is_active: true,
     });
-    courseCreateMock.mockResolvedValue({ id: COURSE_ID });
 
-    const result = await createProgramHeadCourse({
-      code: "IT-401",
-      title: "Advanced Networking",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
-      major_id: MAJOR_ID,
-    });
-
-    expect(result).toEqual({ success: true, data: { id: COURSE_ID } });
-    expect(courseCreateMock).toHaveBeenCalledWith({
-      data: {
-        code: "IT-401",
-        title: "Advanced Networking",
-        description: null,
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
-        program_id: PROGRAM_ID,
-        major_id: MAJOR_ID,
-        default_semester: null,
-        default_term: null,
-        default_year_level: null,
-      },
-    });
-  });
-
-  it("PH cannot create course outside assigned program", async () => {
-    // Simulate no active assignments
-    programHeadAssignmentFindManyMock.mockResolvedValue([]);
-
-    const result = await createProgramHeadCourse({
-      code: "CS-101",
-      title: "Intro to CS",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
-    });
-
-    expect(result).toEqual({
+    await expect(createProgramHeadCourse(input({ major_id: OTHER_MAJOR_ID }))).resolves.toEqual({
       success: false,
-      error: "No active program assignment found for this Program Head.",
+      error: "Selected major does not belong to the selected program.",
     });
     expect(courseCreateMock).not.toHaveBeenCalled();
   });
 
-  it("PH cannot create GE course (only admin can)", async () => {
-    // The schema enforces PROGRAM_SPECIFIC, so GE would fail at the schema
-    // level. Here we test that even if somehow bypassed, the service-level
-    // course_scope is always PROGRAM_SPECIFIC.
-    courseCreateMock.mockResolvedValue({ id: COURSE_ID });
+  it("accepts a major belonging to the selected Program", async () => {
+    majorFindUniqueMock.mockResolvedValue({ id: MAJOR_ID, program_id: BSED_ID, is_active: true });
 
-    const result = await createProgramHeadCourse({
-      code: "GE-101",
-      title: "General Physics",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+    await expect(createProgramHeadCourse(input({ major_id: MAJOR_ID }))).resolves.toMatchObject({
+      success: true,
     });
-
-    expect(result.success).toBe(true);
-    expect(courseCreateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          course_scope: CourseScope.PROGRAM_SPECIFIC,
-          program_id: PROGRAM_ID,
-        }),
-      })
-    );
+    expect(courseCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({ program_id: BSED_ID, major_id: MAJOR_ID }),
+    });
   });
 
-  it("PH cannot modify a GE course", async () => {
+  it("rejects creation when the selected assignment is inactive inside the transaction", async () => {
+    revalidateProgramHeadAssignmentMock.mockResolvedValue(null);
+
+    await expect(createProgramHeadCourse(input())).resolves.toEqual({
+      success: false,
+      error: "Selected Program is no longer assigned.",
+    });
+    expect(courseCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps General Education management forbidden", async () => {
     courseFindUniqueMock.mockResolvedValue({
       id: COURSE_ID,
       program_id: null,
       course_scope: CourseScope.GENERAL_EDUCATION,
     });
 
-    const result = await updateProgramHeadCourse({
-      id: COURSE_ID,
-      code: "GE-101",
-      title: "Updated General Physics",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
-    });
-
-    expect(result).toEqual({
+    await expect(
+      updateProgramHeadCourse(input({ id: COURSE_ID, title: "Updated" }))
+    ).resolves.toEqual({
       success: false,
       error: "General education courses cannot be modified by Program Heads.",
     });
-    expect(courseUpdateMock).not.toHaveBeenCalled();
+    expect(courseUpdateManyMock).not.toHaveBeenCalled();
   });
 
-  it("Major validation: major must belong to the PH's program", async () => {
-    majorFindUniqueMock.mockResolvedValue({
-      id: "major-other",
-      program_id: "other-program",
-      is_active: true,
-    });
-
-    const result = await createProgramHeadCourse({
-      code: "IT-501",
-      title: "Cross-Program Course",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
-      major_id: "major-other",
-    });
-
-    expect(result).toEqual({
-      success: false,
-      error: "Selected major does not belong to your assigned program.",
-    });
-    expect(courseCreateMock).not.toHaveBeenCalled();
-  });
-
-  it("Unique constraint error on duplicate course code", async () => {
-    courseCreateMock.mockRejectedValue(createPrismaUniqueConstraintError());
-
-    const result = await createProgramHeadCourse({
-      code: "IT-301",
-      title: "Duplicate Course",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
-    });
-
-    expect(result).toEqual({
-      success: false,
-      error: 'A course with code "IT-301" already exists.',
-    });
-  });
-
-  // ─── updateProgramHeadCourse ──────────────────────────────────────
-
-  it("PH can update a course within their assigned program", async () => {
+  it("rejects edits to a Course owned by another selected Program", async () => {
     courseFindUniqueMock.mockResolvedValue({
       id: COURSE_ID,
-      program_id: PROGRAM_ID,
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
-    });
-    courseUpdateMock.mockResolvedValue({ id: COURSE_ID });
-
-    const result = await updateProgramHeadCourse({
-      id: COURSE_ID,
-      code: "IT-301",
-      title: "Updated Web Dev",
+      program_id: BEED_ID,
       course_scope: CourseScope.PROGRAM_SPECIFIC,
     });
 
-    expect(result).toEqual({ success: true, data: { id: COURSE_ID } });
-    expect(courseUpdateMock).toHaveBeenCalledWith({
-      where: { id: COURSE_ID },
-      data: {
-        code: "IT-301",
-        title: "Updated Web Dev",
-        description: null,
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
-        program_id: PROGRAM_ID,
-        major_id: null,
-        default_semester: null,
-        default_term: null,
-        default_year_level: null,
-      },
-    });
-  });
-
-  it("PH cannot update course outside assigned program", async () => {
-    courseFindUniqueMock.mockResolvedValue({
-      id: COURSE_ID,
-      program_id: "other-program",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
-    });
-
-    const result = await updateProgramHeadCourse({
-      id: COURSE_ID,
-      code: "CS-101",
-      title: "Intro to CS",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
-    });
-
-    expect(result).toEqual({
+    await expect(
+      updateProgramHeadCourse(input({ id: COURSE_ID, title: "Cross-program edit" }))
+    ).resolves.toEqual({
       success: false,
       error: "You do not have permission to modify this course.",
     });
-    expect(courseUpdateMock).not.toHaveBeenCalled();
+    expect(courseUpdateManyMock).not.toHaveBeenCalled();
   });
 
-  // ─── toggleProgramHeadCourseActive ────────────────────────────────
-
-  it("PH can toggle active status for own program course", async () => {
+  it("revalidates Course ownership and updates an owned Course in one transaction", async () => {
     courseFindUniqueMock.mockResolvedValue({
       id: COURSE_ID,
-      program_id: PROGRAM_ID,
+      program_id: BSED_ID,
       course_scope: CourseScope.PROGRAM_SPECIFIC,
     });
-    courseUpdateMock.mockResolvedValue({ id: COURSE_ID });
 
-    const result = await toggleProgramHeadCourseActive(COURSE_ID, false);
-
-    expect(result).toEqual({ success: true, data: undefined });
-    expect(courseUpdateMock).toHaveBeenCalledWith({
-      where: { id: COURSE_ID },
-      data: { is_active: false },
+    await expect(updateProgramHeadCourse(input({ id: COURSE_ID }))).resolves.toEqual({
+      success: true,
+      data: { id: COURSE_ID },
+    });
+    expect(transactionMock).toHaveBeenCalledTimes(1);
+    expect(courseUpdateManyMock).toHaveBeenCalledWith({
+      where: { id: COURSE_ID, program_id: BSED_ID, course_scope: CourseScope.PROGRAM_SPECIFIC },
+      data: expect.objectContaining({ program_id: BSED_ID }),
     });
   });
 
-  it("PH cannot toggle active for GE course", async () => {
+  it("rejects an ownership change that occurs after the transaction read", async () => {
     courseFindUniqueMock.mockResolvedValue({
       id: COURSE_ID,
-      program_id: null,
-      course_scope: CourseScope.GENERAL_EDUCATION,
-    });
-
-    const result = await toggleProgramHeadCourseActive(COURSE_ID, false);
-
-    expect(result).toEqual({
-      success: false,
-      error: "General education courses cannot be modified by Program Heads.",
-    });
-    expect(courseUpdateMock).not.toHaveBeenCalled();
-  });
-
-  it("rejects when no session is present", async () => {
-    resolveAuthSessionMock.mockResolvedValue(null);
-
-    const result = await createProgramHeadCourse({
-      code: "IT-301",
-      title: "Web Dev",
+      program_id: BSED_ID,
       course_scope: CourseScope.PROGRAM_SPECIFIC,
     });
+    courseUpdateManyMock.mockResolvedValue({ count: 0 });
 
-    expect(result).toEqual({
+    await expect(updateProgramHeadCourse(input({ id: COURSE_ID }))).resolves.toEqual({
       success: false,
-      error: "Program Head authentication is required.",
+      error: "You do not have permission to modify this course.",
     });
   });
 
-  it("rejects when user does not have PROGRAM_HEAD role", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      ...PH_SESSION,
-      roles: [ROLES.FACULTY],
-      activeRole: ROLES.FACULTY,
-    });
+  it("rejects toggle when the selected assignment is revoked before the write", async () => {
+    revalidateProgramHeadAssignmentMock.mockResolvedValue(null);
 
-    const result = await createProgramHeadCourse({
-      code: "IT-301",
-      title: "Web Dev",
+    await expect(
+      toggleProgramHeadCourseActive({ programId: BSED_ID, id: COURSE_ID, is_active: false })
+    ).resolves.toEqual({
+      success: false,
+      error: "Selected Program is no longer assigned.",
+    });
+    expect(courseFindUniqueMock).not.toHaveBeenCalled();
+    expect(courseUpdateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects toggle for a Course owned by another Program", async () => {
+    courseFindUniqueMock.mockResolvedValue({
+      id: COURSE_ID,
+      program_id: BEED_ID,
       course_scope: CourseScope.PROGRAM_SPECIFIC,
     });
 
-    expect(result).toEqual({
+    await expect(
+      toggleProgramHeadCourseActive({ programId: BSED_ID, id: COURSE_ID, is_active: false })
+    ).resolves.toEqual({
       success: false,
-      error: "Program Head authentication is required.",
+      error: "You do not have permission to modify this course.",
+    });
+    expect(courseUpdateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("maps duplicate Course codes to a safe error", async () => {
+    courseCreateMock.mockRejectedValue(createPrismaUniqueConstraintError());
+
+    await expect(createProgramHeadCourse(input())).resolves.toEqual({
+      success: false,
+      error: 'A course with code "IT-301" already exists.',
     });
   });
 });

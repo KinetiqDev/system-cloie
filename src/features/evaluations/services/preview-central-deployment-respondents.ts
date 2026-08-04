@@ -1,7 +1,7 @@
 import { TargetStakeholder } from "@prisma/client";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { listStudentsForClass } from "@/features/enrollments/services/list-students-for-class";
 import type {
   PreviewCentralDeploymentInput,
@@ -12,31 +12,8 @@ import type {
 export async function previewCentralDeploymentRespondents(
   input: PreviewCentralDeploymentInput
 ): Promise<PreviewCentralDeploymentResult> {
-  const authSession = await resolveAuthSession();
-
-  if (authSession?.activeRole !== ROLES.PROGRAM_HEAD) {
-    return {
-      error: "Program Head authentication is required.",
-      success: false,
-    };
-  }
-
-  // Verify PH has an active assignment to the specified program
-  const phAssignment = await prisma.programHeadAssignment.findFirst({
-    where: {
-      program_head_id: authSession.userId,
-      program_id: input.programId,
-      is_active: true,
-    },
-    select: { program_id: true },
-  });
-
-  if (!phAssignment) {
-    return {
-      error: "No active program assignment found for this Program Head.",
-      success: false,
-    };
-  }
+  const contextResult = await resolveProgramHeadContext(input.programId);
+  if (!contextResult.success) return contextResult;
 
   try {
     let respondents: PreviewCentralDeploymentRespondent[] = [];

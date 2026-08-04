@@ -3,12 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveReviewerProgramScope } from "@/features/academic-structure/services/resolve-reviewer-program-scope";
 
-const { facultyProgramAffiliationFindManyMock, programHeadAssignmentFindManyMock } = vi.hoisted(
-  () => ({
-    facultyProgramAffiliationFindManyMock: vi.fn(),
-    programHeadAssignmentFindManyMock: vi.fn(),
-  })
-);
+const {
+  facultyProgramAffiliationFindManyMock,
+  programHeadAssignmentFindManyMock,
+  resolveProgramHeadContextMock,
+} = vi.hoisted(() => ({
+  facultyProgramAffiliationFindManyMock: vi.fn(),
+  programHeadAssignmentFindManyMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+}));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -19,6 +22,10 @@ vi.mock("@/lib/db/prisma", () => ({
       findMany: programHeadAssignmentFindManyMock,
     },
   },
+}));
+
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
 }));
 
 describe("resolveReviewerProgramScope", () => {
@@ -65,6 +72,49 @@ describe("resolveReviewerProgramScope", () => {
       where: { program_head_id: "program-head-1", is_active: true },
     });
     expect(facultyProgramAffiliationFindManyMock).not.toHaveBeenCalled();
+  });
+
+  it("returns only the explicitly selected assigned Program", async () => {
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        authorizedPrograms: [
+          { code: "BSIT", id: "program-1", name: "BS Information Technology" },
+          { code: "BSED", id: "program-2", name: "Bachelor of Secondary Education" },
+        ],
+        selectedProgram: { code: "BSED", id: "program-2", name: "Bachelor of Secondary Education" },
+        userId: "program-head-1",
+      },
+    });
+
+    await expect(
+      resolveReviewerProgramScope({
+        programId: "program-2",
+        reviewerId: "program-head-1",
+        reviewerRole: ROLES.PROGRAM_HEAD,
+      })
+    ).resolves.toEqual(["program-2"]);
+
+    expect(resolveProgramHeadContextMock).toHaveBeenCalledWith("program-2");
+    expect(programHeadAssignmentFindManyMock).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty scope for an unassigned selected Program", async () => {
+    resolveProgramHeadContextMock.mockResolvedValue({
+      error: "Selected Program is not assigned.",
+      success: false,
+    });
+
+    await expect(
+      resolveReviewerProgramScope({
+        programId: "program-9",
+        reviewerId: "program-head-1",
+        reviewerRole: ROLES.PROGRAM_HEAD,
+      })
+    ).resolves.toEqual([]);
+
+    expect(resolveProgramHeadContextMock).toHaveBeenCalledWith("program-9");
+    expect(programHeadAssignmentFindManyMock).not.toHaveBeenCalled();
   });
 
   it("returns null for dean reviewers", async () => {

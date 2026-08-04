@@ -44,9 +44,13 @@ describe("loadCourseAssignmentListPage", () => {
       pathname: "/program-head/course-assignments",
       rawSearchParams: { page: "3", q: "faculty" },
       role: "program-head",
+      programId: "program-1",
     });
 
-    expect(listMock).toHaveBeenCalledWith({ q: "faculty" }, { page: 2, pageSize: 20 });
+    expect(listMock).toHaveBeenCalledWith(
+      { q: "faculty" },
+      { page: 2, pageSize: 20, programId: "program-1" }
+    );
     expect(result.initialFilters.searchQuery).toBe("faculty");
   });
 

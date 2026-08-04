@@ -56,6 +56,7 @@ interface CourseAssignmentFormDialogProps {
   defaultCourseId?: string | null;
   mode?: CourseAssignmentFormMode;
   onSuccess?: () => void;
+  selectedProgramId?: string;
 }
 
 type Step = "term" | "course" | "class" | "faculty" | "confirm";
@@ -70,6 +71,7 @@ export function CourseAssignmentFormDialog({
   defaultCourseId,
   mode = "program-head",
   onSuccess,
+  selectedProgramId,
 }: CourseAssignmentFormDialogProps) {
   const [step, setStep] = useState<Step>(defaultTermInstanceId ? "course" : "term");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,7 +96,7 @@ export function CourseAssignmentFormDialog({
       : availableCourses.filter(
           (c) =>
             c.course_scope === CourseScope.PROGRAM_SPECIFIC &&
-            availablePrograms.some((p) => p.id === c.program_id)
+            (selectedProgramId ? c.program_id === selectedProgramId : availablePrograms.some((p) => p.id === c.program_id))
         );
 
   const selectedCourse = assignableCourses.find((c) => c.id === courseId);
@@ -169,6 +171,7 @@ export function CourseAssignmentFormDialog({
       programId,
       yearLevel,
       section,
+      ...(selectedProgramId ? { selectedProgramId } : {}),
     });
 
     setIsSubmitting(false);

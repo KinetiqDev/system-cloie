@@ -15,6 +15,7 @@ export const allUsers = [
   { id: U.PH_BSSW, email: "ph-bssw@cloie.test", fn: "Ana", ln: "Cruz", role: SystemRole.PROGRAM_HEAD },
   { id: U.PH_BSBA, email: "ph-bsba@cloie.test", fn: "Roberto", ln: "Lim", role: SystemRole.PROGRAM_HEAD },
   { id: U.PH_BSHM, email: "ph-bshm@cloie.test", fn: "Carmen", ln: "Flores", role: SystemRole.PROGRAM_HEAD },
+  { id: U.PH_MULTI, email: "ph-multi@cloie.test", fn: "Daniel", ln: "Garcia", role: SystemRole.PROGRAM_HEAD },
   { id: U.FAC_BSED, email: "faculty-bsed@cloie.test", fn: "Elena", ln: "Torres", role: SystemRole.FACULTY },
   { id: U.FAC_BSBA, email: "faculty-bsba@cloie.test", fn: "Marco", ln: "Villanueva", role: SystemRole.FACULTY },
   { id: U.FAC_BSHM, email: "faculty-bshm@cloie.test", fn: "Lisa", ln: "Mendoza", role: SystemRole.FACULTY },
@@ -53,6 +54,8 @@ export const programHeadAssignments = [
   { programHeadId: U.PH_BSSW, program: "BSSW" },
   { programHeadId: U.PH_BSBA, program: "BSBA" },
   { programHeadId: U.PH_BSHM, program: "BSHM" },
+  { programHeadId: U.PH_MULTI, program: "BEED" },
+  { programHeadId: U.PH_MULTI, program: "BSED" },
 ] as const;
 
 export const externalProfiles = [

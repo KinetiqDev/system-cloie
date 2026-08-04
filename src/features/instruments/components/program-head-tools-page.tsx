@@ -4,6 +4,13 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  buildProgramHeadEditToolPath,
+  buildProgramHeadNewCiloEvaluationPath,
+  buildProgramHeadNewToolPath,
+  buildProgramHeadPublishToolPath,
+  buildProgramHeadToolsPath,
+} from "@/lib/constants/program-head-routes";
+import {
   ChevronDown,
   ChevronRight,
   Copy,
@@ -103,7 +110,13 @@ export function ProgramHeadToolsPage({
         </div>
       </div>
 
-      <Tabs value={defaultTab} onValueChange={(v) => router.push(`/program-head/tools?tab=${v}`)} className="w-full">
+      <Tabs
+        value={defaultTab}
+        onValueChange={(v) =>
+          router.push(buildProgramHeadToolsPath(program.id, v as "templates" | "published"))
+        }
+        className="w-full"
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <TabsList variant="line" className="h-auto gap-4">
             <TabsTrigger value="templates" className="px-1 py-2.5 text-sm">
@@ -115,7 +128,7 @@ export function ProgramHeadToolsPage({
           </TabsList>
 
           <Button
-            render={<Link href="/program-head/tools/new" />}
+            render={<Link href={buildProgramHeadNewToolPath(program.id)} />}
             className="bg-primary font-label text-on-primary hover:bg-primary-hover shrink-0 font-semibold"
           >
             <Plus className="size-4" data-icon="inline-start" />
@@ -124,11 +137,11 @@ export function ProgramHeadToolsPage({
         </div>
 
         <TabsContent value="templates" className="pt-6">
-          <TemplatesGrid templates={templates} baselines={baselines} />
+          <TemplatesGrid templates={templates} baselines={baselines} programId={program.id} />
         </TabsContent>
 
         <TabsContent value="published" className="pt-6">
-          <PublishedDeploymentsTable deployments={deployments} />
+          <PublishedDeploymentsTable deployments={deployments} programId={program.id} />
         </TabsContent>
       </Tabs>
     </div>
@@ -138,9 +151,11 @@ export function ProgramHeadToolsPage({
 function TemplatesGrid({
   templates,
   baselines,
+  programId,
 }: {
   templates: ProgramHeadTemplateItem[];
   baselines: InstitutionalBaselineItem[];
+  programId: string;
 }) {
   const hasContent = templates.length > 0 || baselines.length > 0;
 
@@ -164,7 +179,7 @@ function TemplatesGrid({
           </h3>
           <div className="grid gap-4 md:grid-cols-2">
             {templates.map((template) => (
-              <TemplateCard key={template.id} template={template} />
+              <TemplateCard key={template.id} template={template} programId={programId} />
             ))}
           </div>
         </div>
@@ -178,7 +193,7 @@ function TemplatesGrid({
           </h3>
           <div className="grid gap-4 md:grid-cols-2">
             {baselines.map((baseline) => (
-              <BaselineCard key={baseline.id} baseline={baseline} />
+              <BaselineCard key={baseline.id} baseline={baseline} programId={programId} />
             ))}
           </div>
         </div>
@@ -187,7 +202,13 @@ function TemplatesGrid({
   );
 }
 
-function TemplateCard({ template }: { template: ProgramHeadTemplateItem }) {
+function TemplateCard({
+  template,
+  programId,
+}: {
+  template: ProgramHeadTemplateItem;
+  programId: string;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -198,7 +219,7 @@ function TemplateCard({ template }: { template: ProgramHeadTemplateItem }) {
   function handleDuplicate() {
     setError(null);
     startTransition(async () => {
-      const result = await duplicateTemplateAction(template.id);
+      const result = await duplicateTemplateAction(programId, template.id);
       if (!result.success) {
         setError(result.error);
         return;
@@ -210,7 +231,7 @@ function TemplateCard({ template }: { template: ProgramHeadTemplateItem }) {
   function handleToggleActive() {
     setError(null);
     startTransition(async () => {
-      const result = await toggleTemplateActiveAction(template.id, !template.is_active);
+      const result = await toggleTemplateActiveAction(programId, template.id, !template.is_active);
       if (!result.success) {
         setError(result.error);
         return;
@@ -222,7 +243,7 @@ function TemplateCard({ template }: { template: ProgramHeadTemplateItem }) {
   function handleConfirmDelete() {
     setError(null);
     startTransition(async () => {
-      const result = await deleteTemplateAction(template.id);
+      const result = await deleteTemplateAction(programId, template.id);
       if (!result.success) {
         setError(result.error);
         return;
@@ -295,7 +316,7 @@ function TemplateCard({ template }: { template: ProgramHeadTemplateItem }) {
             size="sm"
             className="flex-1"
             disabled={isPending}
-            render={<Link href={`/program-head/tools/${template.id}/edit`} />}
+            render={<Link href={buildProgramHeadEditToolPath(programId, template.id)} />}
           >
             <Pencil className="size-3.5" data-icon="inline-start" />
             Edit
@@ -313,10 +334,12 @@ function TemplateCard({ template }: { template: ProgramHeadTemplateItem }) {
           <Button
             size="sm"
             className="bg-primary text-on-primary hover:bg-primary-hover flex-1"
-            disabled={isPending || !isProgramWide}
+            disabled={isPending}
             render={
               isProgramWide ? (
-                <Link href={`/program-head/tools/publish?templateId=${template.id}`} />
+                <Link href={buildProgramHeadPublishToolPath(programId, template.id)} />
+              ) : template.template_type === "COURSE_BOUND" ? (
+                <Link href={buildProgramHeadNewCiloEvaluationPath(programId)} />
               ) : undefined
             }
           >
@@ -338,8 +361,8 @@ function TemplateCard({ template }: { template: ProgramHeadTemplateItem }) {
           <DialogHeader>
             <DialogTitle>Delete Template</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete <span className="font-semibold">{template.name}</span>?{" "}
-              This action cannot be undone.
+              Are you sure you want to delete <span className="font-semibold">{template.name}</span>
+              ? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-4">
@@ -356,9 +379,13 @@ function TemplateCard({ template }: { template: ProgramHeadTemplateItem }) {
   );
 }
 
-function BaselineCard({ baseline }: { baseline: InstitutionalBaselineItem }) {
-  const router = useRouter();
-
+function BaselineCard({
+  baseline,
+  programId,
+}: {
+  baseline: InstitutionalBaselineItem;
+  programId: string;
+}) {
   const isProgramWide = baseline.template_type === "PROGRAM_WIDE";
 
   return (
@@ -393,7 +420,7 @@ function BaselineCard({ baseline }: { baseline: InstitutionalBaselineItem }) {
         <Button
           variant="outline"
           size="sm"
-          render={<Link href={`/program-head/tools/${baseline.id}/edit`} />}
+          render={<Link href={buildProgramHeadEditToolPath(programId, baseline.id)} />}
         >
           <Pencil className="mr-1 size-3.5" />
           Edit & Copy
@@ -407,9 +434,15 @@ type DeploymentStatusFilter = "ALL" | "ACTIVE" | "SCHEDULED" | "CLOSED" | "ARCHI
 
 const PAGE_SIZE = 10;
 
-function PublishedDeploymentsTable({ deployments }: { deployments: ProgramHeadDeploymentItem[] }) {
+function PublishedDeploymentsTable({
+  deployments,
+  programId,
+}: {
+  deployments: ProgramHeadDeploymentItem[];
+  programId: string;
+}) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<DeploymentStatusFilter>("ALL");
   const [currentPage, setCurrentPage] = useState(1);
@@ -468,7 +501,7 @@ function PublishedDeploymentsTable({ deployments }: { deployments: ProgramHeadDe
 
   function handleClose(deploymentId: string) {
     startTransition(async () => {
-      const result = await closeCentralDeploymentAction(deploymentId);
+      const result = await closeCentralDeploymentAction(programId, deploymentId);
       if (!result.success) {
         return;
       }
@@ -584,9 +617,10 @@ function PublishedDeploymentsTable({ deployments }: { deployments: ProgramHeadDe
       )}
 
       {/* Result count */}
-      <p className="text-muted-foreground text-center text-xs pt-2">
+      <p className="text-muted-foreground pt-2 text-center text-xs">
         Showing {(safePage - 1) * PAGE_SIZE + 1}–
-        {Math.min(safePage * PAGE_SIZE, filteredDeployments.length)} of {filteredDeployments.length} deployment
+        {Math.min(safePage * PAGE_SIZE, filteredDeployments.length)} of {filteredDeployments.length}{" "}
+        deployment
         {filteredDeployments.length !== 1 ? "s" : ""}
       </p>
     </div>
@@ -637,24 +671,20 @@ function DeploymentAccordionRow({
 
         {/* Target */}
         <div>
-          <Badge className={`text-xs ${getTargetStakeholderBadgeClass(deployment.target_stakeholder)}`}>
+          <Badge
+            className={`text-xs ${getTargetStakeholderBadgeClass(deployment.target_stakeholder)}`}
+          >
             {formatStakeholder(deployment.target_stakeholder)}
           </Badge>
         </div>
 
         {/* Academic Period */}
-        <div className="text-muted-foreground text-sm">
-          {deployment.termInstanceLabel ?? "—"}
-        </div>
+        <div className="text-muted-foreground text-sm">{deployment.termInstanceLabel ?? "—"}</div>
 
         {/* Status */}
         <div>
           <Badge
-            variant={
-              deployment.status === "ACTIVE"
-                ? "default"
-                : "outline"
-            }
+            variant={deployment.status === "ACTIVE" ? "default" : "outline"}
             className="text-xs"
           >
             {deployment.status.charAt(0) + deployment.status.slice(1).toLowerCase()}
@@ -675,7 +705,10 @@ function DeploymentAccordionRow({
             <DropdownMenuTrigger
               onClick={(e) => e.stopPropagation()}
               render={
-                <button type="button" className="hover:bg-muted inline-flex size-8 cursor-pointer items-center justify-center rounded-md">
+                <button
+                  type="button"
+                  className="hover:bg-muted inline-flex size-8 cursor-pointer items-center justify-center rounded-md"
+                >
                   <MoreVertical className="size-4" />
                 </button>
               }

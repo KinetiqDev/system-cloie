@@ -89,9 +89,18 @@ export async function editUserBySecretaryAction(formData: FormData): Promise<
     };
   }
 
-  if (formData.get("program_head.program_id")) {
+  const programHeadProgramIds = formData
+    .getAll("program_head.program_ids")
+    .map((value) => String(value))
+    .filter((value) => value.length > 0);
+
+  // The dialog always marks the Program Head section as present so an empty
+  // desired set (deactivate every assignment) is forwarded, not dropped. The
+  // marker only selects the server-validated branch; the service still
+  // requires Program Head details for a Program Head target.
+  if (formData.has("program_head.present") || programHeadProgramIds.length > 0) {
     raw.program_head = {
-      program_id: formData.get("program_head.program_id"),
+      program_ids: programHeadProgramIds,
     };
   }
 

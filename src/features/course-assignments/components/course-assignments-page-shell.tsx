@@ -45,6 +45,7 @@ export interface CourseAssignmentsPageShellProps {
   initialFilters: AssignmentFiltersState;
   initialPage: number;
   initialError?: string | null;
+  selectedProgramId?: string;
 }
 
 export function CourseAssignmentsPageShell({
@@ -59,6 +60,7 @@ export function CourseAssignmentsPageShell({
   initialFilters,
   initialPage,
   initialError = null,
+  selectedProgramId,
 }: CourseAssignmentsPageShellProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -121,6 +123,7 @@ export function CourseAssignmentsPageShell({
         availablePrograms={availablePrograms}
         availableFaculty={availableFaculty}
         termInstances={termInstances}
+        showProgramFilter={mode === "all-program"}
       />
 
       {loadError && (
@@ -144,6 +147,7 @@ export function CourseAssignmentsPageShell({
         onPageChange={(nextPage) => navigateWithState(filters, nextPage)}
         onAssignmentUpdated={refreshAssignments}
         onAssignFaculty={() => setCreateOpen(true)}
+        selectedProgramId={selectedProgramId}
       />
 
       <CourseAssignmentFormDialog
@@ -154,6 +158,7 @@ export function CourseAssignmentsPageShell({
         termInstances={termInstances}
         mode={mode}
         onSuccess={refreshAssignments}
+        selectedProgramId={selectedProgramId}
       />
     </div>
   );

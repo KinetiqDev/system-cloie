@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveReviewerProgramScope } from "@/features/academic-structure/services/resolve-reviewer-program-scope";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type { CourseBoundResponseReview } from "../types";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import {
@@ -11,7 +12,8 @@ import {
 } from "./shared";
 
 export async function getCourseBoundResponseReview(
-  responseId: string
+  responseId: string,
+  programId?: string
 ): Promise<CourseBoundResponseReview | null> {
   const authSession = await resolveAuthSession();
 
@@ -25,7 +27,14 @@ export async function getCourseBoundResponseReview(
     return null;
   }
 
+  if (reviewerRole === "PROGRAM_HEAD") {
+    if (!programId || !(await resolveProgramHeadContext(programId)).success) {
+      return null;
+    }
+  }
+
   const programScope = await resolveReviewerProgramScope({
+    ...(reviewerRole === "PROGRAM_HEAD" && programId ? { programId } : {}),
     reviewerId: authSession.userId,
     reviewerRole,
   });

@@ -99,6 +99,7 @@ export function PublishCentralDeploymentForm({
     }
 
     const formData = new FormData(event.currentTarget);
+    formData.set("programId", programId);
     const yearLevelValue = formData.get("year_level");
     const yearLevel = yearLevelValue && typeof yearLevelValue === "string" && yearLevelValue.length > 0
       ? (yearLevelValue as YearLevel)
@@ -170,7 +171,7 @@ export function PublishCentralDeploymentForm({
 
       const toastMessage = `Deployment published successfully! ${result.assignmentCount} assignment(s) created. Status: ${result.status}.`;
       router.push(
-        `/program-head/tools?tab=published&toast=${encodeURIComponent(toastMessage)}`
+        `/program-head/programs/${encodeURIComponent(programId)}/tools?tab=published&toast=${encodeURIComponent(toastMessage)}`
       );
     } catch {
       setError("Unable to publish deployment right now. Please try again.");
@@ -197,6 +198,7 @@ export function PublishCentralDeploymentForm({
         className="border-border bg-card space-y-6 rounded-2xl border p-6 shadow-sm"
         onSubmit={handlePreview}
       >
+        <input type="hidden" name="programId" value={programId} />
         <div className="space-y-2">
           <Label htmlFor="deployment_name">Deployed Evaluation Name</Label>
           <Input
@@ -398,7 +400,7 @@ export function PublishCentralDeploymentForm({
         {step === "configure" && (
           <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
             <a
-              href="/program-head/tools"
+               href={`/program-head/programs/${encodeURIComponent(programId)}/tools`}
               className="text-muted-foreground hover:text-foreground text-sm font-medium"
             >
               Cancel

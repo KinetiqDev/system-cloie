@@ -20,6 +20,9 @@ const {
   transactionMock,
   txUserFindManyMock,
   userRoleFindManyMock,
+  resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignmentMock,
+  studentEnrollmentFindManyMock,
 } = vi.hoisted(() => ({
   assignmentCreateManyMock: vi.fn(),
   centralDeploymentCreateMock: vi.fn(),
@@ -36,6 +39,9 @@ const {
   transactionMock: vi.fn(),
   txUserFindManyMock: vi.fn(),
   userRoleFindManyMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+  revalidateProgramHeadAssignmentMock: vi.fn(),
+  studentEnrollmentFindManyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -65,6 +71,10 @@ vi.mock("@/features/enrollments/services/list-students-for-class", () => ({
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
+}));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignment: revalidateProgramHeadAssignmentMock,
 }));
 
 // ─── Test Helpers ────────────────────────────────────────────────────────────
@@ -113,11 +123,25 @@ function setupTransaction() {
       studentAcademicProfile: { findMany: studentAcademicProfileFindManyMock },
       user: { findMany: txUserFindManyMock },
       userRole: { findMany: userRoleFindManyMock },
+      studentEnrollment: {
+        findMany: studentEnrollmentFindManyMock,
+      },
+      instrumentTemplate: {
+        findUnique: vi.fn().mockResolvedValue({
+          program_id: "program-1",
+          is_active: true,
+          template_type: "PROGRAM_WIDE",
+        }),
+      },
+      major: {
+        findUnique: vi.fn().mockResolvedValue({ program_id: "program-1", is_active: true }),
+      },
     })
   );
 }
 
 const baseInput = {
+  programId: "program-1",
   template_id: "template-1",
   deployment_name: "Graduate Exit Evaluation",
   target_stakeholder: "STUDENT" as const,
@@ -140,6 +164,29 @@ describe("publishCentralDeployment", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupTransaction();
+    studentEnrollmentFindManyMock.mockImplementation(async () => {
+      const latest = listStudentsForClassMock.mock.results.at(-1)?.value;
+      if (latest && typeof latest.then === "function") {
+        const result = await latest;
+        return result.success
+          ? result.data.map((student: { userId: string }) => ({ student_user_id: student.userId }))
+          : [];
+      }
+      return [];
+    });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "ph-user-1",
+        authorizedPrograms: [{ id: baseInput.programId, code: "BSIT", name: "BS Information Technology" }],
+        selectedProgram: { id: baseInput.programId, code: "BSIT", name: "BS Information Technology" },
+      },
+    });
+    revalidateProgramHeadAssignmentMock.mockResolvedValue({
+      id: baseInput.programId,
+      code: "BSIT",
+      name: "BS Information Technology",
+    });
   });
 
   // ─── Auth Tests ──────────────────────────────────────────────────────────
@@ -173,6 +220,7 @@ describe("publishCentralDeployment", () => {
   it("rejects PH without active program assignment", async () => {
     mockAuthenticatedPH();
     programHeadAssignmentFindFirstMock.mockResolvedValue(null);
+    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "No active program assignment found for this Program Head." });
 
     const result = await publishCentralDeployment(baseInput);
 
@@ -563,6 +611,7 @@ describe("publishCentralDeployment", () => {
     mockVersion();
     mockNoDuplicate();
     mockTermInstance();
+    listStudentsForClassMock.mockResolvedValue({ success: true, data: [{ userId: "student-1" }, { userId: "student-2" }] });
 
     centralDeploymentCreateMock.mockResolvedValue({
       id: "deployment-6",
@@ -590,5 +639,91 @@ describe("publishCentralDeployment", () => {
         { central_deployment_id: "deployment-6", respondent_id: "student-2" },
       ],
     });
+  });
+
+  it("preserves an explicitly empty curated respondent set", async () => {
+    mockAuthenticatedPH();
+    mockPHAssignment();
+    mockTemplate();
+    mockVersion();
+    mockNoDuplicate();
+    mockTermInstance();
+    listStudentsForClassMock.mockResolvedValue({
+      success: true,
+      data: [{ userId: "student-1" }, { userId: "student-2" }],
+    });
+    centralDeploymentCreateMock.mockResolvedValue({ id: "deployment-empty" });
+
+    const result = await publishCentralDeployment({
+      ...baseInput,
+      respondent_ids: [],
+    });
+
+    expect(result).toEqual({
+      success: true,
+      data: { deploymentId: "deployment-empty", assignmentCount: 0, status: "ACTIVE" },
+    });
+    expect(assignmentCreateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("filters curated IDs to selected-Program transaction eligibility", async () => {
+    mockAuthenticatedPH();
+    mockPHAssignment();
+    mockTemplate();
+    mockVersion();
+    mockNoDuplicate();
+    mockTermInstance();
+    listStudentsForClassMock.mockResolvedValue({ success: true, data: [{ userId: "student-bsed" }] });
+    studentEnrollmentFindManyMock.mockResolvedValue([{ student_user_id: "student-bsed" }]);
+    centralDeploymentCreateMock.mockResolvedValue({ id: "deployment-scoped" });
+
+    const result = await publishCentralDeployment({
+      ...baseInput,
+      respondent_ids: ["student-bsed", "student-beed"],
+    });
+
+    expect(result.success).toBe(true);
+    expect(assignmentCreateManyMock).toHaveBeenCalledWith({
+      data: [{ central_deployment_id: "deployment-scoped", respondent_id: "student-bsed" }],
+    });
+  });
+
+  it("drops a stale preview student removed from transaction eligibility", async () => {
+    mockAuthenticatedPH();
+    mockPHAssignment();
+    mockTemplate();
+    mockVersion();
+    mockNoDuplicate();
+    mockTermInstance();
+    listStudentsForClassMock.mockResolvedValue({ success: true, data: [{ userId: "student-stale" }] });
+    studentEnrollmentFindManyMock.mockResolvedValue([]);
+    centralDeploymentCreateMock.mockResolvedValue({ id: "deployment-stale" });
+
+    const result = await publishCentralDeployment({ ...baseInput });
+
+    expect(result).toEqual({
+      success: true,
+      data: { deploymentId: "deployment-stale", assignmentCount: 0, status: "ACTIVE" },
+    });
+    expect(assignmentCreateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects publish when the selected assignment is revoked before the transaction write", async () => {
+    mockAuthenticatedPH();
+    mockPHAssignment();
+    mockTemplate();
+    mockVersion();
+    mockNoDuplicate();
+    mockTermInstance();
+    revalidateProgramHeadAssignmentMock.mockResolvedValueOnce(null);
+
+    const result = await publishCentralDeployment(baseInput);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Selected Program is no longer assigned.",
+    });
+    expect(centralDeploymentCreateMock).not.toHaveBeenCalled();
+    expect(assignmentCreateManyMock).not.toHaveBeenCalled();
   });
 });

@@ -7,8 +7,15 @@ const serviceMocks = vi.hoisted(() => ({
   removeRosterMembership: vi.fn(),
   restoreRosterMembership: vi.fn(),
 }));
+const authSessionMock = vi.hoisted(() => vi.fn(async () => null));
 
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
+vi.mock("@/features/auth/services/resolve-auth-session", () => ({
+  resolveAuthSession: authSessionMock,
+}));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: vi.fn(),
+}));
 vi.mock("@/features/course-assignments/services/manage-course-roster", () => serviceMocks);
 vi.mock("@/features/course-assignments/services/import-course-roster", () => ({
   importCourseRoster: serviceMocks.importCourseRoster,
@@ -23,6 +30,7 @@ import {
 
 const assignmentId = "11111111-1111-4111-8111-111111111111";
 const membershipId = "22222222-2222-4222-8222-222222222222";
+const programId = "33333333-3333-4333-8333-333333333333";
 
 describe("course roster actions", () => {
   beforeEach(() => {
@@ -68,7 +76,7 @@ describe("course roster actions", () => {
 
     expect(serviceMocks.restoreRosterMembership).toHaveBeenCalledWith(assignmentId, membershipId);
     expect(serviceMocks.removeRosterMembership).toHaveBeenCalledWith(assignmentId, membershipId);
-    expect(revalidatePathMock).toHaveBeenCalledTimes(5);
+    expect(revalidatePathMock).toHaveBeenCalledTimes(4);
   });
 
   it("rejects malformed import action input before service call", async () => {
@@ -89,5 +97,29 @@ describe("course roster actions", () => {
 
     expect(serviceMocks.importCourseRoster).toHaveBeenCalledWith(assignmentId, "email\na@example.com");
     expect(revalidatePathMock).toHaveBeenCalledWith(`/course-rosters/${assignmentId}`);
+  });
+
+  it("passes selected Program scope and revalidates exact selected routes", async () => {
+    serviceMocks.addRosterMembership.mockResolvedValue({
+      success: true,
+      data: { outcome: "CREATED", message: "Student added to Course roster." },
+    });
+    await addRosterMembershipAction({
+      assignmentId,
+      programId,
+      studentEmail: "student@example.com",
+    });
+
+    expect(serviceMocks.addRosterMembership).toHaveBeenCalledWith(
+      assignmentId,
+      "student@example.com",
+      programId
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      `/program-head/programs/${programId}/course-assignments`
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      `/program-head/programs/${programId}/course-rosters/${assignmentId}`
+    );
   });
 });

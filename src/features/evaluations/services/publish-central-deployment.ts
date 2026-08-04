@@ -1,8 +1,12 @@
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { listStudentsForClass } from "@/features/enrollments/services/list-students-for-class";
+import {
+  revalidateProgramHeadAssignment,
+  resolveProgramHeadContext,
+} from "@/features/auth/services/resolve-program-head-context";
 import type { PublishCentralDeploymentInput } from "../schemas/central-deployment";
+import { listStudentsForClass } from "@/features/enrollments/services/list-students-for-class";
 import {
   DeploymentStatus,
   EvaluationTemplateType,
@@ -62,23 +66,10 @@ export async function publishCentralDeployment(
     };
   }
 
-  // 2. Resolve PH's program assignment
-  const phAssignment = await prisma.programHeadAssignment.findFirst({
-    where: {
-      program_head_id: authSession.userId,
-      is_active: true,
-    },
-    select: { program_id: true },
-  });
-
-  if (!phAssignment) {
-    return {
-      success: false,
-      error: "No active program assignment found for this Program Head.",
-    };
-  }
-
-  const programId = phAssignment.program_id;
+  const contextResult = await resolveProgramHeadContext(input.programId);
+  if (!contextResult.success) return contextResult;
+  const { userId, selectedProgram } = contextResult.data;
+  const programId = selectedProgram.id;
 
   // 3. Validate template — must be active and owned by PH's program or institutional baseline
   const template = await prisma.instrumentTemplate.findFirst({
@@ -173,8 +164,68 @@ export async function publishCentralDeployment(
   }
 
   // 8. Transaction: create deployment + assignments
+  let candidateStudentIds: string[] = [];
+  if (input.target_stakeholder === "STUDENT" && input.year_level) {
+    const studentsResult = await listStudentsForClass({
+      termInstanceId: input.term_instance_id,
+      programId,
+      yearLevel: input.year_level,
+      majorId: input.major_id,
+    });
+    if (studentsResult.success) {
+      candidateStudentIds = studentsResult.data.map((student) => student.userId);
+    }
+  }
+
   try {
     const result = await prisma.$transaction(async (tx) => {
+      const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
+      if (!currentProgram) return null;
+
+      const currentTemplate = await tx.instrumentTemplate.findUnique({
+        where: { id: input.template_id },
+        select: { program_id: true, is_active: true, template_type: true },
+      });
+      if (
+        !currentTemplate ||
+        !currentTemplate.is_active ||
+        currentTemplate.template_type !== EvaluationTemplateType.PROGRAM_WIDE ||
+        (currentTemplate.program_id !== null && currentTemplate.program_id !== programId)
+      ) {
+        return {
+          success: false as const,
+          error: "Template not found, inactive, or not accessible to your program.",
+        };
+      }
+
+      if (input.major_id) {
+        const major = await tx.major.findUnique({
+          where: { id: input.major_id },
+          select: { program_id: true, is_active: true },
+        });
+        if (!major || !major.is_active || major.program_id !== programId) {
+          return { success: false as const, error: "Selected major is not available." };
+        }
+      }
+
+      let transactionStudentRespondentIds: string[] = [];
+      if (input.target_stakeholder === "STUDENT" && input.year_level) {
+        const enrollments = await tx.studentEnrollment.findMany({
+          where: {
+            term_instance_id: input.term_instance_id,
+            program_id: programId,
+            year_level: input.year_level,
+            is_active: true,
+            ...(input.major_id ? { major_id: input.major_id } : {}),
+            student_user_id: { in: candidateStudentIds },
+          },
+          select: { student_user_id: true },
+        });
+        transactionStudentRespondentIds = enrollments.map(
+          (enrollment) => enrollment.student_user_id
+        );
+      }
+
       // 8a. Create the CentralDeployment record
       // Phase 9: term_instance_id is now the source of truth
       const deployment = await tx.centralDeployment.create({
@@ -196,23 +247,32 @@ export async function publishCentralDeployment(
       // 8b. Create EvaluationAssignment records for target respondents
       let respondentIds: string[] = [];
 
-      if (input.respondent_ids && input.respondent_ids.length > 0) {
-        // Use the curated list from preview/exclude flow
-        respondentIds = [...new Set(input.respondent_ids)];
+      if (input.respondent_ids !== undefined) {
+        let eligibleRespondentIds = transactionStudentRespondentIds;
+        if (input.target_stakeholder === "ALUMNI") {
+          const invites = await tx.externalStakeholderInvite.findMany({
+            where: { role: ROLES.ALUMNI, program_id: programId, status: "ACCEPTED" },
+            select: { email: true },
+          });
+          const users = await tx.user.findMany({
+            where: { email: { in: invites.map((invite) => invite.email) } },
+            select: { id: true },
+          });
+          eligibleRespondentIds = users.map((user) => user.id);
+        } else if (input.target_stakeholder === "INDUSTRY_PARTNER") {
+          const profiles = await tx.industryPartnerProfile.findMany({
+            where: { program_id: programId },
+            select: { user_id: true },
+          });
+          eligibleRespondentIds = profiles.map((profile) => profile.user_id);
+        }
+        const eligible = new Set(eligibleRespondentIds);
+        respondentIds = [...new Set(input.respondent_ids)].filter((id) => eligible.has(id));
       } else if (input.target_stakeholder === "STUDENT") {
         // Enrollment-based lookup via student enrollment ledger
         // Note: term_instance_id is already validated as required at lines 140-145
         if (input.year_level) {
-          const studentsResult = await listStudentsForClass({
-            termInstanceId: input.term_instance_id!,
-            programId,
-            yearLevel: input.year_level,
-            majorId: input.major_id,
-          });
-
-          if (studentsResult.success) {
-            respondentIds = studentsResult.data.map((s) => s.userId);
-          }
+          respondentIds = transactionStudentRespondentIds;
         }
       } else if (input.target_stakeholder === "ALUMNI") {
         // Find accepted alumni invites scoped to this program
@@ -259,6 +319,9 @@ export async function publishCentralDeployment(
       };
     });
 
+    if (!result) return { success: false, error: "Selected Program is no longer assigned." };
+    if ("success" in result && result.success === false) return result;
+
     return {
       success: true,
       data: result,
@@ -281,6 +344,7 @@ export async function publishCentralDeployment(
 export type CloseCentralDeploymentResult = ServiceResult;
 
 export async function closeCentralDeployment(
+  programId: string,
   deploymentId: string
 ): Promise<CloseCentralDeploymentResult> {
   // 1. Authenticate and check role
@@ -293,21 +357,8 @@ export async function closeCentralDeployment(
     };
   }
 
-  // 2. Resolve PH's program assignment
-  const phAssignment = await prisma.programHeadAssignment.findFirst({
-    where: {
-      program_head_id: authSession.userId,
-      is_active: true,
-    },
-    select: { program_id: true },
-  });
-
-  if (!phAssignment) {
-    return {
-      success: false,
-      error: "No active program assignment found for this Program Head.",
-    };
-  }
+  const contextResult = await resolveProgramHeadContext(programId);
+  if (!contextResult.success) return contextResult;
 
   // 3. Load the deployment
   const deployment = await prisma.centralDeployment.findUnique({
@@ -320,7 +371,7 @@ export async function closeCentralDeployment(
   }
 
   // 4. Validate scope — PH must own the program
-  if (deployment.program_id !== phAssignment.program_id) {
+  if (deployment.program_id !== contextResult.data.selectedProgram.id) {
     return {
       success: false,
       error: "You do not have permission to close this deployment.",
@@ -339,10 +390,32 @@ export async function closeCentralDeployment(
   }
 
   // 6. Update status to CLOSED
-  await prisma.centralDeployment.update({
-    where: { id: deploymentId },
-    data: { status: DeploymentStatus.CLOSED },
+  const result = await prisma.$transaction(async (tx) => {
+    const currentProgram = await revalidateProgramHeadAssignment(tx, {
+      userId: contextResult.data.userId,
+      programId: contextResult.data.selectedProgram.id,
+    });
+    if (!currentProgram) return false;
+    const currentDeployment = await tx.centralDeployment.findUnique({
+      where: { id: deploymentId },
+      select: { program_id: true, status: true },
+    });
+    if (
+      !currentDeployment ||
+      currentDeployment.program_id !== contextResult.data.selectedProgram.id ||
+      (currentDeployment.status !== DeploymentStatus.ACTIVE &&
+        currentDeployment.status !== DeploymentStatus.SCHEDULED)
+    ) {
+      return false;
+    }
+    await tx.centralDeployment.update({
+      where: { id: deploymentId },
+      data: { status: DeploymentStatus.CLOSED },
+    });
+    return true;
   });
+
+  if (!result) return { success: false, error: "You do not have permission to close this deployment." };
 
   return { success: true, data: undefined };
 }

@@ -71,6 +71,7 @@ export type PublishCourseBoundEvaluationInput = {
   deadlineAt?: Date | null;
   deploymentName: string;
   exclusions?: CourseBoundEvaluationExclusionInput[];
+  programId?: string;
   templateId: string;
 };
 
@@ -83,6 +84,7 @@ export type CourseBoundEvaluationExclusionInput = {
 export type LateIncludeCourseBoundEvaluationInput = {
   evaluationId: string;
   membershipId: string;
+  programId?: string;
   reversalCategory: CourseBoundEvaluationExclusionReversalCategory;
   reversalOtherExplanation?: string;
 };
@@ -128,6 +130,7 @@ export type PreviewRespondent = {
  */
 export type PreviewCourseBoundRespondentsInput = {
   assignmentId: string;
+  programId?: string;
 };
 
 export type PreviewCourseBoundRespondentsResult =

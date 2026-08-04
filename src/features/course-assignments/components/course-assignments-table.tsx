@@ -57,6 +57,7 @@ import type {
 } from "@/features/course-assignments/types";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { getYearLevelDisplay, getSectionLabel } from "@/lib/constants/academic";
+import { buildProgramHeadCourseRosterPath } from "@/lib/constants/program-head-routes";
 
 interface Program {
   id: string;
@@ -78,6 +79,7 @@ interface CourseAssignmentsTableProps {
   onPageChange: (page: number) => void;
   onAssignmentUpdated?: () => void;
   onAssignFaculty?: () => void;
+  selectedProgramId?: string;
 }
 
 export function CourseAssignmentsTable({
@@ -92,6 +94,7 @@ export function CourseAssignmentsTable({
   onPageChange,
   onAssignmentUpdated,
   onAssignFaculty,
+  selectedProgramId,
 }: CourseAssignmentsTableProps) {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -110,7 +113,7 @@ export function CourseAssignmentsTable({
 
   const handleActivate = async (assignmentId: string) => {
     setProcessingId(assignmentId);
-    const result = await activateCourseAssignmentAction({ assignmentId });
+    const result = await activateCourseAssignmentAction({ assignmentId, programId: selectedProgramId });
     setProcessingId(null);
 
     if (result.success) {
@@ -127,7 +130,7 @@ export function CourseAssignmentsTable({
 
   const handleDeactivate = async (assignmentId: string) => {
     setProcessingId(assignmentId);
-    const result = await deactivateCourseAssignmentAction({ assignmentId });
+    const result = await deactivateCourseAssignmentAction({ assignmentId, programId: selectedProgramId });
     setProcessingId(null);
 
     if (result.success) {
@@ -149,6 +152,7 @@ export function CourseAssignmentsTable({
     setProcessingId(assignmentId);
     const result = await deleteCourseAssignmentAction({
       assignmentId,
+      programId: selectedProgramId,
       confirmationLabel,
       revision: preflight.revision,
       membershipCount: preflight.membershipCount,
@@ -188,7 +192,10 @@ export function CourseAssignmentsTable({
     setDeletionPreflight(null);
     setDeletionError(null);
     setConfirmationLabel("");
-    const result = await preflightCourseAssignmentDeletionAction(assignment.id);
+    const result = await preflightCourseAssignmentDeletionAction({
+      assignmentId: assignment.id,
+      programId: selectedProgramId,
+    });
     if (request !== deletionRequest.current) return;
     if (result.success) setDeletionPreflight(result.data);
     else {
@@ -289,12 +296,20 @@ export function CourseAssignmentsTable({
               return (
                 <TableRow key={assignment.id} data-readonly={isReadOnly || undefined}>
                   <TableCell>
-                    <Link
-                      href={`/course-rosters/${assignment.id}`}
-                      className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
-                    >
-                      Open roster
-                    </Link>
+                    {mode === "all-program" || (mode === "program-head" && selectedProgramId) ? (
+                      <Link
+                        href={
+                          mode === "all-program"
+                            ? `/course-rosters/${assignment.id}`
+                            : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id)
+                        }
+                        className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+                      >
+                        Open roster
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground px-2 text-sm">Roster available in next phase</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -345,7 +360,7 @@ export function CourseAssignmentsTable({
                           }
                         />
                         <DropdownMenuContent align="end">
-                          {mode === "all-program" && (
+                          {(mode === "all-program" || !isGeneralEducation) && (
                             <DropdownMenuItem
                               onClick={() => setEditAssignment(assignment)}
                               disabled={processingId === assignment.id}
@@ -479,7 +494,7 @@ export function CourseAssignmentsTable({
         </AlertDialogContent>
       </AlertDialog>
 
-      {mode === "all-program" && (
+      {editAssignment !== null && (
         <EditCourseAssignmentDialog
           open={editAssignment !== null}
           onOpenChange={(open) => {
@@ -492,6 +507,7 @@ export function CourseAssignmentsTable({
             setEditAssignment(null);
             onAssignmentUpdated?.();
           }}
+          selectedProgramId={selectedProgramId}
         />
       )}
 

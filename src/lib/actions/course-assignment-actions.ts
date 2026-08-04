@@ -34,9 +34,12 @@ import type {
   CourseAssignmentDeletionPreflight,
   CourseAssignmentResult,
 } from "@/features/course-assignments/types";
+import { buildProgramHeadCourseAssignmentsPath } from "@/lib/constants/program-head-routes";
 
-function revalidateCourseAssignmentRoutes() {
-  revalidatePath("/program-head/course-assignments");
+function revalidateCourseAssignmentRoutes(programIds?: string | string[]) {
+  for (const programId of programIds ? (Array.isArray(programIds) ? programIds : [programIds]) : []) {
+    revalidatePath(buildProgramHeadCourseAssignmentsPath(programId));
+  }
   revalidatePath("/secretary/course-assignments");
   revalidatePath("/dean/academic-structure/course-assignments");
   revalidatePath("/faculty/course-rosters");
@@ -55,7 +58,9 @@ export async function createCourseAssignmentAction(input: CreateCourseAssignment
   const result = await createCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidateCourseAssignmentRoutes();
+    revalidateCourseAssignmentRoutes(
+      result.data?.programIds ?? parsed.data.selectedProgramId
+    );
   }
 
   return result;
@@ -74,7 +79,9 @@ export async function updateCourseAssignmentAction(input: UpdateCourseAssignment
   const result = await updateCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidateCourseAssignmentRoutes();
+    revalidateCourseAssignmentRoutes(
+      result.data?.programIds ?? parsed.data.selectedProgramId
+    );
   }
 
   return result;
@@ -90,10 +97,10 @@ export async function deactivateCourseAssignmentAction(input: DeactivateCourseAs
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const result = await deactivateCourseAssignment(parsed.data.assignmentId);
+  const result = await deactivateCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidateCourseAssignmentRoutes();
+    revalidateCourseAssignmentRoutes(result.data?.programIds ?? parsed.data.programId);
   }
 
   return result;
@@ -112,7 +119,7 @@ export async function activateCourseAssignmentAction(input: ActivateCourseAssign
   const result = await activateCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidateCourseAssignmentRoutes();
+    revalidateCourseAssignmentRoutes(result.data?.programIds ?? parsed.data.programId);
   }
 
   return result;
@@ -131,7 +138,7 @@ export async function deleteCourseAssignmentAction(input: DeleteCourseAssignment
   const result = await deleteCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidateCourseAssignmentRoutes();
+    revalidateCourseAssignmentRoutes(result.data?.programIds ?? parsed.data.programId);
   }
 
   return result;
@@ -141,11 +148,13 @@ export async function deleteCourseAssignmentAction(input: DeleteCourseAssignment
  * Load current server-owned facts for the destructive confirmation dialog.
  */
 export async function preflightCourseAssignmentDeletionAction(
-  assignmentId: string
+  input: string | { assignmentId: string; programId?: string }
 ): Promise<CourseAssignmentResult<CourseAssignmentDeletionPreflight>> {
-  const parsed = preflightCourseAssignmentDeletionSchema.safeParse({ assignmentId });
+  const parsed = preflightCourseAssignmentDeletionSchema.safeParse(
+    typeof input === "string" ? { assignmentId: input } : input
+  );
   if (!parsed.success) return { success: false, error: "Invalid course assignment." };
-  return preflightCourseAssignmentDeletion(parsed.data.assignmentId);
+  return preflightCourseAssignmentDeletion(parsed.data);
 }
 
 /**
@@ -158,10 +167,15 @@ export async function bulkCreateCourseAssignmentsAction(input: BulkCreateCourseA
     return { success: false, errors: [{ index: -1, error: "Invalid input" }], created: 0 };
   }
 
-  const result = await bulkCreateCourseAssignments(parsed.data.assignments);
+  const result = await bulkCreateCourseAssignments(
+    parsed.data.assignments,
+    parsed.data.selectedProgramId
+  );
 
   if (result.success) {
-    revalidateCourseAssignmentRoutes();
+    revalidateCourseAssignmentRoutes(
+      parsed.data.selectedProgramId ?? parsed.data.assignments.map((assignment) => assignment.programId)
+    );
   }
 
   return result;

@@ -30,6 +30,8 @@ export default async function CourseRosterDetailRoute({
   if (!z.string().uuid().safeParse(assignmentId).success) notFound();
   const parsed = searchParamsSchema.safeParse(rawSearchParams);
   if (!parsed.success) notFound();
+  const session = await resolveAuthSession();
+  if (session?.activeRole === ROLES.PROGRAM_HEAD) redirect("/program-head");
   const result = await getCourseRosterDetail(assignmentId, {
     includeRemoved: parsed.data.removed === "1",
     search: parsed.data.search,
@@ -38,7 +40,6 @@ export default async function CourseRosterDetailRoute({
   });
   if (!result.success) {
     if (result.error === "Course assignment not found.") notFound();
-    const session = await resolveAuthSession();
     const backHref = resolveBackHref(session?.activeRole);
     const backLabel =
       session?.activeRole === ROLES.FACULTY
@@ -54,7 +55,6 @@ export default async function CourseRosterDetailRoute({
       />
     );
   }
-  const session = await resolveAuthSession();
   const backHref = resolveBackHref(session?.activeRole);
   const backLabel =
     session?.activeRole === ROLES.FACULTY
@@ -78,6 +78,6 @@ function resolveBackHref(activeRole: string | null | undefined) {
     : activeRole === ROLES.DEAN
       ? "/dean/academic-structure/course-assignments"
       : activeRole === ROLES.PROGRAM_HEAD
-        ? "/program-head/course-assignments"
+        ? "/program-head"
         : "/faculty/course-rosters";
 }

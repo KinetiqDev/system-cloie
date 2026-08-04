@@ -325,11 +325,15 @@ export function CourseRosterDetailPage({
   error,
   backHref = "/faculty/course-rosters",
   backLabel = "Back to My Course Rosters",
+  rosterBasePath,
+  programId,
 }: {
   data: CourseRosterDetail | null;
   error?: string;
   backHref?: string;
   backLabel?: string;
+  rosterBasePath?: string;
+  programId?: string;
 }) {
   if (!data)
     return <SafeRosterError message={error ?? "The roster request could not be completed."} />;
@@ -362,8 +366,8 @@ export function CourseRosterDetailPage({
         activeRosterCount={data.activeRosterCount}
         evaluationEligibleCount={data.evaluationEligibleCount}
       />
-      {canWrite && <AddRosterMember assignmentId={assignment.assignmentId} />}
-      {canWrite && <ImportRosterCsv assignmentId={assignment.assignmentId} />}
+      {canWrite && <AddRosterMember assignmentId={assignment.assignmentId} programId={programId} />}
+      {canWrite && <ImportRosterCsv assignmentId={assignment.assignmentId} programId={programId} />}
 
       <Card>
         <CardHeader>
@@ -374,21 +378,30 @@ export function CourseRosterDetailPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <RosterFilters data={data} assignmentId={assignment.assignmentId} />
+          <RosterFilters data={data} assignmentId={assignment.assignmentId} rosterBasePath={rosterBasePath} />
           <RosterTable
             members={data.members}
             includeRemoved={data.includeRemoved}
             assignment={assignment}
             canWrite={canWrite}
+            programId={programId}
           />
-          <DetailPagination data={data} assignmentId={assignment.assignmentId} />
+          <DetailPagination data={data} assignmentId={assignment.assignmentId} rosterBasePath={rosterBasePath} />
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function RosterFilters({ data, assignmentId }: { data: CourseRosterDetail; assignmentId: string }) {
+function RosterFilters({
+  data,
+  assignmentId,
+  rosterBasePath,
+}: {
+  data: CourseRosterDetail;
+  assignmentId: string;
+  rosterBasePath?: string;
+}) {
   const sortParams = new URLSearchParams({
     search: data.search,
     sort: data.sortDirection === "asc" ? "desc" : "asc",
@@ -432,7 +445,7 @@ function RosterFilters({ data, assignmentId }: { data: CourseRosterDetail; assig
           Include removed students
         </label>
         <Link
-          href={`/course-rosters/${assignmentId}?${sortParams}`}
+          href={`${rosterBasePath ?? "/course-rosters"}/${assignmentId}?${sortParams}`}
           aria-label={`Sort by name ${data.sortDirection === "asc" ? "descending" : "ascending"}`}
           className="focus-visible:ring-ring text-primary inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
@@ -448,11 +461,13 @@ function RosterTable({
   includeRemoved,
   assignment,
   canWrite,
+  programId,
 }: {
   members: CourseRosterMember[];
   includeRemoved: boolean;
   assignment: CourseRosterAssignmentSummary;
   canWrite: boolean;
+  programId?: string;
 }) {
   if (members.length === 0) {
     return (
@@ -548,9 +563,13 @@ function RosterTable({
               {canWrite && (
                 <td className="px-3 py-4">
                   {member.isActive ? (
-                    <RemoveRosterMember assignment={assignment} member={member} />
+                    <RemoveRosterMember assignment={assignment} member={member} programId={programId} />
                   ) : (
-                    <RestoreRosterMember assignmentId={assignment.assignmentId} member={member} />
+                    <RestoreRosterMember
+                      assignmentId={assignment.assignmentId}
+                      member={member}
+                      programId={programId}
+                    />
                   )}
                 </td>
               )}
@@ -565,16 +584,18 @@ function RosterTable({
 function DetailPagination({
   data,
   assignmentId,
+  rosterBasePath,
 }: {
   data: CourseRosterDetail;
   assignmentId: string;
+  rosterBasePath?: string;
 }) {
   if (data.totalPages <= 1) return null;
   const href = (page: number) => {
     const params = new URLSearchParams({ page: String(page), sort: data.sortDirection });
     if (data.search) params.set("search", data.search);
     if (data.includeRemoved) params.set("removed", "1");
-    return `/course-rosters/${assignmentId}?${params}`;
+    return `${rosterBasePath ?? "/course-rosters"}/${assignmentId}?${params}`;
   };
   return (
     <nav

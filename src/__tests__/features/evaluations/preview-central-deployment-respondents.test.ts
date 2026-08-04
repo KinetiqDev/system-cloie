@@ -11,6 +11,7 @@ const {
   findManyIndustryPartnerMock,
   listStudentsForClassMock,
   resolveAuthSessionMock,
+  resolveProgramHeadContextMock,
 } = vi.hoisted(() => ({
   findFirstPhAssignmentMock: vi.fn(),
   findUniqueProgramMock: vi.fn(),
@@ -19,6 +20,7 @@ const {
   findManyIndustryPartnerMock: vi.fn(),
   listStudentsForClassMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -44,6 +46,9 @@ vi.mock("@/lib/db/prisma", () => ({
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
 }));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+}));
 
 vi.mock("@/features/enrollments/services/list-students-for-class", () => ({
   listStudentsForClass: listStudentsForClassMock,
@@ -52,10 +57,22 @@ vi.mock("@/features/enrollments/services/list-students-for-class", () => ({
 describe("previewCentralDeploymentRespondents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "ph-1",
+        authorizedPrograms: [{ id: "program-1", code: "BSCS", name: "Computer Science" }],
+        selectedProgram: { id: "program-1", code: "BSCS", name: "Computer Science" },
+      },
+    });
   });
 
   it("rejects unauthorized access when session is missing or user is not a program head", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "Program Head authentication is required.",
+    });
 
     const result = await previewCentralDeploymentRespondents({
       programId: "program-1",
@@ -70,6 +87,10 @@ describe("previewCentralDeploymentRespondents", () => {
   it("returns error if no active program head assignment is found", async () => {
     resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
     findFirstPhAssignmentMock.mockResolvedValue(null);
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "No active program assignment found for this Program Head.",
+    });
 
     const result = await previewCentralDeploymentRespondents({
       programId: "program-1",
@@ -79,14 +100,23 @@ describe("previewCentralDeploymentRespondents", () => {
     if (!result.success) {
       expect(result.error).toBe("No active program assignment found for this Program Head.");
     }
-    expect(findFirstPhAssignmentMock).toHaveBeenCalledWith({
-      where: {
-        program_head_id: "ph-1",
-        program_id: "program-1",
-        is_active: true,
-      },
-      select: { program_id: true },
+  });
+
+  it("does not query respondents for an unassigned selected Program", async () => {
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "Selected Program is not assigned.",
     });
+
+    const result = await previewCentralDeploymentRespondents({
+      programId: "program-2",
+      targetStakeholder: TargetStakeholder.STUDENT,
+    });
+
+    expect(result).toEqual({ success: false, error: "Selected Program is not assigned." });
+    expect(listStudentsForClassMock).not.toHaveBeenCalled();
+    expect(findManyExternalInviteMock).not.toHaveBeenCalled();
+    expect(findManyIndustryPartnerMock).not.toHaveBeenCalled();
   });
 
   describe("student targeting", () => {

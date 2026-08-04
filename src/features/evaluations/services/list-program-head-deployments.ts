@@ -1,7 +1,6 @@
-import { ROLES } from "@/lib/constants/roles";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type { DeploymentStatus, TargetStakeholder } from "@prisma/client";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
@@ -32,42 +31,16 @@ export type ListProgramHeadDeploymentsResult = {
 
 // ─── Main Service ────────────────────────────────────────────────────────────
 
-export async function listProgramHeadDeployments(): Promise<
+export async function listProgramHeadDeployments(programId: string): Promise<
   ServiceResult<ListProgramHeadDeploymentsResult>
 > {
-  // 1. Authenticate and check role
-  const authSession = await resolveAuthSession();
-
-  if (authSession?.activeRole !== ROLES.PROGRAM_HEAD) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  // 2. Resolve PH's program assignment(s)
-  const assignments = await prisma.programHeadAssignment.findMany({
-    where: {
-      program_head_id: authSession.userId,
-      is_active: true,
-    },
-    select: { program_id: true },
-  });
-
-  const programIds = [...new Set(assignments.map((a) => a.program_id))];
-
-  if (programIds.length === 0) {
-    return {
-      success: false,
-      error: "No active program assignment found for this Program Head.",
-    };
-  }
-
-  const primaryProgramId = programIds[0];
+  const contextResult = await resolveProgramHeadContext(programId);
+  if (!contextResult.success) return contextResult;
+  const selectedProgram = contextResult.data.selectedProgram;
 
   // 3. Resolve program info
   const program = await prisma.program.findUnique({
-    where: { id: primaryProgramId },
+    where: { id: selectedProgram.id },
     select: { id: true, code: true, name: true },
   });
 
@@ -75,10 +48,10 @@ export async function listProgramHeadDeployments(): Promise<
     return { success: false, error: "Assigned program not found." };
   }
 
-  // 4. Query CentralDeployment where program_id is in PH's program IDs
+  // 4. Query CentralDeployment only for the selected Program.
   const rawDeployments = await prisma.centralDeployment.findMany({
     where: {
-      program_id: { in: programIds },
+        program_id: selectedProgram.id,
     },
     include: {
       instrument: {

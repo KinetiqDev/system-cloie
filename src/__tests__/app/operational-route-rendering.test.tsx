@@ -102,7 +102,7 @@ const loadingRoutes = [
 const errorBoundaries = [
   [SecretaryError, "/secretary/dashboard"],
   [FacultyError, "/faculty/dashboard"],
-  [ProgramHeadError, "/program-head/dashboard"],
+  [ProgramHeadError, "/program-head"],
   [DeanError, "/dean/dashboard"],
 ] as const;
 

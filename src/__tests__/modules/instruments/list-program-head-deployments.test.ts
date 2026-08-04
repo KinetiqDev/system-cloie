@@ -10,6 +10,10 @@ const {
   programHeadAssignmentFindManyMock,
   programHeadAssignmentFindFirstMock,
   resolveAuthSessionMock,
+  resolveProgramHeadContextMock,
+  transactionMock,
+  txQueryRawMock,
+  txProgramFindUniqueMock,
 } = vi.hoisted(() => ({
   centralDeploymentFindManyMock: vi.fn(),
   centralDeploymentFindUniqueMock: vi.fn(),
@@ -18,14 +22,18 @@ const {
   programHeadAssignmentFindManyMock: vi.fn(),
   programHeadAssignmentFindFirstMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+  transactionMock: vi.fn(),
+  txQueryRawMock: vi.fn(),
+  txProgramFindUniqueMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     centralDeployment: {
       findMany: centralDeploymentFindManyMock,
-      findUnique: centralDeploymentFindUniqueMock,
       update: centralDeploymentUpdateMock,
+      findUnique: centralDeploymentFindUniqueMock,
     },
     program: {
       findUnique: programFindUniqueMock,
@@ -34,11 +42,16 @@ vi.mock("@/lib/db/prisma", () => ({
       findMany: programHeadAssignmentFindManyMock,
       findFirst: programHeadAssignmentFindFirstMock,
     },
+    $transaction: transactionMock,
   },
 }));
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
+}));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignment: async () => ({ id: PROGRAM_ID, code: "BSIT", name: "BS Information Technology" }),
 }));
 
 // ─── Test Fixtures ───────────────────────────────────────────────────────────
@@ -129,6 +142,24 @@ function mockProgram(program = PROGRAM) {
 describe("listProgramHeadDeployments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: PH_SESSION.userId,
+        authorizedPrograms: [PROGRAM],
+        selectedProgram: PROGRAM,
+      },
+    });
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        $queryRaw: txQueryRawMock.mockResolvedValue([{ is_active: true, program_id: PROGRAM_ID }]),
+        program: { findUnique: txProgramFindUniqueMock.mockResolvedValue(PROGRAM) },
+        centralDeployment: {
+          findUnique: centralDeploymentFindUniqueMock,
+          update: centralDeploymentUpdateMock,
+        },
+      })
+    );
   });
 
   it("returns deployments for the PH's program with correct counts", async () => {
@@ -140,7 +171,7 @@ describe("listProgramHeadDeployments", () => {
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
 
-    const result = await listProgramHeadDeployments();
+    const result = await listProgramHeadDeployments(PROGRAM_ID);
 
     expect(result.success).toBe(true);
     if (!result.success) return;
@@ -168,24 +199,46 @@ describe("listProgramHeadDeployments", () => {
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
 
-    await listProgramHeadDeployments();
+    await listProgramHeadDeployments(PROGRAM_ID);
 
     expect(centralDeploymentFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          program_id: { in: [PROGRAM_ID] },
+          program_id: PROGRAM_ID,
         },
       })
     );
   });
 
+  it("never includes another assigned Program in the selected deployment list", async () => {
+    mockAuthenticatedPH();
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: PH_SESSION.userId,
+        authorizedPrograms: [PROGRAM, { id: "program-2", code: "BSED", name: "BSED" }],
+        selectedProgram: PROGRAM,
+      },
+    });
+    mockProgram();
+    centralDeploymentFindManyMock.mockResolvedValue([]);
+
+    const { listProgramHeadDeployments } = await import("@/features/evaluations/services/list-program-head-deployments");
+    await listProgramHeadDeployments(PROGRAM_ID);
+
+    expect(centralDeploymentFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { program_id: PROGRAM_ID } })
+    );
+  });
+
   it("rejects unauthenticated users", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
+    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "Program Head authentication is required." });
 
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
 
-    const result = await listProgramHeadDeployments();
+    const result = await listProgramHeadDeployments(PROGRAM_ID);
 
     expect(result.success).toBe(false);
     if (result.success) return;
@@ -198,11 +251,12 @@ describe("listProgramHeadDeployments", () => {
       activeRole: ROLES.FACULTY,
       roles: [ROLES.FACULTY],
     });
+    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "Program Head authentication is required." });
 
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
 
-    const result = await listProgramHeadDeployments();
+    const result = await listProgramHeadDeployments(PROGRAM_ID);
 
     expect(result.success).toBe(false);
     if (result.success) return;
@@ -212,11 +266,12 @@ describe("listProgramHeadDeployments", () => {
   it("returns error when PH has no program assignment", async () => {
     mockAuthenticatedPH();
     programHeadAssignmentFindManyMock.mockResolvedValue([]);
+    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "No active program assignment found for this Program Head." });
 
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
 
-    const result = await listProgramHeadDeployments();
+    const result = await listProgramHeadDeployments(PROGRAM_ID);
 
     expect(result.success).toBe(false);
     if (result.success) return;
@@ -232,7 +287,7 @@ describe("listProgramHeadDeployments", () => {
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
 
-    const result = await listProgramHeadDeployments();
+    const result = await listProgramHeadDeployments(PROGRAM_ID);
 
     expect(result.success).toBe(true);
     if (!result.success) return;
@@ -254,7 +309,7 @@ describe("listProgramHeadDeployments", () => {
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
 
-    const result = await listProgramHeadDeployments();
+    const result = await listProgramHeadDeployments(PROGRAM_ID);
 
     expect(result.success).toBe(true);
     if (!result.success) return;
@@ -285,7 +340,7 @@ describe("closeCentralDeployment", () => {
     const { closeCentralDeployment } =
       await import("@/features/evaluations/services/publish-central-deployment");
 
-    const result = await closeCentralDeployment("deploy-1");
+    const result = await closeCentralDeployment(PROGRAM_ID, "deploy-1");
 
     expect(result.success).toBe(true);
     expect(centralDeploymentUpdateMock).toHaveBeenCalledWith({
@@ -307,7 +362,7 @@ describe("closeCentralDeployment", () => {
     const { closeCentralDeployment } =
       await import("@/features/evaluations/services/publish-central-deployment");
 
-    const result = await closeCentralDeployment("deploy-1");
+    const result = await closeCentralDeployment(PROGRAM_ID, "deploy-1");
 
     expect(result.success).toBe(true);
   });
@@ -324,7 +379,7 @@ describe("closeCentralDeployment", () => {
     const { closeCentralDeployment } =
       await import("@/features/evaluations/services/publish-central-deployment");
 
-    const result = await closeCentralDeployment("deploy-1");
+    const result = await closeCentralDeployment(PROGRAM_ID, "deploy-1");
 
     expect(result.success).toBe(false);
     if (result.success) return;
@@ -343,7 +398,7 @@ describe("closeCentralDeployment", () => {
     const { closeCentralDeployment } =
       await import("@/features/evaluations/services/publish-central-deployment");
 
-    const result = await closeCentralDeployment("deploy-1");
+    const result = await closeCentralDeployment(PROGRAM_ID, "deploy-1");
 
     expect(result.success).toBe(false);
     if (result.success) return;
@@ -362,7 +417,7 @@ describe("closeCentralDeployment", () => {
     const { closeCentralDeployment } =
       await import("@/features/evaluations/services/publish-central-deployment");
 
-    const result = await closeCentralDeployment("deploy-other");
+    const result = await closeCentralDeployment(PROGRAM_ID, "deploy-other");
 
     expect(result.success).toBe(false);
     if (result.success) return;
@@ -375,7 +430,7 @@ describe("closeCentralDeployment", () => {
     const { closeCentralDeployment } =
       await import("@/features/evaluations/services/publish-central-deployment");
 
-    const result = await closeCentralDeployment("deploy-1");
+    const result = await closeCentralDeployment(PROGRAM_ID, "deploy-1");
 
     expect(result.success).toBe(false);
     if (result.success) return;
@@ -392,7 +447,7 @@ describe("closeCentralDeployment", () => {
     const { closeCentralDeployment } =
       await import("@/features/evaluations/services/publish-central-deployment");
 
-    const result = await closeCentralDeployment("deploy-1");
+    const result = await closeCentralDeployment(PROGRAM_ID, "deploy-1");
 
     expect(result.success).toBe(false);
     if (result.success) return;
@@ -407,7 +462,7 @@ describe("closeCentralDeployment", () => {
     const { closeCentralDeployment } =
       await import("@/features/evaluations/services/publish-central-deployment");
 
-    const result = await closeCentralDeployment("nonexistent");
+    const result = await closeCentralDeployment(PROGRAM_ID, "nonexistent");
 
     expect(result.success).toBe(false);
     if (result.success) return;

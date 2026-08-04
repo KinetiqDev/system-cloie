@@ -1,45 +1,21 @@
 "use server";
 
 import { EvaluationTemplateType, Prisma } from "@prisma/client";
-import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  revalidateProgramHeadAssignment,
+  resolveProgramHeadContext,
+} from "@/features/auth/services/resolve-program-head-context";
 import type { TemplateStructure } from "../types";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
 interface CreateBaselineCopyInput {
+  programId: string;
   baselineId: string;
   customName: string;
   structure: TemplateStructure;
-}
-
-async function requirePHSession(): Promise<
-  ServiceResult<{ userId: string; programIds: string[] }>
-> {
-  const session = await resolveAuthSession();
-
-  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
-    return { success: false, error: "Unauthorized: Program Head access required." };
-  }
-
-  // Get active program assignments
-  const assignments = await prisma.programHeadAssignment.findMany({
-    where: { program_head_id: session.userId, is_active: true },
-    select: { program_id: true },
-  });
-
-  const programIds = [...new Set(assignments.map((a) => a.program_id))];
-
-  if (programIds.length === 0) {
-    return {
-      success: false,
-      error: "No active program assignment found for this Program Head.",
-    };
-  }
-
-  return { success: true, data: { userId: session.userId, programIds } };
 }
 
 function generateProgramTemplateCode(programCode: string, baseCode: string): string {
@@ -50,16 +26,14 @@ function generateProgramTemplateCode(programCode: string, baseCode: string): str
 export async function createBaselineCopy(
   input: CreateBaselineCopyInput
 ): Promise<ServiceResult<{ id: string }>> {
-  const authResult = await requirePHSession();
+  const authResult = await resolveProgramHeadContext(input.programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programIds } = authResult.data;
-
-  // Use first assigned program (Program Heads typically have one program)
-  const programId = programIds[0];
+  const { userId, selectedProgram } = authResult.data;
+  const programId = selectedProgram.id;
 
   // Fetch the baseline template
   const baseline = await prisma.instrumentTemplate.findUnique({
@@ -103,6 +77,9 @@ export async function createBaselineCopy(
 
   try {
     const template = await prisma.$transaction(async (tx) => {
+      const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
+      if (!currentProgram) return null;
+
       const createdTemplate = await tx.instrumentTemplate.create({
         data: {
           code,
@@ -132,6 +109,7 @@ export async function createBaselineCopy(
       return createdTemplate;
     });
 
+    if (!template) return { success: false, error: "Selected Program is no longer assigned." };
     return { success: true, data: { id: template.id } };
   } catch (error) {
     if (isUniqueConstraintError(error)) {

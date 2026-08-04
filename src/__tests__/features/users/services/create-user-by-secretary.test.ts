@@ -634,6 +634,9 @@ describe("createUserBySecretary service", () => {
         role: SystemRole.PROGRAM_HEAD,
       },
     });
+    // A Secretary-created Program Head account starts with exactly one active
+    // assignment; creation never seeds a second or a primary/default Program.
+    expect(prisma.programHeadAssignment.create).toHaveBeenCalledTimes(1);
     expect(prisma.programHeadAssignment.create).toHaveBeenCalledWith({
       data: {
         program_head_id: "user-ph",

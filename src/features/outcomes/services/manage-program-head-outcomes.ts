@@ -1,6 +1,5 @@
-import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type { CreateGOInput, UpdateGOInput } from "../schemas/go";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
@@ -12,26 +11,6 @@ async function writeProgramHeadOutcome(
   const review = await prepareOutcomeWrite(input);
   if (!review.success) return review;
   return commitOutcomeWrite(review.data, true);
-}
-
-async function resolveAndValidatePHScope(
-  userId: string
-): Promise<ServiceResult<{ programIds: string[] }>> {
-  const assignments = await prisma.programHeadAssignment.findMany({
-    where: { program_head_id: userId, is_active: true },
-    select: { program_id: true },
-  });
-
-  const programIds = [...new Set(assignments.map((a) => a.program_id))];
-
-  if (programIds.length === 0) {
-    return {
-      success: false,
-      error: "No active program assignment found for this Program Head.",
-    };
-  }
-
-  return { success: true, data: { programIds } };
 }
 
 // ─── List GOs ────────────────────────────────────────────────────────────────
@@ -53,27 +32,16 @@ export type ListProgramGOsResult = {
   program: { id: string; code: string; name: string };
 };
 
-export async function listProgramGOs(): Promise<ServiceResult<ListProgramGOsResult>> {
-  const session = await resolveAuthSession();
+export async function listProgramGOs(
+  programId: string
+): Promise<ServiceResult<ListProgramGOsResult>> {
+  const contextResult = await resolveProgramHeadContext(programId);
+  if (!contextResult.success) return contextResult;
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
-  const programId = programIds[0];
+  const selectedProgramId = contextResult.data.selectedProgram.id;
 
   const program = await prisma.program.findUnique({
-    where: { id: programId },
+    where: { id: selectedProgramId },
     select: { id: true, code: true, name: true },
   });
 
@@ -82,7 +50,7 @@ export async function listProgramGOs(): Promise<ServiceResult<ListProgramGOsResu
   }
 
   const gos = await prisma.gO.findMany({
-    where: { program_id: programId },
+    where: { program_id: selectedProgramId },
     include: {
       _count: {
         select: { cilo_mappings: true },
@@ -100,25 +68,10 @@ export async function listProgramGOs(): Promise<ServiceResult<ListProgramGOsResu
 // ─── Create GO ───────────────────────────────────────────────────────────────
 
 export async function createGO(input: CreateGOInput): Promise<ServiceResult<{ id: string }>> {
-  const session = await resolveAuthSession();
+  const contextResult = await resolveProgramHeadContext(input.programId);
+  if (!contextResult.success) return contextResult;
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
-  const programId = programIds[0];
-
-  const result = await writeProgramHeadOutcome({ kind: "GO", action: "create", programId, ...input });
+  const result = await writeProgramHeadOutcome({ kind: "GO", action: "create", ...input });
   if (!result.success) return result;
   if (!result.data.id) return { success: false, error: "Graduate Outcome was not created." };
   return { success: true, data: { id: result.data.id } };
@@ -127,22 +80,8 @@ export async function createGO(input: CreateGOInput): Promise<ServiceResult<{ id
 // ─── Update GO ───────────────────────────────────────────────────────────────
 
 export async function updateGO(input: UpdateGOInput): Promise<ServiceResult<{ id: string }>> {
-  const session = await resolveAuthSession();
-
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
+  const contextResult = await resolveProgramHeadContext(input.programId);
+  if (!contextResult.success) return contextResult;
 
   const existingGO = await prisma.gO.findUnique({
     where: { id: input.id },
@@ -153,7 +92,7 @@ export async function updateGO(input: UpdateGOInput): Promise<ServiceResult<{ id
     return { success: false, error: "Graduate Outcome not found." };
   }
 
-  if (!programIds.includes(existingGO.program_id)) {
+  if (input.programId !== existingGO.program_id) {
     return {
       success: false,
       error: "You do not have permission to modify this Graduate Outcome.",
@@ -168,63 +107,43 @@ export async function updateGO(input: UpdateGOInput): Promise<ServiceResult<{ id
 
 // ─── Delete GO ───────────────────────────────────────────────────────────────
 
-export async function deleteGO(id: string): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
+export async function deleteGO(programId: string, id: string): Promise<ServiceResult> {
+  const contextResult = await resolveProgramHeadContext(programId);
+  if (!contextResult.success) return contextResult;
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
-
-  const existingGO = await prisma.gO.findUnique({ where: { id }, select: { id: true, program_id: true } });
+  const existingGO = await prisma.gO.findUnique({
+    where: { id },
+    select: { id: true, program_id: true },
+  });
 
   if (!existingGO) {
     return { success: false, error: "Graduate Outcome not found." };
   }
 
-  if (!programIds.includes(existingGO.program_id)) {
+  if (programId !== existingGO.program_id) {
     return {
       success: false,
       error: "You do not have permission to delete this Graduate Outcome.",
     };
   }
 
-  const result = await writeProgramHeadOutcome({ kind: "GO", action: "archive", id });
+  const result = await writeProgramHeadOutcome({ kind: "GO", action: "archive", programId, id });
   if (!result.success) return result;
   return { success: true, data: undefined };
 }
 
 // ─── Reorder GOs ─────────────────────────────────────────────────────────────
 
-export async function reorderGOs(orderedIds: string[]): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
+export async function reorderGOs(programId: string, orderedIds: string[]): Promise<ServiceResult> {
+  const contextResult = await resolveProgramHeadContext(programId);
+  if (!contextResult.success) return contextResult;
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
-
-  const result = await writeProgramHeadOutcome({ kind: "GO", action: "reorder", programId: programIds[0], orderedIds });
+  const result = await writeProgramHeadOutcome({
+    kind: "GO",
+    action: "reorder",
+    programId,
+    orderedIds,
+  });
   if (!result.success) return result;
   return { success: true, data: undefined };
 }
@@ -244,34 +163,35 @@ export type CourseCILOMappings = {
   cilos: Array<{
     id: string;
     description: string;
-    mappedGOs: Array<{ id: string; code: string; description: string }>;
+    mappedGOs: Array<{ id: string; mappingId: string; code: string; description: string }>;
   }>;
 };
 
-export async function listCILOMappingsForProgram(): Promise<ServiceResult<CourseCILOMappings[]>> {
-  const session = await resolveAuthSession();
+export async function listCILOMappingsForProgram(
+  programId: string
+): Promise<ServiceResult<CourseCILOMappings[]>> {
+  const contextResult = await resolveProgramHeadContext(programId);
+  if (!contextResult.success) return contextResult;
 
-  if (!session || !session.roles.includes(ROLES.PROGRAM_HEAD)) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
-  const programId = programIds[0];
+  const selectedProgramId = contextResult.data.selectedProgram.id;
 
   // Find all courses within this program that have CILOs
   const courses = await prisma.course.findMany({
     where: {
-      program_id: programId,
       cilos: { some: { is_active: true } },
+      OR: [
+        { program_id: selectedProgramId },
+        {
+          course_scope: "GENERAL_EDUCATION",
+          course_assignments: {
+            some: {
+              program_id: selectedProgramId,
+              is_active: true,
+              term_instance: { status: "ACTIVE" },
+            },
+          },
+        },
+      ],
     },
     select: {
       id: true,
@@ -283,7 +203,9 @@ export async function listCILOMappingsForProgram(): Promise<ServiceResult<Course
           id: true,
           description: true,
           cilo_mappings: {
+            where: { go: { program_id: selectedProgramId } },
             select: {
+              id: true,
               go: {
                 select: {
                   id: true,
@@ -309,6 +231,7 @@ export async function listCILOMappingsForProgram(): Promise<ServiceResult<Course
       description: cilo.description,
       mappedGOs: cilo.cilo_mappings.map((mapping) => ({
         id: mapping.go.id,
+        mappingId: mapping.id,
         code: mapping.go.code,
         description: mapping.go.description,
       })),

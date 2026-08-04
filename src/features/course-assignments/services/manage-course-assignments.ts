@@ -4,6 +4,10 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { ROLES } from "@/lib/constants/roles";
 import { Prisma, type SystemRole } from "@prisma/client";
 import { canManageCourseAssignment } from "../policies";
+import {
+  resolveProgramHeadContext,
+  revalidateProgramHeadAssignment,
+} from "@/features/auth/services/resolve-program-head-context";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { getSectionLabel } from "@/lib/constants/academic";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
@@ -15,32 +19,25 @@ import type {
   DeleteCourseAssignmentInput,
   ActivateCourseAssignmentInput,
   CourseAssignmentDeletionPreflight,
+  CourseAssignmentMutationData,
 } from "../types";
 
-/**
- * Resolve the list of program IDs a Program Head is actively assigned to.
- * Returns an empty array for non-PH roles (admin/dean bypass scope checks in the policy).
- */
-async function resolvePHProgramScope(
-  session: Awaited<ReturnType<typeof resolveAuthSession>>
-): Promise<string[]> {
-  return resolvePHProgramScopeWithDb(prisma, session);
+function isProgramHead(session: Awaited<ReturnType<typeof resolveAuthSession>>) {
+  return session?.activeRole === ROLES.PROGRAM_HEAD;
 }
 
-async function resolvePHProgramScopeWithDb(
-  db: typeof prisma | Prisma.TransactionClient,
-  session: Awaited<ReturnType<typeof resolveAuthSession>>
-): Promise<string[]> {
-  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
-    return [];
-  }
+function missingSelectedProgram() {
+  return { success: false as const, error: "Selected Program is required." };
+}
 
-  const rows = await db.programHeadAssignment.findMany({
-    where: { program_head_id: session.userId, is_active: true },
-    select: { program_id: true },
-  });
-
-  return [...new Set(rows.map((r) => r.program_id))];
+async function validateSelectedProgram(
+  session: Awaited<ReturnType<typeof resolveAuthSession>>,
+  programId: string | undefined
+) {
+  if (!session || !isProgramHead(session)) return null;
+  if (!programId) return missingSelectedProgram();
+  const result = await resolveProgramHeadContext(programId);
+  return result.success ? null : result;
 }
 
 type AssignmentLifecycleRow = {
@@ -124,46 +121,68 @@ function unexpectedLifecycleFailure(
  */
 export async function createCourseAssignment(
   input: CreateCourseAssignmentInput
-): Promise<CourseAssignmentResult<{ id: string }>> {
+): Promise<CourseAssignmentResult<{ id: string; programIds: string[] }>> {
   const authSession = await resolveAuthSession();
 
-  // Get course program for scope check
-  const course = await prisma.course.findUnique({
-    where: { id: input.courseId },
-    select: { program_id: true },
-  });
-
-  if (!course) {
-    return { success: false, error: "Course not found." };
+  if (isProgramHead(authSession) && input.selectedProgramId !== input.programId) {
+    return missingSelectedProgram();
   }
-
-  if (course.program_id !== null && course.program_id !== input.programId) {
-    return { success: false, error: "Assignment program must match the Course's owning program." };
-  }
-
-  // Resolve PH program scope and check permissions
-  const phProgramScope = await resolvePHProgramScope(authSession);
-  const permission = canManageCourseAssignment(authSession, course.program_id, phProgramScope);
-  if (!permission.allowed) {
-    return { success: false, error: permission.reason };
-  }
+  const contextFailure = await validateSelectedProgram(authSession, input.selectedProgramId);
+  if (contextFailure) return contextFailure;
 
   try {
-    const assignment = await prisma.courseAssignment.create({
-      data: {
-        term_instance_id: input.termInstanceId,
-        faculty_id: input.facultyId,
-        course_id: input.courseId,
-        program_id: input.programId,
-        year_level: input.yearLevel,
-        section: input.section,
-        is_active: true,
-        ...(authSession?.userId ? { assigned_by: authSession.userId } : {}),
-      },
+    const assignment = await prisma.$transaction(async (tx) => {
+      if (authSession && isProgramHead(authSession)) {
+        const selected = await revalidateProgramHeadAssignment(tx, {
+          userId: authSession.userId,
+          programId: input.programId,
+        });
+        if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
+      }
+
+      const course = await tx.course.findUnique({
+        where: { id: input.courseId },
+        select: { program_id: true },
+      });
+      if (!course) throw new Error("COURSE_NOT_FOUND");
+      if (course.program_id !== null && course.program_id !== input.programId) {
+        throw new Error("COURSE_PROGRAM_MISMATCH");
+      }
+      const permission = canManageCourseAssignment(
+        authSession,
+        course.program_id,
+        authSession && isProgramHead(authSession) ? [input.programId] : []
+      );
+      if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
+
+      return tx.courseAssignment.create({
+        data: {
+          term_instance_id: input.termInstanceId,
+          faculty_id: input.facultyId,
+          course_id: input.courseId,
+          program_id: input.programId,
+          year_level: input.yearLevel,
+          section: input.section,
+          is_active: true,
+          ...(authSession?.userId ? { assigned_by: authSession.userId } : {}),
+        },
+      });
     });
 
-    return { success: true, data: { id: assignment.id } };
+    return { success: true, data: { id: assignment.id, programIds: [input.programId] } };
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "COURSE_NOT_FOUND") return { success: false, error: "Course not found." };
+      if (error.message === "COURSE_PROGRAM_MISMATCH") {
+        return { success: false, error: "Assignment program must match the Course's owning program." };
+      }
+      if (error.message === "SELECTED_PROGRAM_INACTIVE") {
+        return { success: false, error: "Selected Program is no longer assigned." };
+      }
+      if (error.message.startsWith("PERMISSION:")) {
+        return { success: false, error: error.message.slice("PERMISSION:".length) };
+      }
+    }
     // Handle unique constraint violation (database enforces uniqueness)
     if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return {
@@ -186,8 +205,11 @@ export async function createCourseAssignment(
  */
 export async function updateCourseAssignment(
   input: UpdateCourseAssignmentInput
-): Promise<CourseAssignmentResult> {
+): Promise<CourseAssignmentResult<CourseAssignmentMutationData | undefined>> {
   const authSession = await resolveAuthSession();
+  if (!authSession) return { success: false, error: "Authentication required." };
+  const contextFailure = await validateSelectedProgram(authSession, input.selectedProgramId);
+  if (contextFailure) return contextFailure;
   try {
     return await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
@@ -204,6 +226,20 @@ export async function updateCourseAssignment(
 
       if (!existing) return { success: false, error: "Assignment not found." };
 
+      if (isProgramHead(authSession)) {
+        if (!input.selectedProgramId) return missingSelectedProgram();
+        const selected = await revalidateProgramHeadAssignment(tx, {
+          userId: authSession.userId,
+          programId: input.selectedProgramId,
+        });
+        if (!selected || existing.program_id !== input.selectedProgramId) {
+          return { success: false, error: "Course assignment is outside the selected Program." };
+        }
+        if (input.programId !== undefined && input.programId !== input.selectedProgramId) {
+          return { success: false, error: "Course assignment is outside the selected Program." };
+        }
+      }
+
       if (
         input.programId !== undefined &&
         existing.course.program_id !== null &&
@@ -215,11 +251,10 @@ export async function updateCourseAssignment(
         };
       }
 
-      const phProgramScope = await resolvePHProgramScopeWithDb(tx, authSession);
       const permission = canManageCourseAssignment(
         authSession,
         existing.course.program_id,
-        phProgramScope
+        isProgramHead(authSession) && input.selectedProgramId ? [input.selectedProgramId] : []
       );
       if (!permission.allowed) return { success: false, error: permission.reason };
 
@@ -263,7 +298,12 @@ export async function updateCourseAssignment(
         },
       });
 
-      return { success: true, data: undefined };
+      return {
+        success: true,
+        data: {
+          programIds: [...new Set([existing.program_id, input.programId].filter((id): id is string => Boolean(id)))],
+        },
+      };
     });
   } catch (error) {
     return unexpectedLifecycleFailure(
@@ -279,39 +319,47 @@ export async function updateCourseAssignment(
  * Deactivate a course assignment (soft delete).
  */
 export async function deactivateCourseAssignment(
-  assignmentId: string
-): Promise<CourseAssignmentResult> {
+  input: string | { assignmentId: string; programId?: string }
+): Promise<CourseAssignmentResult<CourseAssignmentMutationData | undefined>> {
   const authSession = await resolveAuthSession();
-
-  // Get existing assignment
-  const existing = await prisma.courseAssignment.findUnique({
-    where: { id: assignmentId },
-    include: { course: true },
-  });
-
-  if (!existing) {
-    return { success: false, error: "Assignment not found." };
-  }
-
-  // Resolve PH program scope and check permissions
-  const phProgramScope = await resolvePHProgramScope(authSession);
-  const permission = canManageCourseAssignment(
-    authSession,
-    existing.course.program_id,
-    phProgramScope
-  );
-  if (!permission.allowed) {
-    return { success: false, error: permission.reason };
-  }
+  const assignmentId = typeof input === "string" ? input : input.assignmentId;
+  const selectedProgramId = typeof input === "string" ? undefined : input.programId;
+  const contextFailure = await validateSelectedProgram(authSession, selectedProgramId);
+  if (contextFailure) return contextFailure;
 
   try {
-    await prisma.courseAssignment.update({
-      where: { id: assignmentId },
-      data: { is_active: false },
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.courseAssignment.findUnique({
+        where: { id: assignmentId },
+        include: { course: true },
+      });
+      if (!existing) throw new Error("ASSIGNMENT_NOT_FOUND");
+      if (authSession && isProgramHead(authSession)) {
+        if (!selectedProgramId) throw new Error("SELECTED_PROGRAM_REQUIRED");
+        const selected = await revalidateProgramHeadAssignment(tx, {
+          userId: authSession.userId,
+          programId: selectedProgramId,
+        });
+        if (!selected || existing.program_id !== selectedProgramId) throw new Error("OUT_OF_SCOPE");
+      }
+      const permission = canManageCourseAssignment(
+        authSession,
+        existing.course.program_id,
+        authSession && isProgramHead(authSession) && selectedProgramId ? [selectedProgramId] : []
+      );
+      if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
+      await tx.courseAssignment.update({ where: { id: assignmentId }, data: { is_active: false } });
+      return { programIds: [existing.program_id] };
     });
 
-    return { success: true, data: undefined };
+    return { success: true, data: result };
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "ASSIGNMENT_NOT_FOUND") return { success: false, error: "Assignment not found." };
+      if (error.message === "SELECTED_PROGRAM_REQUIRED") return missingSelectedProgram();
+      if (error.message === "OUT_OF_SCOPE") return { success: false, error: "Course assignment is outside the selected Program." };
+      if (error.message.startsWith("PERMISSION:")) return { success: false, error: error.message.slice(11) };
+    }
     return unexpectedLifecycleFailure(
       "deactivate_assignment",
       authSession?.userId,
@@ -326,38 +374,43 @@ export async function deactivateCourseAssignment(
  */
 export async function activateCourseAssignment(
   input: ActivateCourseAssignmentInput
-): Promise<CourseAssignmentResult> {
+): Promise<CourseAssignmentResult<CourseAssignmentMutationData | undefined>> {
   const authSession = await resolveAuthSession();
-
-  // Get existing assignment
-  const existing = await prisma.courseAssignment.findUnique({
-    where: { id: input.assignmentId },
-    include: { course: true },
-  });
-
-  if (!existing) {
-    return { success: false, error: "Assignment not found." };
-  }
-
-  // Resolve PH program scope and check permissions
-  const phProgramScope = await resolvePHProgramScope(authSession);
-  const permission = canManageCourseAssignment(
-    authSession,
-    existing.course.program_id,
-    phProgramScope
-  );
-  if (!permission.allowed) {
-    return { success: false, error: permission.reason };
-  }
-
+  const contextFailure = await validateSelectedProgram(authSession, input.programId);
+  if (contextFailure) return contextFailure;
   try {
-    await prisma.courseAssignment.update({
-      where: { id: input.assignmentId },
-      data: { is_active: true },
+    const result = await prisma.$transaction(async (tx) => {
+      const existing = await tx.courseAssignment.findUnique({
+        where: { id: input.assignmentId },
+        include: { course: true },
+      });
+      if (!existing) throw new Error("ASSIGNMENT_NOT_FOUND");
+      if (authSession && isProgramHead(authSession)) {
+        if (!input.programId) throw new Error("SELECTED_PROGRAM_REQUIRED");
+        const selected = await revalidateProgramHeadAssignment(tx, {
+          userId: authSession.userId,
+          programId: input.programId,
+        });
+        if (!selected || existing.program_id !== input.programId) throw new Error("OUT_OF_SCOPE");
+      }
+      const permission = canManageCourseAssignment(
+        authSession,
+        existing.course.program_id,
+        authSession && isProgramHead(authSession) && input.programId ? [input.programId] : []
+      );
+      if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
+      await tx.courseAssignment.update({ where: { id: input.assignmentId }, data: { is_active: true } });
+      return { programIds: [existing.program_id] };
     });
 
-    return { success: true, data: undefined };
+    return { success: true, data: result };
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "ASSIGNMENT_NOT_FOUND") return { success: false, error: "Assignment not found." };
+      if (error.message === "SELECTED_PROGRAM_REQUIRED") return missingSelectedProgram();
+      if (error.message === "OUT_OF_SCOPE") return { success: false, error: "Course assignment is outside the selected Program." };
+      if (error.message.startsWith("PERMISSION:")) return { success: false, error: error.message.slice(11) };
+    }
     return unexpectedLifecycleFailure(
       "activate_assignment",
       authSession?.userId,
@@ -368,20 +421,30 @@ export async function activateCourseAssignment(
 }
 
 export async function preflightCourseAssignmentDeletion(
-  assignmentId: string
+  input: string | { assignmentId: string; programId?: string }
 ): Promise<CourseAssignmentResult<CourseAssignmentDeletionPreflight>> {
+  const assignmentId = typeof input === "string" ? input : input.assignmentId;
+  const selectedProgramId = typeof input === "string" ? undefined : input.programId;
   let actorId: string | undefined;
   try {
     const authSession = await resolveAuthSession();
     actorId = authSession?.userId;
+    const contextFailure = await validateSelectedProgram(authSession, selectedProgramId);
+    if (contextFailure) return contextFailure;
     const existing = await resolveLifecycleAssignment(assignmentId);
     if (!existing) return { success: false, error: "Assignment not found." };
 
-    const phProgramScope = await resolvePHProgramScope(authSession);
+    if (authSession && isProgramHead(authSession)) {
+      if (!selectedProgramId) return missingSelectedProgram();
+      const context = await resolveProgramHeadContext(selectedProgramId);
+      if (!context.success || context.data.userId !== authSession?.userId || existing.program_id !== selectedProgramId) {
+        return { success: false, error: "Course assignment is outside the selected Program." };
+      }
+    }
     const permission = canManageCourseAssignment(
       authSession,
       existing.course.program_id,
-      phProgramScope
+      authSession && isProgramHead(authSession) && selectedProgramId ? [selectedProgramId] : []
     );
     if (!permission.allowed) return { success: false, error: permission.reason };
 
@@ -416,9 +479,11 @@ export async function preflightCourseAssignmentDeletion(
  */
 export async function deleteCourseAssignment(
   input: DeleteCourseAssignmentInput
-): Promise<CourseAssignmentResult> {
+): Promise<CourseAssignmentResult<CourseAssignmentMutationData | undefined>> {
   const authSession = await resolveAuthSession();
   if (!authSession) return { success: false, error: "Authentication required." };
+  const contextFailure = await validateSelectedProgram(authSession, input.programId);
+  if (contextFailure) return contextFailure;
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -435,11 +500,20 @@ export async function deleteCourseAssignment(
       });
       if (!existing) return { success: false, error: "Assignment not found." };
 
-      const phProgramScope = await resolvePHProgramScopeWithDb(tx, authSession);
-      const permission = canManageCourseAssignment(
-        authSession,
-        existing.course.program_id,
-        phProgramScope
+       if (isProgramHead(authSession)) {
+         if (!input.programId) return missingSelectedProgram();
+         const selected = await revalidateProgramHeadAssignment(tx, {
+           userId: authSession.userId,
+           programId: input.programId,
+         });
+         if (!selected || existing.program_id !== input.programId) {
+           return { success: false, error: "Course assignment is outside the selected Program." };
+         }
+       }
+       const permission = canManageCourseAssignment(
+         authSession,
+         existing.course.program_id,
+         isProgramHead(authSession) && input.programId ? [input.programId] : []
       );
       if (!permission.allowed) return { success: false, error: permission.reason };
 
@@ -481,7 +555,7 @@ export async function deleteCourseAssignment(
       }
 
       await tx.courseAssignment.delete({ where: { id: input.assignmentId } });
-      return { success: true, data: undefined };
+      return { success: true, data: { programIds: [existing.program_id] } };
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
@@ -514,7 +588,8 @@ export async function deleteCourseAssignment(
  * successful items when one item in the batch has an issue.
  */
 export async function bulkCreateCourseAssignments(
-  inputs: CreateCourseAssignmentInput[]
+  inputs: CreateCourseAssignmentInput[],
+  selectedProgramId?: string
 ): Promise<BulkCreateResult> {
   const authSession = await resolveAuthSession();
 
@@ -527,8 +602,10 @@ export async function bulkCreateCourseAssignments(
     };
   }
 
-  // Resolve PH program scope once for the entire bulk operation
-  const phProgramScope = await resolvePHProgramScope(authSession);
+  const contextFailure = await validateSelectedProgram(authSession, selectedProgramId);
+  if (contextFailure) {
+    return { success: false, created: 0, errors: [{ index: -1, error: contextFailure.error }] };
+  }
 
   const errors: Array<{ index: number; error: string; referenceId?: string }> = [];
   let created = 0;
@@ -538,47 +615,73 @@ export async function bulkCreateCourseAssignments(
     const input = inputs[i];
 
     try {
-      // Get course program for scope check
-      const course = await prisma.course.findUnique({
-        where: { id: input.courseId },
-        select: { program_id: true },
-      });
-
-      if (!course) {
-        errors.push({ index: i, error: "Course not found." });
+      const requestedProgramId = selectedProgramId ?? input.selectedProgramId;
+      if (isProgramHead(authSession) && requestedProgramId !== input.programId) {
+        errors.push({ index: i, error: "Course assignment is outside the selected Program." });
         continue;
       }
 
-      if (course.program_id !== null && course.program_id !== input.programId) {
-        errors.push({
-          index: i,
-          error: "Assignment program must match the Course's owning program.",
+      if (!requestedProgramId && isProgramHead(authSession)) {
+        errors.push({ index: i, error: "Selected Program is required." });
+        continue;
+      }
+
+      await prisma.$transaction(async (tx) => {
+        if (isProgramHead(authSession)) {
+          const selected = await revalidateProgramHeadAssignment(tx, {
+            userId: authSession.userId,
+            programId: requestedProgramId ?? input.programId,
+          });
+          if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
+        }
+        const course = await tx.course.findUnique({
+          where: { id: input.courseId },
+          select: { program_id: true },
         });
-        continue;
-      }
-
-      // Check permissions
-      const permission = canManageCourseAssignment(authSession, course.program_id, phProgramScope);
-      if (!permission.allowed) {
-        errors.push({ index: i, error: permission.reason });
-        continue;
-      }
-
-      await prisma.courseAssignment.create({
-        data: {
-          term_instance_id: input.termInstanceId,
-          faculty_id: input.facultyId,
-          course_id: input.courseId,
-          program_id: input.programId,
-          year_level: input.yearLevel,
-          section: input.section,
-          is_active: true,
-          ...(authSession?.userId ? { assigned_by: authSession.userId } : {}),
-        },
+        if (!course) throw new Error("COURSE_NOT_FOUND");
+        if (course.program_id !== null && course.program_id !== input.programId) {
+          throw new Error("COURSE_PROGRAM_MISMATCH");
+        }
+        const permission = canManageCourseAssignment(
+          authSession,
+          course.program_id,
+          isProgramHead(authSession) ? [input.programId] : []
+        );
+        if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
+        await tx.courseAssignment.create({
+          data: {
+            term_instance_id: input.termInstanceId,
+            faculty_id: input.facultyId,
+            course_id: input.courseId,
+            program_id: input.programId,
+            year_level: input.yearLevel,
+            section: input.section,
+            is_active: true,
+            assigned_by: authSession.userId,
+          },
+        });
       });
 
       created++;
     } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "COURSE_NOT_FOUND") {
+          errors.push({ index: i, error: "Course not found." });
+          continue;
+        }
+        if (error.message === "COURSE_PROGRAM_MISMATCH") {
+          errors.push({ index: i, error: "Assignment program must match the Course's owning program." });
+          continue;
+        }
+        if (error.message === "SELECTED_PROGRAM_INACTIVE") {
+          errors.push({ index: i, error: "Selected Program is no longer assigned." });
+          continue;
+        }
+        if (error.message.startsWith("PERMISSION:")) {
+          errors.push({ index: i, error: error.message.slice("PERMISSION:".length) });
+          continue;
+        }
+      }
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
         errors.push({
           index: i,

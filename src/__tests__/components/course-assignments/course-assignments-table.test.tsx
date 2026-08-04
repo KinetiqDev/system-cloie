@@ -104,11 +104,11 @@ describe("CourseAssignmentsTable", () => {
     expect(screen.getByLabelText(/next page/i)).toBeInTheDocument();
   });
 
-  it("does not render a no-op Edit menu item", () => {
+  it("renders Edit for a Program-specific Program Head assignment", () => {
     renderTable();
     openRowActions();
 
-    expect(screen.queryByRole("menuitem", { name: /edit/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /edit/i })).toBeInTheDocument();
   });
 
   it("opens an AlertDialog with assignment details when deactivating", async () => {
@@ -138,6 +138,7 @@ describe("CourseAssignmentsTable", () => {
     await waitFor(() => {
       expect(deactivateCourseAssignmentAction).toHaveBeenCalledWith({
         assignmentId: assignment.id,
+        programId: undefined,
       });
     });
     expect(onUpdated).toHaveBeenCalled();
@@ -194,7 +195,10 @@ describe("CourseAssignmentsTable", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /activate/i }));
 
     await waitFor(() => {
-      expect(activateCourseAssignmentAction).toHaveBeenCalledWith({ assignmentId: assignment.id });
+       expect(activateCourseAssignmentAction).toHaveBeenCalledWith({
+         assignmentId: assignment.id,
+         programId: undefined,
+       });
     });
     expect(onUpdated).toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();

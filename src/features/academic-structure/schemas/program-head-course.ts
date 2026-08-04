@@ -17,6 +17,8 @@ const optionalTextField = z.preprocess((value) => {
 }, z.string().max(1000).optional());
 
 const programHeadCourseFields = {
+  programId: z.string().uuid("Invalid Program ID."),
+  course_type: z.enum(["program-wide", "major-specific"]).default("program-wide"),
   code: z
     .string()
     .trim()
@@ -47,10 +49,23 @@ const programHeadCourseFields = {
   ),
 };
 
-function validateSemesterTerm(
-  data: { default_semester?: AcademicSemester; default_term?: AcademicTerm | null },
+function validateCourseInput(
+  data: {
+    course_type: "program-wide" | "major-specific";
+    major_id?: string;
+    default_semester?: AcademicSemester;
+    default_term?: AcademicTerm | null;
+  },
   context: z.RefinementCtx
 ) {
+  if (data.course_type === "major-specific" && !data.major_id) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Select a major for a major-specific course.",
+      path: ["major_id"],
+    });
+  }
+
   if (data.default_semester !== undefined) {
     const result = assertValidSemesterTerm(data.default_semester, data.default_term ?? null);
     if (!result.valid) {
@@ -69,34 +84,24 @@ function validateSemesterTerm(
   }
 }
 
-/**
- * PH courses are always PROGRAM_SPECIFIC (scope locked, program_id injected server-side).
- * This refine mirrors the validateCourseRelationships pattern from course.ts.
- * major_id validity is already enforced by the optionalUuidField UUID preprocessor.
- * No additional cross-field validation is required for the PH submission path because
- * program_id is always present (injected server-side from the PH's assignment).
- */
-function validateCourseRelationships(
-  _data: { course_scope: CourseScope; major_id?: string | null },
-  _context: z.RefinementCtx
-) {
-  // course_scope is locked to PROGRAM_SPECIFIC by the z.literal field.
-  // program_id is injected server-side — always present for PH courses.
-  // major_id uuid validity is handled upstream by optionalUuidField.
-}
-
 export const createProgramHeadCourseSchema = z
   .object(programHeadCourseFields)
-  .superRefine(validateSemesterTerm)
-  .superRefine(validateCourseRelationships);
+  .superRefine(validateCourseInput);
 
 export const updateProgramHeadCourseSchema = z
   .object({
     id: z.string().uuid(),
     ...programHeadCourseFields,
   })
-  .superRefine(validateSemesterTerm)
-  .superRefine(validateCourseRelationships);
+  .superRefine(validateCourseInput);
 
 export type CreateProgramHeadCourseInput = z.infer<typeof createProgramHeadCourseSchema>;
 export type UpdateProgramHeadCourseInput = z.infer<typeof updateProgramHeadCourseSchema>;
+
+export const toggleProgramHeadCourseSchema = z.object({
+  programId: z.string().uuid("Invalid Program ID."),
+  id: z.string().uuid("Invalid Course ID."),
+  is_active: z.boolean(),
+});
+
+export type ToggleProgramHeadCourseInput = z.infer<typeof toggleProgramHeadCourseSchema>;

@@ -117,4 +117,29 @@ describe("Dean mobile navigation drawer", () => {
       "aria-current"
     );
   });
+
+  it("preserves the selected Program in Program Head drawer links", async () => {
+    pathnameMock.mockReturnValue("/program-head/programs/program-2/outcomes/mapping");
+    render(<MobileSidebarDrawer roles={[ROLES.PROGRAM_HEAD]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-2/dashboard"
+    );
+    expect(screen.getByRole("link", { name: "Outcomes" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-2/outcomes"
+    );
+    expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute(
+      "href",
+      "/program-head/profile"
+    );
+    expect(screen.getByRole("dialog").querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Outcomes" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+  });
 });

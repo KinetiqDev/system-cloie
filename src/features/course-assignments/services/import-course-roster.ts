@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { ROLES } from "@/lib/constants/roles";
 
 import {
   projectRosterEligibility,
@@ -37,6 +38,7 @@ const errorStatuses: Record<string, CourseRosterImportRowStatus> = {
   "This Course assignment is inactive. The roster is read-only.": "READ_ONLY",
   "This Academic Period is no longer active. The roster is read-only.": "READ_ONLY",
   "A Course-bound evaluation has been published for this assignment. The roster is locked.": "READ_ONLY",
+  "Course assignment not found.": "READ_ONLY",
 };
 
 const errorMessages: Record<CourseRosterImportRowStatus, string> = {
@@ -169,7 +171,8 @@ function summarize(rows: CourseRosterImportRow[], referenceId?: string): CourseR
 
 export async function importCourseRoster(
   assignmentId: string,
-  input: string | Uint8Array
+  input: string | Uint8Array,
+  programId?: string
 ): Promise<RosterServiceResult<CourseRosterImportSummary>> {
   const parsed = parseCourseRosterCsv(input);
   if (!parsed.success) return { success: false, error: parsed.error };
@@ -179,8 +182,14 @@ export async function importCourseRoster(
     const session = await resolveAuthSession();
     if (!session) return { success: false, error: "Authentication required." };
     actorId = session.userId;
+    if (session.activeRole === ROLES.PROGRAM_HEAD && !programId) {
+      return { success: false, error: "Course assignment not found." };
+    }
 
-    const authorization = await resolveAuthorizedCourseAssignmentRoster(assignmentId, { manage: true });
+    const authorization = await resolveAuthorizedCourseAssignmentRoster(assignmentId, {
+      manage: true,
+      programId,
+    });
     if (!authorization.success) return authorization;
     if (!authorization.data.canManage) return { success: false, error: "Course assignment not found." };
     if (!authorization.data.canMutate) {
@@ -255,7 +264,9 @@ export async function importCourseRoster(
         continue;
       }
 
-      const write = await addRosterMembership(assignmentId, row.normalizedEmail);
+      const write = programId
+        ? await addRosterMembership(assignmentId, row.normalizedEmail, programId)
+        : await addRosterMembership(assignmentId, row.normalizedEmail);
       if (write.success) {
         const status = write.data.outcome === "CREATED" ? "CREATED" : "RESTORED";
         results.push(rowResult(row, status, write.data.message));

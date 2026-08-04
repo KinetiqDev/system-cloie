@@ -43,7 +43,14 @@ export type SecretaryUserEditRecord = {
     primaryProgramId: string | null;
   } | null;
   programHead: {
-    assignmentProgramId: string | null;
+    // Complete active assignment set used to preselect the Secretary edit
+    // dialog fieldset. Historical rows are not projected; they reactivate
+    // when the Secretary selects their Program again.
+    assignments: Array<{
+      programId: string;
+      programCode: string | null;
+      programName: string | null;
+    }>;
   } | null;
   // External verification status for Alumni and Industry Partner accounts.
   verification: {
@@ -115,8 +122,9 @@ export async function getUserEditRecordBySecretary(
         take: 1,
       },
       program_head_assignments: {
-        where: { is_active: true },
-        take: 1,
+        include: {
+          program: { select: { code: true, name: true } },
+        },
       },
       industry_partner_profile: true,
       alumni_profile: {
@@ -176,7 +184,13 @@ export async function getUserEditRecordBySecretary(
           }
         : null,
       programHead: {
-        assignmentProgramId: user.program_head_assignments?.[0]?.program_id ?? null,
+        assignments: (user.program_head_assignments ?? [])
+          .filter((assignment) => assignment.is_active)
+          .map((assignment) => ({
+            programId: assignment.program_id,
+            programCode: assignment.program?.code ?? null,
+            programName: assignment.program?.name ?? null,
+          })),
       },
       verification: user.alumni_profile
         ? { status: user.alumni_profile.verification_status }

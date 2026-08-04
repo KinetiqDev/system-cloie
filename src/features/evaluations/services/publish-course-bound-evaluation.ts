@@ -9,6 +9,10 @@ import {
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import {
+  revalidateProgramHeadAssignment,
+  resolveProgramHeadContext,
+} from "@/features/auth/services/resolve-program-head-context";
+import {
   getFacultyTemplatePublicationContext,
   type FacultyTemplatePublicationContext,
 } from "@/features/instruments/services/manage-faculty-templates";
@@ -201,6 +205,7 @@ export async function publishCourseBoundEvaluation({
   deadlineAt = null,
   deploymentName,
   exclusions = [],
+  programId,
   templateId,
 }: PublishCourseBoundEvaluationInput): Promise<PublishCourseBoundEvaluationResult> {
   let actorId: string | undefined;
@@ -212,6 +217,20 @@ export async function publishCourseBoundEvaluation({
       return { error: "Authentication required.", success: false };
     }
     actorId = authSession.userId;
+
+    const selectedProgram =
+      authSession.activeRole === ROLES.PROGRAM_HEAD
+        ? programId
+          ? await resolveProgramHeadContext(programId)
+          : null
+        : null;
+
+    if (
+      authSession.activeRole === ROLES.PROGRAM_HEAD &&
+      (!selectedProgram || !selectedProgram.success)
+    ) {
+      return { error: "Course assignment not found.", success: false };
+    }
 
     if (!deploymentName.trim()) {
       return { error: "Deployment name is required.", success: false };
@@ -244,15 +263,24 @@ export async function publishCourseBoundEvaluation({
               throw new PublicationValidationError("Course assignment not found.");
             }
 
-            const lockedPhProgramScope =
-              authSession.activeRole === ROLES.PROGRAM_HEAD
-                ? (
-                    await tx.programHeadAssignment.findMany({
-                      where: { program_head_id: authSession.userId, is_active: true },
-                      select: { program_id: true },
-                    })
-                  ).map((headAssignment) => headAssignment.program_id)
-                : [];
+            const selectedProgramId = selectedProgram?.success
+              ? selectedProgram.data.selectedProgram.id
+              : undefined;
+            const lockedSelectedProgram = selectedProgramId
+              ? await revalidateProgramHeadAssignment(tx, {
+                  userId: authSession.userId,
+                  programId: selectedProgramId,
+                })
+              : null;
+            if (selectedProgramId && !lockedSelectedProgram) {
+              throw new PublicationValidationError("Course assignment not found.");
+            }
+
+            if (selectedProgramId && lockedAssignment.program_id !== selectedProgramId) {
+              throw new PublicationValidationError("Course assignment not found.");
+            }
+
+            const lockedPhProgramScope = selectedProgramId ? [selectedProgramId] : [];
             const lockedAuthCheck = canDeployCourseBoundEvaluation(
               authSession,
               {
@@ -301,6 +329,10 @@ export async function publishCourseBoundEvaluation({
                 throw new PublicationValidationError(
                   "On-behalf deployment requires a course-bound template. Please create one first."
                 );
+              }
+
+              if (templateId !== boundTemplate.id) {
+                throw new PublicationValidationError("Course assignment not found.");
               }
 
               effectiveTemplateId = boundTemplate.id;

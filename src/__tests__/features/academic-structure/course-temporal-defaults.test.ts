@@ -225,10 +225,12 @@ describe("Course temporal defaults schema", () => {
   });
 });
 
-import { createProgramHeadCourseSchema, updateProgramHeadCourseSchema } from "@/features/academic-structure/schemas/program-head-course";
+import { createProgramHeadCourseSchema } from "@/features/academic-structure/schemas/program-head-course";
 
 describe("Program Head Course Schema", () => {
   const basePHCourseData = {
+    programId: "11111111-1111-4111-8111-111111111111",
+    course_type: "program-wide",
     code: "TESTPH1",
     title: "PH Course",
     course_scope: CourseScope.PROGRAM_SPECIFIC,
@@ -254,5 +256,18 @@ describe("Program Head Course Schema", () => {
       expect(hasScopeError).toBe(true);
     }
   });
-});
 
+  it("requires a major for a major-specific Course", () => {
+    const result = createProgramHeadCourseSchema.safeParse({
+      ...basePHCourseData,
+      course_type: "major-specific",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.message.includes("Select a major"))).toBe(
+        true
+      );
+    }
+  });
+});

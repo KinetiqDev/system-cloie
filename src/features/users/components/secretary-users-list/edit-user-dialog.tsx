@@ -22,6 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { showToast } from "@/components/ui/toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import {
   editUserBySecretaryAction,
   getUserEditRecordAction,
@@ -175,6 +184,9 @@ function EditUserDialogBody({
   const [companyName, setCompanyName] = useState("");
   const [position, setPosition] = useState("");
 
+  // Program Head assignment set (complete desired managed-Program set).
+  const [programHeadProgramIds, setProgramHeadProgramIds] = useState<string[]>([]);
+
   // Confirmation state
   const [confirmationToken, setConfirmationToken] = useState<string | null>(null);
   const [confirmationSummary, setConfirmationSummary] = useState<{
@@ -236,7 +248,9 @@ function EditUserDialogBody({
       } else if (result.data.role === SystemRole.FACULTY) {
         setProgramId(result.data.faculty?.primaryProgramId ?? "");
       } else if (result.data.role === SystemRole.PROGRAM_HEAD) {
-        setProgramId(result.data.programHead?.assignmentProgramId ?? "");
+        setProgramHeadProgramIds(
+          (result.data.programHead?.assignments ?? []).map((assignment) => assignment.programId)
+        );
       } else if (result.data.role === SystemRole.ALUMNI) {
         setProgramId(result.data.alumni?.programId ?? "");
         setMajorId(result.data.alumni?.majorId ?? null);
@@ -313,11 +327,12 @@ function EditUserDialogBody({
       }
       formData.set("faculty.program_id", programId);
     } else if (loadState.status === "ready" && loadState.record.role === SystemRole.PROGRAM_HEAD) {
-      if (!programId) {
-        setSubmitError("Managed program is required.");
-        return;
+      // The complete desired set is submitted even when every checkbox is
+      // unchecked, so a zero-active-assignment save is possible.
+      formData.set("program_head.present", "1");
+      for (const programId of programHeadProgramIds) {
+        formData.append("program_head.program_ids", programId);
       }
-      formData.set("program_head.program_id", programId);
     } else if (loadState.status === "ready" && loadState.record.role === SystemRole.ALUMNI) {
       const year = Number(graduationYear);
       if (!Number.isInteger(year) || year < 1950) {
@@ -400,13 +415,12 @@ function EditUserDialogBody({
              newValues: result.data.confirmationReview?.newValues ?? {},
            });
         } else if (record?.role === SystemRole.PROGRAM_HEAD) {
-          const oldP = record.programHead?.assignmentProgramId;
           setConfirmationToken(result.data.token!);
-           setConfirmationSummary({
+          setConfirmationSummary({
             programHeadAssignmentChanged: true,
-             oldValues: result.data.confirmationReview?.oldValues ?? {},
-             newValues: result.data.confirmationReview?.newValues ?? {},
-           });
+            oldValues: result.data.confirmationReview?.oldValues ?? {},
+            newValues: result.data.confirmationReview?.newValues ?? {},
+          });
         } else if (record?.role === SystemRole.ALUMNI) {
           setConfirmationToken(result.data.token!);
            setConfirmationSummary({
@@ -677,29 +691,53 @@ function EditUserDialogBody({
           )}
 
           {loadState.record.role === SystemRole.PROGRAM_HEAD && (
-            <div className="space-y-2 border-t pt-4">
-              <Label htmlFor="edit-user-program-head-program">Managed Program</Label>
-              <Select
-                value={programId}
-                onValueChange={(v) => setProgramId(v ?? "")}
-                disabled={isSubmitting}
-              >
-                <SelectTrigger id="edit-user-program-head-program">
-                  <SelectValue placeholder="Select managed program">{selectedProgram?.name}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                   {programs.filter((p) => p.isActive !== false).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">
-                Only this Program Head&apos;s assignment changes. Other Program Heads and course
-                assignments remain unchanged.
-              </p>
-            </div>
+            <FieldSet className="border-t pt-4">
+              <FieldLegend variant="label">Managed Programs</FieldLegend>
+              <FieldDescription>
+                Choose every Program this Program Head manages. Unchecking a Program deactivates
+                its assignment; checking it again reactivates the existing assignment history row.
+                Programs cannot be newly selected while archived.
+              </FieldDescription>
+              <FieldGroup className="gap-2">
+                {programs.map((program) => {
+                  const isCurrentAssignment = (loadState.record.programHead?.assignments ?? []).some(
+                    (assignment) => assignment.programId === program.id
+                  );
+                  const isSelectable = program.isActive !== false || isCurrentAssignment;
+                  const isChecked = programHeadProgramIds.includes(program.id);
+                  return (
+                    <Field key={program.id} orientation="horizontal" className="gap-3">
+                      <Checkbox
+                        id={`edit-user-program-head-${program.id}`}
+                        checked={isChecked}
+                        disabled={!isSelectable || isSubmitting}
+                        onCheckedChange={(next) => {
+                          setProgramHeadProgramIds((current) =>
+                            next ? [...current, program.id] : current.filter((id) => id !== program.id)
+                          );
+                        }}
+                      />
+                      <FieldLabel
+                        htmlFor={`edit-user-program-head-${program.id}`}
+                        className="font-normal"
+                      >
+                        {program.name}
+                        {program.isActive === false && isCurrentAssignment && (
+                          <span className="text-muted-foreground ml-1 text-xs">
+                            (archived context only)
+                          </span>
+                        )}
+                      </FieldLabel>
+                    </Field>
+                  );
+                })}
+              </FieldGroup>
+              <FieldDescription>
+                The complete assignment set is saved as one protected change. No assignment
+                history row is deleted; other Program Heads, course assignments, evaluations, and
+                historical academic work remain unchanged.
+              </FieldDescription>
+            </FieldSet>
           )}
 
           {loadState.record.role === SystemRole.ALUMNI && (
@@ -926,9 +964,9 @@ function EditUserDialogBody({
                 <h4 className="text-sm font-semibold">Program Head Assignment Changes</h4>
                 <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
                   <div className="text-muted-foreground">Previous:</div>
-                  <div>{confirmationSummary.oldValues.program}</div>
+                  <div>{confirmationSummary.oldValues.programs}</div>
                   <div className="text-primary font-medium">New:</div>
-                  <div className="font-medium">{confirmationSummary.newValues.program}</div>
+                  <div className="font-medium">{confirmationSummary.newValues.programs}</div>
                 </div>
               </div>
             )}
@@ -990,7 +1028,7 @@ function EditUserDialogBody({
                 : confirmationSummary.facultyProgramChanged
                   ? "Additional active affiliations remain unchanged. If the selected program is currently an additional affiliation, it will be promoted to primary."
                   : confirmationSummary.programHeadAssignmentChanged
-                    ? "The previous assignment becomes inactive. If this program was managed before, its existing assignment-history row is reactivated. Other Program Heads, course assignments, evaluations, and historical academic work remain unchanged."
+                    ? "The assignment set is replaced by the selected set. Selected Programs stay active or are reactivated from history; unselected active assignments become inactive. No assignment history is deleted. Other Program Heads, course assignments, evaluations, and historical academic work remain unchanged."
                     : "Historical enrollments remain unchanged. This update only applies to the static profile and the current active term."}
             </p>
           </div>

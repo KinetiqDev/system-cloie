@@ -1,6 +1,8 @@
-import { Book, Mail, User } from "lucide-react";
+import { ArrowRight, Book, Mail, User } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { prisma } from "@/lib/db/prisma";
@@ -41,6 +43,13 @@ export default async function ProgramHeadProfilePage() {
         <p className="text-text-muted text-sm">
           Review your account information and program assignments.
         </p>
+        <Link
+          href="/program-head"
+          className={buttonVariants({ variant: "outline", className: "mt-4" })}
+        >
+          Choose a Program to manage
+          <ArrowRight data-icon="inline-end" aria-hidden="true" />
+        </Link>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

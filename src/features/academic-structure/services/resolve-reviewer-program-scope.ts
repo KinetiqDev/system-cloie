@@ -1,7 +1,9 @@
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { ROLES, type Role } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 
 type ResolveReviewerProgramScopeInput = {
+  programId?: string;
   reviewerId: string;
   reviewerRole: Role;
 };
@@ -11,6 +13,7 @@ function toUniqueProgramIds(rows: Array<{ program_id: string }>) {
 }
 
 export async function resolveReviewerProgramScope({
+  programId,
   reviewerId,
   reviewerRole,
 }: ResolveReviewerProgramScopeInput): Promise<string[] | null> {
@@ -28,6 +31,11 @@ export async function resolveReviewerProgramScope({
   }
 
   if (reviewerRole === ROLES.PROGRAM_HEAD) {
+    if (programId) {
+      const selectedContext = await resolveProgramHeadContext(programId);
+      return selectedContext.success ? [selectedContext.data.selectedProgram.id] : [];
+    }
+
     const rows = await prisma.programHeadAssignment.findMany({
       where: { program_head_id: reviewerId, is_active: true },
       select: { program_id: true },

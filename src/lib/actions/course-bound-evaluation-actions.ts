@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { listFacultyCourseContexts } from "@/features/evaluations/services/list-faculty-course-contexts";
 import { loadFacultyManagedCilos } from "@/features/evaluations/services/manage-faculty-cilos";
 import { ROLES } from "@/lib/constants/roles";
@@ -19,6 +20,11 @@ import type {
   LateIncludeCourseBoundEvaluationInput,
   LateIncludeCourseBoundEvaluationResult,
 } from "@/features/evaluations/types";
+import {
+  buildProgramHeadNewCiloEvaluationPath,
+  buildProgramHeadProgramPath,
+  buildProgramHeadToolsPath,
+} from "@/lib/constants/program-head-routes";
 
 export async function listFacultyCourseContextsAction() {
   return await listFacultyCourseContexts();
@@ -42,11 +48,26 @@ export async function publishCourseBoundEvaluationAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input.", success: false };
   }
 
+  if (session.activeRole === ROLES.PROGRAM_HEAD) {
+    if (!parsed.data.programId) {
+      return { error: "Selected Program is required.", success: false };
+    }
+
+    const contextResult = await resolveProgramHeadContext(parsed.data.programId);
+    if (!contextResult.success) {
+      return { error: "Selected Program is unavailable.", success: false };
+    }
+  }
+
   const result = await publishCourseBoundEvaluation(parsed.data);
 
   if (result.success) {
     revalidatePath("/faculty/tools");
-    revalidatePath("/program-head/cilo-reviews");
+    if (session.activeRole === ROLES.PROGRAM_HEAD && parsed.data.programId) {
+      revalidatePath(buildProgramHeadToolsPath(parsed.data.programId));
+      revalidatePath(buildProgramHeadNewCiloEvaluationPath(parsed.data.programId));
+      revalidatePath(buildProgramHeadProgramPath(parsed.data.programId, "cilo-reviews"));
+    }
   }
 
   return result;
@@ -65,6 +86,17 @@ export async function previewCourseBoundRespondentsAction(
     return { error: "Insufficient permissions.", success: false };
   }
 
+  if (session.activeRole === ROLES.PROGRAM_HEAD) {
+    if (!payload.programId) {
+      return { error: "Selected Program is required.", success: false };
+    }
+
+    const contextResult = await resolveProgramHeadContext(payload.programId);
+    if (!contextResult.success) {
+      return { error: "Selected Program is unavailable.", success: false };
+    }
+  }
+
   return await previewCourseBoundRespondents(payload);
 }
 
@@ -81,10 +113,25 @@ export async function lateIncludeCourseBoundEvaluationAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input.", success: false };
   }
 
+  if (session.activeRole === ROLES.PROGRAM_HEAD) {
+    if (!parsed.data.programId) {
+      return { error: "Selected Program is required.", success: false };
+    }
+
+    const contextResult = await resolveProgramHeadContext(parsed.data.programId);
+    if (!contextResult.success) {
+      return { error: "Selected Program is unavailable.", success: false };
+    }
+  }
+
   const result = await lateIncludeCourseBoundEvaluationStudent(parsed.data);
   if (result.success) {
     revalidatePath("/faculty/tools");
     revalidatePath("/student/evaluations");
+    if (session.activeRole === ROLES.PROGRAM_HEAD && parsed.data.programId) {
+      revalidatePath(buildProgramHeadProgramPath(parsed.data.programId, "cilo-reviews"));
+      revalidatePath(buildProgramHeadToolsPath(parsed.data.programId));
+    }
   }
   return result;
 }

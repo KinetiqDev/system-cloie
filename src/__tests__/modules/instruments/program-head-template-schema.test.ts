@@ -27,6 +27,7 @@ describe("program-head-template schema", () => {
 
   test("accepts unique suggested responses in a template payload", () => {
     const result = createProgramHeadTemplateSchema.safeParse({
+      programId: "00000000-0000-4000-8000-000000000001",
       name: "Graduate Exit Tool",
       description: "",
       template_type: "PROGRAM_WIDE",

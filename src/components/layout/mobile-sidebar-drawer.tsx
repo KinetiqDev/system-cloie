@@ -31,7 +31,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
   const drawerRef = useRef<HTMLElement>(null);
   const dean = getHighestNavRole(roles) === ROLES.DEAN;
   const activeGroup = dean ? getDeanActiveGroup(pathname) : null;
-  const mainNav = getMainNavByRoles(roles);
+  const mainNav = getMainNavByRoles(roles, pathname);
   const activeItem = dean
     ? getDeanActiveItem(pathname)
     : getDeepestMatchingNavItem(pathname, mainNav);

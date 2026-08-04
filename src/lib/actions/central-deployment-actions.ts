@@ -6,6 +6,7 @@ import {
   publishCentralDeployment,
   closeCentralDeployment,
 } from "@/features/evaluations/services/publish-central-deployment";
+import { buildProgramHeadToolsPath } from "@/lib/constants/program-head-routes";
 import { previewCentralDeploymentRespondents } from "@/features/evaluations/services/preview-central-deployment-respondents";
 import type { PreviewCentralDeploymentInput } from "@/features/evaluations/types";
 
@@ -18,6 +19,7 @@ type SimpleActionResult = { success: true } | { success: false; error: string };
 export async function publishCentralDeploymentAction(formData: FormData): Promise<ActionResult> {
   const raw: Record<string, unknown> = {
     deployment_name: formData.get("deployment_name"),
+    programId: formData.get("programId"),
     template_id: formData.get("template_id"),
     target_stakeholder: formData.get("target_stakeholder"),
     term_instance_id: formData.get("term_instance_id"),
@@ -67,8 +69,7 @@ export async function publishCentralDeploymentAction(formData: FormData): Promis
     return { success: false, error: result.error };
   }
 
-  revalidatePath("/program-head/tools");
-  revalidatePath("/program-head/deployments");
+  revalidatePath(buildProgramHeadToolsPath(parsed.data.programId));
 
   return {
     success: true,
@@ -85,18 +86,19 @@ export async function previewCentralDeploymentRespondentsAction(
 }
 
 export async function closeCentralDeploymentAction(
+  programId: string,
   deploymentId: string
 ): Promise<SimpleActionResult> {
   if (!deploymentId || typeof deploymentId !== "string") {
     return { success: false, error: "Deployment ID is required." };
   }
 
-  const result = await closeCentralDeployment(deploymentId);
+  const result = await closeCentralDeployment(programId, deploymentId);
 
   if (!result.success) {
     return { success: false, error: result.error };
   }
 
-  revalidatePath("/program-head/tools");
+  revalidatePath(buildProgramHeadToolsPath(programId));
   return { success: true };
 }

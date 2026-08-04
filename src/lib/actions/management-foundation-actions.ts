@@ -20,6 +20,7 @@ import {
   createExternalInviteDraftSchema,
   createFacultyAffiliationSchema,
   createProgramHeadAssignmentSchema,
+  deactivateProgramHeadAssignmentSchema,
   updateIndustryPartnerProfileSchema,
   updateStudentAcademicContextSchema,
 } from "@/features/users/schemas/secretary-user";
@@ -410,7 +411,10 @@ export async function createProgramHeadAssignmentAction(formData: FormData): Pro
   return { success: true };
 }
 
-export async function deactivateProgramHeadAssignmentAction(id: string): Promise<ActionResult> {
+export async function deactivateProgramHeadAssignmentAction(
+  assignmentId: string,
+  programHeadId: string
+): Promise<ActionResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
@@ -419,7 +423,19 @@ export async function deactivateProgramHeadAssignmentAction(id: string): Promise
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
-  const result = await deactivateProgramHeadAssignment(id);
+  const parsed = parseWithSchema(deactivateProgramHeadAssignmentSchema, {
+    assignment_id: assignmentId,
+    program_head_id: programHeadId,
+  });
+
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  const result = await deactivateProgramHeadAssignment(
+    parsed.data.assignment_id,
+    parsed.data.program_head_id
+  );
 
   if (!result.success) {
     return { success: false, error: result.error };
