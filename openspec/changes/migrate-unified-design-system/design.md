@@ -181,6 +181,16 @@ Required matrix: Light, Dark, and System at 375px, 768px, 1024px, and 1440px; ke
 
 Before dedicated-demo browser traces, run `pnpm verify:production-auth-boundary`, `pnpm verify:dedicated-demo-auth-boundary`, and `pnpm verify:demo-target-isolation` against the appropriate configured targets. All slices finish with focused tests, `pnpm lint`, `pnpm test`, and `pnpm build`.
 
+### 8. Appearance storage and showcase fixture cache matrix
+
+`openspec/config.yaml` requires caching-related designs to document key, scope, lifetime, tags, invalidation, authorization boundary, and stale behavior. This change adds no persistent application-data cache, but the browser-local appearance preference and static showcase fixtures are storage boundaries that still need explicit coverage:
+
+| Boundary | Key / scope | Lifetime | Tags | Invalidation | Authorization boundary | Stale behavior |
+| --- | --- | --- | --- | --- | --- | --- |
+| Browser-local appearance preference | Single stable storage key owned by `src/features/design-system/lib/appearance.ts`, scoped to one browser profile and origin and available to same-origin documents; not account-synced or shared across browsers or devices | Until the user changes it or browser storage is cleared; no expiry | not applicable | User selection overwrites the stored value; missing, malformed, or unavailable values fall back per the resolution rules; no server-driven invalidation | none — the stored value cannot grant authorization or change account role; server-side authorization remains the only gate. When rollout is disabled, primary Production ignores stored values and forces Light without writing storage | not applicable — the stored value is current user intent, not a copy of external data |
+| Static showcase fixtures | `src/features/design-system/data/showcase-fixtures.ts` as static module data rendered only under the protected `(app)/design-system` route; contains no institutional or user data | Fixed at build/deploy; changes only through deployment | not applicable | Only through repository change and redeployment; never mutated at runtime | Rendered only after the server-side `resolve-showcase-access` policy passes per ADR 0010; fixtures carry no sensitive data | not applicable — fixtures are static reference data refreshed only by deployment |
+| Persistent application-data cache | none — no Prisma/Supabase, session, profile, response, or client application-data cache is added | not applicable | not applicable | not applicable | not applicable — authorization stays per-request on the server; nothing cached carries identity or role | not applicable — ADR 0006 remains the authoritative contract for any future offline caching |
+
 ## Risks / Trade-offs
 
 - [A root first-paint script and hydrated provider disagree] → Centralize parsing/resolution in one pure module, pass the same server availability decision into both, retain `suppressHydrationWarning` only on the root element, and test no-flash/class parity in browser evidence.
