@@ -34,7 +34,10 @@ export function buildProgramHeadCourseRosterPath(programId: string, assignmentId
   );
 }
 
-export function buildProgramHeadToolsPath(programId: string, tab?: "templates" | "published"): string {
+export function buildProgramHeadToolsPath(
+  programId: string,
+  tab?: "templates" | "published"
+): string {
   const path = buildProgramHeadProgramPath(programId, "tools");
   return tab ? `${path}?tab=${tab}` : path;
 }
@@ -50,4 +53,8 @@ export function buildProgramHeadEditToolPath(programId: string, templateId: stri
 export function buildProgramHeadPublishToolPath(programId: string, templateId?: string): string {
   const path = buildProgramHeadProgramPath(programId, "tools/publish");
   return templateId ? `${path}?templateId=${encodeURIComponent(templateId)}` : path;
+}
+
+export function buildProgramHeadNewCiloEvaluationPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "cilo-evaluations/new");
 }

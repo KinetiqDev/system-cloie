@@ -13,14 +13,13 @@ function isReservedProgramHeadPath(path: string[]): boolean {
       "tools",
       "tools/new",
       "tools/publish",
-      "cilo-evaluations/new",
       "cilo-reviews",
       "analytics",
       "reports",
     ].includes(normalizedPath) ||
     /^tools\/[^/]+\/edit$/.test(normalizedPath) ||
     /^cilo-reviews\/[^/]+$/.test(normalizedPath) ||
-     /^cilo-reviews\/[^/]+\/responses\/[^/]+$/.test(normalizedPath)
+    /^cilo-reviews\/[^/]+\/responses\/[^/]+$/.test(normalizedPath)
   );
 }
 

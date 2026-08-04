@@ -4,24 +4,37 @@ import {
   buildProgramHeadDashboardPath,
   buildProgramHeadProgramPath,
   buildProgramHeadCourseRosterPath,
+  buildProgramHeadNewCiloEvaluationPath,
 } from "@/lib/constants/program-head-routes";
 
 describe("Program Head routes", () => {
   it("builds the canonical selected Program dashboard path", () => {
-    expect(buildProgramHeadDashboardPath("program-1")).toBe("/program-head/programs/program-1/dashboard");
+    expect(buildProgramHeadDashboardPath("program-1")).toBe(
+      "/program-head/programs/program-1/dashboard"
+    );
   });
 
   it("builds child paths without duplicate separators", () => {
-    expect(buildProgramHeadProgramPath("program-1", "/courses")).toBe("/program-head/programs/program-1/courses");
+    expect(buildProgramHeadProgramPath("program-1", "/courses")).toBe(
+      "/program-head/programs/program-1/courses"
+    );
   });
 
   it("builds the canonical selected Program Courses path", () => {
-    expect(buildProgramHeadCoursesPath("program-1")).toBe("/program-head/programs/program-1/courses");
+    expect(buildProgramHeadCoursesPath("program-1")).toBe(
+      "/program-head/programs/program-1/courses"
+    );
   });
 
   it("builds the canonical selected Program roster path", () => {
     expect(buildProgramHeadCourseRosterPath("program-1", "assignment-1")).toBe(
       "/program-head/programs/program-1/course-rosters/assignment-1"
+    );
+  });
+
+  it("builds the canonical selected Program Course-bound evaluation path", () => {
+    expect(buildProgramHeadNewCiloEvaluationPath("program-1")).toBe(
+      "/program-head/programs/program-1/cilo-evaluations/new"
     );
   });
 

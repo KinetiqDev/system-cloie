@@ -8,11 +8,13 @@ const {
   membershipFindManyMock,
   resolveAuthSessionMock,
   programHeadAssignmentFindManyMock,
+  resolveProgramHeadContextMock,
 } = vi.hoisted(() => ({
   findUniqueAssignmentMock: vi.fn(),
   membershipFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -32,6 +34,10 @@ vi.mock("@/lib/db/prisma", () => ({
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
+}));
+
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
 }));
 
 const MOCK_ASSIGNMENT = {
@@ -150,7 +156,9 @@ describe("previewCourseBoundRespondents", () => {
       profileGate: { status: "COMPLETE" },
     });
     findUniqueAssignmentMock.mockResolvedValue(MOCK_ASSIGNMENT);
-    const existingAssignment = await previewCourseBoundRespondents({ assignmentId: "assignment-1" });
+    const existingAssignment = await previewCourseBoundRespondents({
+      assignmentId: "assignment-1",
+    });
 
     findUniqueAssignmentMock.mockResolvedValue(null);
     const missingAssignment = await previewCourseBoundRespondents({ assignmentId: "assignment-2" });
@@ -205,6 +213,40 @@ describe("previewCourseBoundRespondents", () => {
         where: { course_assignment_id: "assignment-1", is_active: true },
       })
     );
+  });
+
+  it("rejects a selected Program that does not own the Course assignment", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "program-head-1",
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+      profileGate: { status: "COMPLETE" },
+    });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        authorizedPrograms: [
+          { code: "BSCS", id: "program-1", name: "BS Computer Science" },
+          { code: "BSED", id: "program-2", name: "Bachelor of Secondary Education" },
+        ],
+        selectedProgram: {
+          code: "BSED",
+          id: "program-2",
+          name: "Bachelor of Secondary Education",
+        },
+        userId: "program-head-1",
+      },
+    });
+    findUniqueAssignmentMock.mockResolvedValue(MOCK_ASSIGNMENT);
+
+    await expect(
+      previewCourseBoundRespondents({ assignmentId: "assignment-1", programId: "program-2" })
+    ).resolves.toEqual({
+      error: "Course assignment not found.",
+      success: false,
+    });
+
+    expect(membershipFindManyMock).not.toHaveBeenCalled();
   });
 
   it("returns a support reference for unexpected preview failures", async () => {

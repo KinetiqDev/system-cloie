@@ -41,5 +41,6 @@ export const publishCourseBoundEvaluationSchema = z.object({
   deadlineAt: z.date().nullable().optional(),
   deploymentName: z.string().trim().min(1, "Deployment name is required."),
   exclusions: z.array(exclusionSchema).optional(),
+  programId: z.string().uuid().optional(),
   templateId: z.string().uuid(),
 });

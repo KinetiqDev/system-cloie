@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { CourseScope } from "@prisma/client";
@@ -16,6 +17,7 @@ import type {
  */
 export async function previewCourseBoundRespondents({
   assignmentId,
+  programId,
 }: PreviewCourseBoundRespondentsInput): Promise<PreviewCourseBoundRespondentsResult> {
   let actorId: string | undefined;
 
@@ -29,6 +31,20 @@ export async function previewCourseBoundRespondents({
       };
     }
     actorId = authSession.userId;
+
+    const selectedProgram =
+      authSession.activeRole === ROLES.PROGRAM_HEAD
+        ? programId
+          ? await resolveProgramHeadContext(programId)
+          : null
+        : null;
+
+    if (
+      authSession.activeRole === ROLES.PROGRAM_HEAD &&
+      (!selectedProgram || !selectedProgram.success)
+    ) {
+      return { error: "Course assignment not found.", success: false };
+    }
 
     // Resolve assignment identity before querying its roster.
     const assignment = await prisma.courseAssignment.findFirst({
@@ -65,14 +81,10 @@ export async function previewCourseBoundRespondents({
     }
 
     // Resolve scope only for the active portal role.
-    let phProgramScope: string[] = [];
-    if (authSession.activeRole === ROLES.PROGRAM_HEAD) {
-      const headAssignments = await prisma.programHeadAssignment.findMany({
-        where: { program_head_id: authSession.userId, is_active: true },
-        select: { program_id: true },
-      });
-      phProgramScope = headAssignments.map((a) => a.program_id).filter(Boolean) as string[];
-    }
+    const selectedProgramId = selectedProgram?.success
+      ? selectedProgram.data.selectedProgram.id
+      : undefined;
+    const phProgramScope = selectedProgramId ? [selectedProgramId] : [];
 
     // Call policy for authorization
     const authCheck = canDeployCourseBoundEvaluation(
@@ -86,6 +98,13 @@ export async function previewCourseBoundRespondents({
     );
 
     if (!authCheck.allowed) {
+      return {
+        error: "Course assignment not found.",
+        success: false,
+      };
+    }
+
+    if (selectedProgramId && assignment.program_id !== selectedProgramId) {
       return {
         error: "Course assignment not found.",
         success: false,
