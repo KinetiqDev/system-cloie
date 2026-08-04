@@ -50,6 +50,11 @@ export const createProgramHeadAssignmentSchema = z.object({
   program_id: z.string().uuid(),
 });
 
+export const deactivateProgramHeadAssignmentSchema = z.object({
+  assignment_id: z.string().uuid(),
+  program_head_id: z.string().uuid(),
+});
+
 export const updateIndustryPartnerProfileSchema = z.object({
   user_id: z.string().uuid(),
   company_name: z

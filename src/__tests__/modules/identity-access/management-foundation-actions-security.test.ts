@@ -11,6 +11,7 @@ vi.mock("@/features/users/services/manage-users", () => ({
   assignUserRole: vi.fn(() => Promise.resolve({ success: true, data: { id: "role-1" } })),
   revokeUserRole: vi.fn(() => Promise.resolve({ success: true })),
   createProgramHeadAssignment: vi.fn(() => Promise.resolve({ success: true })),
+  deactivateProgramHeadAssignment: vi.fn(() => Promise.resolve({ success: true })),
   deleteStudentAcademicContext: vi.fn(() => Promise.resolve({ success: true })),
   deleteIndustryPartnerProfile: vi.fn(() => Promise.resolve({ success: true })),
 }));
@@ -28,6 +29,7 @@ import {
   assignUserRoleAction,
   revokeUserRoleAction,
   createProgramHeadAssignmentAction,
+  deactivateProgramHeadAssignmentAction,
   deleteStudentAcademicContextAction,
   deleteIndustryPartnerProfileAction,
 } from "@/lib/actions/management-foundation-actions";
@@ -37,6 +39,7 @@ import {
   assignUserRole,
   revokeUserRole,
   createProgramHeadAssignment,
+  deactivateProgramHeadAssignment,
   deleteStudentAcademicContext,
   deleteIndustryPartnerProfile,
 } from "@/features/users/services/manage-users";
@@ -193,6 +196,63 @@ describe("management-foundation-actions security", () => {
         program_head_id: "44444444-4444-4444-b444-444444444444",
         program_id: "55555555-5555-4555-a555-555555555555",
       });
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe("deactivateProgramHeadAssignmentAction", () => {
+    const ASSIGNMENT_ID = "55555555-5555-4555-a555-555555555555";
+
+    it("rejects unauthenticated", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
+      const result = await deactivateProgramHeadAssignmentAction(
+        ASSIGNMENT_ID,
+        "44444444-4444-4444-b444-444444444444"
+      );
+      expect(result).toEqual({ success: false, error: "Authentication required." });
+      expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
+    });
+
+    it("rejects wrong role", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
+      const result = await deactivateProgramHeadAssignmentAction(
+        ASSIGNMENT_ID,
+        "44444444-4444-4444-b444-444444444444"
+      );
+      expect(result).toEqual({ success: false, error: "Insufficient permissions." });
+      expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
+    });
+
+    it("rejects a malformed assignment id before calling the service", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
+      const result = await deactivateProgramHeadAssignmentAction(
+        "not-a-uuid",
+        "44444444-4444-4444-b444-444444444444"
+      );
+      expect(result.success).toBe(false);
+      expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
+    });
+
+    it("rejects a malformed program head id before calling the service", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
+      const result = await deactivateProgramHeadAssignmentAction(
+        ASSIGNMENT_ID,
+        "not-a-uuid"
+      );
+      expect(result.success).toBe(false);
+      expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
+    });
+
+    it("accepts valid ids and forwards them to the service", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
+      const result = await deactivateProgramHeadAssignmentAction(
+        ASSIGNMENT_ID,
+        "44444444-4444-4444-b444-444444444444"
+      );
+      expect(deactivateProgramHeadAssignment).toHaveBeenCalledWith(
+        ASSIGNMENT_ID,
+        "44444444-4444-4444-b444-444444444444"
+      );
       expect(result).toEqual({ success: true });
     });
   });

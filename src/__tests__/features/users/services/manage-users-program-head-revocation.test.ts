@@ -86,6 +86,18 @@ describe("revokeUserRole Program Head gate", () => {
     expect(mockTx.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
+  it("keys the advisory lock on a 64-bit hash of the user-scoped key", async () => {
+    mockTx.programHeadAssignment.count.mockResolvedValue(0);
+
+    const result = await revokeUserRole(TARGET_ID, SystemRole.PROGRAM_HEAD);
+
+    expect(result.success).toBe(true);
+    const lockSql = mockTx.$queryRaw.mock.calls[0]?.[0][0] ?? "";
+    const lockKey = mockTx.$queryRaw.mock.calls[0]?.[1] ?? "";
+    expect(lockSql).toContain("pg_advisory_xact_lock(hashtextextended");
+    expect(lockKey).toContain(`cloie:program-head-assignment-set:${TARGET_ID}`);
+  });
+
   it("does not delete the role when the count check fails inside the transaction", async () => {
     mockTx.userRole.delete.mockRejectedValue(new Error("DB write failed"));
 

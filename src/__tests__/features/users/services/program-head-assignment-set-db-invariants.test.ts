@@ -1,7 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, expectTypeOf, it } from "vitest";
 
 import { prisma } from "@/lib/db/prisma";
-import { applyProgramHeadAssignmentSet } from "@/features/users/services/manage-users";
+import {
+  applyProgramHeadAssignmentSet,
+  lockProgramHeadAssignmentSet,
+} from "@/features/users/services/manage-users";
 
 /**
  * Opt-in invariant suite (gate #149): runs only with a disposable
@@ -13,6 +16,16 @@ describe.skipIf(
 )("Program Head assignment-set unique-key invariant", () => {
   const TEST_USER_ID = "00000000-0000-4000-8000-00000000a219";
   const TEST_PROGRAM_ID = "00000000-0000-4000-8000-00000000b219";
+
+  it("rejects a bare client for the locked assignment-set helper", () => {
+    // Compile-time guard (no runtime side effects): a PrismaClient is not
+    // assignable to the locked-client parameter type of
+    // `applyProgramHeadAssignmentSet`, so passing one is a type error. This
+    // pins the lock-first contract that the invariant writers below follow.
+    expectTypeOf<typeof prisma>().not.toMatchTypeOf<
+      Parameters<typeof applyProgramHeadAssignmentSet>[0]
+    >();
+  });
 
   beforeAll(async () => {
     await prisma.$transaction(async (tx) => {
@@ -45,7 +58,10 @@ describe.skipIf(
 
   it("concurrent reactivation attempts leave exactly one active row", async () => {
     // Seed one historical (inactive) row, then race two reactivation writers
-    // for the same compound key.
+    // for the same compound key. Each writer runs under the per-Program-Head
+    // advisory lock exactly like the Secretary protected edit flow, so the
+    // race serializes on the production path rather than relying on
+    // idempotent upserts alone.
     await prisma.programHeadAssignment.create({
       data: {
         program_head_id: TEST_USER_ID,
@@ -55,13 +71,19 @@ describe.skipIf(
     });
 
     await Promise.all([
-      applyProgramHeadAssignmentSet(prisma, {
-        programHeadId: TEST_USER_ID,
-        programIds: [TEST_PROGRAM_ID],
+      prisma.$transaction(async (tx) => {
+        const lockedTx = await lockProgramHeadAssignmentSet(tx, TEST_USER_ID);
+        await applyProgramHeadAssignmentSet(lockedTx, {
+          programHeadId: TEST_USER_ID,
+          programIds: [TEST_PROGRAM_ID],
+        });
       }),
-      applyProgramHeadAssignmentSet(prisma, {
-        programHeadId: TEST_USER_ID,
-        programIds: [TEST_PROGRAM_ID],
+      prisma.$transaction(async (tx) => {
+        const lockedTx = await lockProgramHeadAssignmentSet(tx, TEST_USER_ID);
+        await applyProgramHeadAssignmentSet(lockedTx, {
+          programHeadId: TEST_USER_ID,
+          programIds: [TEST_PROGRAM_ID],
+        });
       }),
     ]);
 
@@ -82,13 +104,19 @@ describe.skipIf(
 
     try {
       await Promise.all([
-        applyProgramHeadAssignmentSet(prisma, {
-          programHeadId: TEST_USER_ID,
-          programIds: [programId],
+        prisma.$transaction(async (tx) => {
+          const lockedTx = await lockProgramHeadAssignmentSet(tx, TEST_USER_ID);
+          await applyProgramHeadAssignmentSet(lockedTx, {
+            programHeadId: TEST_USER_ID,
+            programIds: [programId],
+          });
         }),
-        applyProgramHeadAssignmentSet(prisma, {
-          programHeadId: TEST_USER_ID,
-          programIds: [programId],
+        prisma.$transaction(async (tx) => {
+          const lockedTx = await lockProgramHeadAssignmentSet(tx, TEST_USER_ID);
+          await applyProgramHeadAssignmentSet(lockedTx, {
+            programHeadId: TEST_USER_ID,
+            programIds: [programId],
+          });
         }),
       ]);
 

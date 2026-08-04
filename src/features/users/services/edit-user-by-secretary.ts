@@ -512,8 +512,9 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
       } else if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
         // Serialize assignment-set administration for this target user so a
         // concurrent assignment edit or role revocation cannot interleave
-        // with the role and set re-reads below.
-        await lockProgramHeadAssignmentSet(tx, id);
+        // with the role and set re-reads below. The locked client is passed
+        // to `applyProgramHeadAssignmentSet` below.
+        const lockedTx = await lockProgramHeadAssignmentSet(tx, id);
 
         // The save transaction re-verifies that the target still holds the
         // Program Head role; a role revocation racing this save is denied.
@@ -561,7 +562,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
             }
           }
 
-          await applyProgramHeadAssignmentSet(tx, {
+          await applyProgramHeadAssignmentSet(lockedTx, {
             programHeadId: id,
             programIds: program_head.program_ids,
           });

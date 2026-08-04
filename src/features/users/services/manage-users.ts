@@ -498,7 +498,10 @@ export async function createProgramHeadAssignment(
   }
 }
 
-export async function deactivateProgramHeadAssignment(id: string): Promise<ServiceResult> {
+export async function deactivateProgramHeadAssignment(
+  assignmentId: string,
+  programHeadId: string
+): Promise<ServiceResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
     return { success: false, error: "Authentication required." };
@@ -509,18 +512,26 @@ export async function deactivateProgramHeadAssignment(id: string): Promise<Servi
   }
 
   await prisma.$transaction(async (tx) => {
-    // Resolve the owning Program Head first so the advisory lock is keyed on
-    // the target user id, matching every other assignment-set writer.
+    // Acquire the per-Program-Head advisory lock before reading any
+    // assignment row, matching createProgramHeadAssignment and
+    // revokeUserRole. The lock key is the owning user id, which the caller
+    // supplies, so the row read and write below run under the same lock as
+    // assignment-set administration. The ownership check keeps a mismatched
+    // caller from deactivating a row while holding another user's lock.
+    await lockProgramHeadAssignmentSet(tx, programHeadId);
+
     const assignment = await tx.programHeadAssignment.findUnique({
-      where: { id },
+      where: { id: assignmentId },
       select: { program_head_id: true },
     });
     if (!assignment) {
       throw new Error("Program head assignment not found.");
     }
-    await lockProgramHeadAssignmentSet(tx, assignment.program_head_id);
+    if (assignment.program_head_id !== programHeadId) {
+      throw new Error("Program head assignment does not belong to the target user.");
+    }
     await tx.programHeadAssignment.update({
-      where: { id },
+      where: { id: assignmentId },
       data: { is_active: false },
     });
   });
@@ -529,33 +540,56 @@ export async function deactivateProgramHeadAssignment(id: string): Promise<Servi
 }
 
 /**
+ * A write client that already holds the per-Program-Head advisory lock.
+ * PrismaClient and TransactionClient expose the same model-delegate surface,
+ * so Prisma's types cannot distinguish a locked transaction from a bare
+ * client. Only `lockProgramHeadAssignmentSet` produces this brand (via the
+ * required unique-symbol member), which makes passing an un-locked client to
+ * `applyProgramHeadAssignmentSet` a compile error instead of a silent
+ * lock-free call.
+ */
+declare const programHeadAssignmentSetLock: unique symbol;
+
+export type ProgramHeadAssignmentSetLock = Prisma.TransactionClient & {
+  readonly [programHeadAssignmentSetLock]: true;
+};
+
+/**
  * Serializes Program Head assignment-set administration for one target user.
  * All assignment-set writers and the Program Head role revocation gate take
  * this Postgres advisory transaction lock, so a concurrent assignment edit,
  * standalone assignment write, or role revocation cannot interleave with the
- * transaction re-read of the set (the stale-confirmation check).
+ * transaction re-read of the set (the stale-confirmation check). The key is
+ * hashed with `hashtextextended` (64-bit) so distinct Program Head user ids
+ * cannot collide onto the same 32-bit advisory-lock key and serialize
+ * unrelated transactions.
  */
 export async function lockProgramHeadAssignmentSet(
   tx: Prisma.TransactionClient,
   userId: string
-): Promise<void> {
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`cloie:program-head-assignment-set:${userId}`}))`;
+): Promise<ProgramHeadAssignmentSetLock> {
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`cloie:program-head-assignment-set:${userId}`}, 0))`;
+  return tx as ProgramHeadAssignmentSetLock;
 }
 
 /**
  * Applies a complete Program Head assignment set inside a write transaction.
- * This is the shared lifecycle used by the Secretary protected edit flow and
- * mirrors the upsert/reactivation and deactivation semantics of
- * `createProgramHeadAssignment` and `deactivateProgramHeadAssignment`:
- * selected existing rows (including historical rows) are activated or
- * reactivated, selected Programs without a row receive exactly one new row,
- * and unselected active rows are deactivated. No row is ever deleted or
- * recreated solely to change selection. The compound `(program_head_id,
- * program_id)` unique key turns a concurrent duplicate activation race into a
- * safe activation instead of a duplicate row.
+ * The caller must pass the locked client returned by
+ * `lockProgramHeadAssignmentSet`; acquiring the advisory lock first is what
+ * makes the multi-step updateMany/upsert serialized against other
+ * assignment-set writers. This is the shared lifecycle used by the Secretary
+ * protected edit flow and mirrors the upsert/reactivation and deactivation
+ * semantics of `createProgramHeadAssignment` and
+ * `deactivateProgramHeadAssignment`: selected existing rows (including
+ * historical rows) are activated or reactivated, selected Programs without a
+ * row receive exactly one new row, and unselected active rows are
+ * deactivated. No row is ever deleted or recreated solely to change
+ * selection. The compound `(program_head_id, program_id)` unique key turns a
+ * concurrent duplicate activation race into a safe activation instead of a
+ * duplicate row.
  */
 export async function applyProgramHeadAssignmentSet(
-  tx: Prisma.TransactionClient,
+  tx: ProgramHeadAssignmentSetLock,
   input: { programHeadId: string; programIds: string[] }
 ): Promise<void> {
   const { programHeadId } = input;
