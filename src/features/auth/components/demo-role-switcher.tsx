@@ -1,7 +1,9 @@
 "use client";
 
 import { DEDICATED_DEMO_USERS } from "@/lib/constants/demo-users";
-import { RoleSwitcher, type RoleSwitcherUser } from "./role-switcher";
+import { MobileRoleSwitcher } from "./mobile-role-switcher";
+import { RoleSwitcherDropdown } from "./role-switcher-dropdown";
+import type { RoleSwitcherUser } from "./role-switcher-list";
 
 type DemoRoleSwitcherProps = {
   enabled: boolean;
@@ -9,20 +11,40 @@ type DemoRoleSwitcherProps = {
   users?: readonly RoleSwitcherUser[];
 };
 
-export function DemoRoleSwitcher({ enabled, activeEmail, users = DEDICATED_DEMO_USERS }: DemoRoleSwitcherProps) {
+export function DemoRoleSwitcherDesktop({
+  enabled,
+  activeEmail,
+  users = DEDICATED_DEMO_USERS,
+}: DemoRoleSwitcherProps) {
   if (!enabled) return null;
 
   return (
-    <RoleSwitcher
+    <RoleSwitcherDropdown
       activeEmail={activeEmail}
       users={users}
       endpoint="/api/auth/demo-login"
       requestKey="identifier"
-      storageKey="cloie-demo-switcher-pos"
-      expandedStorageKey="cloie-demo-role-switcher-expanded"
+      title="Demo"
+      description="Switch between dedicated demo accounts"
+    />
+  );
+}
+
+export function DemoRoleSwitcher({
+  enabled,
+  activeEmail,
+  users = DEDICATED_DEMO_USERS,
+}: DemoRoleSwitcherProps) {
+  if (!enabled) return null;
+
+  return (
+    <MobileRoleSwitcher
+      activeEmail={activeEmail}
+      users={users}
+      endpoint="/api/auth/demo-login"
+      requestKey="identifier"
       title="Demo Roles"
       description="Switch between dedicated demo accounts"
-      visibilityClassName="hidden lg:block"
     />
   );
 }
