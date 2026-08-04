@@ -1,372 +1,598 @@
 # DESIGN.md — System CLOIE
 
-## Scope
+> **Status:** Approved unified light/dark design specification  
+> **Repository status:** Light is implemented on `main`; dark and System appearance are approved but not yet implemented.  
+> **Reviewed against `main`:** 2026-08-04
 
-This file defines the visual language, interaction principles, page-type behavior, and UI consistency rules for System CLOIE. It is the authoritative human/AI reference for how the product should look, feel, and behave. It supersedes the missing `docs/design-system.txt` referenced by `src/styles/tokens.css`.
+## 1. Authority and Scope
 
-Use this file for:
+This file defines System CLOIE's visual language, theme behavior, page patterns, components, responsive behavior, interaction, and accessibility. It applies to both light and dark themes.
 
-- page-level design direction and visual hierarchy
-- component styling and layout behavior
-- interaction tone, motion, and feedback patterns
-- module-specific UI guidance
-- consistency constraints for engineers and AI coding agents
-
-Do not use this file for:
-
-- product scope definition (see `docs/cloie-prd.md`, `docs/cloie-srs.md`)
-- engineering workflow rules (see `AGENTS.md`)
-- stack rules (see `openspec/config.yaml`)
-
-## Document Relationship
-
-| Document | Primary Responsibility |
+| Subject | Source of truth |
 | --- | --- |
-| `docs/cloie-prd.md` / `docs/cloie-srs.md` | product scope, workflows, user requirements |
-| `AGENTS.md` | engineering workflow, verification, agent operating rules |
-| `docs/design.md` | visual language, interaction guidance, page-type rules, UI consistency |
-| `src/styles/tokens.css` + `src/app/globals.css` | canonical token *values* (single source of truth for numbers) |
-| `src/features/<domain>/CONTEXT.md` | per-domain glossary and invariants |
+| Architecture, stack, binding engineering rules | `openspec/config.yaml` |
+| Product workflows and requirements | `docs/cloie-prd.md`, `docs/cloie-srs.md` |
+| Domain terms and invariants | `CONTEXT-MAP.md`, feature `CONTEXT.md`, ADRs |
+| Visual and interaction behavior | `docs/design.md` |
+| Numerical design values | `src/styles/tokens.css` |
+| Tailwind/shadcn mappings and type utilities | `src/app/globals.css` |
+| Current behavior | existing code and tests |
+| Execution and verification | `AGENTS.md` |
 
-If documents appear to conflict:
+Surface conflicts explicitly. This file does not define product scope, authorization, database behavior, or engineering workflow.
 
-1. PRD/SRS win for product definition
-2. `docs/design.md` wins for visual and interaction guidance
-3. `AGENTS.md` wins for engineering execution rules
-4. feature-level `spec.md` / `plan.md` apply only to the current implementation slice
+**Keywords:** MUST/MUST NOT are binding; SHOULD/SHOULD NOT require a documented reason to deviate; MAY is optional.
 
-## Product Intent
+---
 
-- **Product type**: Multi-role academic evaluation SaaS (institutional tool)
-- **Primary users**: Assumption College of Davao — respondents (students, alumni, industry partners) and administrators (faculty, secretary, dean)
-- **Primary jobs-to-be-done**: course evaluations, learning outcome assessment, program/major management, analytics and reporting, response collection
-- **Desired product feeling**: institutional, trustworthy, calm, precise
-- **Brand traits**: flat institutional, restrained, credible, professional, orderly
-- **Anti-traits**: playful, trendy, decorative, noisy, gamified
+## 2. Implementing-Agent Quick Start
 
-## Experience Principles
+Before changing UI:
 
-1. **Clarity over decoration** — flat surfaces, minimal shadows, restrained color; every visual element earns its place.
-2. **Role-aware UI** — each role sees only its own tools; navigation is driven by `src/lib/constants/navigation.ts` per-role groups.
-3. **Token consistency** — semantic tokens only (`text-text-secondary`, `bg-primary`); no raw hex in components.
-4. **Status must be legible** — semantic color (success/warning/danger/info) always paired with text or icon, never color alone.
-5. **Responsive by default** — dashboards scale to desktop, flows adapt to mobile; bottom nav and drawer fallbacks are the norm on small screens.
-6. **Accessibility as default** — AA contrast, visible focus rings, keyboard operability, reduced-motion support.
+1. Identify the role, domain, and page type.
+2. Read the relevant context, ADRs, code, and tests.
+3. Reuse the existing shell and `src/components/ui/` primitives.
+4. Use semantic tokens; never choose light/dark values in components.
+5. Cover relevant default, hover, focus, pressed, selected, disabled, loading, error, and empty states.
+6. Verify light, dark, desktop, mobile, keyboard, contrast, and reduced motion.
+7. Run focused tests, `pnpm lint`, and `pnpm build`.
 
-## Visual Theme and Atmosphere
+If dark mode is not yet implemented, follow this approved specification but do not improvise component-local palettes.
 
-Flat institutional style: white surfaces on a slate-tinted background (`#f8fafc`), a single blue primary (`#2563eb`), a gold secondary (`#d49900`) for academic accents, and very low shadows. Headings in Manrope, body in Inter. Emphasis comes from weight, spacing, and color tone rather than elevation or decoration. This system must work consistently across all page types below.
+---
 
-## Page Types
+## 3. Product Design Intent
 
-### Landing & Portal Choice (`src/app/page.tsx`, `src/features/portals/`)
-- **Purpose**: introduce the system, route users into role portals
-- **Density**: low; spacious hero with radial blue glow (`bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,var(--color-primary-soft),transparent)]`)
-- **Primary action style**: large primary button cards (PortalChoiceCard, `hover:shadow-xl hover:shadow-primary/5 hover:ring-primary/20`)
-- **Should emphasize**: brand, trust, clear role paths
-- **Should avoid**: dense tables, admin chrome
+- **Product:** institutional academic evaluation, learning-outcome monitoring, analytics, and reporting platform
+- **Institution:** Assumption College of Davao
+- **Administrative roles:** `SECRETARY`, `DEAN`, `PROGRAM_HEAD`, `FACULTY`
+- **Respondent roles:** `STUDENT`, `ALUMNI`, `INDUSTRY_PARTNER`
+- **Production identity:** one active account role; dev/demo role switching is environment-only
+- **Character:** institutional, trustworthy, calm, precise, professional, orderly, analytical, restrained
+- **Avoid:** playful, trendy, decorative, noisy, gamified, highly saturated, legacy-portal-like, neon, or cyberpunk styling
 
-### Auth & Onboarding (`src/app/(public)/`)
-- **Purpose**: login, onboarding, portal entry, status
-- **Density**: low; centered layout on `bg-[#f8fafc]`, `max-w-7xl` containers with `px-4 sm:px-6 lg:px-8`
-- **Primary action style**: primary buttons
-- **Should emphasize**: focus, minimal distraction
-- **Should avoid**: navigation chrome
+### Experience Principles
 
-### Operational Dashboards (Secretary / Dean / Faculty)
-- **Purpose**: day-to-day administration, CRUD, review
-- **Density**: medium; stat grids `grid gap-4 md:grid-cols-2 xl:grid-cols-4`, cards `flex flex-col gap-6`
-- **Primary action style**: primary button top-right of page header; destructive actions as secondary/outline buttons inside alert dialogs
-- **Should emphasize**: data legibility, scanability, quick actions
-- **Should avoid**: hero imagery, decorative gradients
+1. **Clarity over decoration** — hierarchy, spacing, and restrained color establish structure.
+2. **Role-aware UI** — users see only tools appropriate to their active role.
+3. **Semantic tokens only** — components consume roles, not theme values.
+4. **Legible status** — color is paired with text, icon, shape, or pattern.
+5. **Adaptive by default** — meaning remains constant across themes and breakpoints.
+6. **Accessibility by default** — contrast, focus, keyboard access, touch targets, and reduced motion are required.
 
-### Respondent Flows (Student / Alumni / Industry Partner)
-- **Purpose**: fill out evaluations and response forms
-- **Density**: low; guided wizard (`src/features/responses/components/wizard-shell.tsx`), one step at a time
-- **Primary action style**: prominent primary continue/submit button; progress feedback
-- **Should emphasize**: progress clarity, mobile comfort, minimal cognitive load
-- **Should avoid**: sidebars, admin actions
+---
 
-### Analytics (Faculty / Dean)
-- **Purpose**: outcome metrics, charts, drill-down
-- **Density**: medium-high; chart cards with Recharts via shadcn chart primitives
-- **Primary action style**: contextual (filters, export, drill-down)
-- **Should emphasize**: trends, comparisons, direct labeling
-- **Should avoid**: decorative chart animation, color-only series distinction
+## 4. Unified Theme Architecture
 
-### Legal Pages (`src/app/(legal)/`)
-- **Purpose**: privacy policy, terms
-- **Density**: low; `.legal-prose` styles, `max-w-3xl` text column
-- **Primary action style**: none (informational)
-- **Should emphasize**: readability
-- **Should avoid**: anything beyond prose and minimal headers
+### 4.1 Theme Model and Status
 
-### Empty / Error / Loading States
-- **Empty**: icon-in-circle + `h3 text-lg font-medium` + `text-sm text-muted-foreground` + CTA button (see `course-assignments-table.tsx`)
-- **Error**: `role="alert"` banners, `error-boundary.tsx`, route error files with return path
-- **Loading**: route `loading.tsx` skeleton shells (`operational-route-loading.tsx`, `respondent-route-loading.tsx`) with `role="status" aria-busy`; `Skeleton` = `bg-muted animate-pulse rounded-md`
+System CLOIE has **Light**, **Dark**, and **System** appearance settings. Themes change resolved token values, not component structure, hierarchy, semantics, content, navigation, or responsive behavior.
 
-## Color System
+> **Values adapt. Roles and meanings remain constant.**
 
-### Core Roles
-
-| Role | Token | Value |
+| Appearance | Design | Implementation on `main` |
 | --- | --- | --- |
-| Primary (brand, CTAs, active nav) | `--color-primary` | `#2563eb` |
-| Primary hover / active | `--color-primary-hover` / `-active` | `#1d4ed8` / `#1e40af` |
-| On primary | `--color-on-primary` | `#ffffff` |
-| Primary soft / muted / border | — | `#eff6ff` / `#dbeafe` / `#bfdbfe` |
-| Secondary (gold, academic accent) | `--color-secondary` | `#d49900` |
-| Secondary hover / soft / on-secondary | — | `#b88200` / `#fff4d6` / `#2f2200` |
-| Background (page) | `--color-background` | `#f8fafc` |
-| Surface (cards, chrome) | `--color-surface` | `#ffffff` |
-| Surface alt / muted | — | `#f1f5f9` / `#e2e8f0` |
-| Border / border strong | — | `#e2e8f0` / `#cbd5e1` |
-| Text primary / secondary / muted | — | `#0f172a` / `#334155` / `#64748b` |
-| Success | `--color-success` | `#059669` (soft `#ecfdf5`) |
-| Warning | `--color-warning` | `#d97706` (soft `#fffbeb`) |
-| Danger | `--color-danger` | `#dc2626` (soft `#fef2f2`) |
-| Info (interactive accent, rings) | `--color-info` | `#3b82f6` (soft `#eff6ff`) |
-| Chart 1–5 | `--chart-1..5` | primary, secondary, success, info, warning |
+| Light | Approved | Implemented |
+| Dark | Approved | Not implemented |
+| System | Approved | Not implemented |
 
-All tokens are defined verbatim in `src/styles/tokens.css`; utility registration and shadcn semantic mapping (`--primary`, `--card`, `--ring`, `--sidebar-*`, etc.) live in `src/app/globals.css` (`@theme inline` + `:root`). Values change only in `tokens.css`.
+Do not present dark mode as shipped until tokens, provider, persistence, first-paint resolution, and component verification are complete.
 
-### Color Usage Rules
+### 4.2 Brand Roles
 
-- Use **primary** for primary CTAs, active navigation, links, and interactive accents.
-- Use **gold secondary** sparingly for academic/status distinction (e.g. `--chart-2`, academic accents).
-- Keep surfaces, borders, and most layout chrome **neutral**.
-- Reserve **semantic colors** for status only; always pair with text/icon (badge, toast border, `*-soft` backgrounds).
-- **Info** is the interactive accent: focus rings (`--ring`), hover accents, `accent` surfaces.
-- Do not use semantic colors as dominant backgrounds; use `*-soft` tints instead.
-- Chart/data visuals may use stronger color than layout chrome, but must keep ≥3:1 contrast vs background and pair with patterns/labels for series distinction.
+| Role | Use | Do not use as |
+| --- | --- | --- |
+| Institutional navy | formal ACD/report framing | routine action color |
+| Operational primary | CTA, links, active nav, selection, progress | status color |
+| ACD cyan accent | analytics, categories, specialized accents | default secondary action |
+| Neutral secondary | secondary actions, neutral controls | brand accent |
+| Semantic colors | success, warning, danger, information | decoration/categories |
 
-## Typography
+**ACD cyan and neutral secondary actions are separate roles.**
 
-### Font Direction
+### 4.3 Theme Invariants
 
-- **Headings**: Manrope (600/700) via `next/font/google`, exposed as `font-heading`
-- **Body**: Inter (400/500/600), exposed as `font-body` / `font-sans`
-- **Numbers**: tabular figures where they must align (`tabular-nums` on `ProgressValue`, KPI counts)
-- **Overall tone**: clear, professional, institutional
+Unchanged across themes:
 
-### Type Scale
+- typography, spacing, radii, sizes
+- component anatomy and action hierarchy
+- navigation, status meaning, copy
+- responsive substitutions
+- keyboard and screen-reader behavior
 
-| Style | Size / Line-height | Weight | Font | Utility |
-| --- | --- | --- | --- | --- |
-| Display lg | 3rem / 3.3rem | 700 | heading | `.text-display-lg` |
-| Display md | 2.25rem / 2.7rem | 700 | heading | `.text-display-md` |
-| Heading xl | 1.75rem / 2.25rem | 700 | heading | `.text-heading-xl` |
-| Heading lg | 1.25rem / 1.625rem | 700 | heading | `.text-heading-lg` |
-| Heading md | 1.125rem / 1.575rem | 600 | heading | `.text-heading-md` |
-| Title lg / md / sm | 1.125 / 1 / 0.875rem | 600 | heading | `.text-title-*` |
-| Body lg / md / sm | 1.125 / 1 / 0.875rem | 400 | body | `.text-body-*` |
-| Label lg / md / sm | 0.875 / 0.8125 / 0.75rem | 600 | body | `.text-label-*` |
-| Caption | 0.75rem / 1rem | 400 | body | `.text-caption` |
+Theme-adaptive:
 
-Base: body 1rem / line-height 1.6. Token utilities are defined in `globals.css` lines 250–353.
+- surfaces, foregrounds, borders
+- links, focus, selection
+- semantic soft surfaces
+- charts, overlays, logo containers
 
-### Typography Rules
+### 4.4 Appearance Selection
 
-- Use token utility classes (`.text-heading-*`, `.text-body-*`, `.text-label-*`) instead of ad-hoc `text-2xl font-bold` — the scale above is the only sanctioned sizing.
-- Page headers: `h1` page title + muted description; card titles `font-heading text-base font-medium`.
-- Labels and metadata: `.text-label-sm` (600); eyebrows can use `text-label-sm font-semibold tracking-wider uppercase`.
-- Body text: `text-text-secondary` for subtext, `text-text-muted` for captions/help.
-- Long-form legal content uses `.legal-prose` (`text-base leading-relaxed text-text-secondary`).
-- Never go below 0.75rem; body copy stays ≥0.875rem.
+- Default new users to **System**.
+- Explicit Light/Dark overrides the OS preference.
+- Persist the choice and resolve it before first paint.
+- Theme changes must not reset route, form, filter, scroll, or async state.
+- Use text labels; do not rely on a sun/moon icon alone.
+- Preferred placement: avatar menu and `Settings → Appearance`.
 
-## Layout Principles
+### 4.5 Logo Treatment
 
-### Page Structure
+- Never recolor, invert, filter, crop, distort, or redraw official logos.
+- System CLOIE is primary; the ACD seal is secondary.
+- Light: use neutral surfaces and clear space.
+- Dark: use a light brand-safe plate (`#FFFFFF` or `#F8FAFC`) with a subtle border.
+- Warm colors inside logos are not general UI tokens.
 
-- **App shell** (`src/components/layout/app-shell.tsx`): `Sidebar` (desktop) + main column → `Topbar` → `<main>` with `mx-auto w-full min-w-0 max-w-[1600px] p-4 pb-24 sm:p-6 lg:pb-8` (bottom padding clears mobile nav).
-- **Max width**: `max-w-[1600px]` for operational pages; `max-w-7xl` for public/landing; `max-w-3xl` / `max-w-2xl` for forms and legal.
-- **Grid**: Tailwind default; stat grids `grid gap-4 md:grid-cols-2 xl:grid-cols-4`; forms `flex flex-col gap-6`.
-- **Spacing rhythm**: 4/8px increments; `gap-*` over `space-*`; page sections `gap-6`; card padding `p-4`/`py-4`.
-- **Desktop**: sidebar `w-64` (dean: `w-16 md:flex lg:w-64`), topbar `h-16`, content `p-6`.
-- **Mobile**: bottom nav `h-16` (`md:hidden`, `pb-safe`), content `p-4 pb-24`; dialogs become drawers below `md` (`use-media-query`).
+---
 
-### Spatial Rules
+## 5. Semantic Token System
 
-- Section spacing: `gap-6` / `space-y-6` between content blocks.
-- Card padding: `py-4` default; inputs `h-8`.
-- Alignment: left-aligned labels above fields; page header actions right-aligned.
-- Density: medium for admin lists, low for wizard/respondent flows.
-- Avoid: cramped touch targets, horizontal scroll on mobile, nested scroll regions.
+### 5.1 Ownership and Layers
 
-## Surfaces, Borders, and Elevation
+- `tokens.css` owns numerical values.
+- `globals.css` maps them to Tailwind/shadcn semantics.
+- `design.md` defines meaning and usage.
 
-- **Radius scale**: 2 / 4 / 8 / 12 / 16 / 24px (`--radius-xs…2xl`); base `--radius: 0.5rem` (8px). Convention: `rounded-md` primitives, `rounded-lg` inputs/lists, `rounded-xl` cards/dialogs, `rounded-2xl` hero.
-- **Border style**: 1px `border-border` (`#e2e8f0`); overlays use `ring-1 ring-foreground/10` instead of shadows (dropdown-menu, select, dialog).
-- **Shadow style**: intentionally minimal — `--shadow-sm` `0 1px 2px rgba(0,0,0,0.05)` through `--shadow-xl`; `--shadow-modal: var(--shadow-lg)`; `shadow-sm` on profile/cards, `shadow-md/lg` on overlays.
-- **Surface layering**: background → surface (cards) → surface-alt (secondary) → surface-muted (muted fills); elevation is flat, not stacked.
-- **Hover elevation**: card hovers bump to `shadow-xl shadow-primary/5` + `ring-primary/20` (portal cards only); interactive rows use `hover:bg-muted`.
-- **Modal/popover treatment**: `bg-popover` + `rounded-lg` + `shadow-md` + `ring-1 ring-foreground/10`; dialog overlay `bg-black/10 backdrop-blur-xs`; sheets `w-3/4 sm:max-w-sm`.
+Components MUST use semantic classes such as `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `ring-ring`, and `bg-primary`.
 
-Guidance:
+Token layers:
 
-- Prefer border + spacing over shadows to separate elements.
-- Use stronger elevation only for overlays (dialog, dropdown, tooltip) — never for content cards.
-- Avoid decorative blur; `backdrop-blur` is reserved for overlays and the landing header.
+1. **Brand reference:** ACD navy, ACD cyan, bright cyan, System blue
+2. **Semantic UI:** background, card, muted, input, popover, border, foreground, primary, secondary, accent, link, ring, selected
+3. **Status/visualization:** success, warning, danger, information, chart 1–5
 
-## Component Styling
+### 5.2 Core Light–Dark Mapping
 
-### Buttons (`src/components/ui/button.tsx`)
+| Role | Light | Dark |
+| --- | ---: | ---: |
+| Background | `#F8FAFC` | `#0B1120` |
+| Surface/card | `#FFFFFF` | `#111827` |
+| Surface alternate | `#F1F5F9` | `#172033` |
+| Surface muted | `#E2E8F0` | `#1E293B` |
+| Surface hover | `#F1F5F9` | `#273449` |
+| Input | `#FFFFFF` | `#0F172A` |
+| Popover | `#FFFFFF` | `#172033` |
+| Border | `#E2E8F0` | `#334155` |
+| Border strong | `#CBD5E1` | `#475569` |
+| Text primary | `#0F172A` | `#F8FAFC` |
+| Text secondary | `#334155` | `#CBD5E1` |
+| Text muted | `#64748B` | `#94A3B8` |
+| Text disabled | `#94A3B8` | `#64748B` |
+| Primary | `#2563EB` | `#2563EB` |
+| Link | `#1D4ED8` | `#60A5FA` |
+| Focus ring | `#0284C7` | `#38BDF8` |
+| Selected background | `#EFF6FF` | `#172554` |
+| Selected foreground | `#1E40AF` | `#BFDBFE` |
+| Neutral secondary | `#F1F5F9` | `#1E293B` |
+| Secondary hover | `#E2E8F0` | `#273449` |
 
-- **Variants**: `default` (`bg-primary text-primary-foreground`), `outline` (`border-border bg-background hover:bg-muted`), `secondary`, `ghost` (`hover:bg-muted`), `destructive` (`bg-destructive/10 text-destructive`), `link` (`text-primary underline`), `cta-success` (custom green).
-- **Sizes**: `default`, `xs`, `sm`, `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`; icon-aware padding via `has-data-[icon=inline-end]`.
-- **Behavior**: disabled during async (`loading` state with label swap or `Loader2 animate-spin`), press effect `active:translate-y-px`, `focus-visible:ring-3 ring-ring/50`.
+### 5.3 Brand and Interactive Families
 
-### Inputs
+#### Institutional navy
 
-- `Input` (`@base-ui/react/input`): `h-8 rounded-lg text-base md:text-sm`.
-- `Textarea`: `field-sizing-content min-h-16`.
-- `Checkbox`/`RadioGroup`/`Switch`/`Select`/`Tabs`: Base UI primitives, shadcn-style shells; `Select` and `Switch` triggers take `size: sm | default`.
-- `Label`: visible label per field (never placeholder-only); `required` indicators; errors below the field.
+| Role | Value |
+| --- | ---: |
+| Reference | `#221D60` |
+| Dark surface | `#1E1B4B` |
+| Dark border | `#3730A3` |
+| Dark foreground | `#C7D2FE` |
 
-### Navigation
+Use only for formal report/institutional framing.
 
-- **Sidebar** (`sidebar.tsx`): `w-64`, header h-16 logo + "System CLOIE"; active link `bg-primary-soft text-primary`, inactive `text-text-secondary hover:bg-surface-hover`; badge count pill; user footer. Dean variant collapses to icon rail.
-- **Topbar** (`topbar.tsx`): sticky `h-16 z-40 border-b bg-surface`, avatar `DropdownMenu` with logout.
-- **Mobile**: bottom nav tab bar (`mobile-nav.tsx`, ≤5 items, icon + label) + custom drawer (`mobile-sidebar-drawer.tsx`).
-- **Tabs**: `TabsList` variants `default` (pills) and `line` (underline indicator).
-- **Links**: `navigation-link.tsx` wraps `next/link` with pending dot (`aria-live`).
+#### Operational primary
 
-### Cards
+| Role | Light/shared | Dark |
+| --- | ---: | ---: |
+| Primary | `#2563EB` | `#2563EB` |
+| Hover | `#1D4ED8` | `#1D4ED8` |
+| Active | `#1E40AF` | `#1E40AF` |
+| Soft/selected | `#EFF6FF` | `#172554` |
+| Highlight/link | `#1D4ED8` | `#60A5FA` |
+| On primary | `#FFFFFF` | `#FFFFFF` |
 
-- `Card`: `rounded-xl ring-1 ring-foreground/10 py-4`; `size` via `data-size` (default | sm).
-- KPI cards: `CardTitle` `font-heading text-base font-medium`, `CardDescription` `text-sm text-muted-foreground`, values `tabular-nums`.
+#### ACD cyan accent
 
-### Tables and Lists
+| Role | Light | Dark |
+| --- | ---: | ---: |
+| Accent | `#0369A1` | `#0369A1` |
+| Hover | `#075985` | `#0E7490` |
+| Active | `#0C4A6E` | `#075985` |
+| Soft | `#F0F9FF` | `#082F49` |
+| Border | `#BAE6FD` | `#0E7490` |
+| Highlight | `#25AAE1` | `#38BDF8` |
+| On accent | `#FFFFFF` | `#FFFFFF` |
 
-- `Table`: plain HTML, wrapped in `overflow-x-auto`; sticky-ish headers where needed; `has-aria-expanded` row state; sorting with `aria-sort`.
-- Status: `Badge` (rounded-4xl, `text-xs`) with `default/secondary/destructive/outline/ghost/link` variants; KPI pills.
-- Hover: `hover:bg-muted` rows; cursor-pointer on clickable rows.
+Use for category badges, analytics accents, chart 2, and a separately named specialized action—not the default `secondary` button.
 
-### Data Visualization
+#### Neutral secondary action
 
-- **Library**: Recharts 3 via shadcn chart primitives.
-- **Colors**: `--chart-1..5` tokens (do not hardcode palettes — see Known Gaps).
-- **Conventions**: legends visible, tooltips on hover/tap, `tabular-nums` values, gridlines low-contrast, `aria-label`/text summary describing key insight.
+| Role | Light | Dark |
+| --- | ---: | ---: |
+| Background | `#F1F5F9` | `#1E293B` |
+| Hover | `#E2E8F0` | `#273449` |
+| Border | `#CBD5E1` | `#475569` |
+| Foreground | `#0F172A` | `#F8FAFC` |
 
-### Feedback and Status
+### 5.4 Semantic Status Tokens
 
-- **Success / Warning / Error / Info**: semantic tokens + `*-soft` fills; toast borders colored per kind.
-- **Loading**: skeletons for routes/panels, inline `Loader2 animate-spin` for buttons; spinner with label swap ("Processing...").
-- **Toasts**: custom event system (`showToast(message, kind)` → `CustomEvent("cloie-toast")`), `ToastProvider` in root layout, bottom-right stack, auto-dismiss 4.5s, `?toast=` URL params consumed + cleaned. Do not add sonner or a second toast system.
-- **Empty states**: icon-in-circle + title + description + CTA (`data-testid="empty-state"`).
-- **Errors**: inline `role="alert"` banners; `AlertDialog` confirmation for destructive actions (with confirmation-code preflight in `secretary-programs-list.tsx`).
-
-## Module-Specific Rules
-
-| Module | Role | UI Emphasis | Notes for Agents |
+| Status | Light main / soft | Dark main / soft | Meaning |
 | --- | --- | --- | --- |
-| **Auth / Sessions** | login, onboarding, demo mode | centered public layout | Dev/demo auth uses `cloie_dev_auth` cookie + `@cloie.test` users; never surface demo auth in production UI |
-| **Course Assignments** | roster & membership management | dense tables, badges, membership constraints | Follow `src/features/course-assignments/CONTEXT.md` invariants; use `course-assignments-page-shell.tsx` container |
-| **Academic Structure** | programs, majors, school years | dialog + drawer (md switch), form shells | `manage-majors-dialog.tsx` pattern: Dialog desktop / Drawer mobile via `use-media-query` |
-| **Responses** | respondent wizard flows | low density, single-column wizard | `wizard-shell.tsx` (heading in `font-heading`), progress indicators, mobile-first |
-| **Analytics** | charts, KPIs, drill-down | chart cards, filters | Use `--chart-*` tokens; export/CSV where data-heavy |
-| **Dean PWA** | offline cache contract | stable chrome, offline states | See `docs/adr/0006-dean-pwa-offline-cache-contract.md`; theme color `#0051C3` (see Known Gaps) |
-| **Navigation** | per-role structure | role-filtered groups | Edit `src/lib/constants/navigation.ts`; don't add per-page nav schemes |
+| Success | `#047857` / `#ECFDF5` | `#34D399` / `#052E2B` | completed, valid |
+| Warning | `#B45309` / `#FFFBEB` | `#FBBF24` / `#451A03` | attention required |
+| Danger | `#B91C1C` / `#FEF2F2` | `#F87171` / `#450A0A` | error, destructive |
+| Information | `#4F46E5` / `#EEF2FF` | `#A5B4FC` / `#1E1B4B` | neutral information |
 
-## Interaction Model
+Use soft surfaces for alerts and badges. Filled danger is reserved for the confirmed destructive action. Information is indigo and separate from links, focus, primary, and cyan.
 
-- **Tone**: responsive, quiet; hover → press → focus states via `transition-colors`, press `translate-y-px`.
-- **Hover**: `hover:bg-muted` / `hover:bg-primary-hover`; color transitions only.
-- **Focus**: visible `focus-visible:ring-3 ring-ring/50` (or `outline-ring/50`); never remove focus rings.
-- **Motion**: 150–300ms micro-interactions; `tw-animate-css` utilities (`animate-in fade-in zoom-in-95 slide-in-from-*`, `duration-100`–`300`) driven by Base UI `data-open`/`data-closed` variants.
-- **Philosophy**: motion conveys meaning (enter/exit of overlays) — no decorative animation loops; `motion-safe:` / `motion-reduce:` respected.
-- **Error recovery**: inline error + retry/recovery path; `AlertDialog` before destructive; toasts auto-dismiss.
+### 5.5 Data Visualization
 
-## Responsive Behavior
+| Series | Light | Dark |
+| --- | ---: | ---: |
+| Chart 1 | `#2563EB` | `#60A5FA` |
+| Chart 2 | `#0369A1` | `#22D3EE` |
+| Chart 3 | `#047857` | `#34D399` |
+| Chart 4 | `#7C3AED` | `#A78BFA` |
+| Chart 5 | `#C2410C` | `#FB923C` |
 
-- **Breakpoints**: Tailwind defaults (`sm` 640 / `md` 768 / `lg` 1024 / `xl` 1280); mobile-first.
-- **Desktop (≥lg)**: sidebar + topbar + max-w-[1600px] content; tables and charts full width; charts up to full density.
-- **Tablet (md–lg)**: dean sidebar collapses to icon rail (`md:pl-16`); card grids 2 columns; dialogs still usable.
-- **Mobile (<md)**: sidebar → bottom nav; dialogs → `Drawer`; tables scroll horizontally within containers; forms single column with ≥44px targets; content `p-4 pb-24` so bottom nav never obscures content; `pb-safe` for gesture bars.
+- Chart colors are categorical, not semantic.
+- Use visible legends, direct labels where practical, and marker/line/pattern distinction.
+- Provide a text summary of the key insight.
+- Do not use glow, decorative chart animation, or another chart library.
 
-## Accessibility Expectations
+### 5.6 Semantic Mappings
 
-- **Contrast**: token palette is AA-safe by construction (slate-based text on white/f8fafc); verify new pairings against 4.5:1.
-- **Never color-only status**: pair semantic color with text/icon (badges, toasts, alerts).
-- **Focus**: keep visible focus rings across all interactive elements.
-- **Overlays**: readable (scrim `bg-black/10` + blur) and dismissible (close button, Escape, backdrop).
-- **Motion**: `prefers-reduced-motion` honored via `motion-safe`/`motion-reduce`; tw-animate-css guards.
-- **Tap targets**: ≥44px on mobile; icon buttons get padded hit areas.
-- **Screen readers**: `role="status" aria-busy` loaders, `aria-live` pending indicators, `role="alert"` errors, descriptive labels.
+- `primary`: operational primary
+- `secondary`: neutral secondary action
+- `accent`: neutral/contextual hover, not ACD cyan by default
+- `brand-accent`: ACD cyan
+- `ring`: dedicated focus ring
+- `information`: indigo status
+- `muted`: neutral surface/foreground
+- `destructive`: danger
+- `chart-*`: theme-resolved categorical palette
+- `sidebar-*`: semantic navigation roles
 
-## Content and Copy Tone
+---
 
-- **Voice**: professional, institutional, direct — Assumption College of Davao academic context.
-- **CTA style**: imperative, role-specific ("Continue", "Save Changes", "Submit Evaluation", "Run Rollover").
-- **Empty-state tone**: helpful + actionable ("No data yet" + what to do next).
-- **Error-message tone**: cause + fix, not just "Invalid input".
-- **Data-label tone**: plain, unambiguous (semester, section, outcomes, KPIs).
-- **Guidance**: helper text below complex inputs; progressive disclosure in wizards.
+## 6. Visual Foundations
 
-## Allowed Patterns
+### 6.1 Typography
 
-- Semantic token classes (`text-text-secondary`, `bg-primary`, `border-border`) over raw hex.
-- shadcn semantic classes (`text-muted-foreground`, `bg-muted`, `ring-ring`) — they map to the same values.
-- `cva` variants + `cn()` (clsx + tailwind-merge); `@/*` aliases.
-- `@base-ui/react` primitives with `render` prop (never Radix); `data-slot` attributes.
-- lucide-react icons only; one stroke style; consistent 16–24px sizes.
-- Token typography utilities (`.text-heading-*` etc.) over ad-hoc Tailwind sizing.
-- Route `loading.tsx` skeleton shells and `Skeleton` for async content.
-- `showToast` for transient feedback; `AlertDialog` for destructive confirmation.
-- Dialog desktop → Drawer mobile switch below `md`.
-- Empty-state pattern (icon + title + description + CTA).
-- `gap-*` spacing; `size-*` shorthand; `motion-safe:` animation guards.
+- **Manrope 600/700:** display, headings, titles
+- **Inter 400/500/600:** body, labels, controls
+- **`tabular-nums`:** KPIs, percentages, counts, aligned table data
 
-## Forbidden Patterns
+| Group | Utilities |
+| --- | --- |
+| Display | `.text-display-lg`, `.text-display-md` |
+| Heading | `.text-heading-xl`, `lg`, `md` |
+| Title | `.text-title-lg`, `md`, `sm` |
+| Body | `.text-body-lg`, `md`, `sm` |
+| Label | `.text-label-lg`, `md`, `sm` |
+| Caption | `.text-caption` |
 
-- Raw hex colors in components (flagged violations: `cta-success` `bg-[#22C55E]`, `themeColor #0051C3`, hardcoded chart palette in `mean-bar-chart.tsx` — see Known Gaps).
-- Radix UI packages; any new icon library; emoji as icons.
-- Second toast/feedback system (sonner, etc.) while `toast.tsx` exists.
-- Ad-hoc type sizing (`text-2xl font-bold`) where a token utility exists.
-- Manual `dark:` overrides — dark-mode tokens are not defined yet (see Known Gaps); don't improvise a theme.
-- New per-page navigation structures; edit `src/lib/constants/navigation.ts` instead.
-- Animating width/height/top/left; decorative animation; blocking input during animation.
-- Placeholder-only labels, errors only at top of form, hover-only interactions.
-- `space-*` where `gap-*` works; arbitrary z-index values on overlays.
+Exact sizes live in `globals.css`.
 
-## Known Gaps (Do Not Propagate)
+- Use token utilities, not ad hoc type scales.
+- Body copy stays at least `0.875rem`; no text below `0.75rem`.
+- Headings use primary foreground, not cyan decoration.
+- Legal content uses `.legal-prose`.
 
-- **Dark mode**: `@custom-variant dark` declared, no dark token overrides exist; no theme toggle. Treat as unimplemented.
-- **`text-display-sm`**: used in `portal-shell.tsx` / `legal-page-header.tsx` but not defined in the scale — add it to `globals.css` or migrate those usages.
-- **Theme color mismatch**: `manifest.ts` / `layout.tsx` use `#0051C3`; primary token is `#2563eb`. Reconcile to one brand blue.
-- **`bg-surface-hover`**: referenced by `sidebar.tsx` but not defined in `tokens.css`.
-- **`CardAction`**: defined in `card.tsx` but not exported.
-- **`docs/design-system.txt`**: missing; this document supersedes it as the design reference.
-- **`cta-success` button variant**: hardcoded hex bypassing tokens.
+### 6.2 Spacing, Layout, and Density
 
-## Agent Guidance
+- 4/8 px rhythm; prefer `gap-*` over `space-*`.
+- Standard component gap: 16 px; section gap: 24 px.
+- Admin pages: medium density; respondent/onboarding: low density.
+- Mobile targets: at least 44 × 44 px.
 
-When generating or modifying UI for this product:
+| Context | Layout |
+| --- | --- |
+| Operational app | existing `AppShell`, `max-w-[1600px]`, `p-4 sm:p-6` |
+| Public/landing | `max-w-7xl` |
+| Legal/prose | `max-w-3xl` |
+| Focused form | `max-w-2xl` |
+| KPI grid | 1 / 2 / 4 columns |
+| Forms/wizards | single column by default |
 
-- Start with the correct page type before choosing patterns.
-- Preserve one unified design language across all modules.
-- Read values from `src/styles/tokens.css`; never invent colors, radii, or shadows.
-- Reuse card shells, spacing rhythm, borders, and toolbar patterns before introducing new structures.
-- Respect module-specific rules before applying generic dashboard or app patterns.
-- Prefer user comprehension and workflow continuity over decorative complexity.
-- Avoid introducing a second visual language without explicit approval.
+Reuse `app-shell.tsx`, `sidebar.tsx`, `topbar.tsx`, `mobile-nav.tsx`, and `mobile-sidebar-drawer.tsx`.
 
-## Design Review Checklist
+### 6.3 Radius, Borders, and Elevation
 
-Before considering a UI change complete, verify:
+- Radius: 2 / 4 / 8 / 12 / 16 / 24 px.
+- Inputs/lists: `rounded-lg`; cards/dialogs: `rounded-xl`; portal/hero: `rounded-2xl`.
+- Normal cards use border/ring and minimal shadow.
+- Strong elevation is overlay-only.
+- Dark mode uses luminance and borders before shadow.
+- Decorative blur is prohibited; backdrop blur is limited to overlays or approved landing chrome.
 
-- Does it match the product intent?
-- Does it follow the experience principles?
-- Does it fit the correct page type?
-- Does it reuse the existing visual language (tokens, components)?
-- Does it respect module-specific rules?
-- Does it avoid forbidden patterns?
-- Does it stay usable on desktop and mobile?
-- Does it maintain accessible contrast and focus states?
-- Does it avoid unnecessary visual complexity?
-- Would a new teammate recognize it as part of the same product?
+### 6.4 Iconography
 
-## Quick Prompt Snippet
+Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only controls need an accessible name and adequate hit area. No emoji or additional icon library.
 
-"Build this in the style described in `docs/design.md`. Follow the product intent, experience principles, page-type rules, module-specific constraints, color roles (values in `src/styles/tokens.css`), typography scale, spacing rhythm, and component styling exactly. Reuse existing patterns, avoid forbidden patterns, and preserve one unified visual language."
+---
+
+## 7. Page-Type Patterns
+
+| Page type | Density | Structure | Emphasize | Avoid |
+| --- | --- | --- | --- | --- |
+| Landing / portal | low | brand header, role cards | trust, role paths | admin density |
+| Auth / onboarding | low | focused centered form | minimal distraction | app chrome |
+| Operational dashboard | medium | shell, KPIs, tools, tables | scanability | hero styling |
+| Respondent flow | low | single-column wizard | progress, mobile comfort | sidebars/admin actions |
+| Analytics | medium-high | filters, KPIs, charts | comparison, direct labels | decorative charts |
+| Reports | medium | formal header, filters, export | evidence, legibility | promotional styling |
+| Legal | low | narrow prose | readability | extra controls |
+| Settings | medium | grouped forms | clear persistent preferences | analytics density |
+
+Theme selection must not change the page pattern.
+
+### System States
+
+- **Empty:** icon, title, explanation, recovery CTA
+- **Loading:** structural skeleton; local spinner for small actions
+- **Error:** cause, impact, recovery
+- **Offline:** connection state, available capability, retry/status
+- **Unauthorized:** reason and safe return path
+- **No data:** distinguish absence from loading/failure
+
+The installable PWA shell exists. Offline data caching and mutation queues remain out of scope unless ADR 0006 is reopened.
+
+---
+
+## 8. Shared Components
+
+### 8.1 Required States
+
+| State | Requirement |
+| --- | --- |
+| Default | canonical semantic tokens |
+| Hover | subtle color/surface change |
+| Focus | visible `ring-ring` |
+| Pressed | optional 1 px translation |
+| Selected | semantic surface plus accessible state |
+| Disabled | noninteractive but readable |
+| Loading | preserve width; spinner and/or label |
+| Error | adjacent semantic message |
+| Success | confirmation without replacing selection |
+
+### 8.2 Buttons
+
+Variants:
+
+- `default` — primary
+- `secondary` — neutral secondary
+- `outline`, `ghost`, `link`
+- `destructive`
+- `brand-accent` — specialized cyan
+- existing icon sizes
+
+Rules:
+
+- `secondary` remains neutral in both themes.
+- `brand-accent` is intentional, not a second primary.
+- Routine destructive controls use soft danger; filled danger is confirmation-only.
+- Async actions disable duplicate submission and show loading.
+- Keep existing size names in `button.tsx`.
+- Remove or retokenize hardcoded `cta-success`.
+
+### 8.3 Form Controls
+
+- Reuse existing Base UI/shadcn input, textarea, select, checkbox, radio, switch, label, helper, and error components.
+- Every field has a visible label; errors/helper text appear beside the field.
+- Checked controls use primary, not semantic success.
+- Dark fields use the semantic input surface and dedicated ring.
+- Continue using `customZodResolver`.
+- No placeholder-only labels.
+
+### 8.4 Navigation
+
+Navigation is centralized in `src/lib/constants/navigation.ts`.
+
+- Administrative roles use mobile hamburger/drawer.
+- Student, alumni, and industry partner use bottom navigation.
+- Dean uses tablet icon rail and large-screen sidebar.
+- Active states use selected/primary tokens.
+- Theme does not change route grouping or navigation priority.
+- Dark navigation uses light logo plates.
+- Do not add per-page navigation or expose dev/demo switching in production.
+
+### 8.5 Cards
+
+Canonical: standard, KPI, chart, portal choice, formal institutional.
+
+- Normal cards use neutral surfaces.
+- Cyan is a small accent, category, or marker—not a decorative full-card fill.
+- Navy is limited to formal institutional/report content.
+- Portal cards may use slightly stronger hover elevation.
+- Numeric values use tabular figures.
+
+### 8.6 Tables and Lists
+
+- Use semantic header, hover, selected, and expanded states.
+- Contain wide tables in `overflow-x-auto`.
+- Use `aria-sort`; keyboard-enable clickable rows.
+- Status badges require text.
+- Avoid zebra striping unless clearly needed.
+
+### 8.7 Tabs, Badges, and Progress
+
+- Supported tabs: pill and line.
+- Primary marks active tabs and progress.
+- Cyan badges are categorical; semantic badges indicate status.
+- Progress includes a text/count/percentage.
+- Structure remains identical across themes.
+
+### 8.8 Feedback, Loading, and Overlays
+
+- Reuse `showToast` and root `ToastProvider`; do not add another toast system.
+- Approved kinds: success, warning, error/danger, information.
+- Use route skeletons, local spinners, actionable empty states, and adjacent `role="alert"` errors.
+- Preserve current URL-toast consumption and cleanup.
+- Use Dialog on desktop and Drawer on mobile where established.
+- Use `AlertDialog` for destructive confirmation.
+- Overlays use semantic surface, border, and scrim tokens; strong shadows are overlay-only.
+- No dark-mode glow.
+
+### 8.9 Data Visualization
+
+- Use Recharts; do not add another chart library.
+- New/reworked charts should use shared shadcn-style wrappers when available.
+- Prepare and authorize data on the server; keep chart client boundaries narrow.
+- Use `--chart-*`, legends, tooltips, tabular values, low-contrast grids, and text summaries.
+- Export may be offered for data-heavy views.
+
+---
+
+## 9. Module-Specific Rules
+
+| Module | Emphasis | Required pattern |
+| --- | --- | --- |
+| Auth / sessions | focused public form | never expose dev/demo auth in primary production |
+| Academic calendar / structure | managed records/forms | existing shells; Dialog → Drawer where established |
+| Course assignments | dense roster/membership tables | domain `CONTEXT.md`, existing page shell and constraints |
+| Outcomes / instruments / evaluations | authoring/deployment | progressive disclosure, explicit status, destructive confirmation |
+| Responses | guided low-density flow | `wizard-shell.tsx`, visible progress, mobile-first |
+| Analytics | KPIs, filters, charts | theme chart tokens, legends, summaries, export |
+| Reports | formal evidence/export | limited institutional navy |
+| Dean PWA | stable installable shell | offline data remains deferred by ADR 0006 |
+| Navigation | role-filtered structure | edit central constants only |
+
+---
+
+## 10. Responsive Behavior
+
+Tailwind defaults: `sm` 640, `md` 768, `lg` 1024, `xl` 1280.
+
+- **Desktop:** expanded navigation, full chart/table density, multi-column cards, dialogs.
+- **Tablet:** Dean icon rail, two-column cards, reduced chart density.
+- **Mobile:** respondent bottom nav; admin hamburger/drawer; single-column forms; contained horizontal tables; `pb-safe`; ≥44 px targets.
+
+Appearance must not alter breakpoints, density, information hierarchy, navigation mode, or responsive substitution.
+
+---
+
+## 11. Interaction and Motion
+
+- Hover: color, opacity, or surface change; never the only discovery method.
+- Focus: visible on every surface; never remove the ring.
+- Press: optional 1 px translation.
+- Async: preserve width, prevent duplicates, communicate loading and result.
+- Motion: 150–300 ms; animate opacity/transform, not layout dimensions.
+- No decorative loops or blocked input; honor reduced motion.
+- Resolve theme before first paint; avoid long page fades, flashes, and dark-mode glow.
+
+---
+
+## 12. Accessibility
+
+- Normal text: ≥4.5:1 contrast.
+- Large text and meaningful non-text boundaries: ≥3:1 where applicable.
+- Adjacent dark surfaces need visible luminance/border separation.
+- All controls are keyboard-operable with logical, visible focus.
+- Overlays trap and restore focus appropriately.
+- Never communicate status or chart series by color alone.
+- Errors state cause and recovery.
+- Mobile targets are ≥44 × 44 px and do not rely on hover.
+- Charts use legends, labels, marker/line distinction, tooltips, and text summaries.
+- Honor `prefers-reduced-motion`; loading remains understandable without animation.
+
+---
+
+## 13. Content and Copy
+
+- Professional, institutional, direct.
+- CTAs are imperative and role-specific.
+- Use exact domain terminology from the relevant context.
+- Empty states explain what happened and the next action.
+- Errors provide cause and fix.
+- Place helper copy beside complex inputs.
+- Avoid technical jargon in respondent flows.
+
+---
+
+## 14. Allowed and Forbidden Patterns
+
+### Allowed
+
+- semantic/shadcn token classes
+- `cva`, `cn()`, Base UI, `data-slot`
+- Lucide icons and token type utilities
+- existing loading and toast systems
+- Dialog → Drawer responsive adaptation
+- Light / Dark / System control
+- root-level theme token overrides
+- brand-safe logo plates
+
+### Forbidden
+
+- raw hex in components
+- component-local theme palettes or raw-color `dark:` overrides
+- different component structure by theme
+- gold as a general UI family
+- cyan as default secondary action
+- recolored/inverted logos
+- pure-black, neon, glow, glassmorphism, decorative gradients
+- Radix or another icon/chart/toast library
+- emoji icons
+- per-page navigation
+- placeholder-only labels or color-only status
+- decorative chart animation
+- arbitrary z-index or ad hoc type scales
+
+Existing semantic `dark:` selectors may remain only when resolving semantic variables/opacity, not an independent raw palette.
+
+Exceptions must be documented, scoped, and tokenized when reusable. Example: institutional navy is valid for formal report cards, not ordinary cards.
+
+---
+
+## 15. Implementation Status and Known Gaps
+
+Do not propagate these issues:
+
+| Gap on `main` | Required direction |
+| --- | --- |
+| Legacy gold and light-only values in `tokens.css` | replace with approved light values and `.dark` overrides |
+| No appearance provider/selector | add Light/Dark/System, persistence, OS detection, first-paint resolution |
+| `accent` and `ring` coupled to legacy info blue | separate neutral accent, focus ring, indigo information |
+| `bg-surface-hover` undefined | add semantic hover token |
+| manifest/layout use `#0051C3`, primary is `#2563EB` | reconcile metadata with approved theme strategy |
+| hardcoded `cta-success` | remove or replace with semantic variant |
+| hardcoded chart palettes | migrate to theme `--chart-*` and support tokens |
+| toast uses light hardcoded colors and lacks information | tokenize and add information |
+| `text-display-sm` used but undefined | define or migrate usage |
+| `CardAction` defined but not exported | export or remove |
+| token comment references missing `design-system.txt` | reference `docs/design.md` |
+| light-only raw surfaces remain | audit and replace with semantic classes |
+
+Remove resolved entries promptly; this is not an issue archive.
+
+---
+
+## 16. Agent Review Checklist
+
+- [ ] Correct role, domain, and page type
+- [ ] Relevant context and current implementation inspected
+- [ ] Existing shell and primitives reused
+- [ ] Semantic tokens only
+- [ ] Correct light/dark hierarchy
+- [ ] Required component and system states covered
+- [ ] Desktop and mobile verified
+- [ ] Keyboard, focus, contrast, touch, and reduced motion verified
+- [ ] Status/chart meaning is not color-only
+- [ ] No forbidden pattern
+- [ ] Focused tests, `pnpm lint`, and `pnpm build` pass
+- [ ] Result is recognizably System CLOIE
+
+---
+
+## 17. Visual References
+
+Store companion boards at:
+
+- `docs/assets/system-cloie-design-system-light.png`
+- `docs/assets/system-cloie-design-system-dark.png`
+
+The boards illustrate appearance. This file defines normative meaning and behavior. `tokens.css` remains authoritative for numerical values.
+
+> **One design system. Two resolved themes. One semantic implementation contract.**
