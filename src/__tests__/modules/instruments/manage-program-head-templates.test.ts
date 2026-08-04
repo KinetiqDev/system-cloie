@@ -16,6 +16,8 @@ const {
   programHeadAssignmentFindManyMock,
   resolveAuthSessionMock,
   transactionMock,
+  resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignmentMock,
 } = vi.hoisted(() => ({
   instrumentTemplateFindManyMock: vi.fn(),
   instrumentTemplateFindUniqueMock: vi.fn(),
@@ -29,6 +31,8 @@ const {
   programHeadAssignmentFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   transactionMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+  revalidateProgramHeadAssignmentMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -57,6 +61,10 @@ vi.mock("@/lib/db/prisma", () => ({
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
+}));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+  revalidateProgramHeadAssignment: revalidateProgramHeadAssignmentMock,
 }));
 
 // ─── Test Fixtures ───────────────────────────────────────────────────────────
@@ -115,6 +123,19 @@ describe("manage-program-head-templates", () => {
     // Default: PH is authenticated with an active program assignment
     resolveAuthSessionMock.mockResolvedValue(PH_SESSION);
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: PROGRAM_ID }]);
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: PH_SESSION.userId,
+        authorizedPrograms: [{ id: PROGRAM_ID, code: "BSIT", name: "BS Information Technology" }],
+        selectedProgram: { id: PROGRAM_ID, code: "BSIT", name: "BS Information Technology" },
+      },
+    });
+    revalidateProgramHeadAssignmentMock.mockResolvedValue({
+      id: PROGRAM_ID,
+      code: "BSIT",
+      name: "BS Information Technology",
+    });
 
     const mod = await import("@/features/instruments/services/manage-program-head-templates");
     listProgramHeadTemplates = mod.listProgramHeadTemplates;
@@ -158,7 +179,7 @@ describe("manage-program-head-templates", () => {
       },
     ]);
 
-    const result = await listProgramHeadTemplates();
+    const result = await listProgramHeadTemplates(PROGRAM_ID);
 
     expect(result.success).toBe(true);
     if (!result.success) return;
@@ -168,6 +189,38 @@ describe("manage-program-head-templates", () => {
     // Program-owned template is not read-only
     const ownTemplate = result.data.templates.find((t) => t.id === TEMPLATE_ID);
     expect(ownTemplate?.isReadOnly).toBe(false);
+  });
+
+  it("does not expose faculty-owned drafts to a Program Head", async () => {
+    programFindUniqueMock.mockResolvedValue({
+      id: PROGRAM_ID,
+      code: "BSIT",
+      name: "BS Information Technology",
+    });
+    instrumentTemplateFindManyMock.mockResolvedValue([
+      {
+        id: "program-template",
+        code: "PROGRAM_TEMPLATE",
+        name: "Program Template",
+        description: null,
+        structure: VALID_STRUCTURE,
+        is_active: true,
+        is_faculty_accessible: false,
+        program_id: PROGRAM_ID,
+        faculty_owner_id: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+        versions: [],
+        _count: { versions: 1 },
+      },
+    ]);
+
+    const result = await listProgramHeadTemplates(PROGRAM_ID);
+
+    expect(result.success).toBe(true);
+    expect(instrumentTemplateFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { program_id: PROGRAM_ID, faculty_owner_id: null } })
+    );
   });
 
   // ─── createProgramHeadTemplate ─────────────────────────────────────
@@ -198,6 +251,7 @@ describe("manage-program-head-templates", () => {
     });
 
     const result = await createProgramHeadTemplate({
+      programId: PROGRAM_ID,
       name: "Industry Partners Evaluation Tool",
       description: "For evaluating industry partners.",
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
@@ -233,8 +287,13 @@ describe("manage-program-head-templates", () => {
 
   it("PH cannot create template outside assigned program", async () => {
     programHeadAssignmentFindManyMock.mockResolvedValue([]);
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "No active program assignment found for this Program Head.",
+    });
 
     const result = await createProgramHeadTemplate({
+      programId: PROGRAM_ID,
       name: "Test Template",
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       is_faculty_accessible: false,
@@ -271,6 +330,7 @@ describe("manage-program-head-templates", () => {
     });
 
     await createProgramHeadTemplate({
+      programId: PROGRAM_ID,
       name: "Test Template",
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       is_faculty_accessible: false,
@@ -301,6 +361,7 @@ describe("manage-program-head-templates", () => {
     transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         instrumentTemplate: {
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
           update: instrumentTemplateUpdateMock.mockResolvedValue({
             id: TEMPLATE_ID,
           }),
@@ -318,6 +379,7 @@ describe("manage-program-head-templates", () => {
     });
 
     const result = await updateProgramHeadTemplate({
+      programId: PROGRAM_ID,
       id: TEMPLATE_ID,
       name: "Updated Name",
       description: "Updated description",
@@ -332,6 +394,46 @@ describe("manage-program-head-templates", () => {
     });
   });
 
+  it("denies every selected-context mutation for a template owned by another assigned Program", async () => {
+    const selectedProgramId = "program-2";
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: PH_SESSION.userId,
+        authorizedPrograms: [
+          { id: PROGRAM_ID, code: "BEED", name: "BEED" },
+          { id: selectedProgramId, code: "BSED", name: "BSED" },
+        ],
+        selectedProgram: { id: selectedProgramId, code: "BSED", name: "BSED" },
+      },
+    });
+    instrumentTemplateFindUniqueMock.mockResolvedValue({
+      id: TEMPLATE_ID,
+      program_id: PROGRAM_ID,
+      template_type: "COURSE_BOUND",
+      _count: { versions: 1 },
+      versions: [{ _count: { course_bounds: 0, central_insts: 0 } }],
+    });
+
+    const updateResult = await updateProgramHeadTemplate({
+      programId: selectedProgramId,
+      id: TEMPLATE_ID,
+      name: "Cross Program",
+      template_type: EvaluationTemplateType.COURSE_BOUND,
+      is_faculty_accessible: true,
+      structure: VALID_STRUCTURE,
+    });
+    const duplicateResult = await duplicateTemplate(selectedProgramId, TEMPLATE_ID);
+    const toggleResult = await toggleTemplateActive(selectedProgramId, TEMPLATE_ID, false);
+    const deleteResult = await deleteProgramHeadTemplate(selectedProgramId, TEMPLATE_ID);
+
+    expect(updateResult.success).toBe(false);
+    expect(duplicateResult.success).toBe(false);
+    expect(toggleResult.success).toBe(false);
+    expect(deleteResult.success).toBe(false);
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
   it("PH cannot update institutional baseline template", async () => {
     instrumentTemplateFindUniqueMock.mockResolvedValue({
       id: "baseline-1",
@@ -340,6 +442,7 @@ describe("manage-program-head-templates", () => {
     });
 
     const result = await updateProgramHeadTemplate({
+      programId: PROGRAM_ID,
       id: "baseline-1",
       name: "Attempt update",
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
@@ -385,7 +488,7 @@ describe("manage-program-head-templates", () => {
       return fn(tx);
     });
 
-    const result = await duplicateTemplate(TEMPLATE_ID);
+    const result = await duplicateTemplate(PROGRAM_ID, TEMPLATE_ID);
 
     expect(result).toEqual({
       success: true,
@@ -415,8 +518,20 @@ describe("manage-program-head-templates", () => {
       ],
     });
     instrumentTemplateDeleteMock.mockResolvedValue({ id: TEMPLATE_ID });
+    instrumentTemplateFindUniqueMock.mockResolvedValue({
+      program_id: PROGRAM_ID,
+      versions: [{ _count: { course_bounds: 0, central_insts: 0 } }],
+    });
+    transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        instrumentTemplate: {
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          delete: instrumentTemplateDeleteMock,
+        },
+      })
+    );
 
-    const result = await deleteProgramHeadTemplate(TEMPLATE_ID);
+    const result = await deleteProgramHeadTemplate(PROGRAM_ID, TEMPLATE_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
     expect(instrumentTemplateDeleteMock).toHaveBeenCalledWith({
@@ -438,7 +553,7 @@ describe("manage-program-head-templates", () => {
       ],
     });
 
-    const result = await deleteProgramHeadTemplate(TEMPLATE_ID);
+    const result = await deleteProgramHeadTemplate(PROGRAM_ID, TEMPLATE_ID);
 
     expect(result).toEqual({
       success: false,
@@ -454,8 +569,16 @@ describe("manage-program-head-templates", () => {
       template_type: "COURSE_BOUND",
     });
     instrumentTemplateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID });
+    transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        instrumentTemplate: {
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          update: instrumentTemplateUpdateMock,
+        },
+      })
+    );
 
-    const result = await toggleTemplateActive(TEMPLATE_ID, false);
+    const result = await toggleTemplateActive(PROGRAM_ID, TEMPLATE_ID, false);
 
     expect(result).toEqual({ success: true, data: undefined });
     expect(instrumentTemplateUpdateMock).toHaveBeenCalledWith({
@@ -470,7 +593,7 @@ describe("manage-program-head-templates", () => {
       program_id: null,
     });
 
-    const result = await toggleTemplateActive("baseline-1", false);
+    const result = await toggleTemplateActive(PROGRAM_ID, "baseline-1", false);
 
     expect(result).toEqual({
       success: false,
@@ -488,8 +611,16 @@ describe("manage-program-head-templates", () => {
       template_type: "COURSE_BOUND",
     });
     instrumentTemplateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID });
+    transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        instrumentTemplate: {
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          update: instrumentTemplateUpdateMock,
+        },
+      })
+    );
 
-    const result = await toggleFacultyAccessible(TEMPLATE_ID, true);
+    const result = await toggleFacultyAccessible(PROGRAM_ID, TEMPLATE_ID, true);
 
     expect(result).toEqual({ success: true, data: undefined });
     expect(instrumentTemplateUpdateMock).toHaveBeenCalledWith({
@@ -509,6 +640,7 @@ describe("manage-program-head-templates", () => {
     transactionMock.mockRejectedValue(createPrismaUniqueConstraintError());
 
     const result = await createProgramHeadTemplate({
+      programId: PROGRAM_ID,
       name: "Duplicate Template",
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       is_faculty_accessible: false,
@@ -525,8 +657,13 @@ describe("manage-program-head-templates", () => {
 
   it("rejects unauthenticated requests", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "Program Head authentication is required.",
+    });
 
     const result = await createProgramHeadTemplate({
+      programId: PROGRAM_ID,
       name: "Test",
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       is_faculty_accessible: false,
@@ -545,8 +682,13 @@ describe("manage-program-head-templates", () => {
       roles: [ROLES.FACULTY],
       activeRole: ROLES.FACULTY,
     });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "Program Head authentication is required.",
+    });
 
     const result = await createProgramHeadTemplate({
+      programId: PROGRAM_ID,
       name: "Test",
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       is_faculty_accessible: false,

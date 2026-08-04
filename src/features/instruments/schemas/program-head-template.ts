@@ -94,6 +94,7 @@ export const templateStructureSchema = z
 
 export const createProgramHeadTemplateSchema = z
   .object({
+    programId: z.string().uuid(),
     name: z
       .string()
       .trim()
@@ -119,6 +120,7 @@ export const createProgramHeadTemplateSchema = z
 
 export const updateProgramHeadTemplateSchema = z
   .object({
+    programId: z.string().uuid(),
     id: z.string().uuid(),
     name: z
       .string()

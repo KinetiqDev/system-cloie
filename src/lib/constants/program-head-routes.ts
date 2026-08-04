@@ -33,3 +33,21 @@ export function buildProgramHeadCourseRosterPath(programId: string, assignmentId
     `course-rosters/${encodeURIComponent(assignmentId)}`
   );
 }
+
+export function buildProgramHeadToolsPath(programId: string, tab?: "templates" | "published"): string {
+  const path = buildProgramHeadProgramPath(programId, "tools");
+  return tab ? `${path}?tab=${tab}` : path;
+}
+
+export function buildProgramHeadNewToolPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "tools/new");
+}
+
+export function buildProgramHeadEditToolPath(programId: string, templateId: string): string {
+  return buildProgramHeadProgramPath(programId, `tools/${encodeURIComponent(templateId)}/edit`);
+}
+
+export function buildProgramHeadPublishToolPath(programId: string, templateId?: string): string {
+  const path = buildProgramHeadProgramPath(programId, "tools/publish");
+  return templateId ? `${path}?templateId=${encodeURIComponent(templateId)}` : path;
+}

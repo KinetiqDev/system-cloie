@@ -13,11 +13,14 @@ import {
   deleteProgramHeadTemplate,
   toggleFacultyAccessible,
 } from "@/features/instruments/services/manage-program-head-templates";
+import {
+  buildProgramHeadToolsPath,
+} from "@/lib/constants/program-head-routes";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
-function revalidateTools() {
-  revalidatePath("/program-head/tools");
+function revalidateTools(programId: string) {
+  revalidatePath(buildProgramHeadToolsPath(programId));
 }
 
 export async function createProgramHeadTemplateAction(formData: FormData): Promise<ActionResult> {
@@ -32,6 +35,7 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
 
   const parsed = createProgramHeadTemplateSchema.safeParse({
     name: formData.get("name"),
+    programId: formData.get("programId"),
     description: formData.get("description"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
@@ -51,7 +55,7 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
     return { success: false, error: result.error };
   }
 
-  revalidateTools();
+  revalidateTools(parsed.data.programId);
   return { success: true };
 }
 
@@ -67,6 +71,7 @@ export async function updateProgramHeadTemplateAction(formData: FormData): Promi
 
   const parsed = updateProgramHeadTemplateSchema.safeParse({
     id: formData.get("id"),
+    programId: formData.get("programId"),
     name: formData.get("name"),
     description: formData.get("description"),
     template_type: formData.get("template_type"),
@@ -87,56 +92,58 @@ export async function updateProgramHeadTemplateAction(formData: FormData): Promi
     return { success: false, error: result.error };
   }
 
-  revalidateTools();
+  revalidateTools(parsed.data.programId);
   return { success: true };
 }
 
-export async function duplicateTemplateAction(templateId: string): Promise<ActionResult> {
-  const result = await duplicateTemplate(templateId);
+export async function duplicateTemplateAction(programId: string, templateId: string): Promise<ActionResult> {
+  const result = await duplicateTemplate(programId, templateId);
 
   if (!result.success) {
     return { success: false, error: result.error };
   }
 
-  revalidateTools();
+  revalidateTools(programId);
   return { success: true };
 }
 
 export async function toggleTemplateActiveAction(
+  programId: string,
   id: string,
   is_active: boolean
 ): Promise<ActionResult> {
-  const result = await toggleTemplateActive(id, is_active);
+  const result = await toggleTemplateActive(programId, id, is_active);
 
   if (!result.success) {
     return { success: false, error: result.error };
   }
 
-  revalidateTools();
+  revalidateTools(programId);
   return { success: true };
 }
 
-export async function deleteTemplateAction(id: string): Promise<ActionResult> {
-  const result = await deleteProgramHeadTemplate(id);
+export async function deleteTemplateAction(programId: string, id: string): Promise<ActionResult> {
+  const result = await deleteProgramHeadTemplate(programId, id);
 
   if (!result.success) {
     return { success: false, error: result.error };
   }
 
-  revalidateTools();
+  revalidateTools(programId);
   return { success: true };
 }
 
-async function toggleFacultyAccessibleAction(
+export async function toggleFacultyAccessibleAction(
+  programId: string,
   id: string,
   is_faculty_accessible: boolean
 ): Promise<ActionResult> {
-  const result = await toggleFacultyAccessible(id, is_faculty_accessible);
+  const result = await toggleFacultyAccessible(programId, id, is_faculty_accessible);
 
   if (!result.success) {
     return { success: false, error: result.error };
   }
 
-  revalidateTools();
+  revalidateTools(programId);
   return { success: true };
 }

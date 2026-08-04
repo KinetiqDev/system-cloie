@@ -1,7 +1,9 @@
 import { EvaluationTemplateType, Prisma } from "@prisma/client";
-import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  revalidateProgramHeadAssignment,
+  resolveProgramHeadContext,
+} from "@/features/auth/services/resolve-program-head-context";
 import type {
   CreateProgramHeadTemplateInput,
   UpdateProgramHeadTemplateInput,
@@ -44,26 +46,6 @@ export type ListProgramHeadTemplatesResult = {
 
 
 
-async function resolveAndValidatePHScope(
-  userId: string
-): Promise<ServiceResult<{ programIds: string[] }>> {
-  const assignments = await prisma.programHeadAssignment.findMany({
-    where: { program_head_id: userId, is_active: true },
-    select: { program_id: true },
-  });
-
-  const programIds = [...new Set(assignments.map((a) => a.program_id))];
-
-  if (programIds.length === 0) {
-    return {
-      success: false,
-      error: "No active program assignment found for this Program Head.",
-    };
-  }
-
-  return { success: true, data: { programIds } };
-}
-
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -78,51 +60,25 @@ function generateTemplateCode(programCode: string, templateName: string): string
 
 // ─── Auth Guard ──────────────────────────────────────────────────────────────
 
-async function requirePHSession(): Promise<
-  ServiceResult<{
-    userId: string;
-    programIds: string[];
-    programId: string;
-  }>
-> {
-  const session = await resolveAuthSession();
-
-  if (!session || session.activeRole !== ROLES.PROGRAM_HEAD) {
-    return {
-      success: false,
-      error: "Program Head authentication is required.",
-    };
-  }
-
-  const scopeResult = await resolveAndValidatePHScope(session.userId);
-
-  if (!scopeResult.success) {
-    return scopeResult;
-  }
-
-  const { programIds } = scopeResult.data;
-
-  return {
-    success: true,
-    data: { userId: session.userId, programIds, programId: programIds[0] },
-  };
+async function requirePHSession(programId: string) {
+  return resolveProgramHeadContext(programId);
 }
 
 // ─── List Templates ──────────────────────────────────────────────────────────
 
-export async function listProgramHeadTemplates(): Promise<
-  ServiceResult<ListProgramHeadTemplatesResult>
-> {
-  const authResult = await requirePHSession();
+export async function listProgramHeadTemplates(
+  programId: string
+): Promise<ServiceResult<ListProgramHeadTemplatesResult>> {
+  const authResult = await requirePHSession(programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programId } = authResult.data;
+  const { selectedProgram } = authResult.data;
 
   const program = await prisma.program.findUnique({
-    where: { id: programId },
+    where: { id: selectedProgram.id },
     select: { id: true, code: true, name: true },
   });
 
@@ -132,7 +88,8 @@ export async function listProgramHeadTemplates(): Promise<
 
   const rawTemplates = await prisma.instrumentTemplate.findMany({
     where: {
-      program_id: programId, // Only program-owned templates
+      program_id: selectedProgram.id, // Only selected program-owned templates
+      faculty_owner_id: null,
     },
     include: {
       versions: {
@@ -177,13 +134,14 @@ export async function listProgramHeadTemplates(): Promise<
 export async function createProgramHeadTemplate(
   input: CreateProgramHeadTemplateInput
 ): Promise<ServiceResult<{ id: string }>> {
-  const authResult = await requirePHSession();
+  const authResult = await requirePHSession(input.programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programId } = authResult.data;
+  const { userId, selectedProgram } = authResult.data;
+  const programId = selectedProgram.id;
 
   const program = await prisma.program.findUnique({
     where: { id: programId },
@@ -198,6 +156,11 @@ export async function createProgramHeadTemplate(
 
   try {
     const template = await prisma.$transaction(async (tx) => {
+      const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
+      if (!currentProgram) {
+        return null;
+      }
+
       const createdTemplate = await tx.instrumentTemplate.create({
         data: {
           code,
@@ -225,6 +188,7 @@ export async function createProgramHeadTemplate(
       return createdTemplate;
     });
 
+    if (!template) return { success: false, error: "Selected Program is no longer assigned." };
     return { success: true, data: { id: template.id } };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -243,19 +207,20 @@ export async function createProgramHeadTemplate(
 export async function updateProgramHeadTemplate(
   input: UpdateProgramHeadTemplateInput
 ): Promise<ServiceResult<{ id: string }>> {
-  const authResult = await requirePHSession();
+  const authResult = await requirePHSession(input.programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programIds } = authResult.data;
+  const { userId, selectedProgram } = authResult.data;
 
   const template = await prisma.instrumentTemplate.findUnique({
     where: { id: input.id },
     select: {
       id: true,
       program_id: true,
+      faculty_owner_id: true,
       _count: { select: { versions: true } },
     },
   });
@@ -265,7 +230,7 @@ export async function updateProgramHeadTemplate(
   }
 
   // Cannot update institutional baselines
-  if (template.program_id === null) {
+  if (template.program_id === null || template.faculty_owner_id) {
     return {
       success: false,
       error: "Institutional baseline templates cannot be modified by Program Heads.",
@@ -273,7 +238,7 @@ export async function updateProgramHeadTemplate(
   }
 
   // Must own the template's program
-  if (!programIds.includes(template.program_id)) {
+  if (template.program_id !== selectedProgram.id) {
     return {
       success: false,
       error: "You do not have permission to modify this template.",
@@ -300,7 +265,21 @@ export async function updateProgramHeadTemplate(
 
       const nextVersion = (latestVersion?.version_number ?? 0) + 1;
 
-      await prisma.$transaction(async (tx) => {
+      const writeResult = await prisma.$transaction(async (tx) => {
+        const currentProgram = await revalidateProgramHeadAssignment(tx, {
+          userId,
+          programId: selectedProgram.id,
+        });
+        if (!currentProgram) return null;
+        const currentTemplate = await tx.instrumentTemplate.findUnique({
+          where: { id: input.id },
+          select: { program_id: true, faculty_owner_id: true },
+        });
+        if (
+          currentTemplate?.program_id !== selectedProgram.id ||
+          currentTemplate.faculty_owner_id
+        ) return null;
+
         await tx.instrumentTemplate.update({
           where: { id: input.id },
           data: {
@@ -322,10 +301,26 @@ export async function updateProgramHeadTemplate(
             is_active: true,
           },
         });
+        return true;
       });
+      if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };
     } else {
       // No deployments → update in place (including the existing version)
-      await prisma.$transaction(async (tx) => {
+      const writeResult = await prisma.$transaction(async (tx) => {
+        const currentProgram = await revalidateProgramHeadAssignment(tx, {
+          userId,
+          programId: selectedProgram.id,
+        });
+        if (!currentProgram) return null;
+        const currentTemplate = await tx.instrumentTemplate.findUnique({
+          where: { id: input.id },
+          select: { program_id: true, faculty_owner_id: true },
+        });
+        if (
+          currentTemplate?.program_id !== selectedProgram.id ||
+          currentTemplate.faculty_owner_id
+        ) return null;
+
         await tx.instrumentTemplate.update({
           where: { id: input.id },
           data: {
@@ -354,7 +349,9 @@ export async function updateProgramHeadTemplate(
             },
           });
         }
+        return true;
       });
+      if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };
     }
 
     return { success: true, data: { id: input.id } };
@@ -373,15 +370,17 @@ export async function updateProgramHeadTemplate(
 // ─── Duplicate Template ──────────────────────────────────────────────────────
 
 export async function duplicateTemplate(
+  programId: string,
   templateId: string
 ): Promise<ServiceResult<{ id: string }>> {
-  const authResult = await requirePHSession();
+  const authResult = await requirePHSession(programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programId } = authResult.data;
+  const { userId, selectedProgram } = authResult.data;
+  programId = selectedProgram.id;
 
   const program = await prisma.program.findUnique({
     where: { id: programId },
@@ -401,6 +400,7 @@ export async function duplicateTemplate(
       template_type: true,
       is_faculty_accessible: true,
       program_id: true,
+      faculty_owner_id: true,
     },
   });
 
@@ -409,7 +409,10 @@ export async function duplicateTemplate(
   }
 
   // Source must be in PH's program scope OR an institutional baseline
-  if (source.program_id !== null && source.program_id !== programId) {
+  if (
+    source.faculty_owner_id ||
+    (source.program_id !== null && source.program_id !== selectedProgram.id)
+  ) {
     return {
       success: false,
       error: "You do not have permission to duplicate this template.",
@@ -423,6 +426,13 @@ export async function duplicateTemplate(
 
   try {
     const template = await prisma.$transaction(async (tx) => {
+      const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
+      if (!currentProgram) return null;
+      if (
+        source.faculty_owner_id ||
+        (source.program_id !== null && source.program_id !== currentProgram.id)
+      ) return null;
+
       const createdTemplate = await tx.instrumentTemplate.create({
         data: {
           code: newCode,
@@ -450,6 +460,7 @@ export async function duplicateTemplate(
       return createdTemplate;
     });
 
+    if (!template) return { success: false, error: "Selected Program is no longer assigned." };
     return { success: true, data: { id: template.id } };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -465,62 +476,73 @@ export async function duplicateTemplate(
 
 // ─── Toggle Active ───────────────────────────────────────────────────────────
 
-export async function toggleTemplateActive(id: string, is_active: boolean): Promise<ServiceResult> {
-  const authResult = await requirePHSession();
+export async function toggleTemplateActive(
+  programId: string,
+  id: string,
+  is_active: boolean
+): Promise<ServiceResult> {
+  const authResult = await requirePHSession(programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programIds } = authResult.data;
+  const { userId, selectedProgram } = authResult.data;
 
   const template = await prisma.instrumentTemplate.findUnique({
     where: { id },
-    select: { id: true, program_id: true, template_type: true },
+    select: { id: true, program_id: true, faculty_owner_id: true, template_type: true },
   });
 
   if (!template) {
     return { success: false, error: "Template not found." };
   }
 
-  if (template.program_id === null) {
+  if (template.program_id === null || template.faculty_owner_id) {
     return {
       success: false,
       error: "Institutional baseline templates cannot be modified.",
     };
   }
 
-  if (!programIds.includes(template.program_id)) {
+  if (template.program_id !== selectedProgram.id) {
     return {
       success: false,
       error: "You do not have permission to modify this template.",
     };
   }
 
-  await prisma.instrumentTemplate.update({
-    where: { id },
-    data: { is_active },
+  const writeResult = await prisma.$transaction(async (tx) => {
+    const currentProgram = await revalidateProgramHeadAssignment(tx, {
+      userId,
+      programId: selectedProgram.id,
+    });
+    if (!currentProgram) return null;
+    await tx.instrumentTemplate.update({ where: { id }, data: { is_active } });
+    return true;
   });
+  if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };
 
   return { success: true, data: undefined };
 }
 
 // ─── Toggle Faculty Accessible ───────────────────────────────────────────────
 
-export async function deleteProgramHeadTemplate(id: string): Promise<ServiceResult> {
-  const authResult = await requirePHSession();
+export async function deleteProgramHeadTemplate(programId: string, id: string): Promise<ServiceResult> {
+  const authResult = await requirePHSession(programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programIds } = authResult.data;
+  const { userId, selectedProgram } = authResult.data;
 
   const template = await prisma.instrumentTemplate.findUnique({
     where: { id },
     select: {
       id: true,
       program_id: true,
+      faculty_owner_id: true,
       versions: {
         select: {
           _count: {
@@ -538,14 +560,14 @@ export async function deleteProgramHeadTemplate(id: string): Promise<ServiceResu
     return { success: false, error: "Template not found." };
   }
 
-  if (template.program_id === null) {
+  if (template.program_id === null || template.faculty_owner_id) {
     return {
       success: false,
       error: "Institutional baseline templates cannot be deleted by Program Heads.",
     };
   }
 
-  if (!programIds.includes(template.program_id)) {
+  if (template.program_id !== selectedProgram.id) {
     return {
       success: false,
       error: "You do not have permission to delete this template.",
@@ -563,42 +585,58 @@ export async function deleteProgramHeadTemplate(id: string): Promise<ServiceResu
     };
   }
 
-  await prisma.instrumentTemplate.delete({
-    where: { id },
+  const writeResult = await prisma.$transaction(async (tx) => {
+    const currentProgram = await revalidateProgramHeadAssignment(tx, {
+      userId,
+      programId: selectedProgram.id,
+    });
+    if (!currentProgram) return null;
+    const currentTemplate = await tx.instrumentTemplate.findUnique({
+      where: { id },
+      select: { program_id: true, faculty_owner_id: true },
+    });
+    if (
+      currentTemplate?.program_id !== selectedProgram.id ||
+      currentTemplate.faculty_owner_id
+    ) return null;
+    await tx.instrumentTemplate.delete({ where: { id } });
+    return true;
   });
+  if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };
 
   return { success: true, data: undefined };
 }
 
 export async function toggleFacultyAccessible(
+  programId: string,
   id: string,
   is_faculty_accessible: boolean
 ): Promise<ServiceResult> {
-  const authResult = await requirePHSession();
+  const authResult = await requirePHSession(programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programIds } = authResult.data;
+  const { userId, selectedProgram } = authResult.data;
 
   const template = await prisma.instrumentTemplate.findUnique({
     where: { id },
-    select: { id: true, program_id: true, template_type: true },
+    select: { id: true, program_id: true, faculty_owner_id: true, template_type: true },
   });
 
   if (!template) {
     return { success: false, error: "Template not found." };
   }
 
-  if (template.program_id === null) {
+  if (template.program_id === null || template.faculty_owner_id) {
     return {
       success: false,
       error: "Institutional baseline templates cannot be modified.",
     };
   }
 
-  if (!programIds.includes(template.program_id)) {
+  if (template.program_id !== selectedProgram.id) {
     return {
       success: false,
       error: "You do not have permission to modify this template.",
@@ -612,19 +650,31 @@ export async function toggleFacultyAccessible(
     };
   }
 
-  await prisma.instrumentTemplate.update({
-    where: { id },
-    data: {
-      is_faculty_accessible,
-    },
+  const writeResult = await prisma.$transaction(async (tx) => {
+    const currentProgram = await revalidateProgramHeadAssignment(tx, {
+      userId,
+      programId: selectedProgram.id,
+    });
+    if (!currentProgram) return null;
+    const currentTemplate = await tx.instrumentTemplate.findUnique({
+      where: { id },
+      select: { program_id: true, faculty_owner_id: true },
+    });
+    if (
+      currentTemplate?.program_id !== selectedProgram.id ||
+      currentTemplate.faculty_owner_id
+    ) return null;
+    await tx.instrumentTemplate.update({ where: { id }, data: { is_faculty_accessible } });
+    return true;
   });
+  if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };
 
   return { success: true, data: undefined };
 }
 
 // ─── Get Template by ID (for edit page) ──────────────────────────────────────
 
-export async function getProgramHeadTemplate(id: string): Promise<
+export async function getProgramHeadTemplate(programId: string, id: string): Promise<
   ServiceResult<{
     template: {
       id: string;
@@ -640,16 +690,16 @@ export async function getProgramHeadTemplate(id: string): Promise<
     program: { id: string; code: string; name: string };
   }>
 > {
-  const authResult = await requirePHSession();
+  const authResult = await requirePHSession(programId);
 
   if (!authResult.success) {
     return authResult;
   }
 
-  const { programIds, programId } = authResult.data;
+  const { selectedProgram } = authResult.data;
 
   const program = await prisma.program.findUnique({
-    where: { id: programId },
+    where: { id: selectedProgram.id },
     select: { id: true, code: true, name: true },
   });
 
@@ -669,6 +719,7 @@ export async function getProgramHeadTemplate(id: string): Promise<
       is_active: true,
       is_faculty_accessible: true,
       program_id: true,
+      faculty_owner_id: true,
     },
   });
 
@@ -677,7 +728,10 @@ export async function getProgramHeadTemplate(id: string): Promise<
   }
 
   // Must be in PH's program scope or an institutional baseline
-  if (template.program_id !== null && !programIds.includes(template.program_id)) {
+  if (
+    template.faculty_owner_id ||
+    (template.program_id !== null && template.program_id !== selectedProgram.id)
+  ) {
     return {
       success: false,
       error: "You do not have permission to view this template.",

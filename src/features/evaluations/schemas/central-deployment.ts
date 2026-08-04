@@ -1,4 +1,4 @@
-import { AcademicTerm, YearLevel } from "@prisma/client";
+import { YearLevel } from "@prisma/client";
 import { z } from "zod";
 
 /**
@@ -7,6 +7,7 @@ import { z } from "zod";
  */
 export const publishCentralDeploymentSchema = z
   .object({
+    programId: z.string().uuid(),
     template_id: z.string().uuid(),
     deployment_name: z.string().trim().min(3, "Deployment name must be at least 3 characters."),
     target_stakeholder: z.enum(["STUDENT", "ALUMNI", "INDUSTRY_PARTNER"]),
