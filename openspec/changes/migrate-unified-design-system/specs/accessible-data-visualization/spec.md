@@ -22,8 +22,8 @@ The system SHALL render quantitative analytics with existing Recharts through sh
 The system SHALL present visible legends and keyboard-reachable or equivalent exact-value access for interactive chart data. Each chart SHALL provide a concise text summary of its key insight and a tabular value alternative or equivalent accessible data representation. Color alone SHALL NOT convey a series or status meaning.
 
 #### Scenario: Screen-reader user encounters a chart
-- **GIVEN** a screen-reader user reaches a chart region
-- **WHEN** the chart is encountered
+- **GIVEN** a screen-reader user navigates a page that contains a quantitative chart
+- **WHEN** the chart region is encountered
 - **THEN** the region SHALL identify the chart, expose its key insight, and provide an accessible representation of the underlying displayed values.
 
 #### Scenario: User inspects a series value

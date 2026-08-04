@@ -14,7 +14,7 @@ The system SHALL support Light, Dark, and System appearance preferences through 
 - **THEN** the root document SHALL resolve Dark and all semantic token consumers SHALL render the Dark values without changing page content or hierarchy.
 
 #### Scenario: System follows an operating-system change
-- **GIVEN** a visitor has selected System appearance and the application is open
+- **GIVEN** a visitor has selected System appearance
 - **WHEN** the operating-system appearance changes while the application remains open
 - **THEN** the root document SHALL update to the newly resolved appearance without navigation or loss of route, form, filter, scroll, or async state.
 
@@ -42,6 +42,7 @@ The system SHALL provide text-labeled Light, Dark, and System controls in the au
 - **THEN** the control SHALL show the same current preference as the avatar menu and SHALL update the current document without resetting application state.
 
 #### Scenario: Incomplete or inactive account reaches a protected route
+- **GIVEN** an account with an incomplete self-service role claim or an inactive account
 - **WHEN** an account that does not pass the existing authenticated account-state guard requests Settings Appearance
 - **THEN** the system SHALL preserve the existing safe redirect or account-status behavior and SHALL not expose an appearance route as an authorization bypass.
 
