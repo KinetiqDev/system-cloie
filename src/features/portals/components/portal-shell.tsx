@@ -5,6 +5,10 @@ import { SessionBanner } from "./session-banner";
 import type { RoleCardConfig } from "../lib/role-card-config";
 import { ArrowRight, Building2, Users, Home } from "lucide-react";
 
+const THREE_CARD_GRID_CLASS_NAME =
+  "mx-auto grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3";
+const DEFAULT_GRID_CLASS_NAME = "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+
 interface PortalShellProps {
   title: string;
   subtitle: string;
@@ -75,7 +79,7 @@ export function PortalShell({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className={cards.length === 3 ? THREE_CARD_GRID_CLASS_NAME : DEFAULT_GRID_CLASS_NAME}>
           {cards.map((config) => (
             <RoleSelectionCard key={config.role} config={config} />
           ))}
