@@ -329,4 +329,29 @@ describe("lateIncludeCourseBoundEvaluationStudent", () => {
     });
     expect(evaluationAssignmentCreateMock).not.toHaveBeenCalled();
   });
+
+  it("denies a Program Head without a selected Program and never queries the full assignment set", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      ...session,
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+      userId: "head-1",
+    });
+    programHeadAssignmentFindManyMock.mockResolvedValue([
+      { program_id: "program-1" },
+      { program_id: "program-2" },
+    ]);
+
+    await expect(
+      lateIncludeCourseBoundEvaluationStudent({
+        evaluationId: "evaluation-1",
+        membershipId: "membership-1",
+        reversalCategory: "EXCLUDED_IN_ERROR",
+      })
+    ).resolves.toEqual({ error: "Course assignment not found.", success: false });
+
+    expect(transactionMock).not.toHaveBeenCalled();
+    expect(programHeadAssignmentFindManyMock).not.toHaveBeenCalled();
+    expect(evaluationAssignmentCreateMock).not.toHaveBeenCalled();
+  });
 });

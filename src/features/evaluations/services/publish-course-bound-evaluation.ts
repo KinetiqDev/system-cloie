@@ -331,6 +331,10 @@ export async function publishCourseBoundEvaluation({
                 );
               }
 
+              if (templateId !== boundTemplate.id) {
+                throw new PublicationValidationError("Course assignment not found.");
+              }
+
               effectiveTemplateId = boundTemplate.id;
             }
 

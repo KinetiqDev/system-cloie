@@ -93,17 +93,10 @@ async function isAuthorizedRosterManager(
   programId?: string
 ) {
   const programHeadProgramIds =
-    session.activeRole === ROLES.PROGRAM_HEAD
-      ? programId
-        ? (await revalidateProgramHeadAssignment(db, { programId, userId: session.userId }))
-          ? [programId]
-          : []
-        : (
-            await db.programHeadAssignment.findMany({
-              where: { program_head_id: session.userId, is_active: true },
-              select: { program_id: true },
-            })
-          ).map((row) => row.program_id)
+    session.activeRole === ROLES.PROGRAM_HEAD && programId
+      ? (await revalidateProgramHeadAssignment(db, { programId, userId: session.userId }))
+        ? [programId]
+        : []
       : [];
 
   return canManageCourseRoster(

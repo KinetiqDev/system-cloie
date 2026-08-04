@@ -75,4 +75,45 @@ describe("late inclusion action", () => {
     });
     expect(lateIncludeMock).not.toHaveBeenCalled();
   });
+
+  it("revalidates the selected Program paths after a successful Program Head late inclusion", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: "PROGRAM_HEAD", userId: "head-1" });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        authorizedPrograms: [
+          { code: "BSED", id: "program-1", name: "Bachelor of Secondary Education" },
+        ],
+        selectedProgram: {
+          code: "BSED",
+          id: "program-1",
+          name: "Bachelor of Secondary Education",
+        },
+        userId: "head-1",
+      },
+    });
+    lateIncludeMock.mockResolvedValue({
+      success: true,
+      data: { message: "Student was included in this evaluation." },
+    });
+    const programHeadPayload = {
+      ...payload,
+      programId: "33333333-3333-4333-8333-333333333333",
+    };
+
+    await expect(lateIncludeCourseBoundEvaluationAction(programHeadPayload)).resolves.toEqual({
+      success: true,
+      data: { message: "Student was included in this evaluation." },
+    });
+
+    expect(lateIncludeMock).toHaveBeenCalledWith(programHeadPayload);
+    expect(revalidatePathMock).toHaveBeenCalledWith("/faculty/tools");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/student/evaluations");
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/program-head/programs/33333333-3333-4333-8333-333333333333/cilo-reviews"
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      "/program-head/programs/33333333-3333-4333-8333-333333333333/tools"
+    );
+  });
 });

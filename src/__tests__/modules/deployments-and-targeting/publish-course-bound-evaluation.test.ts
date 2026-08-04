@@ -574,7 +574,7 @@ describe("publishCourseBoundEvaluation", () => {
         assignmentId: "assignment-1",
         deploymentName: "PH On-Behalf Evaluation",
         programId: "program-1",
-        templateId: "template-1",
+        templateId: "bound-template-1",
       });
 
       expect(courseBoundEvaluationCreateMock).toHaveBeenCalledWith({
@@ -672,7 +672,7 @@ describe("publishCourseBoundEvaluation", () => {
       const result = await publishCourseBoundEvaluation({
         assignmentId: "assignment-1",
         deploymentName: "Dean On-Behalf Evaluation",
-        templateId: "template-1",
+        templateId: "bound-template-1",
       });
 
       expect(result.success).toBe(true);
@@ -710,7 +710,7 @@ describe("publishCourseBoundEvaluation", () => {
         publishCourseBoundEvaluation({
           assignmentId: "assignment-1",
           deploymentName: "Dean General Education Evaluation",
-          templateId: "template-1",
+          templateId: "bound-template-1",
         })
       ).resolves.toMatchObject({ success: true });
     });
@@ -731,7 +731,7 @@ describe("publishCourseBoundEvaluation", () => {
       await publishCourseBoundEvaluation({
         assignmentId: "assignment-1",
         deploymentName: "Program Head Active Role Evaluation",
-        templateId: "template-1",
+        templateId: "bound-template-1",
       });
 
       expect(getFacultyTemplatePublicationContextMock).not.toHaveBeenCalled();
@@ -754,7 +754,7 @@ describe("publishCourseBoundEvaluation", () => {
       const result = await publishCourseBoundEvaluation({
         assignmentId: "assignment-1",
         deploymentName: "Secretary On-Behalf Evaluation",
-        templateId: "template-1",
+        templateId: "bound-template-1",
       });
 
       expect(result.success).toBe(true);
@@ -784,10 +784,56 @@ describe("publishCourseBoundEvaluation", () => {
         assignmentId: "assignment-1",
         deploymentName: "PH In-Scope Evaluation",
         programId: "program-1",
-        templateId: "template-1",
+        templateId: "bound-template-1",
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it("denies on-behalf publication when the submitted template is not the assignment's bound template", async () => {
+      const phUserId = "ph-user-1";
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.PROGRAM_HEAD,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.PROGRAM_HEAD],
+        userId: phUserId,
+      });
+      resolveProgramHeadContextMock.mockResolvedValue({
+        success: true,
+        data: {
+          authorizedPrograms: [
+            { code: "BSIT", id: "program-1", name: "BS Information Technology" },
+            { code: "BSED", id: "program-2", name: "Bachelor of Secondary Education" },
+          ],
+          selectedProgram: {
+            code: "BSIT",
+            id: "program-1",
+            name: "BS Information Technology",
+          },
+          userId: phUserId,
+        },
+      });
+      revalidateProgramHeadAssignmentMock.mockResolvedValue({
+        code: "BSIT",
+        id: "program-1",
+        name: "BS Information Technology",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      instrumentTemplateFindFirstMock.mockResolvedValue(MOCK_BOUND_TEMPLATE);
+
+      await expect(
+        publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "Cross-Program Template Evaluation",
+          programId: "program-1",
+          templateId: "template-1",
+        })
+      ).resolves.toEqual({
+        error: "Course assignment not found.",
+        success: false,
+      });
+
+      expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
     });
 
     it("rejects an assignment from another selected Program", async () => {

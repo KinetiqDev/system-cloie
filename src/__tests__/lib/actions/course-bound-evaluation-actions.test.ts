@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
 
-const { previewMock, publishMock, resolveAuthSessionMock, resolveProgramHeadContextMock } =
-  vi.hoisted(() => ({
-    previewMock: vi.fn(),
-    publishMock: vi.fn(),
-    resolveAuthSessionMock: vi.fn(),
-    resolveProgramHeadContextMock: vi.fn(),
-  }));
+const {
+  previewMock,
+  publishMock,
+  resolveAuthSessionMock,
+  resolveProgramHeadContextMock,
+  revalidatePathMock,
+} = vi.hoisted(() => ({
+  previewMock: vi.fn(),
+  publishMock: vi.fn(),
+  resolveAuthSessionMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+  revalidatePathMock: vi.fn(),
+}));
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
@@ -25,7 +31,7 @@ vi.mock("@/features/evaluations/services/publish-course-bound-evaluation", () =>
   publishCourseBoundEvaluation: publishMock,
 }));
 
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 import {
   previewCourseBoundRespondentsAction,
@@ -103,6 +109,28 @@ describe("course-bound evaluation actions", () => {
     ).resolves.toMatchObject({ success: true });
     expect(publishMock).toHaveBeenCalledWith(
       expect.objectContaining({ programId: "00000000-0000-4000-8000-000000000003" })
+    );
+  });
+
+  it("revalidates the selected Program paths after a successful Program Head publish", async () => {
+    const programId = "00000000-0000-4000-8000-000000000003";
+
+    await expect(
+      publishCourseBoundEvaluationAction({
+        ...basePublishPayload,
+        programId,
+      })
+    ).resolves.toMatchObject({ success: true });
+
+    expect(revalidatePathMock).toHaveBeenCalledWith("/faculty/tools");
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      `/program-head/programs/${programId}/tools`
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      `/program-head/programs/${programId}/cilo-evaluations/new`
+    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(
+      `/program-head/programs/${programId}/cilo-reviews`
     );
   });
 });

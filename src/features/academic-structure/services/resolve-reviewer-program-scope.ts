@@ -1,3 +1,4 @@
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { ROLES, type Role } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 
@@ -31,12 +32,8 @@ export async function resolveReviewerProgramScope({
 
   if (reviewerRole === ROLES.PROGRAM_HEAD) {
     if (programId) {
-      const assignments = await prisma.programHeadAssignment.findMany({
-        where: { program_head_id: reviewerId, program_id: programId, is_active: true },
-        select: { program_id: true },
-      });
-
-      return assignments.length > 0 ? [programId] : [];
+      const selectedContext = await resolveProgramHeadContext(programId);
+      return selectedContext.success ? [selectedContext.data.selectedProgram.id] : [];
     }
 
     const rows = await prisma.programHeadAssignment.findMany({

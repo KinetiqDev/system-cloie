@@ -44,36 +44,46 @@ export default async function NewProgramHeadCiloEvaluationPage({
     orderBy: [{ course: { code: "asc" } }, { year_level: "asc" }, { section: "asc" }],
   });
 
+  const eligibleAssignments = await Promise.all(
+    assignments.map(async (assignment) => {
+      const template = await prisma.instrumentTemplate.findFirst({
+        where: {
+          bound_course_id: assignment.course_id,
+          faculty_owner_id: assignment.faculty_id,
+          is_active: true,
+          template_type: "COURSE_BOUND",
+        },
+        orderBy: { created_at: "desc" },
+        select: { id: true },
+      });
+
+      if (!template) return null;
+
+      const publicationContext = await getOnBehalfTemplatePublicationContext(
+        template.id,
+        assignment.faculty_id
+      );
+
+      if (!publicationContext.success) return null;
+
+      if (
+        publicationContext.data.course.id !== assignment.course_id ||
+        publicationContext.data.programId !== contextResult.data.selectedProgram.id
+      ) {
+        return null;
+      }
+
+      return { assignment, publicationContext };
+    })
+  );
+
   const assignmentOptions: AssignmentOption[] = [];
   const publicationContextsByAssignmentId: Record<string, PublicationContext> = {};
 
-  for (const assignment of assignments) {
-    const template = await prisma.instrumentTemplate.findFirst({
-      where: {
-        bound_course_id: assignment.course_id,
-        faculty_owner_id: assignment.faculty_id,
-        is_active: true,
-        template_type: "COURSE_BOUND",
-      },
-      orderBy: { created_at: "desc" },
-      select: { id: true },
-    });
+  for (const eligible of eligibleAssignments) {
+    if (!eligible) continue;
 
-    if (!template) continue;
-
-    const publicationContext = await getOnBehalfTemplatePublicationContext(
-      template.id,
-      assignment.faculty_id
-    );
-
-    if (!publicationContext.success) continue;
-
-    if (
-      publicationContext.data.course.id !== assignment.course_id ||
-      publicationContext.data.programId !== contextResult.data.selectedProgram.id
-    ) {
-      continue;
-    }
+    const { assignment, publicationContext } = eligible;
 
     const termInstanceLabel = formatTermInstanceLabel(
       assignment.term_instance.school_year.code,
