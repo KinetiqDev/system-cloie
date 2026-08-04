@@ -2,6 +2,7 @@ import { ROLES, type Role } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 
 type ResolveReviewerProgramScopeInput = {
+  programId?: string;
   reviewerId: string;
   reviewerRole: Role;
 };
@@ -11,6 +12,7 @@ function toUniqueProgramIds(rows: Array<{ program_id: string }>) {
 }
 
 export async function resolveReviewerProgramScope({
+  programId,
   reviewerId,
   reviewerRole,
 }: ResolveReviewerProgramScopeInput): Promise<string[] | null> {
@@ -28,6 +30,15 @@ export async function resolveReviewerProgramScope({
   }
 
   if (reviewerRole === ROLES.PROGRAM_HEAD) {
+    if (programId) {
+      const assignments = await prisma.programHeadAssignment.findMany({
+        where: { program_head_id: reviewerId, program_id: programId, is_active: true },
+        select: { program_id: true },
+      });
+
+      return assignments.length > 0 ? [programId] : [];
+    }
+
     const rows = await prisma.programHeadAssignment.findMany({
       where: { program_head_id: reviewerId, is_active: true },
       select: { program_id: true },

@@ -113,10 +113,25 @@ export async function lateIncludeCourseBoundEvaluationAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input.", success: false };
   }
 
+  if (session.activeRole === ROLES.PROGRAM_HEAD) {
+    if (!parsed.data.programId) {
+      return { error: "Selected Program is required.", success: false };
+    }
+
+    const contextResult = await resolveProgramHeadContext(parsed.data.programId);
+    if (!contextResult.success) {
+      return { error: "Selected Program is unavailable.", success: false };
+    }
+  }
+
   const result = await lateIncludeCourseBoundEvaluationStudent(parsed.data);
   if (result.success) {
     revalidatePath("/faculty/tools");
     revalidatePath("/student/evaluations");
+    if (session.activeRole === ROLES.PROGRAM_HEAD && parsed.data.programId) {
+      revalidatePath(buildProgramHeadProgramPath(parsed.data.programId, "cilo-reviews"));
+      revalidatePath(buildProgramHeadToolsPath(parsed.data.programId));
+    }
   }
   return result;
 }

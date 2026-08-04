@@ -6,6 +6,7 @@ export const lateIncludeCourseBoundEvaluationSchema = z
   .object({
     evaluationId: z.string().uuid(),
     membershipId: z.string().uuid(),
+    programId: z.string().uuid().optional(),
     reversalCategory: z.nativeEnum(CourseBoundEvaluationExclusionReversalCategory),
     reversalOtherExplanation: z.string().trim().optional(),
   })

@@ -67,6 +67,27 @@ describe("resolveReviewerProgramScope", () => {
     expect(facultyProgramAffiliationFindManyMock).not.toHaveBeenCalled();
   });
 
+  it("returns only the explicitly selected assigned Program", async () => {
+    programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: "program-2" }]);
+
+    await expect(
+      resolveReviewerProgramScope({
+        programId: "program-2",
+        reviewerId: "program-head-1",
+        reviewerRole: ROLES.PROGRAM_HEAD,
+      })
+    ).resolves.toEqual(["program-2"]);
+
+    expect(programHeadAssignmentFindManyMock).toHaveBeenCalledWith({
+      select: { program_id: true },
+      where: {
+        is_active: true,
+        program_head_id: "program-head-1",
+        program_id: "program-2",
+      },
+    });
+  });
+
   it("returns null for dean reviewers", async () => {
     await expect(
       resolveReviewerProgramScope({

@@ -84,6 +84,7 @@ export type CourseBoundEvaluationExclusionInput = {
 export type LateIncludeCourseBoundEvaluationInput = {
   evaluationId: string;
   membershipId: string;
+  programId?: string;
   reversalCategory: CourseBoundEvaluationExclusionReversalCategory;
   reversalOtherExplanation?: string;
 };

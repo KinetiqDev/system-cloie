@@ -15,7 +15,9 @@ const {
   globalMembershipFindUniqueMock,
   globalAssignmentFindFirstMock,
   programHeadAssignmentFindManyMock,
+  revalidateProgramHeadAssignmentMock,
   resolveAuthSessionMock,
+  resolveProgramHeadContextMock,
   transactionMock,
 } = vi.hoisted(() => ({
   courseBoundEvaluationFindUniqueMock: vi.fn(),
@@ -28,7 +30,9 @@ const {
   globalMembershipFindUniqueMock: vi.fn(),
   globalAssignmentFindFirstMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
+  revalidateProgramHeadAssignmentMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
   transactionMock: vi.fn(),
 }));
 
@@ -43,6 +47,11 @@ vi.mock("@/lib/db/prisma", () => ({
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
+}));
+
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  revalidateProgramHeadAssignment: revalidateProgramHeadAssignmentMock,
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
 }));
 
 const session = {
@@ -90,6 +99,7 @@ function configureTransaction() {
         create: evaluationAssignmentCreateMock,
       },
       programHeadAssignment: { findMany: programHeadAssignmentFindManyMock },
+      program: { findUnique: vi.fn() },
     })
   );
 }
@@ -99,6 +109,11 @@ describe("lateIncludeCourseBoundEvaluationStudent", () => {
     vi.clearAllMocks();
     resolveAuthSessionMock.mockResolvedValue(session);
     programHeadAssignmentFindManyMock.mockResolvedValue([]);
+    revalidateProgramHeadAssignmentMock.mockResolvedValue({
+      code: "BSIT",
+      id: "program-1",
+      name: "BS Information Technology",
+    });
     courseBoundEvaluationFindUniqueMock.mockResolvedValue(evaluation);
     courseBoundEvaluationExclusionFindFirstMock.mockResolvedValue(exclusion);
     courseAssignmentMembershipFindUniqueMock.mockResolvedValue({
@@ -276,5 +291,42 @@ describe("lateIncludeCourseBoundEvaluationStudent", () => {
       })
     ).resolves.toMatchObject({ success: true });
     expect(transactionMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("revalidates the selected Program for Program Head late inclusion", async () => {
+    const programHeadSession = {
+      ...session,
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+      userId: "head-1",
+    };
+    resolveAuthSessionMock.mockResolvedValue(programHeadSession);
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        authorizedPrograms: [
+          { code: "BSIT", id: "program-1", name: "BS Information Technology" },
+          { code: "BSED", id: "program-2", name: "Bachelor of Secondary Education" },
+        ],
+        selectedProgram: { code: "BSED", id: "program-2", name: "Bachelor of Secondary Education" },
+        userId: "head-1",
+      },
+    });
+    revalidateProgramHeadAssignmentMock.mockResolvedValue(null);
+
+    await expect(
+      lateIncludeCourseBoundEvaluationStudent({
+        evaluationId: "evaluation-1",
+        membershipId: "membership-1",
+        programId: "program-2",
+        reversalCategory: "EXCLUDED_IN_ERROR",
+      })
+    ).resolves.toEqual({ error: "Course assignment not found.", success: false });
+
+    expect(revalidateProgramHeadAssignmentMock).toHaveBeenCalledWith(expect.any(Object), {
+      programId: "program-2",
+      userId: "head-1",
+    });
+    expect(evaluationAssignmentCreateMock).not.toHaveBeenCalled();
   });
 });

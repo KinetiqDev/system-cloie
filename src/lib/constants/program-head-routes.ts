@@ -58,3 +58,25 @@ export function buildProgramHeadPublishToolPath(programId: string, templateId?: 
 export function buildProgramHeadNewCiloEvaluationPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "cilo-evaluations/new");
 }
+
+export function buildProgramHeadCiloReviewsPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "cilo-reviews");
+}
+
+export function buildProgramHeadCiloReviewDetailPath(
+  programId: string,
+  evaluationId: string
+): string {
+  return buildProgramHeadProgramPath(programId, `cilo-reviews/${encodeURIComponent(evaluationId)}`);
+}
+
+export function buildProgramHeadCiloResponseReviewPath(
+  programId: string,
+  evaluationId: string,
+  responseId: string
+): string {
+  return buildProgramHeadProgramPath(
+    programId,
+    `cilo-reviews/${encodeURIComponent(evaluationId)}/responses/${encodeURIComponent(responseId)}`
+  );
+}

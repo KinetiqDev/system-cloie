@@ -5,6 +5,9 @@ import {
   buildProgramHeadProgramPath,
   buildProgramHeadCourseRosterPath,
   buildProgramHeadNewCiloEvaluationPath,
+  buildProgramHeadCiloReviewsPath,
+  buildProgramHeadCiloReviewDetailPath,
+  buildProgramHeadCiloResponseReviewPath,
 } from "@/lib/constants/program-head-routes";
 
 describe("Program Head routes", () => {
@@ -35,6 +38,18 @@ describe("Program Head routes", () => {
   it("builds the canonical selected Program Course-bound evaluation path", () => {
     expect(buildProgramHeadNewCiloEvaluationPath("program-1")).toBe(
       "/program-head/programs/program-1/cilo-evaluations/new"
+    );
+  });
+
+  it("builds selected Program review and response paths", () => {
+    expect(buildProgramHeadCiloReviewsPath("program-1")).toBe(
+      "/program-head/programs/program-1/cilo-reviews"
+    );
+    expect(buildProgramHeadCiloReviewDetailPath("program-1", "evaluation-1")).toBe(
+      "/program-head/programs/program-1/cilo-reviews/evaluation-1"
+    );
+    expect(buildProgramHeadCiloResponseReviewPath("program-1", "evaluation-1", "response-1")).toBe(
+      "/program-head/programs/program-1/cilo-reviews/evaluation-1/responses/response-1"
     );
   });
 

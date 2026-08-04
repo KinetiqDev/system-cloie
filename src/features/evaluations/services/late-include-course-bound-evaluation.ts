@@ -7,6 +7,10 @@ import {
 } from "@prisma/client";
 import { canManageCourseRoster } from "@/features/course-assignments/policies";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  revalidateProgramHeadAssignment,
+  resolveProgramHeadContext,
+} from "@/features/auth/services/resolve-program-head-context";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
@@ -85,16 +89,21 @@ async function isAuthorizedRosterManager(
     is_active: boolean;
     program_id: string;
     course: { course_scope: CourseScope };
-  }
+  },
+  programId?: string
 ) {
   const programHeadProgramIds =
     session.activeRole === ROLES.PROGRAM_HEAD
-      ? (
-          await db.programHeadAssignment.findMany({
-            where: { program_head_id: session.userId, is_active: true },
-            select: { program_id: true },
-          })
-        ).map((row) => row.program_id)
+      ? programId
+        ? (await revalidateProgramHeadAssignment(db, { programId, userId: session.userId }))
+          ? [programId]
+          : []
+        : (
+            await db.programHeadAssignment.findMany({
+              where: { program_head_id: session.userId, is_active: true },
+              select: { program_id: true },
+            })
+          ).map((row) => row.program_id)
       : [];
 
   return canManageCourseRoster(
@@ -141,6 +150,7 @@ async function findConcurrentSuccess(evaluationId: string, membershipId: string)
 export async function lateIncludeCourseBoundEvaluationStudent({
   evaluationId,
   membershipId,
+  programId,
   reversalCategory,
   reversalOtherExplanation,
 }: LateIncludeCourseBoundEvaluationInput): Promise<LateIncludeCourseBoundEvaluationResult> {
@@ -150,6 +160,11 @@ export async function lateIncludeCourseBoundEvaluationStudent({
     const session = await resolveAuthSession();
     if (!session) return { success: false, error: "Authentication required." };
     actorId = session.userId;
+    if (session.activeRole === ROLES.PROGRAM_HEAD) {
+      if (!programId || !(await resolveProgramHeadContext(programId)).success) {
+        return { success: false, error: NOT_FOUND_ERROR };
+      }
+    }
     const normalizedExplanation = validateReversalExplanation(
       reversalCategory,
       reversalOtherExplanation
@@ -171,7 +186,14 @@ export async function lateIncludeCourseBoundEvaluationStudent({
               throw new LateIncludeValidationError(NOT_FOUND_ERROR);
             }
             if (
-              !(await isAuthorizedRosterManager(tx, session, evaluation.course_assignment)).allowed
+              !(
+                await isAuthorizedRosterManager(
+                  tx,
+                  session,
+                  evaluation.course_assignment,
+                  programId
+                )
+              ).allowed
             ) {
               throw new LateIncludeValidationError(NOT_FOUND_ERROR);
             }
