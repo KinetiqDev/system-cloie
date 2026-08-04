@@ -10,7 +10,7 @@ System CLOIE will support Light, Dark, and System appearance resolution through 
 
 Appearance storage carries no authorization value. No service worker, offline cache, or persistent application cache is added. The showcase is a static visual reference and must not add `navigator.onLine`, a service worker, offline guards, or mutation behavior.
 
-The first-paint appearance bootstrap mechanism depends on deployment Content Security Policy evidence. The CSP feasibility investigation is a blocking task before appearance implementation proceeds; the chosen mechanism (inline `'unsafe-inline'`, hash-based SRI, or nonce) must operate with the existing `src/proxy.ts` session-refresh flow and the streamed `Suspense` root layout.
+The first-paint appearance bootstrap mechanism depends on deployment Content Security Policy evidence. The CSP feasibility investigation is a blocking task before appearance implementation proceeds; the chosen mechanism (inline `'unsafe-inline'`, same-origin external bootstrap, hash-based SRI, or nonce) must operate with the existing `src/proxy.ts` session-refresh flow and the streamed `Suspense` root layout.
 
 ## Context
 
