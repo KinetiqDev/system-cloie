@@ -8,6 +8,8 @@ import {
   buildProgramHeadCiloReviewsPath,
   buildProgramHeadCiloReviewDetailPath,
   buildProgramHeadCiloResponseReviewPath,
+  buildProgramHeadAnalyticsPath,
+  buildProgramHeadReportsPath,
 } from "@/lib/constants/program-head-routes";
 
 describe("Program Head routes", () => {
@@ -50,6 +52,15 @@ describe("Program Head routes", () => {
     );
     expect(buildProgramHeadCiloResponseReviewPath("program-1", "evaluation-1", "response-1")).toBe(
       "/program-head/programs/program-1/cilo-reviews/evaluation-1/responses/response-1"
+    );
+  });
+
+  it("builds selected Program analytics and reports paths", () => {
+    expect(buildProgramHeadAnalyticsPath("program-1")).toBe(
+      "/program-head/programs/program-1/analytics"
+    );
+    expect(buildProgramHeadReportsPath("program-1")).toBe(
+      "/program-head/programs/program-1/reports"
     );
   });
 

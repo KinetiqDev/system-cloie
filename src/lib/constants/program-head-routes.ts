@@ -80,3 +80,11 @@ export function buildProgramHeadCiloResponseReviewPath(
     `cilo-reviews/${encodeURIComponent(evaluationId)}/responses/${encodeURIComponent(responseId)}`
   );
 }
+
+export function buildProgramHeadAnalyticsPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "analytics");
+}
+
+export function buildProgramHeadReportsPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "reports");
+}

@@ -171,6 +171,58 @@ describe("analytics dashboard access", () => {
     expect(prismaMock.program.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 
+  it("constrains every dashboard analytics query to the selected Program for a multi-Program head", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "program-head-1",
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+    });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "program-head-1",
+        authorizedPrograms: [
+          { id: "program-beed", code: "BEED", name: "Elementary Education" },
+          { id: "program-bsed", code: "BSED", name: "Secondary Education" },
+        ],
+        selectedProgram: { id: "program-bsed", code: "BSED", name: "Secondary Education" },
+      },
+    });
+    prismaMock.centralDeployment.count.mockResolvedValue(0);
+    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
+    prismaMock.response.count.mockResolvedValue(0);
+    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
+    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
+      _avg: { rating_value: null },
+    });
+    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
+    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
+    countEligibleMock.mockResolvedValue(0);
+
+    await expect(getProgramHeadDashboard("program-bsed")).resolves.toMatchObject({
+      programCode: "BSED",
+      kpi: { pendingResponses: 0 },
+    });
+
+    const queryMocks = [
+      prismaMock.centralDeployment.count,
+      prismaMock.courseBoundEvaluation.count,
+      prismaMock.response.count,
+      prismaMock.evaluationAssignment.count,
+      prismaMock.quantitativeResponseItem.aggregate,
+      prismaMock.centralDeployment.findMany,
+      prismaMock.qualitativeResponseItem.findMany,
+      countEligibleMock,
+    ];
+
+    for (const queryMock of queryMocks) {
+      expect(queryMock.mock.calls.length).toBeGreaterThan(0);
+      const serialized = JSON.stringify(queryMock.mock.calls);
+      expect(serialized).toContain("program-bsed");
+      expect(serialized).not.toContain("program-beed");
+    }
+  });
+
   it("preserves Faculty KPI values in the primary metrics read model", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "faculty-1",

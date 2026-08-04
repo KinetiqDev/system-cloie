@@ -30,4 +30,30 @@ describe("selected Program migration route", () => {
       })
     ).rejects.toThrow("NOT_FOUND");
   });
+
+  it("does not serve analytics or reports paths once their selected Program pages exist", async () => {
+    await expect(
+      SelectedProgramMigrationPage({
+        params: Promise.resolve({ programId: "program-2", path: ["analytics"] }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+    await expect(
+      SelectedProgramMigrationPage({
+        params: Promise.resolve({ programId: "program-2", path: ["reports"] }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+  });
+
+  it("rejects nested analytics and reports paths that are not canonical routes", async () => {
+    await expect(
+      SelectedProgramMigrationPage({
+        params: Promise.resolve({ programId: "program-2", path: ["analytics", "extra"] }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+    await expect(
+      SelectedProgramMigrationPage({
+        params: Promise.resolve({ programId: "program-2", path: ["reports", "sub"] }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+  });
 });
