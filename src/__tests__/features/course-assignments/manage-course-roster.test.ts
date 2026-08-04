@@ -42,11 +42,21 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
   },
   programHeadAssignment: { findMany: vi.fn() },
+  program: { findUnique: vi.fn() },
   user: { findUnique: vi.fn() },
 }));
+const programHeadContextMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/features/auth/services/resolve-auth-session");
 vi.mock("@/lib/db/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: programHeadContextMock,
+  revalidateProgramHeadAssignment: vi.fn(async (_tx, input) => ({
+    id: input.programId,
+    code: "BSED",
+    name: "Education",
+  })),
+}));
 
 describe("manage course roster service", () => {
   beforeEach(() => {
@@ -57,6 +67,7 @@ describe("manage course roster service", () => {
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
     prismaMock.courseAssignment.findUnique.mockResolvedValue(assignment as never);
     prismaMock.$queryRaw.mockResolvedValue([]);
+    prismaMock.program.findUnique.mockResolvedValue({ id: "program-1", code: "BSED", name: "Education" });
     prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue(null);
   });
 
@@ -220,7 +231,16 @@ describe("manage course roster service", () => {
     prismaMock.programHeadAssignment.findMany.mockResolvedValue([
       { program_id: "program-1" },
     ] as never);
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toMatchObject(
+    prismaMock.$queryRaw.mockResolvedValue([{ is_active: true, program_id: "program-1" }]);
+    programHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "head-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
+      },
+    });
+    await expect(addRosterMembership("assignment-1", "student@example.com", "program-1")).resolves.toMatchObject(
       {
         success: true,
       }
@@ -230,7 +250,9 @@ describe("manage course roster service", () => {
       ...assignment,
       course: { course_scope: CourseScope.GENERAL_EDUCATION },
     } as never);
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toEqual({
+    await expect(
+      addRosterMembership("assignment-1", "student@example.com", "program-1")
+    ).resolves.toEqual({
       success: false,
       error: "Program Heads cannot manage General Education assignments.",
     });
@@ -255,5 +277,32 @@ describe("manage course roster service", () => {
       error:
         "A Course-bound evaluation has been published for this assignment. The roster is locked.",
     });
+  });
+
+  it("rejects a selected Program write when the assignment is revoked in the transaction", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
+    );
+    programHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "head-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
+      },
+    });
+    const { revalidateProgramHeadAssignment } = await import(
+      "@/features/auth/services/resolve-program-head-context"
+    );
+    vi.mocked(revalidateProgramHeadAssignment).mockResolvedValueOnce(null);
+    prismaMock.programHeadAssignment.findMany.mockResolvedValue([
+      { program_id: "program-1" },
+    ] as never);
+    prismaMock.courseAssignment.findUnique.mockResolvedValue(assignment as never);
+
+    await expect(
+      addRosterMembership("assignment-1", "student@example.com", "program-1")
+    ).resolves.toEqual({ success: false, error: "Course assignment not found." });
+    expect(prismaMock.courseAssignmentMembership.create).not.toHaveBeenCalled();
   });
 });

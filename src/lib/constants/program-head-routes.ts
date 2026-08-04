@@ -26,3 +26,10 @@ export function buildProgramHeadCoursesPath(programId: string): string {
 export function buildProgramHeadCourseAssignmentsPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "course-assignments");
 }
+
+export function buildProgramHeadCourseRosterPath(programId: string, assignmentId: string): string {
+  return buildProgramHeadProgramPath(
+    programId,
+    `course-rosters/${encodeURIComponent(assignmentId)}`
+  );
+}

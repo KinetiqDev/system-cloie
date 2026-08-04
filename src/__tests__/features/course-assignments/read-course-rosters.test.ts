@@ -10,6 +10,9 @@ import {
 } from "@/features/course-assignments/services/read-course-rosters";
 
 vi.mock("@/features/auth/services/resolve-auth-session");
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: vi.fn(),
+}));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     academicTermInstance: { findFirst: vi.fn() },
@@ -221,5 +224,64 @@ describe("read course rosters", () => {
     expect(prisma.courseAssignmentMembership.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: expect.any(Array) })
     );
+  });
+
+  it("rejects a cross-Program detail request without disclosing assignment data", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
+    );
+    const { resolveProgramHeadContext } = await import(
+      "@/features/auth/services/resolve-program-head-context"
+    );
+    vi.mocked(resolveProgramHeadContext).mockResolvedValue({
+      success: true,
+      data: {
+        userId: "head-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
+      },
+    });
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+      ...assignment,
+      program_id: "program-2",
+    } as never);
+
+    await expect(getCourseRosterDetail("assignment-1", { programId: "program-1" })).resolves.toEqual({
+      success: false,
+      error: "Course assignment not found.",
+    });
+  });
+
+  it("rejects an unauthorized selected Program in roster discovery", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
+    );
+    const { resolveProgramHeadContext } = await import(
+      "@/features/auth/services/resolve-program-head-context"
+    );
+    vi.mocked(resolveProgramHeadContext).mockResolvedValue({
+      success: false,
+      error: "Selected Program is not assigned.",
+    });
+
+    await expect(
+      listAuthorizedCourseRosterAssignments({ programId: "program-2" })
+    ).resolves.toEqual({ success: false, error: "Course assignment not found." });
+    const { prisma } = await import("@/lib/db/prisma");
+    expect(prisma.courseAssignment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("requires selected Program scope for Program Head roster discovery", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
+    );
+
+    await expect(listAuthorizedCourseRosterAssignments()).resolves.toEqual({
+      success: false,
+      error: "Course assignment not found.",
+    });
+    const { prisma } = await import("@/lib/db/prisma");
+    expect(prisma.courseAssignment.findMany).not.toHaveBeenCalled();
   });
 });

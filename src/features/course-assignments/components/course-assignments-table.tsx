@@ -57,6 +57,7 @@ import type {
 } from "@/features/course-assignments/types";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { getYearLevelDisplay, getSectionLabel } from "@/lib/constants/academic";
+import { buildProgramHeadCourseRosterPath } from "@/lib/constants/program-head-routes";
 
 interface Program {
   id: string;
@@ -295,9 +296,13 @@ export function CourseAssignmentsTable({
               return (
                 <TableRow key={assignment.id} data-readonly={isReadOnly || undefined}>
                   <TableCell>
-                    {mode === "all-program" ? (
+                    {mode === "all-program" || (mode === "program-head" && selectedProgramId) ? (
                       <Link
-                        href={`/course-rosters/${assignment.id}`}
+                        href={
+                          mode === "all-program"
+                            ? `/course-rosters/${assignment.id}`
+                            : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id)
+                        }
                         className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
                       >
                         Open roster

@@ -11,6 +11,7 @@ import {
   resolveAuthorizedCourseAssignmentRoster,
   type RosterEligibilityStudent,
 } from "./course-assignment-roster";
+import { revalidateProgramHeadAssignment } from "@/features/auth/services/resolve-program-head-context";
 import { canManageCourseRoster } from "../policies";
 import type { CourseRosterMutation, RosterServiceResult } from "../types";
 
@@ -139,9 +140,10 @@ function unexpectedRosterFailure(
   return { success: false as const, error: SAFE_FAILURE_ERROR, referenceId };
 }
 
-async function authorizeForWrite(assignmentId: string) {
+async function authorizeForWrite(assignmentId: string, programId?: string) {
   const authorization = await resolveAuthorizedCourseAssignmentRoster(assignmentId, {
     manage: true,
+    programId,
   });
   if (!authorization.success) return authorization;
   if (!authorization.data.canManage) return { success: false as const, error: NOT_FOUND_ERROR };
@@ -167,8 +169,16 @@ async function lockAssignment(tx: Prisma.TransactionClient, assignmentId: string
 async function confirmWriteAuthorization(
   tx: Prisma.TransactionClient,
   session: NonNullable<Awaited<ReturnType<typeof resolveAuthSession>>>,
-  assignment: WriteAssignment
+  assignment: WriteAssignment,
+  programId?: string
 ) {
+  if (session.activeRole === ROLES.PROGRAM_HEAD) {
+    const selectedProgram = programId
+      ? await revalidateProgramHeadAssignment(tx, { userId: session.userId, programId })
+      : null;
+    if (!selectedProgram || assignment.program_id !== selectedProgram.id) return false;
+  }
+
   const programHeadProgramIds =
     session.activeRole === ROLES.PROGRAM_HEAD
       ? (
@@ -243,7 +253,8 @@ async function uniqueMembershipError(
 
 export async function addRosterMembership(
   assignmentId: string,
-  studentEmail: string
+  studentEmail: string,
+  programId?: string
 ): Promise<RosterServiceResult<CourseRosterMutation>> {
   let actorId: string | undefined;
   let studentUserId: string | undefined;
@@ -251,15 +262,17 @@ export async function addRosterMembership(
     const session = await resolveAuthSession();
     if (!session) return { success: false, error: "Authentication required." };
     actorId = session.userId;
-    const authorization = await authorizeForWrite(assignmentId);
+    const authorization = await authorizeForWrite(assignmentId, programId);
     if (!authorization.success) return authorization;
 
     const email = studentEmail.trim().toLowerCase();
     return await prisma.$transaction(async (tx) => {
       const assignment = await lockAssignment(tx, assignmentId);
       if (!assignment) return { success: false, error: NOT_FOUND_ERROR };
-      const authorization = await confirmWriteAuthorization(tx, session, assignment);
-      if (!authorization.allowed) return { success: false, error: NOT_FOUND_ERROR };
+      const authorization = await confirmWriteAuthorization(tx, session, assignment, programId);
+      if (authorization === false || !authorization.allowed) {
+        return { success: false, error: NOT_FOUND_ERROR };
+      }
       const lifecycleFailure = safeMutabilityFailure(assignment);
       if (lifecycleFailure) return lifecycleFailure;
 
@@ -334,7 +347,8 @@ export async function addRosterMembership(
 
 export async function restoreRosterMembership(
   assignmentId: string,
-  membershipId: string
+  membershipId: string,
+  programId?: string
 ): Promise<RosterServiceResult<CourseRosterMutation>> {
   let actorId: string | undefined;
   let studentUserId: string | undefined;
@@ -342,14 +356,16 @@ export async function restoreRosterMembership(
     const session = await resolveAuthSession();
     if (!session) return { success: false, error: "Authentication required." };
     actorId = session.userId;
-    const authorization = await authorizeForWrite(assignmentId);
+    const authorization = await authorizeForWrite(assignmentId, programId);
     if (!authorization.success) return authorization;
 
     return await prisma.$transaction(async (tx) => {
       const assignment = await lockAssignment(tx, assignmentId);
       if (!assignment) return { success: false, error: NOT_FOUND_ERROR };
-      const authorization = await confirmWriteAuthorization(tx, session, assignment);
-      if (!authorization.allowed) return { success: false, error: NOT_FOUND_ERROR };
+      const authorization = await confirmWriteAuthorization(tx, session, assignment, programId);
+      if (authorization === false || !authorization.allowed) {
+        return { success: false, error: NOT_FOUND_ERROR };
+      }
       const lifecycleFailure = safeMutabilityFailure(assignment);
       if (lifecycleFailure) return lifecycleFailure;
 
@@ -410,21 +426,24 @@ export async function restoreRosterMembership(
 
 export async function removeRosterMembership(
   assignmentId: string,
-  membershipId: string
+  membershipId: string,
+  programId?: string
 ): Promise<RosterServiceResult<CourseRosterMutation>> {
   let actorId: string | undefined;
   try {
     const session = await resolveAuthSession();
     if (!session) return { success: false, error: "Authentication required." };
     actorId = session.userId;
-    const authorization = await authorizeForWrite(assignmentId);
+    const authorization = await authorizeForWrite(assignmentId, programId);
     if (!authorization.success) return authorization;
 
     return await prisma.$transaction(async (tx) => {
       const assignment = await lockAssignment(tx, assignmentId);
       if (!assignment) return { success: false, error: NOT_FOUND_ERROR };
-      const authorization = await confirmWriteAuthorization(tx, session, assignment);
-      if (!authorization.allowed) return { success: false, error: NOT_FOUND_ERROR };
+      const authorization = await confirmWriteAuthorization(tx, session, assignment, programId);
+      if (authorization === false || !authorization.allowed) {
+        return { success: false, error: NOT_FOUND_ERROR };
+      }
       const lifecycleFailure = safeMutabilityFailure(assignment);
       if (lifecycleFailure) return lifecycleFailure;
 

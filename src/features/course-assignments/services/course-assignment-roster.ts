@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { CourseScope, type Prisma, type SystemRole } from "@prisma/client";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 
@@ -323,7 +324,7 @@ async function findAssignment(assignmentId: string): Promise<AssignmentForRoster
 
 export async function resolveAuthorizedCourseAssignmentRoster(
   assignmentId: string,
-  options: { manage?: boolean } = {}
+  options: { manage?: boolean; programId?: string } = {}
 ): Promise<RosterServiceResult<AuthorizedRosterAssignment>> {
   let actorId: string | undefined;
 
@@ -336,6 +337,19 @@ export async function resolveAuthorizedCourseAssignmentRoster(
 
     const assignment = await findAssignment(assignmentId);
     if (!assignment) {
+      return { success: false, error: NOT_FOUND_ERROR };
+    }
+
+    if (session.activeRole === ROLES.PROGRAM_HEAD) {
+      if (!options.programId) return { success: false, error: NOT_FOUND_ERROR };
+      const context = await resolveProgramHeadContext(options.programId);
+      if (!context.success) return { success: false, error: NOT_FOUND_ERROR };
+    }
+
+    if (
+      session.activeRole === ROLES.PROGRAM_HEAD &&
+      assignment.program_id !== options.programId
+    ) {
       return { success: false, error: NOT_FOUND_ERROR };
     }
 

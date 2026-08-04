@@ -124,7 +124,7 @@ function ImportSummary({ result }: { result: CourseRosterImportSummary }) {
   );
 }
 
-export function ImportRosterCsv({ assignmentId }: { assignmentId: string }) {
+export function ImportRosterCsv({ assignmentId, programId }: { assignmentId: string; programId?: string }) {
   const [result, setResult] = useState<CourseRosterImportSummary | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -148,6 +148,7 @@ export function ImportRosterCsv({ assignmentId }: { assignmentId: string }) {
     }
     const formData = new FormData();
     formData.set("assignmentId", assignmentId);
+    if (programId) formData.set("programId", programId);
     formData.set("file", file.files[0]);
     setMessage(null);
     setResult(null);
@@ -200,7 +201,7 @@ export function ImportRosterCsv({ assignmentId }: { assignmentId: string }) {
   );
 }
 
-export function AddRosterMember({ assignmentId }: { assignmentId: string }) {
+export function AddRosterMember({ assignmentId, programId }: { assignmentId: string; programId?: string }) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -209,7 +210,7 @@ export function AddRosterMember({ assignmentId }: { assignmentId: string }) {
     event.preventDefault();
     setMessage(null);
     startTransition(async () => {
-      const result = await addRosterMembershipAction({ assignmentId, studentEmail: email });
+      const result = await addRosterMembershipAction({ assignmentId, programId, studentEmail: email });
       setMessage(resultMessage(result));
       if (result.success) setEmail("");
     });
@@ -252,9 +253,11 @@ export function AddRosterMember({ assignmentId }: { assignmentId: string }) {
 export function RemoveRosterMember({
   assignment,
   member,
+  programId,
 }: {
   assignment: CourseRosterAssignmentSummary;
   member: CourseRosterMember;
+  programId?: string;
 }) {
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -266,6 +269,7 @@ export function RemoveRosterMember({
       const result = await removeRosterMembershipAction({
         assignmentId: assignment.assignmentId,
         membershipId: member.membershipId,
+        programId,
       });
       setMessage(resultMessage(result));
     });
@@ -305,9 +309,11 @@ export function RemoveRosterMember({
 export function RestoreRosterMember({
   assignmentId,
   member,
+  programId,
 }: {
   assignmentId: string;
   member: CourseRosterMember;
+  programId?: string;
 }) {
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -319,6 +325,7 @@ export function RestoreRosterMember({
       const result = await restoreRosterMembershipAction({
         assignmentId,
         membershipId: member.membershipId,
+        programId,
       });
       setMessage(resultMessage(result));
     });

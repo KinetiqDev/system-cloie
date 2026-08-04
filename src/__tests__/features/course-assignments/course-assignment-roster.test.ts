@@ -12,7 +12,7 @@ import {
 } from "@/features/course-assignments/services/course-assignment-roster";
 
 vi.mock("@/features/auth/services/resolve-auth-session");
-vi.mock("@/lib/db/prisma", () => ({
+  vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     courseAssignment: { findUnique: vi.fn() },
     evaluationAssignment: { findMany: vi.fn() },
@@ -20,6 +20,9 @@ vi.mock("@/lib/db/prisma", () => ({
     programHeadAssignment: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
   },
+}));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: vi.fn(),
 }));
 
 describe("course-assignment-roster service", () => {
@@ -250,5 +253,38 @@ describe("course-assignment-roster service", () => {
     });
     expect(result).toHaveProperty("referenceId");
     expect(JSON.stringify(result)).not.toContain("database details");
+  });
+
+  it("does not disclose an assignment outside the selected Program", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    const { resolveProgramHeadContext } = await import(
+      "@/features/auth/services/resolve-program-head-context"
+    );
+    vi.mocked(resolveProgramHeadContext).mockResolvedValue({
+      success: true,
+      data: {
+        userId: "head-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
+      },
+    });
+    vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+      id: "assignment-1",
+      faculty_id: "faculty-1",
+      course_id: "course-1",
+      program_id: "program-2",
+      term_instance_id: "term-1",
+      is_active: true,
+      course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+      term_instance: { status: "ACTIVE" },
+      course_bound_evaluations: [],
+    } as never);
+
+    await expect(
+      resolveAuthorizedCourseAssignmentRoster("assignment-1", { programId: "program-1" })
+    ).resolves.toEqual({ success: false, error: "Course assignment not found." });
   });
 });

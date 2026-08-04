@@ -70,18 +70,21 @@ export const bulkCreateCourseAssignmentsSchema = z.object({
 
 export const addRosterMembershipSchema = z.object({
   assignmentId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
   studentEmail: z.string().trim().toLowerCase().email().max(254),
 });
 
 export const restoreRosterMembershipSchema = z.object({
   assignmentId: z.string().uuid(),
   membershipId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
 });
 
 export const removeRosterMembershipSchema = restoreRosterMembershipSchema;
 
 export const importCourseRosterTextSchema = z.object({
   assignmentId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
   csvText: z.string(),
 });
 

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma, type SystemRole } from "@prisma/client";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { ROLES } from "@/lib/constants/roles";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
@@ -191,14 +192,6 @@ async function getActivePeriodId() {
   return activePeriod?.id ?? null;
 }
 
-async function getProgramHeadProgramIds(userId: string) {
-  const assignments = await prisma.programHeadAssignment.findMany({
-    where: { program_head_id: userId, is_active: true },
-    select: { program_id: true },
-  });
-  return [...new Set(assignments.map((assignment) => assignment.program_id))];
-}
-
 function assignmentWhere(
   session: NonNullable<Awaited<ReturnType<typeof resolveAuthSession>>>,
   options: { includeHistory: boolean; activePeriodId: string | null; search: string },
@@ -357,6 +350,7 @@ export async function listAuthorizedCourseRosterAssignments(
     page?: number;
     pageSize?: number;
     facultyOnly?: boolean;
+    programId?: string;
   } = {}
 ): Promise<RosterServiceResult<CourseRosterDiscoveryResult>> {
   let actorId: string | undefined;
@@ -380,10 +374,13 @@ export async function listAuthorizedCourseRosterAssignments(
     const page = Math.max(0, options.page ?? 0);
     const pageSize = options.pageSize ?? DEFAULT_TABLE_PAGE_SIZE;
     const activePeriodId = await getActivePeriodId();
-    const programHeadProgramIds =
-      session.activeRole === ROLES.PROGRAM_HEAD
-        ? await getProgramHeadProgramIds(session.userId)
-        : [];
+    let programHeadProgramIds: string[] = [];
+    if (session.activeRole === ROLES.PROGRAM_HEAD) {
+      if (!options.programId) return { success: false, error: "Course assignment not found." };
+      const context = await resolveProgramHeadContext(options.programId);
+      if (!context.success) return { success: false, error: "Course assignment not found." };
+      programHeadProgramIds = [context.data.selectedProgram.id];
+    }
     const where = assignmentWhere(
       session,
       { includeHistory, activePeriodId, search },
@@ -485,6 +482,7 @@ export async function getCourseRosterDetail(
     search?: string;
     page?: number;
     sortDirection?: "asc" | "desc";
+    programId?: string;
   } = {}
 ): Promise<RosterServiceResult<CourseRosterDetail>> {
   let actorId: string | undefined;
@@ -492,7 +490,9 @@ export async function getCourseRosterDetail(
     const session = await resolveAuthSession();
     if (!session) return { success: false, error: "Authentication required." };
     actorId = session.userId;
-    const authorization = await resolveAuthorizedCourseAssignmentRoster(assignmentId);
+    const authorization = await resolveAuthorizedCourseAssignmentRoster(assignmentId, {
+      programId: options.programId,
+    });
     if (!authorization.success) return authorization;
 
     const assignment = await findDetailedAssignment(assignmentId);

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 
@@ -152,6 +152,33 @@ describe("course roster pages", () => {
 
     expect(screen.getByRole("heading", { name: "Add Student to roster" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument();
+  });
+
+  it("preserves selected Program roster navigation and action scope", async () => {
+    vi.spyOn(rosterActions, "addRosterMembershipAction").mockResolvedValue({
+      success: true,
+      data: { outcome: "CREATED", message: "Student added to Course roster." },
+    });
+    render(
+      <CourseRosterDetailPage
+        data={detail}
+        programId="program-1"
+        rosterBasePath="/program-head/programs/program-1/course-rosters"
+        backHref="/program-head/programs/program-1/course-assignments"
+      />
+    );
+
+    expect(screen.getByRole("link", { name: /back to my course rosters/i })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/course-assignments"
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Student email" }), {
+      target: { value: "student@example.com" },
+    });
+    fireEvent.submit(screen.getByRole("textbox", { name: "Student email" }).closest("form")!);
+    await waitFor(() => expect(rosterActions.addRosterMembershipAction).toHaveBeenCalledWith(
+      expect.objectContaining({ programId: "program-1" })
+    ));
   });
 
   it("shows ineligible removed members but disables restore", () => {
