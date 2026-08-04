@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
 import {
   getHighestNavRole,
+  getNavItemIdentity,
   getDeanPrimaryNav,
   getMobileNavByRoles,
   getDeepestMatchingNavItem,
@@ -31,7 +32,7 @@ export function MobileNav({ roles = [] }: MobileNavProps) {
         const isActive = activeItem === item;
         return (
           <NavigationLink
-            key={item.href}
+              key={getNavItemIdentity(item)}
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={cn(

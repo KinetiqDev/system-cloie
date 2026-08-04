@@ -9,6 +9,7 @@ import {
   getDeanNavGroups,
   getDeanStandaloneNav,
   getHighestNavRole,
+  getNavItemIdentity,
   getMainNavByRoles,
   getSecondaryNavByRoles,
   getDeepestMatchingNavItem,
@@ -60,7 +61,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
             const isActive = activeItem === item;
             return (
               <NavigationLink
-                key={item.href}
+                key={getNavItemIdentity(item)}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(

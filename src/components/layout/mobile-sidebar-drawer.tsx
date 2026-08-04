@@ -12,6 +12,7 @@ import {
   getDeanNavGroups,
   getDeanStandaloneNav,
   getHighestNavRole,
+  getNavItemIdentity,
   getMainNavByRoles,
   getDeanActiveItem,
   getDeepestMatchingNavItem,
@@ -97,7 +98,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
     const active = activeItem === item;
     return (
       <NavigationLink
-        key={item.href}
+        key={getNavItemIdentity(item)}
         href={item.href}
         onClick={() => close(false)}
         aria-current={active ? "page" : undefined}

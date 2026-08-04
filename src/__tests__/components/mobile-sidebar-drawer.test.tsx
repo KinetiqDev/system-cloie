@@ -142,4 +142,19 @@ describe("Dean mobile navigation drawer", () => {
       "page"
     );
   });
+
+  it("does not duplicate Program Head entry-route links without a Selected Program context", async () => {
+    pathnameMock.mockReturnValue("/program-head/profile");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    render(<MobileSidebarDrawer roles={[ROLES.PROGRAM_HEAD]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "href",
+      "/program-head"
+    );
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
 });

@@ -34,6 +34,10 @@ export interface NavGroup {
   items: NavItem[];
 }
 
+export function getNavItemIdentity(item: Pick<NavItem, "href" | "programHeadChildPath">): string {
+  return item.programHeadChildPath ?? item.href;
+}
+
 const STUDENT_NAV: NavItem[] = [
   { name: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
   { name: "My Evaluations", href: "/student/evaluations", icon: FileText },
