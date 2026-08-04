@@ -1,4 +1,4 @@
-import { InviteStatus, SystemRole } from "@prisma/client";
+import { InviteStatus, Prisma, SystemRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type {
   AssignRoleInput,
@@ -151,6 +151,22 @@ export async function assignUserRole(
   }
 }
 
+/** Expected denial thrown by the revocation transaction for the assignment gate. */
+class ActiveProgramHeadAssignmentsError extends Error {
+  constructor() {
+    super("Deactivate all program-head assignments before revoking the Program Head role.");
+    this.name = "ActiveProgramHeadAssignmentsError";
+  }
+}
+
+/** Expected denial thrown by the activation transaction when the role is missing. */
+class MissingProgramHeadRoleError extends Error {
+  constructor() {
+    super("Assign the Program Head role before linking a program assignment.");
+    this.name = "MissingProgramHeadRoleError";
+  }
+}
+
 export async function revokeUserRole(userId: string, role: SystemRole): Promise<ServiceResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
@@ -201,19 +217,39 @@ export async function revokeUserRole(userId: string, role: SystemRole): Promise<
   }
 
   if (role === SystemRole.PROGRAM_HEAD) {
-    const activeAssignments = await prisma.programHeadAssignment.count({
-      where: {
-        program_head_id: userId,
-        is_active: true,
-      },
-    });
+    // The role can only be revoked while no assignment is active. The count
+    // and the delete run in one transaction under the same advisory lock as
+    // assignment-set administration so a concurrent activation cannot slip
+    // between the check and the role deletion.
+    const programHeadUserId = userId;
+    try {
+      await prisma.$transaction(async (tx) => {
+        await lockProgramHeadAssignmentSet(tx, programHeadUserId);
+        const activeAssignments = await tx.programHeadAssignment.count({
+          where: {
+            program_head_id: programHeadUserId,
+            is_active: true,
+          },
+        });
 
-    if (activeAssignments > 0) {
-      return {
-        success: false,
-        error: "Deactivate all program-head assignments before revoking the Program Head role.",
-      };
+        if (activeAssignments > 0) {
+          throw new ActiveProgramHeadAssignmentsError();
+        }
+
+        await tx.userRole.delete({
+          where: { user_id: programHeadUserId },
+        });
+      });
+    } catch (error) {
+      // Convert only the expected assignment-gate denial; database failures
+      // propagate to the caller's error boundary.
+      if (error instanceof ActiveProgramHeadAssignmentsError) {
+        return { success: false, error: error.message };
+      }
+      throw error;
     }
+
+    return { success: true, data: undefined };
   }
 
   if (role === SystemRole.INDUSTRY_PARTNER) {
@@ -410,25 +446,47 @@ export async function createProgramHeadAssignment(
   }
 
   try {
-    await prisma.programHeadAssignment.upsert({
-      where: {
-        program_head_id_program_id: {
+    await prisma.$transaction(async (tx) => {
+      // Re-verify the target still has the Program Head role under the same
+      // advisory lock as assignment-set administration and role revocation,
+      // so a concurrent revocation cannot race the activation.
+      await lockProgramHeadAssignmentSet(tx, input.program_head_id);
+      const roleRecord = await tx.userRole.findUnique({
+        where: { user_id: input.program_head_id },
+        select: { role: true },
+      });
+      if (!roleRecord || roleRecord.role !== SystemRole.PROGRAM_HEAD) {
+        throw new MissingProgramHeadRoleError();
+      }
+
+      await tx.programHeadAssignment.upsert({
+        where: {
+          program_head_id_program_id: {
+            program_head_id: input.program_head_id,
+            program_id: input.program_id,
+          },
+        },
+        update: {
+          is_active: true,
+        },
+        create: {
           program_head_id: input.program_head_id,
           program_id: input.program_id,
+          is_active: true,
         },
-      },
-      update: {
-        is_active: true,
-      },
-      create: {
-        program_head_id: input.program_head_id,
-        program_id: input.program_id,
-        is_active: true,
-      },
+      });
     });
 
     return { success: true, data: undefined };
   } catch (error) {
+    // Convert the expected concurrent-revocation denial; real database
+    // failures propagate to the caller's error boundary.
+    if (error instanceof MissingProgramHeadRoleError) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
     if (isUniqueConstraintError(error)) {
       return {
         success: false,
@@ -450,14 +508,89 @@ export async function deactivateProgramHeadAssignment(id: string): Promise<Servi
     return { success: false, error: "Insufficient permissions." };
   }
 
-  await prisma.programHeadAssignment.update({
-    where: { id },
-    data: {
-      is_active: false,
-    },
+  await prisma.$transaction(async (tx) => {
+    // Resolve the owning Program Head first so the advisory lock is keyed on
+    // the target user id, matching every other assignment-set writer.
+    const assignment = await tx.programHeadAssignment.findUnique({
+      where: { id },
+      select: { program_head_id: true },
+    });
+    if (!assignment) {
+      throw new Error("Program head assignment not found.");
+    }
+    await lockProgramHeadAssignmentSet(tx, assignment.program_head_id);
+    await tx.programHeadAssignment.update({
+      where: { id },
+      data: { is_active: false },
+    });
   });
 
   return { success: true, data: undefined };
+}
+
+/**
+ * Serializes Program Head assignment-set administration for one target user.
+ * All assignment-set writers and the Program Head role revocation gate take
+ * this Postgres advisory transaction lock, so a concurrent assignment edit,
+ * standalone assignment write, or role revocation cannot interleave with the
+ * transaction re-read of the set (the stale-confirmation check).
+ */
+export async function lockProgramHeadAssignmentSet(
+  tx: Prisma.TransactionClient,
+  userId: string
+): Promise<void> {
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`cloie:program-head-assignment-set:${userId}`}))`;
+}
+
+/**
+ * Applies a complete Program Head assignment set inside a write transaction.
+ * This is the shared lifecycle used by the Secretary protected edit flow and
+ * mirrors the upsert/reactivation and deactivation semantics of
+ * `createProgramHeadAssignment` and `deactivateProgramHeadAssignment`:
+ * selected existing rows (including historical rows) are activated or
+ * reactivated, selected Programs without a row receive exactly one new row,
+ * and unselected active rows are deactivated. No row is ever deleted or
+ * recreated solely to change selection. The compound `(program_head_id,
+ * program_id)` unique key turns a concurrent duplicate activation race into a
+ * safe activation instead of a duplicate row.
+ */
+export async function applyProgramHeadAssignmentSet(
+  tx: Prisma.TransactionClient,
+  input: { programHeadId: string; programIds: string[] }
+): Promise<void> {
+  const { programHeadId } = input;
+  const programIds = [...new Set(input.programIds)];
+
+  if (programIds.length === 0) {
+    await tx.programHeadAssignment.updateMany({
+      where: { program_head_id: programHeadId, is_active: true },
+      data: { is_active: false },
+    });
+    return;
+  }
+
+  await tx.programHeadAssignment.updateMany({
+    where: {
+      program_head_id: programHeadId,
+      is_active: true,
+      program_id: { notIn: programIds },
+    },
+    data: { is_active: false },
+  });
+
+  for (const programId of programIds) {
+    await tx.programHeadAssignment.upsert({
+      where: {
+        program_head_id_program_id: { program_head_id: programHeadId, program_id: programId },
+      },
+      create: {
+        program_head_id: programHeadId,
+        program_id: programId,
+        is_active: true,
+      },
+      update: { is_active: true },
+    });
+  }
 }
 
 export async function upsertIndustryPartnerProfile(

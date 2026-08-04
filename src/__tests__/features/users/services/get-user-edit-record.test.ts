@@ -55,7 +55,7 @@ describe("getUserEditRecordBySecretary", () => {
         student: null,
         activeEnrollment: null,
        faculty: null,
-         programHead: { assignmentProgramId: null },
+         programHead: { assignments: [] },
         verification: null,
         industryPartner: null,
         alumni: null,
@@ -165,7 +165,7 @@ describe("getUserEditRecordBySecretary", () => {
     }
   });
 
-  it("projects program head assignment when present", async () => {
+  it("projects the complete active program head assignment set when present", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "program-head-id",
       first_name: "Pat",
@@ -173,14 +173,35 @@ describe("getUserEditRecordBySecretary", () => {
       email: "pat@acd.edu.ph",
       is_active: true,
       roles: [{ role: SystemRole.PROGRAM_HEAD }],
-      program_head_assignments: [{ program_id: "prog-managed" }],
+      program_head_assignments: [
+        {
+          program_id: "prog-beed",
+          is_active: true,
+          program: { code: "BEED", name: "Elem Ed" },
+        },
+        {
+          program_id: "prog-bsed",
+          is_active: true,
+          program: { code: "BSED", name: "Sec Ed" },
+        },
+        {
+          program_id: "prog-historical",
+          is_active: false,
+          program: { code: "BSCED", name: "CED" },
+        },
+      ],
     });
 
     const result = await getUserEditRecordBySecretary("program-head-id");
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.programHead).toEqual({ assignmentProgramId: "prog-managed" });
+      expect(result.data.programHead).toEqual({
+        assignments: [
+          { programId: "prog-beed", programCode: "BEED", programName: "Elem Ed" },
+          { programId: "prog-bsed", programCode: "BSED", programName: "Sec Ed" },
+        ],
+      });
     }
   });
 

@@ -3,19 +3,44 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { type EditUserBySecretaryInput, editUserBySecretarySchema } from "../schemas/edit-user";
+import { applyProgramHeadAssignmentSet, lockProgramHeadAssignmentSet } from "./manage-users";
 import CryptoJS from "crypto-js";
 import { timingSafeEqual } from "node:crypto";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 import { SystemRole } from "@prisma/client";
 
+type ProgramHeadAssignmentRow = {
+  id: string;
+  program_id: string;
+  is_active: boolean;
+  program?: { name: string | null; code: string | null } | null;
+};
+
+function activeAssignmentProgramIds(
+  assignments: ProgramHeadAssignmentRow[] | undefined
+): string[] {
+  return (assignments ?? [])
+    .filter((assignment) => assignment.is_active)
+    .map((assignment) => assignment.program_id)
+    .sort();
+}
+
+function formatProgramSet(names: string[]): string {
+  return names.sort((a, b) => a.localeCompare(b)).join(", ") || "None";
+}
+
 /**
  * Derives a deterministic protected payload string for the requested changes.
  * This ensures the confirmation token is bound to exactly these values.
+ * For Program Head assignment-set edits the payload signs both the reviewed
+ * before set and the desired after set, so a stale confirmation (an
+ * intervening administrator change) never silently overwrites the set.
  */
 function deriveProtectedPayload(
   parsedData: EditUserBySecretaryInput,
   existingRole: SystemRole,
-  userId: string
+  userId: string,
+  currentActiveProgramIds: string[]
 ): string | null {
   if (existingRole === SystemRole.STUDENT && parsedData.student) {
     return `STUDENT:id=${userId}:program=${parsedData.student.program_id}:major=${parsedData.student.major_id ?? "null"}:year=${parsedData.student.year_level ?? "null"}:section=${parsedData.student.section ?? "null"}`;
@@ -24,7 +49,9 @@ function deriveProtectedPayload(
     return `FACULTY:id=${userId}:program=${parsedData.faculty.program_id}`;
   }
   if (existingRole === SystemRole.PROGRAM_HEAD && parsedData.program_head) {
-    return `PROGRAM_HEAD:id=${userId}:program=${parsedData.program_head.program_id}`;
+    const before = currentActiveProgramIds.join(",");
+    const after = [...parsedData.program_head.program_ids].sort().join(",");
+    return `PROGRAM_HEAD:id=${userId}:before=${before}:after=${after}`;
   }
   if (existingRole === SystemRole.ALUMNI && parsedData.alumni) {
     return `ALUMNI:id=${userId}:program=${parsedData.alumni.program_id}:major=${parsedData.alumni.major_id ?? "null"}:graduationYear=${parsedData.alumni.graduation_year}:verificationStatus=${parsedData.alumni.verification_status}`;
@@ -127,9 +154,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         include: { program: { select: { name: true } } },
       },
       program_head_assignments: {
-        where: { is_active: true },
-        take: 1,
-        include: { program: { select: { name: true } } },
+        include: { program: { select: { name: true, code: true } } },
       },
       alumni_profile: { include: { program: { select: { name: true } }, major: { select: { name: true } } } },
       industry_partner_profile: { include: { program: { select: { name: true } } } },
@@ -145,8 +170,16 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     return { success: false, error: "User has no assigned CLOIE account role." };
   }
 
+  // The complete reviewed before-set: every currently active assignment.
+  const currentActiveProgramIds = activeAssignmentProgramIds(existing.program_head_assignments);
+
   // Detect protected changes
-  const protectedPayload = deriveProtectedPayload(parsed.data, existingRole, id);
+  const protectedPayload = deriveProtectedPayload(
+    parsed.data,
+    existingRole,
+    id,
+    currentActiveProgramIds
+  );
 
   const confirmationReview: {
     role: SystemRole;
@@ -187,8 +220,14 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
           return {
             role: existingRole,
-            oldValues: { program: existing.program_head_assignments[0]?.program?.name ?? "None" },
-            newValues: { program: program_head.program_id },
+            oldValues: {
+              programs: formatProgramSet(
+                existing.program_head_assignments
+                  .filter((assignment) => assignment.is_active)
+                  .map((assignment) => assignment.program?.name ?? assignment.program_id)
+              ),
+            },
+            newValues: { programs: "" },
           };
         }
         if (existingRole === SystemRole.ALUMNI && alumni) {
@@ -235,7 +274,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     const ids = [
       student?.program_id,
       faculty?.program_id,
-      program_head?.program_id,
+      ...(program_head?.program_ids ?? []),
       alumni?.program_id,
       industry_partner?.program_id,
     ]
@@ -249,6 +288,11 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     const requestedProgram = ids[0];
     if (requestedProgram) {
       confirmationReview.newValues.program = names.get(requestedProgram) ?? requestedProgram;
+    }
+    if (program_head) {
+      confirmationReview.newValues.programs = formatProgramSet(
+        program_head.program_ids.map((programId) => names.get(programId) ?? programId)
+      );
     }
     if (student?.major_id || alumni?.major_id) {
       const requestedMajor = student?.major_id ?? alumni?.major_id;
@@ -303,8 +347,8 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         requiresConfirmation = true;
       }
     } else if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
-      const currentAssignment = existing.program_head_assignments?.[0] ?? null;
-      if (!currentAssignment || currentAssignment.program_id !== program_head.program_id) {
+      const requestedIds = [...program_head.program_ids].sort();
+      if (currentActiveProgramIds.join(",") !== requestedIds.join(",")) {
         requiresConfirmation = true;
       }
     } else if (existingRole === SystemRole.ALUMNI && alumni) {
@@ -466,43 +510,61 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
           }
         }
       } else if (existingRole === SystemRole.PROGRAM_HEAD && program_head) {
-        const assignment = await tx.programHeadAssignment.findFirst({
-          where: { program_head_id: id, is_active: true },
+        // Serialize assignment-set administration for this target user so a
+        // concurrent assignment edit or role revocation cannot interleave
+        // with the role and set re-reads below.
+        await lockProgramHeadAssignmentSet(tx, id);
+
+        // The save transaction re-verifies that the target still holds the
+        // Program Head role; a role revocation racing this save is denied.
+        const roleRecord = await tx.userRole.findUnique({
+          where: { user_id: id },
+          select: { role: true },
         });
+        if (!roleRecord || roleRecord.role !== SystemRole.PROGRAM_HEAD) {
+          throw new Error("The target user no longer has the Program Head role.");
+        }
 
-        if (!assignment || assignment.program_id !== program_head.program_id) {
-          const program = await tx.program.findUnique({ where: { id: program_head.program_id } });
-          if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
-          if (assignment) {
-            await tx.programHeadAssignment.update({
-              where: { id: assignment.id },
-              data: { is_active: false },
+        // Re-read the assignment set inside the transaction and reject a
+        // stale confirmation whose reviewed set changed after the review.
+        const currentRows = await tx.programHeadAssignment.findMany({
+          where: { program_head_id: id },
+          select: { program_id: true, is_active: true },
+        });
+        const txActiveProgramIds = currentRows
+          .filter((row) => row.is_active)
+          .map((row) => row.program_id)
+          .sort();
+
+        if (txActiveProgramIds.join(",") !== currentActiveProgramIds.join(",")) {
+          throw new Error("The assignment set changed since your review. Please review again.");
+        }
+
+        const requestedIds = [...program_head.program_ids].sort();
+        if (txActiveProgramIds.join(",") !== requestedIds.join(",")) {
+          // Validate every newly selected Program under current Program
+          // lifecycle rules. Retained active assignments are left untouched.
+          const newlySelectedProgramIds = program_head.program_ids.filter(
+            (programId) => !txActiveProgramIds.includes(programId)
+          );
+          if (newlySelectedProgramIds.length > 0) {
+            const programs = await tx.program.findMany({
+              where: { id: { in: newlySelectedProgramIds } },
+              select: { id: true, is_active: true },
             });
+            const programStates = new Map(programs.map((program) => [program.id, program.is_active]));
+            const invalidProgram = newlySelectedProgramIds.find(
+              (programId) => !programStates.has(programId) || !programStates.get(programId)
+            );
+            if (invalidProgram) {
+              throw new Error("Selected program is archived or inactive.");
+            }
           }
 
-          const existingTarget = await tx.programHeadAssignment.findUnique({
-            where: {
-              program_head_id_program_id: {
-                program_head_id: id,
-                program_id: program_head.program_id,
-              },
-            },
+          await applyProgramHeadAssignmentSet(tx, {
+            programHeadId: id,
+            programIds: program_head.program_ids,
           });
-
-          if (existingTarget) {
-            await tx.programHeadAssignment.update({
-              where: { id: existingTarget.id },
-              data: { is_active: true },
-            });
-          } else {
-            await tx.programHeadAssignment.create({
-              data: {
-                program_head_id: id,
-                program_id: program_head.program_id,
-                is_active: true,
-              },
-            });
-          }
         }
       } else if (existingRole === SystemRole.ALUMNI && alumni) {
         const program = await tx.program.findUnique({

@@ -651,7 +651,7 @@ describe("EditUserDialog", () => {
     });
   });
 
-  it("shows managed-program control for Program Head role", async () => {
+  it("renders the assignment-set checkbox fieldset for Program Head role and preselects every active assignment", async () => {
     (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: true,
       data: {
@@ -664,7 +664,9 @@ describe("EditUserDialog", () => {
         student: null,
         activeEnrollment: null,
         faculty: null,
-        programHead: { assignmentProgramId: "prog-old" },
+        programHead: {
+          assignments: [{ programId: "prog-old", programCode: "BSIT", programName: "Information Technology" }],
+        },
         verification: null,
         industryPartner: null,
         alumni: null,
@@ -683,10 +685,113 @@ describe("EditUserDialog", () => {
     );
 
     await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
-    expect(screen.getByLabelText(/managed program/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/other program heads and course assignments remain unchanged/i)
-    ).toBeInTheDocument();
+
+    const fieldset = screen.getByRole("group", { name: /managed programs/i });
+    expect(fieldset).toBeInTheDocument();
+    const currentAssignment = screen.getByRole("checkbox", {
+      name: /information technology/i,
+    });
+    expect(currentAssignment).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /information systems/i })).not.toBeChecked();
+  });
+
+  it("submits the complete checked assignment set from the fieldset", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Pat",
+        lastName: "Head",
+        email: "pat@acd.edu.ph",
+        isActive: true,
+        role: SystemRole.PROGRAM_HEAD,
+        student: null,
+        activeEnrollment: null,
+        faculty: null,
+        programHead: {
+          assignments: [{ programId: "prog-old", programCode: "BSIT", programName: "Information Technology" }],
+        },
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+      },
+    });
+    (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: { id: "target-user" },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
+
+    // Add Information Systems to the set, then save
+    fireEvent.click(screen.getByRole("checkbox", { name: /information systems/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(editUserBySecretaryAction).toHaveBeenCalledTimes(1));
+    const submitted = (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as FormData;
+    expect(submitted.getAll("program_head.program_ids")).toEqual(["prog-old", "prog-new"]);
+    expect(submitted.get("program_head.present")).toBe("1");
+  });
+
+  it("submits an empty assignment set when every checkbox is unchecked", async () => {
+    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        firstName: "Pat",
+        lastName: "Head",
+        email: "pat@acd.edu.ph",
+        isActive: true,
+        role: SystemRole.PROGRAM_HEAD,
+        student: null,
+        activeEnrollment: null,
+        faculty: null,
+        programHead: {
+          assignments: [{ programId: "prog-old", programCode: "BSIT", programName: "Information Technology" }],
+        },
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+      },
+    });
+    (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      success: true,
+      data: { id: "target-user" },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /information technology/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(editUserBySecretaryAction).toHaveBeenCalledTimes(1));
+    const submitted = (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as FormData;
+    expect(submitted.getAll("program_head.program_ids")).toEqual([]);
+    expect(submitted.get("program_head.present")).toBe("1");
   });
 
   it("shows Alumni academic and verification controls with access effect wording", async () => {
@@ -737,7 +842,7 @@ describe("EditUserDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows assignment-history effect in Program Head confirmation", async () => {
+  it("shows exact before/after assignment sets in Program Head confirmation", async () => {
     (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: true,
       data: {
@@ -750,7 +855,11 @@ describe("EditUserDialog", () => {
         student: null,
         activeEnrollment: null,
         faculty: null,
-        programHead: { assignmentProgramId: "prog-old" },
+        programHead: {
+          assignments: [
+            { programId: "prog-old", programCode: "BSIT", programName: "Information Technology" },
+          ],
+        },
         verification: null,
         industryPartner: null,
         alumni: null,
@@ -758,7 +867,15 @@ describe("EditUserDialog", () => {
     });
     (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: true,
-      data: { protectedConfirmationRequired: true, token: "test-token" },
+      data: {
+        protectedConfirmationRequired: true,
+        token: "test-token",
+        confirmationReview: {
+          role: SystemRole.PROGRAM_HEAD,
+          oldValues: { programs: "Information Technology" },
+          newValues: { programs: "Information Systems, Information Technology" },
+        },
+      },
     });
 
     render(
@@ -773,13 +890,14 @@ describe("EditUserDialog", () => {
     );
 
     await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
-    fireEvent.click(screen.getByLabelText(/managed program/i));
-    fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /information systems/i }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() =>
       expect(screen.getByText(/program head assignment changes/i)).toBeInTheDocument()
     );
-    expect(screen.getByText(/previous assignment becomes inactive/i)).toBeInTheDocument();
+    expect(screen.getByText("Information Technology")).toBeInTheDocument();
+    expect(screen.getByText("Information Systems, Information Technology")).toBeInTheDocument();
+    expect(screen.getByText(/assignment set is replaced by the selected set/i)).toBeInTheDocument();
   });
 });

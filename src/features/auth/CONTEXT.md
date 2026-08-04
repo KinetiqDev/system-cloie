@@ -84,6 +84,10 @@ _Avoid_: Optional profile data, historical record
 The managed program a Program Head is responsible for in CLOIE; a Secretary-created Program Head account must start with exactly one active Program Head assignment.
 _Avoid_: Faculty program affiliation, teaching assignment
 
+**Program Head assignment activation/deactivation**:
+A Secretary-managed reversible change to a Program Head assignment row's active state; it preserves the assignment row, its creation time, and its relationship history, and it does not change the Program Head account role.
+_Avoid_: Assignment deletion, role revocation, primary Program change
+
 **Authorized Program set**:
 The complete set of Programs represented by a Program Head's active assignments; it defines which Programs the Program Head may deliberately select for current management work.
 _Avoid_: Primary Program, default Program, remembered Program
