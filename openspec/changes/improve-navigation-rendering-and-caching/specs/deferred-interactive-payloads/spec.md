@@ -18,6 +18,11 @@ The system SHALL fetch and authorize data for visualizations in Server Component
 - **WHEN** a role dashboard renders a chart or word cloud
 - **THEN** the system applies the route's role and program/course scope before sending prepared visualization data to the client
 
+#### Scenario: Faculty selects analytics evaluations
+- **GIVEN** a Faculty user selects one or more Course-bound evaluations in the interactive Faculty Analytics surface
+- **WHEN** the server-authorized analytics result is serialized through the Server Action to the client
+- **THEN** the payload SHALL contain only display metadata, quantitative aggregates, word-frequency tokens, response counts, and concise summary data, and SHALL NOT contain raw submitted qualitative response text, raw response rows, respondent identifiers, or account emails
+
 #### Scenario: Unauthorized visualization route is requested
 - **WHEN** a user lacks access to a dashboard or review route
 - **THEN** the system denies the route before it sends visualization data or client visualization state
