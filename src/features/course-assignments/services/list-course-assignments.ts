@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
-import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
+import { DEFAULT_TABLE_PAGE_SIZE, MAX_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { canViewCourseAssignments } from "../policies";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
@@ -30,8 +30,11 @@ export async function listCourseAssignments(
     return { success: false, error: permission.reason };
   }
 
-  const page = options?.page ?? 0;
-  const pageSize = options?.pageSize ?? DEFAULT_TABLE_PAGE_SIZE;
+  const page = Math.max(0, Math.trunc(options?.page ?? 0));
+  const pageSize = Math.min(
+    MAX_TABLE_PAGE_SIZE,
+    Math.max(1, Math.trunc(options?.pageSize ?? DEFAULT_TABLE_PAGE_SIZE))
+  );
 
   let selectedProgramId: string | undefined;
   if (authSession && authSession.activeRole === ROLES.PROGRAM_HEAD) {

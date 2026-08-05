@@ -31,7 +31,7 @@ export function FacultyQualitativeCloud({ data }: FacultyQualitativeCloudProps) 
         <CardTitle className="text-lg font-bold">Qualitative Feedback</CardTitle>
         <CardDescription>
           {qualitativeItemCount > 0
-            ? `Word cloud from ${qualitativeItemCount} qualitative responses`
+            ? `Word cloud from ${qualitativeItemCount} qualitative feedback ${qualitativeItemCount === 1 ? "item" : "items"}`
             : "No qualitative data available"}
         </CardDescription>
       </CardHeader>

@@ -8,7 +8,7 @@ Define bounded, batched, parallel, and aggregate server-read behavior for high-t
 
 ### Requirement: Role-owned list reads are bounded at the database boundary
 
-The system SHALL apply supported pagination, filtering, and sorting to high-volume role-owned list reads before serializing records to the client.
+The system SHALL apply supported pagination, filtering, and sorting to converted high-volume role-owned list reads before serializing records to the client. Secretary Users uses its fixed route page size. Course Assignments SHALL return no more than 100 records per page; omitted page size uses the route default, and an internal Course Assignment request above 100 is clamped to 100 before the query executes.
 
 #### Scenario: Secretary views Users
 
@@ -19,6 +19,11 @@ The system SHALL apply supported pagination, filtering, and sorting to high-volu
 
 - **WHEN** a user requests a page outside the current filtered result range
 - **THEN** the system canonicalizes or reports the page using the route's established pagination behavior without returning an unbounded dataset
+
+#### Scenario: Requested page size exceeds the maximum
+
+- **WHEN** an internal Course Assignment list caller requests more than 100 records in one page
+- **THEN** the system limits the Course Assignment database read and returned page to 100 records
 
 ### Requirement: Evaluation eligibility reads avoid per-record query amplification
 

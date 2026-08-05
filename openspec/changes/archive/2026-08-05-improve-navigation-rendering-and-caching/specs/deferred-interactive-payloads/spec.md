@@ -27,7 +27,7 @@ The system SHALL fetch and authorize data for visualizations in Server Component
 
 - **GIVEN** a Faculty user selects one or more Course-bound evaluations in the interactive Faculty Analytics surface
 - **WHEN** the server-authorized analytics result is serialized through the Server Action to the client
-- **THEN** the payload SHALL contain only display metadata, quantitative aggregates, word-frequency tokens, response counts, a server-computed qualitative answer-item count, and concise summary data, and SHALL NOT contain raw submitted qualitative response text, raw response rows, respondent identifiers, or account emails
+- **THEN** the payload SHALL contain only display metadata, quantitative aggregates, word-frequency tokens, response counts, and a server-computed qualitative answer-item count, and SHALL NOT contain raw submitted qualitative response text, raw response rows, respondent identifiers, account emails, or any additional summary field outside that closed projection
 
 #### Scenario: Unauthorized visualization route is requested
 

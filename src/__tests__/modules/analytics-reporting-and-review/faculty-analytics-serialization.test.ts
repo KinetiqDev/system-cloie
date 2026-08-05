@@ -206,6 +206,9 @@ describe("faculty analytics serialization", () => {
     expect(serialized).not.toContain("student@cloie.test");
     expect(serialized).not.toContain("second-student@cloie.test");
     expect(serialized).not.toContain("Draft answer must stay excluded");
+    expect(result.data[0]?.wordCloudTokens).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ text: "draft" })])
+    );
     expect(serialized).not.toContain("qualitativeTexts");
     expect(serialized).not.toContain("qual_items");
     expect(serialized).not.toContain("assignments");
