@@ -47,4 +47,4 @@ The system SHALL continue to prepare and authorize analytics data in Server Comp
 #### Scenario: Faculty selects analytics evaluations
 - **GIVEN** a Faculty user selects one or more Course-bound evaluations in the interactive analytics surface and the concurrent rendering change has completed the DTO narrowing
 - **WHEN** the server-authorized analytics result is serialized
-- **THEN** it SHALL contain only chart aggregates, word-frequency tokens, response counts, and display metadata required by the charts, and SHALL exclude raw submitted qualitative response text, response rows, respondent identifiers, and account emails. The field formerly known as `qualitativeTexts` SHALL NOT appear in the client-facing payload.
+- **THEN** it SHALL contain only chart aggregates, word-frequency tokens, response counts, and display metadata required by the charts, and SHALL exclude raw submitted qualitative response text, response rows, respondent identifiers, and account emails.
