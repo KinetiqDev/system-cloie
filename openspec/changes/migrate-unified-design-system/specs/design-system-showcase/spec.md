@@ -55,6 +55,6 @@ The showcase SHALL cover the approved installed and planned shared UI inventory:
 - **THEN** examples SHALL expose accessible names, visible focus, logical state, required overlay focus behavior, status cues beyond color, and reduced-motion-safe feedback.
 
 #### Scenario: Reviewer sees the offline reference
-- **GIVEN** a reviewer reaches the offline reference section within the showcase
-- **WHEN** the section is displayed
+- **GIVEN** the showcase includes an offline reference section
+- **WHEN** a reviewer views the section
 - **THEN** it SHALL identify itself as a static visual reference and SHALL NOT claim that offline data, service-worker caching, or offline mutation behavior is available.

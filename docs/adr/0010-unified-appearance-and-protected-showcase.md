@@ -10,7 +10,7 @@ System CLOIE will support Light, Dark, and System appearance resolution through 
 
 Appearance storage carries no authorization value. No service worker, offline cache, or persistent application cache is added. The showcase is a static visual reference and must not add `navigator.onLine`, a service worker, offline guards, or mutation behavior.
 
-The first-paint appearance bootstrap mechanism depends on deployment Content Security Policy evidence. The CSP feasibility investigation is a blocking task before appearance implementation proceeds; the chosen mechanism (inline `'unsafe-inline'`, hash-based SRI, or nonce) must operate with the existing `src/proxy.ts` session-refresh flow and the streamed `Suspense` root layout.
+The first-paint appearance bootstrap mechanism depends on deployment Content Security Policy evidence. The CSP feasibility investigation is a blocking task before appearance implementation proceeds; the chosen mechanism (inline `'unsafe-inline'`, same-origin external bootstrap, hash-based SRI, or nonce) must operate with the existing `src/proxy.ts` session-refresh flow and the streamed `Suspense` root layout.
 
 ## Context
 
@@ -41,7 +41,8 @@ Rejected as a casual fallback. Nonce CSP forces dynamic rendering on every page,
 - Preference is stored in browser storage under a stable key, parsed through a pure resolution module shared by the bootstrap script and hydrated provider.
 - A missing, malformed, or unavailable value defaults to System.
 - Explicit Light or Dark takes precedence over OS preference.
-- The server-owned `CLOIE_APPEARANCE_ENABLED` release setting controls availability. When unset in primary Production, the bootstrap forces Light before paint, ignores storage, and writes no preference. The avatar menu omits the control and `Settings → Appearance` returns not-found UI.
+- Primary Production appearance is enabled only when the server-only `CLOIE_APPEARANCE_ENABLED` release setting is exactly `"true"`; unset, empty, `"false"`, malformed, and all other values remain disabled. When disabled, the bootstrap forces Light before paint, ignores storage, and writes no preference. The avatar menu omits the control and `Settings → Appearance` returns not-found UI.
+- Repository readiness is recorded in the OpenSpec task; a separate operator follows `docs/runbooks/appearance-production-activation.md` to make, verify, record, or roll back the deployment configuration change. No source-code or example-environment default enables the rollout.
 - The setting is listed in `.env.example` as a release control, never exposed through `NEXT_PUBLIC_*`.
 
 ### 2. Protected showcase access
