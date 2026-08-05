@@ -245,7 +245,7 @@ export async function publishCourseBoundEvaluation({
             await tx.$queryRaw`
         SELECT id
         FROM "course_assignments"
-        WHERE id = ${assignmentId}
+        WHERE id = ${assignmentId}::uuid
         FOR UPDATE
       `;
 

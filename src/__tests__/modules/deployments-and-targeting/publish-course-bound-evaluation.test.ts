@@ -14,6 +14,7 @@ const {
   getFacultyTemplatePublicationContextMock,
   instrumentVersionFindFirstMock,
   instrumentTemplateFindFirstMock,
+  lockCourseAssignmentMock,
   programHeadAssignmentFindManyMock,
   revalidateProgramHeadAssignmentMock,
   ciloFindManyMock,
@@ -31,6 +32,7 @@ const {
   getFacultyTemplatePublicationContextMock: vi.fn(),
   instrumentVersionFindFirstMock: vi.fn(),
   instrumentTemplateFindFirstMock: vi.fn(),
+  lockCourseAssignmentMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
   revalidateProgramHeadAssignmentMock: vi.fn(),
   ciloFindManyMock: vi.fn(),
@@ -193,7 +195,7 @@ describe("publishCourseBoundEvaluation", () => {
 
     transactionMock.mockImplementation(async (callback) =>
       callback({
-        $queryRaw: vi.fn(),
+        $queryRaw: lockCourseAssignmentMock,
         courseBoundEvaluation: { create: courseBoundEvaluationCreateMock },
         courseBoundCiloQuestionBinding: { createMany: bindingCreateManyMock },
         courseBoundEvaluationTarget: { createMany: targetCreateManyMock },
@@ -344,6 +346,10 @@ describe("publishCourseBoundEvaluation", () => {
     expect(courseAssignmentFindUniqueMock).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "assignment-1" } })
     );
+    const [lockSql, lockedAssignmentId] = lockCourseAssignmentMock.mock.calls[0] ?? [];
+    expect(lockSql?.[0]).toContain("WHERE id = ");
+    expect(lockSql?.[1]).toMatch(/^::uuid/);
+    expect(lockedAssignmentId).toBe("assignment-1");
     expect(getFacultyTemplatePublicationContextMock).toHaveBeenCalledWith(
       "template-1",
       expect.objectContaining({ facultyId: "faculty-1" })
