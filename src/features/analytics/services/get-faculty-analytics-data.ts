@@ -219,7 +219,7 @@ export async function getFacultyAnalyticsData(
         totalAssignments,
         ciloMetrics,
         quantitativeQuestions,
-        qualitativeTexts,
+        qualitativeItemCount: qualitativeTexts.length,
         wordCloudTokens: buildWordCloudTokens(qualitativeTexts),
       };
     });

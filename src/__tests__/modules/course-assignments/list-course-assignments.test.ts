@@ -55,7 +55,11 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockPHSession);
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
-      data: { userId: "ph-1", authorizedPrograms: [], selectedProgram: { id: "prog-A", code: "A", name: "A" } },
+      data: {
+        userId: "ph-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "prog-A", code: "A", name: "A" },
+      },
     });
 
     await listCourseAssignments({ programId: "prog-B" }, { programId: "prog-A" });
@@ -74,7 +78,11 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockPHSession);
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
-      data: { userId: "ph-1", authorizedPrograms: [], selectedProgram: { id: "prog-A", code: "A", name: "A" } },
+      data: {
+        userId: "ph-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "prog-A", code: "A", name: "A" },
+      },
     });
 
     await listCourseAssignments({ programId: "prog-B" }, { programId: "prog-A" });
@@ -210,5 +218,43 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
         }),
       })
     );
+  });
+
+  it("bounds page options before querying Prisma", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+    const result = await listCourseAssignments({}, { page: -4, pageSize: 1_000 });
+
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 100,
+      })
+    );
+    expect(result).toMatchObject({
+      success: true,
+      data: { items: [], page: 0, pageSize: 100 },
+    });
+  });
+
+  it.each([
+    { page: Number.NaN, pageSize: Number.NaN },
+    { page: Number.POSITIVE_INFINITY, pageSize: Number.POSITIVE_INFINITY },
+    { page: Number.NEGATIVE_INFINITY, pageSize: Number.NEGATIVE_INFINITY },
+  ])("defaults non-finite page options before querying Prisma", async (options) => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+    const result = await listCourseAssignments({}, options);
+
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 20,
+      })
+    );
+    expect(result).toMatchObject({
+      success: true,
+      data: { items: [], page: 0, pageSize: 20 },
+    });
   });
 });

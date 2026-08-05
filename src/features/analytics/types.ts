@@ -159,7 +159,7 @@ export type FacultyAnalyticsData = {
   totalAssignments: number;
   ciloMetrics: FacultyCiloMetric[];
   quantitativeQuestions: FacultyQuantitativeQuestion[];
-  qualitativeTexts: string[];
+  qualitativeItemCount: number;
   wordCloudTokens: WordCloudToken[];
 };
 

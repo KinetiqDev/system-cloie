@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Role Route Rendering
+
+## Purpose
+
+Define stable loading, recovery, and server-first rendering behavior for authenticated role-owned routes.
+
+## Requirements
 
 ### Requirement: Authenticated role-owned routes provide a stable loading experience
 
@@ -13,8 +19,6 @@ The system SHALL render a role-neutral authenticated-shell fallback while runtim
 
 - **WHEN** a request has no valid authorized application session
 - **THEN** the system redirects to the role selection portal without rendering protected role content in a loading fallback
-
-For an isolated dedicated demo deployment only, a valid signed demo session is an authorized application session. Primary Production continues to require a Google-authenticated account session.
 
 #### Scenario: Account state is not permitted to enter a dashboard
 
