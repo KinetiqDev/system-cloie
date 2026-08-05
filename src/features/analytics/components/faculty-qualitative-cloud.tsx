@@ -9,12 +9,11 @@ type FacultyQualitativeCloudProps = {
 };
 
 export function FacultyQualitativeCloud({ data }: FacultyQualitativeCloudProps) {
-  // Aggregate all qualitative texts and word cloud tokens
-  const allTexts: string[] = [];
+  let qualitativeItemCount = 0;
   const tokenMap = new Map<string, number>();
 
   for (const evalData of data) {
-    allTexts.push(...evalData.qualitativeTexts);
+    qualitativeItemCount += evalData.qualitativeItemCount;
 
     for (const token of evalData.wordCloudTokens) {
       tokenMap.set(token.text, (tokenMap.get(token.text) || 0) + token.value);
@@ -31,8 +30,8 @@ export function FacultyQualitativeCloud({ data }: FacultyQualitativeCloudProps) 
       <CardHeader>
         <CardTitle className="text-lg font-bold">Qualitative Feedback</CardTitle>
         <CardDescription>
-          {allTexts.length > 0
-            ? `Word cloud from ${allTexts.length} qualitative responses`
+          {qualitativeItemCount > 0
+            ? `Word cloud from ${qualitativeItemCount} qualitative responses`
             : "No qualitative data available"}
         </CardDescription>
       </CardHeader>
