@@ -236,4 +236,25 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
       data: { items: [], page: 0, pageSize: 100 },
     });
   });
+
+  it.each([
+    { page: Number.NaN, pageSize: Number.NaN },
+    { page: Number.POSITIVE_INFINITY, pageSize: Number.POSITIVE_INFINITY },
+    { page: Number.NEGATIVE_INFINITY, pageSize: Number.NEGATIVE_INFINITY },
+  ])("defaults non-finite page options before querying Prisma", async (options) => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+    const result = await listCourseAssignments({}, options);
+
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 20,
+      })
+    );
+    expect(result).toMatchObject({
+      success: true,
+      data: { items: [], page: 0, pageSize: 20 },
+    });
+  });
 });

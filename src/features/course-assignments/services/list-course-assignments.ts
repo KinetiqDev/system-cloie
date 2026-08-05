@@ -30,10 +30,14 @@ export async function listCourseAssignments(
     return { success: false, error: permission.reason };
   }
 
-  const page = Math.max(0, Math.trunc(options?.page ?? 0));
+  const requestedPage = options?.page ?? 0;
+  const requestedPageSize = options?.pageSize ?? DEFAULT_TABLE_PAGE_SIZE;
+  const page = Number.isFinite(requestedPage) ? Math.max(0, Math.trunc(requestedPage)) : 0;
   const pageSize = Math.min(
     MAX_TABLE_PAGE_SIZE,
-    Math.max(1, Math.trunc(options?.pageSize ?? DEFAULT_TABLE_PAGE_SIZE))
+    Number.isFinite(requestedPageSize)
+      ? Math.max(1, Math.trunc(requestedPageSize))
+      : DEFAULT_TABLE_PAGE_SIZE
   );
 
   let selectedProgramId: string | undefined;
