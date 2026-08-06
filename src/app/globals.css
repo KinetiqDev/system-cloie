@@ -74,37 +74,73 @@
   --color-primary-muted: var(--color-primary-muted);
   --color-primary-border: var(--color-primary-border);
 
-  /* ---------- Colors — CLOIE Secondary ---------- */
+  /* ---------- Colors — Brand Accent (ACD Cyan) ---------- */
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-brand-accent-active: var(--brand-accent-active);
+  --color-brand-accent-soft: var(--brand-accent-soft);
+  --color-brand-accent-border: var(--brand-accent-border);
+  --color-brand-accent-highlight: var(--brand-accent-highlight);
+  --color-brand-accent-on: var(--brand-accent-on);
+
+  /* ---------- Colors — CLOIE Neutral Secondary ---------- */
   --color-secondary: var(--color-secondary);
   --color-secondary-hover: var(--color-secondary-hover);
   --color-secondary-soft: var(--color-secondary-soft);
   --color-on-secondary: var(--color-on-secondary);
+  --color-secondary-bg: var(--secondary-bg);
+  --color-secondary-border: var(--secondary-border);
+  --color-secondary-fg: var(--secondary-fg);
 
   /* ---------- Colors — Surfaces ---------- */
-  --color-background: var(--color-background);
-  --color-surface: var(--color-surface);
-  --color-surface-alt: var(--color-surface-alt);
-  --color-surface-muted: var(--color-surface-muted);
-  --color-border: var(--color-border);
-  --color-border-strong: var(--color-border-strong);
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-input: var(--surface-input);
+  --color-surface-popover: var(--surface-popover);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-background: var(--surface-secondary);
+  --color-surface: var(--surface-primary);
+  --color-surface-alt: var(--surface-tertiary);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border: var(--border-default);
   --color-surface-container-low: var(--muted);
   --color-surface-container-lowest: var(--background);
 
   /* ---------- Colors — Text ---------- */
-  --color-text-primary: var(--color-text-primary);
-  --color-text-secondary: var(--color-text-secondary);
-  --color-text-muted: var(--color-text-muted);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
   --color-text-on-dark: var(--color-text-on-dark);
 
-  /* ---------- Colors — Semantic ---------- */
-  --color-success: var(--color-success);
-  --color-success-soft: var(--color-success-soft);
-  --color-warning: var(--color-warning);
-  --color-warning-soft: var(--color-warning-soft);
-  --color-danger: var(--color-danger);
-  --color-danger-soft: var(--color-danger-soft);
-  --color-info: var(--color-info);
-  --color-info-soft: var(--color-info-soft);
+  /* ---------- Colors — Status ---------- */
+  --color-status-success-main: var(--status-success-main);
+  --color-status-success-subtle: var(--status-success-subtle);
+  --color-status-warning-main: var(--status-warning-main);
+  --color-status-warning-subtle: var(--status-warning-subtle);
+  --color-status-danger-main: var(--status-danger-main);
+  --color-status-danger-subtle: var(--status-danger-subtle);
+  --color-status-info-main: var(--status-info-main);
+  --color-status-info-subtle: var(--status-info-subtle);
+  --color-success: var(--status-success-main);
+  --color-success-soft: var(--status-success-subtle);
+  --color-warning: var(--status-warning-main);
+  --color-warning-soft: var(--status-warning-subtle);
+  --color-danger: var(--status-danger-main);
+  --color-danger-soft: var(--status-danger-subtle);
+  --color-info: var(--status-info-main);
+  --color-info-soft: var(--status-info-subtle);
+
+  /* ---------- Data Visualization ---------- */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 
   /* ---------- Shadows ---------- */
   --shadow-sm: var(--shadow-sm);
@@ -163,11 +199,6 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-destructive: var(--destructive);
@@ -187,42 +218,42 @@
 /* ========================================
  * shadcn/ui semantic variables → CLOIE design system mapping
  * These are the CSS variables that shadcn components read.
- * Mapped to CLOIE tokens for visual consistency.
+ * Mapped to CLOIE tokens for visual consistency across Light/Dark.
  * ======================================== */
 
 :root {
-  --background: var(--color-background);
-  --foreground: var(--color-text-primary);
-  --card: var(--color-surface);
-  --card-foreground: var(--color-text-primary);
-  --popover: var(--color-surface);
-  --popover-foreground: var(--color-text-primary);
+  --background: var(--surface-secondary);
+  --foreground: var(--text-primary);
+  --card: var(--surface-primary);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-popover);
+  --popover-foreground: var(--text-primary);
   --primary: var(--color-primary);
   --primary-foreground: var(--color-on-primary);
-  --secondary: var(--color-surface-alt);
-  --secondary-foreground: var(--color-text-primary);
-  --muted: var(--color-surface-muted);
-  --muted-foreground: var(--color-text-muted);
-  --accent: var(--color-info-soft);
-  --accent-foreground: var(--color-info);
-  --destructive: var(--color-danger);
-  --border: var(--color-border);
-  --input: var(--color-border);
-  --ring: var(--color-info);
-  --chart-1: var(--color-primary);
-  --chart-2: var(--color-secondary);
-  --chart-3: var(--color-success);
-  --chart-4: var(--color-info);
-  --chart-5: var(--color-warning);
+  --secondary: var(--secondary-bg);
+  --secondary-foreground: var(--secondary-fg);
+  --muted: var(--surface-muted);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-hover);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--status-danger-main);
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--focus-ring);
+  --chart-1: var(--chart-1);
+  --chart-2: var(--chart-2);
+  --chart-3: var(--chart-3);
+  --chart-4: var(--chart-4);
+  --chart-5: var(--chart-5);
   --radius: 0.5rem; /* 8px — radius-md per design system */
-  --sidebar: var(--color-surface);
-  --sidebar-foreground: var(--color-text-primary);
-  --sidebar-primary: var(--color-primary);
-  --sidebar-primary-foreground: var(--color-on-primary);
-  --sidebar-accent: var(--color-info-soft);
-  --sidebar-accent-foreground: var(--color-info);
-  --sidebar-border: var(--color-border);
-  --sidebar-ring: var(--color-info);
+  --sidebar: var(--sidebar-bg);
+  --sidebar-foreground: var(--sidebar-fg);
+  --sidebar-primary: var(--sidebar-primary-bg);
+  --sidebar-primary-foreground: var(--sidebar-primary-fg);
+  --sidebar-accent: var(--sidebar-accent-bg);
+  --sidebar-accent-foreground: var(--sidebar-accent-fg);
+  --sidebar-border: var(--sidebar-border-color);
+  --sidebar-ring: var(--sidebar-ring-color);
 }
 
 /* ========================================
@@ -236,8 +267,8 @@ html {
 }
 
 body {
-  background-color: var(--color-background);
-  color: var(--color-text-primary);
+  background-color: var(--surface-secondary);
+  color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 1rem;
   line-height: 1.6;
@@ -357,8 +388,8 @@ body {
  * ======================================== */
 
 ::selection {
-  background-color: var(--color-primary-soft);
-  color: var(--color-text-primary);
+  background-color: var(--selected-bg);
+  color: var(--selected-fg);
 }
 
 @layer base {

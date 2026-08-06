@@ -1,67 +1,151 @@
 /*
  * CLOIE Design System — CSS Custom Properties
- * Source: docs/design-system.txt
+ * Source: docs/design.md
  *
- * These tokens provide the foundational layer for CLOIE's visual system.
- * Used by both Tailwind @theme and direct CSS references.
+ * Grounded in approved Light and Dark semantic roles.
+ * Governed by decision 1 (resolve one semantic token contract at root).
  */
 
 :root {
   /* ========================================
-   * 1. Core Brand Palette
+   * 1. Operational Primary & Brand References
    * ======================================== */
-
-  /* Primary — Modern Blue (Foundation & Structure) */
   --color-primary: #2563eb;
   --color-primary-hover: #1d4ed8;
   --color-primary-active: #1e40af;
   --color-on-primary: #ffffff;
-
-  /* Primary Tints / Support (Blue shades) */
   --color-primary-soft: #eff6ff;
   --color-primary-muted: #dbeafe;
   --color-primary-border: #bfdbfe;
 
-  /* Secondary — Accent Gold */
-  --color-secondary: #d49900;
-  --color-secondary-hover: #b88200;
-  --color-secondary-soft: #fff4d6;
-  --color-on-secondary: #2f2200;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --on-primary: #ffffff;
+  --primary-soft: #eff6ff;
+
+  /* Institutional Navy */
+  --navy-ref: #221d60;
+  --navy-dark-surface: #1e1b4b;
+  --navy-dark-border: #3730a3;
+  --navy-dark-fg: #c7d2fe;
+
+  /* ACD Cyan Accent */
+  --brand-accent: #0369a1;
+  --brand-accent-hover: #075985;
+  --brand-accent-active: #0c4a6e;
+  --brand-accent-soft: #f0f9ff;
+  --brand-accent-border: #bae6fd;
+  --brand-accent-highlight: #25aae1;
+  --brand-accent-on: #ffffff;
 
   /* ========================================
-   * 2. Neutral Surfaces
+   * 2. Semantic Surfaces (Light Defaults)
    * ======================================== */
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f1f5f9;
-  --color-surface-muted: #e2e8f0;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  --surface-primary: #ffffff;
+  --surface-secondary: #f8fafc;
+  --surface-tertiary: #f1f5f9;
+  --surface-muted: #e2e8f0;
+  --surface-hover: #f1f5f9;
+  --surface-input: #ffffff;
+  --surface-popover: #ffffff;
+  --surface-overlay: #ffffff;
+
+  /* Legacy alias mappings for surfaces */
+  --color-background: var(--surface-secondary);
+  --color-surface: var(--surface-primary);
+  --color-surface-alt: var(--surface-tertiary);
+  --color-surface-muted: var(--surface-muted);
 
   /* ========================================
-   * 3. Text Colors
+   * 3. Borders (Light Defaults)
    * ======================================== */
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #334155;
-  --color-text-muted: #64748b;
+  --border-default: #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  --color-border: var(--border-default);
+  --color-border-strong: var(--border-strong);
+
+  /* ========================================
+   * 4. Text / Foregrounds (Light Defaults)
+   * ======================================== */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-disabled: #94a3b8;
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
   --color-text-on-dark: #ffffff;
 
   /* ========================================
-   * 4. Semantic Colors
+   * 5. Interactive & Neutral Secondary
    * ======================================== */
-  --color-success: #059669;
-  --color-success-soft: #ecfdf5;
-  --color-warning: #d97706;
-  --color-warning-soft: #fffbeb;
-  --color-danger: #dc2626;
-  --color-danger-soft: #fef2f2;
+  --link-color: #1d4ed8;
+  --focus-ring: #0284c7;
 
-  /* Info is used as the Interactive Accent */
-  --color-info: #3b82f6;
-  --color-info-soft: #eff6ff;
+  --selected-bg: #eff6ff;
+  --selected-fg: #1e40af;
+
+  --secondary-bg: #f1f5f9;
+  --secondary-hover: #e2e8f0;
+  --secondary-border: #cbd5e1;
+  --secondary-fg: #0f172a;
+
+  /* Legacy alias for secondary action variables */
+  --color-secondary: var(--secondary-bg);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-soft: var(--secondary-bg);
+  --color-on-secondary: var(--secondary-fg);
 
   /* ========================================
-   * 5. Shadows (Minimal, per Flat Institutional style)
+   * 6. Status Roles (Light Defaults)
+   * ======================================== */
+  --status-success-main: #047857;
+  --status-success-subtle: #ecfdf5;
+
+  --status-warning-main: #b45309;
+  --status-warning-subtle: #fffbeb;
+
+  --status-danger-main: #b91c1c;
+  --status-danger-subtle: #fef2f2;
+
+  --status-info-main: #4f46e5;
+  --status-info-subtle: #eef2ff;
+
+  --color-success: var(--status-success-main);
+  --color-success-soft: var(--status-success-subtle);
+  --color-warning: var(--status-warning-main);
+  --color-warning-soft: var(--status-warning-subtle);
+  --color-danger: var(--status-danger-main);
+  --color-danger-soft: var(--status-danger-subtle);
+  --color-info: var(--status-info-main);
+  --color-info-soft: var(--status-info-subtle);
+
+  /* ========================================
+   * 7. Data Visualization (Light Defaults)
+   * ======================================== */
+  --chart-1: #2563eb;
+  --chart-2: #0369a1;
+  --chart-3: #047857;
+  --chart-4: #7c3aed;
+  --chart-5: #c2410c;
+
+  /* ========================================
+   * 8. Sidebar Roles (Light Defaults)
+   * ======================================== */
+  --sidebar-bg: #ffffff;
+  --sidebar-fg: #0f172a;
+  --sidebar-primary-bg: #2563eb;
+  --sidebar-primary-fg: #ffffff;
+  --sidebar-accent-bg: #eff6ff;
+  --sidebar-accent-fg: #1e40af;
+  --sidebar-border-color: #e2e8f0;
+  --sidebar-ring-color: #0284c7;
+
+  /* ========================================
+   * 9. Shadows (Minimal Institutional Scale)
    * ======================================== */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-dropdown: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
@@ -71,7 +155,7 @@
   --shadow-modal: var(--shadow-lg);
 
   /* ========================================
-   * 6. Border Radius (Design System Scale)
+   * 10. Border Radius Scale
    * ======================================== */
   --radius-xs: 2px;
   --radius-sm: 4px;
@@ -81,7 +165,7 @@
   --radius-2xl: 24px;
 
   /* ========================================
-   * 7. Spacing Reference (Tailwind-based)
+   * 11. Spacing Reference
    * ======================================== */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -93,4 +177,78 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
+}
+
+/* ========================================
+ * Dark Theme Overrides
+ * ======================================== */
+.dark {
+  /* Brand Accent Cyan Hover/Active overrides for Dark */
+  --brand-accent-hover: #0e7490;
+  --brand-accent-active: #075985;
+  --brand-accent-soft: #082f49;
+  --brand-accent-border: #0e7490;
+  --brand-accent-highlight: #38bdf8;
+
+  /* Semantic Surfaces (Dark) */
+  --surface-primary: #111827;
+  --surface-secondary: #0b1120;
+  --surface-tertiary: #172033;
+  --surface-muted: #1e293b;
+  --surface-hover: #273449;
+  --surface-input: #0f172a;
+  --surface-popover: #172033;
+  --surface-overlay: #172033;
+
+  /* Borders (Dark) */
+  --border-default: #334155;
+  --border-strong: #475569;
+
+  /* Text / Foregrounds (Dark) */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-disabled: #64748b;
+
+  /* Interactive & Neutral Secondary (Dark) */
+  --link-color: #60a5fa;
+  --focus-ring: #38bdf8;
+
+  --selected-bg: #172554;
+  --selected-fg: #bfdbfe;
+
+  --secondary-bg: #1e293b;
+  --secondary-hover: #273449;
+  --secondary-border: #475569;
+  --secondary-fg: #f8fafc;
+
+  /* Status Roles (Dark) */
+  --status-success-main: #34d399;
+  --status-success-subtle: #052e2b;
+
+  --status-warning-main: #fbbf24;
+  --status-warning-subtle: #451a03;
+
+  --status-danger-main: #f87171;
+  --status-danger-subtle: #450a0a;
+
+  --status-info-main: #a5b4fc;
+  --status-info-subtle: #1e1b4b;
+
+  /* Data Visualization (Dark) */
+  --chart-1: #60a5fa;
+  --chart-2: #22d3ee;
+  --chart-3: #34d399;
+  --chart-4: #a78bfa;
+  --chart-5: #fb923c;
+
+  /* Sidebar Roles (Dark) */
+  --sidebar-bg: #111827;
+  --sidebar-fg: #f8fafc;
+  --sidebar-primary-bg: #2563eb;
+  --sidebar-primary-fg: #ffffff;
+  --sidebar-accent-bg: #172554;
+  --sidebar-accent-fg: #bfdbfe;
+  --sidebar-border-color: #334155;
+  --sidebar-ring-color: #38bdf8;
 }

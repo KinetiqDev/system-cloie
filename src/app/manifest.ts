@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Comprehensive Learning Outcomes and Instructional Evaluation",
     start_url: "/",
     display: "standalone",
-    background_color: "#F7F9FC",
-    theme_color: "#0051C3",
+    background_color: "#f8fafc",
+    theme_color: "#2563eb",
     icons: [
       {
         src: "/icons/icon-192.png",
