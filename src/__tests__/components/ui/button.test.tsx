@@ -95,15 +95,16 @@ describe("Button", () => {
   });
 
   describe("loading affordance", () => {
-    it("renders a spinner with role=status when loading=true", () => {
+    it("renders an SVG spinner when loading=true", () => {
       render(<Button loading>Save</Button>);
-      expect(screen.getByRole("status")).toBeInTheDocument();
+      expect(document.querySelector("svg")).toBeInTheDocument();
     });
 
-    it("preserves the label text in the DOM when loading to maintain width", () => {
+    it("preserves the label text as the button's accessible name when loading", () => {
       render(<Button loading>Save Changes</Button>);
-      // Label is rendered inside a span (aria-hidden) to preserve layout width.
-      expect(screen.getByText("Save Changes")).toBeInTheDocument();
+      // Label span is NOT aria-hidden — button retains its original accessible name.
+      // AT announces "Save Changes, busy, dimmed" — not an anonymous loading state.
+      expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
     });
 
     it("sets disabled and aria-busy when loading", () => {
@@ -113,17 +114,16 @@ describe("Button", () => {
       expect(btn).toHaveAttribute("aria-busy", "true");
     });
 
-    it("uses a custom loadingLabel for the spinner aria-label", () => {
-      render(<Button loading loadingLabel="Submitting form">Submit</Button>);
-      expect(screen.getByRole("status")).toHaveAttribute(
-        "aria-label",
-        "Submitting form"
-      );
+    it("spinner is aria-hidden so AT does not double-announce a loading label", () => {
+      render(<Button loading>Submit</Button>);
+      // aria-busy on the button carries the loading state; spinner is decorative.
+      const svg = document.querySelector("svg");
+      expect(svg).toHaveAttribute("aria-hidden", "true");
     });
 
-    it("does not render a spinner when loading=false", () => {
+    it("does not render an SVG spinner when loading=false", () => {
       render(<Button>Submit</Button>);
-      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(document.querySelector("svg")).not.toBeInTheDocument();
     });
 
     it("is disabled when the disabled prop is set", () => {

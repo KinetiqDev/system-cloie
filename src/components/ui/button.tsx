@@ -62,8 +62,6 @@ type ButtonProps = ButtonPrimitive.Props &
     asChild?: boolean;
     /** When true, shows a spinner, disables interaction, and preserves label + width. */
     loading?: boolean;
-    /** Screen-reader label for the spinner when loading. Defaults to "Loading". */
-    loadingLabel?: string;
   };
 
 function Button({
@@ -71,7 +69,6 @@ function Button({
   variant = "default",
   size = "default",
   loading = false,
-  loadingLabel = "Loading",
   children,
   ...props
 }: ButtonProps) {
@@ -94,10 +91,16 @@ function Button({
     >
       {loading ? (
         <>
-          {/* Spinner replaces the leading icon slot visually but label is preserved. */}
-          <Spinner size={spinnerSize} label={loadingLabel} aria-hidden={false} />
-          {/* Label remains in the DOM to preserve button width and announce state. */}
-          <span aria-hidden="true">{children}</span>
+          {/*
+           * Spinner is decorative — aria-busy on the button already signals
+           * the pending state to AT. Hiding the spinner prevents a double
+           * announcement ("Loading" + button name).
+           * The label span is NOT aria-hidden so the button retains its
+           * original accessible name (e.g. "Save"), making it clear *what*
+           * is loading. Width is preserved because the text is still in the DOM.
+           */}
+          <Spinner size={spinnerSize} aria-hidden="true" />
+          <span>{children}</span>
         </>
       ) : (
         children
