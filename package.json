@@ -17,7 +17,7 @@
     "fallow:dupes": "pnpm exec fallow dupes",
     "fallow:health": "pnpm exec fallow health",
     "fallow:flags": "pnpm exec fallow flags",
-    "fallow:baseline": "pnpm exec fallow dead-code --save-baseline fallow-baselines/dead-code.json && pnpm exec fallow health --save-baseline fallow-baselines/health.json && pnpm exec fallow dupes --save-baseline fallow-baselines/dupes.json",
+    "fallow:baseline": "tsx scripts/refresh-fallow-baselines.ts",
     "verify:production-auth-boundary": "tsx scripts/verify-production-auth-boundary.ts",
     "verify:dedicated-demo-auth-boundary": "tsx scripts/verify-dedicated-demo-auth-boundary.ts",
     "verify:demo-target-isolation": "tsx scripts/validate-demo-target-isolation.ts",

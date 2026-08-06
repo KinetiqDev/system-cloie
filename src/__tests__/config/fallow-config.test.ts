@@ -83,9 +83,7 @@ describe("fallow config", () => {
     expect(pkg.scripts["fallow:dupes"]).toBe("pnpm exec fallow dupes");
     expect(pkg.scripts["fallow:health"]).toBe("pnpm exec fallow health");
     expect(pkg.scripts["fallow:flags"]).toBe("pnpm exec fallow flags");
-    expect(pkg.scripts["fallow:baseline"]).toBe(
-      "pnpm exec fallow dead-code --save-baseline fallow-baselines/dead-code.json && pnpm exec fallow health --save-baseline fallow-baselines/health.json && pnpm exec fallow dupes --save-baseline fallow-baselines/dupes.json"
-    );
+    expect(pkg.scripts["fallow:baseline"]).toBe("tsx scripts/refresh-fallow-baselines.ts");
   });
 
   it("classifies every source path group and permits only the documented seams", () => {
