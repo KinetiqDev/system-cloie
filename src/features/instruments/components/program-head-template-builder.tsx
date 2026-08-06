@@ -3,12 +3,16 @@
 import { useRouter } from "next/navigation";
 import { TemplateBuilder } from "./template-builder";
 import { createBaselineCopyAction } from "@/lib/actions/program-head-baseline-actions";
+import {
+  createProgramHeadTemplateAction,
+  updateProgramHeadTemplateAction,
+} from "@/lib/actions/program-head-template-actions";
 import type { TemplateBuilderProps } from "./template-builder";
 import { buildProgramHeadPublishToolPath, buildProgramHeadToolsPath } from "@/lib/constants/program-head-routes";
 
 interface ProgramHeadTemplateBuilderProps extends Omit<
   TemplateBuilderProps,
-  "onSaveResult" | "isInstitutionalBaseline" | "onSaveAsCopy" | "onPublish"
+  "onSave" | "onSaveResult" | "isInstitutionalBaseline" | "onSaveAsCopy" | "onPublish"
 > {
   isInstitutionalBaseline?: boolean;
   programId: string;
@@ -21,6 +25,12 @@ export function ProgramHeadTemplateBuilder({
 }: ProgramHeadTemplateBuilderProps) {
   const router = useRouter();
   const templateId = props.initialData?.id;
+  const handleSave = async (formData: FormData) => {
+    formData.set("programId", programId);
+    return templateId
+      ? await updateProgramHeadTemplateAction(formData)
+      : await createProgramHeadTemplateAction(formData);
+  };
 
   const handlePublish = templateId
      ? () => router.push(buildProgramHeadPublishToolPath(programId, templateId))
@@ -29,11 +39,12 @@ export function ProgramHeadTemplateBuilder({
   return (
     <TemplateBuilder
       {...props}
+      onSave={handleSave}
       isInstitutionalBaseline={isInstitutionalBaseline}
-       onSaveAsCopy={(baselineId, customName, structure) =>
-         createBaselineCopyAction(programId, baselineId, customName, structure)
-       }
-       toolsHref={buildProgramHeadToolsPath(programId)}
+      onSaveAsCopy={(baselineId, customName, structure) =>
+        createBaselineCopyAction(programId, baselineId, customName, structure)
+      }
+      toolsHref={buildProgramHeadToolsPath(programId)}
       onPublish={handlePublish}
     />
   );
