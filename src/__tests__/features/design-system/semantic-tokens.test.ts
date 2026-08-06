@@ -76,9 +76,8 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(tokensCss).toContain("--chart-5: #c2410c");
     });
 
-    it("defines approved Dark overrides in .dark block and @media (prefers-color-scheme: dark)", () => {
+    it("defines approved Dark overrides in .dark block", () => {
       expect(tokensCss).toContain(".dark {");
-      expect(tokensCss).toContain("@media (prefers-color-scheme: dark) {");
 
       // Surface roles (Dark)
       expect(tokensCss).toContain("--surface-primary: #111827");
@@ -127,6 +126,10 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
   });
 
   describe("globals.css - Tailwind Theme & Semantic Bridge", () => {
+    it("configures @custom-variant dark to match .dark class selector", () => {
+      expect(globalsCss).toContain("@custom-variant dark (&:is(.dark *));");
+    });
+
     it("exposes semantic surface, text, border, status, and chart utilities in @theme inline", () => {
       expect(globalsCss).toContain("--color-surface-primary: var(--surface-primary);");
       expect(globalsCss).toContain("--color-surface-secondary: var(--surface-secondary);");
@@ -224,7 +227,6 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       const unapproved: { file: string; color: string }[] = [];
 
       for (const file of sourceFiles) {
-        // Skip layout/manifest which are audited in foundation test above
         if (file === "src/app/layout.tsx" || file === "src/app/manifest.ts" || file === "src/app/(public)/layout.tsx") {
           const content = readProjectFile(file);
           const matches = content.match(hexRegex) || [];

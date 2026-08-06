@@ -181,7 +181,7 @@
 
 /* ========================================
  * Dark Theme Overrides
- * Applies when .dark class is on <html> OR when OS prefers dark mode (unless .light class is set)
+ * Applies when .dark class is present on <html> ancestor
  * ======================================== */
 .dark {
   /* Brand Accent Cyan Hover/Active overrides for Dark */
@@ -252,77 +252,4 @@
   --sidebar-accent-fg: #bfdbfe;
   --sidebar-border-color: #334155;
   --sidebar-ring-color: #38bdf8;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    /* Brand Accent Cyan Hover/Active overrides for Dark */
-    --brand-accent-hover: #0e7490;
-    --brand-accent-active: #075985;
-    --brand-accent-soft: #082f49;
-    --brand-accent-border: #0e7490;
-    --brand-accent-highlight: #38bdf8;
-
-    /* Semantic Surfaces (Dark) */
-    --surface-primary: #111827;
-    --surface-secondary: #0b1120;
-    --surface-tertiary: #172033;
-    --surface-muted: #1e293b;
-    --surface-hover: #273449;
-    --surface-input: #0f172a;
-    --surface-popover: #172033;
-    --surface-overlay: #172033;
-
-    /* Borders (Dark) */
-    --border-default: #334155;
-    --border-strong: #475569;
-
-    /* Text / Foregrounds (Dark) */
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --text-disabled: #64748b;
-
-    /* Interactive & Neutral Secondary (Dark) */
-    --link-color: #60a5fa;
-    --focus-ring: #38bdf8;
-
-    --selected-bg: #172554;
-    --selected-fg: #bfdbfe;
-
-    --secondary-bg: #1e293b;
-    --secondary-hover: #273449;
-    --secondary-border: #475569;
-    --secondary-fg: #f8fafc;
-
-    /* Status Roles (Dark) */
-    --status-success-main: #34d399;
-    --status-success-subtle: #052e2b;
-
-    --status-warning-main: #fbbf24;
-    --status-warning-subtle: #451a03;
-
-    --status-danger-main: #f87171;
-    --status-danger-subtle: #450a0a;
-
-    --status-info-main: #a5b4fc;
-    --status-info-subtle: #1e1b4b;
-
-    /* Data Visualization (Dark) */
-    --chart-1: #60a5fa;
-    --chart-2: #22d3ee;
-    --chart-3: #34d399;
-    --chart-4: #a78bfa;
-    --chart-5: #fb923c;
-
-    /* Sidebar Roles (Dark) */
-    --sidebar-bg: #111827;
-    --sidebar-fg: #f8fafc;
-    --sidebar-primary-bg: #2563eb;
-    --sidebar-primary-fg: #ffffff;
-    --sidebar-accent-bg: #172554;
-    --sidebar-accent-fg: #bfdbfe;
-    --sidebar-border-color: #334155;
-    --sidebar-ring-color: #38bdf8;
-  }
 }
