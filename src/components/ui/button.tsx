@@ -1,7 +1,10 @@
+import * as React from "react";
+
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -18,8 +21,20 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        /**
+         * Specialized ACD cyan accent action.
+         * Intentionally distinct from `default` (operational primary).
+         * SHALL NOT be used as a second generic primary.
+         */
+        "brand-accent":
+          "bg-brand-accent text-brand-accent-on hover:bg-brand-accent-hover active:bg-brand-accent-active focus-visible:border-brand-accent-border focus-visible:ring-brand-accent/30",
+        /**
+         * Deprecated — retained only until slice 20 removes it together with its
+         * sole caller `src/features/instruments/components/template-builder.tsx`.
+         * Retokenized through the semantic success family (no raw hex).
+         */
         "cta-success":
-          "bg-[#22C55E] text-white hover:bg-[#16A34A] focus-visible:border-[#16A34A]/40 focus-visible:ring-[#22C55E]/30",
+          "bg-status-success-main text-status-success-on hover:bg-status-success-main/90 focus-visible:border-status-success-main/40 focus-visible:ring-status-success-main/30",
       },
       size: {
         default:
@@ -42,24 +57,66 @@ const buttonVariants = cva(
   }
 );
 
+type ButtonProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+    /** When true, shows a spinner, disables interaction, and preserves label + width. */
+    loading?: boolean;
+  };
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  loading = false,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
+}: ButtonProps) {
   // Base UI uses the 'render' prop for delegation, not 'asChild'.
   // We destructure asChild here to prevent it from being passed to the DOM.
-  const { asChild, ...rest } = props;
+  const { asChild: _asChild, disabled, ...rest } = props;
+
+  // Spinner size tracks button size: xs/sm → sm, default/lg → default, icon* → default.
+  const spinnerSize =
+    size === "xs" || size === "sm" ? "sm" : "default";
 
   return (
     <ButtonPrimitive
       data-slot="button"
       nativeButton={!rest.render}
+      disabled={loading || disabled}
+      aria-busy={loading || undefined}
       className={cn(buttonVariants({ variant, size, className }))}
       {...rest}
-    />
+    >
+      {loading ? (
+        /*
+         * Single wrapper child keeps the button's intrinsic flex layout unchanged
+         * — the spinner is absolutely centered and adds zero flex width.
+         * Layout width is driven by the opacity-0 spacer (aria-hidden, visual only).
+         * A sr-only sibling carries the accessible name so the button label is
+         * announced by AT as "Save Changes, busy, dimmed" rather than unnamed.
+         * aria-busy on the button signals the in-progress state to AT.
+         */
+        <span className="relative inline-flex items-center justify-center">
+          <Spinner
+            size={spinnerSize}
+            aria-hidden="true"
+            className="absolute"
+          />
+          {/* Visual spacer — drives button width, hidden from AT */}
+          <span className="opacity-0 select-none pointer-events-none" aria-hidden="true">
+            {children}
+          </span>
+          {/* Accessible label — no visible pixels, read by AT */}
+          <span className="sr-only">{children}</span>
+        </span>
+      ) : (
+        children
+      )}
+    </ButtonPrimitive>
   );
 }
 
 export { Button, buttonVariants };
+export type { ButtonProps };

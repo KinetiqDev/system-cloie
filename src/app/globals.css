@@ -120,6 +120,7 @@
   /* ---------- Colors — Status ---------- */
   --color-status-success-main: var(--status-success-main);
   --color-status-success-subtle: var(--status-success-subtle);
+  --color-status-success-on: var(--status-success-on);
   --color-status-warning-main: var(--status-warning-main);
   --color-status-warning-subtle: var(--status-warning-subtle);
   --color-status-danger-main: var(--status-danger-main);
