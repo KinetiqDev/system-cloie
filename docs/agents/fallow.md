@@ -86,11 +86,11 @@ Package scripts (see `package.json`): `pnpm fallow:audit`, `pnpm fallow:dead-cod
 
 ### Current Follow-Up Candidates
 
-Initial reports point at these evidence-backed candidates; each needs a focused domain/seam design before any code change (see issue #174 for the refactor scope and issue #167 for the stabilization backlog — referencing them here does not implement them):
+Initial reports point at these evidence-backed candidates; each needs a focused domain/seam design before any code change (see issue #174 for the refactor scope and issue #167 for the stabilization backlog — referencing them here does not implement them). The first report intake (2026-08-07) filed these focused issues:
 
-- **Traced dead code** — unused exports/files after trace verification (e.g. framework-discovered Server Actions with non-obvious consumers must be traced before removal).
-- **Duplicate modules/workflows** — the duplicated evaluation/instrument workflows and mirrored respondent route families are the high-value clone clusters.
-- **Complexity hotspots** — health report targets; the `edit-user-by-secretary` service module is the leading hotspot candidate.
+- **Traced dead code** — unused exports/files after trace verification (e.g. framework-discovered Server Actions with non-obvious consumers must be traced before removal). Intake issue: open a new ticket per traced finding or link to #167.
+- **Duplicate modules/workflows** — the duplicated evaluation/instrument workflows and mirrored respondent route families are the high-value clone clusters. Intake issues: #287 (mirrored respondent route pages), #288 (responses list-student-* service pair), #290 (fallow verification fixtures and report scripts).
+- **Complexity hotspots** — health report targets; the `edit-user-by-secretary` service module is the leading hotspot candidate. Intake issues: #286 (edit-user-by-secretary, parent #174), #289 (get-student-assigned-evaluation-session, parent #174).
 - **Dedicated seam designs** — future cross-domain seam work (e.g. `auth <-> users`, `instruments <-> evaluations`, layout/auth coupling); requires a focused proposal naming the module, interface, seam, preserved invariants, and migration tests.
 
 ## References
