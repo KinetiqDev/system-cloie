@@ -1516,6 +1516,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "ui_primitive"
   },
   {
+    "path": "src/components/ui/spinner.tsx",
+    "disposition": "task",
+    "taskId": 3,
+    "category": "ui_primitive"
+  },
+  {
     "path": "src/components/ui/checkbox.tsx",
     "disposition": "task",
     "taskId": 4,
