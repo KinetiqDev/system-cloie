@@ -358,7 +358,7 @@ export function WizardShell({
                             }
                             className={cn(
                               "rounded-full border px-3 py-1.5 text-label-sm font-medium transition-all",
-                              "hover:bg-primary-soft hover:border-primary hover:text-primary",
+                              "hover:bg-primary-soft hover:border-primary hover:text-selected-fg",
                               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                               "active:scale-95",
                               currentValue

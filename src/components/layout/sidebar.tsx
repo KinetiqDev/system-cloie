@@ -67,7 +67,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
                 className={cn(
                   "group text-body-md flex items-center justify-between rounded-md px-3 py-2.5 font-medium transition-colors",
                   isActive
-                    ? "bg-primary-soft text-primary"
+                    ? "bg-primary-soft text-selected-fg"
                     : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
                 )}
               >
@@ -75,7 +75,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
                   <item.icon
                     className={cn(
                       "size-5 shrink-0",
-                      isActive ? "text-primary" : "text-text-muted group-hover:text-text-primary"
+                      isActive ? "text-selected-fg" : "text-text-muted group-hover:text-text-primary"
                     )}
                   />
                   {item.name}
@@ -154,7 +154,7 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
         className={cn(
           "group flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:min-w-11",
           compact ? "justify-center lg:justify-start" : "",
-          active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+          active ? "bg-primary-soft text-selected-fg" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
         )}
       >
         <item.icon className="size-5 shrink-0" aria-hidden="true" />
@@ -179,7 +179,7 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
             return (
               <div key={group.href}>
                 <div className="flex items-center gap-1">
-                  <NavigationLink href={group.href} aria-current={active ? "page" : undefined} title={group.name} className={cn("flex min-h-11 flex-1 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2 focus-visible:outline-ring md:min-w-11", active ? "bg-primary-soft text-primary" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary")}>
+                  <NavigationLink href={group.href} aria-current={active ? "page" : undefined} title={group.name} className={cn("flex min-h-11 flex-1 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2 focus-visible:outline-ring md:min-w-11", active ? "bg-primary-soft text-selected-fg" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary")}>
                     <group.icon className="size-5 shrink-0" aria-hidden="true" /><span className="md:hidden lg:inline">{group.name}</span>
                   </NavigationLink>
                   <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${group.name}`} aria-expanded={expanded} disabled={activeGroup !== null} onClick={() => setOpenGroup(expanded ? null : { href: group.href, pathname })} className="hidden min-h-11 min-w-11 items-center justify-center rounded-md text-text-muted hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-ring md:flex lg:min-w-11">

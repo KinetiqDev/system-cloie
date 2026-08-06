@@ -1,12 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import {
-  Progress,
-  ProgressIndicator,
-  ProgressLabel,
-  ProgressTrack,
-  ProgressValue,
-} from "@/components/ui/progress";
+import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 
 describe("Progress", () => {
   describe("semantic retokening", () => {
@@ -57,7 +51,7 @@ describe("Progress", () => {
       expect(value).toHaveClass("tabular-nums");
     });
 
-    it("composes label, value, and indicator inside the root", () => {
+    it("composes label, value, and the auto-rendered indicator inside the root", () => {
       render(
         <Progress value={25} aria-label="Loading">
           <ProgressLabel>Uploading</ProgressLabel>
@@ -92,12 +86,11 @@ describe("Progress", () => {
     });
   });
 
-  describe("exported subcomponent API", () => {
-    it("exports ProgressTrack and ProgressIndicator for advanced composition", () => {
-      expect(ProgressTrack).toBeDefined();
-      expect(ProgressIndicator).toBeDefined();
-      expect(ProgressLabel).toBeDefined();
-      expect(ProgressValue).toBeDefined();
+  describe("public API", () => {
+    it("exports ProgressLabel and ProgressValue for text/value composition only", async () => {
+      const mod = await import("@/components/ui/progress");
+      const expected = ["Progress", "ProgressLabel", "ProgressValue"].sort();
+      expect(Object.keys(mod).sort()).toEqual(expected);
     });
   });
 });

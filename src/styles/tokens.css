@@ -192,6 +192,11 @@
   --brand-accent-border: #0e7490;
   --brand-accent-highlight: #38bdf8;
 
+  /* Operational Primary Soft (selected surface) — matches the
+   * approved dark Selected background in design 5.2. */
+  --color-primary-soft: #172554;
+  --primary-soft: #172554;
+
   /* Semantic Surfaces (Dark) */
   --surface-primary: #111827;
   --surface-secondary: #0b1120;

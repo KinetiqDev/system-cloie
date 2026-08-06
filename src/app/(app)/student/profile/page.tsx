@@ -44,7 +44,7 @@ export default async function StudentProfilePage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="border-border shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-primary-soft text-primary rounded-lg p-2">
+            <div className="bg-primary-soft text-selected-fg rounded-lg p-2">
               <User className="size-5" />
             </div>
             <div>
@@ -69,7 +69,7 @@ export default async function StudentProfilePage() {
               </div>
             </div>
             <div className="pt-2">
-              <Badge variant="secondary" className="bg-primary-soft text-primary font-bold">
+              <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-bold">
                 Role: Student
               </Badge>
             </div>
@@ -146,7 +146,7 @@ export default async function StudentProfilePage() {
         <Card className="border-border border-l-primary border-l-4 shadow-sm md:col-span-2">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <div className="bg-primary-soft text-primary shrink-0 rounded-lg p-2">
+              <div className="bg-primary-soft text-selected-fg shrink-0 rounded-lg p-2">
                 <ShieldCheck className="size-5" />
               </div>
               <div className="space-y-2">

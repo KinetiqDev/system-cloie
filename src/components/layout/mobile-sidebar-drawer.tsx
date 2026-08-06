@@ -105,7 +105,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
         className={cn(
           "focus-visible:outline-ring flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2",
           active
-            ? "bg-primary-soft text-primary"
+            ? "bg-primary-soft text-selected-fg"
             : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
         )}
       >
@@ -186,7 +186,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
                         className={cn(
                           "flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium",
                           active
-                            ? "bg-primary-soft text-primary"
+                            ? "bg-primary-soft text-selected-fg"
                             : "text-text-secondary hover:bg-surface-hover"
                         )}
                       >

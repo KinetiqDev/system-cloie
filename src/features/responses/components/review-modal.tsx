@@ -58,7 +58,7 @@ export function ReviewModal({
                         className="border-border/50 flex items-start justify-between gap-4 border-b py-3"
                       >
                         <span className="text-text-secondary text-sm">{item.prompt}</span>
-                        <span className="text-primary bg-primary-soft shrink-0 rounded-md px-3 py-1 font-black">
+                        <span className="text-selected-fg bg-primary-soft shrink-0 rounded-md px-3 py-1 font-black">
                           {answer ?? "—"}
                         </span>
                       </div>

@@ -43,7 +43,7 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
   return (
     <div className="flex flex-col h-full bg-surface border border-border rounded-2xl p-6 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-center gap-4 mb-4">
-        <div className="flex items-center justify-center size-12 rounded-xl bg-primary-soft text-primary shrink-0">
+        <div className="flex items-center justify-center size-12 rounded-xl bg-primary-soft text-selected-fg shrink-0">
           <Icon className="size-6" />
         </div>
         <div>

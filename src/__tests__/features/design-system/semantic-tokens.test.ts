@@ -74,6 +74,10 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(tokensCss).toContain("--chart-3: #047857");
       expect(tokensCss).toContain("--chart-4: #7c3aed");
       expect(tokensCss).toContain("--chart-5: #c2410c");
+
+      // Selected pair (Light)
+      expect(tokensCss).toContain("--selected-bg: #eff6ff");
+      expect(tokensCss).toContain("--selected-fg: #1e40af");
     });
 
     it("defines approved Dark overrides in .dark block", () => {
@@ -114,6 +118,15 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(tokensCss).toContain("--chart-3: #34d399");
       expect(tokensCss).toContain("--chart-4: #a78bfa");
       expect(tokensCss).toContain("--chart-5: #fb923c");
+
+      // Primary soft (selected surface) — regression for the dark active
+      // tab treatment introduced in issue #254.
+      expect(tokensCss).toContain("--color-primary-soft: #172554");
+      expect(tokensCss).toContain("--primary-soft: #172554");
+
+      // Selected pair must resolve to a contrast-safe foreground in dark.
+      expect(tokensCss).toContain("--selected-bg: #172554");
+      expect(tokensCss).toContain("--selected-fg: #bfdbfe");
     });
 
     it("does not contain legacy gold or unapproved hardcoded primary color", () => {
@@ -137,6 +150,8 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(globalsCss).toContain("--color-text-primary: var(--text-primary);");
       expect(globalsCss).toContain("--color-text-secondary: var(--text-secondary);");
       expect(globalsCss).toContain("--color-text-muted: var(--text-muted);");
+      expect(globalsCss).toContain("--color-selected-bg: var(--selected-bg);");
+      expect(globalsCss).toContain("--color-selected-fg: var(--selected-fg);");
       expect(globalsCss).toContain("--color-border-default: var(--border-default);");
       expect(globalsCss).toContain("--color-status-success-main: var(--status-success-main);");
       expect(globalsCss).toContain("--color-status-danger-main: var(--status-danger-main);");
@@ -239,6 +254,35 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       }
 
       expect(unapproved).toEqual([]);
+    });
+  });
+
+  describe("Contrast-Safe Selected Surface Pairing", () => {
+    it("never pairs content-bearing primary-soft surfaces with text-primary", () => {
+      const filesToScan = ["src/app", "src/components", "src/features"];
+      const hexRegex = /text-primary/g;
+      const violated: string[] = [];
+
+      for (const dir of filesToScan) {
+        const files = getAllSourceFiles(dir).filter(
+          (f) => f.endsWith(".ts") || f.endsWith(".tsx")
+        );
+        for (const file of files) {
+          if (file.includes(".test.") || file.includes(".spec.")) continue;
+          const lines = readProjectFile(file).split("\n");
+          lines.forEach((line, index) => {
+            if (!line.includes("bg-primary-soft")) return;
+            // text-text-primary is the allowed surface text role; only the
+            // bare text-primary utility is unsafe on the soft surface.
+            const sanitized = line.replaceAll("text-text-primary", "");
+            if (hexRegex.test(sanitized)) {
+              violated.push(`${file}:${index + 1}`);
+            }
+          });
+        }
+      }
+
+      expect(violated).toEqual([]);
     });
   });
 });

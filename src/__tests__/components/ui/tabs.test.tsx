@@ -59,7 +59,7 @@ describe("Tabs", () => {
       expect(active).toHaveAttribute("data-active");
     });
 
-    it("uses the primary soft background and primary text on the active default trigger", () => {
+    it("uses the primary soft background and selected foreground on the active default trigger", () => {
       render(
         <Tabs defaultValue="one">
           <TabsList>
@@ -69,7 +69,7 @@ describe("Tabs", () => {
       );
       const active = screen.getByText("One");
       expect(active).toHaveClass("data-active:bg-primary-soft");
-      expect(active).toHaveClass("data-active:text-primary");
+      expect(active).toHaveClass("data-active:text-selected-fg");
     });
 
     it("uses the primary role for the line variant underline indicator", () => {

@@ -26,10 +26,10 @@ export function PortalChoiceCard({
       className="group flex h-full flex-col rounded-2xl border bg-surface p-6 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:ring-1 hover:ring-primary/20"
     >
       <div className="mb-5 flex items-center justify-between">
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-primary-soft text-primary transition-colors duration-300 group-hover:bg-primary/10">
+        <div className="flex size-14 items-center justify-center rounded-2xl bg-primary-soft text-selected-fg transition-colors duration-300 group-hover:bg-primary/10">
           {icon}
         </div>
-        <span className="text-caption rounded-full bg-primary-soft px-3 py-1 font-semibold text-primary">
+        <span className="text-caption rounded-full bg-primary-soft px-3 py-1 font-semibold text-selected-fg">
           {badge}
         </span>
       </div>

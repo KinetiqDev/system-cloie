@@ -73,6 +73,8 @@
   --color-primary-soft: var(--color-primary-soft);
   --color-primary-muted: var(--color-primary-muted);
   --color-primary-border: var(--color-primary-border);
+  --color-selected-bg: var(--selected-bg);
+  --color-selected-fg: var(--selected-fg);
 
   /* ---------- Colors — Brand Accent (ACD Cyan) ---------- */
   --color-brand-accent: var(--brand-accent);
