@@ -1,5 +1,5 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
+import { readdirSync, readFileSync, statSync } from "fs";
+import { join, relative, resolve } from "path";
 import { describe, expect, it } from "vitest";
 import { isRawColorAllowed } from "@/features/design-system/data/raw-color-allowlist";
 
@@ -8,6 +8,26 @@ const rootDir = resolve(__dirname, "../../../..");
 const readProjectFile = (relativePath: string): string => {
   return readFileSync(resolve(rootDir, relativePath), "utf-8");
 };
+
+function getAllSourceFiles(dir: string): string[] {
+  const fullDir = resolve(rootDir, dir);
+  let results: string[] = [];
+  try {
+    const list = readdirSync(fullDir);
+    for (const file of list) {
+      const fullPath = join(fullDir, file);
+      const stat = statSync(fullPath);
+      if (stat && stat.isDirectory()) {
+        results = results.concat(getAllSourceFiles(relative(rootDir, fullPath)));
+      } else if (file.endsWith(".ts") || file.endsWith(".tsx") || file.endsWith(".css")) {
+        results.push(relative(rootDir, fullPath));
+      }
+    }
+  } catch {
+    // Directory might not exist in some environments
+  }
+  return results;
+}
 
 describe("Design System — Semantic Foundations (Issue #252)", () => {
   const tokensCss = readProjectFile("src/styles/tokens.css");
@@ -56,8 +76,9 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(tokensCss).toContain("--chart-5: #c2410c");
     });
 
-    it("defines approved Dark overrides in .dark block", () => {
+    it("defines approved Dark overrides in .dark block and @media (prefers-color-scheme: dark)", () => {
       expect(tokensCss).toContain(".dark {");
+      expect(tokensCss).toContain("@media (prefers-color-scheme: dark) {");
 
       // Surface roles (Dark)
       expect(tokensCss).toContain("--surface-primary: #111827");
@@ -119,7 +140,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(globalsCss).toContain("--color-chart-1: var(--chart-1);");
     });
 
-    it("maps shadcn semantic CSS variables to approved design tokens", () => {
+    it("maps shadcn semantic CSS variables to approved design tokens without self-referential cycles", () => {
       expect(globalsCss).toContain("--background: var(--surface-secondary);");
       expect(globalsCss).toContain("--foreground: var(--text-primary);");
       expect(globalsCss).toContain("--card: var(--surface-primary);");
@@ -129,6 +150,13 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(globalsCss).toContain("--border: var(--border-default);");
       expect(globalsCss).toContain("--input: var(--border-default);");
       expect(globalsCss).toContain("--ring: var(--focus-ring);");
+
+      // Verify no self-referential cyclic chart redeclarations in :root
+      expect(globalsCss).not.toContain("--chart-1: var(--chart-1);");
+      expect(globalsCss).not.toContain("--chart-2: var(--chart-2);");
+      expect(globalsCss).not.toContain("--chart-3: var(--chart-3);");
+      expect(globalsCss).not.toContain("--chart-4: var(--chart-4);");
+      expect(globalsCss).not.toContain("--chart-5: var(--chart-5);");
     });
   });
 
@@ -165,6 +193,50 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(isRawColorAllowed("src/app/layout.tsx", "#0051C3")).toBe(false);
       expect(isRawColorAllowed("src/app/(public)/layout.tsx", "#F8FAFC")).toBe(false);
       expect(isRawColorAllowed("src/components/ui/button.tsx", "#D49900")).toBe(false);
+    });
+
+    it("audits foundation modified files for un-allowlisted raw hex colors", () => {
+      const filesToAudit = [
+        "src/app/layout.tsx",
+        "src/app/manifest.ts",
+        "src/app/(public)/layout.tsx",
+      ];
+
+      const violations: { file: string; color: string }[] = [];
+      const hexRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b/g;
+
+      for (const file of filesToAudit) {
+        const content = readProjectFile(file);
+        const matches = content.match(hexRegex) || [];
+        for (const hex of matches) {
+          if (!isRawColorAllowed(file, hex)) {
+            violations.push({ file, color: hex });
+          }
+        }
+      }
+
+      expect(violations).toEqual([]);
+    });
+
+    it("traverses source files and asserts no unapproved raw hex colors exist in foundation files", () => {
+      const sourceFiles = getAllSourceFiles("src/app");
+      const hexRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b/g;
+      const unapproved: { file: string; color: string }[] = [];
+
+      for (const file of sourceFiles) {
+        // Skip layout/manifest which are audited in foundation test above
+        if (file === "src/app/layout.tsx" || file === "src/app/manifest.ts" || file === "src/app/(public)/layout.tsx") {
+          const content = readProjectFile(file);
+          const matches = content.match(hexRegex) || [];
+          for (const hex of matches) {
+            if (!isRawColorAllowed(file, hex)) {
+              unapproved.push({ file, color: hex });
+            }
+          }
+        }
+      }
+
+      expect(unapproved).toEqual([]);
     });
   });
 });

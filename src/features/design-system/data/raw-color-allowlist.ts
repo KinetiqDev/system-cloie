@@ -4,7 +4,7 @@
  * Grounded in docs/design.md Section 15 & Issue #252.
  * Defines approved exceptions where raw color values (e.g. hex codes) are legitimate:
  * 1. Brand assets and SVG logos in public/logos/
- * 2. Official asset pixels / static manifests
+ * 2. Official asset pixels / static manifests and viewport metadata
  * 3. Documented temporary legacy exceptions in production inventory
  */
 
@@ -27,6 +27,16 @@ export const RAW_COLOR_ALLOWLIST: RawColorAllowlistEntry[] = [
     pattern: "public/icons/**",
     approvedValues: ["*"],
     reason: "PWA icon graphics and maskables",
+  },
+  {
+    pattern: "src/app/layout.tsx",
+    approvedValues: ["#2563EB", "#0B1120"],
+    reason: "Theme-neutral root viewport themeColor metadata (docs/design.md section 5)",
+  },
+  {
+    pattern: "src/app/manifest.ts",
+    approvedValues: ["#2563EB", "#F8FAFC"],
+    reason: "Theme-neutral PWA manifest theme_color and background_color metadata",
   },
   {
     pattern: "src/features/design-system/data/production-surface-inventory.ts",
