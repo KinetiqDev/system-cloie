@@ -479,6 +479,87 @@ describe("refresh fallow baselines", () => {
     }
   });
 
+  it("preserves the interrupted state byte-for-byte when a non-main checkout is rejected", () => {
+    const fixture = createFixture(true);
+    try {
+      const snapshot = commitSentinelBaselines(fixture.work, fixture.withOrigin);
+      git(fixture.work, ["checkout", "-qb", "feature/x"]);
+      git(fixture.work, ["commit", "-qm", "feature work", "--allow-empty"]);
+      // An interrupted refresh state is present, but the checkout is not main:
+      // recovery must not mutate anything before the checkout is rejected.
+      rmSync(join(fixture.work, "fallow-baselines"), { recursive: true, force: true });
+      const previous = join(fixture.work, ".fallow-baselines-previous");
+      mkdirSync(previous, { recursive: true });
+      const contents = JSON.parse(snapshot) as Record<string, string>;
+      for (const name of BASELINE_FILES) {
+        writeFileSync(join(previous, name), contents[name]);
+      }
+
+      const result = runScript(["--root", fixture.work]);
+      expect(result.status).not.toBe(0);
+      expect(result.stdout + result.stderr).toContain("must be on");
+      // Nothing was healed: the parked generation is still parked and the
+      // reader-visible directory is still absent.
+      for (const name of BASELINE_FILES) {
+        expect(readFileSync(join(previous, name), "utf8")).toBe(contents[name]);
+      }
+      expect(existsSync(join(fixture.work, "fallow-baselines"))).toBe(false);
+      // The refresh lock was released and nothing was staged.
+      expect(existsSync(join(fixture.work, ".fallow-baselines.lock"))).toBe(false);
+      expect(
+        readdirSync(fixture.work).filter((name) => name.startsWith(".fallow-staging-"))
+      ).toEqual([]);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it("preserves the interrupted state byte-for-byte when a dirty worktree is rejected", () => {
+    const fixture = createFixture(true);
+    try {
+      const snapshot = commitSentinelBaselines(fixture.work, fixture.withOrigin);
+      // An interrupted refresh state is present together with unrelated
+      // dirt: recovery must not mutate anything before the worktree is
+      // rejected.
+      rmSync(join(fixture.work, "fallow-baselines"), { recursive: true, force: true });
+      const previous = join(fixture.work, ".fallow-baselines-previous");
+      mkdirSync(previous, { recursive: true });
+      const contents = JSON.parse(snapshot) as Record<string, string>;
+      for (const name of BASELINE_FILES) {
+        writeFileSync(join(previous, name), contents[name]);
+      }
+      writeFileSync(join(fixture.work, "src/index.ts"), "export const used = 2;\n");
+      // A pre-existing orphaned staging directory (from a crashed run) must
+      // also survive the rejected invocation byte-for-byte.
+      const orphan = join(fixture.work, ".fallow-staging-orphan");
+      mkdirSync(orphan, { recursive: true });
+      const orphanBytes = '{"orphan": "stage-sentinel"}\n';
+      writeFileSync(join(orphan, "dead-code.json"), orphanBytes);
+
+      const result = runScript(["--root", fixture.work]);
+      expect(result.status).not.toBe(0);
+      expect(result.stdout + result.stderr).toContain("dirty worktree");
+      // Nothing was healed or cleaned: the parked generation is still parked,
+      // the reader-visible directory is still absent, the orphaned staging
+      // directory is untouched, and the unrelated edit survives.
+      for (const name of BASELINE_FILES) {
+        expect(readFileSync(join(previous, name), "utf8")).toBe(contents[name]);
+      }
+      expect(existsSync(join(fixture.work, "fallow-baselines"))).toBe(false);
+      expect(readFileSync(join(fixture.work, "src/index.ts"), "utf8")).toBe(
+        "export const used = 2;\n"
+      );
+      expect(readFileSync(join(orphan, "dead-code.json"), "utf8")).toBe(orphanBytes);
+      // The refresh lock was released and nothing new was staged.
+      expect(existsSync(join(fixture.work, ".fallow-baselines.lock"))).toBe(false);
+      expect(
+        readdirSync(fixture.work).filter((name) => name.startsWith(".fallow-staging-"))
+      ).toEqual([".fallow-staging-orphan"]);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   it("completes a fully installed generation when the last refresh was interrupted after the swap", () => {
     const fixture = createFixture(true);
     try {

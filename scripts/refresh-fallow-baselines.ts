@@ -21,6 +21,7 @@ const FALLOW_VERSION = "2.54.3";
 
 const BASELINES_DIR_NAME = "fallow-baselines";
 const PREVIOUS_DIR_NAME = ".fallow-baselines-previous";
+const INVALID_GENERATION_DIR_NAME = "fallow-baselines.invalid";
 const LOCK_FILE_NAME = ".fallow-baselines.lock";
 const STAGING_PREFIX = ".fallow-staging-";
 
@@ -73,9 +74,12 @@ Environment:
 
 Guards:
   - the checkout must be a git worktree on main, not a detached HEAD
-  - git status must be clean, ignoring nothing (tracked and untracked)
   - an 'origin' remote must exist and origin/main must be fetchable
   - HEAD must match origin/main (neither behind nor ahead)
+  - worktree cleanliness is verified before any transaction mutation
+    (ignoring the transaction's own interrupted paths) and re-verified
+    after recovery; checkouts rejected by the pre-recovery identity,
+    synchronization, or unrelated-dirt guards are not modified
   - HEAD and the worktree are rechecked immediately before publish
   - transaction paths must not be symbolic links (refused)
   - a single-writer lock (exclusively created, never reclaimed automatically)
@@ -134,7 +138,10 @@ function requireGitSuccess(
   return child.stdout.trim();
 }
 
-function assertCleanUpToDateMain(root: string): void {
+function assertRefreshableCheckout(root: string): void {
+  // Read-only checkout identity and sync checks. These run before any
+  // transaction mutation (recovery, staging cleanup) so a rejected checkout
+  // is never modified.
   const worktree = requireGitSuccess(
     runCommand("git", ["rev-parse", "--is-inside-work-tree"], root),
     "git rev-parse",
@@ -154,13 +161,6 @@ function assertCleanUpToDateMain(root: string): void {
   const branch = branchResult.stdout.trim();
   if (branch !== "main") {
     fail(`refuse to refresh baselines: checkout must be on 'main' (currently '${branch}')`);
-  }
-
-  const status = runCommand("git", ["status", "--porcelain"], root);
-  if (status.error || status.status !== 0 || status.stdout.trim() !== "") {
-    fail(
-      "refuse to refresh baselines: dirty worktree; baselines must represent a reviewed clean main state"
-    );
   }
 
   const remote = runCommand("git", ["remote", "get-url", "origin"], root);
@@ -192,6 +192,41 @@ function assertCleanUpToDateMain(root: string): void {
   if (ahead !== "0") {
     fail(
       `refuse to refresh baselines: ${root} is ${ahead} commit(s) ahead of origin/main; baselines must represent the pushed remote state`
+    );
+  }
+}
+
+function assertNoUnrelatedWorktreeChanges(root: string): void {
+  // Cleanliness check that ignores the transaction's own paths: an
+  // interrupted refresh leaves fallow-baselines/ parked and
+  // .fallow-baselines-previous/ present, which would otherwise look like
+  // unrelated dirt. Any other change refuses the refresh before recovery or
+  // cleanup mutates anything.
+  const status = runCommand(
+    "git",
+    [
+      "status",
+      "--porcelain",
+      "--",
+      ".",
+      `:(exclude)${BASELINES_DIR_NAME}`,
+      `:(exclude)${PREVIOUS_DIR_NAME}`,
+      `:(exclude)${INVALID_GENERATION_DIR_NAME}`,
+    ],
+    root
+  );
+  if (status.error || status.status !== 0 || status.stdout.trim() !== "") {
+    fail(
+      "refuse to refresh baselines: dirty worktree; baselines must represent a reviewed clean main state"
+    );
+  }
+}
+
+function assertCleanWorktree(root: string): void {
+  const status = runCommand("git", ["status", "--porcelain"], root);
+  if (status.error || status.status !== 0 || status.stdout.trim() !== "") {
+    fail(
+      "refuse to refresh baselines: dirty worktree; baselines must represent a reviewed clean main state"
     );
   }
 }
@@ -345,7 +380,7 @@ function recoverInterruptedPublish(root: string): void {
       // remove it); quarantine it, then restore the known-good parked
       // generation. The quarantine preserves the invalid generation as
       // diagnostic evidence if the restore fails.
-      const quarantineDir = join(root, `${BASELINES_DIR_NAME}.invalid`);
+      const quarantineDir = join(root, INVALID_GENERATION_DIR_NAME);
       try {
         renameSync(baselinesDir, quarantineDir);
         renameSync(previousDir, baselinesDir);
@@ -385,7 +420,7 @@ function publishGeneration(stagingDir: string, baselinesDir: string, previousDir
   } catch (error) {
     try {
       if (hadPrevious) {
-        const quarantineDir = join(dirname(baselinesDir), `${BASELINES_DIR_NAME}.invalid`);
+        const quarantineDir = join(dirname(baselinesDir), INVALID_GENERATION_DIR_NAME);
         renameSync(baselinesDir, quarantineDir);
         renameSync(previousDir, baselinesDir);
         rmSync(quarantineDir, { recursive: true, force: true });
@@ -514,10 +549,13 @@ function refreshBaselines(root: string): void {
 
   const lockFile = acquireLock(root);
   try {
+    assertRefreshableCheckout(root);
+    assertNoUnrelatedWorktreeChanges(root);
+
     removeOrphanedStagingDirs(root);
     recoverInterruptedPublish(root);
 
-    assertCleanUpToDateMain(root);
+    assertCleanWorktree(root);
     const headSha = requireGitSuccess(
       runCommand("git", ["rev-parse", "HEAD"], root),
       "git rev-parse HEAD",
