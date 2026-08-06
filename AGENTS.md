@@ -7,7 +7,7 @@ Before any implementation, design, or investigation, orient through these in ord
 1. **`openspec/config.yaml`** — canonical architecture, stack, rules, and workflow contract. The single source of truth.
 2. **`CONTEXT-MAP.md`** — index of domain contexts and their relationships.
 3. **`src/features/<domain>/CONTEXT.md`** — per-domain glossary, rules, and invariants for the area you're working in.
-4. **`docs/adr/`** — architectural decision records (9 ADRs). Surface conflicts explicitly rather than silently overriding.
+4. **`docs/adr/`** — architectural decision records. Surface conflicts explicitly rather than silently overriding.
 5. **Existing code, tests, and GitHub issues** in the affected domain.
 
 The `openspec/config.yaml` rules section is binding — proposal, specs, design, and tasks must follow it. Run `pnpm lint` and `pnpm build` before considering any change complete.
@@ -165,6 +165,16 @@ The dedicated demo deployment is a separate, isolated production-mode instance w
 
 - Some uniqueness rules rely on Postgres features Prisma can't express (example: `NULLS NOT DISTINCT` index for `course_bound_evaluations`). The real constraint is enforced in `supabase/migrations/*` and only mirrored as a non-unique `@@index` in Prisma. Do not add a `@unique` where the migration has the real SQL constraint; they will conflict.
 
+## Code Intelligence (Fallow)
+
+Static analysis is evidence, not instruction. Agents consult the project-local `fallow-mcp` MCP server (declared in `opencode.json`); the runbook is `docs/agents/fallow.md`, and the policy is recorded in `docs/adr/0011-fallow-code-intelligence-policy.md`.
+
+- **Trace before deleting** — Before deleting an export, file, dependency, or class member that Fallow reports unused, trace the finding and verify its consumers and domain context first.
+- **Trace before refactoring** — Before refactoring for complexity or duplication, identify the module's interface, its seams, the tests that pin its behavior, and the domain invariants it carries (per `CONTEXT.md`).
+- **Protected categories** — treat as intentionally reachable: Next.js entry points and route handlers, Server Actions, generated types (`src/types/supabase-database.ts`), the shadcn/ui public inventory (`src/components/ui/**`), dynamic consumers, and domain context (`CONTEXT.md` glossaries and invariants).
+- **No unattended mutation** — never run `pnpm exec fallow fix --yes` or apply `fix_apply` results unattended; fixes start from dry-run evidence (`pnpm exec fallow fix --dry-run` / `fix_preview`). Baseline refresh (`pnpm fallow:baseline`) is human-gated.
+- **Gate** — the CI audit gate fails only on new findings in changed files; address those with traced, focused changes.
+
 ## Commit Convention
 
 - Follow Conventional Commits (see `docs/conventional-commits-cheatsheet.md`).
@@ -197,7 +207,7 @@ Other reference: `docs/agents/discrepancies-prd-srs-vs-current.md` (known spec g
 | **Architecture & Design** | codebase-design, domain-modeling, improve-codebase-architecture, prototype |
 | **UI/UX** | design-taste-frontend, shadcn, emil-design-eng, ui-ux-pro-max |
 | **Implementation & Testing** | implement, tdd, code-review |
-| **Debugging & Research** | a11y-debugging, chrome-devtools, debug-optimize-lcp, diagnosing-bugs, memory-leak-debugging, research, troubleshooting |
+| **Debugging & Research** | a11y-debugging, chrome-devtools, debug-optimize-lcp, diagnosing-bugs, fallow, memory-leak-debugging, research, troubleshooting |
 | **Process & Docs** | grill-me, grill-with-docs, grilling, handoff, teach, write-a-skill, writing-great-skills |
 | **Framework** | next-best-practices, supabase, supabase-postgres-best-practices |
 | **Other** | agent-browser, setup-matt-pocock-skills, zoom-out, model-relay |
@@ -220,6 +230,7 @@ Other reference: `docs/agents/discrepancies-prd-srs-vs-current.md` (known spec g
 ### MCP Tools
 
 - **context7** — Query current docs for any library, framework, SDK, or CLI
+- **fallow** — Codebase intelligence via the project-local `fallow-mcp` server (see the Code Intelligence section)
 - **supabase** — Schema, SQL, migrations, Edge Functions, project management
 - **notion** — Read/write pages, databases, comments; search workspace
 - **Chrome DevTools** — Browser automation (navigate, click, screenshot, trace, Lighthouse audit)

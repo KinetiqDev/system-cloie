@@ -56,6 +56,7 @@ All agent skills available to this repo, grouped by source. Descriptions are pul
 - **diagnosing-bugs** — Diagnosis loop for hard bugs and performance regressions.
 - **memory-leak-debugging** — Diagnose and resolve JS/Node memory leaks using Chrome DevTools MCP heap snapshots.
 - **troubleshooting** — Troubleshoot Chrome DevTools connection/target issues; trigger when list_pages, new_page, or navigate_page fail.
+- **fallow** — Codebase intelligence for TypeScript and JavaScript: changed-code risk, cleanup opportunities, duplication, complexity hotspots, boundary policies, feature flags, and auto-fix previews (dry-run first).
 - **research** — Investigate a question against high-trust primary sources and capture findings as a Markdown file in the repo.
 
 ### Supabase
