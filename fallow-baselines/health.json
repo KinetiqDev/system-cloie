@@ -1,0 +1,904 @@
+{
+  "finding_counts": {
+    "prisma/seed/runners/seed-course-assignments.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "prisma/seed/runners/seed-evaluations.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "prisma/seed/runners/seed-foundation.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "prisma/seed/runners/seed-outcomes.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "prisma/seed/runners/seed-responses.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "prisma/seed/runners/seed-users.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "scripts/audit-cbe-legacy-columns-precise.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/audit-null-sections.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/refresh-fallow-baselines.ts": {
+      "complexity_moderate": {
+        "count": 3
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/validate-demo-target-isolation.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/__tests__/config/fallow-config.test.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/__tests__/features/users/services/edit-user-by-secretary.test.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/__tests__/scripts/verify-production-auth-boundary.test.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/alumni/dashboard/page.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/alumni/profile/page.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/course-rosters/[assignmentId]/page.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/dean/college-oversight/enrollments/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/dean/college-oversight/enrollments/roster/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/dean/college-oversight/learning-outcomes/page.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/dean/profile/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/faculty/cilo-evaluations/new/page.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/faculty/cilos/new/add-cilo-form.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/faculty/dashboard/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/faculty/profile/page.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/faculty/tools/[id]/edit/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/industry-partner/dashboard/page.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/industry-partner/profile/page.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/program-head/programs/[programId]/course-rosters/[assignmentId]/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/secretary/school-years/[id]/client-page.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/secretary/school-years/[id]/rollover/page.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/secretary/users/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/student/dashboard/page.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/student/evaluations/[id]/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/student/evaluations/page.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/app/(app)/student/profile/page.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(public)/onboarding/page.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/app/(public)/onboarding/student-profile-form.tsx": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "src/app/api/auth/callback/route.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/components/layout/mobile-sidebar-drawer.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/components/layout/sidebar.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/academic-calendar/components/school-year-form.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/features/academic-calendar/components/school-year-list.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/features/academic-calendar/components/term-instance-form.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/academic-calendar/components/term-instance-picker.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/academic-calendar/services/manage-academic-period-lifecycle.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/academic-calendar/services/read-period-readiness.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/academic-structure/components/course-form.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/academic-structure/components/management-courses-list.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/academic-structure/components/program-form.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/academic-structure/components/program-head-courses-catalog.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/academic-structure/components/secretary-programs-list.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/academic-structure/services/list-management-courses-summary.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/academic-structure/services/manage-program-head-courses.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/analytics/components/faculty-analytics-dashboard.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/analytics/components/faculty-analytics-filters.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/analytics/components/faculty-cilo-analytics-chart.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/analytics/components/faculty-qualitative-cloud.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/analytics/components/faculty-quantitative-breakdown.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/analytics/services/get-course-bound-response-review.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/analytics/services/get-course-bound-review-detail.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/analytics/services/get-program-head-dashboard.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/auth/services/resolve-auth-session.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/auth/services/resolve-post-login-destination.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/components/course-assignment-form-dialog.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/components/course-assignments-page-shell.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/components/course-assignments-table.tsx": {
+      "complexity_high": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/components/course-roster-pages.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/components/course-row-assignments-sheet.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/components/edit-course-assignment-dialog.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/components/shared/assignment-filters.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/components/shared/wizard-stepper.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/services/course-assignment-roster.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/services/import-course-roster.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/services/list-course-assignments-for-faculty.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/services/list-course-assignments.ts": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/course-assignments/services/manage-course-assignments.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "complexity_high": {
+        "count": 1
+      },
+      "complexity_moderate": {
+        "count": 3
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "src/features/course-assignments/services/manage-course-roster.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/features/course-assignments/services/read-course-rosters.ts": {
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/dean/services/read-dean-oversight.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/enrollments/components/enrollment-editor-dialog.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/enrollments/components/student-enrollment-history.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/enrollments/services/list-enrollments.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/components/evaluation-detail-dialog.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/components/faculty-cilos-course-list.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "src/features/evaluations/components/faculty-published-evaluations-table.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/features/evaluations/components/publish-central-deployment-form.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/components/publish-course-bound-evaluation-form-v2.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/get-faculty-evaluation-detail.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/late-include-course-bound-evaluation.ts": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/list-faculty-course-contexts.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/list-faculty-courses-with-cilos.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/list-faculty-published-evaluations.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/list-program-head-deployments.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/preview-course-bound-respondents.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/publish-central-deployment.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/evaluations/services/publish-course-bound-evaluation.ts": {
+      "complexity_critical": {
+        "count": 2
+      },
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      }
+    },
+    "src/features/instruments/components/program-head-tools-page.tsx": {
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 4
+      }
+    },
+    "src/features/instruments/components/template-builder.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/instruments/components/templates-grid.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/instruments/services/list-faculty-templates.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/instruments/services/manage-faculty-templates.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/features/legal/services/legal-acknowledgement-ticket.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/outcomes/components/program-head-mapping-controls.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/outcomes/services/manage-outcome-writes.ts": {
+      "complexity_critical": {
+        "count": 2
+      },
+      "complexity_high": {
+        "count": 1
+      },
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 2
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/responses/services/get-student-assigned-evaluation-session.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/responses/services/get-student-submitted-response-review.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/responses/services/list-stakeholder-evaluations.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/responses/services/list-student-assigned-evaluations.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/responses/services/list-student-course-bound-evaluations.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/responses/services/save-central-deployment-draft.ts": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/features/responses/services/save-student-evaluation-draft.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/users/components/secretary-add-user-form.tsx": {
+      "complexity_high": {
+        "count": 1
+      },
+      "complexity_moderate": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/users/components/secretary-users-list/edit-user-dialog.tsx": {
+      "complexity_critical": {
+        "count": 4
+      },
+      "crap_critical": {
+        "count": 4
+      }
+    },
+    "src/features/users/components/secretary-users-list/users-filter-bar.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/users/services/create-user-by-secretary.ts": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/users/services/edit-user-by-secretary.ts": {
+      "complexity_critical": {
+        "count": 3
+      },
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 3
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/users/services/get-user-edit-record.ts": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/features/users/services/manage-users.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/features/users/services/resolve-profile-gate.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/lib/actions/alumni-actions.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/lib/actions/course-roster-actions.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/lib/actions/enrollment-actions.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/lib/actions/faculty-cilo-actions.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/lib/actions/faculty-template-actions.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/lib/actions/onboarding-actions.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/lib/actions/secretary-edit-user-actions.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "src/lib/actions/secretary-user-crud-actions.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/proxy.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "vitest.setup.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    }
+  },
+  "runtime_coverage_findings": [],
+  "target_keys": [
+    "src/features/academic-structure/components/course-form.tsx:high impact",
+    "src/features/enrollments/services/list-enrollments.ts:dead code",
+    "src/lib/actions/enrollment-actions.ts:dead code",
+    "src/app/api/auth/callback/route.ts:complexity",
+    "src/features/users/services/edit-user-by-secretary.ts:complexity",
+    "src/app/api/dean/route-helpers.ts:high impact",
+    "src/features/course-assignments/services/list-course-assignments.ts:complexity",
+    "src/features/academic-calendar/services/resolve-active-term.ts:dead code",
+    "src/features/responses/services/list-student-assigned-evaluations.ts:complexity",
+    "src/lib/constants/academic.ts:dead code",
+    "src/components/ui/sheet.tsx:dead code",
+    "src/components/ui/tooltip.tsx:dead code",
+    "src/features/legal/services/legal-acknowledgement-ticket.ts:high impact",
+    "src/features/users/schemas/edit-user.ts:dead code",
+    "src/__tests__/helpers/auth-session.ts:high impact",
+    "src/features/instruments/components/template-builder.tsx:complexity",
+    "src/features/academic-calendar/schemas/school-year.ts:dead code",
+    "src/features/course-assignments/services/manage-course-assignments.ts:complexity",
+    "src/features/course-assignments/course-assignment-list-state.ts:high impact",
+    "src/features/outcomes/services/manage-outcome-writes.ts:complexity",
+    "src/features/course-assignments/services/course-roster-csv.ts:high impact",
+    "src/features/evaluations/services/publish-course-bound-evaluation.ts:complexity",
+    "src/components/ui/dropdown-menu.tsx:dead code",
+    "src/features/course-assignments/services/import-course-roster.ts:complexity",
+    "src/features/responses/services/get-student-assigned-evaluation-session.ts:complexity",
+    "src/features/users/components/secretary-users-list/edit-user-dialog.tsx:complexity",
+    "src/features/academic-structure/components/program-head-courses-catalog.tsx:complexity"
+  ]
+}
