@@ -172,7 +172,7 @@ Static analysis is evidence, not instruction. Agents consult the project-local `
 - **Trace before deleting** — Before deleting an export, file, dependency, or class member that Fallow reports unused, trace the finding and verify its consumers and domain context first.
 - **Trace before refactoring** — Before refactoring for complexity or duplication, identify the module's interface, its seams, the tests that pin its behavior, and the domain invariants it carries (per `CONTEXT.md`).
 - **Protected categories** — treat as intentionally reachable: Next.js entry points and route handlers, Server Actions, generated types (`src/types/supabase-database.ts`), the shadcn/ui public inventory (`src/components/ui/**`), dynamic consumers, and domain context (`CONTEXT.md` glossaries and invariants).
-- **No unattended mutation** — never run `fallow fix --yes` or apply `fix_apply` results unattended; fixes start from dry-run evidence (`fallow fix --dry-run` / `fix_preview`). Baseline refresh (`pnpm fallow:baseline`) is human-gated.
+- **No unattended mutation** — never run `pnpm exec fallow fix --yes` or apply `fix_apply` results unattended; fixes start from dry-run evidence (`pnpm exec fallow fix --dry-run` / `fix_preview`). Baseline refresh (`pnpm fallow:baseline`) is human-gated.
 - **Gate** — the CI audit gate fails only on new findings in changed files; address those with traced, focused changes.
 
 ## Commit Convention

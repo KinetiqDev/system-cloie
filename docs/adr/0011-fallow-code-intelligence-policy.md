@@ -36,13 +36,13 @@ Rejected. Remote rules and runtime coverage (paid) introduce external or license
 
 ### 1. Baseline-backed changed-file gate
 
-- CI runs `fallow audit` against the change base with per-category identity baselines (`fallow-baselines/{dead-code,health,dupes}.json`).
+- CI runs the Fallow audit gate (`scripts/run-fallow-audit.ts`) against the change base with per-category identity baselines (`fallow-baselines/{dead-code,health,dupes}.json`).
 - Only new findings unmatched by the baselines in files touched by the change can fail the build; the gate's verdict is recorded in `artifacts/fallow/audit.json` and `audit.sarif`.
 - Baselines are identity-based (fallow-specific issue IDs), not count-based, so they cannot mask new occurrences of a known issue.
 
 ### 2. Narrow seams only
 
-- The enforced boundary restrictions are exactly the two rules in `.fallowrc.json`: `ui-primitives` (`src/components/ui/**`) may import only `shared`; `shared` (`src/lib/**`) may import only `types`. Zone peers compose automatically.
+- The enforced boundary restrictions are the two rules in `.fallowrc.json`: `ui-primitives` (`src/components/ui/**`) may import only same-zone peers and `shared`; `shared` (`src/lib/**`) may import only same-zone peers and `types`. Same-zone peer imports are automatic; the `allow` lists add the only permitted cross-zone targets.
 - Every other classified zone — including `features` (`src/features/**`), `server-actions` (`src/lib/actions/**`), `routes`, and `hooks` — is unrestricted during the initial rollout, because sanctioned composition (Server Actions in feature services calling shared domain services) must not be flagged.
 - Any new boundary rule requires a focused proposal naming the two modules, the direction, the invariants it protects, and the tests that prove enforcement, before it is added to the configuration.
 
@@ -53,8 +53,8 @@ Rejected. Remote rules and runtime coverage (paid) introduce external or license
 
 ### 4. Human-gated mutation
 
-- Agents and CI never run `fallow fix --yes`, `fix_apply` (MCP), or baseline refresh unattended.
-- Fixes begin with dry-run evidence (`fallow fix --dry-run` / `fix_preview`), and the resulting diff goes through normal review.
+- Agents and CI never run `pnpm exec fallow fix --yes`, `fix_apply` (MCP), or baseline refresh unattended.
+- Fixes begin with dry-run evidence (`pnpm exec fallow fix --dry-run` / `fix_preview`), and the resulting diff goes through normal review.
 - Baseline refresh (`pnpm fallow:baseline`) runs only from a clean, up-to-date `main` worktree, and its diff is reviewed before commit.
 
 ### 5. Protected categories

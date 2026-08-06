@@ -39,7 +39,7 @@ Before deleting **anything** Fallow reports unused — an export, a file, a depe
 
 1. **Trace the finding**: `trace_export` / `trace_file` / `trace_dependency` / `trace_clone` (MCP) or `pnpm exec fallow dead-code --trace <file>:<export>` (CLI).
 2. **Verify the protected categories**: `src/app/**` and route handlers (Next.js entry points), `"use server"` Server Actions, `src/types/supabase-database.ts` (generated types), `src/components/ui/**` (shadcn public inventory — intentionally unconsumed exports are fine), any dynamic consumer (`import(...)` with variables, framework-invoked members), and domain context (`CONTEXT.md` glossaries and invariants). These are treated as intentionally reachable.
-3. **Propose with evidence**: for fixes use `fix_preview` / `fix --dry-run` first (see Fixes); for refactors identify the module's interface, its seams, the tests that pin its behavior, and the authorization and lifecycle invariants the module preserves.
+3. **Propose with evidence**: for fixes use `fix_preview` / `pnpm exec fallow fix --dry-run` first (see Fixes); for refactors identify the module's interface, its seams, the tests that pin its behavior, and the authorization and lifecycle invariants the module preserves.
 4. **Gate**: run `audit` against the change base before finishing the change.
 
 ## Project Commands
@@ -61,8 +61,8 @@ Package scripts (see `package.json`): `pnpm fallow:audit`, `pnpm fallow:dead-cod
 
 ## Fixes (Dry-Run Only)
 
-- Start every fix from dry-run evidence: `fallow fix --dry-run` or the `fix_preview` MCP tool. Review the proposed diff like any code change.
-- **Never run `fallow fix --yes`** in CI or unattended. `fix_apply` (MCP) is the same mutation under a different name — do not call it; prefer `fix_preview`.
+- Start every fix from dry-run evidence: `pnpm exec fallow fix --dry-run` or the `fix_preview` MCP tool. Review the proposed diff like any code change.
+- **Never run `pnpm exec fallow fix --yes`** in CI or unattended. `fix_apply` (MCP) is the same mutation under a different name — do not call it; prefer `fix_preview`.
 - Low-confidence candidates that Fallow skips stay skipped; the repo does not add blanket suppressions to force them through.
 
 ## Baseline Maintenance (Human-Gated)

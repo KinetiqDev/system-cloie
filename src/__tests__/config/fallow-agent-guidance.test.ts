@@ -149,7 +149,17 @@ describe("fallow runbook (docs/agents/fallow.md)", () => {
 
   it("requires dry-run evidence before fixes", () => {
     expect(RUNBOOK).toMatch(/fix --dry-run/);
-    expect(RUNBOOK).toMatch(/Never run `fallow fix --yes`/);
+    expect(RUNBOOK).toMatch(/Never run `pnpm exec fallow fix --yes`/);
+  });
+
+  it("uses the project-local pnpm exec fallow form for every CLI example", () => {
+    const bareExamples = [
+      ...(GUIDANCE_TEXT.matchAll(/`fallow ([a-z][a-z0-9-]*)/g) ?? []),
+    ].map((match) => match[1]);
+    expect(
+      bareExamples,
+      "executable CLI examples must use `pnpm exec fallow <cmd>`, not a bare `fallow <cmd>`",
+    ).toEqual([]);
   });
 
   it("gates baseline refresh to human operators", () => {
