@@ -95,6 +95,17 @@ describe("Button", () => {
   });
 
   describe("loading affordance", () => {
+    it("spinner overlays the label without adding a sibling flex child (width preservation)", () => {
+      // The button must have exactly one direct child element when loading
+      // so the spinner does not sit beside the label and expand intrinsic width.
+      // The wrapper is position:relative; the spinner is position:absolute inside it.
+      render(<Button loading>Save</Button>);
+      const btn = screen.getByRole("button");
+      expect(btn.children).toHaveLength(1);
+      const wrapper = btn.children[0];
+      expect(wrapper).toHaveClass("relative");
+    });
+
     it("renders an SVG spinner when loading=true", () => {
       render(<Button loading>Save</Button>);
       expect(document.querySelector("svg")).toBeInTheDocument();

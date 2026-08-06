@@ -90,18 +90,27 @@ function Button({
       {...rest}
     >
       {loading ? (
-        <>
-          {/*
-           * Spinner is decorative — aria-busy on the button already signals
-           * the pending state to AT. Hiding the spinner prevents a double
-           * announcement ("Loading" + button name).
-           * The label span is NOT aria-hidden so the button retains its
-           * original accessible name (e.g. "Save"), making it clear *what*
-           * is loading. Width is preserved because the text is still in the DOM.
-           */}
-          <Spinner size={spinnerSize} aria-hidden="true" />
-          <span>{children}</span>
-        </>
+        /*
+         * Single wrapper child keeps the button's intrinsic flex layout unchanged
+         * — the spinner is absolutely centered and adds zero flex width.
+         * Layout width is driven by the opacity-0 spacer (aria-hidden, visual only).
+         * A sr-only sibling carries the accessible name so the button label is
+         * announced by AT as "Save Changes, busy, dimmed" rather than unnamed.
+         * aria-busy on the button signals the in-progress state to AT.
+         */
+        <span className="relative inline-flex items-center justify-center">
+          <Spinner
+            size={spinnerSize}
+            aria-hidden="true"
+            className="absolute"
+          />
+          {/* Visual spacer — drives button width, hidden from AT */}
+          <span className="opacity-0 select-none pointer-events-none" aria-hidden="true">
+            {children}
+          </span>
+          {/* Accessible label — no visible pixels, read by AT */}
+          <span className="sr-only">{children}</span>
+        </span>
       ) : (
         children
       )}
