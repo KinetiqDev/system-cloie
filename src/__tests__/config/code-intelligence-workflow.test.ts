@@ -19,6 +19,9 @@ interface Workflow {
   name: string;
   on: {
     pull_request?: { branches?: string[] };
+    push?: { branches?: string[] };
+    schedule?: Array<{ cron?: string }>;
+    workflow_dispatch?: unknown;
   };
   permissions: Record<string, string>;
   jobs: Record<
@@ -26,6 +29,7 @@ interface Workflow {
     {
       name?: string;
       "runs-on": string;
+      if?: string;
       env?: Record<string, string>;
       steps: Array<Record<string, unknown>>;
     }
@@ -36,12 +40,15 @@ function loadWorkflow(): Workflow {
   return yaml.load(WORKFLOW_SOURCE) as Workflow;
 }
 
-function jobSteps(): Array<Record<string, unknown>> {
+function jobSteps(jobName: string): Array<Record<string, unknown>> {
   const workflow = loadWorkflow();
-  const jobs = Object.values(workflow.jobs);
-  expect(jobs).toHaveLength(1);
-  return jobs[0].steps;
+  const job = workflow.jobs[jobName];
+  expect(job, `workflow job ${jobName} should exist`).toBeDefined();
+  return job.steps;
 }
+
+const GATE_JOB = "fallow-audit-gate";
+const REPORTS_JOB = "fallow-reports";
 
 describe("code-intelligence workflow", () => {
   it("is a least-privilege pull-request gate on main with read-level permissions", () => {
@@ -55,7 +62,7 @@ describe("code-intelligence workflow", () => {
   });
 
   it("checks out full history and reuses the pinned pnpm/Node setup", () => {
-    const steps = jobSteps();
+    const steps = jobSteps(GATE_JOB);
 
     const checkout = steps.find((step) => step.uses === "actions/checkout@v4");
     expect(checkout).toBeDefined();
@@ -79,7 +86,7 @@ describe("code-intelligence workflow", () => {
   });
 
   it("runs the audit against the pull request base SHA and rejects an absent base SHA", () => {
-    const steps = jobSteps();
+    const steps = jobSteps(GATE_JOB);
 
     const auditStep = steps.find((step) =>
       String(step.run ?? "").includes("run-fallow-audit.ts")
@@ -102,13 +109,66 @@ describe("code-intelligence workflow", () => {
     expect(guardStep?.name).toMatch(/base SHA/i);
   });
 
+  it("runs the gate only for pull requests and the reports only outside pull requests", () => {
+    const workflow = loadWorkflow();
+
+    expect(workflow.jobs[GATE_JOB].if).toBe("github.event_name == 'pull_request'");
+    expect(workflow.jobs[REPORTS_JOB].if).toBe("github.event_name != 'pull_request'");
+  });
+
+  it("triggers on push to main, a weekly schedule, and manual dispatch", () => {
+    const workflow = loadWorkflow();
+
+    expect(workflow.on.push).toEqual({ branches: ["main"] });
+
+    expect(workflow.on.schedule).toBeDefined();
+    expect(workflow.on.schedule?.length).toBe(1);
+    expect(workflow.on.schedule?.[0].cron).toMatch(/^\d+ \d+ \* \* \d+$/);
+
+    expect(workflow.on.workflow_dispatch).toBeDefined();
+  });
+
+  it("runs the complete reports through the runner in the reports job", () => {
+    const steps = jobSteps(REPORTS_JOB);
+
+    const reportStep = steps.find((step) =>
+      String(step.run ?? "").includes("run-fallow-reports.ts")
+    );
+    expect(reportStep).toBeDefined();
+    expect(String(reportStep?.run)).toBe(
+      "pnpm exec tsx scripts/run-fallow-reports.ts"
+    );
+  });
+
+  it("uploads the reports artifacts with always() in the reports job", () => {
+    const steps = jobSteps(REPORTS_JOB);
+
+    const reportIndex = steps.findIndex((step) =>
+      String(step.run ?? "").includes("run-fallow-reports.ts")
+    );
+    expect(reportIndex).toBeGreaterThanOrEqual(0);
+
+    const upload = steps.find((step) => String(step.uses ?? "").startsWith("actions/upload-artifact@"));
+    expect(upload).toBeDefined();
+    expect(String(upload?.uses)).toBe("actions/upload-artifact@v4");
+    expect(upload?.if).toBe("always()");
+    expect(String((upload as { with: Record<string, string> }).with.path)).toContain(
+      "artifacts/fallow"
+    );
+
+    const uploadIndex = steps.findIndex((step) =>
+      String(step.uses ?? "").startsWith("actions/upload-artifact@")
+    );
+    expect(uploadIndex).toBeGreaterThan(reportIndex);
+  });
+
   it("never passes --fail-on-issues or --ci", () => {
     expect(WORKFLOW_SOURCE).not.toContain("--fail-on-issues");
     expect(WORKFLOW_SOURCE).not.toContain("--ci");
   });
 
   it("uploads the JSON and SARIF artifacts after the audit and before any failure propagates", () => {
-    const steps = jobSteps();
+    const steps = jobSteps(GATE_JOB);
 
     const auditIndex = steps.findIndex((step) =>
       String(step.run ?? "").includes("run-fallow-audit.ts")
@@ -129,8 +189,22 @@ describe("code-intelligence workflow", () => {
     expect(uploadIndex).toBeGreaterThan(auditIndex);
   });
 
+  it("keeps the gate job blocking on its audit outcome without continue-on-error", () => {
+    const workflow = loadWorkflow();
+    const gateJob = workflow.jobs[GATE_JOB] as Record<string, unknown> & {
+      steps: Array<Record<string, unknown>>;
+    };
+
+    const auditStep = gateJob.steps.find((step) =>
+      String(step.run ?? "").includes("run-fallow-audit.ts")
+    );
+    expect(auditStep).toBeDefined();
+    expect(auditStep?.["continue-on-error"]).toBeUndefined();
+    expect(gateJob["continue-on-error"]).toBeUndefined();
+  });
+
   it("does not add write permissions, comments, code scanning, or third-party actions", () => {
-    const steps = jobSteps();
+    const workflow = loadWorkflow();
 
     const allowedUses = new Set([
       "actions/checkout@v4",
@@ -138,14 +212,20 @@ describe("code-intelligence workflow", () => {
       "actions/setup-node@v4",
       "actions/upload-artifact@v4",
     ]);
-    for (const step of steps) {
-      const uses = String(step.uses ?? "");
-      if (uses) {
-        expect(allowedUses.has(uses)).toBe(true);
+    for (const job of Object.values(workflow.jobs)) {
+      for (const step of job.steps) {
+        const uses = String(step.uses ?? "");
+        if (uses) {
+          expect(allowedUses.has(uses)).toBe(true);
+        }
       }
     }
-    expect(steps.some((step) => String(step.run ?? "").includes("gh pr comment"))).toBe(false);
+    expect(WORKFLOW_SOURCE).not.toMatch(/gh pr comment/);
     expect(WORKFLOW_SOURCE).not.toMatch(/security-events/);
     expect(WORKFLOW_SOURCE).not.toMatch(/codeql|github\/code-scanning/i);
+  });
+
+  it("never runs fallow fix in the workflow", () => {
+    expect(WORKFLOW_SOURCE).not.toMatch(/fallow fix|fix --yes/);
   });
 });

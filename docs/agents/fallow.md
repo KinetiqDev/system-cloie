@@ -57,7 +57,7 @@ All verified against the installed binary (see `pnpm exec fallow --help`):
 | `pnpm exec fallow list --entry-points --format json --quiet` | Discovered entry points |
 | `pnpm exec fallow config --path` | Which config file was loaded |
 
-Package scripts (see `package.json`): `pnpm fallow:audit`, `pnpm fallow:dead-code`, `pnpm fallow:dupes`, `pnpm fallow:health`, `pnpm fallow:flags`, `pnpm fallow:baseline`.
+Package scripts (see `package.json`): `pnpm fallow:audit`, `pnpm fallow:dead-code`, `pnpm fallow:dupes`, `pnpm fallow:health`, `pnpm fallow:flags`, `pnpm fallow:reports`, `pnpm fallow:baseline`.
 
 ## Fixes (Dry-Run Only)
 
@@ -77,6 +77,8 @@ Package scripts (see `package.json`): `pnpm fallow:audit`, `pnpm fallow:dead-cod
 
 - The PR gate (`scripts/run-fallow-audit.ts`, invoked by the CI workflow) writes `artifacts/fallow/audit.json` and `audit.sarif`.
 - Exit codes: `0` clean/pass, `1` issues found (gate outcome), `2` tool error. The gate fails only on new findings unmatched by `fallow-baselines/*.json`; the verdict lives in the `verdict` field of the JSON.
+- The complete report runner (`pnpm fallow:reports`, script `scripts/run-fallow-reports.ts`, invoked post-merge, weekly, and manually by the CI workflow) writes `artifacts/fallow/<command>.json` and `<command>.sarif` for `dead-code` (unused code and the boundary inventory), `dupes`, `health` (hotspots and targets), and `flags`. Each command runs twice — `--format json --quiet` and `--format sarif --quiet` — because `--sarif-file` is a no-op for these commands in fallow 2.54.3; SARIF is captured from stdout instead. Stale report artifacts from a previous run are removed before reporting so a failed run can never upload an outdated report.
+- Report exit codes: `0` and `1` are completed report states (findings are retained in the artifacts, not failures); the runner exits `2` on a tool or configuration failure (spawn/signal failure, unexpected exit status). Reports are preserved without parsing, re-scoring, or suppression, and never run `pnpm exec fallow fix`.
 - Full-project reports are read-only (`--format json --quiet` runs above) and are used for report-to-issue intake:
   1. Confirm the finding with a trace and the protected-category check above.
   2. File a focused issue naming the file, the finding type, and the traced evidence; label it `ready-for-agent`.
