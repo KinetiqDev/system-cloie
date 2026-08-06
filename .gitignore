@@ -22,6 +22,9 @@
 /.fallow-staging-*
 /.fallow-baselines.lock*
 
+# fallow report artifacts
+/artifacts/
+
 # next.js
 /.next/
 /out/

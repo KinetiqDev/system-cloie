@@ -17,6 +17,7 @@
     "fallow:dupes": "pnpm exec fallow dupes",
     "fallow:health": "pnpm exec fallow health",
     "fallow:flags": "pnpm exec fallow flags",
+    "fallow:reports": "tsx scripts/run-fallow-reports.ts",
     "fallow:baseline": "tsx scripts/refresh-fallow-baselines.ts",
     "verify:production-auth-boundary": "tsx scripts/verify-production-auth-boundary.ts",
     "verify:dedicated-demo-auth-boundary": "tsx scripts/verify-dedicated-demo-auth-boundary.ts",
