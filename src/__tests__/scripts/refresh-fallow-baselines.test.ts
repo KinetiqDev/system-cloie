@@ -89,7 +89,13 @@ const baselines = {
   dupes: { clone_groups: [] },
 };
 fs.writeFileSync(baselinePath, JSON.stringify(baselines[subcommand], null, 2));
-process.stdout.write(JSON.stringify({ schema_version: 4, version: "2.54.3", total_issues: 0 }));
+const report = { schema_version: 4, version: "2.54.3", total_issues: 0 };
+if (mode === "big-output") {
+  report.pad = "x".repeat(2 * 1024 * 1024);
+}
+// Synchronous fd write: process.stdout.write can buffer and then get cut off
+// by the process.exit below when the payload exceeds the pipe buffer.
+fs.writeSync(1, JSON.stringify(report));
 process.exit(0);
 `;
 
@@ -232,6 +238,27 @@ describe("refresh fallow baselines", () => {
         }
       }
       expectNoStagingArtifacts(fixture.work);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it("accepts analyzer output larger than the default child-process buffer", () => {
+    const fixture = createFixture(true);
+    try {
+      const stub = join(fixture.base, "stub.cjs");
+      writeFileSync(stub, STUB_SCRIPT);
+
+      const result = runScript(["--root", fixture.work], {
+        FALLOW_BIN: stub,
+        STUB_MODE: "big-output",
+      });
+      expect(result.status).toBe(0);
+      expect(result.stdout + result.stderr).toContain("dead-code.json");
+      expect(result.stdout + result.stderr).toContain("health.json");
+      expect(result.stdout + result.stderr).toContain("dupes.json");
+      expectNoStagingArtifacts(fixture.work);
+      expectNoTransactionArtifacts(fixture.work);
     } finally {
       fixture.cleanup();
     }

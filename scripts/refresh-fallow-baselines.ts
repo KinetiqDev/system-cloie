@@ -24,6 +24,11 @@ const PREVIOUS_DIR_NAME = ".fallow-baselines-previous";
 const INVALID_GENERATION_DIR_NAME = "fallow-baselines.invalid";
 const LOCK_FILE_NAME = ".fallow-baselines.lock";
 const STAGING_PREFIX = ".fallow-staging-";
+// Analyzer stdout carries the full JSON report (plus the saved baseline file),
+// which grows with the codebase: the pinned binary emitted a ~3.4 MiB dupes
+// report on the initial clean-main bootstrap. The node:child_process default
+// buffer is 1 MiB per stream, so analyzer output must opt into a larger cap.
+const ANALYZER_MAX_BUFFER = 256 * 1024 * 1024;
 
 interface AnalyzerSpec {
   command: string;
@@ -115,8 +120,13 @@ function fail(message: string): never {
   throw new Error(message);
 }
 
-function runCommand(command: string, args: string[], cwd: string): SpawnSyncReturns<string> {
-  return spawnSync(command, args, { cwd, encoding: "utf8" });
+function runCommand(
+  command: string,
+  args: string[],
+  cwd: string,
+  maxBuffer = 1024 * 1024
+): SpawnSyncReturns<string> {
+  return spawnSync(command, args, { cwd, encoding: "utf8", maxBuffer });
 }
 
 function requireGitSuccess(
@@ -517,7 +527,8 @@ function runAnalyzer(
       "json",
       "--quiet",
     ],
-    root
+    root,
+    ANALYZER_MAX_BUFFER
   );
   if (child.error) {
     fail(`could not start fallow for '${command}': ${child.error.message}`);
