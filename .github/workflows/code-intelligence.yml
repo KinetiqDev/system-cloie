@@ -1,0 +1,52 @@
+name: Code Intelligence
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fallow-audit-gate:
+    name: Fallow Audit Gate
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10.30.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require base SHA
+        if: github.event.pull_request.base.sha == ''
+        run: echo "missing pull request base SHA" && exit 2
+
+      - name: Run fallow audit
+        run: pnpm exec tsx scripts/run-fallow-audit.ts "$BASE_SHA"
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+      - name: Upload fallow audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fallow-audit-${{ github.event.pull_request.number }}
+          path: artifacts/fallow/
+          if-no-files-found: ignore

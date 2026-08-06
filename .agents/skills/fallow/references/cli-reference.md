@@ -1698,7 +1698,7 @@ Available on all commands:
 | `--summary` | `bool` | `false` | Show only category counts without individual items. Useful for dashboards and quick overviews |
 | `--ci` | `bool` | `false` | CI mode: `--format sarif --fail-on-issues --quiet` |
 | `--fail-on-issues` | `bool` | `false` | Exit 1 if any issues found (promotes `warn` to `error`) |
-| `--sarif-file` | `string` | - | Write SARIF output to a file instead of stdout |
+| `--sarif-file` | `string` | - | Write SARIF output to a file instead of stdout. **Known bug (verified on fallow 2.54.3, native binary): the flag parses but never writes the file — SARIF only reaches stdout.** Capture SARIF via a separate run with `--format sarif` and redirect stdout (see `scripts/run-fallow-audit.ts`) |
 | `-o, --output-file` | `string` | - | Write the report to a file instead of stdout, for any --format (no ANSI codes). Useful on large projects where the terminal scrollback truncates the top. Progress and the confirmation stay on stderr |
 | `--report-path-prefix` | `string` | - | Prefix prepended to every path in the CI-facing formats (`github-annotations`, `github-summary`, `codeclimate`, `review-github`, `review-gitlab`). CI platforms address files by repository-root-relative path, so when the analyzed project lives in a subdirectory (e.g. `packages/app/`), paths need that offset. fallow detects the offset via the git toplevel automatically; this flag overrides the detection. Pass an empty string to disable rebasing and emit paths relative to `--root` |
 | `--fail-on-regression` | `bool` | `false` | Fail if issue count increased beyond tolerance vs a regression baseline |
