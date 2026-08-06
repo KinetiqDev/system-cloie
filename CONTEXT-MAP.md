@@ -6,6 +6,7 @@
 - [Academic Calendar](./src/features/academic-calendar/CONTEXT.md) - defines school years, semesters, terms, and active academic periods.
 - [Course Catalog and Assignments](./src/features/course-assignments/CONTEXT.md) - defines courses, class sections, teaching assignments, and evaluation scopes.
 - [Academic Structure](./src/features/academic-structure/CONTEXT.md) - defines academic programs and majors offered by the college.
+- [Design System](./src/features/design-system/CONTEXT.md) - defines root semantic tokens, unified appearance preferences (Light, Dark, System), protected visual showcase, and production-surface inventory.
 
 ## Relationships
 
@@ -15,3 +16,4 @@
 - **Identity and Access -> Academic Calendar**: Deferred enrollment depends on whether an active academic term exists.
 - **Course Catalog and Assignments -> Academic Calendar**: Course assignments are scoped to the active academic period.
 - **Academic Structure -> Course Catalog and Assignments**: Program-specific courses and course assignments reference the academic program that owns or scopes them.
+- **Design System -> All Contexts**: Design System provides shared semantic tokens, appearance resolution, and production component primitives consumed across all feature visual surfaces.
