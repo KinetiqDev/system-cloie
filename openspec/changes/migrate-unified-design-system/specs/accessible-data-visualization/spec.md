@@ -11,7 +11,7 @@ The system SHALL render quantitative analytics with existing Recharts through sh
 #### Scenario: Chart has more than five categories
 - **GIVEN** a chart contains more than five distinct categories
 - **WHEN** the chart is rendered
-- **THEN** repeated categorical colors SHALL be supplemented by deterministic markers, lines, patterns, direct labels, or another non-color distinction and SHALL NOT expand the raw palette beyond the approved five-role palette.
+- **THEN** categories that repeat a color SHALL also receive a deterministic mark-level distinction through a pattern, marker, line style, or equivalent graphical treatment, SHALL remain identifiable through direct labels or visible legend text, and SHALL NOT expand the raw palette beyond the approved five-role palette.
 
 #### Scenario: Chart has no data or fails to load
 - **GIVEN** authorized chart data is absent, loading, or unavailable due to an error
@@ -32,7 +32,7 @@ The system SHALL present visible legends and keyboard-reachable or equivalent ex
 - **THEN** the system SHALL communicate the series or category name and exact value through an accessible tooltip, label, table, or equivalent control.
 
 ### Requirement: Chart data remains server-authorized and privacy-narrowed
-The system SHALL continue to prepare and authorize analytics data in Server Components or server-only services before passing minimal serializable aggregate data to client-side Recharts or word-cloud rendering. The concurrent `improve-navigation-rendering-and-caching` change SHALL complete server-side payload narrowing as a prerequisite before this change renders any chart visualization. Chart client components and Server Action chart DTOs SHALL NOT receive respondent identifiers, account emails, raw response rows, raw submitted qualitative response text, or unused authorization context. Payloads SHALL contain only display metadata, quantitative aggregates, word-frequency tokens, response counts, and allowed chart labels.
+The system SHALL continue to prepare and authorize analytics data in Server Components or server-only services before passing minimal serializable aggregate data to client-side Recharts or word-cloud rendering. Chart client components and Server Action chart payloads SHALL preserve the existing aggregate-only privacy contract and SHALL NOT receive respondent identifiers, account emails, raw response rows, raw submitted qualitative response text, or unused authorization context. Payloads SHALL contain only display metadata, quantitative aggregates, word-frequency tokens, response counts, and allowed chart labels.
 
 #### Scenario: Authorized analytics chart is rendered
 - **GIVEN** an authorized role opens an analytics surface
@@ -40,11 +40,11 @@ The system SHALL continue to prepare and authorize analytics data in Server Comp
 - **THEN** the server SHALL have enforced the existing role and scope rules before the data reaches the client component.
 
 #### Scenario: Qualitative word cloud is rendered
-- **GIVEN** the concurrent rendering change has completed the Faculty analytics DTO privacy narrowing
+- **GIVEN** the existing Faculty analytics payload contains only authorized aggregates and server-computed word-frequency data
 - **WHEN** the word cloud is displayed
 - **THEN** its visual colors SHALL resolve from the approved chart tokens and it SHALL receive only server-computed word-frequency tokens, response counts, and summary data rather than raw submitted qualitative response text.
 
 #### Scenario: Faculty selects analytics evaluations
-- **GIVEN** a Faculty user selects one or more Course-bound evaluations in the interactive analytics surface and the concurrent rendering change has completed the DTO narrowing
+- **GIVEN** a Faculty user selects one or more Course-bound evaluations in the interactive analytics surface
 - **WHEN** the server-authorized analytics result is serialized
 - **THEN** it SHALL contain only chart aggregates, word-frequency tokens, response counts, and display metadata required by the charts, and SHALL exclude raw submitted qualitative response text, response rows, respondent identifiers, and account emails.

@@ -81,3 +81,16 @@ The system SHALL retain Manrope for headings and Inter for body/control text, us
 - **GIVEN** a shared control contains only an icon
 - **WHEN** the control is rendered
 - **THEN** it SHALL use a Lucide icon, have an accessible name, preserve an adequate hit area of at least 44 by 44 CSS pixels, and use the semantic foreground and focus roles.
+
+### Requirement: Production visual migration has complete ownership
+The system SHALL maintain an audited inventory of production UI surfaces covered by the unified design-system migration. Every inventory entry SHALL have one completed migration owner before primary Production appearance rollout can be accepted.
+
+#### Scenario: Repository readiness is evaluated
+- **GIVEN** the migration slices are complete
+- **WHEN** the repository readiness gate audits production UI
+- **THEN** every audited route and shared component SHALL have an owning completed slice and SHALL have no unreviewed raw palette, forbidden decorative effect, sub-`0.75rem` text, or component-local Light/Dark palette.
+
+#### Scenario: A new violation is discovered at readiness
+- **GIVEN** the readiness audit finds a production surface outside the approved inventory or an unresolved violation
+- **WHEN** readiness is evaluated
+- **THEN** the gate SHALL fail and the surface SHALL receive an explicit migration owner before rollout; the gate SHALL NOT silently repair unowned production code.
