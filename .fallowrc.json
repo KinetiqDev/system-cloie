@@ -1,4 +1,53 @@
 {
+  // Fallow policy for System CLOIE (see openspec/changes/integrate-fallow-code-intelligence).
+  // Exact pin: fallow@2.54.3 in package.json; every command runs through `pnpm exec fallow`.
+
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "ignoreDependencies": ["supabase", "shadcn"]
+
+  // react-dom is a Next.js production requirement even though static analysis sees it
+  // only in test files. It stays in `dependencies`; the exception is recorded here so
+  // no test-only-dependency finding is produced.
+  "ignoreDependencies": ["supabase", "shadcn", "react-dom"],
+
+  // src/app/globals.css imports shadcn/tailwind.css, which exists in the installed
+  // package but is unresolved by Fallow's CSS resolver. The finding stays visible as a
+  // warning; it is not disabled and not treated as an error.
+  "rules": {
+    "unresolved-imports": "warn"
+  },
+
+  // Identity baselines committed under fallow-baselines/ (regenerated only from a
+  // clean, up-to-date main checkout). `fallow audit` removes baseline-matched
+  // findings from its verdict.
+  "audit": {
+    "deadCodeBaseline": "fallow-baselines/dead-code.json",
+    "healthBaseline": "fallow-baselines/health.json",
+    "dupesBaseline": "fallow-baselines/dupes.json"
+  },
+
+  // Architecture zones classify every source path group. Zone order matters: a file
+  // belongs to the first zone whose pattern matches. Only ui-primitives and shared
+  // carry rules during the initial rollout; every other zone is unrestricted.
+  "boundaries": {
+    "zones": [
+      { "name": "tests", "patterns": ["src/__tests__/**", "**/*.test.ts", "**/*.test.tsx"] },
+      { "name": "routes", "patterns": ["src/app/**", "src/proxy.ts"] },
+      { "name": "server-actions", "patterns": ["src/lib/actions/**"] },
+      { "name": "ui-primitives", "patterns": ["src/components/ui/**"] },
+      { "name": "features", "patterns": ["src/features/**"] },
+      { "name": "shared-presentation", "patterns": ["src/components/**"] },
+      { "name": "shared", "patterns": ["src/lib/**"] },
+      { "name": "hooks", "patterns": ["src/hooks/**"] },
+      { "name": "types", "patterns": ["src/types/**"] },
+      { "name": "scripts", "patterns": ["scripts/**"] },
+      { "name": "prisma", "patterns": ["prisma/**"] }
+    ],
+    "rules": [
+      // UI primitives may compose peers (automatic) and shared infrastructure only.
+      { "from": "ui-primitives", "allow": ["shared"] },
+      // Shared infrastructure may compose peers (automatic) and generated/application
+      // types only; src/lib/actions/** is classified as server-actions before shared.
+      { "from": "shared", "allow": ["types"] }
+    ]
+  }
 }

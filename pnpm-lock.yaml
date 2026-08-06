@@ -118,7 +118,7 @@ importers:
         specifier: 16.2.4
         version: 16.2.4(@typescript-eslint/parser@8.58.2(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
       fallow:
-        specifier: ^2.54.3
+        specifier: 2.54.3
         version: 2.54.3
       jsdom:
         specifier: ^29.0.2

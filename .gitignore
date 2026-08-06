@@ -18,6 +18,10 @@
 /.playwright-mcp
 /.fallow
 
+# fallow baseline refresh transaction artifacts
+/.fallow-staging-*
+/.fallow-baselines.lock*
+
 # next.js
 /.next/
 /out/
