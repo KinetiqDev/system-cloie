@@ -10,7 +10,7 @@ System CLOIE will support Light, Dark, and System appearance resolution through 
 
 Appearance storage carries no authorization value. No service worker, offline cache, or persistent application cache is added. The showcase is a static visual reference and must not add `navigator.onLine`, a service worker, offline guards, or mutation behavior.
 
-The first-paint appearance bootstrap mechanism depends on deployment Content Security Policy evidence. The CSP feasibility investigation is a blocking task before appearance implementation proceeds; the chosen mechanism (inline `'unsafe-inline'`, same-origin external bootstrap, hash-based SRI, or nonce) must operate with the existing `src/proxy.ts` session-refresh flow and the streamed `Suspense` root layout.
+The first-paint appearance bootstrap is a same-origin external script loaded synchronously from the root document head. This change does not introduce a repository CSP: Next.js emits inline framework and RSC bootstrap scripts, so `script-src 'self'` alone would break hydration. `src/proxy.ts` remains unchanged. Effective primary Production and dedicated-demo response headers must be confirmed before implementation and at rollout readiness. A conflicting host-injected policy blocks implementation until this ADR is amended with reviewed evidence.
 
 ## Context
 
@@ -30,9 +30,9 @@ Rejected. Storing appearance in a user profile would add Prisma schema changes, 
 
 Rejected. It has no current dependency, the root `.dark` selector already exists in `globals.css`, and the required behavior (resolve preference, apply root class, listen for OS changes) is small and auditable in project-owned code.
 
-### Nonce-based CSP as default
+### Inline, SRI-only, and nonce-based bootstrap
 
-Rejected as a casual fallback. Nonce CSP forces dynamic rendering on every page, removes static/CDN benefits, and is incompatible with Partial Prerendering. The feasibility task must compare inline `'unsafe-inline'` bootstrap, same-origin external bootstrap, hash-based SRI policy, and nonce policy before the implementation path is chosen.
+Rejected. Inline bootstrap requires `'unsafe-inline'`. Experimental build-time SRI cannot cover a dynamically generated inline bootstrap. Nonce CSP forces dynamic rendering on every page, removes static/CDN benefits, and is incompatible with Partial Prerendering. The same-origin external script preserves static rendering and the existing streamed shell without weakening `script-src` or changing session middleware.
 
 ## Decision Details
 
@@ -64,9 +64,11 @@ Rejected as a casual fallback. Nonce CSP forces dynamic rendering on every page,
 
 ### 4. CSP and first-paint mechanism
 
-- The current effective deployment CSP headers need inspection. The repository has no CSP in `src/proxy.ts` or `next.config.ts`.
-- A dedicated CSP feasibility task must investigate before appearance implementation: compare inline bootstrap (`'unsafe-inline'`), same-origin external bootstrap, hash-based SRI (experimental, Next.js 16 App Router), and nonce policy through `src/proxy.ts`.
-- Nonce CSP forces all pages to dynamic rendering and removes static/CDN benefits. It cannot be a casual fallback clause.
+- `public/appearance-bootstrap.js` is a small synchronous same-origin script loaded from `src/app/layout.tsx` before application content. It parses the stable browser-storage value, applies or removes `.dark`, and sets the resolved color scheme before visible paint.
+- This change does not add a CSP header in `next.config.ts` or `src/proxy.ts`. A future strict-CSP change must choose and test a complete Next.js-supported nonce or experimental SRI strategy; it cannot protect only the appearance script while blocking framework scripts.
+- `src/proxy.ts` and `src/lib/supabase/middleware.ts` remain unchanged. The mechanism does not add a nonce, call `connection()`, make routes dynamic, or alter the streamed `Suspense` shell.
+- Effective headers on primary Production and dedicated demo were not discoverable from repository or GitHub deployment metadata. Before implementation, the owning ticket must inspect both deployed origins and verify the complete production build: appearance bootstrap, hydration, client navigation, streamed RSC payloads, and a representative Server Action. A host-injected policy conflict stops implementation and requires a reviewed ADR update; it is not silently bypassed.
+- Rollback removes the external script insertion while retaining safe Light tokens and the fail-closed release setting.
 
 ## Consequences
 
@@ -80,7 +82,7 @@ Rejected as a casual fallback. Nonce CSP forces dynamic rendering on every page,
 ### Negative
 
 - Two separate controls (avatar menu and Settings Appearance) must remain synchronized; the appearance provider is the single source of truth.
-- The CSP feasibility task is a blocking dependency before appearance selection reaches any deployment.
+- Effective deployed-header confirmation is a blocking implementation precondition and a repeated readiness check.
 - Showcase denial under streamed layouts may produce not-found UI rather than an HTTP 404 until implementation proves the earlier check.
 - The server-owned rollout setting adds an operator step that could be missed if not documented in the release runbook.
 
