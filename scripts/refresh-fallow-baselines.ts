@@ -1,21 +1,28 @@
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import {
   existsSync,
-  mkdirSync,
+  lstatSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   renameSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 
 const SCHEMA_VERSION = 4;
 const FALLOW_VERSION = "2.54.3";
+
+const BASELINES_DIR_NAME = "fallow-baselines";
+const PREVIOUS_DIR_NAME = ".fallow-baselines-previous";
+const LOCK_FILE_NAME = ".fallow-baselines.lock";
+const STAGING_PREFIX = ".fallow-staging-";
 
 interface AnalyzerSpec {
   command: string;
@@ -60,23 +67,41 @@ Options:
   -h, --help      Print this help and exit without touching git or analyzers
 
 Environment:
-  FALLOW_BIN      Path to the fallow binary (internal test seam)
+  FALLOW_BIN                    Path to the fallow binary (internal test seam)
+  FALLOW_PUBLISH_FAILPOINT      'after-park' | 'after-swap' (internal test seam that
+                                injects a failure at that publish step)
 
 Guards:
   - the checkout must be a git worktree on main, not a detached HEAD
   - git status must be clean, ignoring nothing (tracked and untracked)
   - an 'origin' remote must exist and origin/main must be fetchable
   - HEAD must match origin/main (neither behind nor ahead)
+  - HEAD and the worktree are rechecked immediately before publish
+  - transaction paths must not be symbolic links (refused)
+  - a single-writer lock (exclusively created, never reclaimed automatically)
+    prevents concurrent refreshes; a lock left by a crashed run is refused
+    with removal instructions, and the interrupted generation state is healed
+    by the next run once the lock is removed
 
 Transaction:
   all three analyzers run into a staging directory; every output is validated
-  (schema/version identity and baseline structure) before any tracked baseline
-  is replaced. Any failure removes the staging output and leaves every prior
-  baseline byte-for-byte unchanged.
+  (schema/version identity and baseline structure) before publication. The
+  complete validated generation is then published as one directory swap with an
+  explicit commit point: the current fallow-baselines/ generation is parked at
+  .fallow-baselines-previous, the staged generation is renamed into
+  fallow-baselines/ (the commit point; readers never observe a mixed
+  generation, though they may briefly observe none), the installed generation
+  is re-validated, and the parked generation is removed. Any failure before the
+  commit point restores the previous generation byte-for-byte and removes all
+  temporary output. An interruption is healed by the next run (after the
+  crashed run's lock is removed), which restores the previous generation or
+  completes a fully installed commit. After the commit point, removal of the
+  parked generation is deferred cleanup: a failure to delete it is reported as
+  a warning and completed by the next run, never as a rollback.
 
 Exit codes:
   0  baselines refreshed
-  1  guard, analyzer, or validation failure`;
+  1  guard, analyzer, validation, or transaction failure`;
 
 function printUsage(): void {
   process.stdout.write(`${USAGE}\n`);
@@ -96,11 +121,15 @@ function requireGitSuccess(
   cwd: string
 ): string {
   if (child.error) {
-    fail(`refuse to refresh baselines: could not run ${description} in ${cwd}: ${child.error.message}`);
+    fail(
+      `refuse to refresh baselines: could not run ${description} in ${cwd}: ${child.error.message}`
+    );
   }
   if (child.status !== 0) {
     const detail = child.stderr.trim() || child.stdout.trim();
-    fail(`refuse to refresh baselines: ${description} failed in ${cwd}${detail ? `: ${detail}` : ""}`);
+    fail(
+      `refuse to refresh baselines: ${description} failed in ${cwd}${detail ? `: ${detail}` : ""}`
+    );
   }
   return child.stdout.trim();
 }
@@ -202,6 +231,228 @@ function validateBaselineFile(baselinePath: string, requiredKeys: string[]): voi
   }
 }
 
+function refuseSymlinkOrNonDirectory(path: string, description: string): void {
+  let stats;
+  try {
+    stats = lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+  if (stats.isSymbolicLink()) {
+    fail(`refuse to refresh baselines: ${description} '${path}' must not be a symbolic link`);
+  }
+  if (!stats.isDirectory()) {
+    fail(`refuse to refresh baselines: ${description} '${path}' is not a directory`);
+  }
+}
+
+function acquireLock(root: string): string {
+  const lockFile = join(root, LOCK_FILE_NAME);
+  const ownContent = `${process.pid} ${readProcessStartTime(process.pid)} ${randomToken()}\n`;
+  try {
+    writeFileSync(lockFile, ownContent, { flag: "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+      throw error;
+    }
+    // The lock exists. Locks are never reclaimed automatically: a path-based
+    // probe-then-replace cannot be made atomic on POSIX, so automatic takeover
+    // could displace a live refresh. Refuse with diagnostics and explicit
+    // recovery instructions instead.
+    let recorded: string;
+    try {
+      recorded = readFileSync(lockFile, "utf8").trim();
+    } catch {
+      recorded = "(unreadable)";
+    }
+    fail(
+      `refuse to refresh baselines: another refresh appears to be running (lock '${lockFile}' records '${recorded}'); if no refresh is running, remove the lock file and re-run to recover any interrupted refresh`
+    );
+  }
+  return lockFile;
+}
+
+function randomToken(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function readProcessStartTime(pid: number): number {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    const afterComm = stat
+      .slice(stat.lastIndexOf(")") + 1)
+      .trim()
+      .split(/\s+/);
+    return Number(afterComm[19] ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+function removeOrphanedStagingDirs(root: string): void {
+  // Under the exclusive lock, any staging directory present was abandoned by a
+  // crashed run (a live run holds the lock), so removal is safe.
+  for (const entry of readdirSync(root)) {
+    if (entry.startsWith(STAGING_PREFIX)) {
+      rmSync(join(root, entry), { recursive: true, force: true });
+    }
+  }
+}
+
+function failpoint(name: string): void {
+  if (process.env.FALLOW_PUBLISH_FAILPOINT === name) {
+    fail(`injected publish failure at '${name}' (FALLOW_PUBLISH_FAILPOINT test seam)`);
+  }
+}
+
+function assertStillCleanMain(root: string, headSha: string): void {
+  const current = requireGitSuccess(
+    runCommand("git", ["rev-parse", "HEAD"], root),
+    "git rev-parse HEAD",
+    root
+  );
+  if (current !== headSha) {
+    fail(
+      "refuse to publish baselines: HEAD moved while the analyzers ran; re-run the refresh on a stable checkout"
+    );
+  }
+  const status = runCommand("git", ["status", "--porcelain"], root);
+  if (status.error || status.status !== 0 || status.stdout.trim() !== "") {
+    fail(
+      "refuse to publish baselines: worktree changed while the analyzers ran; re-run the refresh on a stable checkout"
+    );
+  }
+}
+
+function recoverInterruptedPublish(root: string): void {
+  const baselinesDir = join(root, BASELINES_DIR_NAME);
+  const previousDir = join(root, PREVIOUS_DIR_NAME);
+  if (!existsSync(previousDir)) {
+    return;
+  }
+  refuseSymlinkOrNonDirectory(previousDir, "interrupted refresh state");
+  if (existsSync(baselinesDir)) {
+    refuseSymlinkOrNonDirectory(baselinesDir, "installed baseline generation");
+    try {
+      for (const analyzer of ANALYZERS) {
+        validateBaselineFile(join(baselinesDir, analyzer.file), analyzer.requiredKeys);
+      }
+    } catch (error) {
+      // The installed generation is invalid (e.g. a previous rollback could not
+      // remove it); quarantine it, then restore the known-good parked
+      // generation. The quarantine preserves the invalid generation as
+      // diagnostic evidence if the restore fails.
+      const quarantineDir = join(root, `${BASELINES_DIR_NAME}.invalid`);
+      try {
+        renameSync(baselinesDir, quarantineDir);
+        renameSync(previousDir, baselinesDir);
+        rmSync(quarantineDir, { recursive: true, force: true });
+      } catch (restoreError) {
+        fail(
+          `refuse to refresh baselines: interrupted refresh left an invalid installed generation (${error instanceof Error ? error.message : String(error)}) and restoring the previous generation failed (${restoreError instanceof Error ? restoreError.message : String(restoreError)}); inspect '${quarantineDir}' and '${previousDir}' manually`
+        );
+      }
+      console.log(
+        "PASS recovered an interrupted refresh: restored the previous baseline generation"
+      );
+      return;
+    }
+    rmSync(previousDir, { recursive: true, force: true });
+    console.log(
+      "PASS recovered an interrupted refresh: completed a fully installed baseline generation"
+    );
+    return;
+  }
+  renameSync(previousDir, baselinesDir);
+  console.log("PASS recovered an interrupted refresh: restored the previous baseline generation");
+}
+
+function publishGeneration(stagingDir: string, baselinesDir: string, previousDir: string): void {
+  const hadPrevious = existsSync(baselinesDir);
+  if (hadPrevious) {
+    renameSync(baselinesDir, previousDir);
+  }
+  failpoint("after-park");
+  renameSync(stagingDir, baselinesDir);
+  failpoint("after-swap");
+  try {
+    for (const analyzer of ANALYZERS) {
+      validateBaselineFile(join(baselinesDir, analyzer.file), analyzer.requiredKeys);
+    }
+  } catch (error) {
+    try {
+      if (hadPrevious) {
+        const quarantineDir = join(dirname(baselinesDir), `${BASELINES_DIR_NAME}.invalid`);
+        renameSync(baselinesDir, quarantineDir);
+        renameSync(previousDir, baselinesDir);
+        rmSync(quarantineDir, { recursive: true, force: true });
+      } else {
+        rmSync(baselinesDir, { recursive: true, force: true });
+      }
+    } catch (rollbackError) {
+      const combined = new Error(
+        `baseline refresh failed: ${error instanceof Error ? error.message : String(error)}; restoring the previous generation also failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+      );
+      (combined as { rollbackIncomplete?: boolean }).rollbackIncomplete = true;
+      throw combined;
+    }
+    throw error;
+  }
+  if (hadPrevious) {
+    try {
+      rmSync(previousDir, { recursive: true, force: true });
+    } catch (error) {
+      console.warn(
+        `WARN could not remove the previous generation '${previousDir}' (${error instanceof Error ? error.message : String(error)}); it will be cleaned up by the next refresh`
+      );
+    }
+  }
+}
+
+function rollbackFailedPublish(
+  baselinesDir: string,
+  previousDir: string,
+  stagingDir: string,
+  originalError: unknown
+): never {
+  try {
+    if (existsSync(previousDir)) {
+      if (existsSync(baselinesDir)) {
+        if ((originalError as { rollbackIncomplete?: boolean }).rollbackIncomplete) {
+          // The invalid generation could not be removed; the parked generation is
+          // the only known-good copy. Leave both in place for manual recovery.
+          console.warn(
+            `WARN refusing to delete the parked generation '${previousDir}': the installed generation could not be rolled back; inspect both directories manually`
+          );
+        } else {
+          // The commit point passed: the new generation is installed and
+          // reader-visible. Complete the commit by dropping the parked generation.
+          rmSync(previousDir, { recursive: true, force: true });
+        }
+      } else {
+        // The commit point never passed: restore the previous generation.
+        renameSync(previousDir, baselinesDir);
+      }
+    }
+  } catch (rollbackError) {
+    throw new Error(
+      `baseline refresh failed: ${originalError instanceof Error ? originalError.message : String(originalError)}; rollback also failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+    );
+  } finally {
+    try {
+      rmSync(stagingDir, { recursive: true, force: true });
+    } catch (cleanupError) {
+      console.warn(
+        `WARN could not remove the staging directory '${stagingDir}' (${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}); it will be cleaned up by the next refresh`
+      );
+    }
+  }
+  throw originalError;
+}
+
 function resolveFallowBin(): string {
   const override = process.env.FALLOW_BIN;
   if (override) {
@@ -246,33 +497,50 @@ function runAnalyzer(
     validateReport(parseReport(child.stdout));
     validateBaselineFile(baselinePath, requiredKeys);
   } catch (error) {
+    const detail = child.stderr.trim();
     fail(
-      `fallow '${command}' failed validation: ${error instanceof Error ? error.message : String(error)}`
+      `fallow '${command}' failed validation: ${error instanceof Error ? error.message : String(error)}${detail ? `; stderr: ${detail}` : ""}`
     );
   }
 }
 
 function refreshBaselines(root: string): void {
   const fallowBin = resolveFallowBin();
-  assertCleanUpToDateMain(root);
+  const baselinesDir = join(root, BASELINES_DIR_NAME);
+  const previousDir = join(root, PREVIOUS_DIR_NAME);
 
-  const baselinesDir = join(root, "fallow-baselines");
-  mkdirSync(baselinesDir, { recursive: true });
-  const stagingDir = mkdtempSync(join(baselinesDir, ".staging-"));
+  refuseSymlinkOrNonDirectory(baselinesDir, "baselines directory");
+  refuseSymlinkOrNonDirectory(previousDir, "recovery directory");
 
+  const lockFile = acquireLock(root);
   try {
-    for (const analyzer of ANALYZERS) {
-      runAnalyzer(fallowBin, root, stagingDir, analyzer);
-      console.log(`PASS fallow ${analyzer.command} produced ${analyzer.file}`);
-    }
+    removeOrphanedStagingDirs(root);
+    recoverInterruptedPublish(root);
 
-    for (const analyzer of ANALYZERS) {
-      renameSync(join(stagingDir, analyzer.file), join(baselinesDir, analyzer.file));
+    assertCleanUpToDateMain(root);
+    const headSha = requireGitSuccess(
+      runCommand("git", ["rev-parse", "HEAD"], root),
+      "git rev-parse HEAD",
+      root
+    );
+
+    const stagingDir = mkdtempSync(join(root, STAGING_PREFIX));
+
+    try {
+      for (const analyzer of ANALYZERS) {
+        runAnalyzer(fallowBin, root, stagingDir, analyzer);
+        console.log(`PASS fallow ${analyzer.command} produced ${analyzer.file}`);
+      }
+
+      assertStillCleanMain(root, headSha);
+      publishGeneration(stagingDir, baselinesDir, previousDir);
+    } catch (error) {
+      rollbackFailedPublish(baselinesDir, previousDir, stagingDir, error);
     }
-    rmSync(stagingDir, { recursive: true, force: true });
-  } catch (error) {
-    rmSync(stagingDir, { recursive: true, force: true });
-    throw error;
+  } finally {
+    // The lock is exclusively ours: nothing else ever removes it, so release
+    // is unconditional.
+    rmSync(lockFile, { force: true });
   }
 
   console.log("PASS baselines refreshed from a clean, up-to-date main checkout");
@@ -304,12 +572,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       printUsage();
       process.exit(0);
     }
-    if (!existsSync(root) || !statSync(root).isDirectory()) {
+    const resolvedRoot = resolve(root);
+    if (!existsSync(resolvedRoot) || !statSync(resolvedRoot).isDirectory()) {
       fail(`--root '${root}' is not a directory`);
     }
-    refreshBaselines(root);
+    refreshBaselines(resolvedRoot);
   } catch (error) {
-    console.error(error instanceof Error ? error.message : `baseline refresh failed: ${String(error)}`);
+    console.error(
+      error instanceof Error ? error.message : `baseline refresh failed: ${String(error)}`
+    );
     process.exitCode = 1;
   }
 }

@@ -35,19 +35,19 @@ The affected domain contexts are Identity and Access, Academic Calendar, Course 
 
 The scripts expose direct analyzer commands and a small report orchestrator. The orchestrator does not parse, re-score, or suppress Fallow JSON; it only preserves every report and gives Fallow's documented process codes explicit workflow semantics:
 
-| Script | Purpose | Exit behavior |
-| --- | --- | --- |
-| `fallow:audit` | Changed-file audit; caller supplies a base ref | Exit `0` for pass/warn, `1` for unmatched error-severity findings, `2` for execution/configuration errors |
-| `fallow:dead-code` | Complete dead-code/circular/seam inventory | Direct report command |
-| `fallow:dupes` | Complete clone inventory | Direct report command |
-| `fallow:health` | Complete score, hotspot, and refactoring-target report | Direct report command |
-| `fallow:flags` | Complete feature-flag inventory | Direct report command |
-| `fallow:reports` | Run and retain the complete report set | Treat process codes `0` and `1` as completed report states; fail on `2` or any other execution error |
-| `fallow:baseline` | Explicitly regenerate all three committed identity baselines | Maintenance-only command |
+| Script             | Purpose                                                      | Exit behavior                                                                                             |
+| ------------------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `fallow:audit`     | Changed-file audit; caller supplies a base ref               | Exit `0` for pass/warn, `1` for unmatched error-severity findings, `2` for execution/configuration errors |
+| `fallow:dead-code` | Complete dead-code/circular/seam inventory                   | Direct report command                                                                                     |
+| `fallow:dupes`     | Complete clone inventory                                     | Direct report command                                                                                     |
+| `fallow:health`    | Complete score, hotspot, and refactoring-target report       | Direct report command                                                                                     |
+| `fallow:flags`     | Complete feature-flag inventory                              | Direct report command                                                                                     |
+| `fallow:reports`   | Run and retain the complete report set                       | Treat process codes `0` and `1` as completed report states; fail on `2` or any other execution error      |
+| `fallow:baseline`  | Explicitly regenerate all three committed identity baselines | Maintenance-only command                                                                                  |
 
 `scripts/run-fallow-reports.ts` owns complete-report process handling. For each report command it writes JSON to stdout capture and supplies `--sarif-file` for a companion SARIF file, records the per-command result, and retains artifacts when Fallow returns `1` for findings. It exits nonzero only for `2`, a spawn/signal failure, or another unexpected execution failure. This lets scheduled, manual, and post-merge reports retain legacy evidence without presenting analyzer findings as workflow failures.
 
-`scripts/refresh-fallow-baselines.ts` owns the multi-command baseline transaction. It writes all three matching Fallow subcommands to a temporary directory, accepts their normal finding exit code while rejecting runtime/config failures, validates each output's schema/version, and replaces `fallow-baselines/dead-code.json`, `fallow-baselines/health.json`, and `fallow-baselines/dupes.json` only after the complete set is valid. A failed or interrupted command leaves every prior baseline byte-for-byte unchanged and cleans temporary output. It records only static-analysis identifiers, never environment values or application data.
+`scripts/refresh-fallow-baselines.ts` owns the multi-command baseline transaction. It writes all three matching Fallow subcommands to a temporary staging directory, accepts their normal finding exit code while rejecting runtime/config failures, and validates each output's schema/version before publication. The complete validated generation is then published as one directory swap with an explicit commit point: the current `fallow-baselines/` generation is parked at `.fallow-baselines-previous`, the staged generation is renamed into `fallow-baselines/` (the commit point; readers never observe a mixed generation, though they may briefly observe none), the installed generation is re-validated, and the parked generation is removed. Any failure before the commit point restores the previous generation byte-for-byte and cleans all temporary output. An interruption is healed by the next run (after the crashed run's lock is removed), which restores the previous generation or completes a fully installed commit. After the commit point, removal of the parked generation is deferred cleanup, never a rollback. A single-writer lock file is created exclusively and never reclaimed automatically, so a concurrent or crashed refresh is refused with removal instructions. It records only static-analysis identifiers, never environment values or application data.
 
 **Alternative rejected:** invoking `npx fallow` or a globally installed binary. Either can select a version different from the lockfile and invalidate baseline identity semantics. **Alternative rejected:** building a custom Node parser/scorecard around Fallow JSON. The CLI already owns its finding model, baseline matching, and severity behavior.
 
@@ -75,9 +75,9 @@ On a weekly schedule and `workflow_dispatch`, a non-blocking report job runs `pn
 
 `.fallowrc.json` declares zones for tests, routes/proxy, Server Actions, feature modules, shared presentation, UI primitives, shared infrastructure, hooks, generated/application types, and scripts/Prisma. It explicitly restricts only two current, zero-violation directions:
 
-| Importing zone | Allowed zones | Evidence |
-| --- | --- | --- |
-| `ui-primitives` (`src/components/ui/**`) | itself, `shared` (`src/lib/**`) | Current primitives import peers and `@/lib/utils`; they do not import features, routes, or shared presentation. |
+| Importing zone                                          | Allowed zones                    | Evidence                                                                                                                             |
+| ------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `ui-primitives` (`src/components/ui/**`)                | itself, `shared` (`src/lib/**`)  | Current primitives import peers and `@/lib/utils`; they do not import features, routes, or shared presentation.                      |
 | `shared` (`src/lib/**`, excluding `src/lib/actions/**`) | itself, `types` (`src/types/**`) | Shared infrastructure has no feature/route/presentation imports; Supabase adapters legitimately import the generated database types. |
 
 Fallow allows self imports automatically. `src/lib/actions/**` is classified before `src/lib/**` and is intentionally unrestricted because its established interface composes feature schemas and services. Routes, features, shared presentation, hooks, tests, scripts, and Prisma are classified for reporting but have no restrictive rule during this change.
@@ -98,7 +98,7 @@ New root `opencode.json` declares the `fallow` local MCP server as `pnpm exec fa
 4. Run `fix --dry-run` before any proposed Fallow fix; never run `fix --yes` in CI or as an unattended agent action.
 5. Treat static results as evidence. Verify Next.js entry points, Server Actions, generated code, public shadcn inventory, and dynamic consumers before editing.
 
-The documentation does not copy the untracked `.agents/skills/fallow/` into tracked configuration because its provenance is unknown and it describes capabilities beyond the installed analyzer. The repository-visible guidance only documents commands verified by `fallow@2.54.3`.
+The `.agents/skills/fallow/` directory is tracked in the repository and predates this change; this change does not extend it and does not rely on it. The repository-visible guidance in this design and in `AGENTS.md` only documents commands verified by `fallow@2.54.3` and always invokes Fallow through `pnpm exec fallow`.
 
 ### 6. Record the quality-policy decision and remediation intake
 
