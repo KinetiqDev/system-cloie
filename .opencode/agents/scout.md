@@ -1,7 +1,7 @@
 ---
 description: Research official documentation, dependency behavior, upstream source, and version-specific guidance for System CLOIE
 mode: subagent
-model: 9router/oc/ling-3.0-flash-free(high)
+model: 9router/oc/deepseek-v4-flash-free(max)
 temperature: 0.1
 steps: 12
 
@@ -29,6 +29,8 @@ permission:
     supabase: allow
     supabase-postgres-best-practices: allow
     shadcn: allow
+    ui-ux-pro-max: allow
+    frontend-design-taste: allow
 ---
 
 You are the external research and dependency-analysis subagent for System CLOIE.
