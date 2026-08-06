@@ -27,12 +27,12 @@ function walkDir(dir: string, extension: string): string[] {
 }
 
 describe("production-surface-inventory", () => {
-  it("discovers all production UI surfaces and asserts every surface has an inventory entry", () => {
+  it("discovers all production UI surfaces and asserts exact bidirectional inventory parity", () => {
     const discoveredTsx = [
       ...walkDir("src/app", ".tsx"),
       ...walkDir("src/components", ".tsx"),
       ...walkDir("src/features", ".tsx"),
-    ];
+    ].filter((f) => !f.includes("/features/design-system/"));
 
     const extraMetadataFiles = [
       "src/styles/tokens.css",
@@ -41,16 +41,22 @@ describe("production-surface-inventory", () => {
     ];
 
     const allDiscovered = Array.from(new Set([...discoveredTsx, ...extraMetadataFiles])).sort();
-    const inventoryPaths = new Set(PRODUCTION_SURFACE_INVENTORY.map((entry) => entry.path));
+    const discoveredSet = new Set(allDiscovered);
+    const inventoryPaths = PRODUCTION_SURFACE_INVENTORY.map((entry) => entry.path);
+    const inventorySet = new Set(inventoryPaths);
 
-    const missingSurfaces: string[] = [];
-    allDiscovered.forEach((surfacePath) => {
-      if (!inventoryPaths.has(surfacePath)) {
-        missingSurfaces.push(surfacePath);
-      }
-    });
+    const missingFromInventory = allDiscovered.filter((surfacePath) => !inventorySet.has(surfacePath));
+    const extraInInventory = inventoryPaths.filter((inventoryPath) => !discoveredSet.has(inventoryPath));
 
-    expect(missingSurfaces, `Discovered surfaces missing from inventory: ${missingSurfaces.join(", ")}`).toEqual([]);
+    expect(
+      missingFromInventory,
+      `Discovered surfaces missing from inventory: ${missingFromInventory.join(", ")}`
+    ).toEqual([]);
+
+    expect(
+      extraInInventory,
+      `Inventory entries absent from discovered production surface set: ${extraInInventory.join(", ")}`
+    ).toEqual([]);
   });
 
   it("passes comprehensive validation for full production surface inventory", () => {
@@ -91,6 +97,18 @@ describe("production-surface-inventory", () => {
     });
   });
 
+  it("properly classifies layout.tsx entries as category layout", () => {
+    const programHeadLayout = PRODUCTION_SURFACE_INVENTORY.find(
+      (e) => e.path === "src/app/(app)/program-head/programs/[programId]/layout.tsx"
+    );
+    expect(programHeadLayout?.category).toBe("layout");
+
+    const legalLayout = PRODUCTION_SURFACE_INVENTORY.find(
+      (e) => e.path === "src/app/(legal)/layout.tsx"
+    );
+    expect(legalLayout?.category).toBe("layout");
+  });
+
   it("properly classifies redirect and compatibility routes", () => {
     const redirects = PRODUCTION_SURFACE_INVENTORY.filter(
       (entry) => entry.disposition === "redirect"
@@ -126,39 +144,39 @@ describe("production-surface-inventory", () => {
     });
 
     it("rejects task disposition with missing or invalid taskId", () => {
-      const sampleMissing: InventoryEntry = {
+      const sampleMissing = {
         path: "src/app/page.tsx",
         disposition: "task",
         category: "route",
-      };
+      } as unknown as InventoryEntry;
       expect(validateInventoryEntry(sampleMissing, mockFileExists)).toContain(
         "Task-owned entry at src/app/page.tsx must have a valid taskId"
       );
 
-      const sampleInvalid: InventoryEntry = {
+      const sampleInvalid = {
         path: "src/app/page.tsx",
         disposition: "task",
         taskId: 99,
         category: "route",
-      };
+      } as InventoryEntry;
       expect(validateInventoryEntry(sampleInvalid, mockFileExists)).toContain(
         "Task ID 99 for src/app/page.tsx must be between 1 and 27"
       );
     });
 
     it("rejects non-task disposition with a taskId", () => {
-      const sample: InventoryEntry = {
+      const sample = {
         path: "src/app/page.tsx",
         disposition: "already_compliant",
         taskId: 5,
         category: "route",
-      };
+      } as unknown as InventoryEntry;
       expect(validateInventoryEntry(sample, mockFileExists)).toContain(
         "Non-task entry at src/app/page.tsx must not have a taskId"
       );
     });
 
-    it("rejects redirect, placeholder, or exception disposition without notes", () => {
+    it("rejects redirect, placeholder, generated, or exception disposition without notes", () => {
       const sampleRedirect: InventoryEntry = {
         path: "src/app/page.tsx",
         disposition: "redirect",
@@ -178,6 +196,15 @@ describe("production-surface-inventory", () => {
         'Entry with disposition "not_found_placeholder" at src/app/page.tsx must include non-empty explanatory notes'
       );
 
+      const sampleGenerated: InventoryEntry = {
+        path: "src/app/page.tsx",
+        disposition: "generated",
+        category: "generated",
+      };
+      expect(validateInventoryEntry(sampleGenerated, mockFileExists)).toContain(
+        'Entry with disposition "generated" at src/app/page.tsx must include non-empty explanatory notes'
+      );
+
       const sampleException: InventoryEntry = {
         path: "src/app/page.tsx",
         disposition: "approved_exception",
@@ -188,7 +215,7 @@ describe("production-surface-inventory", () => {
       );
     });
 
-    it("validates placeholder, generated, and approved_exception entries correctly", () => {
+    it("validates placeholder, generated, and approved_exception entries correctly when notes are provided", () => {
       const validPlaceholder: InventoryEntry = {
         path: "src/app/page.tsx",
         disposition: "not_found_placeholder",

@@ -32,5 +32,5 @@ _Avoid_: Unowned UI component, ambiguous migration slice, silent fallbacks
 
 1. **Rollout Gate**: Primary Production remains Light-only unless `CLOIE_APPEARANCE_ENABLED` is set to exact `"true"`. Unset, empty, or false forces Light before first paint.
 2. **Showcase Protection**: The `/design-system` route is available only in `development` and valid dedicated demo environments, and fails closed with a not-found UI in primary Production or malformed demo settings per ADR 0010.
-3. **Single Disposition Inventory**: Every auditable production surface file in `src/app`, `src/components`, and `src/features` has exactly one deterministic disposition (`task`, `already_compliant`, `redirect`, `not_found_placeholder`, `generated`, or `approved_exception`).
+3. **Single Disposition Inventory**: Every auditable production surface file in `src/app`, `src/components`, `src/features`, and `src/styles` has exactly one deterministic disposition (`task`, `already_compliant`, `redirect`, `not_found_placeholder`, `generated`, or `approved_exception`).
 4. **Preserved Product & Privacy Invariants**: Visual token migration must never alter SystemRole authorization, account state, navigation information hierarchy, routing behavior, or aggregate-only analytics privacy contracts (commit `8e2582a`).

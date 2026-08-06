@@ -1,11 +1,13 @@
-import fs from "fs";
-export type InventoryDisposition =
-  | 'task'
-  | 'already_compliant'
-  | 'redirect'
-  | 'not_found_placeholder'
-  | 'generated'
-  | 'approved_exception';
+export const INVENTORY_DISPOSITIONS = [
+  "task",
+  "already_compliant",
+  "redirect",
+  "not_found_placeholder",
+  "generated",
+  "approved_exception",
+] as const;
+
+export type InventoryDisposition = (typeof INVENTORY_DISPOSITIONS)[number];
 
 export type InventoryCategory =
   | 'ui_primitive'
@@ -15,29 +17,29 @@ export type InventoryCategory =
   | 'generated'
   | 'tokens';
 
-export interface InventoryEntry {
-  /** Project-relative path (e.g., src/components/ui/button.tsx) */
+export interface InventoryEntryBase {
+  /** Project-relative path (e.g., 'src/components/ui/button.tsx') */
   path: string;
-  /** Primary disposition for migration auditing */
-  disposition: InventoryDisposition;
-  /** Owning OpenSpec task slice number (1-27) if disposition is task */
-  taskId?: number;
   /** Surface category for reporting */
   category: InventoryCategory;
-  /** Mandatory explanatory notes for redirects, placeholders, exceptions, or generated surfaces */
+  /** Mandatory explanatory notes for redirects, placeholders, generated surfaces, or approved exceptions */
   notes?: string;
 }
+
+export type InventoryEntry =
+  | (InventoryEntryBase & {
+      disposition: 'task';
+      taskId?: number;
+    })
+  | (InventoryEntryBase & {
+      disposition: Exclude<InventoryDisposition, 'task'>;
+      taskId?: never;
+    });
 
 export const VALID_TASK_IDS: number[] = Array.from({ length: 27 }, (_, i) => i + 1);
 
 export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
-  {
-    "path": "src/__tests__/features/design-system/production-surface-inventory.test.ts",
-    "disposition": "task",
-    "taskId": 1,
-    "category": "feature_component",
-    "notes": "Migration prerequisites context and inventory"
-  },
+
   {
     "path": "src/app/(app)/alumni/dashboard/loading.tsx",
     "disposition": "task",
@@ -882,7 +884,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "path": "src/app/(app)/program-head/programs/[programId]/layout.tsx",
     "disposition": "task",
     "taskId": 14,
-    "category": "route"
+    "category": "layout"
   },
   {
     "path": "src/app/(app)/program-head/programs/[programId]/outcomes/loading.tsx",
@@ -1296,7 +1298,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "path": "src/app/(legal)/layout.tsx",
     "disposition": "task",
     "taskId": 25,
-    "category": "route"
+    "category": "layout"
   },
   {
     "path": "src/app/(legal)/privacy/page.tsx",
@@ -1951,20 +1953,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "taskId": 19,
     "category": "feature_component"
   },
-  {
-    "path": "src/features/design-system/CONTEXT.md",
-    "disposition": "task",
-    "taskId": 1,
-    "category": "feature_component",
-    "notes": "Migration prerequisites context and inventory"
-  },
-  {
-    "path": "src/features/design-system/data/production-surface-inventory.ts",
-    "disposition": "task",
-    "taskId": 1,
-    "category": "feature_component",
-    "notes": "Migration prerequisites context and inventory"
-  },
+
   {
     "path": "src/features/enrollments/components/enrollment-editor-dialog.tsx",
     "disposition": "task",
@@ -2269,16 +2258,23 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
 ];
 
 
-export function validateInventoryEntry(entry: InventoryEntry, fileExists: (p: string) => boolean = fs.existsSync): string[] {
+export function validateInventoryEntry(
+  entry: InventoryEntry,
+  fileExists?: (p: string) => boolean
+): string[] {
   const errors: string[] = [];
-  const validDispositions: InventoryDisposition[] = [
-    "task",
-    "already_compliant",
-    "redirect",
-    "not_found_placeholder",
-    "generated",
-    "approved_exception"
-  ];
+  const validDispositions: readonly InventoryDisposition[] = INVENTORY_DISPOSITIONS;
+  const checkExists =
+    fileExists ??
+    ((p: string) => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const fsModule = require("node:fs");
+        return fsModule.existsSync(p);
+      } catch {
+        return false;
+      }
+    });
 
   if (!entry.path || entry.path.trim().length === 0) {
     errors.push("Entry path must not be empty");
@@ -2292,10 +2288,14 @@ export function validateInventoryEntry(entry: InventoryEntry, fileExists: (p: st
     if (entry.taskId === undefined || entry.taskId === null) {
       errors.push(`Task-owned entry at ${entry.path} must have a valid taskId`);
     } else if (!VALID_TASK_IDS.includes(entry.taskId)) {
-      errors.push(`Task ID ${entry.taskId} for ${entry.path} must be between 1 and 27`);
+      errors.push(
+        `Task ID ${entry.taskId} for ${entry.path} must be between ${VALID_TASK_IDS[0]} and ${
+          VALID_TASK_IDS[VALID_TASK_IDS.length - 1]
+        }`
+      );
     }
   } else {
-    if (entry.taskId !== undefined && entry.taskId !== null) {
+    if ((entry as { taskId?: number }).taskId !== undefined && (entry as { taskId?: number }).taskId !== null) {
       errors.push(`Non-task entry at ${entry.path} must not have a taskId`);
     }
   }
@@ -2303,14 +2303,17 @@ export function validateInventoryEntry(entry: InventoryEntry, fileExists: (p: st
   if (
     entry.disposition === "redirect" ||
     entry.disposition === "not_found_placeholder" ||
+    entry.disposition === "generated" ||
     entry.disposition === "approved_exception"
   ) {
     if (!entry.notes || entry.notes.trim().length === 0) {
-      errors.push(`Entry with disposition "${entry.disposition}" at ${entry.path} must include non-empty explanatory notes`);
+      errors.push(
+        `Entry with disposition "${entry.disposition}" at ${entry.path} must include non-empty explanatory notes`
+      );
     }
   }
 
-  if (entry.path && !fileExists(entry.path)) {
+  if (entry.path && !checkExists(entry.path)) {
     errors.push(`Stale inventory path does not exist on disk: ${entry.path}`);
   }
 
@@ -2319,7 +2322,7 @@ export function validateInventoryEntry(entry: InventoryEntry, fileExists: (p: st
 
 export function validateInventory(
   inventory: InventoryEntry[],
-  fileExists: (p: string) => boolean = fs.existsSync
+  fileExists?: (p: string) => boolean
 ): string[] {
   const errors: string[] = [];
   const seenPaths = new Set<string>();
