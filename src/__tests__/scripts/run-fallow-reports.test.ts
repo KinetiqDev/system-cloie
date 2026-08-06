@@ -29,6 +29,7 @@ if (process.env.STUB_FAIL_STARTUP) {
 }
 if (process.env.STUB_SIGNAL_COMMAND && args[0] === process.env.STUB_SIGNAL_COMMAND) {
   process.kill(process.pid, process.env.STUB_SIGNAL ?? "SIGTERM");
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10000);
 }
 if (process.env.STUB_FAIL_COMMAND && args[0] === process.env.STUB_FAIL_COMMAND) {
   fs.writeSync(2, (process.env.STUB_FAIL_COMMAND_STDERR ?? "stub command failed") + "\\n");
@@ -336,6 +337,30 @@ describe("run fallow reports", () => {
         expectSarifArtifact(workspace.out, command);
       }
       expect(existsSync(reportPath(workspace.out, "dupes", "sarif"))).toBe(false);
+    } finally {
+      workspace.cleanup();
+    }
+  });
+
+  it("removes stale report artifacts from previous runs before reporting", () => {
+    const workspace = createWorkspace();
+    try {
+      mkdirSync(workspace.out, { recursive: true });
+      for (const command of REPORT_COMMANDS) {
+        for (const format of ["json", "sarif"] as const) {
+          writeFileSync(reportPath(workspace.out, command, format), "stale");
+        }
+      }
+      const result = runScript({
+        FALLOW_BIN: workspace.stub,
+        FALLOW_REPORTS_OUT_DIR: workspace.out,
+        STUB_JSON_EXIT: "3",
+      });
+      expect(result.status).toBe(2);
+      for (const command of REPORT_COMMANDS) {
+        expect(existsSync(reportPath(workspace.out, command, "json"))).toBe(true);
+        expect(existsSync(reportPath(workspace.out, command, "sarif"))).toBe(false);
+      }
     } finally {
       workspace.cleanup();
     }

@@ -1,5 +1,5 @@
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
-import { closeSync, existsSync, mkdirSync, openSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -41,6 +41,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     const outDir = process.env.FALLOW_REPORTS_OUT_DIR ?? DEFAULT_OUT_DIR;
     mkdirSync(outDir, { recursive: true });
+
+    for (const command of REPORT_COMMANDS) {
+      for (const format of ["json", "sarif"] as const) {
+        const stalePath = join(outDir, `${command}.${format}`);
+        try {
+          rmSync(stalePath, { force: true });
+        } catch {
+          // tolerate unremovable paths; the capture step reports them
+        }
+      }
+    }
 
     const fallowBin = resolveFallowBin();
     if (!existsSync(fallowBin)) {

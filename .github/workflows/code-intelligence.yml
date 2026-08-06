@@ -25,6 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -61,6 +62,10 @@ jobs:
     name: Fallow Code Intelligence Reports
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: fallow-reports-${{ github.ref }}
+      cancel-in-progress: true
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -69,6 +74,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3

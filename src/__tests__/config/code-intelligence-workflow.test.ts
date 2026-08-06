@@ -190,13 +190,17 @@ describe("code-intelligence workflow", () => {
   });
 
   it("keeps the gate job blocking on its audit outcome without continue-on-error", () => {
-    const steps = jobSteps(GATE_JOB);
+    const workflow = loadWorkflow();
+    const gateJob = workflow.jobs[GATE_JOB] as Record<string, unknown> & {
+      steps: Array<Record<string, unknown>>;
+    };
 
-    const auditStep = steps.find((step) =>
+    const auditStep = gateJob.steps.find((step) =>
       String(step.run ?? "").includes("run-fallow-audit.ts")
     );
     expect(auditStep).toBeDefined();
-    expect(auditStep?.continue_on_error).toBeUndefined();
+    expect(auditStep?.["continue-on-error"]).toBeUndefined();
+    expect(gateJob["continue-on-error"]).toBeUndefined();
   });
 
   it("does not add write permissions, comments, code scanning, or third-party actions", () => {
