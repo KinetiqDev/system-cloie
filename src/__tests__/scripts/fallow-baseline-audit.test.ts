@@ -49,6 +49,31 @@ interface AuditFixture {
   cleanup: () => void;
 }
 
+// Generates the three identity baselines with the pinned binary and commits
+// them as the audit base, returning the baseline commit SHA.
+function installBaselines(work: string): string {
+  mkdirSync(join(work, "fallow-baselines"), { recursive: true });
+  for (const analyzer of ANALYZERS) {
+    const result = runFallow(work, [
+      analyzer.command,
+      "--save-baseline",
+      `fallow-baselines/${analyzer.file}`,
+      "--format",
+      "json",
+      "--quiet",
+    ]);
+    if (result.status !== 0 && result.status !== 1) {
+      throw new Error(`fallow ${analyzer.command} failed with exit ${String(result.status)}`);
+    }
+  }
+  git(work, ["add", "-A"]);
+  git(work, ["commit", "-qm", "baselines"]);
+  return spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: work,
+    encoding: "utf8",
+  }).stdout.trim();
+}
+
 // A minimal repository whose only dead-code finding is the unused export
 // `orphanExport` in src/unused.ts. The three identity baselines are generated
 // with the pinned binary and committed, so every subsequent audit runs
@@ -77,26 +102,65 @@ function createAuditFixture(): AuditFixture {
     );
     git(work, ["add", "-A"]);
     git(work, ["commit", "-qm", "init"]);
-    mkdirSync(join(work, "fallow-baselines"), { recursive: true });
-    for (const analyzer of ANALYZERS) {
-      const result = runFallow(work, [
-        analyzer.command,
-        "--save-baseline",
-        `fallow-baselines/${analyzer.file}`,
-        "--format",
-        "json",
-        "--quiet",
-      ]);
-      if (result.status !== 0 && result.status !== 1) {
-        throw new Error(`fallow ${analyzer.command} failed with exit ${String(result.status)}`);
-      }
-    }
+    const baseSha = installBaselines(work);
+    return {
+      work,
+      baseSha,
+      cleanup: () => rmSync(base, { recursive: true, force: true }),
+    };
+  } catch (error) {
+    rmSync(base, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+// Operator-free body: `??`/`||` chains inflate cyclomatic and cognitive
+// complexity, and an unmatched complexity finding would corrupt the
+// duplication-only verdict this fixture measures.
+const DUPLICATED_BODY = `  const first = payload.first;
+  const second = payload.second;
+  const third = payload.third;
+  const fourth = payload.fourth;
+  const fifth = payload.fifth;
+  const sixth = payload.sixth;
+  const seventh = payload.seventh;
+  const eighth = payload.eighth;
+  const ninth = payload.ninth;
+  const tenth = payload.tenth;
+  return { first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth };
+`;
+
+function duplicatedTransform(name: string): string {
+  return `export function ${name}(payload: Record<string, string>): Record<string, string> {\n${DUPLICATED_BODY}}\n`;
+}
+
+// A minimal repository whose only finding is one duplicated block in
+// src/a.ts (transformA/transformB).
+function createDuplicationAuditFixture(): AuditFixture {
+  const base = mkdtempSync(join(tmpdir(), "fallow-duplication-audit-"));
+  try {
+    git(base, ["init", "-q", "-b", "main", "work"]);
+    const work = join(base, "work");
+    git(work, ["config", "user.email", "t@t.t"]);
+    git(work, ["config", "user.name", "test"]);
+    git(work, ["config", "commit.gpgsign", "false"]);
+    mkdirSync(join(work, "src"), { recursive: true });
+    writeFileSync(
+      join(work, "src/index.ts"),
+      'import { transformA, transformB } from "./a";\nexport const result = [transformA({}), transformB({})];\n'
+    );
+    writeFileSync(
+      join(work, "src/a.ts"),
+      `${duplicatedTransform("transformA")}${duplicatedTransform("transformB")}`
+    );
+    writeFileSync(join(work, ".fallowrc.json"), readFileSync(join(PROJECT_ROOT, ".fallowrc.json")));
+    writeFileSync(
+      join(work, ".gitignore"),
+      "/.fallow\n/.fallow-staging-*\n/.fallow-baselines.lock*\n"
+    );
     git(work, ["add", "-A"]);
-    git(work, ["commit", "-qm", "baselines"]);
-    const baseSha = spawnSync("git", ["rev-parse", "HEAD"], {
-      cwd: work,
-      encoding: "utf8",
-    }).stdout.trim();
+    git(work, ["commit", "-qm", "init"]);
+    const baseSha = installBaselines(work);
     return {
       work,
       baseSha,
@@ -112,6 +176,9 @@ interface AuditReport {
   verdict: string;
   dead_code: {
     unused_exports: Array<{ path: string; export_name: string }>;
+  };
+  duplication?: {
+    clone_groups: Array<{ instances: Array<{ file: string }> }>;
   };
 }
 
@@ -186,6 +253,68 @@ describe("fallow baseline-backed audit", () => {
         path: "src/unused.ts",
         export_name: "brandNewUnused",
       });
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it("excludes a baseline-matched clone group but reports a new clone as a warning-only finding", () => {
+    const fixture = createDuplicationAuditFixture();
+    try {
+      // The baselined duplicate block survives in the changed file: identity
+      // matching must exclude it from the audit verdict entirely.
+      writeFileSync(
+        join(fixture.work, "src/a.ts"),
+        `${duplicatedTransform("transformA")}${duplicatedTransform("transformB")}// note\n`
+      );
+      git(fixture.work, ["add", "-A"]);
+      git(fixture.work, ["commit", "-qm", "touch the duplicated file"]);
+
+      const matched = runFallow(fixture.work, [
+        "audit",
+        "--base",
+        fixture.baseSha,
+        "--format",
+        "json",
+        "--quiet",
+      ]);
+      expect(matched.status).toBe(0);
+      const matchedReport = JSON.parse(matched.stdout) as AuditReport;
+      expect(matchedReport.verdict).toBe("pass");
+      expect(matchedReport.duplication?.clone_groups ?? []).toEqual([]);
+
+      // A new disjoint clone group is reported in the artifact, but under the
+      // checked-in policy duplication is warning-only: the native verdict
+      // stays `warn` with exit 0. Fallow 2.54.3 exposes no error-severity
+      // knob for code-duplication (no rule severity, no audit threshold), so
+      // this test pins the actual semantics; enforcing new-clone failures is
+      // the PR-gate slice's decision.
+      writeFileSync(
+        join(fixture.work, "src/y.ts"),
+        `${duplicatedTransform("transformY1")}${duplicatedTransform("transformY2")}`
+      );
+      writeFileSync(
+        join(fixture.work, "src/index.ts"),
+        'import { transformA, transformB } from "./a";\nimport { transformY1, transformY2 } from "./y";\nexport const result = [transformA({}), transformB({}), transformY1({}), transformY2({})];\n'
+      );
+      git(fixture.work, ["add", "-A"]);
+      git(fixture.work, ["commit", "-qm", "add a new duplicate block"]);
+
+      const unmatched = runFallow(fixture.work, [
+        "audit",
+        "--base",
+        fixture.baseSha,
+        "--format",
+        "json",
+        "--quiet",
+      ]);
+      expect(unmatched.status).toBe(0);
+      const unmatchedReport = JSON.parse(unmatched.stdout) as AuditReport;
+      expect(unmatchedReport.verdict).toBe("warn");
+      expect(unmatchedReport.duplication?.clone_groups).toHaveLength(1);
+      expect(
+        unmatchedReport.duplication?.clone_groups[0].instances.map((instance) => instance.file)
+      ).toContain("src/y.ts");
     } finally {
       fixture.cleanup();
     }
