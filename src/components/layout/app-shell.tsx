@@ -19,6 +19,7 @@ interface AppShellProps {
   activeRole?: Role | null;
   demoEnabled?: boolean;
   demoUsers?: readonly RoleSwitcherUser[];
+  appearanceEnabled?: boolean;
 }
 
 export function AppShell({
@@ -28,6 +29,7 @@ export function AppShell({
   activeRole,
   demoEnabled = false,
   demoUsers = [],
+  appearanceEnabled = false,
 }: AppShellProps) {
   const activeRoles = activeRole ? [activeRole] : roles ?? [];
   const mobileNavMode = getMobileNavMode(activeRoles);
@@ -41,7 +43,12 @@ export function AppShell({
       {/* Main Content Area */}
       <div className={isDean ? "flex min-w-0 flex-1 flex-col md:pl-16 lg:pl-64" : "flex min-w-0 flex-1 flex-col lg:pl-64"}>
         {/* Top App Bar — includes hamburger trigger for admin/dean/ph/faculty */}
-        <Topbar user={user} mobileNavMode={mobileNavMode} roles={activeRoles}>
+        <Topbar
+          user={user}
+          mobileNavMode={mobileNavMode}
+          roles={activeRoles}
+          appearanceEnabled={appearanceEnabled}
+        >
           <DevRoleSwitcherDesktop activeEmail={user?.email} />
           <DemoRoleSwitcherDesktop enabled={demoEnabled} activeEmail={user?.email} users={demoUsers} />
         </Topbar>

@@ -4,6 +4,9 @@ import { Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/ui/toast";
+import { AppearanceBootstrapScript } from "@/features/design-system/components/appearance-bootstrap-script";
+import { AppearanceProvider } from "@/features/design-system/components/appearance-provider";
+import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
 
 const manrope = Manrope({
   variable: "--font-heading",
@@ -51,14 +54,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const appearanceEnabled = resolveAppearanceAvailability();
+
   return (
     <html
       lang="en"
       className={cn("h-full", manrope.variable, inter.variable, "font-sans")}
       suppressHydrationWarning
     >
+      <head>
+        {appearanceEnabled ? <AppearanceBootstrapScript /> : null}
+      </head>
       <body suppressHydrationWarning className="flex min-h-full flex-col antialiased">
-        {children}
+        <AppearanceProvider enabled={appearanceEnabled}>{children}</AppearanceProvider>
         <Suspense fallback={null}>
           <ToastProvider />
         </Suspense>

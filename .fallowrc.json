@@ -9,6 +9,12 @@
   // no test-only-dependency finding is produced.
   "ignoreDependencies": ["supabase", "shadcn", "react-dom"],
 
+  // public/appearance-bootstrap.js is loaded synchronously via a script tag in the
+  // root document head (see src/features/design-system/components/appearance-bootstrap-script.tsx
+  // and ADR 0010). Static analysis cannot see string script references, so the whole
+  // public asset directory is declared as runtime-loaded and always-used.
+  "dynamicallyLoaded": ["public/**"],
+
   // src/app/globals.css imports shadcn/tailwind.css, which exists in the installed
   // package but is unresolved by Fallow's CSS resolver. The finding stays visible as a
   // warning; it is not disabled and not treated as an error.
