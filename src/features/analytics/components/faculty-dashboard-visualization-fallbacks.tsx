@@ -29,10 +29,15 @@ export function CourseMeanPieChartFallback() {
 export function QualitativeWordCloudFallback() {
   return (
     <VisualizationLoading label="Loading qualitative response insights visualization">
-      <div className="flex min-h-[424px] flex-col gap-3">
-        <Skeleton aria-hidden="true" className="h-6 w-56" />
-        <Skeleton aria-hidden="true" className="min-h-[392px] w-full rounded-xl" />
-      </div>
+      <Card className="min-h-[424px]">
+        <CardHeader>
+          <CardTitle>Qualitative Response Insights</CardTitle>
+          <CardDescription>Frequent words from qualitative feedback</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Skeleton aria-hidden="true" className="h-80 w-full rounded-lg" />
+        </CardContent>
+      </Card>
     </VisualizationLoading>
   );
 }

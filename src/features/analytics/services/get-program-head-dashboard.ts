@@ -29,6 +29,7 @@ export type ProgramHeadDashboardData = {
   kpi: ProgramHeadDashboardKPI;
   stakeholderMeans: StakeholderMeanItem[];
   wordCloudTokens: WordCloudToken[];
+  qualitativeItemCount: number;
 };
 
 type ProgramHeadDashboardScope = {
@@ -265,6 +266,7 @@ async function getProgramHeadDashboardForScope(
       pendingResponses: centralPendingAssignments + courseBoundPendingAssignments,
     },
     stakeholderMeans,
+    qualitativeItemCount: qualResponses.length,
     wordCloudTokens,
   };
 }

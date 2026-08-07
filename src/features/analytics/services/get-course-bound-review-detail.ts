@@ -236,6 +236,7 @@ export async function getCourseBoundReviewDetail(
     evaluationTitle: evaluation.deployment_name ?? evaluation.instrument.template.name,
     overallMean: mean(allQuantRatings),
     programLabel: ca.course.major?.name ?? ca.program.name,
+    qualitativeItemCount: qualitativeTexts.length,
     responseCards,
     responseCount: submittedResponses.length,
     reviewerRole,

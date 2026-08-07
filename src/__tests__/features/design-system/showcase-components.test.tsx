@@ -16,6 +16,39 @@ import { DataShowcase } from "@/features/design-system/components/data-showcase"
 import { TableSelectionShowcase } from "@/features/design-system/components/table-selection-showcase";
 import { SHOWCASE_PROGRAMS } from "@/features/design-system/data/showcase-fixtures";
 
+/**
+ * @isoterik/react-word-cloud hardcodes `new OffscreenCanvas(1, 1)` for its
+ * d3-cloud layout; jsdom has none. The stub only needs to satisfy the layout
+ * measurement calls; placement math tolerates a sparse pixel buffer. Stubbed
+ * at module level because the layout runs on a deferred timer that can fire
+ * after a test's `afterEach`.
+ */
+const wordCloudCanvasContextStub = {
+  fillStyle: "",
+  strokeStyle: "",
+  font: "",
+  lineWidth: 1,
+  clearRect: () => undefined,
+  fillText: () => undefined,
+  strokeText: () => undefined,
+  save: () => undefined,
+  restore: () => undefined,
+  translate: () => undefined,
+  rotate: () => undefined,
+  measureText: (text: string) => ({ width: String(text).length * 8 }),
+  getImageData: () => ({ data: { length: 4 } }),
+};
+
+class OffscreenCanvasStub {
+  width = 1;
+  height = 1;
+  getContext() {
+    return wordCloudCanvasContextStub;
+  }
+}
+
+vi.stubGlobal("OffscreenCanvas", OffscreenCanvasStub);
+
 describe("Design System Showcase page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -156,6 +189,23 @@ describe("ChartShowcase", () => {
       document.querySelector(
         '[id^="stakeholder-mean-"][id$="-hatch-0-c0"], [id^="stakeholder-mean-"][id$="-hatch-1-c0"], [id^="stakeholder-mean-"][id$="-hatch-2-c0"], [id^="stakeholder-mean-"][id$="-hatch-3-c0"], [id^="stakeholder-mean-"][id$="-hatch-4-c0"]'
       )
+    ).not.toBeNull();
+  });
+
+  it("renders the qualitative word cloud with frequency summary, insight, and exact values", () => {
+    render(<DesignSystemShowcasePage />);
+
+    expect(
+      screen.getByRole("heading", { name: "Word cloud with repeated-token hatch distinction" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Sample Word Cloud")).toBeInTheDocument();
+    expect(screen.getByText("Top 13 words from 24 qualitative responses")).toBeInTheDocument();
+    expect(screen.getByText("Most frequent word: clarity (12).")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Sample Word Cloud" })
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector('[id*="word-cloud-"][id$="-hatch-0-c1"]')
     ).not.toBeNull();
   });
 });

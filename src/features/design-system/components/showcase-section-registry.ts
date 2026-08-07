@@ -62,7 +62,7 @@ export const SHOWCASE_SECTIONS: readonly ShowcaseSectionEntry[] = [
     id: "charts",
     title: "Charts",
     description:
-      "Quantitative charts on the approved five-token palette with legends, direct labels, exact-value tables, text insight, and deterministic hatch distinction beyond five categories.",
+      "Quantitative and qualitative charts on the approved five-token palette with legends, direct labels, exact-value tables, text insight, and deterministic hatch distinction beyond five categories.",
     component: ChartShowcase,
   },
   {

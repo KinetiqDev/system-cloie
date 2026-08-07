@@ -33,12 +33,15 @@ vi.mock("@/features/analytics/components/qualitative-word-cloud", () => ({
   QualitativeWordCloud: ({
     title,
     tokens,
+    responseCount,
   }: {
     title: string;
     tokens: Array<{ text: string; value: number }>;
+    responseCount: number;
   }) => (
     <div>
-      Word cloud: {title} ({tokens.map((token) => token.text).join(", ") || "no tokens"})
+      Word cloud: {title} ({responseCount} responses;{" "}
+      {tokens.map((token) => token.text).join(", ") || "no tokens"})
     </div>
   ),
 }));
@@ -51,6 +54,7 @@ const bsedDashboard = {
     { stakeholder: "STUDENT", label: "Students", mean: 4.2, responseCount: 3 },
   ],
   wordCloudTokens: [{ text: "clear", value: 2 }],
+  qualitativeItemCount: 1,
 };
 
 const bsedContext = {
@@ -91,7 +95,7 @@ describe("selected Program insights routes", () => {
       screen.getByText("Mean chart: Mean Attainment by Stakeholder (Students:4.2)")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Word cloud: Qualitative Response Insights (clear)")
+      screen.getByText("Word cloud: Qualitative Response Insights (1 responses; clear)")
     ).toBeInTheDocument();
     expect(screen.queryByText(/BEED/)).not.toBeInTheDocument();
   });
