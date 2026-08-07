@@ -311,7 +311,7 @@ export function ManagementCoursesList({
 
       {/* Data table */}
       <div className="overflow-x-auto rounded-lg border">
-        <Table className="min-w-[900px]">
+        <Table className="min-w-0 md:min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-full md:w-auto">Course</TableHead>
