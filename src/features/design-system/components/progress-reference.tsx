@@ -2,7 +2,7 @@
 
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 
-export interface ProgressReferenceItem {
+interface ProgressReferenceItem {
   id: string;
   label: string;
   detail: string;

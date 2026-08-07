@@ -6,6 +6,7 @@ import {
   getMobileNavMode,
   getDeanNavGroups,
   getDeanStandaloneNav,
+  getNavItemIdentity,
   type NavItem,
 } from "@/lib/constants/navigation";
 import { NavigationRow, BottomNavRow } from "@/components/layout/navigation-row";
@@ -88,7 +89,7 @@ export function NavigationShowcase() {
                 </div>
                 <ul className="flex flex-col gap-2">
                   {items.map((item) => (
-                    <ItemLine key={item.href} item={item} />
+                    <ItemLine key={getNavItemIdentity(item)} item={item} />
                   ))}
                 </ul>
               </div>

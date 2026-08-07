@@ -214,6 +214,21 @@ describe("NavigationShowcase", () => {
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
+  it("keys role rows by identity so shared program-head entry hrefs do not collide", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      render(<NavigationShowcase />);
+
+      const duplicateKeyWarnings = errorSpy.mock.calls.filter((call) =>
+        String(call[0]).includes("same key")
+      );
+      expect(duplicateKeyWarnings).toEqual([]);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("renders the real interactive admin drawer", async () => {
     render(<NavigationShowcase />);
 
