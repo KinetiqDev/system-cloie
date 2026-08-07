@@ -268,7 +268,10 @@ function TemplateCard({
               <DropdownMenuItem
                 variant="destructive"
                 disabled={isPending}
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={() => {
+                  setError(null);
+                  setShowDeleteDialog(true);
+                }}
               >
                 <Trash2 className="size-4" />
                 Delete
