@@ -39,16 +39,16 @@ export default async function AlumniHistoryPage() {
         <Table>
           <TableHeader className="bg-surface-muted/50">
             <TableRow>
-              <TableHead className="text-[10px] font-bold tracking-wider uppercase">
+              <TableHead className="text-label-sm font-bold tracking-wider uppercase">
                 Evaluation Form
               </TableHead>
-              <TableHead className="text-[10px] font-bold tracking-wider uppercase">
+              <TableHead className="text-label-sm font-bold tracking-wider uppercase">
                 Submission Date
               </TableHead>
-              <TableHead className="text-[10px] font-bold tracking-wider uppercase">
+              <TableHead className="text-label-sm font-bold tracking-wider uppercase">
                 Status
               </TableHead>
-              <TableHead className="text-right text-[10px] font-bold tracking-wider uppercase">
+              <TableHead className="text-label-sm text-right font-bold tracking-wider uppercase">
                 Actions
               </TableHead>
             </TableRow>
@@ -69,8 +69,8 @@ export default async function AlumniHistoryPage() {
                   {sub.session.submittedAt ? formatDate(sub.session.submittedAt) : "N/A"}
                 </TableCell>
                 <TableCell>
-                  <Badge className="border-green-200 bg-green-100 text-[10px] font-bold text-green-800 uppercase">
-                    Submitted
+                  <Badge variant="success" className="uppercase">
+                    Completed
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -106,8 +106,8 @@ export default async function AlumniHistoryPage() {
                   </h3>
                   <p className="text-text-muted text-xs font-medium">{sub.programLabel}</p>
                 </div>
-                <Badge className="shrink-0 border-green-200 bg-green-100 text-[9px] font-bold text-green-800 uppercase">
-                  Submitted
+                <Badge variant="success" className="shrink-0 uppercase">
+                  Completed
                 </Badge>
               </div>
 
@@ -115,7 +115,7 @@ export default async function AlumniHistoryPage() {
                 <div className="flex items-center gap-2">
                   <Calendar className="text-text-muted size-3.5" />
                   <div className="flex flex-col">
-                    <span className="text-text-muted text-[9px] font-black tracking-tighter uppercase">
+                    <span className="text-text-muted text-label-sm font-black tracking-tighter uppercase">
                       Date
                     </span>
                     <span className="text-xs font-bold">
@@ -129,7 +129,7 @@ export default async function AlumniHistoryPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 gap-2 text-xs font-bold"
+                  className="min-h-11 flex-1 gap-2 text-xs font-bold"
                   disabled={!sub.href}
                   render={sub.href ? <Link href={sub.href} /> : undefined}
                 >

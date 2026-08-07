@@ -5,6 +5,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
@@ -41,7 +42,7 @@ export function ReviewModal({
           <div className="space-y-8">
             {sections.map((s) => (
               <div key={s.id}>
-                <h3 className="text-primary mb-4 text-[10px] font-bold tracking-widest uppercase">
+                <h3 className="text-text-muted text-label-sm mb-4 font-bold tracking-wider uppercase">
                   {s.name}
                 </h3>
                 <div className="space-y-4">
@@ -69,13 +70,14 @@ export function ReviewModal({
             ))}
           </div>
 
-          <div className="mt-8 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <AlertCircle className="size-5 shrink-0 text-amber-600" />
-            <p className="text-xs leading-relaxed font-medium text-amber-800">
+          <Alert variant="warning" className="mt-8">
+            <AlertCircle className="size-5 shrink-0" />
+            <AlertTitle>Responses are final after submission</AlertTitle>
+            <AlertDescription>
               Please review your answers carefully. By clicking submit, your responses will be
               finalized and locked. You cannot edit them after this step.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
         </div>
 
         <DialogFooter className="bg-surface shrink-0 gap-3 border-t p-6 sm:gap-0">
@@ -85,7 +87,7 @@ export function ReviewModal({
           <Button
             onClick={onSubmit}
             disabled={isSubmitting}
-            className="bg-primary hover:bg-primary-hover min-w-[140px] px-8 font-bold"
+            className="min-w-[140px] px-8 font-bold"
           >
             {isSubmitting ? "Submitting..." : "Confirm & Submit"}
           </Button>

@@ -53,13 +53,13 @@ export default async function IndustryPartnerProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                 Full Name
               </label>
               <p className="text-sm font-semibold">{fullName}</p>
             </div>
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                 Email Address
               </label>
               <div className="flex items-center gap-2 text-sm font-semibold">
@@ -88,7 +88,7 @@ export default async function IndustryPartnerProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4 text-sm font-semibold">
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                 Company Name
               </label>
               <p className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export default async function IndustryPartnerProfilePage() {
             </div>
             {profile?.position && (
               <div className="space-y-1">
-                <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                   Position
                 </label>
                 <p className="flex items-center gap-2">
@@ -108,7 +108,7 @@ export default async function IndustryPartnerProfilePage() {
               </div>
             )}
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                 Affiliated Program
               </label>
               <p className="flex items-center gap-2">
@@ -118,7 +118,7 @@ export default async function IndustryPartnerProfilePage() {
             </div>
             {profile?.program && (
               <div className="space-y-1">
-                <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                   Program Code
                 </label>
                 <p>{profile.program.code}</p>
@@ -135,7 +135,7 @@ export default async function IndustryPartnerProfilePage() {
                 <ShieldCheck className="size-5" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-text-primary font-bold">Data Privacy & Responses</h3>
+                <h2 className="text-text-primary font-bold">Data Privacy & Responses</h2>
                 <p className="text-text-secondary text-sm leading-relaxed">
                   Your evaluation responses are handled confidentially and are reported only in
                   aggregated form. Once an evaluation is finalized and submitted, it cannot be

@@ -31,19 +31,19 @@ export default async function IndustryPartnerEvaluationsPage() {
           <TabsList className="h-auto flex-wrap gap-2 bg-transparent p-0">
             <TabsTrigger
               value="pending"
-              className="bg-surface text-text-secondary data-[state=active]:bg-primary rounded-full px-5 py-2 text-sm font-medium data-[state=active]:text-on-primary"
+              className="bg-surface text-text-secondary data-active:bg-primary data-active:text-on-primary min-h-11 rounded-full px-5 text-sm font-medium"
             >
               Pending
             </TabsTrigger>
             <TabsTrigger
               value="in-progress"
-              className="bg-surface text-text-secondary data-[state=active]:bg-primary rounded-full px-5 py-2 text-sm font-medium data-[state=active]:text-on-primary"
+              className="bg-surface text-text-secondary data-active:bg-primary data-active:text-on-primary min-h-11 rounded-full px-5 text-sm font-medium"
             >
               In Progress
             </TabsTrigger>
             <TabsTrigger
               value="submitted"
-              className="bg-surface text-text-secondary data-[state=active]:bg-primary rounded-full px-5 py-2 text-sm font-medium data-[state=active]:text-on-primary"
+              className="bg-surface text-text-secondary data-active:bg-primary data-active:text-on-primary min-h-11 rounded-full px-5 text-sm font-medium"
             >
               Submitted
             </TabsTrigger>
@@ -52,9 +52,9 @@ export default async function IndustryPartnerEvaluationsPage() {
           <div className="flex w-full gap-4 md:w-auto">
             <div className="relative w-full md:w-64">
               <Search className="text-text-muted absolute top-2.5 left-3 size-4" />
-              <Input placeholder="Search evaluations..." className="h-10 pl-9" />
+              <Input placeholder="Search evaluations..." className="min-h-11 pl-9" />
             </div>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="min-h-11 gap-2">
               <Filter className="size-4" />
               Filter
             </Button>

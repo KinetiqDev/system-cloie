@@ -54,13 +54,13 @@ export default async function StudentProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                 Full Name
               </label>
               <p className="text-sm font-semibold">{fullName}</p>
             </div>
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                 Email Address
               </label>
               <div className="flex items-center gap-2 text-sm font-semibold">
@@ -89,13 +89,13 @@ export default async function StudentProfilePage() {
           <CardContent className="space-y-4 pt-4 text-sm font-semibold">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                   Student ID
                 </label>
                 <p>{profile?.student_id_number ?? "Not set"}</p>
               </div>
               <div className="space-y-1">
-                <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                   Year Level
                 </label>
                 <p>{getYearLevelDisplay(enrollment?.year_level)}</p>
@@ -103,7 +103,7 @@ export default async function StudentProfilePage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                 Program
               </label>
               <p className="flex items-center gap-2">
@@ -114,13 +114,13 @@ export default async function StudentProfilePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                   Major
                 </label>
                 <p>{profile?.major?.name ?? "Program-wide"}</p>
               </div>
               <div className="space-y-1">
-                <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                   Academic Year
                 </label>
                 <p>{enrollment?.term.school_year.code ?? "Not set"}</p>
@@ -129,7 +129,7 @@ export default async function StudentProfilePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
                   Section
                 </label>
                 <p>
@@ -139,7 +139,6 @@ export default async function StudentProfilePage() {
                 </p>
               </div>
             </div>
-
           </CardContent>
         </Card>
 
@@ -150,7 +149,7 @@ export default async function StudentProfilePage() {
                 <ShieldCheck className="size-5" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-text-primary font-bold">Data Privacy & Responses</h3>
+                <h2 className="text-text-primary font-bold">Data Privacy & Responses</h2>
                 <p className="text-text-secondary text-sm leading-relaxed">
                   Your evaluation responses are handled confidentially and are reported only in
                   aggregated form. Once an evaluation is finalized and submitted, it cannot be

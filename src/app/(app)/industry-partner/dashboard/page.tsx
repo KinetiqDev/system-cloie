@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TargetStakeholder } from "@prisma/client";
+import { ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -60,7 +61,7 @@ export default async function IndustryPartnerDashboardPage() {
               </div>
 
               {resumeItem.href && (
-                <Button render={<Link href={resumeItem.href} />} className="font-semibold">
+                <Button render={<Link href={resumeItem.href} />} className="min-h-11 font-semibold">
                   {resumeItem.status === "IN_PROGRESS" ? "Resume" : "Start Evaluation"}
                 </Button>
               )}
@@ -92,16 +93,18 @@ export default async function IndustryPartnerDashboardPage() {
             .map((evalItem) => (
               <EvaluationListCard key={evalItem.assignmentId} {...evalItem} />
             ))}
-          {active.filter((item) => item.status === "NOT_STARTED" || item.status === "DUE_SOON").length === 0 && (
+          {active.filter((item) => item.status === "NOT_STARTED" || item.status === "DUE_SOON")
+            .length === 0 && (
             <div className="border-border bg-surface rounded-xl border-2 border-dashed p-12 text-center">
               <div className="bg-primary-soft mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-                <svg className="text-selected-fg size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
+                <ClipboardList className="text-selected-fg size-6" />
               </div>
-              <h4 className="text-title-sm text-text-primary mb-2 font-semibold">No pending evaluations</h4>
+              <h4 className="text-title-sm text-text-primary mb-2 font-semibold">
+                No pending evaluations
+              </h4>
               <p className="text-body-sm text-text-secondary mx-auto max-w-sm">
-                You don&apos;t have any active evaluations at the moment. Check back later or view your history.
+                You don&apos;t have any active evaluations at the moment. Check back later or view
+                your history.
               </p>
             </div>
           )}
