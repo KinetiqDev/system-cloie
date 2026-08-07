@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { ROLES } from "@/lib/constants/roles";
 import { listFacultyCoursesWithCilos } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AddCiloForm } from "./add-cilo-form";
 import { addCilosToCourseAction } from "@/lib/actions/faculty-cilo-actions";
 
@@ -18,7 +18,9 @@ export default async function FacultyAddCiloPage() {
     return (
       <div className="space-y-4">
         <h1 className="text-heading-lg">Add New CILO</h1>
-        <p className="text-body-md text-text-secondary">{result.error}</p>
+        <Alert variant="destructive">
+          <AlertDescription>{result.error}</AlertDescription>
+        </Alert>
       </div>
     );
   }

@@ -2,6 +2,8 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -45,7 +47,7 @@ export function ProgramHeadMappingControls({
           <RemoveMappingControl key={go.mappingId} programId={programId} go={go} />
         ))
       ) : (
-        <span className="text-text-muted text-xs italic">No mappings</span>
+        <span className="text-muted-foreground text-xs italic">No mappings</span>
       )}
       <CreateMappingControl
         programId={programId}
@@ -83,20 +85,16 @@ function RemoveMappingControl({
   return (
     <div>
       <div className="flex items-center gap-1">
-        <span
-          className="bg-secondary text-secondary-foreground rounded-md px-2 py-1 text-xs"
-          title={go.description}
-        >
+        <Badge variant="secondary" className="max-w-40 truncate" title={go.description}>
           {go.code}
-        </span>
+        </Badge>
         {state?.success ? (
           <Button
             type="button"
             variant="destructive"
             size="sm"
-            className="h-6 px-1 text-xs"
+            loading={isCommitting}
             onClick={confirm}
-            disabled={isCommitting}
           >
             {isCommitting ? "Removing..." : "Confirm remove"}
           </Button>
@@ -108,8 +106,8 @@ function RemoveMappingControl({
               type="submit"
               variant="ghost"
               size="sm"
-              className="h-6 px-1 text-xs"
-              disabled={pending}
+              aria-label={pending ? "Preparing..." : `Remove mapping to ${go.code}`}
+              loading={pending}
             >
               {pending ? "Preparing..." : "Remove"}
             </Button>
@@ -118,14 +116,14 @@ function RemoveMappingControl({
       </div>
       {state?.success && <ReviewSummary review={state.review} />}
       {error && (
-        <p role="alert" className="text-danger mt-1 text-xs">
-          {error}
-        </p>
+        <Alert variant="destructive" className="mt-1">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       {state && !state.success && (
-        <p role="alert" className="text-danger mt-1 text-xs">
-          {state.error}
-        </p>
+        <Alert variant="destructive" className="mt-1">
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
       )}
     </div>
   );
@@ -183,37 +181,25 @@ function CreateMappingControl({
           </SelectContent>
         </Select>
         {state?.success ? (
-          <Button
-            type="button"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={confirm}
-            disabled={isCommitting}
-          >
+          <Button type="button" size="sm" loading={isCommitting} onClick={confirm}>
             {isCommitting ? "Adding..." : "Confirm mapping"}
           </Button>
         ) : (
-          <Button
-            type="submit"
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            disabled={pending}
-          >
+          <Button type="submit" variant="outline" size="sm" loading={pending}>
             {pending ? "Preparing..." : "Review mapping"}
           </Button>
         )}
       </form>
       {state?.success && <ReviewSummary review={state.review} />}
       {error && (
-        <p role="alert" className="text-danger mt-1 text-xs">
-          {error}
-        </p>
+        <Alert variant="destructive" className="mt-1">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       {state && !state.success && (
-        <p role="alert" className="text-danger mt-1 text-xs">
-          {state.error}
-        </p>
+        <Alert variant="destructive" className="mt-1">
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
       )}
     </div>
   );
@@ -221,7 +207,7 @@ function CreateMappingControl({
 
 function ReviewSummary({ review }: { review: OutcomeWriteReview }) {
   return (
-    <div className="bg-surface-alt mt-2 rounded-md p-2 text-xs" aria-label="Mapping change review">
+    <div className="bg-muted mt-2 rounded-md p-2 text-xs" aria-label="Mapping change review">
       <p className="font-semibold">Review this change</p>
       <p>Before: {JSON.stringify(review.before)}</p>
       <p>After: {JSON.stringify(review.after)}</p>

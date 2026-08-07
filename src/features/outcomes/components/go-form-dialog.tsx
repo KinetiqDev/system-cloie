@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,8 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
   createGOSchema,
@@ -74,37 +75,43 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {errors.root && (
-        <div className="bg-danger-soft text-danger rounded-md p-3 text-sm">
-          {errors.root.message}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{errors.root.message}</AlertDescription>
+        </Alert>
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor="create-go-code">GO Code</Label>
-        <Input
-          id="create-go-code"
-          placeholder="e.g. GO-1"
-          autoComplete="off"
-          aria-invalid={!!errors.code}
-          {...register("code")}
-        />
-        {errors.code && <p className="text-danger text-xs">{errors.code.message}</p>}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="create-go-description">Description</Label>
-        <Textarea
-          id="create-go-description"
-          placeholder="Describe the graduate outcome..."
-          rows={4}
-          aria-invalid={!!errors.description}
-          {...register("description")}
-        />
-        {errors.description && <p className="text-danger text-xs">{errors.description.message}</p>}
-      </div>
+      <Field data-invalid={errors.code ? true : undefined}>
+        <FieldLabel htmlFor="create-go-code">GO Code</FieldLabel>
+        <FieldContent>
+          <Input
+            id="create-go-code"
+            placeholder="e.g. GO-1"
+            autoComplete="off"
+            aria-invalid={errors.code ? true : undefined}
+            aria-describedby={errors.code ? "create-go-code-error" : undefined}
+            {...register("code")}
+          />
+          <FieldError id="create-go-code-error" errors={[errors.code]} />
+        </FieldContent>
+      </Field>
+      <Field data-invalid={errors.description ? true : undefined}>
+        <FieldLabel htmlFor="create-go-description">Description</FieldLabel>
+        <FieldContent>
+          <Textarea
+            id="create-go-description"
+            placeholder="Describe the graduate outcome..."
+            rows={4}
+            aria-invalid={errors.description ? true : undefined}
+            aria-describedby={errors.description ? "create-go-description-error" : undefined}
+            {...register("description")}
+          />
+          <FieldError id="create-go-description-error" errors={[errors.description]} />
+        </FieldContent>
+      </Field>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" loading={isPending}>
           {isPending ? "Saving..." : "Create GO"}
         </Button>
       </div>
@@ -157,37 +164,43 @@ function EditForm({
       <input type="hidden" {...register("programId")} />
       <input type="hidden" {...register("id")} />
       {errors.root && (
-        <div className="bg-danger-soft text-danger rounded-md p-3 text-sm">
-          {errors.root.message}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{errors.root.message}</AlertDescription>
+        </Alert>
       )}
-      <div className="space-y-1.5">
-        <Label htmlFor="edit-go-code">GO Code</Label>
-        <Input
-          id="edit-go-code"
-          placeholder="e.g. GO-1"
-          autoComplete="off"
-          aria-invalid={!!errors.code}
-          {...register("code")}
-        />
-        {errors.code && <p className="text-danger text-xs">{errors.code.message}</p>}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="edit-go-description">Description</Label>
-        <Textarea
-          id="edit-go-description"
-          placeholder="Describe the graduate outcome..."
-          rows={4}
-          aria-invalid={!!errors.description}
-          {...register("description")}
-        />
-        {errors.description && <p className="text-danger text-xs">{errors.description.message}</p>}
-      </div>
+      <Field data-invalid={errors.code ? true : undefined}>
+        <FieldLabel htmlFor="edit-go-code">GO Code</FieldLabel>
+        <FieldContent>
+          <Input
+            id="edit-go-code"
+            placeholder="e.g. GO-1"
+            autoComplete="off"
+            aria-invalid={errors.code ? true : undefined}
+            aria-describedby={errors.code ? "edit-go-code-error" : undefined}
+            {...register("code")}
+          />
+          <FieldError id="edit-go-code-error" errors={[errors.code]} />
+        </FieldContent>
+      </Field>
+      <Field data-invalid={errors.description ? true : undefined}>
+        <FieldLabel htmlFor="edit-go-description">Description</FieldLabel>
+        <FieldContent>
+          <Textarea
+            id="edit-go-description"
+            placeholder="Describe the graduate outcome..."
+            rows={4}
+            aria-invalid={errors.description ? true : undefined}
+            aria-describedby={errors.description ? "edit-go-description-error" : undefined}
+            {...register("description")}
+          />
+          <FieldError id="edit-go-description-error" errors={[errors.description]} />
+        </FieldContent>
+      </Field>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" loading={isPending}>
           {isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>
