@@ -84,22 +84,22 @@ export function IndustryPartnerOnboardingForm({
   };
 
   return (
-    <Card className="border-border overflow-hidden shadow-lg">
+    <Card className="border-border overflow-hidden shadow-sm">
       <div className="border-border bg-surface flex items-center justify-between border-b px-6 py-3">
         <span className="text-label-md text-primary font-bold tracking-wider uppercase">
           Onboarding
         </span>
-        <span className="text-caption text-text-muted">Industry Partner Profile</span>
+        <span className="text-caption text-muted-foreground">Industry Partner Profile</span>
       </div>
       <div className="bg-primary h-1 w-full" />
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-8 px-6 py-8 sm:px-8">
           <div className="space-y-1">
-            <h1 className="font-heading text-text-primary text-2xl font-bold">
+            <h1 className="font-heading text-foreground text-heading-lg font-bold">
               Industry Partner Setup
             </h1>
-            <p className="text-body-sm text-text-secondary">
+            <p className="text-body-sm text-muted-foreground">
               Please provide your professional details to access the industry partner portal.
             </p>
           </div>
@@ -114,12 +114,12 @@ export function IndustryPartnerOnboardingForm({
           <div className="space-y-5">
             {/* Institutional / Google Email */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                 Email Account
               </Label>
               <div className="border-border bg-surface-muted flex items-center gap-3 rounded-lg border px-4 py-2.5">
-                <Mail className="text-text-muted size-4 shrink-0" />
-                <span className="text-body-md text-text-secondary">{email}</span>
+                <Mail className="text-muted-foreground size-4 shrink-0" />
+                <span className="text-body-md text-muted-foreground">{email}</span>
               </div>
             </div>
 
@@ -136,7 +136,7 @@ export function IndustryPartnerOnboardingForm({
               <div className="space-y-2">
                 <Label
                   htmlFor="first_name"
-                  className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
                 >
                   First Name
                 </Label>
@@ -158,7 +158,7 @@ export function IndustryPartnerOnboardingForm({
               <div className="space-y-2">
                 <Label
                   htmlFor="last_name"
-                  className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
                 >
                   Last Name
                 </Label>
@@ -189,12 +189,12 @@ export function IndustryPartnerOnboardingForm({
             <div className="space-y-2">
               <Label
                 htmlFor="company_name"
-                className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
               >
                 Company / Organization Name
               </Label>
               <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted size-4" />
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
                 <Input
                   id="company_name"
                   placeholder="e.g. Acme Corp"
@@ -214,12 +214,12 @@ export function IndustryPartnerOnboardingForm({
             <div className="space-y-2">
               <Label
                 htmlFor="position"
-                className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
               >
-                Position / Title <span className="text-text-muted font-normal normal-case ml-1">(Optional)</span>
+                Position / Title <span className="text-muted-foreground font-normal normal-case ml-1">(Optional)</span>
               </Label>
               <div className="relative">
-                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted size-4" />
+                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
                 <Input
                   id="position"
                   placeholder="e.g. Senior Engineer"
@@ -237,8 +237,8 @@ export function IndustryPartnerOnboardingForm({
 
             {/* Academic Program Affiliation */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
-                Program Affiliation <span className="text-text-muted font-normal normal-case ml-1">(Optional)</span>
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
+                Program Affiliation <span className="text-muted-foreground font-normal normal-case ml-1">(Optional)</span>
               </Label>
               <Controller
                 name="program_id"
@@ -287,7 +287,7 @@ export function IndustryPartnerOnboardingForm({
           <Button
             type="button"
             variant="ghost"
-            className="text-text-muted hover:text-text-primary w-full gap-2"
+            className="text-muted-foreground hover:text-foreground min-h-11 w-full gap-2"
             onClick={async () => {
               await resetIncompleteRoleClaim();
             }}

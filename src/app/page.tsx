@@ -6,9 +6,6 @@ import { PortalChoiceCard } from "@/features/portals";
 export default function Home() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
-      {/* Subtle blue radial glow from top center */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,var(--color-primary-soft),transparent)]" />
-
       {/* Header */}
       <header className="relative z-10 border-b border-border/80 bg-background/80 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -22,7 +19,7 @@ export default function Home() {
             />
             <div className="space-y-0">
               <p className="text-title-md font-bold text-primary">System CLOIE</p>
-              <p className="text-caption text-text-muted">Assumption College of Davao</p>
+              <p className="text-caption text-muted-foreground">Assumption College of Davao</p>
             </div>
           </div>
         </div>
@@ -54,10 +51,10 @@ export default function Home() {
             </div>
           </div>
 
-          <h1 className="text-display-md font-extrabold tracking-tight text-text-primary sm:text-display-lg">
+          <h1 className="text-display-md font-extrabold tracking-tight text-foreground sm:text-display-lg">
             Welcome to System CLOIE
           </h1>
-          <p className="mx-auto mt-3 max-w-lg text-body-md text-text-muted">
+          <p className="mx-auto mt-3 max-w-lg text-body-md text-muted-foreground">
             Select your portal to sign in or register.
           </p>
 
@@ -85,15 +82,15 @@ export default function Home() {
 
       <footer className="relative z-10 border-t border-border/80 bg-background/80">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-2 px-4 py-4 text-center sm:flex-row sm:gap-4 sm:px-6 lg:px-8">
-          <p className="text-body-sm text-text-muted">
+          <p className="text-body-sm text-muted-foreground">
             © {new Date().getFullYear()} System CLOIE. All rights reserved.
           </p>
           <span className="hidden text-border sm:inline" aria-hidden="true">|</span>
           <nav aria-label="Legal links" className="flex gap-4 text-body-sm">
-            <Link className="text-text-muted underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="/privacy">
+            <Link className="text-muted-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="/privacy">
               Privacy Notice
             </Link>
-            <Link className="text-text-muted underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="/terms">
+            <Link className="text-muted-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="/terms">
               Terms of Use
             </Link>
           </nav>

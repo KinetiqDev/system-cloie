@@ -31,16 +31,10 @@ export function PortalShell({
 }: PortalShellProps) {
   return (
     <div className="relative min-h-screen bg-background selection:bg-primary/10">
-      {/* Dynamic Background */}
-      <div className="pointer-events-none fixed inset-0 flex justify-center overflow-hidden">
-        <div className="absolute -top-[20%] right-[10%] h-[600px] w-[600px] rounded-full bg-primary/5 blur-[120px]" />
-        <div className="absolute -left-[10%] top-[40%] h-[500px] w-[500px] rounded-full bg-primary/5 blur-[100px]" />
-      </div>
-
       <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto mb-16 max-w-2xl text-center">
-          <h1 className="text-display-sm mb-4 text-text-primary">{title}</h1>
-          <p className="text-body-lg text-text-secondary">{subtitle}</p>
+          <h1 className="text-heading-xl mb-4 text-foreground">{title}</h1>
+          <p className="text-body-lg text-muted-foreground">{subtitle}</p>
 
           {session && (
             <SessionBanner email={session.email} isComplete={session.isComplete} />

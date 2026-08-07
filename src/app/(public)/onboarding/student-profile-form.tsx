@@ -135,13 +135,13 @@ export function StudentProfileForm({
   };
 
   return (
-    <Card className="border-border overflow-hidden shadow-lg">
+    <Card className="border-border overflow-hidden shadow-sm">
       {/* Step indicator header */}
       <div className="border-border bg-surface flex items-center justify-between border-b px-6 py-3">
         <span className="text-label-md text-primary font-bold tracking-wider uppercase">
           Onboarding
         </span>
-        <span className="text-caption text-text-muted">Step 1 of 1</span>
+        <span className="text-caption text-muted-foreground">Step 1 of 1</span>
       </div>
       <div className="bg-primary h-1 w-full" />
 
@@ -149,10 +149,10 @@ export function StudentProfileForm({
         <CardContent className="space-y-8 px-6 py-8 sm:px-8">
           {/* Page heading */}
           <div className="space-y-1">
-            <h1 className="font-heading text-text-primary text-2xl font-bold">
+            <h1 className="font-heading text-foreground text-heading-lg font-bold">
               Student Profile Setup
             </h1>
-            <p className="text-body-sm text-text-secondary">
+            <p className="text-body-sm text-muted-foreground">
               Please provide your academic details to continue with your registration.
             </p>
           </div>
@@ -168,7 +168,7 @@ export function StudentProfileForm({
           {!hasActiveTerm && (
             <Alert className="border-warning/30 bg-warning-soft/20">
               <CalendarDays className="size-4 text-warning" />
-              <AlertDescription className="text-text-secondary text-body-sm">
+              <AlertDescription className="text-muted-foreground text-body-sm">
                 <span className="font-semibold text-warning">Enrollment Deferred</span> — No active
                 academic term is currently configured. Your profile will be created, but year level
                 and section information will be collected once a term becomes available.
@@ -189,7 +189,7 @@ export function StudentProfileForm({
               <div className="space-y-2">
                 <Label
                   htmlFor="first_name"
-                  className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
                 >
                   First Name
                 </Label>
@@ -206,7 +206,7 @@ export function StudentProfileForm({
               <div className="space-y-2">
                 <Label
                   htmlFor="last_name"
-                  className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
                 >
                   Last Name
                 </Label>
@@ -222,17 +222,17 @@ export function StudentProfileForm({
             </div>
 
             {initialFirstName && (
-              <p className="text-caption text-text-muted">Retrieved from your Google account</p>
+              <p className="text-caption text-muted-foreground">Retrieved from your Google account</p>
             )}
 
             {/* Institutional Email */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                 Institutional Email
               </Label>
               <div className="border-border bg-surface-muted flex items-center gap-3 rounded-lg border px-4 py-2.5">
-                <Mail className="text-text-muted size-4 shrink-0" />
-                <span className="text-body-md text-text-secondary">{email}</span>
+                <Mail className="text-muted-foreground size-4 shrink-0" />
+                <span className="text-body-md text-muted-foreground">{email}</span>
               </div>
             </div>
           </div>
@@ -248,7 +248,7 @@ export function StudentProfileForm({
 
             {/* Academic Program */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                 Academic Program
               </Label>
               <Controller
@@ -281,7 +281,7 @@ export function StudentProfileForm({
 
             {/* Major — conditional */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                 Major (if applicable)
               </Label>
               {requiresMajor ? (
@@ -310,7 +310,7 @@ export function StudentProfileForm({
                 />
               ) : (
                 <div className="border-border bg-surface-muted flex items-center rounded-lg border px-4 py-2.5">
-                  <span className="text-body-md text-text-muted">General / No Major</span>
+                  <span className="text-body-md text-muted-foreground">General / No Major</span>
                 </div>
               )}
               {errors.major_id && (
@@ -327,7 +327,7 @@ export function StudentProfileForm({
                 <div className="space-y-2">
                   <Label
                     htmlFor="student_id_number"
-                    className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                    className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
                   >
                     School ID Number
                   </Label>
@@ -348,7 +348,7 @@ export function StudentProfileForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+                  <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                     Year Level
                   </Label>
                   <Controller
@@ -385,7 +385,7 @@ export function StudentProfileForm({
               <div className="space-y-2">
                 <Label
                   htmlFor="student_id_number"
-                  className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
                 >
                   School ID Number
                 </Label>
@@ -409,7 +409,7 @@ export function StudentProfileForm({
             {/* Section — only shown when an active term exists */}
             {hasActiveTerm && (
               <div className="space-y-2">
-                <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+                <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                   Section
                 </Label>
                 <Controller
@@ -459,9 +459,10 @@ export function StudentProfileForm({
             {!isSubmitting && <ArrowRight className="size-5" />}
           </Button>
 
-          <button
+          <Button
             type="button"
-            className="text-text-muted hover:text-text-primary flex items-center justify-center gap-2 py-2 text-sm font-medium transition-colors"
+            variant="ghost"
+            className="text-muted-foreground hover:text-foreground min-h-11 w-full gap-2"
             onClick={async () => {
               const supabase = createClient();
               await supabase.auth.signOut();
@@ -470,7 +471,7 @@ export function StudentProfileForm({
           >
             <ArrowLeft className="size-4" />
             Cancel / Back to Login
-          </button>
+          </Button>
         </CardFooter>
       </form>
     </Card>

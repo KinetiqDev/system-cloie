@@ -12,8 +12,8 @@ interface SessionBannerProps {
 export function SessionBanner({ email, isComplete }: SessionBannerProps) {
   return (
     <div className="mt-8 inline-flex flex-col items-center gap-3 rounded-xl border border-border bg-surface p-4">
-      <p className="text-body-sm text-text-secondary">
-        Signed in as <span className="font-medium text-text-primary">{email}</span>
+      <p className="text-body-sm text-muted-foreground">
+        Signed in as <span className="font-medium text-foreground">{email}</span>
       </p>
       <div className="flex items-center gap-3">
         <form action="/api/auth/logout" method="post">

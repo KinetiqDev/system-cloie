@@ -50,4 +50,17 @@ describe("PortalShell role-card layout", () => {
     expect(grid).toHaveClass("grid-cols-1", "sm:grid-cols-2", "lg:grid-cols-3", "xl:grid-cols-4");
     expect(grid).not.toHaveClass("max-w-5xl");
   });
+
+  it("renders no decorative blur or glow decoration", () => {
+    const { container } = renderShell(ROLE_CARDS_RESPONDENT);
+    expect(container.querySelector("[class*='blur-']")).toBeNull();
+    expect(container.querySelector("[class*='bg-primary/5']")).toBeNull();
+  });
+
+  it("uses semantic heading and muted text tokens", () => {
+    const { container } = renderShell(ROLE_CARDS_RESPONDENT);
+    expect(container.querySelector(".text-heading-xl")).not.toBeNull();
+    expect(container.querySelector(".text-text-secondary")).toBeNull();
+    expect(container.querySelector(".text-text-muted")).toBeNull();
+  });
 });
