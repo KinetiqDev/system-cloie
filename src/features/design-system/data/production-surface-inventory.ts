@@ -1,4 +1,4 @@
-export const INVENTORY_DISPOSITIONS = [
+const INVENTORY_DISPOSITIONS = [
   "task",
   "already_compliant",
   "redirect",
@@ -7,9 +7,9 @@ export const INVENTORY_DISPOSITIONS = [
   "approved_exception",
 ] as const;
 
-export type InventoryDisposition = (typeof INVENTORY_DISPOSITIONS)[number];
+type InventoryDisposition = (typeof INVENTORY_DISPOSITIONS)[number];
 
-export type InventoryCategory =
+type InventoryCategory =
   | 'ui_primitive'
   | 'layout'
   | 'route'
@@ -17,7 +17,7 @@ export type InventoryCategory =
   | 'generated'
   | 'tokens';
 
-export interface InventoryEntryBase {
+interface InventoryEntryBase {
   /** Project-relative path (e.g., 'src/components/ui/button.tsx') */
   path: string;
   /** Surface category for reporting */
@@ -36,7 +36,7 @@ export type InventoryEntry =
       taskId?: never;
     });
 
-export const VALID_TASK_IDS: number[] = Array.from({ length: 27 }, (_, i) => i + 1);
+const VALID_TASK_IDS: number[] = Array.from({ length: 27 }, (_, i) => i + 1);
 
 export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
 
@@ -140,6 +140,30 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "path": "src/app/(app)/dean/academic-structure/course-assignments/page.tsx",
     "disposition": "task",
     "taskId": 14,
+    "category": "route"
+  },
+  {
+    "path": "src/app/(app)/design-system/layout.tsx",
+    "disposition": "task",
+    "taskId": 7,
+    "category": "layout"
+  },
+  {
+    "path": "src/app/(app)/design-system/loading.tsx",
+    "disposition": "task",
+    "taskId": 7,
+    "category": "route"
+  },
+  {
+    "path": "src/app/(app)/design-system/not-found.tsx",
+    "disposition": "task",
+    "taskId": 7,
+    "category": "route"
+  },
+  {
+    "path": "src/app/(app)/design-system/page.tsx",
+    "disposition": "task",
+    "taskId": 7,
     "category": "route"
   },
   {
@@ -2270,6 +2294,40 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
 ];
 
 
+function validateTaskOwnership(entry: InventoryEntry, errors: string[]): void {
+  if (entry.disposition === "task") {
+    if (entry.taskId === undefined || entry.taskId === null) {
+      errors.push(`Task-owned entry at ${entry.path} must have a valid taskId`);
+    } else if (!VALID_TASK_IDS.includes(entry.taskId)) {
+      errors.push(
+        `Task ID ${entry.taskId} for ${entry.path} must be between ${VALID_TASK_IDS[0]} and ${
+          VALID_TASK_IDS[VALID_TASK_IDS.length - 1]
+        }`
+      );
+    }
+  } else if (
+    (entry as { taskId?: number }).taskId !== undefined &&
+    (entry as { taskId?: number }).taskId !== null
+  ) {
+    errors.push(`Non-task entry at ${entry.path} must not have a taskId`);
+  }
+}
+
+function validateExplanatoryNotes(entry: InventoryEntry, errors: string[]): void {
+  if (
+    entry.disposition === "redirect" ||
+    entry.disposition === "not_found_placeholder" ||
+    entry.disposition === "generated" ||
+    entry.disposition === "approved_exception"
+  ) {
+    if (!entry.notes || entry.notes.trim().length === 0) {
+      errors.push(
+        `Entry with disposition "${entry.disposition}" at ${entry.path} must include non-empty explanatory notes`
+      );
+    }
+  }
+}
+
 export function validateInventoryEntry(
   entry: InventoryEntry,
   fileExists?: (p: string) => boolean
@@ -2296,34 +2354,8 @@ export function validateInventoryEntry(
     errors.push(`Invalid disposition "${entry.disposition}" for path ${entry.path}`);
   }
 
-  if (entry.disposition === "task") {
-    if (entry.taskId === undefined || entry.taskId === null) {
-      errors.push(`Task-owned entry at ${entry.path} must have a valid taskId`);
-    } else if (!VALID_TASK_IDS.includes(entry.taskId)) {
-      errors.push(
-        `Task ID ${entry.taskId} for ${entry.path} must be between ${VALID_TASK_IDS[0]} and ${
-          VALID_TASK_IDS[VALID_TASK_IDS.length - 1]
-        }`
-      );
-    }
-  } else {
-    if ((entry as { taskId?: number }).taskId !== undefined && (entry as { taskId?: number }).taskId !== null) {
-      errors.push(`Non-task entry at ${entry.path} must not have a taskId`);
-    }
-  }
-
-  if (
-    entry.disposition === "redirect" ||
-    entry.disposition === "not_found_placeholder" ||
-    entry.disposition === "generated" ||
-    entry.disposition === "approved_exception"
-  ) {
-    if (!entry.notes || entry.notes.trim().length === 0) {
-      errors.push(
-        `Entry with disposition "${entry.disposition}" at ${entry.path} must include non-empty explanatory notes`
-      );
-    }
-  }
+  validateTaskOwnership(entry, errors);
+  validateExplanatoryNotes(entry, errors);
 
   if (entry.path && !checkExists(entry.path)) {
     errors.push(`Stale inventory path does not exist on disk: ${entry.path}`);
