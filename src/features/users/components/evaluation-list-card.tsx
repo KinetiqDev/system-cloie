@@ -32,12 +32,7 @@ export function EvaluationListCard({
       <div className="flex flex-col justify-between gap-4 md:flex-row">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex items-center gap-2">
-            <Badge
-              variant={status === "DUE_SOON" ? "secondary" : "outline"}
-              className={`text-[10px] uppercase ${
-                status === "DUE_SOON" ? "border-warning bg-warning-soft text-warning" : ""
-              }`}
-            >
+            <Badge variant={status === "DUE_SOON" ? "warning" : "outline"} className="uppercase">
               {status === "DUE_SOON" ? "Closing Soon" : `Deadline: ${deadline}`}
             </Badge>
           </div>
@@ -51,19 +46,13 @@ export function EvaluationListCard({
 
           {deploymentType === "COURSE_BOUND" && courseTitle ? (
             <>
-              <p className="text-text-secondary truncate text-sm font-medium">
-                {courseTitle}
-              </p>
+              <p className="text-text-secondary truncate text-sm font-medium">{courseTitle}</p>
               {facultyName && (
-                <p className="text-text-muted mt-0.5 text-sm">
-                  Published by {facultyName}
-                </p>
+                <p className="text-text-muted mt-0.5 text-sm">Published by {facultyName}</p>
               )}
             </>
           ) : (
-            <p className="text-text-secondary truncate text-sm font-medium">
-              {programLabel}
-            </p>
+            <p className="text-text-secondary truncate text-sm font-medium">{programLabel}</p>
           )}
           <p className="text-text-muted mt-1 text-xs font-semibold tracking-wide uppercase">
             {deploymentType === "CENTRAL" ? "Central Deployment" : "Course-Bound Evaluation"}
@@ -86,7 +75,7 @@ export function EvaluationListCard({
           <Button
             disabled={!href}
             render={href ? <Link href={href} /> : undefined}
-            className="mt-2 w-full font-bold md:w-auto"
+            className="mt-2 min-h-11 w-full font-bold md:w-auto"
           >
             {isSubmitted ? "View Answers" : isResuming ? "Resume" : "Start Evaluation"}
           </Button>

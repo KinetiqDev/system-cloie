@@ -5,7 +5,7 @@ export default function IndustryPartnerDashboardLoading() {
   return (
     <div className="space-y-8">
       {/* Hero Card Skeleton */}
-      <section className="bg-primary/50 mb-8 rounded-2xl border p-6 lg:p-8">
+      <section className="bg-surface border-border mb-8 rounded-2xl border p-6 lg:p-8">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="space-y-4">
             <Skeleton className="h-8 w-48" />
@@ -21,7 +21,7 @@ export default function IndustryPartnerDashboardLoading() {
         {[1, 2, 3].map((i) => (
           <Card key={i} className="border-border">
             <CardContent className="p-6">
-              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="mb-2 h-4 w-24" />
               <Skeleton className="h-8 w-12" />
             </CardContent>
           </Card>
@@ -32,7 +32,7 @@ export default function IndustryPartnerDashboardLoading() {
       <section className="mt-8 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <Skeleton className="h-6 w-40 mb-2" />
+            <Skeleton className="mb-2 h-6 w-40" />
             <Skeleton className="h-4 w-64" />
           </div>
           <Skeleton className="h-4 w-16" />

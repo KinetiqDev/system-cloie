@@ -397,12 +397,12 @@ export function WizardShell({
             variant="outline"
             onClick={handlePrevious}
             disabled={currentStep === 0}
-            className="font-bold"
+            className="min-h-11 font-bold"
           >
             <ArrowLeft className="mr-2 size-4" /> Previous
           </Button>
 
-          <Button onClick={handleNext} className="min-w-[160px] font-bold" disabled={isSaving}>
+          <Button onClick={handleNext} className="min-h-11 min-w-[160px] font-bold" disabled={isSaving}>
             {currentStep === totalSteps - 1 ? (
               <span className="flex items-center">
                 Review & Submit <CheckCircle className="ml-2 size-4" />
