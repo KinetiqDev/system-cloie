@@ -15,11 +15,11 @@ export function LegalPageHeader({ document }: { document: LegalDocument }) {
             {document.description}
           </p>
         </div>
-        <div className="grid gap-3 rounded-xl border border-amber-300/70 bg-amber-50 p-4 text-sm text-amber-950 sm:grid-cols-[auto_1fr] sm:gap-x-4 sm:gap-y-1">
-          <strong className="font-semibold">Publication status</strong>
-          <span>{document.approvalStatus}</span>
+        <div className="border-warning/50 bg-warning-soft grid gap-3 rounded-xl border p-4 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-4 sm:gap-y-1">
+          <strong className="text-warning font-semibold">Publication status</strong>
+          <span className="text-text-secondary">{document.approvalStatus}</span>
           <span className="hidden sm:block" aria-hidden="true" />
-          <span className="leading-6">{document.approvalNote}</span>
+          <span className="text-text-secondary leading-6">{document.approvalNote}</span>
         </div>
         <dl className="grid gap-4 text-sm sm:grid-cols-3">
           <div>

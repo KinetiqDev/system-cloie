@@ -1,13 +1,23 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 
 export default function UnauthorizedPage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-3xl font-bold">Unauthorized</h1>
-      <p>You are signed in, but your current role cannot access this section.</p>
-      <Link href="/dashboard" className="underline">
-        Return to dashboard
-      </Link>
+    <main className="flex min-h-screen items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <h1 className="font-heading text-base leading-snug font-medium">Unauthorized</h1>
+          <CardDescription>
+            You are signed in, but your current role cannot access this section.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button render={<Link href="/dashboard" />}>
+            Return to dashboard
+          </Button>
+        </CardContent>
+      </Card>
     </main>
   );
 }
