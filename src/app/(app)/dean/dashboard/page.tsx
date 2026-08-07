@@ -4,7 +4,11 @@ import { ArrowUpRight, CheckCircle2, CircleAlert, Gauge, Layers3 } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { getDeanDashboard, type DeanDashboardData, type DeanReadState } from "@/features/dean/services/read-dean-oversight";
+import {
+  getDeanDashboard,
+  type DeanDashboardData,
+  type DeanReadState,
+} from "@/features/dean/services/read-dean-oversight";
 import { DeanDashboardLoading } from "@/features/dean/components/dean-oversight-loading";
 
 const risks = [
@@ -56,12 +60,7 @@ export async function DeanDashboardDetails({
   return <DeanDashboardContent result={result} />;
 }
 
-export function DeanDashboardContent({
-  result,
-}: {
-  result: DeanReadState<DeanDashboardData>;
-}) {
-
+export function DeanDashboardContent({ result }: { result: DeanReadState<DeanDashboardData> }) {
   if (result.state === "no-eligible-period") {
     return (
       <Card>
@@ -148,7 +147,9 @@ export function DeanDashboardContent({
                   <CardDescription>{risk.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-semibold tabular-nums">{riskCounts[risk.dataKey]}</p>
+                  <p className="font-heading text-heading-xl text-foreground tabular-nums">
+                    {riskCounts[risk.dataKey]}
+                  </p>
                   <span className="sr-only">Open filtered Learning Outcomes for {risk.label}</span>
                 </CardContent>
               </Card>
@@ -220,7 +221,7 @@ function KpiCard({
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold tabular-nums">{value}</p>
+        <p className="font-heading text-heading-xl text-foreground tabular-nums">{value}</p>
         <p className="text-text-secondary mt-1 text-xs">{detail}</p>
       </CardContent>
     </Card>

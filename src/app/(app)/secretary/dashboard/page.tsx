@@ -20,7 +20,7 @@ export default async function SecretaryDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Secretary Dashboard</h1>
+        <h1 className="font-heading text-text-primary text-2xl font-black">Secretary Dashboard</h1>
         <p className="text-text-secondary text-sm">
           Operate the academic and access foundation that powers every downstream stakeholder
           workflow.
@@ -37,7 +37,9 @@ export default async function SecretaryDashboardPage() {
           <Card key={stat.label}>
             <CardHeader className="pb-2">
               <CardDescription>{stat.label}</CardDescription>
-              <CardTitle className="text-3xl">{stat.value}</CardTitle>
+              <CardTitle className="font-heading text-heading-xl text-foreground tabular-nums">
+                {stat.value}
+              </CardTitle>
             </CardHeader>
           </Card>
         ))}

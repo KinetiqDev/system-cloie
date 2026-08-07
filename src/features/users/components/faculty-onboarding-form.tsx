@@ -92,11 +92,12 @@ export function FacultyOnboardingForm({
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-8 px-6 py-8 sm:px-8">
           <div className="space-y-1">
-            <h1 className="font-heading text-text-primary text-2xl font-bold">
+            <h1 className="font-heading text-text-primary text-2xl font-black">
               Faculty Profile Setup
             </h1>
             <p className="text-body-sm text-text-secondary">
-              Please complete your details and select your primary program affiliation to access the faculty portal.
+              Please complete your details and select your primary program affiliation to access the
+              faculty portal.
             </p>
           </div>
 
