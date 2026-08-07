@@ -50,6 +50,7 @@
   --surface-input: #ffffff;
   --surface-popover: #ffffff;
   --surface-overlay: #ffffff;
+  --scrim: rgba(15, 23, 42, 0.5);
 
   /* Legacy alias mappings for surfaces */
   --color-background: var(--surface-secondary);
@@ -206,6 +207,7 @@
   --surface-input: #0f172a;
   --surface-popover: #172033;
   --surface-overlay: #172033;
+  --scrim: rgba(2, 6, 23, 0.6);
 
   /* Borders (Dark) */
   --border-default: #334155;

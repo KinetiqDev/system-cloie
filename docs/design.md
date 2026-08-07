@@ -153,6 +153,7 @@ Token layers:
 | Surface hover | `#F1F5F9` | `#273449` |
 | Input | `#FFFFFF` | `#0F172A` |
 | Popover | `#FFFFFF` | `#172033` |
+| Scrim | `rgba(15, 23, 42, 0.5)` | `rgba(2, 6, 23, 0.6)` |
 | Border | `#E2E8F0` | `#334155` |
 | Border strong | `#CBD5E1` | `#475569` |
 | Text primary | `#0F172A` | `#F8FAFC` |

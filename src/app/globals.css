@@ -103,6 +103,7 @@
   --color-surface-input: var(--surface-input);
   --color-surface-popover: var(--surface-popover);
   --color-surface-overlay: var(--surface-overlay);
+  --color-scrim: var(--scrim);
   --color-background: var(--surface-secondary);
   --color-surface: var(--surface-primary);
   --color-surface-alt: var(--surface-tertiary);
