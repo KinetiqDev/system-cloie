@@ -12,7 +12,7 @@ describe("RolloverRunner", () => {
     term: null,
     startDate: null,
     endDate: null,
-    isActive: true,
+    status: "ACTIVE",
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -25,7 +25,7 @@ describe("RolloverRunner", () => {
     term: null,
     startDate: null,
     endDate: null,
-    isActive: false,
+    status: "PLANNED",
     createdAt: new Date(),
     updatedAt: new Date(),
   };

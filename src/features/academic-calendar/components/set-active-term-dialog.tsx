@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { setActiveTermInstanceAction } from "@/lib/actions/secretary-school-year-actions";
 import { showToast } from "@/components/ui/toast";
@@ -34,8 +34,10 @@ export function SetActiveTermDialog({
   onSuccess,
 }: SetActiveTermDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleConfirm() {
+    setError(null);
     setIsSubmitting(true);
 
     const formData = new FormData();
@@ -53,7 +55,7 @@ export function SetActiveTermDialog({
       onOpenChange(false);
       onSuccess?.();
     } else {
-      showToast(result.error, "error");
+      setError(result.error);
     }
 
     setIsSubmitting(false);
@@ -76,14 +78,21 @@ export function SetActiveTermDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
+        <div className="space-y-4 py-4">
+          <Alert variant="information">
+            <Info className="h-4 w-4" />
             <AlertDescription>
               <strong>{termLabel}</strong> will become the active term.
               {termInstance.status === "ACTIVE" && " This term is already active."}
             </AlertDescription>
           </Alert>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <DialogFooter>
@@ -98,9 +107,10 @@ export function SetActiveTermDialog({
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={isSubmitting || termInstance.status === "ACTIVE"}
+            loading={isSubmitting}
+            disabled={termInstance.status === "ACTIVE"}
           >
-            {isSubmitting ? "Setting..." : "Set Active"}
+            {isSubmitting ? "Setting…" : "Set as Active"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
   Table,
   TableBody,
   TableCell,
@@ -13,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Plus, Archive, CheckCircle } from "lucide-react";
+import { ArrowLeft, Plus, Archive, CheckCircle, CalendarX2 } from "lucide-react";
 import { formatDateRange } from "@/lib/utils/date-format";
 import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
 import { TermInstanceForm } from "@/features/academic-calendar/components/term-instance-form";
@@ -74,19 +81,23 @@ export function SchoolYearDetailClientPage({
         </CardHeader>
         <CardContent>
           {schoolYear.termInstances.length === 0 ? (
-            <div className="text-muted-foreground py-8 text-center">
-              <p>No term instances yet.</p>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <CalendarX2 />
+                </EmptyMedia>
+                <EmptyTitle>No term instances yet</EmptyTitle>
+                <EmptyDescription>
+                  Add a semester and term to start building this school year.
+                </EmptyDescription>
+              </EmptyHeader>
               {!schoolYear.isArchived && (
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => setAddingTerm(true)}
-                >
+                <Button variant="outline" onClick={() => setAddingTerm(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add First Term
                 </Button>
               )}
-            </div>
+            </Empty>
           ) : (
             <Table>
               <TableHeader>
@@ -105,7 +116,7 @@ export function SchoolYearDetailClientPage({
                     <TableCell>{term.term ? getTermLabel(term.term) : "—"}</TableCell>
                     <TableCell>
                       {term.status === "ACTIVE" ? (
-                        <Badge variant="default">
+                        <Badge variant="success">
                           <CheckCircle className="mr-1 h-3 w-3" />
                           Active
                         </Badge>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
 import { showToast } from "@/components/ui/toast";
 import type { TermInstanceItem } from "../types";
 import type {
@@ -123,29 +124,29 @@ export function RolloverRunner({
 
   if (step === "confirm") {
     return (
-      <div className="border-border bg-surface space-y-6 rounded-xl border p-6">
+      <div className="rounded-xl border bg-card space-y-6 p-6">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Confirm Term Rollover</h3>
-          <p className="text-text-muted text-sm">
+          <p className="text-muted-foreground text-sm">
             This will roll over active student enrollments from the source term to the target
             term, promoting students to their next year level.
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="bg-surface-container-low space-y-1 rounded-lg p-4">
-            <p className="text-text-muted text-xs font-semibold uppercase">Source Term</p>
+          <div className="space-y-1 rounded-lg bg-muted p-4">
+            <p className="text-muted-foreground text-xs font-semibold uppercase">Source Term</p>
             <p className="font-medium">{formatTermLabel(sourceTerm)}</p>
           </div>
-          <div className="bg-surface-container-low space-y-1 rounded-lg p-4">
-            <p className="text-text-muted text-xs font-semibold uppercase">Target Term</p>
+          <div className="space-y-1 rounded-lg bg-muted p-4">
+            <p className="text-muted-foreground text-xs font-semibold uppercase">Target Term</p>
             <p className="font-medium">{formatTermLabel(targetTerm)}</p>
           </div>
         </div>
 
-        <div className="bg-primary/5 border-primary/20 space-y-2 rounded-lg border p-4">
+        <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
           <p className="text-sm font-medium">Cohort Promotion Rules:</p>
-          <ul className="text-text-secondary text-sm space-y-1">
+          <ul className="text-muted-foreground text-sm space-y-1">
             <li>• 1st Year → 2nd Year</li>
             <li>• 2nd Year → 3rd Year</li>
             <li>• 3rd Year → 4th Year</li>
@@ -158,17 +159,17 @@ export function RolloverRunner({
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="text-center">
                 <p className="text-2xl font-bold">{previewData.wouldProcessCount}</p>
-                <p className="text-text-muted text-xs">Students to Process</p>
+                <p className="text-muted-foreground text-xs">Students to Process</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-primary">{previewData.wouldCreateCount}</p>
-                <p className="text-text-muted text-xs">Enrollments to Create</p>
+                <p className="text-primary text-2xl font-bold">{previewData.wouldCreateCount}</p>
+                <p className="text-muted-foreground text-xs">Enrollments to Create</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-text-secondary">
+                <p className="text-muted-foreground text-2xl font-bold">
                   {previewData.wouldSkipCount}
                 </p>
-                <p className="text-text-muted text-xs">Already Enrolled (Skip)</p>
+                <p className="text-muted-foreground text-xs">Already Enrolled (Skip)</p>
               </div>
             </div>
 
@@ -188,7 +189,7 @@ export function RolloverRunner({
               <Button
                 type="button"
                 onClick={handleRun}
-                disabled={isLoading}
+                loading={isLoading}
                 className="flex-1"
               >
                 {isLoading ? "Processing..." : "Run Rollover"}
@@ -199,7 +200,7 @@ export function RolloverRunner({
           <Button
             type="button"
             onClick={handlePreview}
-            disabled={isLoading}
+            loading={isLoading}
             className="w-full"
           >
             {isLoading ? "Loading Preview..." : "Preview Rollover"}
@@ -213,17 +214,21 @@ export function RolloverRunner({
 
   if (step === "running") {
     return (
-      <div className="border-border bg-surface space-y-6 rounded-xl border p-6">
+      <div className="rounded-xl border bg-card space-y-6 p-6">
         <div className="space-y-2 text-center">
           <h3 className="text-lg font-semibold">Running Rollover...</h3>
-          <p className="text-text-muted text-sm">
+          <p className="text-muted-foreground text-sm">
             Creating enrollments for {formatTermLabel(targetTerm)}
           </p>
         </div>
 
+        <div className="flex items-center justify-center">
+          <Spinner size="lg" label="Running rollover" />
+        </div>
+
         <Progress value={50} className="w-full" />
 
-        <p className="text-text-muted text-center text-sm">
+        <p className="text-muted-foreground text-center text-sm">
           This may take a moment for large cohorts.
         </p>
       </div>
@@ -234,26 +239,28 @@ export function RolloverRunner({
 
   if (step === "results" && resultData) {
     return (
-      <div className="border-border bg-surface space-y-6 rounded-xl border p-6">
+      <div className="rounded-xl border bg-card space-y-6 p-6">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Rollover Complete</h3>
-          <p className="text-text-muted text-sm">
+          <p className="text-muted-foreground text-sm">
             Successfully processed enrollments for {formatTermLabel(targetTerm)}
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="bg-surface-container-low text-center rounded-lg p-4">
+          <div className="rounded-lg bg-muted p-4 text-center">
             <p className="text-2xl font-bold">{resultData.processedCount}</p>
-            <p className="text-text-muted text-xs">Students Processed</p>
+            <p className="text-muted-foreground text-xs">Students Processed</p>
           </div>
-          <div className="bg-primary/10 text-center rounded-lg p-4">
-            <p className="text-2xl font-bold text-primary">{resultData.createdCount}</p>
-            <p className="text-text-muted text-xs">Enrollments Created</p>
+          <div className="rounded-lg bg-primary/10 p-4 text-center">
+            <p className="text-primary text-2xl font-bold">{resultData.createdCount}</p>
+            <p className="text-muted-foreground text-xs">Enrollments Created</p>
           </div>
-          <div className="bg-surface-container-low text-center rounded-lg p-4">
-            <p className="text-2xl font-bold text-text-secondary">{resultData.skippedCount}</p>
-            <p className="text-text-muted text-xs">Already Enrolled</p>
+          <div className="rounded-lg bg-muted p-4 text-center">
+            <p className="text-muted-foreground text-2xl font-bold">
+              {resultData.skippedCount}
+            </p>
+            <p className="text-muted-foreground text-xs">Already Enrolled</p>
           </div>
         </div>
 

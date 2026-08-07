@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { AcademicSemester, AcademicTerm } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SemesterTermPicker } from "./term-instance-picker";
+import {
+  SemesterTermPicker,
+  type SemesterTermValue,
+} from "./term-instance-picker";
 import { addTermInstanceAction } from "@/lib/actions/secretary-school-year-actions";
 import { showToast } from "@/components/ui/toast";
 
@@ -35,36 +38,38 @@ export function TermInstanceForm({
   schoolYearCode,
   onSuccess,
 }: TermInstanceFormProps) {
-  const [semester, setSemester] = useState<AcademicSemester | undefined>(
-    AcademicSemester.FIRST
-  );
-  const [term, setTerm] = useState<AcademicTerm | undefined>(AcademicTerm.FIRST_TERM);
+  const [value, setValue] = useState<SemesterTermValue>({
+    semester: AcademicSemester.FIRST,
+    term: AcademicTerm.FIRST_TERM,
+  });
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     setIsSubmitting(true);
 
-    if (!semester) {
-      showToast("Please select a semester", "error");
+    if (!value.semester) {
+      setError("Please select a semester");
       setIsSubmitting(false);
       return;
     }
 
     // Summer must have null term
-    const effectiveTerm = semester === AcademicSemester.SUMMER ? null : term;
+    const effectiveTerm = value.semester === AcademicSemester.SUMMER ? null : value.term;
 
-    if (semester !== AcademicSemester.SUMMER && !term) {
-      showToast("Please select a term for first or second semester", "error");
+    if (value.semester !== AcademicSemester.SUMMER && !value.term) {
+      setError("Please select a term for first or second semester");
       setIsSubmitting(false);
       return;
     }
 
     const formData = new FormData();
     formData.append("schoolYearId", schoolYearId);
-    formData.append("semester", semester);
+    formData.append("semester", value.semester);
     if (effectiveTerm) {
       formData.append("term", effectiveTerm);
     }
@@ -83,30 +88,29 @@ export function TermInstanceForm({
       onOpenChange(false);
       onSuccess?.();
     } else {
-      showToast(result.error, "error");
+      setError(result.error);
     }
 
     setIsSubmitting(false);
   }
 
   function resetForm() {
-    setSemester(AcademicSemester.FIRST);
-    setTerm(AcademicTerm.FIRST_TERM);
+    setValue({ semester: AcademicSemester.FIRST, term: AcademicTerm.FIRST_TERM });
     setStartDate("");
     setEndDate("");
+    setError(null);
   }
 
   useEffect(() => {
     if (open) {
       resetForm();
     }
-   
   }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <DialogHeader>
             <DialogTitle>Add Term Instance</DialogTitle>
             <DialogDescription>
@@ -116,35 +120,42 @@ export function TermInstanceForm({
 
           <div className="grid gap-4 py-4">
             <SemesterTermPicker
-              semester={semester}
-              term={term}
-              onSemesterChange={setSemester}
-              onTermChange={setTerm}
+              value={value}
+              onChange={(next) => {
+                setValue(next);
+                if (error) setError(null);
+              }}
               disabled={isSubmitting}
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  disabled={isSubmitting}
-                />
-              </div>
+              <Field>
+                <FieldLabel htmlFor="startDate">Start Date</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="endDate">End Date</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </FieldContent>
+              </Field>
             </div>
+
+            <FieldError>{error}</FieldError>
           </div>
 
           <DialogFooter>
@@ -156,8 +167,8 @@ export function TermInstanceForm({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add Term"}
+            <Button type="submit" loading={isSubmitting}>
+              {isSubmitting ? "Adding…" : "Add Term"}
             </Button>
           </DialogFooter>
         </form>
