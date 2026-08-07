@@ -2,11 +2,22 @@
 
 import { useState, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { CalendarClock, Users } from "lucide-react";
 import { type TargetStakeholder, YearLevel } from "@prisma/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type {
@@ -65,6 +76,8 @@ export function PublishCentralDeploymentForm({
   const [selectedTemplateId, setSelectedTemplateId] = useState(preselectedTemplateId ?? "");
   const [targetStakeholder, setTargetStakeholder] = useState<string>("STUDENT");
   const [selectedTermInstanceId, setSelectedTermInstanceId] = useState<string>(activeTermId ?? "");
+  const [selectedYearLevel, setSelectedYearLevel] = useState<string>("");
+  const [selectedMajorId, setSelectedMajorId] = useState<string>("");
   const [step, setStep] = useState<Step>("configure");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,11 +113,10 @@ export function PublishCentralDeploymentForm({
 
     const formData = new FormData(event.currentTarget);
     formData.set("programId", programId);
-    const yearLevelValue = formData.get("year_level");
-    const yearLevel = yearLevelValue && typeof yearLevelValue === "string" && yearLevelValue.length > 0
-      ? (yearLevelValue as YearLevel)
+    const yearLevelValue = selectedYearLevel.length > 0
+      ? (selectedYearLevel as YearLevel)
       : undefined;
-    const majorId = (formData.get("major_id") as string) || undefined;
+    const majorId = selectedMajorId || undefined;
 
     // Phase 7: Validate term instance selection
     if (!selectedTermInstanceId) {
@@ -112,7 +124,7 @@ export function PublishCentralDeploymentForm({
       return;
     }
 
-    if (targetStakeholder === "STUDENT" && !yearLevel) {
+    if (targetStakeholder === "STUDENT" && !yearLevelValue) {
       setError("Please select a target year level.");
       return;
     }
@@ -125,7 +137,7 @@ export function PublishCentralDeploymentForm({
         majorId,
         programId,
         targetStakeholder: targetStakeholder as TargetStakeholder,
-        yearLevel,
+        yearLevel: yearLevelValue,
       });
 
       if (!result.success) {
@@ -199,201 +211,232 @@ export function PublishCentralDeploymentForm({
         onSubmit={handlePreview}
       >
         <input type="hidden" name="programId" value={programId} />
-        <div className="space-y-2">
-          <Label htmlFor="deployment_name">Deployed Evaluation Name</Label>
-          <Input
-            id="deployment_name"
-            name="deployment_name"
-            placeholder="e.g. BSIT Exit Survey 2026"
-            required
-          />
-          <p className="text-muted-foreground text-xs">
-            This is the name respondents and reviewers will see for this publication.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="template_id">Evaluation Template</Label>
-          {preselectedTemplateId && selectedTemplate ? (
-            <>
-              <div className="border-input bg-muted flex items-center gap-3 rounded-lg border px-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{selectedTemplate.name}</p>
-                </div>
-                <Badge variant="outline" className="shrink-0 text-xs">Pre-selected</Badge>
-              </div>
-              <input type="hidden" name="template_id" value={selectedTemplateId} />
-            </>
-          ) : (
-            <select
-              id="template_id"
-              name="template_id"
-              className="border-input h-9 w-full rounded-lg border bg-transparent px-2.5 text-sm"
-              value={selectedTemplateId}
-              onChange={(e) => setSelectedTemplateId(e.target.value)}
+        <Field>
+          <FieldLabel htmlFor="deployment_name">Deployed Evaluation Name</FieldLabel>
+          <FieldContent>
+            <Input
+              id="deployment_name"
+              name="deployment_name"
+              placeholder="e.g. BSIT Exit Survey 2026"
               required
-            >
-              <option value="">Select a template...</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
+            />
+            <p className="text-muted-foreground text-xs">
+              This is the name respondents and reviewers will see for this publication.
+            </p>
+          </FieldContent>
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="template_id">Evaluation Template</FieldLabel>
+          <FieldContent>
+            {preselectedTemplateId && selectedTemplate ? (
+              <>
+                <div className="border-input bg-muted flex items-center gap-3 rounded-lg border px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{selectedTemplate.name}</p>
+                  </div>
+                  <Badge variant="outline" className="shrink-0 text-xs">Pre-selected</Badge>
+                </div>
+                <input type="hidden" name="template_id" value={selectedTemplateId} />
+              </>
+            ) : (
+              <>
+                <Select
+                  value={selectedTemplateId}
+                  onValueChange={(value) => setSelectedTemplateId(value ?? "")}
+                >
+                  <SelectTrigger id="template_id" className="w-full">
+                    <SelectValue placeholder="Select a template...">
+                      {selectedTemplateId
+                        ? (templates.find((t) => t.id === selectedTemplateId)?.name ??
+                          "Select a template...")
+                        : null}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="template_id" value={selectedTemplateId} />
+              </>
+            )}
+          </FieldContent>
+        </Field>
 
         {/* Two-column grid */}
         <div className="grid gap-6 md:grid-cols-2">
           {/* Left column — Deployment Schedule */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <svg
-                className="text-primary h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
+              <CalendarClock className="text-primary size-5" />
               <h2 className="text-label-lg font-semibold tracking-wide uppercase">
                 Deployment Schedule
               </h2>
             </div>
 
             {/* Activation Date & Time */}
-            <div className="space-y-2">
-              <Label htmlFor="activation_at">Activation Date & Time</Label>
-              <Input type="datetime-local" id="activation_at" name="activation_at" />
-              <p className="text-muted-foreground text-xs">
-                Leave empty to activate immediately upon publication.
-              </p>
-            </div>
+            <Field>
+              <FieldLabel htmlFor="activation_at">Activation Date & Time</FieldLabel>
+              <FieldContent>
+                <Input type="datetime-local" id="activation_at" name="activation_at" />
+                <p className="text-muted-foreground text-xs">
+                  Leave empty to activate immediately upon publication.
+                </p>
+              </FieldContent>
+            </Field>
 
             {/* Deadline Date & Time */}
-            <div className="space-y-2">
-              <Label htmlFor="deadline_at">Deadline Date & Time</Label>
-              <Input type="datetime-local" id="deadline_at" name="deadline_at" />
-              <p className="text-muted-foreground text-xs">
-                Optional. Respondents cannot submit after this deadline.
-              </p>
-            </div>
+            <Field>
+              <FieldLabel htmlFor="deadline_at">Deadline Date & Time</FieldLabel>
+              <FieldContent>
+                <Input type="datetime-local" id="deadline_at" name="deadline_at" />
+                <p className="text-muted-foreground text-xs">
+                  Optional. Respondents cannot submit after this deadline.
+                </p>
+              </FieldContent>
+            </Field>
           </div>
 
           {/* Right column — Audience Targeting */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <svg
-                className="text-primary h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
+              <Users className="text-primary size-5" />
               <h2 className="text-label-lg font-semibold tracking-wide uppercase">
                 Audience Targeting
               </h2>
             </div>
 
             {/* Academic Context - Phase 7: Term Instance Picker */}
-            <div className="space-y-2">
-              <Label htmlFor="term_instance_id">Academic Term</Label>
-              <select
-                id="term_instance_id"
-                name="term_instance_id"
-                className="border-input h-9 w-full rounded-lg border bg-transparent px-2.5 text-sm"
-                value={selectedTermInstanceId}
-                onChange={(e) => setSelectedTermInstanceId(e.target.value)}
-                required
-              >
-                <option value="">Select a term...</option>
-                {termInstances.map((ti) => (
-                  <option key={ti.id} value={ti.id}>
-                    {ti.schoolYearCode} — {getSemesterLabel(ti.semester)}
-                    {ti.term ? ` — ${getTermLabel(ti.term)}` : ""}
-                    {ti.status === "ACTIVE" ? " (Active)" : ""}
-                  </option>
-                ))}
-              </select>
-              <p className="text-muted-foreground text-xs">
-                Select the academic term for this deployment.
-              </p>
-            </div>
+            <Field>
+              <FieldLabel htmlFor="term_instance_id">Academic Term</FieldLabel>
+              <FieldContent>
+                <Select
+                  value={selectedTermInstanceId}
+                  onValueChange={(value) => setSelectedTermInstanceId(value ?? "")}
+                >
+                  <SelectTrigger id="term_instance_id" className="w-full">
+                    <SelectValue placeholder="Select a term...">
+                      {selectedTermInstanceId
+                        ? (() => {
+                            const ti = termInstances.find((t) => t.id === selectedTermInstanceId);
+                            return ti
+                              ? `${ti.schoolYearCode} — ${getSemesterLabel(ti.semester)}${
+                                  ti.term ? ` — ${getTermLabel(ti.term)}` : ""
+                                }${ti.status === "ACTIVE" ? " (Active)" : ""}`
+                              : null;
+                          })()
+                        : null}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {termInstances.map((ti) => (
+                      <SelectItem key={ti.id} value={ti.id}>
+                        <span className="flex items-center gap-2">
+                          {ti.status === "ACTIVE" && (
+                            <span className="bg-primary size-2 rounded-full" />
+                          )}
+                          {ti.schoolYearCode} — {getSemesterLabel(ti.semester)}
+                          {ti.term ? ` — ${getTermLabel(ti.term)}` : ""}
+                          {ti.status === "ACTIVE" ? " (Active)" : ""}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input type="hidden" name="term_instance_id" value={selectedTermInstanceId} />
+                <p className="text-muted-foreground text-xs">
+                  Select the academic term for this deployment.
+                </p>
+              </FieldContent>
+            </Field>
 
             {/* Target Stakeholder */}
             <fieldset className="space-y-2">
               <legend className="text-sm leading-none font-medium">Target Stakeholder</legend>
-              <div className="space-y-2">
+              <RadioGroup
+                value={targetStakeholder}
+                onValueChange={(value) => setTargetStakeholder(value ?? "STUDENT")}
+              >
                 {STAKEHOLDER_OPTIONS.map((option) => (
                   <label key={option.value} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="target_stakeholder"
-                      value={option.value}
-                      checked={targetStakeholder === option.value}
-                      onChange={() => setTargetStakeholder(option.value)}
-                    />
+                    <RadioGroupItem value={option.value} />
                     {option.label}
                   </label>
                 ))}
-              </div>
+              </RadioGroup>
+              <input type="hidden" name="target_stakeholder" value={targetStakeholder} />
             </fieldset>
 
             {/* Year Level is required for student-targeted deployments. */}
             {showYearLevel && yearLevels.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="year_level">Year Level</Label>
-                <select
-                  id="year_level"
-                  name="year_level"
-                  required={showYearLevel}
-                  className="border-input h-9 w-full rounded-lg border bg-transparent px-2.5 text-sm"
-                >
-                  <option value="">Select year level</option>
-                  {yearLevels.map((yl) => (
-                    <option key={yl} value={yl}>
-                      {getYearLevelDisplay(yl)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Field>
+                <FieldLabel htmlFor="year_level">Year Level</FieldLabel>
+                <FieldContent>
+                  <Select
+                    value={selectedYearLevel}
+                    onValueChange={(value) => setSelectedYearLevel(value ?? "")}
+                  >
+                    <SelectTrigger id="year_level" className="w-full">
+                      <SelectValue placeholder="Select year level">
+                        {selectedYearLevel
+                          ? getYearLevelDisplay(selectedYearLevel as YearLevel)
+                          : null}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yearLevels.map((yl) => (
+                        <SelectItem key={yl} value={yl}>
+                          {getYearLevelDisplay(yl)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <input type="hidden" name="year_level" value={selectedYearLevel} />
+                </FieldContent>
+              </Field>
             )}
 
             {/* Major — conditional on program having majors */}
             {showMajor && (
-              <div className="space-y-2">
-                <Label htmlFor="major_id">Major</Label>
-                <select
-                  id="major_id"
-                  name="major_id"
-                  className="border-input h-9 w-full rounded-lg border bg-transparent px-2.5 text-sm"
-                >
-                  <option value="">All majors</option>
-                  {majors.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Field>
+                <FieldLabel htmlFor="major_id">Major</FieldLabel>
+                <FieldContent>
+                  <Select
+                    value={selectedMajorId}
+                    onValueChange={(value) => setSelectedMajorId(value ?? "")}
+                  >
+                    <SelectTrigger id="major_id" className="w-full">
+                      <SelectValue placeholder="All majors">
+                        {selectedMajorId
+                          ? (majors.find((m) => m.id === selectedMajorId)?.name ?? null)
+                          : null}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All majors</SelectItem>
+                      {majors.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <input type="hidden" name="major_id" value={selectedMajorId} />
+                </FieldContent>
+              </Field>
             )}
           </div>
         </div>
 
         {/* Messages */}
         {error && step === "configure" && (
-          <p className="bg-danger/10 text-danger rounded-lg px-3 py-2 text-sm">{error}</p>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Actions */}
@@ -407,8 +450,8 @@ export function PublishCentralDeploymentForm({
             </a>
             <Button
               type="submit"
-              disabled={isLoadingPreview || templates.length === 0}
-              className="bg-primary text-on-primary"
+              loading={isLoadingPreview}
+              disabled={templates.length === 0}
             >
               {isLoadingPreview ? "Loading preview..." : "Preview Respondents"}
             </Button>
@@ -443,13 +486,13 @@ export function PublishCentralDeploymentForm({
                 <thead className="bg-muted sticky top-0">
                   <tr className="text-muted-foreground text-left text-xs font-semibold uppercase">
                     <th className="px-3 py-2">
-                      <input
-                        type="checkbox"
+                      <Checkbox
+                        aria-label="Select all respondents"
                         checked={excludedRespondentIds.length === 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
+                        onCheckedChange={(checked) => {
+                          if (checked === true) {
                             setExcludedRespondentIds([]);
-                          } else {
+                          } else if (checked === false) {
                             setExcludedRespondentIds(
                               previewRespondents.map((r) => r.userId)
                             );
@@ -481,11 +524,11 @@ export function PublishCentralDeploymentForm({
                         className={isExcluded ? "bg-danger-soft/20 opacity-60" : ""}
                       >
                         <td className="px-3 py-2">
-                          <input
-                            type="checkbox"
+                          <Checkbox
+                            aria-label={`Include ${respondent.lastName}, ${respondent.firstName}`}
                             checked={!isExcluded}
-                            onChange={(e) =>
-                              handleExcludeRespondent(respondent.userId, !e.target.checked)
+                            onCheckedChange={(checked) =>
+                              handleExcludeRespondent(respondent.userId, checked !== true)
                             }
                           />
                         </td>
@@ -512,40 +555,22 @@ export function PublishCentralDeploymentForm({
           )}
 
           {error && step === "preview" && (
-            <p className="bg-danger/10 text-danger rounded-lg px-3 py-2 text-sm">{error}</p>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           <div className="flex items-center gap-3">
             <Button
               type="button"
               onClick={handlePublishFinal}
+              loading={isSubmitting}
               disabled={
-                isSubmitting ||
                 previewRespondents.length === 0 ||
                 previewRespondents.length === excludedRespondentIds.length
               }
-              className="bg-primary text-on-primary"
             >
-              {isSubmitting ? (
-                "Publishing..."
-              ) : (
-                <span className="inline-flex items-center gap-1.5">
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                    />
-                  </svg>
-                  Confirm and Publish
-                </span>
-              )}
+              {isSubmitting ? "Publishing..." : "Confirm and Publish"}
             </Button>
             <Button
               type="button"

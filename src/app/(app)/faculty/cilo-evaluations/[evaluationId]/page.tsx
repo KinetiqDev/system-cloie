@@ -26,8 +26,8 @@ export default async function FacultyCiloEvaluationDetailPage({
       </Button>
 
       <section className="space-y-1">
-        <h1 className="text-2xl font-bold">{detail.evaluationTitle}</h1>
-        <p className="text-text-muted text-sm">
+        <h1 className="text-heading-lg">{detail.evaluationTitle}</h1>
+        <p className="text-muted-foreground text-sm">
           {detail.courseTitle} | {detail.programLabel} | {detail.termInstanceLabel}
         </p>
       </section>

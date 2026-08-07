@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import {
   Select,
   SelectContent,
@@ -7,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { YearLevel, StudentSection } from "@prisma/client";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
@@ -82,6 +83,7 @@ export function AssignmentPicker({
   disabled = false,
   allowClear = false,
 }: AssignmentPickerProps) {
+  const pickerId = useId();
   const labelSource = allAssignments ?? assignments;
   // Sort by course code, then year level
   const sortedAssignments = [...assignments]
@@ -100,64 +102,66 @@ export function AssignmentPicker({
     });
 
   return (
-    <div className="space-y-2">
-      {label && <Label>{label}</Label>}
-      <Select
-        value={value ?? ""}
-        onValueChange={(val) => onChange(val || null)}
-        disabled={disabled || sortedAssignments.length === 0}
-      >
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder={placeholder}>
-            {value
-              ? (() => {
-                  const a = labelSource.find((a) => a.id === value);
-                  return a
-                    ? formatClassIdentityLabel(
-                        a.courseCode,
-                        a.courseTitle,
-                        a.yearLevel,
-                        a.section,
-                        a.programCode
-                      )
-                    : null;
-                })()
-              : null}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {allowClear && (
-            <SelectItem value="">Clear selection</SelectItem>
-          )}
-          {sortedAssignments.length === 0 ? (
-            <SelectItem value="" disabled>
-              No assignments available
-            </SelectItem>
-          ) : (
-            sortedAssignments.map((assignment) => (
-              <SelectItem key={assignment.id} value={assignment.id}>
-                <span className="flex flex-col">
-                  <span>
-                    {formatClassIdentityLabel(
-                      assignment.courseCode,
-                      assignment.courseTitle,
-                      assignment.yearLevel,
-                      assignment.section,
-                      assignment.programCode
+    <Field>
+      {label && <FieldLabel htmlFor={pickerId}>{label}</FieldLabel>}
+      <FieldContent>
+        <Select
+          value={value ?? ""}
+          onValueChange={(val) => onChange(val || null)}
+          disabled={disabled || sortedAssignments.length === 0}
+        >
+          <SelectTrigger id={pickerId} className="w-full">
+            <SelectValue placeholder={placeholder}>
+              {value
+                ? (() => {
+                    const a = labelSource.find((a) => a.id === value);
+                    return a
+                      ? formatClassIdentityLabel(
+                          a.courseCode,
+                          a.courseTitle,
+                          a.yearLevel,
+                          a.section,
+                          a.programCode
+                        )
+                      : null;
+                  })()
+                : null}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {allowClear && (
+              <SelectItem value="">Clear selection</SelectItem>
+            )}
+            {sortedAssignments.length === 0 ? (
+              <SelectItem value="" disabled>
+                No assignments available
+              </SelectItem>
+            ) : (
+              sortedAssignments.map((assignment) => (
+                <SelectItem key={assignment.id} value={assignment.id}>
+                  <span className="flex flex-col">
+                    <span>
+                      {formatClassIdentityLabel(
+                        assignment.courseCode,
+                        assignment.courseTitle,
+                        assignment.yearLevel,
+                        assignment.section,
+                        assignment.programCode
+                      )}
+                    </span>
+                    {assignment.termInstanceLabel && (
+                      <span className="text-muted-foreground text-xs">
+                        {assignment.termInstanceLabel}
+                      </span>
                     )}
                   </span>
-                  {assignment.termInstanceLabel && (
-                    <span className="text-muted-foreground text-xs">
-                      {assignment.termInstanceLabel}
-                    </span>
-                  )}
-                </span>
-              </SelectItem>
-            ))
-          )}
-        </SelectContent>
-      </Select>
-    </div>
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </FieldContent>
+    </Field>
   );
 }
 
@@ -182,6 +186,7 @@ export function GroupedAssignmentPicker({
   onTermChange,
   ...pickerProps
 }: GroupedAssignmentPickerProps) {
+  const termPickerId = useId();
   // Filter assignments by selected term
   const filteredAssignments = selectedTermId
     ? assignments.filter((a) => a.termInstanceId === selectedTermId)
@@ -194,44 +199,46 @@ export function GroupedAssignmentPicker({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Academic Term</Label>
-        <Select
-          value={selectedTermId ?? ""}
-          onValueChange={(val) => onTermChange?.(val || null)}
-          disabled={sortedTerms.length === 0}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="All Terms">
-              {selectedTermId
-                ? (() => {
-                    const t = sortedTerms.find((t) => t.id === selectedTermId);
-                    return t
-                      ? formatTermInstanceLabel(t.schoolYearCode, t.semester, t.term)
-                      : null;
-                  })()
-                : null}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">All Terms</SelectItem>
-            {sortedTerms.map((term) => (
-              <SelectItem key={term.id} value={term.id}>
-                <span className="flex items-center gap-2">
-                  {term.status === "ACTIVE" && (
-                    <span className="bg-primary h-2 w-2 rounded-full" />
-                  )}
-                  {formatTermInstanceLabel(
-                    term.schoolYearCode,
-                    term.semester,
-                    term.term
-                  )}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Field>
+        <FieldLabel htmlFor={termPickerId}>Academic Term</FieldLabel>
+        <FieldContent>
+          <Select
+            value={selectedTermId ?? ""}
+            onValueChange={(val) => onTermChange?.(val || null)}
+            disabled={sortedTerms.length === 0}
+          >
+            <SelectTrigger id={termPickerId} className="w-full">
+              <SelectValue placeholder="All Terms">
+                {selectedTermId
+                  ? (() => {
+                      const t = sortedTerms.find((t) => t.id === selectedTermId);
+                      return t
+                        ? formatTermInstanceLabel(t.schoolYearCode, t.semester, t.term)
+                        : null;
+                    })()
+                  : null}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Terms</SelectItem>
+              {sortedTerms.map((term) => (
+                <SelectItem key={term.id} value={term.id}>
+                  <span className="flex items-center gap-2">
+                    {term.status === "ACTIVE" && (
+                      <span className="bg-primary h-2 w-2 rounded-full" />
+                    )}
+                    {formatTermInstanceLabel(
+                      term.schoolYearCode,
+                      term.semester,
+                      term.term
+                    )}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldContent>
+      </Field>
 
       <AssignmentPicker
         {...pickerProps}
