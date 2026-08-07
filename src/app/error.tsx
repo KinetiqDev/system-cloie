@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 
 export default function Error({
   error,
@@ -19,7 +19,9 @@ export default function Error({
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Something went wrong</CardTitle>
+          <h1 className="font-heading text-base leading-snug font-medium">
+            Something went wrong
+          </h1>
           <CardDescription>
             An unexpected error occurred. Please try again or contact support if the problem persists.
           </CardDescription>
