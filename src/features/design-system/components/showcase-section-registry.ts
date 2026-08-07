@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { ChartShowcase } from "./chart-showcase";
 import { ComponentStateMatrix } from "./component-state-matrix";
 import { DataShowcase } from "./data-showcase";
 import { FeedbackAndStateShowcase } from "./feedback-and-state-showcase";
@@ -56,6 +57,13 @@ export const SHOWCASE_SECTIONS: readonly ShowcaseSectionEntry[] = [
     description:
       "Selectable table rows using local static state only — selection is reference state and performs no database mutation.",
     component: TableSelectionShowcase,
+  },
+  {
+    id: "charts",
+    title: "Charts",
+    description:
+      "Quantitative charts on the approved five-token palette with legends, direct labels, exact-value tables, text insight, and deterministic hatch distinction beyond five categories.",
+    component: ChartShowcase,
   },
   {
     id: "feedback",

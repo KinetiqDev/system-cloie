@@ -1,30 +1,37 @@
 "use client";
 
+import { useId } from "react";
 import type { PieLabelRenderProps } from "recharts";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartPatternDefs,
+  ChartTooltip,
+  chartFill,
+} from "@/components/ui/chart";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { FacultyAnalyticsData } from "../types";
 
 type FacultyCiloAnalyticsChartProps = {
   data: FacultyAnalyticsData[];
 };
 
-const COLORS = [
-  "#3b82f6", // blue
-  "#10b981", // emerald
-  "#f59e0b", // amber
-  "#ef4444", // red
-  "#8b5cf6", // violet
-  "#0891b2", // cyan
-  "#c026d3", // fuchsia
-  "#ea580c", // orange
-  "#4f46e5", // indigo
-  "#15803d", // green
-  "#be185d", // pink
-  "#0d9488", // teal
-];
-
 export function FacultyCiloAnalyticsChart({ data }: FacultyCiloAnalyticsChartProps) {
+  const instanceId = useId().replace(/[:]/g, "");
+  const chartId = `cilo-mean-${instanceId}`;
+  const titleId = `${chartId}-title`;
+  const insightId = `${chartId}-insight`;
   // Aggregate CILO metrics across all evaluations
   const ciloMap = new Map<string, { label: string; description: string; values: number[] }>();
 
@@ -66,29 +73,45 @@ export function FacultyCiloAnalyticsChart({ data }: FacultyCiloAnalyticsChartPro
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-bold">CILO Mean Attainment</CardTitle>
+          <CardTitle className="text-title-sm">CILO Mean Attainment</CardTitle>
           <CardDescription>No CILO data available</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
-            <p className="text-muted-foreground text-sm">
-              No CILO-bound quantitative responses yet.
-            </p>
-          </div>
+          <Empty className="h-64">
+            <EmptyTitle>No CILO data yet</EmptyTitle>
+            <EmptyDescription>No CILO-bound quantitative responses yet.</EmptyDescription>
+          </Empty>
         </CardContent>
       </Card>
     );
   }
 
+  const config = Object.fromEntries(
+    chartData.map((item) => [item.name, { label: `${item.name} (${item.value})` }])
+  );
+
+  const best = chartData[0];
+  const worst = chartData[chartData.length - 1];
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-bold">CILO Mean Attainment</CardTitle>
+        <CardTitle id={titleId} className="text-title-sm">
+          CILO Mean Attainment
+        </CardTitle>
         <CardDescription>Mean scores per Course Intended Learning Outcome</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={320}>
+      <CardContent className="flex flex-col gap-3">
+        <ChartContainer
+          id={chartId}
+          role="region"
+          aria-labelledby={titleId}
+          aria-describedby={insightId}
+          config={config}
+          className="aspect-auto h-80 w-full"
+        >
           <PieChart>
+            <ChartPatternDefs chartId={chartId} categoryCount={chartData.length} />
             <Pie
               data={chartData}
               dataKey="value"
@@ -98,14 +121,15 @@ export function FacultyCiloAnalyticsChart({ data }: FacultyCiloAnalyticsChartPro
               outerRadius={100}
               innerRadius={50}
               paddingAngle={3}
+              isAnimationActive={false}
               label={({ name, value }: PieLabelRenderProps) => `${name}: ${value}`}
               labelLine
             >
-              {chartData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              {chartData.map((item, index) => (
+                <Cell key={`cell-${index}`} fill={chartFill(chartId, index)} />
               ))}
             </Pie>
-            <Tooltip
+            <ChartTooltip
               formatter={(value, name) => {
                 const item = chartData.find((d) => d.name === name);
                 return [`Mean: ${value}`, item?.description || name];
@@ -117,15 +141,37 @@ export function FacultyCiloAnalyticsChart({ data }: FacultyCiloAnalyticsChartPro
                 fontSize: "13px",
               }}
             />
-            <Legend
-              verticalAlign="bottom"
-              formatter={(value: string) => {
-                const item = chartData.find((d) => d.name === value);
-                return item ? `${value} (${item.value})` : value;
-              }}
-            />
+            <ChartLegend verticalAlign="bottom" content={<ChartLegendContent nameKey="name" />} />
           </PieChart>
-        </ResponsiveContainer>
+        </ChartContainer>
+        <p id={insightId} className="text-body-sm text-text-secondary">
+          {chartData.length === 1
+            ? `Mean attainment for ${best.name}: ${best.value}.`
+            : `Highest attainment: ${best.name} (${best.value}). Lowest attainment: ${worst.name} (${worst.value}).`}
+        </p>
+        <details>
+          <summary className="text-label-sm text-text-secondary cursor-pointer">
+            View exact values
+          </summary>
+          <div className="border-border mt-3 overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Course Intended Learning Outcome</TableHead>
+                  <TableHead className="text-right">Mean</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {chartData.map((item) => (
+                  <TableRow key={item.key}>
+                    <TableCell className="max-w-md truncate font-medium">{item.name}</TableCell>
+                    <TableCell className="text-right tabular-nums">{item.value}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </details>
       </CardContent>
     </Card>
   );

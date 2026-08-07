@@ -71,7 +71,7 @@ export function FacultyQuantitativeBreakdown({ data }: FacultyQuantitativeBreakd
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-bold">Quantitative Questions</CardTitle>
+          <CardTitle className="text-title-sm">Quantitative Questions</CardTitle>
           <CardDescription>No quantitative data available</CardDescription>
         </CardHeader>
         <CardContent>
@@ -86,7 +86,7 @@ export function FacultyQuantitativeBreakdown({ data }: FacultyQuantitativeBreakd
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-bold">Quantitative Questions</CardTitle>
+        <CardTitle className="text-title-sm">Quantitative Questions</CardTitle>
         <CardDescription>
           {questions.length} questions with {questions.reduce((sum, q) => sum + q.responseCount, 0)}{" "}
           total responses

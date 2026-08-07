@@ -203,3 +203,35 @@ export const SHOWCASE_ERROR_REFERENCE = {
   recovery: "Try again, then contact support if the issue persists.",
   retryLabel: "Try again",
 } as const;
+
+interface ShowcaseChartBar {
+  label: string;
+  value: number | null;
+}
+
+interface ShowcaseChartPieSlice {
+  label: string;
+  mean: number;
+  responseCount: number;
+}
+
+/** Seven categories over the approved five-token palette: six and seven repeat a color and get hatch distinction. */
+export const SHOWCASE_CHART_BARS: readonly ShowcaseChartBar[] = [
+  { label: "Student", value: 4.42 },
+  { label: "Alumni", value: 4.18 },
+  { label: "Industry Partner", value: 3.86 },
+  { label: "Instructor", value: 4.65 },
+  { label: "Support Staff", value: 3.94 },
+  { label: "Graduate Student", value: 4.3 },
+  { label: "External Reviewer", value: 4.05 },
+];
+
+/** Six slices over the approved five-token palette: the sixth repeats a color and gets hatch distinction. */
+export const SHOWCASE_CHART_PIE: readonly ShowcaseChartPieSlice[] = [
+  { label: "Student", mean: 4.42, responseCount: 128 },
+  { label: "Alumni", mean: 4.18, responseCount: 64 },
+  { label: "Industry Partner", mean: 3.86, responseCount: 41 },
+  { label: "Instructor", mean: 4.65, responseCount: 32 },
+  { label: "Support Staff", mean: 3.94, responseCount: 27 },
+  { label: "Graduate Student", mean: 4.3, responseCount: 19 },
+];
