@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Plus } from "lucide-react";
 import { CourseAssignmentsTable } from "./course-assignments-table";
 import { AssignmentFilters } from "./shared/assignment-filters";
@@ -127,12 +128,10 @@ export function CourseAssignmentsPageShell({
       />
 
       {loadError && (
-        <div
-          role="alert"
-          className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-4 py-3 text-sm"
-        >
-          {loadError}
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Could not load course assignments</AlertTitle>
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
       )}
 
       <CourseAssignmentsTable

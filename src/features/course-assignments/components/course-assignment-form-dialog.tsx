@@ -10,8 +10,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showToast } from "@/components/ui/toast";
 import { UserIcon } from "lucide-react";
@@ -260,8 +260,9 @@ export function CourseAssignmentFormDialog({
 
         {step === "course" && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Course</Label>
+            <Field>
+              <FieldLabel htmlFor="assignment-course">Course</FieldLabel>
+              <FieldContent>
                 <Select
                 value={courseId ?? ""}
                 onValueChange={(value) => {
@@ -272,7 +273,7 @@ export function CourseAssignmentFormDialog({
                   setHasTouchedYearLevel(false);
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="assignment-course">
                   <SelectValue placeholder="Select a course...">
                     {courseId
                       ? (() => {
@@ -290,7 +291,8 @@ export function CourseAssignmentFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+              </FieldContent>
+            </Field>
           </div>
         )}
 
@@ -312,20 +314,23 @@ export function CourseAssignmentFormDialog({
 
         {step === "faculty" && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select Faculty</Label>
-              <FacultySearchPopover
-                selectedFacultyId={selectedFaculty?.id ?? null}
-                selectedFacultyName={
-                  selectedFaculty
-                    ? `${selectedFaculty.firstName} ${selectedFaculty.lastName}`
-                    : null
-                }
-                targetProgramId={programId ?? undefined}
-                targetProgramName={selectedProgram?.name}
-                onSelect={setSelectedFaculty}
-              />
-            </div>
+            <Field>
+              <FieldLabel htmlFor="assignment-faculty">Select Faculty</FieldLabel>
+              <FieldContent>
+                <FacultySearchPopover
+                  id="assignment-faculty"
+                  selectedFacultyId={selectedFaculty?.id ?? null}
+                  selectedFacultyName={
+                    selectedFaculty
+                      ? `${selectedFaculty.firstName} ${selectedFaculty.lastName}`
+                      : null
+                  }
+                  targetProgramId={programId ?? undefined}
+                  targetProgramName={selectedProgram?.name}
+                  onSelect={setSelectedFaculty}
+                />
+              </FieldContent>
+            </Field>
 
             {selectedFaculty && (
               <div className="flex items-start gap-3 rounded-xl border bg-muted/40 p-4">
@@ -350,13 +355,11 @@ export function CourseAssignmentFormDialog({
 
         {step === "confirm" && showCrossProgramWarning && (
           <div className="space-y-4">
-            <Alert variant="destructive">
+            <Alert variant="warning">
+              <AlertTitle>Cross-Program Assignment</AlertTitle>
               <AlertDescription>
-                <p className="font-medium">Cross-Program Assignment</p>
-                <p className="mt-1">
-                  {selectedFaculty?.firstName} {selectedFaculty?.lastName} is not affiliated with{" "}
-                  {selectedProgram?.name}. Are you sure you want to proceed?
-                </p>
+                {selectedFaculty?.firstName} {selectedFaculty?.lastName} is not affiliated with{" "}
+                {selectedProgram?.name}. Are you sure you want to proceed?
               </AlertDescription>
             </Alert>
 
@@ -407,12 +410,12 @@ export function CourseAssignmentFormDialog({
               Cancel
             </Button>
             {step === "confirm" ? (
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Confirm Assignment"}
+              <Button loading={isSubmitting} onClick={handleSubmit}>
+                Confirm Assignment
               </Button>
             ) : (
-              <Button onClick={handleNext} disabled={isSubmitting || !canProceed()}>
-                {isSubmitting ? "Creating..." : "Next"}
+              <Button loading={isSubmitting} onClick={handleNext} disabled={!canProceed()}>
+                Next
               </Button>
             )}
           </div>
