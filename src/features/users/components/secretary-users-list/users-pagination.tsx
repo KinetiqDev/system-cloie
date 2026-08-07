@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface UsersPaginationProps {
@@ -8,11 +9,7 @@ interface UsersPaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export function UsersPagination({
-  currentPage,
-  totalPages,
-  onPageChange,
-}: UsersPaginationProps) {
+export function UsersPagination({ currentPage, totalPages, onPageChange }: UsersPaginationProps) {
   if (totalPages <= 1) return null;
 
   const buildPageNumbers = (): (number | "ellipsis")[] => {
@@ -61,7 +58,7 @@ export function UsersPagination({
         className="motion-safe:transition-colors motion-safe:duration-150"
         aria-label="Previous page"
       >
-        ←
+        <ChevronLeft aria-hidden />
       </Button>
 
       {buildPageNumbers().map((page, idx) =>
@@ -79,7 +76,7 @@ export function UsersPagination({
             variant={page === currentPage ? "default" : "outline"}
             size="sm"
             onClick={() => onPageChange(page)}
-            className="motion-safe:transition-colors motion-safe:duration-150 min-w-[36px]"
+            className="min-w-9 motion-safe:transition-colors motion-safe:duration-150"
             aria-label={`Page ${page}`}
             aria-current={page === currentPage ? "page" : undefined}
           >
@@ -96,7 +93,7 @@ export function UsersPagination({
         className="motion-safe:transition-colors motion-safe:duration-150"
         aria-label="Next page"
       >
-        →
+        <ChevronRight aria-hidden />
       </Button>
     </div>
   );

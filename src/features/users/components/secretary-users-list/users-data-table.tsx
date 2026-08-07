@@ -20,37 +20,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { formatRole, getRoleBadgeClass } from "@/features/users/lib/role-visuals";
 import type { SecretaryUserSummaryItem } from "../../services/list-secretary-users-summary";
-
-/** Returns accessible Tailwind bg+text classes for each role. */
-function getRoleBadgeClass(role: SystemRole): string {
-  switch (role) {
-    case SystemRole.SECRETARY:
-      return "bg-red-100 text-red-700";
-    case SystemRole.DEAN:
-      return "bg-purple-100 text-purple-700";
-    case SystemRole.PROGRAM_HEAD:
-      return "bg-indigo-100 text-indigo-700";
-    case SystemRole.FACULTY:
-      return "bg-blue-100 text-blue-700";
-    case SystemRole.STUDENT:
-      return "bg-emerald-100 text-emerald-700";
-    case SystemRole.ALUMNI:
-      return "bg-amber-100 text-amber-800";
-    case SystemRole.INDUSTRY_PARTNER:
-      return "bg-sky-100 text-sky-700";
-    default:
-      return "bg-slate-100 text-slate-700";
-  }
-}
-
-/** Format `PROGRAM_HEAD` → `"Program Head"` */
-function formatRole(role: SystemRole): string {
-  return role
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
-}
 
 interface UsersDataTableProps {
   users: SecretaryUserSummaryItem[];
@@ -69,21 +47,25 @@ export function UsersDataTable({
 }: UsersDataTableProps) {
   if (users.length === 0) {
     return (
-      <div className="bg-muted/50 rounded-lg border py-12 text-center">
-        <Users className="text-muted-foreground/50 mx-auto mb-3 h-12 w-12" />
-        <h3 className="text-lg font-medium">No users found</h3>
-        <p className="text-muted-foreground mt-1 max-w-sm mx-auto text-sm">
-          Try adjusting your filters or search to find what you&apos;re looking for.
-        </p>
-      </div>
+      <Empty className="py-12">
+        <EmptyMedia variant="icon">
+          <Users aria-hidden className="size-4" />
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle>No users found</EmptyTitle>
+          <EmptyDescription>
+            Try adjusting your filters or search to find what you&apos;re looking for.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
   return (
     <>
       {/* Desktop Table View */}
-      <div className="hidden md:block rounded-lg border overflow-hidden">
-        <Table>
+      <div className="hidden overflow-x-auto rounded-lg border md:block">
+        <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
               <TableHead className="w-[200px]">Name</TableHead>
@@ -123,18 +105,16 @@ export function UsersDataTable({
                     <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm">
-                  {user.email}
-                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
                 <TableCell>
-                  <Badge variant={user.isActive ? "default" : "secondary"}>
+                  <Badge variant={user.isActive ? "success" : "secondary"}>
                     {user.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors">
-                      <MoreVertical className="h-4 w-4" />
+                    <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground inline-flex size-9 items-center justify-center rounded-md transition-colors">
+                      <MoreVertical className="size-4" />
                       <span className="sr-only">User actions</span>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
@@ -148,7 +128,7 @@ export function UsersDataTable({
                       <DropdownMenuItem
                         disabled={isPending}
                         onClick={() => onToggleActive(user.id, user.isActive)}
-                        className={user.isActive ? "text-destructive" : "text-emerald-600"}
+                        className={user.isActive ? "text-destructive" : "text-success"}
                       >
                         {user.isActive ? "Deactivate" : "Activate"}
                       </DropdownMenuItem>
@@ -162,46 +142,44 @@ export function UsersDataTable({
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden space-y-3">
+      <div className="flex flex-col gap-3 md:hidden">
         {users.map((user) => (
           <Card
             key={user.id}
-            className="motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm overflow-hidden"
+            className="overflow-hidden motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm"
           >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-semibold">
+                  <h3 className="font-heading text-title-sm text-foreground">
                     {user.firstName} {user.lastName}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="mt-1 flex items-center gap-2">
                     {user.activeRole ? (
                       <Badge className={getRoleBadgeClass(user.activeRole)}>
                         {formatRole(user.activeRole)}
                       </Badge>
                     ) : null}
-                    <Badge variant={user.isActive ? "default" : "secondary"}>
+                    <Badge variant={user.isActive ? "success" : "secondary"}>
                       {user.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
                 </div>
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground -mr-2 inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors">
-                    <MoreVertical className="h-4 w-4" />
+                  <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground -mr-2 inline-flex size-9 items-center justify-center rounded-md transition-colors">
+                    <MoreVertical className="size-4" />
                     <span className="sr-only">User actions</span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onClick={() => onViewUser(user)}>
                       View details
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEditUser(user)}>
-                      Edit user
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEditUser(user)}>Edit user</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       disabled={isPending}
                       onClick={() => onToggleActive(user.id, user.isActive)}
-                      className={user.isActive ? "text-destructive" : "text-emerald-600"}
+                      className={user.isActive ? "text-destructive" : "text-success"}
                     >
                       {user.isActive ? "Deactivate" : "Activate"}
                     </DropdownMenuItem>
@@ -209,13 +187,13 @@ export function UsersDataTable({
                 </DropdownMenu>
               </div>
             </CardHeader>
-            <CardContent className="pt-0 space-y-2">
+            <CardContent className="flex flex-col gap-2 pt-0">
               <div className="flex items-center gap-2 text-sm">
-                <Mail className="text-muted-foreground h-4 w-4" />
+                <Mail className="text-muted-foreground size-4" />
                 <span className="text-muted-foreground">{user.email}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <Building2 className="text-muted-foreground h-4 w-4" />
+                <Building2 className="text-muted-foreground size-4" />
                 <span>{user.programLabel}</span>
                 {user.majorLabel && (
                   <span className="text-muted-foreground">• {user.majorLabel}</span>
@@ -223,7 +201,7 @@ export function UsersDataTable({
               </div>
               {user.roles.includes(SystemRole.STUDENT) && user.sectionLabel && (
                 <div className="flex items-center gap-2 text-sm">
-                  <GraduationCap className="text-muted-foreground h-4 w-4" />
+                  <GraduationCap className="text-muted-foreground size-4" />
                   <span>{user.sectionLabel}</span>
                 </div>
               )}

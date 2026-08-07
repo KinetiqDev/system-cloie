@@ -36,10 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  YEAR_LEVEL_OPTIONS,
-  STUDENT_SECTION_OPTIONS,
-} from "@/lib/constants/academic";
+import { YEAR_LEVEL_OPTIONS, STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
 import { AlertCircle, Loader2, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -73,8 +70,7 @@ const SINGLE_SELECT_ROLES: SystemRole[] = [
   SystemRole.INDUSTRY_PARTNER,
 ];
 
-const INTERNAL_EMAIL_HELPER =
-  "Internal roles require an @acd.edu.ph or @acdeducation.com address.";
+const INTERNAL_EMAIL_HELPER = "Internal roles require an @acd.edu.ph or @acdeducation.com address.";
 
 function needsProgramField(role: SystemRole | undefined): "single" | "none" {
   if (!role) return "none";
@@ -125,7 +121,7 @@ function FormControl({ id, label, optional, helper, error, children }: FormContr
       <Label htmlFor={id}>
         {label}
         {optional && (
-          <span className="ml-1 font-normal normal-case text-text-muted">(optional)</span>
+          <span className="text-text-muted ml-1 font-normal normal-case">(optional)</span>
         )}
       </Label>
       {helper && (
@@ -301,8 +297,7 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
 
   const selectedProgram = programs.find((program) => program.id === selectedProgramId);
   const hasMajors = !!selectedProgram && selectedProgram.majors.length > 0;
-  const showMajor =
-    programMode === "single" && (studentMode || alumniMode) && hasMajors;
+  const showMajor = programMode === "single" && (studentMode || alumniMode) && hasMajors;
 
   const programLabel = studentMode ? "Academic program" : "Affiliated program";
 
@@ -348,9 +343,7 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
       position: "",
     };
 
-    (
-      Object.keys(resetValues) as Array<keyof typeof resetValues>
-    ).forEach((fieldName) => {
+    (Object.keys(resetValues) as Array<keyof typeof resetValues>).forEach((fieldName) => {
       setValue(fieldName as Path<CreateUserBySecretaryInput>, resetValues[fieldName] as never);
     });
   }
@@ -414,7 +407,7 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
   };
 
   return (
-    <Card className="border-border shadow-lg">
+    <Card className="border-border shadow-sm">
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2">
@@ -480,8 +473,8 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
           {showDetailsSection && (
             <>
               <Separator />
-              <fieldset className="flex flex-col gap-4 min-w-0">
-                <legend className="float-none w-full text-label-sm font-semibold uppercase tracking-wider text-text-secondary">
+              <fieldset className="flex min-w-0 flex-col gap-4">
+                <legend className="text-label-sm text-text-secondary float-none w-full font-semibold tracking-wider uppercase">
                   {detailsSectionTitle}
                 </legend>
 

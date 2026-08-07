@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, GraduationCap, UsersRound, Briefcase } from "lucide-react";
+import { Users, GraduationCap, UsersRound, Briefcase, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SecretaryUsersKPI } from "../../services/list-secretary-users-summary";
 
@@ -9,51 +9,42 @@ interface UsersKPIProps {
 }
 
 export function UsersKPI({ kpi }: UsersKPIProps) {
+  const stats: Array<{
+    label: string;
+    value: number;
+    sub: string;
+    icon: LucideIcon;
+  }> = [
+    { label: "Total Users", value: kpi.totalUsers, sub: "Across all roles", icon: Users },
+    { label: "Students", value: kpi.totalStudents, sub: "Enrolled learners", icon: GraduationCap },
+    { label: "Alumni", value: kpi.totalAlumni, sub: "Graduates", icon: UsersRound },
+    {
+      label: "Industry",
+      value: kpi.totalIndustryPartners,
+      sub: "External partners",
+      icon: Briefcase,
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <Card className="motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-          <Users className="text-muted-foreground h-4 w-4" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{kpi.totalUsers}</div>
-          <CardDescription className="text-xs">Across all roles</CardDescription>
-        </CardContent>
-      </Card>
-
-      <Card className="motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Students</CardTitle>
-          <GraduationCap className="text-muted-foreground h-4 w-4" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{kpi.totalStudents}</div>
-          <CardDescription className="text-xs">Enrolled learners</CardDescription>
-        </CardContent>
-      </Card>
-
-      <Card className="motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Alumni</CardTitle>
-          <UsersRound className="text-muted-foreground h-4 w-4" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{kpi.totalAlumni}</div>
-          <CardDescription className="text-xs">Graduates</CardDescription>
-        </CardContent>
-      </Card>
-
-      <Card className="motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Industry</CardTitle>
-          <Briefcase className="text-muted-foreground h-4 w-4" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{kpi.totalIndustryPartners}</div>
-          <CardDescription className="text-xs">External partners</CardDescription>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {stats.map((stat) => (
+        <Card
+          key={stat.label}
+          className="motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm"
+        >
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <CardTitle className="text-title-sm">{stat.label}</CardTitle>
+            <stat.icon className="text-muted-foreground size-4" aria-hidden />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            <span className="font-heading text-heading-xl text-foreground tabular-nums">
+              {stat.value}
+            </span>
+            <CardDescription>{stat.sub}</CardDescription>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
