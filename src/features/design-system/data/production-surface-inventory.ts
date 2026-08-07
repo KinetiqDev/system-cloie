@@ -143,6 +143,30 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "route"
   },
   {
+    "path": "src/app/(app)/design-system/layout.tsx",
+    "disposition": "task",
+    "taskId": 7,
+    "category": "layout"
+  },
+  {
+    "path": "src/app/(app)/design-system/loading.tsx",
+    "disposition": "task",
+    "taskId": 7,
+    "category": "route"
+  },
+  {
+    "path": "src/app/(app)/design-system/not-found.tsx",
+    "disposition": "task",
+    "taskId": 7,
+    "category": "route"
+  },
+  {
+    "path": "src/app/(app)/design-system/page.tsx",
+    "disposition": "task",
+    "taskId": 7,
+    "category": "route"
+  },
+  {
     "path": "src/app/(app)/dean/academic-structure/courses/[id]/edit/loading.tsx",
     "disposition": "task",
     "taskId": 14,

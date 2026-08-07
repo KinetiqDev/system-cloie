@@ -242,3 +242,35 @@ describe("production-surface-inventory", () => {
     });
   });
 });
+
+describe("design-system showcase inventory entries", () => {
+  const showcasePaths = [
+    "src/app/(app)/design-system/layout.tsx",
+    "src/app/(app)/design-system/loading.tsx",
+    "src/app/(app)/design-system/not-found.tsx",
+    "src/app/(app)/design-system/page.tsx",
+  ];
+
+  it("registers every showcase route file under migration task 7", () => {
+    const entries = PRODUCTION_SURFACE_INVENTORY.filter((entry) =>
+      showcasePaths.includes(entry.path)
+    );
+    expect(entries.map((entry) => entry.path).sort()).toEqual([...showcasePaths].sort());
+
+    for (const entry of entries) {
+      expect(entry.disposition).toBe("task");
+      expect(entry.taskId).toBe(7);
+    }
+  });
+
+  it("classifies the showcase layout as a layout surface and the remaining files as routes", () => {
+    const byPath = new Map(
+      PRODUCTION_SURFACE_INVENTORY.map((entry) => [entry.path, entry.category])
+    );
+
+    expect(byPath.get("src/app/(app)/design-system/layout.tsx")).toBe("layout");
+    expect(byPath.get("src/app/(app)/design-system/loading.tsx")).toBe("route");
+    expect(byPath.get("src/app/(app)/design-system/not-found.tsx")).toBe("route");
+    expect(byPath.get("src/app/(app)/design-system/page.tsx")).toBe("route");
+  });
+});
