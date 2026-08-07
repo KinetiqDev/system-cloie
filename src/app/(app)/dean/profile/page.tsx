@@ -36,7 +36,7 @@ export default async function DeanProfilePage() {
         {/* Personal Information */}
         <Card className="border-border shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-primary-soft text-primary rounded-lg p-2">
+            <div className="bg-primary-soft text-selected-fg rounded-lg p-2">
               <User className="size-5" />
             </div>
             <div>
@@ -61,7 +61,7 @@ export default async function DeanProfilePage() {
               </div>
             </div>
             <div className="pt-2">
-              <Badge variant="secondary" className="bg-primary-soft text-primary font-bold">
+              <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-bold">
                 Role: College Dean
               </Badge>
             </div>

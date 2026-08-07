@@ -66,7 +66,7 @@ export function RoleSwitcherList({
             className={cn(
               "rounded-lg border px-2.5 py-1.5 text-left transition-colors",
               isActive
-                ? "border-primary bg-primary-soft text-primary"
+                ? "border-primary bg-primary-soft text-selected-fg"
                 : "border-border bg-background hover:border-primary/40 hover:bg-primary-soft/40"
             )}
             aria-label={`Switch to ${user.label}`}

@@ -15,6 +15,7 @@ export function StatCards({ pending, inProgress, completed }: StatCardsProps) {
       sub: "Awaiting submission",
       color: "text-primary",
       bg: "bg-primary-soft",
+      tileColor: "text-selected-fg",
       icon: FileText,
     },
     {
@@ -43,7 +44,7 @@ export function StatCards({ pending, inProgress, completed }: StatCardsProps) {
             <span className="text-label-sm text-text-muted font-bold tracking-wider uppercase">
               {s.label}
             </span>
-            <div className={`p-2 ${s.bg} rounded-lg ${s.color}`}>
+            <div className={`p-2 ${s.bg} rounded-lg ${s.tileColor ?? s.color}`}>
               <s.icon className="size-5" />
             </div>
           </div>
