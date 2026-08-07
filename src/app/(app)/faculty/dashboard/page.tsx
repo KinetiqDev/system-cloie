@@ -122,7 +122,7 @@ function KPICard({
           </CardDescription>
           {icon}
         </div>
-        <CardTitle className="text-2xl font-bold">
+        <CardTitle className="font-heading text-heading-xl text-foreground tabular-nums">
           {typeof value === "number" ? value.toLocaleString() : value}
         </CardTitle>
       </CardHeader>

@@ -32,13 +32,12 @@ export function RoleSwitcherDropdown({
   description,
 }: RoleSwitcherDropdownProps) {
   const [open, setOpen] = useState(false);
-  const { search, setSearch, error, isSubmitting, filteredUsers, handleRoleClick } =
-    useRoleSwitch({
-      endpoint,
-      requestKey,
-      users,
-      onSwitchSuccess: () => setOpen(false),
-    });
+  const { search, setSearch, error, isSubmitting, filteredUsers, handleRoleClick } = useRoleSwitch({
+    endpoint,
+    requestKey,
+    users,
+    onSwitchSuccess: () => setOpen(false),
+  });
 
   const searchInputId = `dropdown-${title.toLowerCase().replaceAll(" ", "-")}`;
 
@@ -56,7 +55,7 @@ export function RoleSwitcherDropdown({
         <DropdownMenuContent align="end" sideOffset={8} className="w-64 p-0">
           <DropdownMenuGroup>
             <DropdownMenuLabel className="text-xs font-semibold">{title}</DropdownMenuLabel>
-            <DropdownMenuLabel className="text-text-muted py-0 text-[10px] font-normal">
+            <DropdownMenuLabel className="text-text-muted text-caption py-0">
               {description}
             </DropdownMenuLabel>
           </DropdownMenuGroup>

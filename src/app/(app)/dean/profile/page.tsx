@@ -46,13 +46,13 @@ export default async function DeanProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
                 Full Name
               </label>
               <p className="text-sm font-semibold">{fullName}</p>
             </div>
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
                 Email Address
               </label>
               <div className="flex items-center gap-2 text-sm font-semibold">
@@ -81,7 +81,7 @@ export default async function DeanProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4 text-sm font-semibold">
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
                 Scope
               </label>
               <p className="flex items-center gap-2">
@@ -90,7 +90,7 @@ export default async function DeanProfilePage() {
               </p>
             </div>
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
                 Access Level
               </label>
               <p>All programs and academic outcomes</p>

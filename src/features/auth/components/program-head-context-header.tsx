@@ -7,18 +7,19 @@ import type { ProgramHeadProgram } from "@/features/auth/services/resolve-progra
 
 export function ProgramHeadContextHeader({ program }: { program: ProgramHeadProgram }) {
   return (
-    <Card className="mb-6 border-primary/20 bg-primary/5">
+    <Card className="border-primary/20 bg-primary/5 mb-6">
       <CardContent className="flex flex-wrap items-center justify-between gap-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold">
             {program.code.slice(0, 2)}
           </div>
           <div className="min-w-0">
-            <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.16em] uppercase">
+            <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
               Selected Program
             </p>
             <p className="truncate text-sm font-semibold">
-              {program.code} <span className="text-muted-foreground font-normal">{program.name}</span>
+              {program.code}{" "}
+              <span className="text-muted-foreground font-normal">{program.name}</span>
             </p>
           </div>
         </div>

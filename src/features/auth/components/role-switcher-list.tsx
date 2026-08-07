@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 
 export type RoleSwitcherUser = {
   email: string;
@@ -35,7 +36,7 @@ export function RoleSwitcherList({
       {error && (
         <p
           role="alert"
-          className="rounded-md border border-red-100 bg-red-50 px-2 py-1.5 text-[11px] text-red-600"
+          className="border-danger/50 bg-danger-soft text-caption text-danger rounded-md border px-2 py-1.5"
         >
           {error}
         </p>
@@ -45,7 +46,7 @@ export function RoleSwitcherList({
           className="text-text-muted pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2"
           aria-hidden="true"
         />
-        <input
+        <Input
           type="text"
           id={`${searchInputId}-search`}
           name={`${searchInputId}-search`}
@@ -53,7 +54,7 @@ export function RoleSwitcherList({
           placeholder="Search roles..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="border-border bg-background text-text-primary placeholder:text-text-muted w-full rounded-md border py-1.5 pr-2 pl-6 text-[11px] outline-none focus:ring-1 focus:ring-blue-500"
+          className="pr-2 pl-6"
         />
       </div>
       {users.map((user) => {
@@ -65,6 +66,7 @@ export function RoleSwitcherList({
             type="button"
             className={cn(
               "rounded-lg border px-2.5 py-1.5 text-left transition-colors",
+              "focus-visible:ring-ring focus-visible:ring-3 focus-visible:outline-none",
               isActive
                 ? "border-primary bg-primary-soft text-selected-fg"
                 : "border-border bg-background hover:border-primary/40 hover:bg-primary-soft/40"
@@ -76,9 +78,9 @@ export function RoleSwitcherList({
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-xs font-semibold">{user.label}</p>
-                <p className="text-text-muted truncate text-[10px]">{user.email}</p>
+                <p className="text-text-muted text-caption truncate">{user.email}</p>
               </div>
-              <span className="bg-surface-muted text-text-secondary shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
+              <span className="bg-surface-muted text-text-secondary text-caption shrink-0 rounded-full px-1.5 py-0.5 font-semibold tracking-wider uppercase">
                 {user.role.replaceAll("_", " ")}
               </span>
             </div>

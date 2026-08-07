@@ -57,13 +57,13 @@ export default async function FacultyProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
                 Full Name
               </label>
               <p className="text-sm font-semibold">{fullName}</p>
             </div>
             <div className="space-y-1">
-              <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+              <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
                 Email Address
               </label>
               <div className="flex items-center gap-2 text-sm font-semibold">
@@ -96,7 +96,7 @@ export default async function FacultyProfilePage() {
             ) : (
               affiliations.map((aff) => (
                 <div key={aff.program.id} className="space-y-1">
-                  <label className="text-text-muted text-[10px] font-black tracking-widest uppercase">
+                  <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
                     {aff.program.code}
                   </label>
                   <p className="flex items-center gap-2">
