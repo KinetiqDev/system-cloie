@@ -1552,6 +1552,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "ui_primitive"
   },
   {
+    "path": "src/components/ui/chart.tsx",
+    "disposition": "task",
+    "taskId": 9,
+    "category": "ui_primitive"
+  },
+  {
     "path": "src/components/ui/spinner.tsx",
     "disposition": "task",
     "taskId": 3,

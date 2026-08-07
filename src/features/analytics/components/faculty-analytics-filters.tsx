@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import type { FacultyAnalyticsFilters } from "../services/list-faculty-analytics-evaluations";
 
 type FacultyAnalyticsFiltersProps = {
@@ -45,14 +45,19 @@ export function FacultyAnalyticsFilters({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* School Year */}
         <div className="space-y-2">
-          <label className="text-xs font-medium">School Year</label>
+          <Label htmlFor="school-year-filter" className="text-label-sm">
+            School Year
+          </Label>
           <Select
             value={filters.schoolYearCode ?? "all"}
             onValueChange={(value) =>
-              onChange({ ...filters, schoolYearCode: value === "all" || !value ? undefined : value })
+              onChange({
+                ...filters,
+                schoolYearCode: value === "all" || !value ? undefined : value,
+              })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger id="school-year-filter">
               <SelectValue placeholder="All Years" />
             </SelectTrigger>
             <SelectContent>
@@ -68,7 +73,9 @@ export function FacultyAnalyticsFilters({
 
         {/* Status */}
         <div className="space-y-2">
-          <label className="text-xs font-medium">Status</label>
+          <Label htmlFor="status-filter" className="text-label-sm">
+            Status
+          </Label>
           <Select
             value={filters.statuses?.[0] ?? "all"}
             onValueChange={(value) =>
@@ -79,7 +86,7 @@ export function FacultyAnalyticsFilters({
               })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger id="status-filter">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -97,15 +104,18 @@ export function FacultyAnalyticsFilters({
       {/* Course Selection */}
       {availableCourses.length > 0 && (
         <div className="space-y-2">
-          <label className="text-xs font-medium">Courses</label>
+          <Label className="text-label-sm">Courses</Label>
           <div className="flex flex-wrap gap-2">
             {availableCourses.map((course) => {
               const isSelected = filters.courseIds?.includes(course.id) ?? false;
               return (
-                <Badge
+                <Button
                   key={course.id}
+                  type="button"
                   variant={isSelected ? "default" : "outline"}
-                  className="cursor-pointer"
+                  size="sm"
+                  aria-pressed={isSelected}
+                  className="min-h-11 sm:min-h-7"
                   onClick={() => {
                     const newCourseIds = isSelected
                       ? (filters.courseIds || []).filter((id) => id !== course.id)
@@ -114,7 +124,7 @@ export function FacultyAnalyticsFilters({
                   }}
                 >
                   {course.label}
-                </Badge>
+                </Button>
               );
             })}
           </div>

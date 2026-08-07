@@ -4,6 +4,7 @@ import { useState, useTransition, useCallback, useEffect, useRef } from "react";
 import { BarChart3, Filter, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { showToast } from "@/components/ui/toast";
 import type { FacultyAnalyticsEvaluationItem, FacultyAnalyticsData } from "../types";
 import type { FacultyAnalyticsFilters } from "../services/list-faculty-analytics-evaluations";
@@ -124,7 +125,7 @@ export function FacultyAnalyticsDashboard({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Filter className="text-muted-foreground size-4" />
-              <CardTitle className="text-base font-medium">Filters</CardTitle>
+              <CardTitle>Filters</CardTitle>
             </div>
             <Button variant="outline" size="sm" onClick={handleApplyFilters} disabled={isPending}>
               {isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
@@ -156,9 +157,7 @@ export function FacultyAnalyticsDashboard({
       {evaluations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-medium">
-              Select Evaluations ({selectedEvaluationIds.length} selected)
-            </CardTitle>
+            <CardTitle>Select Evaluations ({selectedEvaluationIds.length} selected)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -167,11 +166,10 @@ export function FacultyAnalyticsDashboard({
                   key={evaluation.id}
                   className="hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3"
                 >
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selectedEvaluationIds.includes(evaluation.id)}
-                    onChange={() => handleEvaluationToggle(evaluation.id)}
-                    className="mt-1 size-4"
+                    onCheckedChange={() => handleEvaluationToggle(evaluation.id)}
+                    className="mt-1"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{evaluation.deploymentName}</p>

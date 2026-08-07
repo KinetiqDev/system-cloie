@@ -61,7 +61,9 @@ export function FacultyAnalyticsSummary({
               <Skeleton className="h-8 w-20" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{card.value}</div>
+                <div className="font-heading text-heading-xl text-foreground tabular-nums">
+                  {card.value}
+                </div>
                 <p className="text-muted-foreground text-xs">{card.description}</p>
               </>
             )}

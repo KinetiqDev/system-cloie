@@ -82,16 +82,22 @@ describe("TableSelectionShowcase", () => {
   it("selects all rows and reports the selection count", () => {
     render(<TableSelectionShowcase />);
 
-    expect(screen.getByText(`0 of ${SHOWCASE_PROGRAMS.length} programs selected`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`0 of ${SHOWCASE_PROGRAMS.length} programs selected`)
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Select all programs" }));
 
     expect(
-      screen.getByText(`${SHOWCASE_PROGRAMS.length} of ${SHOWCASE_PROGRAMS.length} programs selected`)
+      screen.getByText(
+        `${SHOWCASE_PROGRAMS.length} of ${SHOWCASE_PROGRAMS.length} programs selected`
+      )
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
-    expect(screen.getByText(`0 of ${SHOWCASE_PROGRAMS.length} programs selected`)).toBeInTheDocument();
+    expect(
+      screen.getByText(`0 of ${SHOWCASE_PROGRAMS.length} programs selected`)
+    ).toBeInTheDocument();
   });
 });
 
@@ -120,6 +126,37 @@ describe("OverlayAndFeedbackShowcase", () => {
     expect(showToastMock).toHaveBeenCalledWith(expect.any(String), "warning");
     expect(showToastMock).toHaveBeenCalledWith(expect.any(String), "error");
     expect(showToastMock).toHaveBeenCalledWith(expect.any(String), "information");
+  });
+});
+
+describe("ChartShowcase", () => {
+  it("renders reference charts with legend, insight, and exact-value tables", () => {
+    render(<DesignSystemShowcasePage />);
+
+    expect(screen.getByRole("heading", { name: "Charts" })).toBeInTheDocument();
+    expect(screen.getByText("Mean Attainment by Stakeholder")).toBeInTheDocument();
+    expect(screen.getByText("Student (128 responses)")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        /Highest mean: Instructor \(4\.65\)\. Lowest mean: Industry Partner \(3\.86\)\./
+      )
+    ).toHaveLength(2);
+    expect(screen.getAllByText("View exact values").length).toBeGreaterThan(0);
+  });
+
+  it("hatches the seventh bar and sixth pie slice with deterministic patterns", () => {
+    render(<DesignSystemShowcasePage />);
+
+    expect(document.querySelector('[id^="stakeholder-mean-"][id$="-hatch-0-c1"]')).not.toBeNull();
+    const barPatterns = document.querySelectorAll(
+      '[id^="mean-bar-"][id$="-hatch-0-c1"], [id^="mean-bar-"][id$="-hatch-1-c1"]'
+    );
+    expect(barPatterns.length).toBe(2);
+    expect(
+      document.querySelector(
+        '[id^="stakeholder-mean-"][id$="-hatch-0-c0"], [id^="stakeholder-mean-"][id$="-hatch-1-c0"], [id^="stakeholder-mean-"][id$="-hatch-2-c0"], [id^="stakeholder-mean-"][id$="-hatch-3-c0"], [id^="stakeholder-mean-"][id$="-hatch-4-c0"]'
+      )
+    ).not.toBeNull();
   });
 });
 
