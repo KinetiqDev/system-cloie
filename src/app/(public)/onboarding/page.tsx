@@ -144,21 +144,21 @@ export default async function OnboardingPage({
   if (intent === "student") {
     return (
       <div className="mx-auto w-full max-w-lg">
-        <Card className="border-border overflow-hidden shadow-lg">
+        <Card className="border-border overflow-hidden shadow-sm">
           <div className="bg-primary flex items-center justify-center py-10">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-              <UserPlus className="size-8 text-white" />
+            <div className="flex size-16 items-center justify-center rounded-2xl bg-on-primary/20">
+              <UserPlus className="size-8 text-on-primary" />
             </div>
           </div>
 
           <CardContent className="space-y-6 px-8 py-8">
-            <h1 className="font-heading text-primary text-center text-2xl font-bold">
+            <h1 className="font-heading text-primary text-center text-heading-lg font-bold">
               Complete Your Student Profile
             </h1>
 
             <div className="border-warning bg-warning-soft/30 flex gap-3 rounded-lg border-l-4 p-4">
               <CheckCircle className="text-warning mt-0.5 size-5 shrink-0" />
-              <p className="text-body-sm text-text-secondary">
+              <p className="text-body-sm text-muted-foreground">
                 We found your ACD account, but your student profile is not yet set up. Please
                 complete your registration to access the platform.
               </p>
@@ -173,13 +173,14 @@ export default async function OnboardingPage({
             </Button>
 
             <form action={resetIncompleteRoleClaim} className="w-full flex justify-center">
-              <button
+              <Button
                 type="submit"
-                className="text-text-muted hover:text-text-primary flex items-center justify-center gap-2 text-sm font-medium transition-colors"
+                variant="ghost"
+                className="text-muted-foreground hover:text-foreground min-h-11 w-full gap-2"
               >
                 <ArrowLeft className="size-4" />
                 Cancel / Back to Role Selection
-              </button>
+              </Button>
             </form>
           </CardContent>
         </Card>

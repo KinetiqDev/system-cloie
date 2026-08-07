@@ -19,8 +19,8 @@ export function HeroCard({
           <h2 className="font-heading text-heading-lg lg:text-heading-xl mb-1 font-extrabold">
             Welcome, {name}
           </h2>
-          <p className="text-white/80 font-medium">{contextLabel}</p>
-          <p className="bg-white/10 text-body-sm mt-4 inline-block rounded-full border border-white/20 px-3 py-1.5">
+          <p className="text-on-primary/80 font-medium">{contextLabel}</p>
+          <p className="bg-on-primary/10 text-body-sm mt-4 inline-block rounded-full border border-on-primary/20 px-3 py-1.5">
             Complete your assigned evaluations before their deadlines.
           </p>
         </div>
@@ -28,7 +28,7 @@ export function HeroCard({
           <Button
             render={<Link href={evaluationsHref} />}
             variant="outline"
-            className="border-on-primary bg-on-primary text-primary hover:bg-white font-semibold"
+            className="border-on-primary bg-on-primary text-primary hover:bg-on-primary/90 font-semibold"
           >
             My Evaluations
           </Button>

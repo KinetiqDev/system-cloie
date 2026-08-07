@@ -88,13 +88,12 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
   const config = STATUS_CONFIGS[type];
   const Icon = config.icon;
 
-  // HSL tailored color schemes for a visually premium alert system
+  // Semantic color roles for the status alert presentation
   const colorMap = {
     danger: {
       bg: "bg-danger-soft/30",
       border: "border-danger/20",
       text: "text-danger",
-      glow: "bg-danger/10",
       iconBg: "bg-danger/10",
       iconColor: "text-danger",
     },
@@ -102,7 +101,6 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
       bg: "bg-warning-soft/30",
       border: "border-warning/20",
       text: "text-warning",
-      glow: "bg-warning/10",
       iconBg: "bg-warning/10",
       iconColor: "text-warning",
     },
@@ -110,7 +108,6 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
       bg: "bg-info-soft/30",
       border: "border-info/20",
       text: "text-info",
-      glow: "bg-info/10",
       iconBg: "bg-info/10",
       iconColor: "text-info",
     },
@@ -127,10 +124,7 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
   }
 
   return (
-    <div className="relative z-10 mx-auto w-full max-w-md animate-fade-in p-4">
-      {/* Decorative Glow Spot */}
-      <div className={`pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 h-48 w-48 rounded-full blur-3xl opacity-50 ${colorMap.glow}`} />
-
+    <div className="relative z-10 mx-auto w-full max-w-md p-4">
       {/* Header Section */}
       <div className="mb-8 flex flex-col items-center">
         <div className="mb-5 flex items-center gap-4">
@@ -151,32 +145,32 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
           />
         </div>
         <h1 className="text-heading-xl font-bold tracking-tight text-primary">System CLOIE</h1>
-        <p className="mt-1 text-label-sm text-text-secondary uppercase tracking-wider">Access Status</p>
+        <p className="mt-1 text-label-sm text-muted-foreground uppercase tracking-wider">Access Status</p>
       </div>
 
       {/* Main Status Card */}
-      <Card className="border border-border bg-surface/85 backdrop-blur-md shadow-xl overflow-hidden">
+      <Card className="border border-border bg-surface shadow-sm overflow-hidden">
         {/* Color accent bar at the top */}
         <div className={`h-1.5 w-full ${config.color === "danger" ? "bg-danger" : config.color === "warning" ? "bg-warning" : "bg-info"}`} />
 
         <CardHeader className="space-y-4 pt-8 pb-6 text-center">
           <div className="flex justify-center">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-full ${colorMap.iconBg} transition-transform hover:scale-105 duration-300`}>
+            <div className={`flex h-14 w-14 items-center justify-center rounded-full ${colorMap.iconBg}`}>
               <Icon className={`size-7 ${colorMap.iconColor}`} />
             </div>
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-heading-lg font-bold text-text-primary">
+            <CardTitle className="text-heading-lg font-bold text-foreground">
               {config.title}
             </CardTitle>
-            <CardDescription className="text-body-md text-text-secondary px-2">
+            <CardDescription className="text-body-md text-muted-foreground px-2">
               {descriptionText}
             </CardDescription>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8">
-          <div className="p-4 bg-muted/50 rounded-lg border border-border text-body-sm text-text-secondary leading-relaxed">
+          <div className="p-4 bg-muted/50 rounded-lg border border-border text-body-sm text-muted-foreground leading-relaxed">
             {config.details}
           </div>
 
@@ -199,7 +193,7 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
       </Card>
 
       {/* Help Footer */}
-      <p className="mt-6 text-center text-body-sm text-text-secondary">
+      <p className="mt-6 text-center text-body-sm text-muted-foreground">
         Need assistance?{" "}
         <a
           href="mailto:support@acdeducation.com"

@@ -39,18 +39,18 @@ export default async function LoginPage({
           />
         </div>
         <h1 className="text-display-md font-bold tracking-tight text-primary">System CLOIE</h1>
-        <p className="mt-2 text-center text-text-secondary">
+        <p className="mt-2 text-center text-muted-foreground">
           System for Comprehensive Learning Outcomes and Instructional Evaluation
         </p>
       </div>
 
       {/* Error Alert */}
       {error === "auth-failure" && (
-        <Alert variant="destructive" className="mb-6 border-danger/20 bg-danger-soft">
-          <AlertCircle className="size-5 shrink-0 text-danger" />
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="size-5 shrink-0" />
           <div className="ml-3">
-            <AlertTitle className="text-danger">Authentication Failed</AlertTitle>
-            <AlertDescription className="text-danger/90">
+            <AlertTitle>Authentication Failed</AlertTitle>
+            <AlertDescription>
               There was a problem signing you in. Please try again.
             </AlertDescription>
           </div>
@@ -58,23 +58,23 @@ export default async function LoginPage({
       )}
 
       {/* Back to portal link */}
-      <Card className="border-border bg-surface shadow-lg">
+      <Card className="border-border bg-surface shadow-sm">
         <CardHeader className="space-y-3 pb-6 pt-8 text-center">
-          <CardTitle className="text-heading-lg font-bold text-text-primary">Welcome Back</CardTitle>
-          <CardDescription className="text-body-md mx-auto max-w-[280px] text-text-secondary">
+          <CardTitle className="text-heading-lg font-bold text-foreground">Welcome Back</CardTitle>
+          <CardDescription className="text-body-md mx-auto max-w-[280px] text-muted-foreground">
             Return to the portal selection to choose your role.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8">
-          <p className="text-center text-body-sm text-text-secondary">
+          <p className="text-center text-body-sm text-muted-foreground">
             Choose a role from the public portal to review the legal documents before Google sign-in.
           </p>
 
           <div className="text-center">
             <a
               href="/portal/respondents"
-              className="text-caption text-text-muted hover:text-text-primary transition-colors"
+              className="text-caption text-muted-foreground hover:text-foreground transition-colors"
             >
               Go to portal selection →
             </a>

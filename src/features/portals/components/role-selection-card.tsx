@@ -2,6 +2,7 @@
 
 import { useState, ElementType } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   ShieldAlert, 
   CheckCircle2, 
@@ -47,23 +48,23 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
           <Icon className="size-6" />
         </div>
         <div>
-          <h3 className="text-title-md font-semibold text-text-primary">{config.title}</h3>
+          <h3 className="text-title-md font-semibold text-foreground">{config.title}</h3>
           {!isSelfService && config.category === "pre_provisioned_admin" && (
-            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 text-[10px] font-medium tracking-wide uppercase">
+            <Badge variant="warning" className="mt-1 uppercase tracking-wide">
               <Lock className="size-3" />
               Pre-Provisioned
-            </span>
+            </Badge>
           )}
         </div>
       </div>
 
-      <p className="text-body-sm text-text-secondary flex-1 mb-6">
+      <p className="text-body-sm text-muted-foreground flex-1 mb-6">
         {config.description}
       </p>
 
       <div className="space-y-4 mt-auto">
         {/* Domain Indicator */}
-        <div className="text-caption text-text-muted flex items-start gap-2 bg-background p-3 rounded-lg border border-border/50">
+        <div className="text-caption text-muted-foreground flex items-start gap-2 bg-background p-3 rounded-lg border border-border/50">
           {needsAcdEmail ? (
             <>
               <ShieldAlert className="size-4 text-primary shrink-0 mt-0.5" />
@@ -71,7 +72,7 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
             </>
           ) : (
             <>
-              <CheckCircle2 className="size-4 text-green-600 shrink-0 mt-0.5" />
+              <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" />
               <span>Any Google account accepted</span>
             </>
           )}
@@ -80,7 +81,8 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
         {/* Action Area */}
         <Button 
           onClick={() => setIsDialogOpen(true)}
-          className="w-full bg-white text-text-primary border border-border hover:bg-surface-hover shadow-sm"
+          variant="outline"
+          className="w-full shadow-sm"
         >
           <img
               src="/logos/google-logo.svg" 

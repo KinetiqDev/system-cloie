@@ -95,22 +95,22 @@ export function AlumniOnboardingForm({
   };
 
   return (
-    <Card className="border-border overflow-hidden shadow-lg">
+    <Card className="border-border overflow-hidden shadow-sm">
       <div className="border-border bg-surface flex items-center justify-between border-b px-6 py-3">
         <span className="text-label-md text-primary font-bold tracking-wider uppercase">
           Onboarding
         </span>
-        <span className="text-caption text-text-muted">Alumni Profile</span>
+        <span className="text-caption text-muted-foreground">Alumni Profile</span>
       </div>
       <div className="bg-primary h-1 w-full" />
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-8 px-6 py-8 sm:px-8">
           <div className="space-y-1">
-            <h1 className="font-heading text-text-primary text-2xl font-bold">
+            <h1 className="font-heading text-foreground text-heading-lg font-bold">
               Alumni Profile Setup
             </h1>
-            <p className="text-body-sm text-text-secondary">
+            <p className="text-body-sm text-muted-foreground">
               Please provide your graduation details to access the alumni portal.
             </p>
           </div>
@@ -125,12 +125,12 @@ export function AlumniOnboardingForm({
           <div className="space-y-5">
             {/* Institutional / Google Email */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                 Email Account
               </Label>
               <div className="border-border bg-surface-muted flex items-center gap-3 rounded-lg border px-4 py-2.5">
-                <Mail className="text-text-muted size-4 shrink-0" />
-                <span className="text-body-md text-text-secondary">{email}</span>
+                <Mail className="text-muted-foreground size-4 shrink-0" />
+                <span className="text-body-md text-muted-foreground">{email}</span>
               </div>
             </div>
 
@@ -147,7 +147,7 @@ export function AlumniOnboardingForm({
               <div className="space-y-2">
                 <Label
                   htmlFor="first_name"
-                  className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
                 >
                   First Name
                 </Label>
@@ -169,7 +169,7 @@ export function AlumniOnboardingForm({
               <div className="space-y-2">
                 <Label
                   htmlFor="last_name"
-                  className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
                 >
                   Last Name
                 </Label>
@@ -198,7 +198,7 @@ export function AlumniOnboardingForm({
 
             {/* Academic Program */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                 Program Graduated From
               </Label>
               <Controller
@@ -232,7 +232,7 @@ export function AlumniOnboardingForm({
             {/* Major — conditional */}
             {hasMajors && (
               <div className="space-y-2">
-                <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+                <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                   Major (if applicable)
                 </Label>
                 <Controller
@@ -271,12 +271,12 @@ export function AlumniOnboardingForm({
             <div className="space-y-2">
               <Label
                 htmlFor="graduation_year"
-                className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
               >
                 Graduation Year
               </Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted size-4" />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
                 <Input
                   id="graduation_year"
                   type="number"
@@ -308,7 +308,7 @@ export function AlumniOnboardingForm({
           <Button
             type="button"
             variant="ghost"
-            className="text-text-muted hover:text-text-primary w-full gap-2"
+            className="text-muted-foreground hover:text-foreground min-h-11 w-full gap-2"
             onClick={async () => {
               await resetIncompleteRoleClaim();
             }}
