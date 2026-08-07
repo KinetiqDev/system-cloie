@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
-import { Archive, Edit, Plus, Search } from "lucide-react";
+import { AlertCircle, Archive, ChevronLeft, ChevronRight, Edit, Plus, Search } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +43,7 @@ import type {
   ProgramHeadCourseItem,
   ProgramHeadCourseSummary,
 } from "../services/resolve-program-head-courses";
+import { getCourseTypeBadgeClass } from "@/features/academic-structure/lib/course-visuals";
 
 type ProgramHeadCoursesCatalogProps = {
   program: { id: string; code: string; name: string };
@@ -66,13 +68,6 @@ function getCourseTypeLabel(course: ProgramHeadCourseItem): string {
   }
 
   return course.major_id ? "Major-Specific" : "Program-Wide";
-}
-
-function getCourseTypeBadgeClass(course: ProgramHeadCourseItem): string {
-  if (course.course_scope === CourseScope.GENERAL_EDUCATION) {
-    return "bg-emerald-100 text-emerald-700";
-  }
-  return course.major_id ? "bg-indigo-100 text-indigo-700" : "bg-blue-100 text-blue-700";
 }
 
 function filterCourses(
@@ -135,11 +130,9 @@ function StatCard({
 }) {
   return (
     <div className="border-border bg-surface hover:bg-surface-alt flex h-28 flex-col justify-between rounded-lg border p-5 transition-colors">
-      <span className="text-text-muted text-xs font-semibold tracking-wider uppercase">
-        {label}
-      </span>
+      <span className="text-label-sm text-muted-foreground tracking-wider uppercase">{label}</span>
       <span
-        className={`font-heading text-3xl font-bold ${muted ? "text-text-muted" : "text-text-primary"}`}
+        className={`font-heading text-heading-xl tabular-nums ${muted ? "text-muted-foreground" : "text-foreground"}`}
       >
         {value}
       </span>
@@ -206,16 +199,10 @@ function CourseFormDialog({
     course?.major_id ? "major-specific" : "program-wide"
   );
   const [majorId, setMajorId] = useState(course?.major_id ?? "");
-  const [yearLevel, setYearLevel] = useState<YearLevel | "">(
-    course?.default_year_level ?? ""
-  );
-  const [semester, setSemester] = useState<AcademicSemester | "">(
-    course?.default_semester ?? ""
-  );
+  const [yearLevel, setYearLevel] = useState<YearLevel | "">(course?.default_year_level ?? "");
+  const [semester, setSemester] = useState<AcademicSemester | "">(course?.default_semester ?? "");
   const [term, setTerm] = useState<AcademicTerm | "">(
-    course?.default_semester === AcademicSemester.SUMMER
-      ? ""
-      : (course?.default_term ?? "")
+    course?.default_semester === AcademicSemester.SUMMER ? "" : (course?.default_term ?? "")
   );
 
   const isSummer = semester === AcademicSemester.SUMMER;
@@ -274,7 +261,10 @@ function CourseFormDialog({
           {mode === "edit" && course && <input type="hidden" name="id" value={course.id} />}
 
           {error && (
-            <div className="bg-danger-soft text-danger rounded-md p-3 text-sm">{error}</div>
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           <div className="space-y-2">
@@ -284,7 +274,7 @@ function CourseFormDialog({
               value={scopeType}
               onValueChange={(v) => setScopeType(v as "program-wide" | "major-specific")}
             >
-            <SelectTrigger id="scope-type">
+              <SelectTrigger id="scope-type">
                 <SelectValue>
                   {scopeType === "program-wide" ? "Program-Wide" : "Major-Specific"}
                 </SelectValue>
@@ -301,11 +291,11 @@ function CourseFormDialog({
           {scopeType === "major-specific" && majors.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="major_id">Major</Label>
-            <MajorSelect
-              majors={majors}
-              defaultValue={course?.major_id ?? undefined}
-              onChange={setMajorId}
-            />
+              <MajorSelect
+                majors={majors}
+                defaultValue={course?.major_id ?? undefined}
+                onChange={setMajorId}
+              />
             </div>
           )}
 
@@ -342,7 +332,7 @@ function CourseFormDialog({
             />
           </div>
 
-          <div className="border-border-muted bg-surface-alt grid gap-4 rounded-lg border p-4 md:grid-cols-3">
+          <div className="border-border bg-surface-alt grid gap-4 rounded-lg border p-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="year-level">
                 Year Level <span className="text-text-muted text-xs font-normal">(default)</span>
@@ -351,7 +341,8 @@ function CourseFormDialog({
                 <SelectTrigger id="year-level">
                   <SelectValue placeholder="Select year level">
                     {yearLevel
-                      ? (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevel)?.label ?? "Select year level")
+                      ? (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevel)?.label ??
+                        "Select year level")
                       : "Select year level"}
                   </SelectValue>
                 </SelectTrigger>
@@ -383,7 +374,8 @@ function CourseFormDialog({
                 <SelectTrigger id="semester">
                   <SelectValue placeholder="Select semester">
                     {semester
-                      ? (SEMESTER_OPTIONS.find((o) => o.value === semester)?.label ?? "Select semester")
+                      ? (SEMESTER_OPTIONS.find((o) => o.value === semester)?.label ??
+                        "Select semester")
                       : "Select semester"}
                   </SelectValue>
                 </SelectTrigger>
@@ -478,10 +470,8 @@ export function ProgramHeadCoursesCatalog({
       {/* Header */}
       <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="font-heading text-text-primary mb-2 text-4xl font-bold tracking-tight lg:text-5xl">
-            Courses
-          </h1>
-          <div className="flex items-center gap-3">
+          <h1 className="font-heading text-text-primary text-2xl font-black">Courses</h1>
+          <div className="mt-2 flex items-center gap-3">
             <span className="font-heading text-primary text-xl font-medium">{programLabel}</span>
             <span className="bg-border-strong h-1.5 w-1.5 rounded-full" />
             <span className="text-body-md text-text-muted">
@@ -493,7 +483,7 @@ export function ProgramHeadCoursesCatalog({
           onClick={() => setCreateDialogOpen(true)}
           className="inline-flex items-center gap-2"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="size-4" data-icon="inline-start" />
           Add Course
         </Button>
       </div>
@@ -511,21 +501,27 @@ export function ProgramHeadCoursesCatalog({
       <div className="bg-surface-alt rounded-xl p-2">
         {/* Tab pill selector */}
         <div className="mb-4 flex flex-wrap gap-2 px-4 pt-3 pb-2">
-          {([
-            { value: "all", label: "All Courses" },
-            { value: "program-wide", label: "Program-Wide" },
-            { value: "major-specific", label: "Major-Specific" },
-            { value: "gen-ed", label: "Gen Ed" },
-            { value: "archived", label: "Archived" },
-          ] as const).map(({ value, label }) => (
+          {(
+            [
+              { value: "all", label: "All Courses" },
+              { value: "program-wide", label: "Program-Wide" },
+              { value: "major-specific", label: "Major-Specific" },
+              { value: "gen-ed", label: "Gen Ed" },
+              { value: "archived", label: "Archived" },
+            ] as const
+          ).map(({ value, label }) => (
             <button
               key={value}
               type="button"
-              onClick={() => { setActiveTab(value); setCurrentPage(1); }}
+              aria-pressed={activeTab === value}
+              onClick={() => {
+                setActiveTab(value);
+                setCurrentPage(1);
+              }}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === value
-                  ? "bg-primary text-white font-semibold"
-                  : "border-border text-text-secondary hover:border-primary hover:text-primary border bg-white"
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : "border-border text-text-secondary hover:border-primary hover:text-primary bg-surface border"
               }`}
             >
               {label}
@@ -533,11 +529,10 @@ export function ProgramHeadCoursesCatalog({
           ))}
         </div>
         <div>
-
           {/* Filters */}
           <div className="flex flex-col items-start justify-between gap-4 px-4 pb-4 lg:flex-row lg:items-center">
             <div className="relative w-full lg:w-80">
-              <Search className="text-text-muted absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Search className="text-text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 className="pl-9"
                 placeholder="Search course code or title..."
@@ -580,28 +575,20 @@ export function ProgramHeadCoursesCatalog({
           {/* Data Table */}
           <div className="border-border bg-surface overflow-hidden rounded-lg border">
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs font-medium tracking-wider uppercase">
-                      Code
-                    </TableHead>
-                    <TableHead className="text-xs font-medium tracking-wider uppercase">
-                      Title
-                    </TableHead>
-                    <TableHead className="text-xs font-medium tracking-wider uppercase">
-                      Type
-                    </TableHead>
-                    <TableHead className="text-xs font-medium tracking-wider uppercase">
+                    <TableHead className="text-label-sm tracking-wider uppercase">Code</TableHead>
+                    <TableHead className="text-label-sm tracking-wider uppercase">Title</TableHead>
+                    <TableHead className="text-label-sm tracking-wider uppercase">Type</TableHead>
+                    <TableHead className="text-label-sm tracking-wider uppercase">
                       Major Scope
                     </TableHead>
-                    <TableHead className="text-xs font-medium tracking-wider uppercase">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-xs font-medium tracking-wider uppercase">
+                    <TableHead className="text-label-sm tracking-wider uppercase">Status</TableHead>
+                    <TableHead className="text-label-sm tracking-wider uppercase">
                       Last Updated
                     </TableHead>
-                    <TableHead className="text-right text-xs font-medium tracking-wider uppercase">
+                    <TableHead className="text-label-sm text-right tracking-wider uppercase">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -621,13 +608,15 @@ export function ProgramHeadCoursesCatalog({
                         </TableCell>
                         <TableCell className="text-text-primary text-sm">{course.title}</TableCell>
                         <TableCell className="whitespace-nowrap">
-                          <Badge className={`text-xs ${getCourseTypeBadgeClass(course)}`}>
+                          <Badge
+                            className={`text-xs ${getCourseTypeBadgeClass(course.course_scope, course.major_id)}`}
+                          >
                             {getCourseTypeLabel(course)}
                           </Badge>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {course.major ? (
-                            <Badge className="bg-violet-100 text-violet-700 text-xs">
+                            <Badge variant="outline" className="text-xs">
                               {course.major.name}
                             </Badge>
                           ) : course.program ? (
@@ -640,7 +629,7 @@ export function ProgramHeadCoursesCatalog({
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <Badge
-                            variant={course.is_active ? "default" : "secondary"}
+                            variant={course.is_active ? "success" : "secondary"}
                             className="text-xs"
                           >
                             {course.is_active ? "Active" : "Inactive"}
@@ -654,22 +643,20 @@ export function ProgramHeadCoursesCatalog({
                             <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
+                                size="icon-lg"
                                 title="Edit"
                                 onClick={() => setEditingCourse(course)}
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="size-4" />
                               </Button>
                               <Button
                                 variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
+                                size="icon-lg"
                                 title={course.is_active ? "Archive" : "Restore"}
                                 disabled={isPending}
                                 onClick={() => handleToggleActive(course.id, course.is_active)}
                               >
-                                <Archive className="h-4 w-4" />
+                                <Archive className="size-4" />
                               </Button>
                             </div>
                           )}
@@ -699,7 +686,7 @@ export function ProgramHeadCoursesCatalog({
                 disabled={safePage <= 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               >
-                ←
+                <ChevronLeft className="size-4" />
               </Button>
               <Button
                 variant="outline"
@@ -708,7 +695,7 @@ export function ProgramHeadCoursesCatalog({
                 disabled={safePage >= totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               >
-                →
+                <ChevronRight className="size-4" />
               </Button>
             </div>
           )}

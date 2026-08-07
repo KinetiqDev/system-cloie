@@ -3,7 +3,16 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { CourseScope } from "@prisma/client";
-import { BookOpen, GraduationCap, Layers, MoreVertical, Search, Library } from "lucide-react";
+import {
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
+  Layers,
+  MoreVertical,
+  Search,
+  Library,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +54,7 @@ import {
   toggleCourseActiveAction,
   deleteCourseAction,
 } from "@/lib/actions/management-foundation-actions";
+import { getCourseScopeBadgeClass } from "@/features/academic-structure/lib/course-visuals";
 
 import type {
   ManagementCourseSummaryItem,
@@ -57,21 +67,6 @@ import type {
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 15;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Returns accessible Tailwind bg+text classes for each course scope. */
-function getCourseScopeBadgeClass(scope: CourseScope): string {
-  switch (scope) {
-    case CourseScope.GENERAL_EDUCATION:
-      return "bg-emerald-100 text-emerald-700";
-    case CourseScope.PROGRAM_SPECIFIC:
-    default:
-      return "bg-blue-100 text-blue-700";
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -203,9 +198,9 @@ export function ManagementCoursesList({
 
   // ---- Render --------------------------------------------------------------
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Courses</h1>
         <p className="text-body-md text-text-secondary">
           Manage the shared course catalog for general education, program-wide, and major-specific
@@ -243,7 +238,7 @@ export function ManagementCoursesList({
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:flex-wrap">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
         {/* Scope filter */}
         <Select value={scopeFilter} onValueChange={handleScopeChange}>
           <SelectTrigger className="w-full md:w-[180px]">
@@ -303,7 +298,7 @@ export function ManagementCoursesList({
         )}
 
         {/* Search */}
-        <div className="relative w-full md:max-w-xs md:ml-auto">
+        <div className="relative w-full md:ml-auto md:max-w-xs">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search by code or title..."
@@ -315,109 +310,119 @@ export function ManagementCoursesList({
       </div>
 
       {/* Data table */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-full md:w-auto">Course</TableHead>
-            <TableHead className="hidden md:table-cell">Course Title</TableHead>
-            <TableHead className="hidden md:table-cell">Scope</TableHead>
-            <TableHead className="hidden md:table-cell">Program</TableHead>
-            <TableHead className="hidden md:table-cell">Major</TableHead>
-            <TableHead className="hidden md:table-cell text-right">CILOs</TableHead>
-            {showEvaluationCount && (
-              <TableHead className="hidden text-right md:table-cell">Evaluations</TableHead>
-            )}
-            <TableHead className="hidden md:table-cell">Status</TableHead>
-            <TableHead className="w-12 text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginatedCourses.length === 0 ? (
+      <div className="overflow-x-auto rounded-lg border">
+        <Table className="min-w-0 md:min-w-[900px]">
+          <TableHeader>
             <TableRow>
-              <TableCell
-                colSpan={showEvaluationCount ? 9 : 8}
-                className="text-muted-foreground h-24 text-center"
-              >
-                No courses found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            paginatedCourses.map((course) => (
-              <TableRow key={course.id} className="group">
-                <TableCell className="w-[99%] md:w-auto max-w-[200px] sm:max-w-[300px] md:max-w-none align-top">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-foreground font-bold truncate">{course.code}</span>
-                    <span className="text-muted-foreground md:hidden text-xs whitespace-normal line-clamp-2 break-words">
-                      {course.title}
-                    </span>
-                    <div className="md:hidden mt-1 flex flex-wrap items-center gap-1.5">
-                      <Badge className={getCourseScopeBadgeClass(course.courseScope)}>
-                        {course.courseScopeLabel}
-                      </Badge>
-                      <Badge variant={course.isActive ? "default" : "secondary"} className={!course.isActive ? "bg-amber-100 text-amber-900 hover:bg-amber-200" : ""}>
-                        {course.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    <div className="md:hidden mt-0.5 text-xs text-muted-foreground flex items-center gap-1.5 overflow-hidden">
-                      <span className="truncate min-w-0">{course.programCode ?? "No Program"}</span>
-                      {course.majorName && (
-                        <>
-                          <span className="text-border shrink-0">•</span>
-                          <span className="truncate min-w-0">{course.majorName}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">{course.title}</TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <Badge className={getCourseScopeBadgeClass(course.courseScope)}>{course.courseScopeLabel}</Badge>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">{course.programCode ?? "—"}</TableCell>
-                <TableCell className="hidden md:table-cell">{course.majorName ?? "—"}</TableCell>
-                <TableCell className="hidden md:table-cell text-right">{course.ciloCount}</TableCell>
+              <TableHead className="w-full md:w-auto">Course</TableHead>
+              <TableHead className="hidden md:table-cell">Course Title</TableHead>
+              <TableHead className="hidden md:table-cell">Scope</TableHead>
+              <TableHead className="hidden md:table-cell">Program</TableHead>
+              <TableHead className="hidden md:table-cell">Major</TableHead>
+              <TableHead className="hidden text-right md:table-cell">CILOs</TableHead>
               {showEvaluationCount && (
-                <TableCell className="hidden text-right md:table-cell">
-                  {course.evaluationCount}
-                </TableCell>
+                <TableHead className="hidden text-right md:table-cell">Evaluations</TableHead>
               )}
-                <TableCell className="hidden md:table-cell">
-                  <Badge variant={course.isActive ? "default" : "secondary"} className={!course.isActive ? "bg-amber-100 text-amber-900 hover:bg-amber-200" : ""}>
-                    {course.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-8 items-center justify-center rounded-md transition-colors">
-                      <MoreVertical className="size-4" />
-                      <span className="sr-only">Actions</span>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem render={<Link href={`${basePath}/${course.id}/edit`} />}>
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        disabled={isPending}
-                        onClick={() => handleToggleActive(course.id, course.isActive)}
-                      >
-                        {course.isActive ? "Deactivate" : "Activate"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled={isPending}
-                        onClick={() => setCourseToDelete({ id: course.id, code: course.code })}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              <TableHead className="hidden md:table-cell">Status</TableHead>
+              <TableHead className="w-12 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedCourses.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={showEvaluationCount ? 9 : 8}
+                  className="text-muted-foreground h-24 text-center"
+                >
+                  No courses found.
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              paginatedCourses.map((course) => (
+                <TableRow key={course.id} className="group">
+                  <TableCell className="w-[99%] max-w-[200px] align-top sm:max-w-[300px] md:w-auto md:max-w-none">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-foreground truncate font-bold">{course.code}</span>
+                      <span className="text-muted-foreground line-clamp-2 text-xs break-words whitespace-normal md:hidden">
+                        {course.title}
+                      </span>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 md:hidden">
+                        <Badge className={getCourseScopeBadgeClass(course.courseScope)}>
+                          {course.courseScopeLabel}
+                        </Badge>
+                        <Badge variant={course.isActive ? "success" : "secondary"}>
+                          {course.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 overflow-hidden text-xs md:hidden">
+                        <span className="min-w-0 truncate">
+                          {course.programCode ?? "No Program"}
+                        </span>
+                        {course.majorName && (
+                          <>
+                            <span className="text-border shrink-0">•</span>
+                            <span className="min-w-0 truncate">{course.majorName}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">{course.title}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Badge className={getCourseScopeBadgeClass(course.courseScope)}>
+                      {course.courseScopeLabel}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {course.programCode ?? "—"}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">{course.majorName ?? "—"}</TableCell>
+                  <TableCell className="hidden text-right md:table-cell">
+                    {course.ciloCount}
+                  </TableCell>
+                  {showEvaluationCount && (
+                    <TableCell className="hidden text-right md:table-cell">
+                      {course.evaluationCount}
+                    </TableCell>
+                  )}
+                  <TableCell className="hidden md:table-cell">
+                    <Badge variant={course.isActive ? "success" : "secondary"}>
+                      {course.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-9 items-center justify-center rounded-md transition-colors">
+                        <MoreVertical className="size-4" />
+                        <span className="sr-only">Actions</span>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem render={<Link href={`${basePath}/${course.id}/edit`} />}>
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          disabled={isPending}
+                          onClick={() => handleToggleActive(course.id, course.isActive)}
+                        >
+                          {course.isActive ? "Deactivate" : "Activate"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={isPending}
+                          onClick={() => setCourseToDelete({ id: course.id, code: course.code })}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -429,7 +434,7 @@ export function ManagementCoursesList({
             disabled={safePage <= 1}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           >
-            ←
+            <ChevronLeft className="size-4" />
           </Button>
 
           {buildPageNumbers().map((page, idx) =>
@@ -458,7 +463,7 @@ export function ManagementCoursesList({
             disabled={safePage >= totalPages}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           >
-            →
+            <ChevronRight className="size-4" />
           </Button>
         </div>
       )}
@@ -475,16 +480,13 @@ export function ManagementCoursesList({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete course?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <span className="font-medium">{courseToDelete?.code}</span>. This cannot be undone.
+              This will permanently delete{" "}
+              <span className="font-medium">{courseToDelete?.code}</span>. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={isPending}
-              onClick={confirmDelete}
-            >
+            <AlertDialogAction variant="destructive" disabled={isPending} onClick={confirmDelete}>
               {isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -502,13 +504,15 @@ function KPICard({ label, value, icon }: { label: string; value: number; icon: R
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardDescription className="text-xs font-semibold tracking-wider uppercase">
+        <div className="flex items-center justify-between gap-2">
+          <CardDescription className="text-label-sm text-muted-foreground truncate tracking-wider uppercase">
             {label}
           </CardDescription>
           {icon}
         </div>
-        <CardTitle className="text-2xl font-bold">{value.toLocaleString()}</CardTitle>
+        <CardTitle className="font-heading text-heading-xl text-foreground tabular-nums">
+          {value.toLocaleString()}
+        </CardTitle>
       </CardHeader>
     </Card>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,7 @@ export function ProgramForm({
 
       {error && (
         <Alert variant="destructive">
+          <AlertCircle className="size-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

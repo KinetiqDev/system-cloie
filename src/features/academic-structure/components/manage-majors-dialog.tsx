@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Plus, Power, Trash2 } from "lucide-react";
+import { AlertCircle, Plus, Power, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,7 @@ export function ManageMajorsDialog({
     <>
       {error && (
         <Alert variant="destructive">
+          <AlertCircle className="size-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -108,8 +109,8 @@ export function ManageMajorsDialog({
             {majors.map((major) => (
               <li key={major.id} className="flex items-center justify-between gap-2 py-3">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="text-sm font-medium truncate">{major.name}</span>
-                  <Badge variant={major.is_active ? "default" : "secondary"} className="shrink-0">
+                  <span className="truncate text-sm font-medium">{major.name}</span>
+                  <Badge variant={major.is_active ? "success" : "secondary"} className="shrink-0">
                     {major.is_active ? "Active" : "Inactive"}
                   </Badge>
                 </div>
@@ -167,7 +168,7 @@ export function ManageMajorsDialog({
       {/* Add major form */}
       <form ref={formRef} action={handleAddMajor} className="flex items-center gap-2 border-t pt-4">
         <input type="hidden" name="program_id" value={program.id} />
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <Input
             name="name"
             placeholder="New major name..."
@@ -191,13 +192,9 @@ export function ManageMajorsDialog({
         <DialogContent className="flex max-h-[min(90dvh,36rem)] flex-col sm:max-w-md">
           <DialogHeader className="shrink-0">
             <DialogTitle>Manage Majors — {program.code}</DialogTitle>
-            <DialogDescription>
-              Add, toggle, or remove majors for {program.name}.
-            </DialogDescription>
+            <DialogDescription>Add, toggle, or remove majors for {program.name}.</DialogDescription>
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-            {content}
-          </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">{content}</div>
         </DialogContent>
       </Dialog>
     );
@@ -205,16 +202,14 @@ export function ManageMajorsDialog({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-      <DrawerContent className="px-4 pb-8 flex max-h-[85dvh] flex-col">
+      <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-8">
         <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
           <DrawerTitle>Manage Majors — {program.code}</DrawerTitle>
           <DrawerDescription className="line-clamp-2">
             Add, toggle, or remove majors for {program.name}.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-2">
-          {content}
-        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-2">{content}</div>
       </DrawerContent>
     </Drawer>
   );
