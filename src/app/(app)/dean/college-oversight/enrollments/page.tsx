@@ -295,7 +295,7 @@ function ClassCard({
           <p className="text-text-secondary text-sm">{courseClass.courseName}</p>
         </div>
         <div className="text-right">
-          <p className="font-heading text-heading-lg text-foreground tabular-nums">
+          <p className="font-heading text-heading-xl text-foreground tabular-nums">
             {courseClass.enrolledStudentCount}
           </p>
           <p className="text-text-secondary text-xs">placements</p>
