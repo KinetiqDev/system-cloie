@@ -65,6 +65,9 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(tokensCss).toContain("--surface-input: #ffffff");
       expect(tokensCss).toContain("--surface-popover: #ffffff");
 
+      // Scrim (overlay dimming) — approved Light value (design.md 5.2)
+      expect(tokensCss).toContain("--scrim: rgba(15, 23, 42, 0.5)");
+
       // Text roles
       expect(tokensCss).toContain("--text-primary: #0f172a");
       expect(tokensCss).toContain("--text-secondary: #334155");
@@ -108,6 +111,9 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(tokensCss).toContain("--surface-overlay: #172033");
       expect(tokensCss).toContain("--surface-input: #0f172a");
       expect(tokensCss).toContain("--surface-popover: #172033");
+
+      // Scrim (overlay dimming) — approved Dark value (design.md 5.2)
+      expect(tokensCss).toContain("--scrim: rgba(2, 6, 23, 0.6)");
 
       // Text roles (Dark)
       expect(tokensCss).toContain("--text-primary: #f8fafc");
@@ -164,6 +170,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(globalsCss).toContain("--color-surface-primary: var(--surface-primary);");
       expect(globalsCss).toContain("--color-surface-secondary: var(--surface-secondary);");
       expect(globalsCss).toContain("--color-surface-hover: var(--surface-hover);");
+      expect(globalsCss).toContain("--color-scrim: var(--scrim);");
       expect(globalsCss).toContain("--color-text-primary: var(--text-primary);");
       expect(globalsCss).toContain("--color-text-secondary: var(--text-secondary);");
       expect(globalsCss).toContain("--color-text-muted: var(--text-muted);");

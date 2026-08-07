@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type ToastKind = "success" | "error" | "warning";
+type ToastKind = "success" | "error" | "warning" | "information";
 
 type ToastMessage = {
   id: number;
@@ -62,7 +62,14 @@ export function ToastProvider() {
       return;
     }
 
-    const kind = params.get("toastType") === "error" ? "error" : "success";
+    const kind =
+      params.get("toastType") === "error"
+        ? "error"
+        : params.get("toastType") === "warning"
+        ? "warning"
+        : params.get("toastType") === "info"
+        ? "information"
+        : "success";
     window.dispatchEvent(
       new CustomEvent(TOAST_EVENT, {
         detail: { kind, message: toast },
@@ -84,17 +91,25 @@ export function ToastProvider() {
     <div className="fixed right-4 bottom-4 z-[100] flex w-[min(420px,calc(100vw-2rem))] flex-col gap-2">
       {toasts.map((toast) => {
         const Icon =
-          toast.kind === "success" ? CheckCircle2 : toast.kind === "warning" ? AlertTriangle : XCircle;
+          toast.kind === "success"
+            ? CheckCircle2
+            : toast.kind === "warning"
+            ? AlertTriangle
+            : toast.kind === "information"
+            ? Info
+            : XCircle;
         return (
           <div
             key={toast.id}
             className={cn(
               "bg-surface flex items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg",
               toast.kind === "success"
-                ? "border-green-200 text-green-800"
+                ? "border-success/40 text-success"
                 : toast.kind === "warning"
-                ? "border-yellow-200 text-yellow-800"
-                : "border-red-200 text-red-800"
+                ? "border-warning/40 text-warning"
+                : toast.kind === "information"
+                ? "border-info/40 text-info"
+                : "border-danger/40 text-danger"
             )}
           >
             <Icon className="mt-0.5 size-4 shrink-0" />

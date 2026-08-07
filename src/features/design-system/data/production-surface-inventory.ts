@@ -1600,6 +1600,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "ui_primitive"
   },
   {
+    "path": "src/components/ui/popover.tsx",
+    "disposition": "task",
+    "taskId": 6,
+    "category": "ui_primitive"
+  },
+  {
     "path": "src/components/ui/skeleton.tsx",
     "disposition": "task",
     "taskId": 5,
