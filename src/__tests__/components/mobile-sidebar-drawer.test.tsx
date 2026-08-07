@@ -157,4 +157,20 @@ describe("Dean mobile navigation drawer", () => {
     expect(consoleError).not.toHaveBeenCalled();
     consoleError.mockRestore();
   });
+
+  it("uses semantic sidebar surface, scrim, and selected roles", async () => {
+    pathnameMock.mockReturnValue("/dean/academic-structure/courses");
+    render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveClass("bg-sidebar");
+    expect(dialog.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Courses" })).toHaveClass(
+      "bg-sidebar-accent",
+      "min-h-11"
+    );
+    expect(document.querySelector(".bg-scrim")).not.toBeNull();
+  });
 });

@@ -47,7 +47,7 @@ export function Topbar({
   const showHamburger = mobileNavMode !== "bottom-nav";
 
   return (
-    <header className="border-border bg-surface sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b px-4 sm:px-6">
+    <header className="border-sidebar-border bg-sidebar sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b px-4 sm:px-6">
       {/* Left side: branding (mobile) or hamburger trigger */}
       <div className="flex items-center gap-3 lg:hidden">
         {showHamburger ? (
@@ -59,7 +59,7 @@ export function Topbar({
               alt="System CLOIE Logo"
               width={486}
               height={513}
-              className="h-7 w-auto rounded"
+              className="h-7 w-auto rounded border border-border bg-white p-0.5"
             />
             <span className="text-title-md text-primary font-bold tracking-tight">System CLOIE</span>
           </>
@@ -71,11 +71,11 @@ export function Topbar({
         {children}
         {/* Profile avatar + dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="hover:bg-surface-muted flex items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors focus:outline-none">
-            <div className="bg-primary flex size-8 shrink-0 items-center justify-center rounded-full text-white">
+          <DropdownMenuTrigger className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground flex min-h-11 items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+            <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
               <span className="text-caption font-semibold">{initials}</span>
             </div>
-            <ChevronDown className="text-text-muted size-4" />
+            <ChevronDown className="text-sidebar-foreground/60 size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={8} className="w-56">
             <div className="px-3 py-2">

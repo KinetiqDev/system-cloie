@@ -2,9 +2,9 @@ import { AlertTriangle, CheckCircle2, Info, XCircle, type LucideIcon } from "luc
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProgressListReference } from "./progress-reference";
 import {
   SHOWCASE_KPIS,
   SHOWCASE_PROGRAMS,
@@ -102,12 +102,7 @@ export function DataShowcase() {
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Progress</h3>
         <div className="flex max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-4">
-          {SHOWCASE_PROGRESS_ITEMS.map((item) => (
-            <Progress key={item.id} value={item.value} className="flex-col">
-              <ProgressLabel>{item.label}</ProgressLabel>
-              <ProgressValue>{(formattedValue) => formattedValue ?? item.detail}</ProgressValue>
-            </Progress>
-          ))}
+          <ProgressListReference items={SHOWCASE_PROGRESS_ITEMS} />
         </div>
       </section>
     </div>

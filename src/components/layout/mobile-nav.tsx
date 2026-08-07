@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
 import {
   getHighestNavRole,
@@ -11,7 +10,7 @@ import {
   getDeepestMatchingNavItem,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
-import { NavigationLink } from "./navigation-link";
+import { BottomNavRow } from "./navigation-row";
 
 interface MobileNavProps {
   roles?: Role[];
@@ -27,29 +26,21 @@ export function MobileNav({ roles = [] }: MobileNavProps) {
   const activeItem = getDeepestMatchingNavItem(pathname, mainNav);
 
   return (
-    <nav className="border-border bg-surface pb-safe fixed inset-x-0 bottom-0 z-50 flex h-16 items-center justify-between border-t px-2 md:hidden" aria-label="Primary navigation">
+    <nav className="border-sidebar-border bg-sidebar pb-safe fixed inset-x-0 bottom-0 z-50 flex h-16 items-center justify-between border-t px-2 md:hidden" aria-label="Primary navigation">
       {mainNav.map((item) => {
         const isActive = activeItem === item;
         return (
-          <NavigationLink
-              key={getNavItemIdentity(item)}
+          <BottomNavRow
+            key={getNavItemIdentity(item)}
             href={item.href}
+            active={isActive}
             aria-current={isActive ? "page" : undefined}
-            className={cn(
-              "flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              isActive ? "text-primary" : "text-text-muted hover:text-text-primary"
-            )}
           >
-            <item.icon className={cn("size-6", isActive && "text-primary")} />
-            <span
-              className={cn(
-                "text-[10px] leading-none font-medium",
-                isActive ? "text-primary" : "text-text-muted"
-              )}
-            >
+            <item.icon className="size-6" aria-hidden="true" />
+            <span className="text-label-sm block max-w-full truncate leading-none">
               {item.name}
             </span>
-          </NavigationLink>
+          </BottomNavRow>
         );
       })}
     </nav>

@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { ProgressReference } from "./progress-reference";
 
 /**
  * Actions and states matrix: every interactive primitive with its supported
@@ -132,10 +132,7 @@ export function ComponentStateMatrix() {
         <h3 className="font-heading text-title-sm text-foreground">Progress indicators</h3>
         <div className="divide-y divide-border rounded-lg border border-border bg-card">
           <Row label="Determinate">
-            <Progress value={35} className="w-64">
-              <ProgressLabel>Processing</ProgressLabel>
-              <ProgressValue>{(value) => value ?? "35%"}</ProgressValue>
-            </Progress>
+            <ProgressReference />
           </Row>
           <Row label="Indeterminate">
             <Spinner size="sm" label="Working" />

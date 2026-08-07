@@ -18,7 +18,7 @@ import {
   getDeepestMatchingNavItem,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
-import { NavigationLink } from "./navigation-link";
+import { NavigationRow } from "./navigation-row";
 
 interface MobileSidebarDrawerProps {
   roles?: Role[];
@@ -97,21 +97,16 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
   const renderLink = (item: { name: string; href: string; icon: LucideIcon }) => {
     const active = activeItem === item;
     return (
-      <NavigationLink
+      <NavigationRow
         key={getNavItemIdentity(item)}
         href={item.href}
         onClick={() => close(false)}
+        active={active}
         aria-current={active ? "page" : undefined}
-        className={cn(
-          "focus-visible:outline-ring flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium focus-visible:outline-2",
-          active
-            ? "bg-primary-soft text-selected-fg"
-            : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-        )}
       >
         <item.icon className="size-5 shrink-0" aria-hidden="true" />
         {item.name}
-      </NavigationLink>
+      </NavigationRow>
     );
   };
 
@@ -122,7 +117,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
         type="button"
         onClick={() => setIsOpen(true)}
         className={cn(
-          "text-text-muted hover:bg-surface-muted hover:text-text-primary focus-visible:outline-ring flex min-h-11 min-w-11 items-center justify-center rounded-md transition-colors focus-visible:outline-2",
+          "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground focus-visible:outline-ring flex min-h-11 min-w-11 items-center justify-center rounded-md transition-colors focus-visible:outline-2",
           dean ? "md:hidden" : "lg:hidden"
         )}
         aria-label="Open navigation menu"
@@ -132,7 +127,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
       </button>
       {isOpen && (
         <div
-          className={cn("fixed inset-0 z-50 bg-black/50", dean ? "md:hidden" : "lg:hidden")}
+          className={cn("bg-scrim fixed inset-0 z-50", dean ? "md:hidden" : "lg:hidden")}
           onClick={() => close()}
           aria-hidden="true"
         />
@@ -144,18 +139,18 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
           aria-modal="true"
           aria-label="Navigation menu"
           className={cn(
-            "bg-surface fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] flex-col shadow-xl",
+            "bg-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] flex-col shadow-xl",
             dean ? "md:hidden" : "lg:hidden"
           )}
         >
-          <div className="border-border flex min-h-16 shrink-0 items-center justify-between border-b px-5">
+          <div className="border-sidebar-border flex min-h-16 shrink-0 items-center justify-between border-b px-5">
             <div className="flex items-center gap-3">
               <Image
                 src="/logos/cloie-logo.png"
                 alt="System CLOIE Logo"
                 width={486}
                 height={513}
-                className="h-7 w-auto rounded"
+                className="h-7 w-auto rounded border border-border bg-white p-0.5"
               />
               <span className="text-title-md text-primary font-bold tracking-tight">
                 System CLOIE
@@ -164,7 +159,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
             <button
               type="button"
               onClick={() => close()}
-              className="text-text-muted hover:bg-surface-muted focus-visible:outline-ring flex min-h-11 min-w-11 items-center justify-center rounded-md focus-visible:outline-2"
+              className="text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground focus-visible:outline-ring flex min-h-11 min-w-11 items-center justify-center rounded-md focus-visible:outline-2"
               aria-label="Close navigation menu"
             >
               <X className="size-5" aria-hidden="true" />
@@ -179,22 +174,17 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
                   const active = activeItem?.href === group.href && activeItem.name === group.name;
                   return (
                     <div key={group.href}>
-                      <NavigationLink
+                      <NavigationRow
                         href={group.href}
                         onClick={() => close(false)}
+                        active={active}
                         aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium",
-                          active
-                            ? "bg-primary-soft text-selected-fg"
-                            : "text-text-secondary hover:bg-surface-hover"
-                        )}
                       >
                         <group.icon className="size-5" aria-hidden="true" />
                         {group.name}
-                      </NavigationLink>
+                      </NavigationRow>
                       {expanded && (
-                        <div className="border-border mt-1 ml-4 flex flex-col gap-1 border-l pl-2">
+                        <div className="border-sidebar-border mt-1 ml-4 flex flex-col gap-1 border-l pl-2">
                           {group.items.map(renderLink)}
                         </div>
                       )}
@@ -208,9 +198,13 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
             )}
           </nav>
           {user && (
-            <div className="border-border border-t p-4">
-              <div className="text-body-sm font-semibold">{user.name || "User"}</div>
-              <div className="text-caption text-text-muted truncate">{user.email || ""}</div>
+            <div className="border-sidebar-border border-t p-4">
+              <div className="text-body-sm text-sidebar-foreground font-semibold">
+                {user.name || "User"}
+              </div>
+              <div className="text-caption text-sidebar-foreground/60 truncate">
+                {user.email || ""}
+              </div>
             </div>
           )}
         </aside>

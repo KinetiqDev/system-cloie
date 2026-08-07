@@ -55,4 +55,30 @@ describe("Program Head desktop navigation", () => {
       expect(consoleError).not.toHaveBeenCalled();
     }
   );
+
+  it("applies semantic sidebar roles to active and inactive rows", () => {
+    render(<Sidebar roles={[ROLES.PROGRAM_HEAD]} />);
+
+    const tools = screen.getByRole("link", { name: "Tools" });
+    expect(tools).toHaveAttribute("aria-current", "page");
+    expect(tools).toHaveClass("bg-sidebar-accent", "text-sidebar-accent-foreground", "min-h-11");
+
+    const dashboard = screen.getByRole("link", { name: "Dashboard" });
+    expect(dashboard).not.toHaveClass("bg-sidebar-accent");
+    expect(dashboard).toHaveClass("text-sidebar-foreground/70", "hover:bg-sidebar-accent/40");
+  });
+
+  it("marks the Dean rail surface with sidebar roles", () => {
+    pathnameMock.mockReturnValue("/dean/academic-structure/programs");
+
+    render(<Sidebar roles={[ROLES.DEAN]} />);
+
+    expect(screen.getByRole("link", { name: "Programs" })).toHaveClass(
+      "bg-sidebar-accent",
+      "min-h-11"
+    );
+    const structure = screen.getByRole("link", { name: "Academic Structure" });
+    expect(structure).not.toHaveClass("bg-sidebar-accent");
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("md:min-w-11");
+  });
 });
