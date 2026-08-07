@@ -7,7 +7,7 @@ import { OverlayAndFeedbackShowcase } from "./overlay-and-feedback-showcase";
 import { TableSelectionShowcase } from "./table-selection-showcase";
 import { TokenReference } from "./token-reference";
 
-export interface ShowcaseSectionEntry {
+interface ShowcaseSectionEntry {
   id: string;
   title: string;
   description: string;

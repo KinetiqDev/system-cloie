@@ -10,7 +10,7 @@
 
 export type ShowcaseStatus = "success" | "warning" | "danger" | "information";
 
-export interface ShowcaseProgram {
+interface ShowcaseProgram {
   id: string;
   code: string;
   name: string;
@@ -19,7 +19,7 @@ export interface ShowcaseProgram {
   statusLabel: string;
 }
 
-export interface ShowcaseKpi {
+interface ShowcaseKpi {
   id: string;
   label: string;
   value: string;
@@ -27,33 +27,33 @@ export interface ShowcaseKpi {
   trend: "positive" | "neutral" | "negative";
 }
 
-export interface ShowcaseFormOption {
+interface ShowcaseFormOption {
   value: string;
   label: string;
 }
 
-export interface ShowcaseProgressItem {
+interface ShowcaseProgressItem {
   id: string;
   label: string;
   value: number;
   detail: string;
 }
 
-export interface ShowcaseAlertExample {
+interface ShowcaseAlertExample {
   id: string;
   kind: ShowcaseStatus;
   title: string;
   description: string;
 }
 
-export interface ShowcaseEmptyExample {
+interface ShowcaseEmptyExample {
   id: string;
   title: string;
   description: string;
   actionLabel: string;
 }
 
-export interface ShowcaseTabContent {
+interface ShowcaseTabContent {
   id: string;
   heading: string;
   body: string;
