@@ -16,6 +16,7 @@ import type {
   SecretaryUsersSortDirection,
   SecretaryUsersSortField,
 } from "../../schemas/secretary-users-list";
+import { formatRole } from "@/features/users/lib/role-visuals";
 
 const ALL_ROLES: SystemRole[] = [
   SystemRole.SECRETARY,
@@ -26,14 +27,6 @@ const ALL_ROLES: SystemRole[] = [
   SystemRole.ALUMNI,
   SystemRole.INDUSTRY_PARTNER,
 ];
-
-/** Format `PROGRAM_HEAD` → `"Program Head"` */
-function formatRole(role: SystemRole): string {
-  return role
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
-}
 
 interface UsersFilterBarProps {
   roleFilter: string;
@@ -177,7 +170,7 @@ export function UsersFilterBar({
 
       {/* Search */}
       <div className="relative w-full md:ml-auto md:max-w-xs">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
         <Input
           placeholder="Search by name or email..."
           value={searchTerm}
@@ -187,10 +180,10 @@ export function UsersFilterBar({
         {searchTerm && (
           <button
             onClick={() => onSearchChange("")}
-            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 rounded-full p-0.5 transition-colors"
+            className="text-muted-foreground hover:text-foreground absolute top-1/2 right-1 -translate-y-1/2 rounded-full p-2 transition-colors"
             aria-label="Clear search"
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </button>
         )}
       </div>

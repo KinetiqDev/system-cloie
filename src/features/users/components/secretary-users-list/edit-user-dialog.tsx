@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useMemo } from "react";
 import { SystemRole, YearLevel, StudentSection, VerificationStatus } from "@prisma/client";
-import { Loader2, Mail, ShieldAlert, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Loader2, Mail, ShieldAlert, ShieldCheck, CheckCircle2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { showToast } from "@/components/ui/toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Field,
   FieldDescription,
@@ -35,14 +36,8 @@ import {
   editUserBySecretaryAction,
   getUserEditRecordAction,
 } from "@/lib/actions/secretary-edit-user-actions";
+import { formatRole, getRoleBadgeClass } from "@/features/users/lib/role-visuals";
 import type { SecretaryUserEditRecord } from "@/features/users/services/get-user-edit-record";
-
-function formatRole(role: SystemRole): string {
-  return role
-    .toLowerCase()
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (m) => m.toUpperCase());
-}
 
 function formatYearLevel(yl: YearLevel): string {
   return yl
@@ -70,27 +65,6 @@ const SECTION_OPTIONS: { label: string; value: StudentSection }[] = [
   { label: "Afternoon", value: "AFTERNOON" },
   { label: "Evening", value: "EVENING" },
 ];
-
-function getRoleBadgeClass(role: SystemRole): string {
-  switch (role) {
-    case SystemRole.SECRETARY:
-      return "bg-red-100 text-red-700";
-    case SystemRole.DEAN:
-      return "bg-purple-100 text-purple-700";
-    case SystemRole.PROGRAM_HEAD:
-      return "bg-indigo-100 text-indigo-700";
-    case SystemRole.FACULTY:
-      return "bg-blue-100 text-blue-700";
-    case SystemRole.STUDENT:
-      return "bg-emerald-100 text-emerald-700";
-    case SystemRole.ALUMNI:
-      return "bg-amber-100 text-amber-800";
-    case SystemRole.INDUSTRY_PARTNER:
-      return "bg-sky-100 text-sky-700";
-    default:
-      return "bg-slate-100 text-slate-700";
-  }
-}
 
 interface EditUserDialogProps {
   userId: string | null;
@@ -255,12 +229,12 @@ function EditUserDialogBody({
         setProgramId(result.data.alumni?.programId ?? "");
         setMajorId(result.data.alumni?.majorId ?? null);
         setGraduationYear(result.data.alumni?.graduationYear?.toString() ?? "");
-         setVerificationStatus(result.data.verification?.status ?? null);
+        setVerificationStatus(result.data.verification?.status ?? null);
       } else if (result.data.role === SystemRole.INDUSTRY_PARTNER) {
         setCompanyName(result.data.industryPartner?.companyName ?? "");
         setPosition(result.data.industryPartner?.position ?? "");
         setProgramId(result.data.industryPartner?.programId ?? "");
-         setVerificationStatus(result.data.verification?.status ?? null);
+        setVerificationStatus(result.data.verification?.status ?? null);
       }
 
       setLoadState({ status: "ready", record: result.data });
@@ -397,23 +371,23 @@ function EditUserDialogBody({
           const oldSec = record?.activeEnrollment?.section;
           const newSec = section;
 
-           const profileChanged = !!(oldM !== newM);
+          const profileChanged = !!(oldM !== newM);
           const placementChanged = !!(newYL && newSec && (oldYL !== newYL || oldSec !== newSec));
 
           setConfirmationToken(result.data.token!);
-           setConfirmationSummary({
+          setConfirmationSummary({
             profileChanged,
             placementChanged,
-             oldValues: result.data.confirmationReview?.oldValues ?? {},
-             newValues: result.data.confirmationReview?.newValues ?? {},
-           });
+            oldValues: result.data.confirmationReview?.oldValues ?? {},
+            newValues: result.data.confirmationReview?.newValues ?? {},
+          });
         } else if (record?.role === SystemRole.FACULTY) {
           setConfirmationToken(result.data.token!);
-           setConfirmationSummary({
+          setConfirmationSummary({
             facultyProgramChanged: true,
-             oldValues: result.data.confirmationReview?.oldValues ?? {},
-             newValues: result.data.confirmationReview?.newValues ?? {},
-           });
+            oldValues: result.data.confirmationReview?.oldValues ?? {},
+            newValues: result.data.confirmationReview?.newValues ?? {},
+          });
         } else if (record?.role === SystemRole.PROGRAM_HEAD) {
           setConfirmationToken(result.data.token!);
           setConfirmationSummary({
@@ -423,18 +397,18 @@ function EditUserDialogBody({
           });
         } else if (record?.role === SystemRole.ALUMNI) {
           setConfirmationToken(result.data.token!);
-           setConfirmationSummary({
+          setConfirmationSummary({
             alumniChanged: true,
-             oldValues: result.data.confirmationReview?.oldValues ?? {},
-             newValues: result.data.confirmationReview?.newValues ?? {},
-           });
+            oldValues: result.data.confirmationReview?.oldValues ?? {},
+            newValues: result.data.confirmationReview?.newValues ?? {},
+          });
         } else if (record?.role === SystemRole.INDUSTRY_PARTNER) {
           setConfirmationToken(result.data.token!);
-           setConfirmationSummary({
+          setConfirmationSummary({
             industryPartnerChanged: true,
-             oldValues: result.data.confirmationReview?.oldValues ?? {},
-             newValues: result.data.confirmationReview?.newValues ?? {},
-           });
+            oldValues: result.data.confirmationReview?.oldValues ?? {},
+            newValues: result.data.confirmationReview?.newValues ?? {},
+          });
         }
         return;
       }
@@ -476,17 +450,19 @@ function EditUserDialogBody({
       )}
 
       {loadState.status === "error" && (
-        <div role="alert" className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
-          {loadState.message}
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>{loadState.message}</AlertDescription>
+        </Alert>
       )}
 
       {loadState.status === "ready" && !confirmationToken && (
         <form onSubmit={handleSubmit} className="space-y-4 pt-2" aria-busy={isSubmitting}>
           {submitError && (
-            <div role="alert" className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
-              {submitError}
-            </div>
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
           )}
 
           <div className="space-y-2">
@@ -516,7 +492,7 @@ function EditUserDialogBody({
           </div>
 
           <fieldset className="space-y-2">
-            <legend className="text-muted-foreground text-[10px] font-black tracking-widest uppercase">
+            <legend className="text-label-sm text-muted-foreground tracking-wider uppercase">
               Account Email
             </legend>
             <div className="border-input bg-muted/40 text-muted-foreground flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
@@ -533,7 +509,7 @@ function EditUserDialogBody({
           </fieldset>
 
           <fieldset className="space-y-2">
-            <legend className="text-muted-foreground text-[10px] font-black tracking-widest uppercase">
+            <legend className="text-label-sm text-muted-foreground tracking-wider uppercase">
               CLOIE Account Role
             </legend>
             <div className="border-input bg-muted/40 text-muted-foreground flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
@@ -576,16 +552,19 @@ function EditUserDialogBody({
                     <SelectValue placeholder="Select program">{selectedProgram?.name}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                     {programs.filter((p) => p.isActive !== false).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
+                    {programs
+                      .filter((p) => p.isActive !== false)
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {selectedProgramIsArchived && (
                   <p className="text-muted-foreground text-xs">
-                    Current program is archived. It remains context only; new archived selections are unavailable.
+                    Current program is archived. It remains context only; new archived selections
+                    are unavailable.
                   </p>
                 )}
               </div>
@@ -600,11 +579,13 @@ function EditUserDialogBody({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                       {selectedProgram.majors.filter((m) => m.isActive !== false).map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
+                      {selectedProgram.majors
+                        .filter((m) => m.isActive !== false)
+                        .map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -673,14 +654,18 @@ function EditUserDialogBody({
                 disabled={isSubmitting}
               >
                 <SelectTrigger id="edit-user-faculty-program">
-                  <SelectValue placeholder="Select primary program">{selectedProgram?.name}</SelectValue>
+                  <SelectValue placeholder="Select primary program">
+                    {selectedProgram?.name}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                   {programs.filter((p) => p.isActive !== false).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
+                  {programs
+                    .filter((p) => p.isActive !== false)
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <p className="text-muted-foreground text-xs">
@@ -694,15 +679,15 @@ function EditUserDialogBody({
             <FieldSet className="border-t pt-4">
               <FieldLegend variant="label">Managed Programs</FieldLegend>
               <FieldDescription>
-                Choose every Program this Program Head manages. Unchecking a Program deactivates
-                its assignment; checking it again reactivates the existing assignment history row.
+                Choose every Program this Program Head manages. Unchecking a Program deactivates its
+                assignment; checking it again reactivates the existing assignment history row.
                 Programs cannot be newly selected while archived.
               </FieldDescription>
               <FieldGroup className="gap-2">
                 {programs.map((program) => {
-                  const isCurrentAssignment = (loadState.record.programHead?.assignments ?? []).some(
-                    (assignment) => assignment.programId === program.id
-                  );
+                  const isCurrentAssignment = (
+                    loadState.record.programHead?.assignments ?? []
+                  ).some((assignment) => assignment.programId === program.id);
                   const isSelectable = program.isActive !== false || isCurrentAssignment;
                   const isChecked = programHeadProgramIds.includes(program.id);
                   return (
@@ -713,7 +698,9 @@ function EditUserDialogBody({
                         disabled={!isSelectable || isSubmitting}
                         onCheckedChange={(next) => {
                           setProgramHeadProgramIds((current) =>
-                            next ? [...current, program.id] : current.filter((id) => id !== program.id)
+                            next
+                              ? [...current, program.id]
+                              : current.filter((id) => id !== program.id)
                           );
                         }}
                       />
@@ -733,9 +720,9 @@ function EditUserDialogBody({
                 })}
               </FieldGroup>
               <FieldDescription>
-                The complete assignment set is saved as one protected change. No assignment
-                history row is deleted; other Program Heads, course assignments, evaluations, and
-                historical academic work remain unchanged.
+                The complete assignment set is saved as one protected change. No assignment history
+                row is deleted; other Program Heads, course assignments, evaluations, and historical
+                academic work remain unchanged.
               </FieldDescription>
             </FieldSet>
           )}
@@ -754,11 +741,13 @@ function EditUserDialogBody({
                     <SelectValue placeholder="Select program">{selectedProgram?.name}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                     {programs.filter((p) => p.isActive !== false).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
+                    {programs
+                      .filter((p) => p.isActive !== false)
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -772,11 +761,13 @@ function EditUserDialogBody({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                       {selectedProgram.majors.filter((m) => m.isActive !== false).map((m) => (
-                        <SelectItem key={m.id} value={m.id}>
-                          {m.name}
-                        </SelectItem>
-                      ))}
+                      {selectedProgram.majors
+                        .filter((m) => m.isActive !== false)
+                        .map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -810,8 +801,10 @@ function EditUserDialogBody({
                     <SelectItem value={VerificationStatus.REJECTED}>Rejected</SelectItem>
                   </SelectContent>
                 </Select>
-                 <p className="text-muted-foreground text-xs">
-                   {verificationStatus ? verificationEffect(verificationStatus) : "Choose a verification status."}
+                <p className="text-muted-foreground text-xs">
+                  {verificationStatus
+                    ? verificationEffect(verificationStatus)
+                    : "Choose a verification status."}
                 </p>
               </div>
             </div>
@@ -853,16 +846,19 @@ function EditUserDialogBody({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">No affiliated program</SelectItem>
-                     {programs.filter((p) => p.isActive !== false).map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
+                    {programs
+                      .filter((p) => p.isActive !== false)
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {selectedProgramIsArchived && (
                   <p className="text-muted-foreground text-xs">
-                    Current program is archived. It remains context only; new archived selections are unavailable.
+                    Current program is archived. It remains context only; new archived selections
+                    are unavailable.
                   </p>
                 )}
               </div>
@@ -874,7 +870,7 @@ function EditUserDialogBody({
                   disabled={isSubmitting}
                 >
                   <SelectTrigger id="edit-user-industry-verification">
-                   <SelectValue>{formatVerificationStatus(verificationStatus)}</SelectValue>
+                    <SelectValue>{formatVerificationStatus(verificationStatus)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={VerificationStatus.PENDING}>Pending</SelectItem>
@@ -883,7 +879,9 @@ function EditUserDialogBody({
                   </SelectContent>
                 </Select>
                 <p className="text-muted-foreground text-xs">
-                   {verificationStatus ? verificationEffect(verificationStatus) : "Choose a verification status."}
+                  {verificationStatus
+                    ? verificationEffect(verificationStatus)
+                    : "Choose a verification status."}
                 </p>
               </div>
             </div>
@@ -909,9 +907,10 @@ function EditUserDialogBody({
       {loadState.status === "ready" && confirmationToken && confirmationSummary && (
         <form onSubmit={handleSubmit} className="space-y-4 pt-2" aria-busy={isSubmitting}>
           {submitError && (
-            <div role="alert" className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">
-              {submitError}
-            </div>
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
           )}
 
           <div className="bg-muted/20 space-y-4 rounded-md border p-4">
@@ -988,8 +987,10 @@ function EditUserDialogBody({
                     {confirmationSummary.newValues.verification}
                   </div>
                 </div>
-                 <p className="text-muted-foreground text-sm">
-                   {verificationStatus ? verificationEffect(verificationStatus) : "Choose a verification status."}
+                <p className="text-muted-foreground text-sm">
+                  {verificationStatus
+                    ? verificationEffect(verificationStatus)
+                    : "Choose a verification status."}
                 </p>
               </div>
             )}
@@ -1015,16 +1016,18 @@ function EditUserDialogBody({
                     {confirmationSummary.newValues.verification}
                   </div>
                 </div>
-                 <p className="text-muted-foreground text-sm">
-                   {verificationStatus ? verificationEffect(verificationStatus) : "Choose a verification status."}
+                <p className="text-muted-foreground text-sm">
+                  {verificationStatus
+                    ? verificationEffect(verificationStatus)
+                    : "Choose a verification status."}
                 </p>
               </div>
             )}
 
             <p className="text-muted-foreground flex items-start gap-2 pt-2 text-sm">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+              <CheckCircle2 className="text-success mt-0.5 size-4 shrink-0" />
               {confirmationSummary.alumniChanged || confirmationSummary.industryPartnerChanged
-               ? "Profile and verification save together."
+                ? "Profile and verification save together."
                 : confirmationSummary.facultyProgramChanged
                   ? "Additional active affiliations remain unchanged. If the selected program is currently an additional affiliation, it will be promoted to primary."
                   : confirmationSummary.programHeadAssignmentChanged

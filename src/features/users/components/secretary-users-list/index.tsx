@@ -67,10 +67,7 @@ export function SecretaryUsersList({
   useEffect(() => {
     const nextQ = searchDraft.trim() || undefined;
     if (nextQ === (query.q || undefined) && query.page === 1) return;
-    const timer = setTimeout(
-      () => navigateWithQuery({ q: nextQ, page: 1 }),
-      300
-    );
+    const timer = setTimeout(() => navigateWithQuery({ q: nextQ, page: 1 }), 300);
     return () => clearTimeout(timer);
   }, [searchDraft]);
 
@@ -80,9 +77,9 @@ export function SecretaryUsersList({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">User Management</h1>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="font-heading text-text-primary text-2xl font-black">User Management</h1>
         <p className="text-muted-foreground text-sm">
           Manage users, roles, and academic contexts across the institution.
         </p>
@@ -91,15 +88,15 @@ export function SecretaryUsersList({
       <UsersKPI kpi={kpi} />
 
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Users</h2>
+        <div className="flex flex-col gap-1">
+          <h2 className="font-heading text-text-primary text-2xl font-black">Users</h2>
           <p className="text-muted-foreground text-sm">
             {total} total user{total !== 1 ? "s" : ""}
           </p>
         </div>
         <Link href="/secretary/users/new">
           <Button className="motion-safe:transition-colors motion-safe:duration-150">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="size-4" data-icon="inline-start" />
             Add User
           </Button>
         </Link>
