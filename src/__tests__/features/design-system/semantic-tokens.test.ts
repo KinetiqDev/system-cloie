@@ -29,6 +29,23 @@ function getAllSourceFiles(dir: string): string[] {
   return results;
 }
 
+function findUnsafePairingLines(source: string): number[] {
+  // Non-global: a boolean test() must not retain lastIndex across lines,
+  // or a prohibited pairing early in a later line is silently skipped.
+  const textPrimaryRegex = /text-primary/;
+  const violated: number[] = [];
+  source.split("\n").forEach((line, index) => {
+    if (!line.includes("bg-primary-soft")) return;
+    // text-text-primary is the allowed surface text role; only the bare
+    // text-primary utility is unsafe on the soft surface.
+    const sanitized = line.replaceAll("text-text-primary", "");
+    if (textPrimaryRegex.test(sanitized)) {
+      violated.push(index + 1);
+    }
+  });
+  return violated;
+}
+
 describe("Design System — Semantic Foundations (Issue #252)", () => {
   const tokensCss = readProjectFile("src/styles/tokens.css");
   const globalsCss = readProjectFile("src/app/globals.css");
@@ -258,9 +275,23 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
   });
 
   describe("Contrast-Safe Selected Surface Pairing", () => {
+    it("flags every prohibited pairing line, not only the first match", () => {
+      const source = [
+        'className="bg-primary-soft text-primary"',
+        'className="bg-primary-soft text-primary"',
+      ].join("\n");
+
+      expect(findUnsafePairingLines(source)).toEqual([1, 2]);
+    });
+
+    it("allows the surface text role on lines that also contain bg-primary-soft", () => {
+      const source = 'className="bg-primary-soft text-text-primary hover:text-text-primary"';
+
+      expect(findUnsafePairingLines(source)).toEqual([]);
+    });
+
     it("never pairs content-bearing primary-soft surfaces with text-primary", () => {
       const filesToScan = ["src/app", "src/components", "src/features"];
-      const hexRegex = /text-primary/g;
       const violated: string[] = [];
 
       for (const dir of filesToScan) {
@@ -269,16 +300,9 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
         );
         for (const file of files) {
           if (file.includes(".test.") || file.includes(".spec.")) continue;
-          const lines = readProjectFile(file).split("\n");
-          lines.forEach((line, index) => {
-            if (!line.includes("bg-primary-soft")) return;
-            // text-text-primary is the allowed surface text role; only the
-            // bare text-primary utility is unsafe on the soft surface.
-            const sanitized = line.replaceAll("text-text-primary", "");
-            if (hexRegex.test(sanitized)) {
-              violated.push(`${file}:${index + 1}`);
-            }
-          });
+          for (const lineNumber of findUnsafePairingLines(readProjectFile(file))) {
+            violated.push(`${file}:${lineNumber}`);
+          }
         }
       }
 
