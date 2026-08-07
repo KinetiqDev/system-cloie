@@ -28,13 +28,6 @@ const buttonVariants = cva(
          */
         "brand-accent":
           "bg-brand-accent text-brand-accent-on hover:bg-brand-accent-hover active:bg-brand-accent-active focus-visible:border-brand-accent-border focus-visible:ring-brand-accent/30",
-        /**
-         * Deprecated — retained only until slice 20 removes it together with its
-         * sole caller `src/features/instruments/components/template-builder.tsx`.
-         * Retokenized through the semantic success family (no raw hex).
-         */
-        "cta-success":
-          "bg-status-success-main text-status-success-on hover:bg-status-success-main/90 focus-visible:border-status-success-main/40 focus-visible:ring-status-success-main/30",
       },
       size: {
         default:
@@ -77,8 +70,7 @@ function Button({
   const { asChild: _asChild, disabled, ...rest } = props;
 
   // Spinner size tracks button size: xs/sm → sm, default/lg → default, icon* → default.
-  const spinnerSize =
-    size === "xs" || size === "sm" ? "sm" : "default";
+  const spinnerSize = size === "xs" || size === "sm" ? "sm" : "default";
 
   return (
     <ButtonPrimitive
@@ -99,13 +91,9 @@ function Button({
          * aria-busy on the button signals the in-progress state to AT.
          */
         <span className="relative inline-flex items-center justify-center">
-          <Spinner
-            size={spinnerSize}
-            aria-hidden="true"
-            className="absolute"
-          />
+          <Spinner size={spinnerSize} aria-hidden="true" className="absolute" />
           {/* Visual spacer — drives button width, hidden from AT */}
-          <span className="opacity-0 select-none pointer-events-none" aria-hidden="true">
+          <span className="pointer-events-none opacity-0 select-none" aria-hidden="true">
             {children}
           </span>
           {/* Accessible label — no visible pixels, read by AT */}

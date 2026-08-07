@@ -52,8 +52,8 @@ export function ManagementTemplateBuilder(props: ManagementTemplateBuilderProps)
       <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="text-center">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle className="size-6 text-green-600" />
+            <div className="bg-success-soft mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
+              <CheckCircle className="text-success size-6" />
             </div>
             <DialogTitle className="text-center">Template Saved Successfully</DialogTitle>
             <DialogDescription className="text-center">
@@ -70,11 +70,11 @@ export function ManagementTemplateBuilder(props: ManagementTemplateBuilderProps)
       <Dialog open={errorModalOpen} onOpenChange={setErrorModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="text-center">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-red-100">
-              <XCircle className="size-6 text-red-600" />
+            <div className="bg-danger-soft mx-auto mb-4 flex size-12 items-center justify-center rounded-full">
+              <XCircle className="text-danger size-6" />
             </div>
             <DialogTitle className="text-center">Failed to Save Template</DialogTitle>
-            <DialogDescription className="text-center text-red-600">
+            <DialogDescription className="text-danger text-center">
               {errorMessage}
             </DialogDescription>
           </DialogHeader>

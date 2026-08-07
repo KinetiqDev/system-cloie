@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FacultyPublishedEvaluationsTable } from "@/features/evaluations/components/faculty-published-evaluations-table";
 import type { FacultyTemplateItem } from "../services/list-faculty-templates";
@@ -15,14 +14,13 @@ type FacultyToolsPageProps = {
 };
 
 export function FacultyToolsPage({ evaluations, program, templates }: FacultyToolsPageProps) {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState("templates");
 
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h1 className="text-heading-lg">Evaluation Tools</h1>
-        <p className="text-body-md text-text-secondary">
+        <h1 className="font-heading text-text-primary text-2xl font-black">Evaluation Tools</h1>
+        <p className="text-muted-foreground text-sm">
           Manage templates and published evaluations for{" "}
           <span className="text-primary font-semibold">
             {program.code} - {program.name}
