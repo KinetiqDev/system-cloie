@@ -5,16 +5,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Copy, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,9 +29,13 @@ import {
   duplicateAdminTemplateAction,
   deleteAdminTemplateAction,
 } from "@/lib/actions/admin-template-actions";
+import { showToast } from "@/components/ui/toast";
 
 type TemplateActions = {
-  onToggleActive: (id: string, is_active: boolean) => Promise<{ success: true } | { success: false; error: string }>;
+  onToggleActive: (
+    id: string,
+    is_active: boolean
+  ) => Promise<{ success: true } | { success: false; error: string }>;
   onDuplicate: (id: string) => Promise<{ success: true } | { success: false; error: string }>;
   onDelete: (id: string) => Promise<{ success: true } | { success: false; error: string }>;
 };
@@ -65,7 +71,11 @@ type ManagementToolsPageProps = {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ManagementToolsPage({ templates, basePath = "/secretary/instruments", actions = DEFAULT_ACTIONS }: ManagementToolsPageProps) {
+export function ManagementToolsPage({
+  templates,
+  basePath = "/secretary/instruments",
+  actions = DEFAULT_ACTIONS,
+}: ManagementToolsPageProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteTarget, setDeleteTarget] = useState<TemplateItem | null>(null);
@@ -87,7 +97,11 @@ export function ManagementToolsPage({ templates, basePath = "/secretary/instrume
   function handleConfirmDelete() {
     if (!deleteTarget) return;
     startTransition(async () => {
-      await actions.onDelete(deleteTarget.id);
+      const result = await actions.onDelete(deleteTarget.id);
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
       setDeleteTarget(null);
       router.refresh();
     });
@@ -98,8 +112,8 @@ export function ManagementToolsPage({ templates, basePath = "/secretary/instrume
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <h1 className="text-heading-lg">Evaluation Tools</h1>
-          <p className="text-body-md text-text-secondary">
+          <h1 className="font-heading text-text-primary text-2xl font-black">Evaluation Tools</h1>
+          <p className="text-muted-foreground text-sm">
             Manage institutional baseline evaluation templates. These templates can be adopted by
             program heads for their programs.
           </p>
@@ -128,14 +142,16 @@ export function ManagementToolsPage({ templates, basePath = "/secretary/instrume
                 <div className="flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 space-y-1">
-                      <CardTitle className="line-clamp-2 text-base font-bold">{template.name}</CardTitle>
+                      <CardTitle className="line-clamp-2 text-base font-bold">
+                        {template.name}
+                      </CardTitle>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      <Badge variant={template.is_active ? "default" : "outline"}>
+                      <Badge variant={template.is_active ? "success" : "outline"}>
                         {template.is_active ? "Active" : "Inactive"}
                       </Badge>
                       <DropdownMenu>
-                        <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-8 items-center justify-center rounded-md transition-colors">
+                        <DropdownMenuTrigger className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors">
                           <MoreVertical className="size-4" />
                           <span className="sr-only">Actions</span>
                         </DropdownMenuTrigger>
@@ -176,9 +192,11 @@ export function ManagementToolsPage({ templates, basePath = "/secretary/instrume
               </CardHeader>
               <CardContent className="space-y-3">
                 {template.description && (
-                  <p className="text-text-secondary line-clamp-2 text-sm">{template.description}</p>
+                  <p className="text-muted-foreground line-clamp-2 text-sm">
+                    {template.description}
+                  </p>
                 )}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="text-muted-foreground flex items-center justify-between text-xs">
                   <span>Institutional baseline</span>
                   <span>
                     {template._count.versions} version
@@ -201,33 +219,32 @@ export function ManagementToolsPage({ templates, basePath = "/secretary/instrume
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation AlertDialog */}
       {deleteTarget && (
-        <Dialog
+        <AlertDialog
           open={!!deleteTarget}
           onOpenChange={(open) => {
+            if (!open && isPending) return;
             if (!open) setDeleteTarget(null);
           }}
         >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Delete Template</DialogTitle>
-              <DialogDescription>
+          <AlertDialogContent className="sm:max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Template</AlertDialogTitle>
+              <AlertDialogDescription>
                 Are you sure you want to delete{" "}
                 <span className="font-semibold">{deleteTarget.name}</span> ({deleteTarget.code})?
                 This action cannot be undone and will remove all associated versions.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-                Cancel
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+              <Button variant="destructive" onClick={handleConfirmDelete} loading={isPending}>
+                Delete
               </Button>
-              <Button variant="destructive" disabled={isPending} onClick={handleConfirmDelete}>
-                {isPending ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

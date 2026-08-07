@@ -11,8 +11,8 @@ export default async function FacultyToolsRoute() {
   if (!templatesResult.success) {
     return (
       <div className="space-y-4">
-        <h1 className="text-heading-lg">Evaluation Tools</h1>
-        <p className="text-body-md text-text-secondary">{templatesResult.error}</p>
+        <h1 className="font-heading text-text-primary text-2xl font-black">Evaluation Tools</h1>
+        <p className="text-muted-foreground text-sm">{templatesResult.error}</p>
       </div>
     );
   }

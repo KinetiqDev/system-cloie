@@ -25,13 +25,16 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,18 +77,9 @@ function formatStakeholder(stakeholder: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-/** Returns accessible Tailwind bg+text classes for each target stakeholder. */
-function getTargetStakeholderBadgeClass(stakeholder: string): string {
-  switch (stakeholder) {
-    case "STUDENT":
-      return "bg-emerald-100 text-emerald-700";
-    case "ALUMNI":
-      return "bg-amber-100 text-amber-800";
-    case "INDUSTRY_PARTNER":
-      return "bg-sky-100 text-sky-700";
-    default:
-      return "bg-slate-100 text-slate-700";
-  }
+/** Categorical target-stakeholder badge treatment (ACD cyan category, theme-resolved). */
+function getTargetStakeholderBadgeClass(): string {
+  return "bg-brand-accent-soft text-brand-accent dark:text-brand-accent-highlight";
 }
 
 export function ProgramHeadToolsPage({
@@ -102,8 +96,8 @@ export function ProgramHeadToolsPage({
     <div className="space-y-8">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div>
-          <h1 className="font-headline text-4xl font-bold tracking-tight">Evaluation Tools</h1>
-          <p className="font-body text-on-surface-variant mt-2 text-sm">
+          <h1 className="font-heading text-text-primary text-2xl font-black">Evaluation Tools</h1>
+          <p className="text-muted-foreground mt-2 text-sm">
             Manage templates and published deployments for{" "}
             <span className="font-semibold">{program.name}</span>.
           </p>
@@ -129,7 +123,7 @@ export function ProgramHeadToolsPage({
 
           <Button
             render={<Link href={buildProgramHeadNewToolPath(program.id)} />}
-            className="bg-primary font-label text-on-primary hover:bg-primary-hover shrink-0 font-semibold"
+            className="shrink-0"
           >
             <Plus className="size-4" data-icon="inline-start" />
             Create New Template
@@ -161,8 +155,8 @@ function TemplatesGrid({
 
   if (!hasContent) {
     return (
-      <div className="border-outline-variant rounded-xl border-2 border-dashed py-16 text-center">
-        <p className="font-body text-on-surface-variant">
+      <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
+        <p className="text-muted-foreground">
           No templates found. Create your first template or import from institutional baselines.
         </p>
       </div>
@@ -174,7 +168,7 @@ function TemplatesGrid({
       {/* Program Templates */}
       {templates.length > 0 && (
         <div className="space-y-4">
-          <h3 className="font-label text-text-secondary text-xs font-semibold tracking-[0.05em] uppercase">
+          <h3 className="text-label-sm text-muted-foreground tracking-wider uppercase">
             Program Templates
           </h3>
           <div className="grid gap-4 md:grid-cols-2">
@@ -188,7 +182,7 @@ function TemplatesGrid({
       {/* Institutional Baselines */}
       {baselines.length > 0 && (
         <div className="space-y-4">
-          <h3 className="font-label text-text-secondary text-xs font-semibold tracking-[0.05em] uppercase">
+          <h3 className="text-label-sm text-muted-foreground tracking-wider uppercase">
             Institutional Baselines (Copy to Customize)
           </h3>
           <div className="grid gap-4 md:grid-cols-2">
@@ -255,20 +249,14 @@ function TemplateCard({
 
   return (
     <>
-      <div className="group bg-surface-container-lowest relative flex flex-col rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="group bg-card relative flex flex-col rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
         <div className="mb-3 flex items-center justify-between">
-          <span
-            className={`font-label inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide ${
-              template.is_active
-                ? "bg-success/15 text-success"
-                : "border-border text-text-muted border bg-transparent"
-            }`}
-          >
+          <Badge variant={template.is_active ? "success" : "outline"}>
             {template.is_active ? "Active" : "Inactive"}
-          </span>
+          </Badge>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-7 items-center justify-center rounded-md transition-colors">
+            <DropdownMenuTrigger className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors">
               <MoreVertical className="size-4" />
               <span className="sr-only">Actions</span>
             </DropdownMenuTrigger>
@@ -280,7 +268,10 @@ function TemplateCard({
               <DropdownMenuItem
                 variant="destructive"
                 disabled={isPending}
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={() => {
+                  setError(null);
+                  setShowDeleteDialog(true);
+                }}
               >
                 <Trash2 className="size-4" />
                 Delete
@@ -289,13 +280,13 @@ function TemplateCard({
           </DropdownMenu>
         </div>
 
-        <h3 className="font-headline text-on-surface text-lg font-semibold">{template.name}</h3>
-        <p className="font-body text-on-surface-variant mt-1 line-clamp-2 text-sm">
+        <h3 className="font-heading text-foreground text-lg font-semibold">{template.name}</h3>
+        <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
           {template.description ?? "No description."}
         </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="font-label text-on-surface-variant text-xs font-semibold tracking-[0.05em] uppercase">
+          <span className="text-label-sm text-muted-foreground tracking-wider uppercase">
             Program-owned - {template._count.versions} version(s)
           </span>
           <Badge variant="outline" className="text-xs">
@@ -308,7 +299,11 @@ function TemplateCard({
           )}
         </div>
 
-        {error && <p className="text-error mt-2 text-xs font-medium">{error}</p>}
+        {error && (
+          <p role="alert" className="text-danger mt-2 text-xs font-medium">
+            {error}
+          </p>
+        )}
 
         <div className="mt-4 flex gap-2">
           <Button
@@ -333,7 +328,7 @@ function TemplateCard({
           </Button>
           <Button
             size="sm"
-            className="bg-primary text-on-primary hover:bg-primary-hover flex-1"
+            className="flex-1"
             disabled={isPending}
             render={
               isProgramWide ? (
@@ -349,32 +344,36 @@ function TemplateCard({
         </div>
       </div>
 
-      <Dialog
+      <AlertDialog
         open={showDeleteDialog}
         onOpenChange={(open) => {
+          if (!open && isPending) return;
           if (!open) {
             setShowDeleteDialog(false);
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Template</DialogTitle>
-            <DialogDescription>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete <span className="font-semibold">{template.name}</span>
               ? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleConfirmDelete} loading={isPending}>
+              Delete
             </Button>
-            <Button variant="destructive" disabled={isPending} onClick={handleConfirmDelete}>
-              {isPending ? "Deleting..." : "Delete"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -389,12 +388,12 @@ function BaselineCard({
   const isProgramWide = baseline.template_type === "PROGRAM_WIDE";
 
   return (
-    <div className="bg-surface group border-outline-variant hover:border-outline relative flex flex-col overflow-hidden rounded-xl border transition-all">
+    <div className="bg-card group border-border hover:border-strong relative flex flex-col overflow-hidden rounded-xl border transition-all">
       {/* Header */}
       <div className="flex flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h3 className="font-body text-on-surface line-clamp-2 text-base font-semibold">
+            <h3 className="text-foreground line-clamp-2 text-base font-semibold">
               {baseline.name}
             </h3>
           </div>
@@ -402,7 +401,7 @@ function BaselineCard({
             Institutional
           </Badge>
         </div>
-        <p className="font-body text-on-surface-variant line-clamp-2 text-sm">
+        <p className="text-muted-foreground line-clamp-2 text-sm">
           {baseline.description || "No description"}
         </p>
       </div>
@@ -523,8 +522,8 @@ function PublishedDeploymentsTable({
 
   if (localDeployments.length === 0) {
     return (
-      <div className="border-outline-variant rounded-xl border-2 border-dashed py-16 text-center">
-        <p className="font-body text-on-surface-variant">No published tools yet.</p>
+      <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
+        <p className="text-muted-foreground">No published tools yet.</p>
       </div>
     );
   }
@@ -671,9 +670,7 @@ function DeploymentAccordionRow({
 
         {/* Target */}
         <div>
-          <Badge
-            className={`text-xs ${getTargetStakeholderBadgeClass(deployment.target_stakeholder)}`}
-          >
+          <Badge className={`text-xs ${getTargetStakeholderBadgeClass()}`}>
             {formatStakeholder(deployment.target_stakeholder)}
           </Badge>
         </div>

@@ -59,7 +59,9 @@ export function TemplatesGrid({ templates }: TemplatesGridProps) {
               <div className="flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-1">
-                    <CardTitle className="line-clamp-2 text-base font-bold">{template.name}</CardTitle>
+                    <CardTitle className="line-clamp-2 text-base font-bold">
+                      {template.name}
+                    </CardTitle>
                   </div>
                   <Badge variant={isOwned ? "outline" : "default"} className="shrink-0">
                     {isOwned ? "My Copy" : "Shared"}
@@ -69,7 +71,7 @@ export function TemplatesGrid({ templates }: TemplatesGridProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               {template.description && (
-                <p className="text-text-secondary line-clamp-2 text-sm">{template.description}</p>
+                <p className="text-muted-foreground line-clamp-2 text-sm">{template.description}</p>
               )}
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-xs">

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -38,7 +40,7 @@ import type {
   EvaluationTemplateType,
   TemplateCiloQuestionBinding,
 } from "../types";
-import { DEFAULT_LIKERT_5_DESCRIPTORS, listTemplateLikertQuestions } from "../types";
+import { DEFAULT_LIKERT_5_DESCRIPTORS } from "../types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -218,7 +220,6 @@ export function TemplateBuilder({
 
     return labels;
   }, [facultyConfig?.initialBindings, loadedCilos]);
-  const likertQuestions = useMemo(() => listTemplateLikertQuestions(sections), [sections]);
   const selectedCiloIds = useMemo(
     () => new Set(Object.values(ciloQuestionBindings).filter(Boolean)),
     [ciloQuestionBindings]
@@ -635,19 +636,19 @@ export function TemplateBuilder({
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
       <div className="space-y-1">
-        <p className="font-label text-text-secondary text-xs font-semibold tracking-[0.05em] uppercase">
+        <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
           {programLabel}
         </p>
-        <h1 className="font-headline text-heading-lg">
+        <h1 className="font-heading text-text-primary text-2xl font-black">
           {initialData?.id ? "Edit Template" : "New Template"}
         </h1>
       </div>
 
       {/* Error / Success Messages */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {/* Template Settings Card */}
@@ -670,7 +671,7 @@ export function TemplateBuilder({
           </div>
           <div className="space-y-2">
             <Label htmlFor="template-description">
-              Template Description <span className="text-text-secondary">(optional)</span>
+              Template Description <span className="text-muted-foreground">(optional)</span>
             </Label>
             <Textarea
               id="template-description"
@@ -702,9 +703,7 @@ export function TemplateBuilder({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="COURSE_BOUND">Course-bound</SelectItem>
-                {!facultyMode && (
-                  <SelectItem value="PROGRAM_WIDE">Program-wide</SelectItem>
-                )}
+                {!facultyMode && <SelectItem value="PROGRAM_WIDE">Program-wide</SelectItem>}
               </SelectContent>
             </Select>
           </div>
@@ -730,12 +729,12 @@ export function TemplateBuilder({
             )}
           </div>
           {!facultyMode && effectiveTemplateType !== "COURSE_BOUND" && (
-            <p className="text-text-secondary text-xs">
+            <p className="text-muted-foreground text-xs">
               Faculty access is available only for course-bound templates.
             </p>
           )}
           {facultyMode && (
-            <div className="border-border rounded-lg border p-4 space-y-2">
+            <div className="border-border space-y-2 rounded-lg border p-4">
               <Label htmlFor="faculty-course-context">Course</Label>
               <Select
                 value={boundCourseId}
@@ -768,7 +767,7 @@ export function TemplateBuilder({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-text-secondary text-xs">
+              <p className="text-muted-foreground text-xs">
                 {isLoadingCilos
                   ? "Loading saved CILOs..."
                   : loadedCilos.length > 0
@@ -785,11 +784,9 @@ export function TemplateBuilder({
         <button
           type="button"
           onClick={() => addSection(0)}
-          className="text-primary hover:bg-primary/5 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors"
+          className="text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
         >
-          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-          </svg>
+          <Plus className="size-5" />
           Add Section
         </button>
       </div>
@@ -827,11 +824,9 @@ export function TemplateBuilder({
               <button
                 type="button"
                 onClick={() => addSection(sectionIndex + 1)}
-                className="text-text-secondary hover:text-primary hover:bg-primary/5 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors"
+                className="text-muted-foreground hover:text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
               >
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-                </svg>
+                <Plus className="size-4" />
                 Insert Section
               </button>
             </div>
@@ -844,11 +839,9 @@ export function TemplateBuilder({
         <button
           type="button"
           onClick={() => addSection()}
-          className="text-primary hover:bg-primary/5 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors"
+          className="text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
         >
-          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-          </svg>
+          <Plus className="size-5" />
           Add Section
         </button>
       </div>
@@ -860,21 +853,15 @@ export function TemplateBuilder({
         </Button>
         {(facultyMode || onPublish) && (
           <Button
-            variant="cta-success"
+            variant="brand-accent"
             onClick={facultyMode ? handlePublish : onPublish}
-            disabled={isPending}
+            loading={isPending}
           >
             Publish
           </Button>
         )}
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending
-            ? isInstitutionalBaseline
-              ? "Creating Copy…"
-              : "Saving…"
-            : isInstitutionalBaseline
-              ? "Save as Program Copy"
-              : "Save Template"}
+        <Button onClick={handleSave} loading={isPending}>
+          {isInstitutionalBaseline ? "Save as Program Copy" : "Save Template"}
         </Button>
       </div>
 
@@ -902,8 +889,8 @@ export function TemplateBuilder({
             <Button variant="outline" onClick={() => setCopyNameDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveAsCopy} disabled={!copyName.trim() || isCopyPending}>
-              {isCopyPending ? "Creating…" : "Create Copy"}
+            <Button onClick={handleSaveAsCopy} disabled={!copyName.trim()} loading={isCopyPending}>
+              Create Copy
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -978,7 +965,7 @@ function SectionCard({
           <div className="flex-1 space-y-3">
             <input
               type="text"
-              className="placeholder:text-text-secondary/50 hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent py-1 text-lg font-semibold transition-colors focus:outline-none"
+              className="placeholder:text-muted-foreground/50 hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent py-1 text-lg font-semibold transition-colors focus:outline-none"
               placeholder={`Section ${sectionIndex + 1} title`}
               value={section.title}
               onChange={(e) => onUpdateSection(section.key, { title: e.target.value })}
@@ -999,7 +986,7 @@ function SectionCard({
             <button
               type="button"
               onClick={() => onRemoveSection(section.key)}
-              className="text-text-secondary mt-1 rounded-md p-1.5 transition-colors hover:bg-red-50 hover:text-red-500"
+              className="text-muted-foreground hover:bg-danger-soft hover:text-danger focus-visible:ring-ring mt-1 rounded-md p-1.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
               title="Remove section"
             >
               <svg
@@ -1020,7 +1007,7 @@ function SectionCard({
         </div>
 
         {/* Questions */}
-        <div className="bg-surface-container-low space-y-4 rounded-xl p-4">
+        <div className="bg-muted space-y-4 rounded-xl p-4">
           {section.questions.map((question, questionIndex) => (
             <QuestionCard
               key={question.key}
@@ -1050,11 +1037,9 @@ function SectionCard({
             <button
               type="button"
               onClick={() => onAddQuestion(section.key)}
-              className="text-primary hover:bg-primary/5 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors"
+              className="text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
             >
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-              </svg>
+              <Plus className="size-4" />
               Add Question
             </button>
           </div>
@@ -1111,10 +1096,10 @@ function QuestionCard({
   const [newResponse, setNewResponse] = useState("");
 
   return (
-    <div className="group border-border bg-surface-container-lowest space-y-4 rounded-lg border p-4">
+    <div className="group border-border bg-background space-y-4 rounded-lg border p-4">
       {/* Question Header */}
       <div className="flex items-center justify-between gap-4">
-        <p className="font-label text-primary text-xs font-semibold tracking-[0.05em] uppercase">
+        <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
           Question {questionIndex + 1}
         </p>
         <Select
@@ -1208,13 +1193,13 @@ function QuestionCard({
               {question.suggestedResponses.map((resp, idx) => (
                 <div
                   key={idx}
-                  className="border-border bg-surface flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                  className="border-border bg-card flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                 >
                   <span className="flex-1">{resp}</span>
                   <button
                     type="button"
                     onClick={() => onRemoveSuggestedResponse(sectionKey, question.key, idx)}
-                    className="text-text-secondary shrink-0 rounded p-0.5 transition-colors hover:text-red-500"
+                    className="text-muted-foreground hover:text-danger focus-visible:ring-ring shrink-0 rounded p-0.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
                   >
                     <svg
                       className="h-4 w-4"
@@ -1266,7 +1251,7 @@ function QuestionCard({
             <button
               type="button"
               onClick={() => onRemove(sectionKey, question.key)}
-              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
+              className="text-danger hover:bg-danger-soft focus-visible:ring-ring inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
             >
               <svg
                 className="h-4 w-4"
@@ -1288,7 +1273,7 @@ function QuestionCard({
         <div className="flex items-center gap-2">
           <Label
             htmlFor={`required-${question.key}`}
-            className="text-text-secondary cursor-pointer text-xs"
+            className="text-muted-foreground cursor-pointer text-xs"
           >
             Required
           </Label>
@@ -1331,7 +1316,7 @@ function LikertDescriptorsEditor({
                 {idx < descriptors.length - 1 && (
                   <div className="bg-border absolute top-1/2 left-full h-px w-full" />
                 )}
-                <div className="border-primary/40 bg-surface flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-semibold text-primary/60">
+                <div className="border-primary/40 bg-card text-primary/60 flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-semibold">
                   {descriptor.value}
                 </div>
               </div>
@@ -1339,7 +1324,7 @@ function LikertDescriptorsEditor({
             {/* Editable label */}
             <input
               type="text"
-              className="text-text-secondary hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent text-center text-xs transition-colors focus:outline-none"
+              className="text-muted-foreground hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent text-center text-xs transition-colors focus:outline-none"
               value={descriptor.label}
               onChange={(e) => onUpdate(sectionKey, questionKey, idx, e.target.value)}
             />

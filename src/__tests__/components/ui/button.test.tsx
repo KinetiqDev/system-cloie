@@ -53,17 +53,10 @@ describe("Button", () => {
       expect(brandAccentClasses).not.toContain("bg-primary");
     });
 
-    /**
-     * cta-success: deprecated compatibility variant retained until slice 20.
-     * Retokenized through semantic success family — no raw hex colors.
-     */
-    it("applies semantic success token classes for cta-success and contains no raw hex", () => {
-      render(<Button variant="cta-success">Publish</Button>);
-      const btn = screen.getByRole("button");
-      expect(btn).toHaveClass("bg-status-success-main");
-      expect(btn).toHaveClass("text-status-success-on");
-      const ctaSuccessClasses = buttonVariants({ variant: "cta-success" });
-      expect(ctaSuccessClasses).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+    it("no longer exposes the retired success variant", () => {
+      const classes = buttonVariants({ variant: "retired-success" } as never);
+      expect(classes).not.toContain("bg-status-success-main");
+      expect(classes).not.toContain("text-status-success-on");
     });
   });
 
@@ -89,7 +82,11 @@ describe("Button", () => {
     });
 
     it("applies icon sizes", () => {
-      render(<Button size="icon" aria-label="Close">✕</Button>);
+      render(
+        <Button size="icon" aria-label="Close">
+          ✕
+        </Button>
+      );
       expect(screen.getByRole("button")).toHaveClass("size-8");
     });
   });

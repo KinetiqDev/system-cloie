@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, beforeEach } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ManagementToolsPage } from "@/features/instruments/components/management-tools-page";
 
@@ -50,10 +50,7 @@ describe("ManagementToolsPage", () => {
     render(<ManagementToolsPage templates={mockTemplates} basePath="/dean/instruments" />);
 
     expect(screen.getByText("Evaluation Tools")).toBeInTheDocument();
-    expect(screen.getByText("Create Template")).toHaveAttribute(
-      "href",
-      "/dean/instruments/new"
-    );
+    expect(screen.getByText("Create Template")).toHaveAttribute("href", "/dean/instruments/new");
   });
 
   test("displays template status badges correctly", () => {
@@ -104,8 +101,37 @@ describe("ManagementToolsPage", () => {
   test("shows empty state when no templates", () => {
     render(<ManagementToolsPage templates={[]} basePath="/secretary/instruments" />);
 
-    expect(
-      screen.getByText(/No baseline templates yet/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No baseline templates yet/i)).toBeInTheDocument();
+  });
+
+  test("keeps the delete confirmation open when deletion fails", async () => {
+    const dispatchEventSpy = vi.spyOn(window, "dispatchEvent");
+    const mockActions = {
+      onToggleActive: vi.fn().mockResolvedValue({ success: true }),
+      onDuplicate: vi.fn().mockResolvedValue({ success: true }),
+      onDelete: vi.fn().mockResolvedValue({ success: false, error: "Cannot delete." }),
+    };
+
+    render(
+      <ManagementToolsPage
+        templates={mockTemplates}
+        basePath="/secretary/instruments"
+        actions={mockActions}
+      />
+    );
+
+    const actionsButtons = screen.getAllByRole("button", { name: "Actions" });
+    fireEvent.click(actionsButtons[0]);
+    fireEvent.click(screen.getByRole("menuitem", { name: /delete/i }));
+
+    const dialog = await screen.findByRole("alertdialog", { name: "Delete Template" });
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => {
+      expect(mockActions.onDelete).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.getByRole("alertdialog", { name: "Delete Template" })).toBe(dialog);
+    expect(dispatchEventSpy).toHaveBeenCalled();
   });
 });
