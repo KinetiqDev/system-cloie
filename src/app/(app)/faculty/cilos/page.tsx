@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { listFacultyCoursesWithCilos } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 import { listSchoolYears } from "@/features/academic-calendar/services/list-school-years";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FacultyCilosCourseList } from "@/features/evaluations/components/faculty-cilos-course-list";
 import {
   loadCilosForCourseAction,
@@ -30,7 +31,9 @@ export default async function FacultyCilosPage({ searchParams }: FacultyCilosPag
     return (
       <div className="space-y-4">
         <h1 className="text-heading-lg">Manage CILOs</h1>
-        <p className="text-body-md text-text-secondary">{coursesResult.error}</p>
+        <Alert variant="destructive">
+          <AlertDescription>{coursesResult.error}</AlertDescription>
+        </Alert>
       </div>
     );
   }
