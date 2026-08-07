@@ -3,7 +3,16 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type {
   DeanEnrollmentsData,
   DeanPeriodSummary,
@@ -91,11 +100,7 @@ export async function EnrollmentDetails({
   return <EnrollmentContent result={result} />;
 }
 
-export function EnrollmentContent({
-  result,
-}: {
-  result: DeanReadState<DeanEnrollmentsData>;
-}) {
+export function EnrollmentContent({ result }: { result: DeanReadState<DeanEnrollmentsData> }) {
   if (result.state === "no-eligible-period") {
     return (
       <Card>
@@ -157,12 +162,9 @@ function PeriodControls({
           ))}
         </select>
       </div>
-      <button
-        type="submit"
-        className="bg-primary text-primary-foreground focus-visible:ring-ring h-11 rounded-lg px-4 text-sm font-medium transition-transform outline-none focus-visible:ring-3 active:translate-y-px"
-      >
+      <Button type="submit" className="h-11">
         View period
-      </button>
+      </Button>
     </form>
   );
 }
@@ -185,7 +187,7 @@ function ProgramDetail({
         </span>
         <span className="flex shrink-0 items-center gap-3">
           <span className="text-right">
-            <span className="block text-2xl font-semibold tabular-nums">
+            <span className="font-heading text-heading-xl text-foreground block tabular-nums">
               {program.enrolledStudentCount}
             </span>
             <span className="text-text-secondary block text-xs">placements</span>
@@ -197,7 +199,7 @@ function ProgramDetail({
         </span>
       </summary>
       <div className="border-t px-3 pt-3 pb-3 sm:px-4 sm:pb-4">
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden md:block">
           <ClassTable classes={program.classes} periodId={periodId} />
         </div>
         <div className="flex flex-col gap-2 md:hidden">
@@ -222,32 +224,32 @@ function ClassTable({
   periodId: string;
 }) {
   return (
-    <table className="w-full min-w-[42rem] text-left text-sm">
-      <thead className="bg-muted/40 text-text-secondary border-b text-xs">
-        <tr>
-          <th scope="col" className="px-3 py-3 font-medium">
+    <Table className="min-w-[42rem]">
+      <TableHeader>
+        <TableRow className="bg-muted/40 text-text-secondary text-xs">
+          <TableHead scope="col" className="px-3 py-3 font-medium">
             Course
-          </th>
-          <th scope="col" className="px-3 py-3 font-medium">
+          </TableHead>
+          <TableHead scope="col" className="px-3 py-3 font-medium">
             Year level
-          </th>
-          <th scope="col" className="px-3 py-3 font-medium">
+          </TableHead>
+          <TableHead scope="col" className="px-3 py-3 font-medium">
             Section
-          </th>
-          <th scope="col" className="px-3 py-3 text-right font-medium">
+          </TableHead>
+          <TableHead scope="col" className="px-3 py-3 text-right font-medium">
             Placements
-          </th>
-          <th scope="col" className="px-3 py-3 text-right font-medium">
+          </TableHead>
+          <TableHead scope="col" className="px-3 py-3 text-right font-medium">
             Action
-          </th>
-        </tr>
-      </thead>
-      <tbody className="divide-y">
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {classes.map((courseClass) => (
           <ClassRow key={courseClass.assignmentId} courseClass={courseClass} periodId={periodId} />
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -259,22 +261,22 @@ function ClassRow({
   periodId: string;
 }) {
   return (
-    <tr className="hover:bg-muted/40 transition-colors">
-      <th scope="row" className="px-3 py-4 font-medium">
+    <TableRow>
+      <TableHead scope="row" className="px-3 py-4 font-medium">
         <span className="block">{courseClass.courseCode}</span>
         <span className="text-text-secondary block text-xs font-normal">
           {courseClass.courseName}
         </span>
-      </th>
-      <td className="px-3 py-4">{courseClass.yearLevel}</td>
-      <td className="px-3 py-4">{courseClass.section}</td>
-      <td className="px-3 py-4 text-right font-semibold tabular-nums">
+      </TableHead>
+      <TableCell className="px-3 py-4">{courseClass.yearLevel}</TableCell>
+      <TableCell className="px-3 py-4">{courseClass.section}</TableCell>
+      <TableCell className="px-3 py-4 text-right font-semibold tabular-nums">
         {courseClass.enrolledStudentCount}
-      </td>
-      <td className="px-3 py-4 text-right">
+      </TableCell>
+      <TableCell className="px-3 py-4 text-right">
         <RosterLink periodId={periodId} assignmentId={courseClass.assignmentId} />
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -293,7 +295,9 @@ function ClassCard({
           <p className="text-text-secondary text-sm">{courseClass.courseName}</p>
         </div>
         <div className="text-right">
-          <p className="text-xl font-semibold tabular-nums">{courseClass.enrolledStudentCount}</p>
+          <p className="font-heading text-heading-lg text-foreground tabular-nums">
+            {courseClass.enrolledStudentCount}
+          </p>
           <p className="text-text-secondary text-xs">placements</p>
         </div>
       </div>

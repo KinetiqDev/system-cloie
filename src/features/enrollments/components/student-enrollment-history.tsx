@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,7 +96,7 @@ export function StudentEnrollmentHistory({ userId, onEdit }: StudentEnrollmentHi
                 <TableCell>{enrollment.section || "—"}</TableCell>
                 <TableCell>{sourceLabels[enrollment.source]}</TableCell>
                 <TableCell>
-                  <Badge variant={enrollment.isActive ? "default" : "secondary"}>
+                  <Badge variant={enrollment.isActive ? "success" : "secondary"}>
                     {enrollment.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </TableCell>

@@ -3,7 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import type {
   DeanPeriodSummary,
   DeanReadState,
@@ -58,7 +60,12 @@ export default async function DeanEnrollmentRosterPage({
 
   let pageResult: DeanReadState<{ page: number }>;
   try {
-    pageResult = await getDeanRosterPage({ periodId: period, assignmentId: assignment, query, page });
+    pageResult = await getDeanRosterPage({
+      periodId: period,
+      assignmentId: assignment,
+      query,
+      page,
+    });
   } catch (error) {
     if (error instanceof DeanReadModelNotFoundError) notFound();
     throw error;
@@ -218,23 +225,20 @@ function RosterSearchForm({
         <label htmlFor="roster-query" className="text-sm font-medium">
           Search names
         </label>
-        <input
+        <Input
           id="roster-query"
           name="query"
           type="search"
           defaultValue={query}
           maxLength={100}
           placeholder="Search by first or last name"
-          className="border-input bg-background focus-visible:ring-ring h-11 rounded-lg border px-3 text-base outline-none focus-visible:ring-3"
+          className="h-11 px-3"
         />
       </div>
-      <button
-        type="submit"
-        className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium outline-none focus-visible:ring-3"
-      >
+      <Button type="submit" className="h-11">
         <Search aria-hidden="true" />
         Search
-      </button>
+      </Button>
     </form>
   );
 }
