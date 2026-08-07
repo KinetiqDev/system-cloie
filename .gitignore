@@ -64,6 +64,3 @@ skills-lock.json
 # IDE
 .idea
 .vscode
-
-#redundant workflow
-.github/workflows/
