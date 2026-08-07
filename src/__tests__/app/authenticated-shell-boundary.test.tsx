@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
 
 const { resolveAuthSessionMock } = vi.hoisted(() => ({
@@ -8,6 +8,10 @@ const { resolveAuthSessionMock } = vi.hoisted(() => ({
 
 const { getDemoAuthConfigMock } = vi.hoisted(() => ({
   getDemoAuthConfigMock: vi.fn(),
+}));
+
+const { resolveAppearanceAvailabilityMock } = vi.hoisted(() => ({
+  resolveAppearanceAvailabilityMock: vi.fn(),
 }));
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
@@ -22,17 +26,27 @@ vi.mock("@/features/auth/services/demo-auth", () => ({
   getDemoAuthConfig: getDemoAuthConfigMock,
 }));
 
+vi.mock("@/features/design-system/services/resolve-appearance-availability", () => ({
+  resolveAppearanceAvailability: resolveAppearanceAvailabilityMock,
+}));
+
 vi.mock("@/components/layout/app-shell", () => ({
   AppShell: ({
     children,
     demoEnabled,
     demoUsers,
+    appearanceEnabled,
   }: {
     children: React.ReactNode;
     demoEnabled?: boolean;
     demoUsers?: readonly { email: string }[];
+    appearanceEnabled?: boolean;
   }) => (
-    <div data-demo-enabled={String(demoEnabled)} data-demo-users={demoUsers?.length ?? 0}>
+    <div
+      data-demo-enabled={String(demoEnabled)}
+      data-demo-users={demoUsers?.length ?? 0}
+      data-appearance-enabled={String(appearanceEnabled)}
+    >
       {children}
     </div>
   ),
@@ -50,6 +64,10 @@ function deferred<T>() {
 }
 
 describe("AuthenticatedAppShell", () => {
+  beforeEach(() => {
+    resolveAppearanceAvailabilityMock.mockReturnValue(false);
+  });
+
   it("passes a true demo capability for a valid dedicated-demo configuration", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       email: "demo-faculty@cloie.test",
@@ -70,6 +88,23 @@ describe("AuthenticatedAppShell", () => {
     expect(screen.getByText("Protected sentinel").parentElement).toHaveAttribute(
       "data-demo-users",
       "1"
+    );
+  });
+
+  it("passes the appearance capability to the shell", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      email: "faculty@example.com",
+      roles: [ROLES.FACULTY],
+      activeRole: ROLES.FACULTY,
+    });
+    getDemoAuthConfigMock.mockReturnValue(null);
+    resolveAppearanceAvailabilityMock.mockReturnValue(true);
+
+    render(await AuthenticatedAppShell({ children: <div>Protected sentinel</div> }));
+
+    expect(screen.getByText("Protected sentinel").parentElement).toHaveAttribute(
+      "data-appearance-enabled",
+      "true"
     );
   });
 

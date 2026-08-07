@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, LogOut, Settings } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -12,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MobileSidebarDrawer } from "./mobile-sidebar-drawer";
+import { AppearanceMenuItems } from "@/features/design-system/components/appearance-menu-items";
 import type { Role } from "@/lib/constants/roles";
 import type { MobileNavMode } from "@/lib/constants/navigation";
 
@@ -24,9 +26,16 @@ interface TopbarProps {
   mobileNavMode?: MobileNavMode;
   roles?: Role[];
   children?: React.ReactNode;
+  appearanceEnabled?: boolean;
 }
 
-export function Topbar({ user, mobileNavMode = "bottom-nav", roles, children }: TopbarProps) {
+export function Topbar({
+  user,
+  mobileNavMode = "bottom-nav",
+  roles,
+  children,
+  appearanceEnabled = false,
+}: TopbarProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -76,6 +85,25 @@ export function Topbar({ user, mobileNavMode = "bottom-nav", roles, children }: 
               <p className="text-caption text-text-muted">{user?.email || "No email"}</p>
             </div>
             <DropdownMenuSeparator />
+            {appearanceEnabled && (
+              <>
+                <div className="px-3 pt-1 pb-2">
+                  <p className="text-caption text-text-muted mb-1 px-1 font-medium uppercase tracking-wide">
+                    Appearance
+                  </p>
+                  <AppearanceMenuItems />
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2"
+                  render={<Link href="/settings/appearance" />}
+                >
+                  <Settings className="size-4" />
+                  Appearance settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem
               className="text-danger focus:text-danger cursor-pointer gap-2"
               onClick={handleLogout}

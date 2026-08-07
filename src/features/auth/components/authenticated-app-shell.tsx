@@ -4,6 +4,7 @@ import { DEDICATED_DEMO_USERS } from "@/lib/constants/demo-users";
 import { SessionGuard } from "@/features/auth/components/session-guard";
 import { getDemoAuthConfig } from "@/features/auth/services/demo-auth";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
 
 export async function AuthenticatedAppShell({ children }: { children: ReactNode }) {
   const session = await resolveAuthSession();
@@ -12,6 +13,7 @@ export async function AuthenticatedAppShell({ children }: { children: ReactNode 
   const demoUsers = demoConfig
     ? DEDICATED_DEMO_USERS.filter((user) => demoConfig.allowedUsers.has(user.email))
     : [];
+  const appearanceEnabled = resolveAppearanceAvailability();
 
   const user = session
     ? {
@@ -28,6 +30,7 @@ export async function AuthenticatedAppShell({ children }: { children: ReactNode 
         activeRole={session?.activeRole}
         demoEnabled={demoEnabled}
         demoUsers={demoUsers}
+        appearanceEnabled={appearanceEnabled}
       >
         {children}
       </AppShell>
