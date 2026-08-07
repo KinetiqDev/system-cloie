@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -310,7 +311,7 @@ export function PublishCourseBoundEvaluationFormV2({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Publish CILO Evaluation</h1>
+        <h1 className="text-heading-lg">Publish CILO Evaluation</h1>
         <p className="text-muted-foreground text-sm">
           Select a class assignment to target the right students. The course context and
           CILO-to-question bindings come from the saved faculty template.
@@ -318,18 +319,16 @@ export function PublishCourseBoundEvaluationFormV2({
       </div>
 
       {isOnBehalf && selectedAssignment && (
-        <Card className="border-blue-200 bg-blue-50" role="status">
-          <CardContent className="flex items-start gap-3 py-4">
-            <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-800" />
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> You are deploying this evaluation on behalf of{" "}
-              <span className="font-semibold">
-                {selectedAssignment.facultyName || "the assigned faculty member"}
-              </span>
-              . Question customization is disabled for on-behalf deployments.
-            </p>
-          </CardContent>
-        </Card>
+        <Alert variant="information" role="status">
+          <Info className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+          <AlertDescription className="text-sm">
+            <strong>Note:</strong> You are deploying this evaluation on behalf of{" "}
+            <span className="font-semibold">
+              {selectedAssignment.facultyName || "the assigned faculty member"}
+            </span>
+            . Question customization is disabled for on-behalf deployments.
+          </AlertDescription>
+        </Alert>
       )}
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -481,15 +480,16 @@ export function PublishCourseBoundEvaluationFormV2({
             </div>
 
             {error && (
-              <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
-                {error}
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoadingPreview || !selectedAssignmentId}
+              loading={isLoadingPreview}
+              disabled={!selectedAssignmentId}
             >
               {isLoadingPreview ? "Loading Preview..." : "Preview Respondents"}
             </Button>
@@ -600,9 +600,9 @@ export function PublishCourseBoundEvaluationFormV2({
             </div>
 
             {error && (
-              <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
-                {error}
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
 
             <div className="flex gap-3">
@@ -613,7 +613,7 @@ export function PublishCourseBoundEvaluationFormV2({
                 type="button"
                 className="flex-1"
                 onClick={handlePublishFinal}
-                disabled={isSubmitting}
+                loading={isSubmitting}
               >
                 {isSubmitting ? "Publishing..." : "Publish Evaluation"}
               </Button>

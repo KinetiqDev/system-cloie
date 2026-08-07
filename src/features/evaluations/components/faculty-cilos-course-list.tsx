@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, Plus, Search, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -202,12 +203,14 @@ function ViewEditCilosModal({
         </DialogHeader>
 
         {error && (
-          <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">{error}</div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
         {successMessage && (
-          <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-700">
-            {successMessage}
-          </div>
+          <Alert variant="success" role="status">
+            <AlertDescription>{successMessage}</AlertDescription>
+          </Alert>
         )}
 
         {isLoading ? (
@@ -237,7 +240,8 @@ function ViewEditCilosModal({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:bg-destructive/10 shrink-0"
+                      aria-label={`Remove CILO ${index + 1}`}
+                      className="text-destructive hover:bg-destructive/10 min-h-11 min-w-11 shrink-0"
                       onClick={() => handleRemoveCilo(cilo.id)}
                     >
                       <Trash2 className="size-4" />
@@ -270,7 +274,7 @@ function ViewEditCilosModal({
               <Button variant="outline" onClick={() => handleOpenChange(false)}>
                 Close
               </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
+              <Button onClick={handleSave} loading={isSaving}>
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
@@ -353,7 +357,7 @@ export function FacultyCilosCourseList({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-heading-lg">Manage CILOs</h1>
-          <p className="text-body-md text-text-secondary">
+          <p className="text-body-md text-muted-foreground">
             View and manage Course-Intended Learning Outcomes for your affiliated program courses.
           </p>
         </div>
