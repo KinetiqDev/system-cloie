@@ -14,7 +14,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { showToast } from "@/components/ui/toast";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
 import { YEAR_LEVEL_OPTIONS, STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
@@ -85,7 +91,12 @@ export function EnrollmentEditorDialog({
     setIsSubmitting(false);
 
     if (result.success) {
-      showToast(existingEnrollment ? "The enrollment has been successfully updated." : "The enrollment has been successfully created.", "success");
+      showToast(
+        existingEnrollment
+          ? "The enrollment has been successfully updated."
+          : "The enrollment has been successfully created.",
+        "success"
+      );
       onOpenChange(false);
       onSuccess?.();
     } else {
@@ -111,10 +122,12 @@ export function EnrollmentEditorDialog({
             <TermInstancePicker
               termInstances={termInstances}
               value={watch("termInstanceId")}
-              onChange={(value) => value && setValue("termInstanceId", value, { shouldValidate: true })}
+              onChange={(value) =>
+                value && setValue("termInstanceId", value, { shouldValidate: true })
+              }
             />
             {errors.termInstanceId && (
-              <p className="text-sm text-red-500">Please select a term</p>
+              <p className="text-destructive text-sm">Please select a term</p>
             )}
           </div>
 
@@ -147,7 +160,9 @@ export function EnrollmentEditorDialog({
               <Label>Year Level</Label>
               <Select
                 value={watch("yearLevel")}
-                onValueChange={(value) => setValue("yearLevel", value as YearLevel, { shouldValidate: true })}
+                onValueChange={(value) =>
+                  setValue("yearLevel", value as YearLevel, { shouldValidate: true })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select year" />
@@ -166,7 +181,9 @@ export function EnrollmentEditorDialog({
               <Label>Section (Optional)</Label>
               <Select
                 value={watch("section")}
-                onValueChange={(value) => setValue("section", value as StudentSection, { shouldValidate: true })}
+                onValueChange={(value) =>
+                  setValue("section", value as StudentSection, { shouldValidate: true })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select section" />
