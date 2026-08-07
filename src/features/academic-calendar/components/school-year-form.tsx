@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -28,17 +28,19 @@ interface SchoolYearFormProps {
 export function SchoolYearForm({ open, onOpenChange, onSuccess }: SchoolYearFormProps) {
   const [startYear, setStartYear] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentYear = new Date().getFullYear();
   const previewCode = startYear ? formatSchoolYearCode(parseInt(startYear, 10)) : "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     setIsSubmitting(true);
 
     const year = parseInt(startYear, 10);
     if (isNaN(year) || year < 2000 || year > 2100) {
-      showToast("Please enter a valid start year (2000-2100)", "error");
+      setError("Please enter a valid start year (2000-2100)");
       setIsSubmitting(false);
       return;
     }
@@ -54,7 +56,7 @@ export function SchoolYearForm({ open, onOpenChange, onSuccess }: SchoolYearForm
       onOpenChange(false);
       onSuccess?.();
     } else {
-      showToast(result.error, "error");
+      setError(result.error);
     }
 
     setIsSubmitting(false);
@@ -63,7 +65,7 @@ export function SchoolYearForm({ open, onOpenChange, onSuccess }: SchoolYearForm
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <DialogHeader>
             <DialogTitle>Create School Year</DialogTitle>
             <DialogDescription>
@@ -73,22 +75,30 @@ export function SchoolYearForm({ open, onOpenChange, onSuccess }: SchoolYearForm
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="startYear">Start Year</Label>
-              <Input
-                id="startYear"
-                type="number"
-                min={2000}
-                max={2100}
-                placeholder={currentYear.toString()}
-                value={startYear}
-                onChange={(e) => setStartYear(e.target.value)}
-                required
-              />
-              <p className="text-muted-foreground text-sm">
-                Example: Enter &quot;2025&quot; to create school year &quot;2025-2026&quot;
-              </p>
-            </div>
+            <Field data-invalid={!!error}>
+              <FieldLabel htmlFor="startYear">Start Year</FieldLabel>
+              <FieldContent>
+                <Input
+                  id="startYear"
+                  type="number"
+                  min={2000}
+                  max={2100}
+                  placeholder={currentYear.toString()}
+                  value={startYear}
+                  onChange={(e) => {
+                    setStartYear(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? "start-year-error" : "start-year-help"}
+                  required
+                />
+                <FieldDescription id="start-year-help">
+                  Example: Enter &quot;2025&quot; to create school year &quot;2025-2026&quot;
+                </FieldDescription>
+                <FieldError id="start-year-error">{error}</FieldError>
+              </FieldContent>
+            </Field>
 
             {previewCode && (
               <div className="bg-muted rounded-md p-3 text-center">
@@ -107,8 +117,8 @@ export function SchoolYearForm({ open, onOpenChange, onSuccess }: SchoolYearForm
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !startYear}>
-              {isSubmitting ? "Creating..." : "Create"}
+            <Button type="submit" loading={isSubmitting} disabled={!startYear}>
+              {isSubmitting ? "Creating…" : "Create"}
             </Button>
           </DialogFooter>
         </form>

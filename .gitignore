@@ -43,7 +43,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files 
+# env files
 .env
 .env*.local
 
@@ -64,7 +64,3 @@ skills-lock.json
 # IDE
 .idea
 .vscode
-
-
-
-

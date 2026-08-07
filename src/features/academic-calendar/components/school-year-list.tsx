@@ -12,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
   ChevronDown,
   ChevronRight,
   Plus,
@@ -49,11 +56,15 @@ export function SchoolYearList({ schoolYears, onRefresh }: SchoolYearListProps) 
 
   if (schoolYears.length === 0) {
     return (
-      <div className="text-muted-foreground py-12 text-center">
-        <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
-        <p className="text-lg font-medium">No school years found</p>
-        <p className="text-sm">Create a school year to get started</p>
-      </div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Calendar />
+          </EmptyMedia>
+          <EmptyTitle>No school years found</EmptyTitle>
+          <EmptyDescription>Create a school year to get started</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
@@ -66,8 +77,11 @@ export function SchoolYearList({ schoolYears, onRefresh }: SchoolYearListProps) 
         >
           <div className="flex items-center justify-between p-4">
             <button
+              type="button"
               className="flex items-center gap-3 transition-opacity hover:opacity-70"
               onClick={() => toggleExpand(year.id)}
+              aria-expanded={expandedYears.has(year.id)}
+              aria-controls={`school-year-${year.id}-terms`}
             >
               {expandedYears.has(year.id) ? (
                 <ChevronDown className="h-5 w-5" />
@@ -101,7 +115,7 @@ export function SchoolYearList({ schoolYears, onRefresh }: SchoolYearListProps) 
           </div>
 
           {expandedYears.has(year.id) && (
-            <div className="border-t">
+            <div id={`school-year-${year.id}-terms`} className="border-t">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -174,7 +188,7 @@ function TermInstanceRow({ term, isArchived, onSetActive }: TermInstanceRowProps
       <TableCell>{term.term ? getTermLabel(term.term) : "—"}</TableCell>
       <TableCell>
         {term.status === "ACTIVE" ? (
-          <Badge variant="default">
+          <Badge variant="success">
             <CheckCircle className="mr-1 h-3 w-3" />
             Active
           </Badge>

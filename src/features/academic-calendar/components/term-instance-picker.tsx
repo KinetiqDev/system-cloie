@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useId } from "react";
 import { AcademicSemester, AcademicTerm } from "@prisma/client";
 import {
   Select,
@@ -98,7 +98,10 @@ export function TermInstancePicker({
             <SelectItem key={instance.id} value={instance.id}>
               <span className="flex items-center gap-2">
                 {instance.status === "ACTIVE" && (
-                  <span className="bg-primary h-2 w-2 rounded-full" />
+                  <span className="flex items-center gap-1.5">
+                    <span className="bg-primary h-2 w-2 rounded-full" aria-hidden="true" />
+                    <span className="sr-only">Active</span>
+                  </span>
                 )}
                 {formatTermInstanceLabel(
                   instance.schoolYearCode,
@@ -117,43 +120,52 @@ export function TermInstancePicker({
 /**
  * Picker specifically for semester and term selection (for creating new term instances).
  */
+export interface SemesterTermValue {
+  semester: AcademicSemester | null;
+  term: AcademicTerm | null;
+}
+
 interface SemesterTermPickerProps {
-  semester: AcademicSemester | undefined;
-  term: AcademicTerm | undefined;
-  onSemesterChange: (semester: AcademicSemester) => void;
-  onTermChange: (term: AcademicTerm | undefined) => void;
+  value: SemesterTermValue;
+  onChange: (value: SemesterTermValue) => void;
   disabled?: boolean;
 }
 
 export function SemesterTermPicker({
-  semester,
-  term,
-  onSemesterChange,
-  onTermChange,
+  value,
+  onChange,
   disabled = false,
 }: SemesterTermPickerProps) {
-  const isSummer = semester === AcademicSemester.SUMMER;
+  const isSummer = value.semester === AcademicSemester.SUMMER;
 
-  // When semester changes to SUMMER, clear the term
-  useEffect(() => {
-    if (isSummer && term !== undefined) {
-      onTermChange(undefined);
-    }
-  }, [isSummer, term, onTermChange]);
+  function handleSemesterChange(next: string | null) {
+    const semester = (next ?? "") as AcademicSemester;
+    onChange({
+      semester,
+      term: semester === AcademicSemester.SUMMER ? null : value.term,
+    });
+  }
+
+  function handleTermChange(next: string | null) {
+    onChange({
+      ...value,
+      term: next ? (next as AcademicTerm) : null,
+    });
+  }
 
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
         <Label htmlFor="semester">Semester</Label>
         <Select
-          value={semester}
-          onValueChange={(value) => onSemesterChange(value as AcademicSemester)}
+          value={value.semester ?? ""}
+          onValueChange={handleSemesterChange}
           disabled={disabled}
         >
           <SelectTrigger id="semester">
             <SelectValue placeholder="Select semester">
-              {semester
-                ? (SEMESTER_OPTIONS.find((o) => o.value === semester)?.label ?? null)
+              {value.semester
+                ? (SEMESTER_OPTIONS.find((o) => o.value === value.semester)?.label ?? null)
                 : null}
             </SelectValue>
           </SelectTrigger>
@@ -168,16 +180,14 @@ export function SemesterTermPicker({
       <div className="space-y-2">
         <Label htmlFor="term">Term</Label>
         <Select
-          value={term ?? ""}
-          onValueChange={(value) =>
-            onTermChange(value ? (value as AcademicTerm) : undefined)
-          }
+          value={value.term ?? ""}
+          onValueChange={handleTermChange}
           disabled={disabled || isSummer}
         >
           <SelectTrigger id="term">
             <SelectValue placeholder={isSummer ? "N/A" : "Select term"}>
-              {term
-                ? (TERM_OPTIONS.find((o) => o.value === term)?.label ?? null)
+              {value.term
+                ? (TERM_OPTIONS.find((o) => o.value === value.term)?.label ?? null)
                 : null}
             </SelectValue>
           </SelectTrigger>

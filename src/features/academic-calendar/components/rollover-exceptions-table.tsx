@@ -2,6 +2,22 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { CheckCircle2 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { RolloverException, RolloverExceptionType } from "../services/run-term-rollover";
 
 interface RolloverExceptionsTableProps {
@@ -11,11 +27,11 @@ interface RolloverExceptionsTableProps {
 
 const EXCEPTION_TYPE_CONFIG: Record<
   RolloverExceptionType,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  { label: string; variant: "default" | "secondary" | "destructive" | "warning" | "outline" }
 > = {
   GRADUATING: { label: "Graduating", variant: "secondary" },
   MISSING_DATA: { label: "Missing Data", variant: "destructive" },
-  DUPLICATE: { label: "Duplicate", variant: "outline" },
+  DUPLICATE: { label: "Duplicate", variant: "warning" },
 };
 
 export function RolloverExceptionsTable({
@@ -24,47 +40,57 @@ export function RolloverExceptionsTable({
 }: RolloverExceptionsTableProps) {
   if (exceptions.length === 0) {
     return (
-      <div className="text-text-muted py-8 text-center text-sm">
-        No exceptions - all students processed successfully.
-      </div>
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <CheckCircle2 />
+          </EmptyMedia>
+          <EmptyTitle>No exceptions</EmptyTitle>
+          <EmptyDescription>
+            No exceptions — all students processed successfully.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
   return (
-    <div className="border-border rounded-lg border">
-      <table className="w-full text-sm">
-        <thead className="bg-surface-container-low">
-          <tr className="text-text-secondary text-left text-xs font-semibold uppercase">
-            <th className="px-3 py-2">Student</th>
-            <th className="px-3 py-2">Type</th>
-            <th className="px-3 py-2">Current Year</th>
-            <th className="px-3 py-2">Reason</th>
-            {onEditStudent && <th className="px-3 py-2">Actions</th>}
-          </tr>
-        </thead>
-        <tbody className="divide-y">
+    <div className="rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Student</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Current Year</TableHead>
+            <TableHead>Reason</TableHead>
+            {onEditStudent && <TableHead>Actions</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {exceptions.map((exception) => {
             const typeConfig = EXCEPTION_TYPE_CONFIG[exception.exceptionType];
 
             return (
-              <tr key={exception.studentUserId}>
-                <td className="px-3 py-2">
+              <TableRow key={exception.studentUserId}>
+                <TableCell>
                   <div>
                     <p className="font-medium">{exception.studentName}</p>
-                    <p className="text-text-muted text-xs">{exception.studentEmail}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {exception.studentEmail}
+                    </p>
                   </div>
-                </td>
-                <td className="px-3 py-2">
+                </TableCell>
+                <TableCell>
                   <Badge variant={typeConfig.variant}>{typeConfig.label}</Badge>
-                </td>
-                <td className="px-3 py-2">
+                </TableCell>
+                <TableCell>
                   {exception.currentYearLevel.replace("_", " ")}
-                </td>
-                <td className="px-3 py-2 text-text-secondary">
+                </TableCell>
+                <TableCell className="text-muted-foreground">
                   {exception.message}
-                </td>
+                </TableCell>
                 {onEditStudent && (
-                  <td className="px-3 py-2">
+                  <TableCell>
                     <Button
                       type="button"
                       variant="outline"
@@ -73,13 +99,13 @@ export function RolloverExceptionsTable({
                     >
                       Edit
                     </Button>
-                  </td>
+                  </TableCell>
                 )}
-              </tr>
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { formatTermInstanceCompact } from "@/lib/utils/date-format";
 import type { ActiveTermContext } from "../types";
 
@@ -29,7 +30,7 @@ export function ActiveTermBadge({ activeTerm, className }: ActiveTermBadgeProps)
   );
 
   return (
-    <Badge variant="default" className={className}>
+    <Badge variant="success" className={className}>
       {label}
     </Badge>
   );
@@ -41,7 +42,8 @@ export function ActiveTermBadge({ activeTerm, className }: ActiveTermBadgeProps)
 export function ActiveTermBadgeSkeleton({ className }: { className?: string }) {
   return (
     <Badge variant="outline" className={className}>
-      <span className="animate-pulse">Loading...</span>
+      <Spinner size="sm" label="Loading active term" className="mr-1" />
+      <span>Loading active term</span>
     </Badge>
   );
 }

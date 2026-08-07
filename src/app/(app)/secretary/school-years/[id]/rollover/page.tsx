@@ -3,6 +3,14 @@ import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { TriangleAlert } from "lucide-react";
 import { RolloverRunner } from "@/features/academic-calendar/components/rollover-runner";
 import {
   previewTermRolloverAction,
@@ -70,39 +78,39 @@ export default async function TermRolloverPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <nav className="text-text-secondary flex items-center gap-2 text-sm">
-        <Link href="/secretary/school-years" className="hover:text-text-primary">
+      <nav className="text-muted-foreground flex items-center gap-2 text-sm">
+        <Link href="/secretary/school-years" className="hover:text-foreground">
           School Years
         </Link>
         <span>›</span>
         <Link
           href={`/secretary/school-years/${schoolYearId}`}
-          className="hover:text-text-primary"
+          className="hover:text-foreground"
         >
           {schoolYear.code}
         </Link>
         <span>›</span>
-        <span className="text-text-primary font-medium">Term Rollover</span>
+        <span className="text-foreground font-medium">Term Rollover</span>
       </nav>
 
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold">Term Rollover</h1>
-        <p className="text-text-secondary">
+        <p className="text-muted-foreground">
           Roll over student enrollments from one term to the next within{" "}
           <span className="font-semibold">{schoolYear.code}</span>.
         </p>
       </div>
 
       {/* Term Instances Summary */}
-      <div className="border-border bg-surface rounded-xl border p-4">
+      <div className="rounded-xl border bg-card p-4">
         <h2 className="text-sm font-semibold">Available Terms</h2>
         <div className="mt-2 space-y-1">
           {termInstances.map((ti) => (
             <div
               key={ti.id}
               className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
-                ti.status === "ACTIVE" ? "bg-primary/10" : "bg-surface-container-low"
+                ti.status === "ACTIVE" ? "bg-success-soft" : "bg-muted"
               }`}
             >
               <span>
@@ -110,7 +118,7 @@ export default async function TermRolloverPage({ params }: PageProps) {
                 {ti.term ? ` — ${ti.term}` : ""}
               </span>
               {ti.status === "ACTIVE" && (
-                <span className="text-primary text-xs font-medium">Active</span>
+                <span className="text-success text-xs font-medium">Active</span>
               )}
             </div>
           ))}
@@ -126,22 +134,25 @@ export default async function TermRolloverPage({ params }: PageProps) {
           runAction={runTermRolloverAction}
         />
       ) : (
-        <div className="border-border bg-surface rounded-xl border p-6">
-          <div className="space-y-2">
-            <h3 className="font-semibold">Rollover Not Available</h3>
-            <p className="text-text-muted text-sm">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <TriangleAlert />
+            </EmptyMedia>
+            <EmptyTitle>Rollover Not Available</EmptyTitle>
+            <EmptyDescription>
               {!sourceTerm
                 ? "There is no active term in this school year. Please set an active term first."
                 : "There is no next term to roll over to. This appears to be the last term in the school year."}
-            </p>
-            <Link
-              href={`/secretary/school-years/${schoolYearId}`}
-              className="text-primary inline-block text-sm font-medium hover:underline"
-            >
-              Manage Terms →
-            </Link>
-          </div>
-        </div>
+            </EmptyDescription>
+          </EmptyHeader>
+          <Link
+            href={`/secretary/school-years/${schoolYearId}`}
+            className="text-primary text-sm font-medium hover:underline"
+          >
+            Manage Terms →
+          </Link>
+        </Empty>
       )}
     </div>
   );
