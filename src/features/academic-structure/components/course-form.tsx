@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
+import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,10 +91,10 @@ export function CourseForm({
 
   async function handleSubmit(formData: FormData) {
     setError(null);
-    
+
     // Wait one tick to ensure state is flushed (React batching issue with form submissions)
     await Promise.resolve();
-    
+
     formData.set("default_year_level", yearLevel);
     formData.set("default_semester", semester);
     formData.set("default_term", isSummer ? "" : term);
@@ -126,6 +127,7 @@ export function CourseForm({
 
       {error && (
         <Alert variant="destructive">
+          <AlertCircle className="size-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
@@ -201,7 +203,7 @@ export function CourseForm({
             <SelectTrigger id={`course-program-${defaultValues?.id ?? "new"}`} className="w-full">
               <SelectValue>
                 {programId
-                  ? programs.find((p) => p.id === programId)?.code ?? "No program"
+                  ? (programs.find((p) => p.id === programId)?.code ?? "No program")
                   : "No program"}
               </SelectValue>
             </SelectTrigger>
@@ -226,7 +228,7 @@ export function CourseForm({
             <SelectTrigger id={`course-major-${defaultValues?.id ?? "new"}`} className="w-full">
               <SelectValue>
                 {majorId
-                  ? filteredMajors.find((m) => m.id === majorId)?.name ?? "Program-wide / none"
+                  ? (filteredMajors.find((m) => m.id === majorId)?.name ?? "Program-wide / none")
                   : "Program-wide / none"}
               </SelectValue>
             </SelectTrigger>
@@ -242,7 +244,7 @@ export function CourseForm({
         </div>
       </div>
 
-      <div className="border-border-muted bg-surface-alt grid gap-4 rounded-lg border p-4 md:grid-cols-3">
+      <div className="border-border bg-surface-alt grid gap-4 rounded-lg border p-4 md:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor={`year-level-${defaultValues?.id ?? "new"}`}>
             Year Level <span className="text-text-muted text-xs font-normal">(default)</span>
