@@ -53,7 +53,7 @@ export function WizardStepper({ steps, currentStep, className }: WizardStepperPr
               </div>
               <span
                 className={cn(
-                  "text-[10px] font-medium leading-none",
+                  "text-xs font-medium leading-none",
                   isActive && "text-primary",
                   isCompleted && "text-foreground",
                   !isActive && !isCompleted && "text-muted-foreground"

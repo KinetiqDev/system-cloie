@@ -495,7 +495,11 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
-    expect(await screen.findByText(/cross-program assignment/i)).toBeInTheDocument();
+    const warningTitle = await screen.findByText(/cross-program assignment/i);
+    const warningAlert = warningTitle.closest('[data-slot="alert"]');
+    expect(warningAlert).not.toBeNull();
+    expect(warningAlert).toHaveClass("bg-warning-soft");
+    expect(warningAlert).not.toHaveClass("bg-danger-soft");
     expect(screen.getByText(/cs201 — data structures/i)).toBeInTheDocument();
     expect(screen.getByText(/bscs/i)).toBeInTheDocument();
     expect(screen.getByText(/2nd year/i)).toBeInTheDocument();
@@ -504,6 +508,36 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
 
     await waitFor(() => {
       expect(createCourseAssignmentAction).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps the confirm action labeled while submission is pending", async () => {
+    facultyMockState.crossProgram = true;
+    let resolveCreate: (value: { success: true; data: { id: string; programIds: string[] } }) => void = () => {};
+    vi.mocked(createCourseAssignmentAction).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        })
+    );
+
+    render(<Wrapper crossProgram />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    await screen.findByText(/cross-program assignment/i);
+    fireEvent.click(screen.getByRole("button", { name: /confirm assignment/i }));
+
+    const pendingButton = screen.getByRole("button", { name: /confirm assignment/i });
+    expect(pendingButton).toHaveAttribute("aria-busy", "true");
+    expect(pendingButton).toBeDisabled();
+
+    resolveCreate({ success: true, data: { id: "assignment-1", programIds: ["prog-1"] } });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 });

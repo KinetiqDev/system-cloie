@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { showToast } from "@/components/ui/toast";
 import { ClassIdentityFields } from "./shared/class-identity-fields";
 import { FacultySearchPopover } from "./shared/faculty-search-popover";
@@ -163,22 +164,22 @@ export function EditCourseAssignmentDialog({
               </p>
             )}
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" htmlFor="assignment-faculty">
-                Faculty
-              </label>
-              <FacultySearchPopover
-                id="assignment-faculty"
-                selectedFacultyId={facultyId || null}
-                selectedFacultyName={facultyName}
-                targetProgramId={assignment.programId}
-                targetProgramName={assignment.programName}
-                onSelect={(faculty) => {
-                  setFacultyId(faculty.id);
-                  setFacultyName(`${faculty.firstName} ${faculty.lastName}`);
-                }}
-              />
-            </div>
+            <Field>
+              <FieldLabel htmlFor="assignment-faculty">Faculty</FieldLabel>
+              <FieldContent>
+                <FacultySearchPopover
+                  id="assignment-faculty"
+                  selectedFacultyId={facultyId || null}
+                  selectedFacultyName={facultyName}
+                  targetProgramId={assignment.programId}
+                  targetProgramName={assignment.programName}
+                  onSelect={(faculty) => {
+                    setFacultyId(faculty.id);
+                    setFacultyName(`${faculty.firstName} ${faculty.lastName}`);
+                  }}
+                />
+              </FieldContent>
+            </Field>
           </div>
         )}
 
@@ -186,8 +187,8 @@ export function EditCourseAssignmentDialog({
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !hasChanges}>
-            {isSubmitting ? "Saving..." : "Save Changes"}
+          <Button loading={isSubmitting} onClick={handleSubmit} disabled={!hasChanges}>
+            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>

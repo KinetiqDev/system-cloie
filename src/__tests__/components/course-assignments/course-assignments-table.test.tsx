@@ -301,6 +301,13 @@ describe("CourseAssignmentsTable", () => {
     expect(screen.queryByRole("button", { name: /create merged class/i })).not.toBeInTheDocument();
   });
 
+  it("exposes an accessible loading state with a status spinner", () => {
+    renderTable({ assignments: [], total: 0, loading: true });
+
+    expect(screen.getByRole("status", { name: /loading assignments/i })).toBeInTheDocument();
+    expect(screen.getByText(/loading assignments/i)).toBeInTheDocument();
+  });
+
   it("renders General Education rows as read-only in program-head mode without management actions", () => {
     const geAssignment = createAssignment({
       id: "ge-1",

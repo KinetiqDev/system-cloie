@@ -14,6 +14,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -25,7 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +42,7 @@ import {
   Power,
   Pencil,
   AlertTriangle,
+  FileX2,
   Plus,
 } from "lucide-react";
 import { showToast } from "@/components/ui/toast";
@@ -223,7 +226,11 @@ export function CourseAssignmentsTable({
 
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" aria-busy="true">
+        <div className="flex items-center gap-2 py-1">
+          <Spinner size="sm" label="Loading assignments" />
+          <span className="text-muted-foreground text-sm">Loading assignments...</span>
+        </div>
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
@@ -235,27 +242,25 @@ export function CourseAssignmentsTable({
 
   if (assignments.length === 0) {
     return (
-      <div className="space-y-4 py-12 text-center" data-testid="empty-state">
-        <div className="bg-muted mx-auto flex h-12 w-12 items-center justify-center rounded-full">
-          <AlertTriangle className="text-muted-foreground h-6 w-6" />
-        </div>
-        <div>
-          <h3 className="text-lg font-medium">No course assignments found</h3>
-          <p className="text-muted-foreground mt-1 text-sm">
+      <Empty className="py-12" data-testid="empty-state">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <FileX2 />
+          </EmptyMedia>
+          <EmptyTitle>No course assignments found</EmptyTitle>
+          <EmptyDescription>
             {mode === "all-program"
               ? "Assign faculty to a course across any program to get started."
               : "Assign faculty to a Program-specific Course to get started."}
-          </p>
-        </div>
-        <div className="flex items-center justify-center gap-2">
-          {onAssignFaculty && (
-            <Button onClick={onAssignFaculty}>
-              <Plus className="mr-2 h-4 w-4" />
-              Assign Faculty
-            </Button>
-          )}
-        </div>
-      </div>
+          </EmptyDescription>
+        </EmptyHeader>
+        {onAssignFaculty && (
+          <Button onClick={onAssignFaculty}>
+            <Plus className="mr-2 h-4 w-4" />
+            Assign Faculty
+          </Button>
+        )}
+      </Empty>
     );
   }
 
@@ -320,7 +325,7 @@ export function CourseAssignmentsTable({
                   <TableCell>
                     <Badge
                       variant={isGeneralEducation ? "secondary" : "outline"}
-                      className="px-1.5 py-0 text-[10px]"
+                      className="px-1.5 py-0"
                     >
                       {isGeneralEducation ? "GE" : "Program-specific"}
                     </Badge>
@@ -336,7 +341,7 @@ export function CourseAssignmentsTable({
                   <TableCell>{getSectionLabel(assignment.section)}</TableCell>
                   <TableCell>{assignment.termLabel}</TableCell>
                   <TableCell>
-                    <Badge variant={assignment.isActive ? "default" : "outline"}>
+                    <Badge variant={assignment.isActive ? "success" : "outline"}>
                       {assignment.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
@@ -374,7 +379,7 @@ export function CourseAssignmentsTable({
                               onClick={() => openConfirmDialog("deactivate", assignment)}
                               disabled={processingId === assignment.id}
                             >
-                              <Power className="mr-2 h-4 w-4 text-amber-600" />
+                              <Power className="text-warning mr-2 h-4 w-4" />
                               Deactivate
                             </DropdownMenuItem>
                           ) : (
@@ -382,14 +387,14 @@ export function CourseAssignmentsTable({
                               onClick={() => handleActivate(assignment.id)}
                               disabled={processingId === assignment.id}
                             >
-                              <Power className="mr-2 h-4 w-4 text-emerald-600" />
+                              <Power className="text-success mr-2 h-4 w-4" />
                               Activate
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
                             onClick={() => void openDeleteDialog(assignment)}
                             disabled={processingId === assignment.id}
-                            className="text-red-600"
+                            className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
@@ -411,7 +416,7 @@ export function CourseAssignmentsTable({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               {confirmDialog.type === "delete" && (
-                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <AlertTriangle className="text-destructive h-5 w-5" />
               )}
               {dialogTitle}
             </AlertDialogTitle>
@@ -455,21 +460,24 @@ export function CourseAssignmentsTable({
                       </AlertDescription>
                     </Alert>
                   )}
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="assignment-delete-confirmation">
+                  <Field>
+                    <FieldLabel htmlFor="assignment-delete-confirmation">
                       Type <span className="font-semibold">{deletionPreflight.label}</span> to
                       confirm.
-                    </Label>
-                    <Input
-                      id="assignment-delete-confirmation"
-                      value={confirmationLabel}
-                      onChange={(event) => setConfirmationLabel(event.target.value)}
-                      autoComplete="off"
-                    />
-                  </div>
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        id="assignment-delete-confirmation"
+                        value={confirmationLabel}
+                        onChange={(event) => setConfirmationLabel(event.target.value)}
+                        autoComplete="off"
+                      />
+                    </FieldContent>
+                  </Field>
                 </>
               ) : !deletionError ? (
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                  <Spinner size="sm" label="Checking the current assignment state" />
                   Checking the current assignment state...
                 </p>
               ) : null}
@@ -480,15 +488,15 @@ export function CourseAssignmentsTable({
             <Button
               variant={confirmButtonVariant}
               onClick={confirmAction}
+              loading={isConfirmDialogProcessing}
               disabled={
-                isConfirmDialogProcessing ||
-                (confirmDialog.type === "delete" &&
-                  (!deletionPreflight ||
-                    deletionPreflight.courseBoundEvaluationCount > 0 ||
-                    confirmationLabel !== deletionPreflight.label))
+                confirmDialog.type === "delete" &&
+                (!deletionPreflight ||
+                  deletionPreflight.courseBoundEvaluationCount > 0 ||
+                  confirmationLabel !== deletionPreflight.label)
               }
             >
-              {isConfirmDialogProcessing ? `${confirmButtonText}...` : confirmButtonText}
+              {confirmButtonText}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

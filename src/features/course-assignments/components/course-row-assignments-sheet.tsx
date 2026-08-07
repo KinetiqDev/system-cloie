@@ -13,7 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { CalendarX2, Plus, UsersRound } from "lucide-react";
 import { loadCourseAssignmentsForSheetAction } from "@/lib/actions/course-assignment-actions";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
 import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
@@ -86,19 +88,37 @@ export function CourseRowAssignmentsSheet({
 
           <div className="mt-6 space-y-4">
             {!termInstanceId ? (
-              <div className="text-muted-foreground py-8 text-center">
-                Please select a term to view assignments.
-              </div>
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <CalendarX2 />
+                  </EmptyMedia>
+                  <EmptyTitle>Select a term</EmptyTitle>
+                  <EmptyDescription>Please select a term to view assignments.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : loading ? (
-              <div className="space-y-2">
+              <div className="space-y-2" aria-busy="true">
+                <div className="flex items-center gap-2 py-1">
+                  <Spinner size="sm" label="Loading course assignments" />
+                  <span className="text-muted-foreground text-sm">Loading assignments...</span>
+                </div>
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
               </div>
             ) : assignments.length === 0 ? (
-              <div className="text-muted-foreground py-8 text-center">
-                No faculty assigned yet for this course in the selected term.
-              </div>
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <UsersRound />
+                  </EmptyMedia>
+                  <EmptyTitle>No faculty assigned yet</EmptyTitle>
+                  <EmptyDescription>
+                    No faculty assigned yet for this course in the selected term.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <div className="space-y-2">
                 {assignments.map((assignment) => (
@@ -119,7 +139,7 @@ export function CourseRowAssignmentsSheet({
                         </span>
                       </div>
                     </div>
-                    <Badge variant={assignment.isActive ? "default" : "secondary"}>
+                    <Badge variant={assignment.isActive ? "success" : "secondary"}>
                       {assignment.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </div>
