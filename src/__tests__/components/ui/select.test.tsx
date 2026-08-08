@@ -237,6 +237,7 @@ describe("SelectItem selected state", () => {
       renderBasicSelect();
       const trigger = screen.getByLabelText("Role");
       expect(trigger).toHaveClass("pointer-coarse:data-[size=default]:h-11");
+      expect(trigger).toHaveClass("pointer-coarse:data-[size=default]:min-w-11");
 
       fireEvent.click(trigger);
       const item = document.querySelector('[role="option"]');

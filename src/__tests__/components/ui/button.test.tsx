@@ -92,8 +92,8 @@ describe("Button", () => {
 
     it.each([
       ["default", "pointer-coarse:h-11"],
-      ["xs", "pointer-coarse:h-11"],
-      ["sm", "pointer-coarse:h-11"],
+      ["xs", "pointer-coarse:h-11 pointer-coarse:min-w-11"],
+      ["sm", "pointer-coarse:h-11 pointer-coarse:min-w-11"],
       ["lg", "pointer-coarse:h-12"],
       ["icon", "pointer-coarse:size-11"],
       ["icon-xs", "pointer-coarse:size-11"],
