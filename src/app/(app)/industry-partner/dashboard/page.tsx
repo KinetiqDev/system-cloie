@@ -25,11 +25,7 @@ export default async function IndustryPartnerDashboardPage() {
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
-      <HeroCard
-        name={displayName}
-        contextLabel="Industry Partner Portal"
-        evaluationsHref="/industry-partner/evaluations"
-      />
+      <HeroCard name={displayName} contextLabel="Industry Partner Portal" />
       <StatCards
         pending={active.length}
         inProgress={inProgressCount}
