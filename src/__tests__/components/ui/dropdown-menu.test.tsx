@@ -43,4 +43,11 @@ describe("DropdownMenu", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
+
+  it("keeps menu items at a 44px touch row height on coarse pointers", async () => {
+    renderDropdownMenu();
+    fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    const item = await screen.findByRole("menuitem", { name: "Item one" });
+    expect(item).toHaveClass("pointer-coarse:min-h-11");
+  });
 });

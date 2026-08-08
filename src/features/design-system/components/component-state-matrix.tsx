@@ -46,6 +46,13 @@ export function ComponentStateMatrix() {
               <Plus aria-hidden />
             </Button>
           </Row>
+          <Row label="Touch sizing">
+            <span className="text-body-sm text-muted-foreground">
+              On coarse-pointer devices (phones, tablets, touchscreens) every size expands to at
+              least a 44&nbsp;px touch target via <code>pointer-coarse:</code> overrides — desktop
+              density is unchanged.
+            </span>
+          </Row>
           <Row label="Loading">
             <Button loading>Save Changes</Button>
             <Button loading variant="outline">

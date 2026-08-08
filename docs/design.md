@@ -285,7 +285,7 @@ Exact sizes live in `globals.css`.
 - 4/8 px rhythm; prefer `gap-*` over `space-*`.
 - Standard component gap: 16 px; section gap: 24 px.
 - Admin pages: medium density; respondent/onboarding: low density.
-- Mobile targets: at least 44 × 44 px.
+- Mobile targets: at least 44 × 44 px. Interactive controls (buttons, inputs, selects, switches, checkboxes, radio items, menu rows) carry `pointer-coarse:` overrides that expand them to ≥44 px on touch devices; fine-pointer (desktop) sizes stay dense.
 
 | Context         | Layout                                              |
 | --------------- | --------------------------------------------------- |

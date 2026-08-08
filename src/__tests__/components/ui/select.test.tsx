@@ -231,4 +231,16 @@ describe("SelectItem selected state", () => {
     const items = document.querySelectorAll('[role="option"]');
     expect(items.length).toBeGreaterThanOrEqual(2);
   });
+
+  describe("touch targets", () => {
+    it("bumps the trigger height and option rows on coarse pointers", () => {
+      renderBasicSelect();
+      const trigger = screen.getByLabelText("Role");
+      expect(trigger).toHaveClass("pointer-coarse:data-[size=default]:h-11");
+
+      fireEvent.click(trigger);
+      const item = document.querySelector('[role="option"]');
+      expect(item).toHaveClass("pointer-coarse:min-h-11");
+    });
+  });
 });
