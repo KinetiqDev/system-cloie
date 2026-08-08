@@ -14,12 +14,13 @@ vi.mock("@/lib/cache/academic-periods", () => ({
 }));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
+    $transaction: vi.fn(),
     schoolYear: {
       create: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
     },
-    academicTermInstance: { findFirst: vi.fn() },
+    academicTermInstance: { findFirst: vi.fn(), create: vi.fn() },
   },
 }));
 
@@ -41,6 +42,9 @@ describe("Academic Calendar School Year writers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary);
+    vi.mocked(prisma.$transaction).mockImplementation((callback) =>
+      callback(prisma as never)
+    );
   });
 
   it("invalidates shared period data after creating a School Year", async () => {

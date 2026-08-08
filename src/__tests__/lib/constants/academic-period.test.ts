@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   ALLOWED_SEMESTER_TERM_PAIRS,
+  CANONICAL_TERMS,
   formatSchoolYearCode,
   parseSchoolYearCode,
   assertValidSemesterTerm,
@@ -118,6 +119,23 @@ describe("academic-period constants", () => {
       expect(getTermShortLabel(AcademicTerm.SECOND_TERM)).toBe("2nd Term");
       expect(getTermShortLabel(null)).toBe("");
       expect(getTermShortLabel(undefined)).toBe("");
+    });
+  });
+
+  describe("CANONICAL_TERMS", () => {
+    it("defines exactly the 5 fixed periods of a school year", () => {
+      expect(CANONICAL_TERMS).toHaveLength(5);
+      expect(CANONICAL_TERMS).toEqual([
+        { semester: AcademicSemester.FIRST, term: AcademicTerm.FIRST_TERM, label: expect.any(String) },
+        { semester: AcademicSemester.FIRST, term: AcademicTerm.SECOND_TERM, label: expect.any(String) },
+        { semester: AcademicSemester.SECOND, term: AcademicTerm.FIRST_TERM, label: expect.any(String) },
+        { semester: AcademicSemester.SECOND, term: AcademicTerm.SECOND_TERM, label: expect.any(String) },
+        { semester: AcademicSemester.SUMMER, term: null, label: expect.any(String) },
+      ]);
+    });
+
+    it("is the single source for the allowed semester-term pairs", () => {
+      expect(ALLOWED_SEMESTER_TERM_PAIRS).toBe(CANONICAL_TERMS);
     });
   });
 

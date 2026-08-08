@@ -1720,12 +1720,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "feature_component"
   },
   {
-    "path": "src/features/academic-calendar/components/term-instance-form.tsx",
-    "disposition": "task",
-    "taskId": 13,
-    "category": "feature_component"
-  },
-  {
     "path": "src/features/academic-calendar/components/term-instance-picker.tsx",
     "disposition": "task",
     "taskId": 13,

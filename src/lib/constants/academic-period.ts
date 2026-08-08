@@ -1,11 +1,10 @@
 import { AcademicSemester, AcademicTerm } from "@prisma/client";
 
 /**
- * Valid semester-term combinations.
- * Summer has no term (term is null).
- * First and Second semesters have both terms.
+ * The 5 fixed period definitions every School Year SHALL contain.
+ * Summer has no term (term is null); First and Second semesters have both terms.
  */
-export const ALLOWED_SEMESTER_TERM_PAIRS: Array<{
+export const CANONICAL_TERMS: Array<{
   semester: AcademicSemester;
   term: AcademicTerm | null;
   label: string;
@@ -16,6 +15,11 @@ export const ALLOWED_SEMESTER_TERM_PAIRS: Array<{
   { semester: AcademicSemester.SECOND, term: AcademicTerm.SECOND_TERM, label: "2nd Semester — 2nd Term" },
   { semester: AcademicSemester.SUMMER, term: null, label: "Summer" },
 ];
+
+/**
+ * Valid semester-term combinations (same set as the canonical terms).
+ */
+export const ALLOWED_SEMESTER_TERM_PAIRS = CANONICAL_TERMS;
 
 /**
  * Format a school year code from a start year.

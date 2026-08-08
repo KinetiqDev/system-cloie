@@ -20,10 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Plus, Archive, CheckCircle, CalendarX2 } from "lucide-react";
+import { ArrowLeft, Archive, CheckCircle, CalendarX2 } from "lucide-react";
 import { formatDateRange } from "@/lib/utils/date-format";
 import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
-import { TermInstanceForm } from "@/features/academic-calendar/components/term-instance-form";
 import { SetActiveTermDialog } from "@/features/academic-calendar/components/set-active-term-dialog";
 import type { SchoolYearWithTerms, TermInstanceItem } from "@/features/academic-calendar/types";
 
@@ -35,7 +34,6 @@ export function SchoolYearDetailClientPage({
   schoolYear,
 }: SchoolYearDetailClientPageProps) {
   const router = useRouter();
-  const [addingTerm, setAddingTerm] = useState(false);
   const [settingActiveTerm, setSettingActiveTerm] = useState<TermInstanceItem | null>(null);
 
   return (
@@ -66,12 +64,6 @@ export function SchoolYearDetailClientPage({
               {formatDateRange(schoolYear.startDate, schoolYear.endDate)}
             </p>
           </div>
-          {!schoolYear.isArchived && (
-            <Button onClick={() => setAddingTerm(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Term Instance
-            </Button>
-          )}
         </div>
       </div>
 
@@ -88,15 +80,9 @@ export function SchoolYearDetailClientPage({
                 </EmptyMedia>
                 <EmptyTitle>No term instances yet</EmptyTitle>
                 <EmptyDescription>
-                  Add a semester and term to start building this school year.
+                  School year structure is created with its canonical terms.
                 </EmptyDescription>
               </EmptyHeader>
-              {!schoolYear.isArchived && (
-                <Button variant="outline" onClick={() => setAddingTerm(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add First Term
-                </Button>
-              )}
             </Empty>
           ) : (
             <Table>
@@ -145,16 +131,6 @@ export function SchoolYearDetailClientPage({
           )}
         </CardContent>
       </Card>
-
-      {addingTerm && (
-        <TermInstanceForm
-          open={addingTerm}
-          onOpenChange={setAddingTerm}
-          schoolYearId={schoolYear.id}
-          schoolYearCode={schoolYear.code}
-          onSuccess={() => setAddingTerm(false)}
-        />
-      )}
 
       {settingActiveTerm && (
         <SetActiveTermDialog

@@ -21,7 +21,6 @@ import {
 import {
   ChevronDown,
   ChevronRight,
-  Plus,
   Archive,
   CheckCircle,
   Calendar,
@@ -29,7 +28,6 @@ import {
 import { formatDateRange } from "@/lib/utils/date-format";
 import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
 import type { SchoolYearWithTerms, TermInstanceItem } from "../types";
-import { TermInstanceForm } from "./term-instance-form";
 import { SetActiveTermDialog } from "./set-active-term-dialog";
 
 interface SchoolYearListProps {
@@ -39,7 +37,6 @@ interface SchoolYearListProps {
 
 export function SchoolYearList({ schoolYears, onRefresh }: SchoolYearListProps) {
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
-  const [addingTermTo, setAddingTermTo] = useState<SchoolYearWithTerms | null>(null);
   const [settingActiveTerm, setSettingActiveTerm] = useState<TermInstanceItem | null>(null);
 
   function toggleExpand(yearId: string) {
@@ -102,15 +99,6 @@ export function SchoolYearList({ schoolYears, onRefresh }: SchoolYearListProps) 
                 {year.termInstances.length} term
                 {year.termInstances.length !== 1 ? "s" : ""}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAddingTermTo(year)}
-                disabled={year.isArchived}
-              >
-                <Plus className="mr-1 h-4 w-4" />
-                Add Term
-              </Button>
             </div>
           </div>
 
@@ -133,7 +121,7 @@ export function SchoolYearList({ schoolYears, onRefresh }: SchoolYearListProps) 
                         colSpan={5}
                         className="text-muted-foreground text-center py-8"
                       >
-                        No term instances yet. Click &quot;Add Term&quot; to create one.
+                        No term instances yet.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -152,16 +140,6 @@ export function SchoolYearList({ schoolYears, onRefresh }: SchoolYearListProps) 
           )}
         </div>
       ))}
-
-      {addingTermTo && (
-        <TermInstanceForm
-          open={!!addingTermTo}
-          onOpenChange={(open: boolean) => !open && setAddingTermTo(null)}
-          schoolYearId={addingTermTo.id}
-          schoolYearCode={addingTermTo.code}
-          onSuccess={onRefresh}
-        />
-      )}
 
       {settingActiveTerm && (
         <SetActiveTermDialog

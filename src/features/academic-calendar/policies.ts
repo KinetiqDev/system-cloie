@@ -1,9 +1,24 @@
-import { AcademicPeriodStatus, AcademicSemester } from "@prisma/client";
-import { isValidSemesterTerm } from "@/lib/constants/academic-period";
+import { AcademicPeriodStatus, AcademicSemester, AcademicTerm } from "@prisma/client";
+import { CANONICAL_TERMS, isValidSemesterTerm } from "@/lib/constants/academic-period";
 
 export type LifecycleTransitionDecision =
   | { allowed: true }
   | { allowed: false; reason: string };
+
+/**
+ * Whether a term instance is one of the 5 structural (canonical) terms of a
+ * School Year. Structural terms are created with the School Year and must
+ * never be deleted.
+ */
+export function isStructuralTerm(term: {
+  semester: AcademicSemester;
+  term: AcademicTerm | null | undefined;
+}): boolean {
+  return CANONICAL_TERMS.some(
+    (canonical) =>
+      canonical.semester === term.semester && canonical.term === (term.term ?? null)
+  );
+}
 
 /**
  * Decide whether an Academic Period may move from its current status to a target.

@@ -6,7 +6,6 @@ const {
   createSchoolYearMock,
   updateSchoolYearMock,
   archiveSchoolYearMock,
-  addTermInstanceMock,
   updateTermInstanceMock,
   deleteTermInstanceMock,
   setActiveTermInstanceMock,
@@ -17,7 +16,6 @@ const {
   createSchoolYearMock: vi.fn(),
   updateSchoolYearMock: vi.fn(),
   archiveSchoolYearMock: vi.fn(),
-  addTermInstanceMock: vi.fn(),
   updateTermInstanceMock: vi.fn(),
   deleteTermInstanceMock: vi.fn(),
   setActiveTermInstanceMock: vi.fn(),
@@ -34,7 +32,6 @@ vi.mock("@/features/academic-calendar/services/manage-school-years", () => ({
   archiveSchoolYear: archiveSchoolYearMock,
 }));
 vi.mock("@/features/academic-calendar/services/manage-term-instances", () => ({
-  addTermInstance: addTermInstanceMock,
   updateTermInstance: updateTermInstanceMock,
   deleteTermInstance: deleteTermInstanceMock,
   setActiveTermInstance: setActiveTermInstanceMock,
@@ -44,7 +41,6 @@ vi.mock("@/lib/cache/academic-periods", () => ({
 }));
 
 import {
-  addTermInstanceAction,
   archiveSchoolYearAction,
   createSchoolYearAction,
   deleteTermInstanceAction,
@@ -78,12 +74,6 @@ describe("Secretary academic-period actions", () => {
       form({ id: SCHOOL_YEAR_ID, startDate: "2026-08-01", endDate: "2027-05-31" }),
     ],
     ["archive school year", archiveSchoolYearAction, archiveSchoolYearMock, form({ id: "school-year-1" })],
-    [
-      "add term instance",
-      addTermInstanceAction,
-      addTermInstanceMock,
-      form({ schoolYearId: SCHOOL_YEAR_ID, semester: "SUMMER" }),
-    ],
     [
       "update term instance",
       updateTermInstanceAction,

@@ -1,4 +1,5 @@
 import { prisma } from "../../../src/lib/db/prisma";
+import { backfillCanonicalTermInstances } from "../../../src/features/academic-calendar/services/manage-school-years";
 import { D } from "../constants/ids";
 import { academicTermDefinitions, managedTermInstanceIds } from "../fixtures/academic-calendar";
 import type { AcademicCalendarContext } from "../types";
@@ -15,6 +16,10 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
     update: { code: "2027-2028", start_date: new Date("2027-06-01"), end_date: new Date("2028-05-31") },
     create: { id: D.SY_2027_2028, code: "2027-2028", start_date: new Date("2027-06-01"), end_date: new Date("2028-05-31") },
   });
+  const schoolYearIds: Record<string, string> = {
+    "2026-2027": sy2026_2027.id,
+    "2027-2028": sy2027_2028.id,
+  };
 
   console.log("  → Resetting mock Academic Period fixtures...");
   await prisma.qualitativeResponseItem.deleteMany({ where: { response: { OR: [
@@ -46,18 +51,30 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
   } finally {
     await prisma.$executeRawUnsafe('ALTER TABLE "academic_period_readiness_snapshots" ENABLE TRIGGER "academic_period_readiness_snapshots_immutable"');
   }
-  await prisma.academicTermInstance.deleteMany({ where: { id: { in: managedTermInstanceIds } } });
 
-  console.log("  → Term instances (lifecycle fixtures)...");
-  const schoolYears = { "2026-2027": sy2026_2027, "2027-2028": sy2027_2028 };
-  const terms = {} as Record<string, Awaited<ReturnType<typeof prisma.academicTermInstance.create>>>;
+  console.log("  → Creating canonical lifecycle fixtures (fixed ids)...");
+  await prisma.academicTermInstance.createMany({
+    data: academicTermDefinitions.map((definition) => ({
+      id: definition.id,
+      school_year_id: schoolYearIds[definition.schoolYear],
+      semester: definition.semester,
+      term: definition.term,
+      start_date: new Date(definition.startDate),
+      end_date: new Date(definition.endDate),
+      status: definition.status,
+    })),
+    skipDuplicates: true,
+  });
+
+  console.log("  → Ensuring remaining canonical term instances per school year...");
+  await backfillCanonicalTermInstances();
+
+  console.log("  → Applying lifecycle fixture statuses...");
+  const terms = {} as Record<string, Awaited<ReturnType<typeof prisma.academicTermInstance.update>>>;
   for (const definition of academicTermDefinitions) {
-    terms[definition.id] = await prisma.academicTermInstance.create({
+    terms[definition.id] = await prisma.academicTermInstance.update({
+      where: { id: definition.id },
       data: {
-        id: definition.id,
-        school_year_id: schoolYears[definition.schoolYear].id,
-        semester: definition.semester,
-        term: definition.term,
         start_date: new Date(definition.startDate),
         end_date: new Date(definition.endDate),
         status: definition.status,

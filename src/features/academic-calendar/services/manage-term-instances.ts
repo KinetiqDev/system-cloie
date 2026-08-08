@@ -3,14 +3,10 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
-import { isValidSemesterTerm, compareSemesters } from "@/lib/constants/academic-period";
-import { canDeleteTermInstance } from "../policies";
-import type {
-  CreateTermInstanceInput,
-  UpdateTermInstanceInput,
-} from "../schemas/term-instance";
+import { compareSemesters } from "@/lib/constants/academic-period";
+import { canDeleteTermInstance, isStructuralTerm } from "../policies";
+import type { UpdateTermInstanceInput } from "../schemas/term-instance";
 import { type ServiceResult } from "@/lib/utils/service-result";
-import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { transitionPeriodStatus } from "./manage-academic-period-lifecycle";
 import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
 
@@ -25,64 +21,6 @@ export async function verifySecretaryAccess(): Promise<ServiceResult<{ userId: s
   }
 
   return { success: true, data: { userId: session.userId } };
-}
-
-/**
- * Add a new Term Instance to a School Year.
- */
-export async function addTermInstance(
-  input: CreateTermInstanceInput
-): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifySecretaryAccess();
-  if (!auth.success) return auth;
-
-  // Validate semester-term combination
-  if (!isValidSemesterTerm(input.semester, input.term ?? null)) {
-    return {
-      success: false,
-      error:
-        input.semester === "SUMMER"
-          ? "Summer semester cannot have a term"
-          : "First and Second semesters must have a term",
-    };
-  }
-
-  // Verify school year exists and is not archived
-  const schoolYear = await prisma.schoolYear.findUnique({
-    where: { id: input.schoolYearId },
-    select: { id: true, is_archived: true },
-  });
-
-  if (!schoolYear) {
-    return { success: false, error: "School year not found" };
-  }
-
-  if (schoolYear.is_archived) {
-    return { success: false, error: "Cannot add terms to an archived school year" };
-  }
-
-  try {
-    const termInstance = await prisma.academicTermInstance.create({
-      data: {
-        school_year_id: input.schoolYearId,
-        semester: input.semester,
-        term: input.term ?? null,
-        start_date: input.startDate ?? null,
-        end_date: input.endDate ?? null,
-      },
-    });
-
-    invalidateAcademicPeriodReadModelTags();
-    return { success: true, data: { id: termInstance.id } };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: "A term instance with this semester and term already exists for this school year",
-      };
-    }
-    throw error;
-  }
 }
 
 /**
@@ -149,6 +87,12 @@ export async function deleteTermInstance(id: string): Promise<ServiceResult> {
 
   if (existing.school_year.is_archived) {
     return { success: false, error: "Cannot delete terms of an archived school year" };
+  }
+
+  // Structural (canonical) terms must never be deleted; only legacy
+  // non-canonical terms may be removed.
+  if (isStructuralTerm(existing)) {
+    return { success: false, error: "Structural terms cannot be deleted" };
   }
 
   // Check if this is the active term
