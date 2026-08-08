@@ -54,28 +54,33 @@ describe("Topbar appearance integration", () => {
     );
   }
 
-  it("exposes the compact selector and the Settings Appearance link when enabled", async () => {
+  it("keeps the profile menu to identity and logout only", async () => {
     renderTopbar(true);
 
     fireEvent.click(screen.getByRole("button", { name: /T/i }));
     await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
 
-    expect(screen.getByRole("menuitemradio", { name: "Dark" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitemradio", { name: "Light" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitemradio", { name: "System" })).toBeInTheDocument();
-
-    const settingsLink = screen.getByRole("menuitem", { name: /Appearance settings/i });
-    expect(settingsLink).toHaveAttribute("href", "/settings/appearance");
-  });
-
-  it("omits all appearance controls when disabled", async () => {
-    renderTopbar(false);
-
-    fireEvent.click(screen.getByRole("button", { name: /T/i }));
-    await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
-
+    expect(screen.getByRole("menuitem", { name: "Logout" })).toBeInTheDocument();
     expect(screen.queryByRole("menuitemradio")).not.toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: /Appearance settings/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Appearance/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the standalone appearance trigger with all options when enabled", async () => {
+    renderTopbar(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
+    await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
+
+    expect(screen.getByRole("menuitemradio", { name: "Dark" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: "Light" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: "System" })).toBeInTheDocument();
+  });
+
+  it("omits the appearance trigger entirely when disabled", () => {
+    renderTopbar(false);
+
+    expect(screen.queryByRole("button", { name: "Appearance" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /T/i })).toBeInTheDocument();
   });
 });

@@ -168,6 +168,20 @@ describe("OverlayAndFeedbackShowcase", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
+  it("opens the reference dropdown menus without erroring", async () => {
+    render(<DesignSystemShowcasePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Actions" }));
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "View details" })).toBeInTheDocument());
+    expect(screen.getByRole("menuitem", { name: "Delete sample" })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menuitem", { name: "View details" })).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Duplicate sample" })).toBeInTheDocument());
+  });
+
   it("fires the shared toast contract with each supported kind", () => {
     render(<DesignSystemShowcasePage />);
 

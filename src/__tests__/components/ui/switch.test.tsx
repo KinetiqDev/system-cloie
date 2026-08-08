@@ -91,4 +91,44 @@ describe("Switch", () => {
       expect(screen.getByRole("switch")).toBeInTheDocument();
     });
   });
+
+  describe("touch targets", () => {
+    it("expands the hit area on coarse pointers to reach the 44px floor", () => {
+      render(<Switch aria-label="Notify" />);
+      const sw = screen.getByRole("switch");
+      expect(sw).toHaveClass("pointer-coarse:data-[size=default]:after:-inset-y-[12px]");
+      render(<Switch size="sm" aria-label="Notify compact" />);
+      expect(screen.getAllByRole("switch")[1]).toHaveClass(
+        "pointer-coarse:data-[size=sm]:after:-inset-y-[14px]"
+      );
+    });
+  });
+
+  describe("visual size", () => {
+    it("renders a 20x40 default track and 16x32 compact track", () => {
+      render(<Switch aria-label="Notify" />);
+      const sw = screen.getByRole("switch");
+      expect(sw).toHaveClass("data-[size=default]:h-5", "data-[size=default]:w-10");
+
+      render(<Switch size="sm" aria-label="Notify compact" />);
+      expect(screen.getAllByRole("switch")[1]).toHaveClass(
+        "data-[size=sm]:h-4",
+        "data-[size=sm]:w-8"
+      );
+    });
+
+    it("travels the checked thumb flush to the track edge (track - thumb - 2px gap)", () => {
+      render(<Switch defaultChecked aria-label="Notify" />);
+      const thumb = screen.getByRole("switch").querySelector("[data-slot='switch-thumb']");
+      expect(thumb).toHaveClass("group-data-[size=default]/switch:data-checked:translate-x-[22px]");
+
+      render(<Switch size="sm" defaultChecked aria-label="Notify compact" />);
+      const compactThumb = screen.getAllByRole("switch")[1].querySelector(
+        "[data-slot='switch-thumb']"
+      );
+      expect(compactThumb).toHaveClass(
+        "group-data-[size=sm]/switch:data-checked:translate-x-[18px]"
+      );
+    });
+  });
 });

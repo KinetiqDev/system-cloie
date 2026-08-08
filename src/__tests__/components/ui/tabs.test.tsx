@@ -160,4 +160,30 @@ describe("Tabs", () => {
       expect(trigger.tagName.toLowerCase()).toBe("button");
     });
   });
+
+  describe("pill variant", () => {
+    it("renders chip-style list and triggers with primary active fill", () => {
+      render(
+        <Tabs defaultValue="one">
+          <TabsList variant="pill">
+            <TabsTrigger value="one">One</TabsTrigger>
+            <TabsTrigger value="two">Two</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      );
+      const list = screen.getByRole("tablist");
+      expect(list).toHaveAttribute("data-variant", "pill");
+      expect(list).toHaveClass("data-[variant=pill]:gap-2");
+      const trigger = screen.getByText("Two");
+      expect(trigger).toHaveClass("group-data-[variant=pill]/tabs-list:rounded-full");
+      expect(trigger).toHaveClass("group-data-[variant=pill]/tabs-list:min-h-11");
+      expect(trigger).toHaveClass("group-data-[variant=pill]/tabs-list:bg-surface");
+      expect(trigger).toHaveClass(
+        "group-data-[variant=pill]/tabs-list:data-active:bg-primary"
+      );
+      expect(trigger).toHaveClass(
+        "group-data-[variant=pill]/tabs-list:data-active:text-on-primary"
+      );
+    });
+  });
 });

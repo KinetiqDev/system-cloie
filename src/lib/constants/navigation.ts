@@ -40,7 +40,7 @@ export function getNavItemIdentity(item: Pick<NavItem, "href" | "programHeadChil
 
 const STUDENT_NAV: NavItem[] = [
   { name: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
-  { name: "My Evaluations", href: "/student/evaluations", icon: FileText },
+  { name: "Evaluations", href: "/student/evaluations", icon: FileText },
   { name: "Submission History", href: "/student/history", icon: History },
   { name: "Profile", href: "/student/profile", icon: UserCircle },
 ];
@@ -150,15 +150,15 @@ const DEAN_NAV_GROUPS: NavGroup[] = [
 
 const ALUMNI_NAV: NavItem[] = [
   { name: "Dashboard", href: "/alumni/dashboard", icon: LayoutDashboard },
-  { name: "My Evaluations", href: "/alumni/evaluations", icon: FileText },
-  { name: "Submission History", href: "/alumni/history", icon: History },
+  { name: "Evaluations", href: "/alumni/evaluations", icon: FileText },
+  { name: "History", href: "/alumni/history", icon: History },
   { name: "Profile", href: "/alumni/profile", icon: UserCircle },
 ];
 
 const INDUSTRY_PARTNER_NAV: NavItem[] = [
   { name: "Dashboard", href: "/industry-partner/dashboard", icon: LayoutDashboard },
-  { name: "My Evaluations", href: "/industry-partner/evaluations", icon: FileText },
-  { name: "Submission History", href: "/industry-partner/history", icon: History },
+  { name: "Evaluations", href: "/industry-partner/evaluations", icon: FileText },
+  { name: "History", href: "/industry-partner/history", icon: History },
   { name: "Profile", href: "/industry-partner/profile", icon: UserCircle },
 ];
 

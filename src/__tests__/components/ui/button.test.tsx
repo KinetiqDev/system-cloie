@@ -89,6 +89,19 @@ describe("Button", () => {
       );
       expect(screen.getByRole("button")).toHaveClass("size-8");
     });
+
+    it.each([
+      ["default", "pointer-coarse:h-11"],
+      ["xs", "pointer-coarse:h-11 pointer-coarse:min-w-11"],
+      ["sm", "pointer-coarse:h-11 pointer-coarse:min-w-11"],
+      ["lg", "pointer-coarse:h-12"],
+      ["icon", "pointer-coarse:size-11"],
+      ["icon-xs", "pointer-coarse:size-11"],
+      ["icon-sm", "pointer-coarse:size-11"],
+      ["icon-lg", "pointer-coarse:size-12"],
+    ] as const)("size %s carries a coarse-pointer touch target override", (size, coarseClass) => {
+      expect(buttonVariants({ size })).toContain(coarseClass);
+    });
   });
 
   describe("loading affordance", () => {

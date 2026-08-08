@@ -25,11 +25,7 @@ export default async function AlumniDashboardPage() {
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
-      <HeroCard
-        name={displayName}
-        contextLabel="Alumni Portal"
-        evaluationsHref="/alumni/evaluations"
-      />
+      <HeroCard name={displayName} contextLabel="Alumni Portal" />
       <StatCards
         pending={active.length}
         inProgress={inProgressCount}

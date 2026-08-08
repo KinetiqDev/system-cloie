@@ -1043,18 +1043,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "route"
   },
   {
-    "path": "src/app/(app)/settings/appearance/loading.tsx",
-    "disposition": "task",
-    "taskId": 8,
-    "category": "route"
-  },
-  {
-    "path": "src/app/(app)/settings/appearance/page.tsx",
-    "disposition": "task",
-    "taskId": 8,
-    "category": "route"
-  },
-  {
     "path": "src/app/(app)/secretary/courses/[id]/edit/page.tsx",
     "disposition": "task",
     "taskId": 14,
@@ -2238,6 +2226,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     "path": "src/features/users/components/evaluation-list-card.tsx",
+    "disposition": "task",
+    "taskId": 24,
+    "category": "feature_component"
+  },
+  {
+    "path": "src/features/users/components/evaluation-list-browser.tsx",
     "disposition": "task",
     "taskId": 24,
     "category": "feature_component"

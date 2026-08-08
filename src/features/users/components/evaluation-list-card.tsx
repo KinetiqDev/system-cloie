@@ -38,7 +38,7 @@ export function EvaluationListCard({
           </div>
 
           <h4
-            className="group-hover:text-primary mb-1 line-clamp-2 text-lg font-bold transition-colors"
+            className="group-hover:text-primary mb-1 line-clamp-2 text-title-lg font-semibold transition-colors"
             title={evaluationTitle}
           >
             {evaluationTitle}
@@ -46,15 +46,15 @@ export function EvaluationListCard({
 
           {deploymentType === "COURSE_BOUND" && courseTitle ? (
             <>
-              <p className="text-text-secondary truncate text-sm font-medium">{courseTitle}</p>
+              <p className="text-body-sm text-muted-foreground truncate font-medium">{courseTitle}</p>
               {facultyName && (
-                <p className="text-text-muted mt-0.5 text-sm">Published by {facultyName}</p>
+                <p className="text-muted-foreground mt-0.5 text-sm">Published by {facultyName}</p>
               )}
             </>
           ) : (
-            <p className="text-text-secondary truncate text-sm font-medium">{programLabel}</p>
+            <p className="text-body-sm text-muted-foreground truncate font-medium">{programLabel}</p>
           )}
-          <p className="text-text-muted mt-1 text-xs font-semibold tracking-wide uppercase">
+          <p className="text-muted-foreground mt-1 text-label-sm font-semibold tracking-wide uppercase">
             {deploymentType === "CENTRAL" ? "Central Deployment" : "Course-Bound Evaluation"}
           </p>
         </div>
@@ -62,8 +62,8 @@ export function EvaluationListCard({
         <div className="flex shrink-0 flex-col justify-center gap-2 md:items-end">
           {isResuming && (
             <div className="w-full space-y-1.5 md:w-48">
-              <div className="text-text-muted flex items-center justify-between text-xs font-bold">
-                <span className="text-text-secondary">{progress}% Complete</span>
+              <div className="text-muted-foreground flex items-center justify-between text-label-sm font-bold">
+                <span className="text-body-sm text-muted-foreground">{progress}% Complete</span>
               </div>
               <Progress
                 value={progress}
@@ -75,7 +75,7 @@ export function EvaluationListCard({
           <Button
             disabled={!href}
             render={href ? <Link href={href} /> : undefined}
-            className="mt-2 min-h-11 w-full font-bold md:w-auto"
+            className="mt-2 min-h-11 w-full font-semibold md:w-auto"
           >
             {isSubmitted ? "View Answers" : isResuming ? "Resume" : "Start Evaluation"}
           </Button>

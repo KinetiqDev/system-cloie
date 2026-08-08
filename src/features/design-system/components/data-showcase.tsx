@@ -84,20 +84,63 @@ export function DataShowcase() {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Tabs</h3>
-        <Tabs defaultValue={SHOWCASE_TAB_CONTENT[0].id} className="w-full max-w-md">
-          <TabsList>
-            {SHOWCASE_TAB_CONTENT.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}>
-                {tab.heading}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {SHOWCASE_TAB_CONTENT.map((tab) => (
-            <TabsContent key={tab.id} value={tab.id}>
-              <p className="text-body-sm text-muted-foreground">{tab.body}</p>
-            </TabsContent>
-          ))}
-        </Tabs>
+        <div className="flex max-w-md flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-caption text-muted-foreground font-medium uppercase">
+              Segmented · default
+            </p>
+            <Tabs defaultValue={SHOWCASE_TAB_CONTENT[0].id} className="w-full">
+              <TabsList>
+                {SHOWCASE_TAB_CONTENT.map((tab) => (
+                  <TabsTrigger key={tab.id} value={tab.id}>
+                    {tab.heading}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {SHOWCASE_TAB_CONTENT.map((tab) => (
+                <TabsContent key={tab.id} value={tab.id}>
+                  <p className="text-body-sm text-muted-foreground">{tab.body}</p>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <p className="text-caption text-muted-foreground font-medium uppercase">Pill</p>
+            <Tabs defaultValue={SHOWCASE_TAB_CONTENT[0].id} className="w-full">
+              <TabsList variant="pill">
+                {SHOWCASE_TAB_CONTENT.map((tab) => (
+                  <TabsTrigger key={tab.id} value={tab.id}>
+                    {tab.heading}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {SHOWCASE_TAB_CONTENT.map((tab) => (
+                <TabsContent key={tab.id} value={tab.id}>
+                  <p className="text-body-sm text-muted-foreground">{tab.body}</p>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <p className="text-caption text-muted-foreground font-medium uppercase">Line</p>
+            <Tabs defaultValue={SHOWCASE_TAB_CONTENT[0].id} className="w-full">
+              <TabsList variant="line" className="h-auto gap-4">
+                {SHOWCASE_TAB_CONTENT.map((tab) => (
+                  <TabsTrigger key={tab.id} value={tab.id} className="px-1 py-2.5">
+                    {tab.heading}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {SHOWCASE_TAB_CONTENT.map((tab) => (
+                <TabsContent key={tab.id} value={tab.id}>
+                  <p className="text-body-sm text-muted-foreground">{tab.body}</p>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+        </div>
       </section>
 
       <section className="flex flex-col gap-3">

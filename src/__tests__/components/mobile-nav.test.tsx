@@ -52,7 +52,7 @@ describe("MobileNav", () => {
 
     render(<MobileNav roles={[ROLES.ALUMNI]} />);
 
-    expect(screen.getByRole("link", { name: "Submission History" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "History" })).toHaveAttribute(
       "aria-current",
       "page"
     );

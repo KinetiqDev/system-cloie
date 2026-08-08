@@ -90,4 +90,11 @@ describe("Input", () => {
       expect(screen.getByLabelText("Email").tagName.toLowerCase()).toBe("input");
     });
   });
+
+  describe("touch targets", () => {
+    it("carries a coarse-pointer height override so touch inputs meet the 44px floor", () => {
+      render(<Input aria-label="Email" />);
+      expect(screen.getByLabelText("Email")).toHaveClass("pointer-coarse:h-11");
+    });
+  });
 });
