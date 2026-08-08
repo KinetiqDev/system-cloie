@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ChevronDown, LogOut, Settings } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
 import Image from "next/image";
 import {
   DropdownMenu,
@@ -13,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MobileSidebarDrawer } from "./mobile-sidebar-drawer";
-import { AppearanceMenuItems } from "@/features/design-system/components/appearance-menu-items";
+import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
 import type { Role } from "@/lib/constants/roles";
 import type { MobileNavMode } from "@/lib/constants/navigation";
 
@@ -69,6 +68,7 @@ export function Topbar({
       {/* Right side actions */}
       <div className="flex items-center gap-3">
         {children}
+        <AppearanceMenuTrigger enabled={appearanceEnabled} />
         {/* Profile avatar + dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground focus-visible:outline-ring flex min-h-11 items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2">
@@ -85,25 +85,6 @@ export function Topbar({
               <p className="text-caption text-text-muted">{user?.email || "No email"}</p>
             </div>
             <DropdownMenuSeparator />
-            {appearanceEnabled && (
-              <>
-                <div className="px-3 pt-1 pb-2">
-                  <p className="text-caption text-text-muted mb-1 px-1 font-medium tracking-wide uppercase">
-                    Appearance
-                  </p>
-                  <AppearanceMenuItems />
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="cursor-pointer gap-2"
-                  render={<Link href="/settings/appearance" />}
-                >
-                  <Settings className="size-4" />
-                  Appearance settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
             <DropdownMenuItem
               className="text-danger focus:text-danger cursor-pointer gap-2"
               onClick={handleLogout}

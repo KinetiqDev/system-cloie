@@ -1,3 +1,6 @@
+import { Monitor, Moon, Sun } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 export const APPEARANCE_STORAGE_KEY = "cloie:appearance";
 
 export const APPEARANCE_VALUES = ["light", "dark", "system"] as const;
@@ -5,6 +8,16 @@ export const APPEARANCE_VALUES = ["light", "dark", "system"] as const;
 export type AppearancePreference = (typeof APPEARANCE_VALUES)[number];
 
 export type ResolvedAppearance = "light" | "dark";
+
+export const APPEARANCE_OPTIONS: ReadonlyArray<{
+  value: AppearancePreference;
+  label: string;
+  icon: LucideIcon;
+}> = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
+];
 
 export function parseAppearance(value: string | null | undefined): AppearancePreference | null {
   if (value === "light" || value === "dark" || value === "system") {

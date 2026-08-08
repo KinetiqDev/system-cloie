@@ -5,7 +5,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import type { AppearancePreference } from "@/features/design-system/lib/appearance";
-import { APPEARANCE_OPTIONS } from "./appearance-selector";
+import { APPEARANCE_OPTIONS } from "@/features/design-system/lib/appearance";
 import { useAppearance } from "./appearance-provider";
 
 export function AppearanceMenuItems() {
