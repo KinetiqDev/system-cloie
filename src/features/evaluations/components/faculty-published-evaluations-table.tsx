@@ -27,6 +27,7 @@ import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { YearLevel } from "@prisma/client";
 import { EvaluationDetailDialog } from "./evaluation-detail-dialog";
 import { CloseEvaluationDialog } from "./close-evaluation-dialog";
+import { getStatusVariant } from "./evaluation-status";
 import {
   getFacultyEvaluationDetailAction,
   closeFacultyEvaluationAction,
@@ -50,21 +51,6 @@ function formatDate(date: Date | string | null): string {
   });
 }
 
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case "ACTIVE":
-      return "bg-emerald-100 text-emerald-800";
-    case "SCHEDULED":
-      return "bg-amber-100 text-amber-800";
-    case "CLOSED":
-      return "bg-gray-100 text-gray-600";
-    case "ARCHIVED":
-      return "bg-gray-100 text-gray-400";
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
-}
 
 function getScopeLabel(scope: string): string {
   return scope
@@ -229,7 +215,7 @@ export function FacultyPublishedEvaluationsTable({
                         {evalItem.termInstanceLabel}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(evalItem.status)}>
+                        <Badge variant={getStatusVariant(evalItem.status)}>
                           {evalItem.status.charAt(0) + evalItem.status.slice(1).toLowerCase()}
                         </Badge>
                       </TableCell>

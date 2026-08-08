@@ -3,6 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
+import { getStatusVariant } from "./evaluation-status";
 import type { FacultyEvaluationDetail } from "../types";
 import type {
   LateIncludeCourseBoundEvaluationInput,
@@ -38,21 +39,6 @@ function formatDate(date: Date | string | null): string {
   });
 }
 
-function getStatusColor(status: string): string {
-  switch (status) {
-    case "ACTIVE":
-      return "bg-primary text-primary-foreground";
-    case "SCHEDULED":
-      return "bg-amber-100 text-amber-800";
-    case "CLOSED":
-      return "bg-gray-100 text-gray-600";
-    case "ARCHIVED":
-      return "bg-gray-100 text-gray-400";
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
-}
-
 export function EvaluationDetailDialog({
   detail,
   open,
@@ -83,7 +69,7 @@ export function EvaluationDetailDialog({
           )}
           {/* Status & Academic Period */}
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className={getStatusColor(detail.status)}>
+            <Badge variant={getStatusVariant(detail.status)}>
               {detail.status.charAt(0) + detail.status.slice(1).toLowerCase()}
             </Badge>
             <span className="text-muted-foreground text-sm">{detail.termInstanceLabel}</span>
