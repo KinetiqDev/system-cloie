@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import {
   DeanReadModelNotFoundError,
@@ -186,12 +187,9 @@ function PeriodControls({
         </select>
       </div>
       {risk && <input type="hidden" name="risk" value={risk} />}
-      <button
-        type="submit"
-        className="bg-primary text-primary-foreground focus-visible:ring-ring h-11 rounded-lg px-4 text-sm font-medium transition-transform outline-none focus-visible:ring-3 active:translate-y-px"
-      >
+      <Button type="submit" className="h-11">
         View period
-      </button>
+      </Button>
     </form>
   );
 }
