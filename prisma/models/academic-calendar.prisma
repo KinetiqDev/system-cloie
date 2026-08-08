@@ -23,19 +23,26 @@ enum AcademicPeriodStatus {
 }
 
 model SchoolYear {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code        String    @unique
-  start_date  DateTime? @db.Date
-  end_date    DateTime? @db.Date
-  is_archived Boolean   @default(false)
-  archived_by String?   @db.Uuid
-  archived_at DateTime?
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
+  id                            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                          String            @unique
+  start_date                    DateTime?         @db.Date
+  end_date                      DateTime?         @db.Date
+  is_archived                   Boolean           @default(false)
+  archived_by                   String?           @db.Uuid
+  archived_at                   DateTime?
+  is_active                     Boolean           @default(false)
+  active_semester               AcademicSemester?
+  active_semester_activated_by  String?           @db.Uuid
+  active_semester_activated_at  DateTime?
+  created_at                    DateTime          @default(now())
+  updated_at                    DateTime          @updatedAt
 
-  term_instances   AcademicTermInstance[]
-  archived_by_user User?                  @relation("ArchivedSchoolYears", fields: [archived_by], references: [id], onDelete: SetNull)
+  term_instances                  AcademicTermInstance[]
+  archived_by_user                User?                           @relation("ArchivedSchoolYears", fields: [archived_by], references: [id], onDelete: SetNull)
+  active_semester_activated_by_user User?                         @relation("ActiveSemesterActivator", fields: [active_semester_activated_by], references: [id], onDelete: SetNull)
 
+  // Prisma cannot express the partial unique index (at most one active School Year); the real constraint is managed via Supabase migration
+  @@index([is_active])
   @@map("school_years")
 }
 

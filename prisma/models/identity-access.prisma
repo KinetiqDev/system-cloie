@@ -46,6 +46,7 @@ model User {
   alumni_profile                        AlumniProfile?
   faculty_owned_templates               InstrumentTemplate[]             @relation("FacultyOwnedInstrumentTemplates")
   archived_school_years                 SchoolYear[]                     @relation("ArchivedSchoolYears")
+  active_semester_school_years          SchoolYear[]                     @relation("ActiveSemesterActivator")
   enrollments                           StudentEnrollment[]
   created_enrollments                   StudentEnrollment[]              @relation("EnrollmentCreator")
   course_assignments                    CourseAssignment[]               @relation("faculty")
