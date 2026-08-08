@@ -22,7 +22,7 @@ export function FacultyToolsPage({ evaluations, program, templates }: FacultyToo
         <h1 className="font-heading text-text-primary text-2xl font-black">Evaluation Tools</h1>
         <p className="text-muted-foreground text-sm">
           Manage templates and published evaluations for{" "}
-          <span className="text-primary font-semibold">
+          <span className="text-link font-semibold">
             {program.code} - {program.name}
           </span>
           .

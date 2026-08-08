@@ -10,13 +10,13 @@ const alertVariants = cva(
       variant: {
         default: "border-border bg-card text-card-foreground",
         destructive:
-          "border-danger/50 bg-danger-soft text-danger *:data-[slot=alert-description]:text-danger/90 *:[svg]:text-current",
+          "border-danger/50 bg-danger-soft text-danger *:data-[slot=alert-description]:text-danger *:[svg]:text-current",
         success:
-          "border-success/50 bg-success-soft text-success *:data-[slot=alert-description]:text-success/90 *:[svg]:text-current",
+          "border-success/50 bg-success-soft text-success *:data-[slot=alert-description]:text-success *:[svg]:text-current",
         warning:
-          "border-warning/50 bg-warning-soft text-warning *:data-[slot=alert-description]:text-warning/90 *:[svg]:text-current",
+          "border-warning/50 bg-warning-soft text-warning *:data-[slot=alert-description]:text-warning *:[svg]:text-current",
         information:
-          "border-info/50 bg-info-soft text-info *:data-[slot=alert-description]:text-info/90 *:[svg]:text-current",
+          "border-info/50 bg-info-soft text-info *:data-[slot=alert-description]:text-info *:[svg]:text-current",
       },
     },
     defaultVariants: {

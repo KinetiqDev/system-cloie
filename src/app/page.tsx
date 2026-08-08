@@ -18,7 +18,7 @@ export default function Home() {
                className="h-9 w-auto shrink-0 object-contain"
             />
             <div className="space-y-0">
-              <p className="text-title-md font-bold text-primary">System CLOIE</p>
+              <p className="text-title-md font-bold text-link">System CLOIE</p>
               <p className="text-caption text-muted-foreground">Assumption College of Davao</p>
             </div>
           </div>

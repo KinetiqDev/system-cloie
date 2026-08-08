@@ -162,7 +162,7 @@ export function RolloverRunner({
                 <p className="text-muted-foreground text-xs">Students to Process</p>
               </div>
               <div className="text-center">
-                <p className="text-primary text-2xl font-bold">{previewData.wouldCreateCount}</p>
+                <p className="text-text-primary text-2xl font-bold">{previewData.wouldCreateCount}</p>
                 <p className="text-muted-foreground text-xs">Enrollments to Create</p>
               </div>
               <div className="text-center">
@@ -253,7 +253,7 @@ export function RolloverRunner({
             <p className="text-muted-foreground text-xs">Students Processed</p>
           </div>
           <div className="rounded-lg bg-primary/10 p-4 text-center">
-            <p className="text-primary text-2xl font-bold">{resultData.createdCount}</p>
+            <p className="text-text-primary text-2xl font-bold">{resultData.createdCount}</p>
             <p className="text-muted-foreground text-xs">Enrollments Created</p>
           </div>
           <div className="rounded-lg bg-muted p-4 text-center">

@@ -311,7 +311,7 @@ function MatrixCard({ program, periodId }: { program: MatrixProgram; periodId: s
         </div>
         <Link
           href={`/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(periodId)}&program=${encodeURIComponent(program.id)}`}
-          className="focus-visible:ring-ring text-primary mt-4 inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="focus-visible:ring-ring text-link mt-4 inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           View {program.name} Learning Outcomes
         </Link>

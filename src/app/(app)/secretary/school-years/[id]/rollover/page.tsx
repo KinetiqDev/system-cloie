@@ -148,7 +148,7 @@ export default async function TermRolloverPage({ params }: PageProps) {
           </EmptyHeader>
           <Link
             href={`/secretary/school-years/${schoolYearId}`}
-            className="text-primary text-sm font-medium hover:underline"
+            className="text-link text-sm font-medium hover:underline"
           >
             Manage Terms →
           </Link>

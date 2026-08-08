@@ -13,7 +13,7 @@ export default function DeanCreateProgramPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <Link
         href="/dean/academic-structure/programs"
-        className="text-primary inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:underline"
+        className="text-link inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:underline"
       >
         <ArrowLeft className="size-4" />
         Back

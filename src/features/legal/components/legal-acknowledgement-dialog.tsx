@@ -108,7 +108,7 @@ export function LegalAcknowledgementDialog({
               ))}
               <Link
                 href="/privacy"
-                className="text-primary focus-visible:ring-ring mt-2 inline-block font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+                className="text-link focus-visible:ring-ring mt-2 inline-block font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
               >
                 Read the full Privacy Notice
               </Link>
@@ -125,7 +125,7 @@ export function LegalAcknowledgementDialog({
               ))}
               <Link
                 href="/terms"
-                className="text-primary focus-visible:ring-ring mt-2 inline-block font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+                className="text-link focus-visible:ring-ring mt-2 inline-block font-medium underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
               >
                 Read the full Terms of Use
               </Link>

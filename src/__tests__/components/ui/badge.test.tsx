@@ -12,7 +12,7 @@ describe("Badge", () => {
     ["secondary", "bg-secondary", "text-secondary-foreground"],
     ["outline", "border-border", "text-foreground"],
     ["ghost", "hover:bg-muted"],
-    ["link", "text-primary"],
+    ["link", "text-link"],
   ] as const)("retokenizes the %s variant", (variant, ...expected) => {
     render(<Badge variant={variant}>Label</Badge>);
     expect(screen.getByText("Label")).toHaveClass(...expected);

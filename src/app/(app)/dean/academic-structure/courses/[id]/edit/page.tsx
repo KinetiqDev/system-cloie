@@ -39,7 +39,7 @@ export default async function DeanEditCoursePage({ params }: { params: Promise<{
     <div className="mx-auto max-w-3xl space-y-6">
       <Link
         href="/dean/academic-structure/courses"
-        className="text-primary inline-flex min-h-11 items-center"
+        className="text-link inline-flex min-h-11 items-center"
       >
         Back to Courses
       </Link>

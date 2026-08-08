@@ -31,7 +31,7 @@ export function LegalPageShell({ document }: { document: LegalDocument }) {
               height={513}
               className="h-9 w-auto"
             />
-            <span className="text-title-md text-primary font-bold">System CLOIE</span>
+            <span className="text-title-md text-link font-bold">System CLOIE</span>
           </Link>
           <nav aria-label="Public navigation" className="flex items-center gap-4 text-sm">
             <Link

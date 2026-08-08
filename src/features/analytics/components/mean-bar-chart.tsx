@@ -88,9 +88,13 @@ export function MeanBarChart({ title, data }: MeanBarChartProps) {
           </BarChart>
         </ChartContainer>
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" aria-label="Chart legend">
+      <div
+        role="list"
+        className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
+        aria-label="Chart legend"
+      >
         {data.map((entry, index) => (
-          <span key={entry.label} className="flex items-center gap-1.5">
+          <span role="listitem" key={entry.label} className="flex items-center gap-1.5">
             <ChartSwatch fill={entry.value === null ? "var(--muted)" : chartFill(chartId, index)} />
             <span className="text-muted-foreground text-xs">{entry.label}</span>
           </span>

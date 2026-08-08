@@ -30,16 +30,17 @@ export default async function FacultyEditTemplatePage({ params }: FacultyEditTem
   const template = templateResult.data;
   const courseContexts = courseContextsResult.success ? courseContextsResult.data : [];
 
-  const programLabel = template.programCode && template.programName
-    ? `${template.programCode} — ${template.programName}`
-    : "Institutional Template";
+  const programLabel =
+    template.programCode && template.programName
+      ? `${template.programCode} — ${template.programName}`
+      : "Institutional Template";
 
   return (
     <div className="space-y-6">
       {/* Back link */}
       <Link
         href="/faculty/tools"
-        className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
       >
         <ArrowLeft className="size-4" />
         Back to Tools

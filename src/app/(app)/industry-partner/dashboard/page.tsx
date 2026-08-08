@@ -46,7 +46,7 @@ export default async function IndustryPartnerDashboardPage() {
           <Card className="border-border overflow-hidden shadow-sm">
             <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between">
               <div className="space-y-2">
-                <p className="text-primary text-label-sm font-semibold tracking-wider uppercase">
+                <p className="text-link text-label-sm font-semibold tracking-wider uppercase">
                   {resumeItem.status === "IN_PROGRESS" ? "In Progress" : "Pending"}
                 </p>
                 <div>
@@ -54,7 +54,7 @@ export default async function IndustryPartnerDashboardPage() {
                   <p className="text-text-secondary text-body-sm">{resumeItem.programLabel}</p>
                 </div>
                 {resumeItem.status === "IN_PROGRESS" && (
-                  <p className="text-secondary text-body-sm font-medium">
+                  <p className="text-text-secondary text-body-sm font-medium">
                     {resumeItem.progress}% complete
                   </p>
                 )}
@@ -80,7 +80,7 @@ export default async function IndustryPartnerDashboardPage() {
           </div>
           <Link
             href="/industry-partner/evaluations"
-            className="text-primary text-label-sm font-bold hover:underline"
+            className="text-link text-label-sm font-bold hover:underline"
           >
             View All
           </Link>

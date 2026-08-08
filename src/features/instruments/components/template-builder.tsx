@@ -784,7 +784,7 @@ export function TemplateBuilder({
         <button
           type="button"
           onClick={() => addSection(0)}
-          className="text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
+          className="text-link hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
         >
           <Plus className="size-5" />
           Add Section
@@ -839,7 +839,7 @@ export function TemplateBuilder({
         <button
           type="button"
           onClick={() => addSection()}
-          className="text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
+          className="text-link hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
         >
           <Plus className="size-5" />
           Add Section
@@ -1037,7 +1037,7 @@ function SectionCard({
             <button
               type="button"
               onClick={() => onAddQuestion(section.key)}
-              className="text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
+              className="text-link hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
             >
               <Plus className="size-4" />
               Add Question
@@ -1316,7 +1316,7 @@ function LikertDescriptorsEditor({
                 {idx < descriptors.length - 1 && (
                   <div className="bg-border absolute top-1/2 left-full h-px w-full" />
                 )}
-                <div className="border-primary/40 bg-card text-primary/60 flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-semibold">
+                <div className="border-primary/40 bg-card text-link flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-semibold">
                   {descriptor.value}
                 </div>
               </div>

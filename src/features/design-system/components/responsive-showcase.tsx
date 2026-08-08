@@ -51,7 +51,7 @@ function BrandRow({ compact = false }: { compact?: boolean }) {
         className="h-6 w-auto rounded border border-border bg-white p-0.5"
       />
       {!compact && (
-        <span className="text-title-md text-primary font-bold tracking-tight">System CLOIE</span>
+        <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
       )}
     </div>
   );
@@ -134,7 +134,7 @@ export function ResponsiveShowcase() {
                 height={513}
                 className="h-6 w-auto rounded border border-border bg-white p-0.5"
               />
-              <span className="text-title-md text-primary font-bold tracking-tight">
+              <span className="text-title-md text-link font-bold tracking-tight">
                 System CLOIE
               </span>
             </div>

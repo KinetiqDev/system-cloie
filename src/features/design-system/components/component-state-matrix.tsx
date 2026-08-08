@@ -68,13 +68,13 @@ export function ComponentStateMatrix() {
             <Input placeholder="Placeholder text" className="w-56" />
           </Row>
           <Row label="With value">
-            <Input defaultValue="Sample value" className="w-56" />
+            <Input aria-label="Sample value" defaultValue="Sample value" className="w-56" />
           </Row>
           <Row label="Read only">
-            <Input readOnly defaultValue="Read only value" className="w-56" />
+            <Input aria-label="Read only value" readOnly defaultValue="Read only value" className="w-56" />
           </Row>
           <Row label="Disabled">
-            <Input disabled defaultValue="Disabled value" className="w-56" />
+            <Input aria-label="Disabled value" disabled defaultValue="Disabled value" className="w-56" />
           </Row>
         </div>
       </section>

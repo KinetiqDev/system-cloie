@@ -78,7 +78,7 @@ export default async function IndustryPartnerProfilePage() {
         {/* Company Context */}
         <Card className="border-border shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-secondary-soft text-secondary rounded-lg p-2">
+            <div className="bg-secondary-soft text-text-secondary rounded-lg p-2">
               <Building2 className="size-5" />
             </div>
             <div>

@@ -68,7 +68,7 @@ export function AppShell({
         <div
           role="status"
           aria-label="Dedicated demo environment"
-          className="border-border bg-surface/95 text-text-secondary fixed top-3 right-3 z-[60] rounded-full border px-3 py-1 text-[10px] font-semibold tracking-wide shadow-sm"
+          className="border-border bg-surface/95 text-text-secondary fixed top-3 right-3 z-[60] rounded-full border px-3 py-1 text-xs font-semibold tracking-wide shadow-sm"
         >
           Dedicated demo environment
         </div>

@@ -22,7 +22,7 @@ export default async function SelectedProgramDashboardPage({
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Dashboard</h1>
         <p className="text-body-md text-text-secondary">
-          <span className="text-primary font-semibold">
+          <span className="text-link font-semibold">
             {dashboard.programCode} — {dashboard.programLabel}
           </span>{" "}
           · Program overview and evaluation insights

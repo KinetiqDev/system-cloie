@@ -44,9 +44,7 @@ export function ProgramHeadSelector({ programs }: { programs: ProgramHeadProgram
   return (
     <div className="flex max-w-4xl flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <p className="text-primary text-label-sm tracking-wider uppercase">
-          Program Head workspace
-        </p>
+        <p className="text-link text-label-sm tracking-wider uppercase">Program Head workspace</p>
         <h1 className="font-heading text-text-primary text-2xl font-black">Choose a Program</h1>
         <p className="text-text-secondary max-w-2xl text-sm">
           Select the Program you want to manage. Each workspace opens one explicit Program context;

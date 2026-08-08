@@ -365,7 +365,7 @@ export function WizardShell({
                                 .split(",")
                                 .map((value) => value.trim())
                                 .includes(suggestion)
-                                ? "bg-primary/10 border-primary text-primary"
+                                  ? "bg-primary/10 border-primary text-selected-fg"
                                 : "bg-surface border-border text-text-secondary"
                             )}
                           >

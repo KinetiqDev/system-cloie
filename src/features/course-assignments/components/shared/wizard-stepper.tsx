@@ -40,21 +40,18 @@ export function WizardStepper({ steps, currentStep, className }: WizardStepperPr
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors",
                   isCompleted && "bg-primary text-primary-foreground",
-                  isActive && "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2",
+                  isActive &&
+                    "bg-primary text-primary-foreground ring-primary ring-2 ring-offset-2",
                   !isCompleted && !isActive && "bg-muted text-muted-foreground"
                 )}
                 aria-current={isActive ? "step" : undefined}
               >
-                {isCompleted ? (
-                  <CheckIcon className="h-3.5 w-3.5" />
-                ) : (
-                  <span>{i + 1}</span>
-                )}
+                {isCompleted ? <CheckIcon className="h-3.5 w-3.5" /> : <span>{i + 1}</span>}
               </div>
               <span
                 className={cn(
-                  "text-xs font-medium leading-none",
-                  isActive && "text-primary",
+                  "text-xs leading-none font-medium",
+                  isActive && "text-link",
                   isCompleted && "text-foreground",
                   !isActive && !isCompleted && "text-muted-foreground"
                 )}

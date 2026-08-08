@@ -221,7 +221,7 @@ export function AddCiloForm({ courses, programs, addAction }: AddCiloFormProps) 
       {/* Back link */}
       <Link
         href="/faculty/cilos"
-        className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
       >
         <ArrowLeft className="size-4" />
         Back
@@ -312,7 +312,7 @@ export function AddCiloForm({ courses, programs, addAction }: AddCiloFormProps) 
                     key={index}
                     className="border-border bg-card flex items-center gap-3 rounded-lg border p-3"
                   >
-                    <span className="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                    <span className="bg-primary/10 text-link flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                       {index + 1}
                     </span>
                     <p className="flex-1 text-sm">{cilo}</p>

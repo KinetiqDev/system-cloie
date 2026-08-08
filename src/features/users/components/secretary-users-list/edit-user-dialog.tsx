@@ -922,7 +922,7 @@ function EditUserDialogBody({
                   <div>
                     {confirmationSummary.oldValues.program} • {confirmationSummary.oldValues.major}
                   </div>
-                  <div className="text-primary font-medium">New:</div>
+                  <div className="text-link font-medium">New:</div>
                   <div className="font-medium">
                     {confirmationSummary.newValues.program} • {confirmationSummary.newValues.major}
                   </div>
@@ -938,7 +938,7 @@ function EditUserDialogBody({
                   <div>
                     {confirmationSummary.oldValues.year} • {confirmationSummary.oldValues.section}
                   </div>
-                  <div className="text-primary font-medium">New:</div>
+                  <div className="text-link font-medium">New:</div>
                   <div className="font-medium">
                     {confirmationSummary.newValues.year} • {confirmationSummary.newValues.section}
                   </div>
@@ -952,7 +952,7 @@ function EditUserDialogBody({
                 <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
                   <div className="text-muted-foreground">Previous:</div>
                   <div>{confirmationSummary.oldValues.program}</div>
-                  <div className="text-primary font-medium">New:</div>
+                  <div className="text-link font-medium">New:</div>
                   <div className="font-medium">{confirmationSummary.newValues.program}</div>
                 </div>
               </div>
@@ -964,7 +964,7 @@ function EditUserDialogBody({
                 <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
                   <div className="text-muted-foreground">Previous:</div>
                   <div>{confirmationSummary.oldValues.programs}</div>
-                  <div className="text-primary font-medium">New:</div>
+                  <div className="text-link font-medium">New:</div>
                   <div className="font-medium">{confirmationSummary.newValues.programs}</div>
                 </div>
               </div>
@@ -980,7 +980,7 @@ function EditUserDialogBody({
                     • {confirmationSummary.oldValues.graduationYear} •{" "}
                     {confirmationSummary.oldValues.verification}
                   </div>
-                  <div className="text-primary font-medium">New:</div>
+                  <div className="text-link font-medium">New:</div>
                   <div className="font-medium">
                     {confirmationSummary.newValues.program} • {confirmationSummary.newValues.major}{" "}
                     • {confirmationSummary.newValues.graduationYear} •{" "}
@@ -1008,7 +1008,7 @@ function EditUserDialogBody({
                     {confirmationSummary.oldValues.program} •{" "}
                     {confirmationSummary.oldValues.verification}
                   </div>
-                  <div className="text-primary font-medium">New:</div>
+                  <div className="text-link font-medium">New:</div>
                   <div className="font-medium">
                     {confirmationSummary.newValues.company} •{" "}
                     {confirmationSummary.newValues.position} •{" "}

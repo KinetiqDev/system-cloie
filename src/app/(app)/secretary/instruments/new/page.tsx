@@ -9,7 +9,7 @@ export default function SecretaryCreateTemplatePage() {
       {/* Back link */}
       <Link
         href="/secretary/instruments"
-        className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
       >
         <ArrowLeft className="size-4" />
         Back to Tools

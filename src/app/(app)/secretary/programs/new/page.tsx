@@ -20,7 +20,7 @@ export default function CreateProgramPage() {
       {/* Back link */}
       <Link
         href="/secretary/programs"
-        className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
       >
         <ArrowLeft className="size-4" />
         Back

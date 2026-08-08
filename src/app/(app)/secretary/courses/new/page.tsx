@@ -36,7 +36,7 @@ export default async function CreateCoursePage() {
       {/* Back link */}
       <Link
         href="/secretary/courses"
-        className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
       >
         <ArrowLeft className="size-4" />
         Back

@@ -89,7 +89,7 @@ export default async function DeanEnrollmentRosterPage({
       <div className="flex flex-col gap-3">
         <Link
           href={`/dean/college-oversight/enrollments?period=${encodeURIComponent(period)}`}
-          className="text-primary focus-visible:ring-ring inline-flex min-h-11 w-fit items-center gap-2 rounded-md text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="text-link focus-visible:ring-ring inline-flex min-h-11 w-fit items-center gap-2 rounded-md text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           <ArrowLeft aria-hidden="true" />
           Back to Enrollments
@@ -297,7 +297,7 @@ function Pagination({
       {data.page > 1 ? (
         <Link
           href={href(data.page - 1)}
-          className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           <ChevronLeft aria-hidden="true" /> Previous
         </Link>
@@ -310,7 +310,7 @@ function Pagination({
       {data.page < data.totalPages ? (
         <Link
           href={href(data.page + 1)}
-          className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           Next <ChevronRight aria-hidden="true" />
         </Link>
@@ -336,7 +336,7 @@ function EmptyRoster({ heading, message }: { heading: string; message: string })
         <CardContent>
           <Link
             href="/dean/college-oversight/enrollments"
-            className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+            className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
           >
             Return to Enrollments
           </Link>

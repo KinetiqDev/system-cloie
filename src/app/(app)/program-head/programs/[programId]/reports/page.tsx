@@ -37,7 +37,7 @@ export default async function SelectedProgramReportsPage({
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Reports</h1>
         <p className="text-body-md text-text-secondary">
-          <span className="text-primary font-semibold">
+          <span className="text-link font-semibold">
             {code} — {name}
           </span>{" "}
           · Program-scoped report exports

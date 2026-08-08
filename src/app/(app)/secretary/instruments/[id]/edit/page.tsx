@@ -10,7 +10,9 @@ interface SecretaryEditTemplatePageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function SecretaryEditTemplatePage({ params }: SecretaryEditTemplatePageProps) {
+export default async function SecretaryEditTemplatePage({
+  params,
+}: SecretaryEditTemplatePageProps) {
   const { id } = await params;
 
   const template = await getBaselineTemplate(id);
@@ -24,7 +26,7 @@ export default async function SecretaryEditTemplatePage({ params }: SecretaryEdi
       {/* Back link */}
       <Link
         href="/secretary/instruments"
-        className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
       >
         <ArrowLeft className="size-4" />
         Back to Tools
