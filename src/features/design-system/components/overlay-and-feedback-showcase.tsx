@@ -4,7 +4,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -144,7 +144,9 @@ export function OverlayAndFeedbackShowcase() {
                 <ChevronDown aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuLabel>Reference actions</DropdownMenuLabel>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Reference actions</DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuItem>View details</DropdownMenuItem>
                 <DropdownMenuItem>Edit sample</DropdownMenuItem>
                 <DropdownMenuSeparator />
