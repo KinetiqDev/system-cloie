@@ -102,4 +102,28 @@ describe("RadioGroup", () => {
       expect(screen.getByRole("radio")).toBeInTheDocument();
     });
   });
+
+  describe("touch targets", () => {
+    it("expands the hit area on coarse pointers to reach the 44px floor", () => {
+      render(
+        <RadioGroup aria-label="Plan">
+          <RadioGroupItem value="free" aria-label="Free" />
+        </RadioGroup>
+      );
+      const item = screen.getByRole("radio");
+      expect(item).toHaveClass("pointer-coarse:after:-inset-x-3.5");
+      expect(item).toHaveClass("pointer-coarse:after:-inset-y-3.5");
+    });
+  });
+
+  describe("visual size", () => {
+    it("renders 20px radio items", () => {
+      render(
+        <RadioGroup aria-label="Plan">
+          <RadioGroupItem value="free" aria-label="Free" />
+        </RadioGroup>
+      );
+      expect(screen.getByRole("radio")).toHaveClass("size-5");
+    });
+  });
 });

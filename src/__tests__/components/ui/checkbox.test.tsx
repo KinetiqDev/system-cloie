@@ -77,4 +77,23 @@ describe("Checkbox", () => {
       expect(screen.getByRole("checkbox").tagName.toLowerCase()).toBe("span");
     });
   });
+
+  describe("touch targets", () => {
+    it("expands the hit area on coarse pointers to reach the 44px floor", () => {
+      render(<Checkbox aria-label="Agree" />);
+      const checkbox = screen.getByRole("checkbox");
+      expect(checkbox).toHaveClass("pointer-coarse:after:-inset-x-3.5");
+      expect(checkbox).toHaveClass("pointer-coarse:after:-inset-y-3.5");
+    });
+  });
+
+  describe("visual size", () => {
+    it("renders a 20px box with a proportionate check icon", () => {
+      render(<Checkbox defaultChecked aria-label="Agree" />);
+      expect(screen.getByRole("checkbox")).toHaveClass("size-5");
+      expect(
+        screen.getByRole("checkbox").querySelector("[data-slot='checkbox-indicator']")
+      ).toHaveClass("[&>svg]:size-4");
+    });
+  });
 });
