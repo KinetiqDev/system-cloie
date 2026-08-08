@@ -2231,6 +2231,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "feature_component"
   },
   {
+    "path": "src/features/users/components/evaluation-list-browser.tsx",
+    "disposition": "task",
+    "taskId": 24,
+    "category": "feature_component"
+  },
+  {
     "path": "src/features/users/components/faculty-onboarding-form.tsx",
     "disposition": "task",
     "taskId": 18,
