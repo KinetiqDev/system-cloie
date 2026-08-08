@@ -1,10 +1,10 @@
 # Primary Production Appearance Activation Runbook
 
-This is the operator-facing procedure for activating the server-owned primary Production appearance release control after the repository readiness gate in `openspec/changes/migrate-unified-design-system/tasks.md` task 14.1 is accepted. It complements [ADR 0010](../adr/0010-unified-appearance-and-protected-showcase.md). A Git commit documents this procedure but never performs its deployment action.
+This is the operator-facing procedure for activating the server-owned primary Production appearance release control after the repository readiness gate in `openspec/changes/migrate-unified-design-system/tasks.md` task 26 is accepted. It complements [ADR 0010](../adr/0010-unified-appearance-and-protected-showcase.md). A Git commit documents this procedure but never performs its deployment action.
 
 ## Scope And Safety
 
-- Perform this action only on the intended primary Production deployment after task 14.1 evidence is accepted.
+- Perform this action only on the intended primary Production deployment after task 26 evidence is accepted.
 - Do not modify application source, `.env.example`, or deployment configuration stored in the repository during this procedure.
 - Keep `CLOIE_APPEARANCE_ENABLED` server-only. Never expose it through `NEXT_PUBLIC_*`, browser bundles, logs, screenshots, traces, or evidence records.
 - The protected Design System Showcase remains unavailable in primary Production before and after appearance activation.
@@ -31,9 +31,9 @@ PRODUCTION_EVIDENCE_BASE_URL="<verified-primary-production-origin>" \
 
 ## Pre-Activation Verification
 
-1. Confirm task 14.1 completion evidence includes the approved Light/Dark/System viewport matrix, accessibility checks, raw-color allowlist, type-scale audit, focused tests, `pnpm lint`, `pnpm test`, `pnpm build`, effective CSP check, and protected deployment-boundary checks.
+1. Confirm task 26 completion evidence includes the approved Light/Dark/System viewport matrix, accessibility checks, raw-color allowlist, type-scale audit, focused tests, `pnpm lint`, `pnpm test`, `pnpm build`, effective CSP check, and protected deployment-boundary checks.
 2. In a fresh browser context with OS Dark selected, verify the primary Production target remains Light before paint, has no appearance selector, and returns not-found UI for Settings Appearance.
-3. Record the required redacted evidence in a comment on [GitHub issue #225](https://github.com/Tugeru/project-cloie/issues/225): deployment identifier, pre-activation forced-Light result, activation timestamp, post-activation selector and OS-Dark result, boundary-check result, and rollback readiness. Link to approved private trace storage only when needed; do not commit traces or screenshots.
+3. Record the required redacted evidence in a comment on [GitHub issue #225](https://github.com/KinetiqDev/system-cloie/issues/225): deployment identifier, pre-activation forced-Light result, activation timestamp, post-activation selector and OS-Dark result, boundary-check result, and rollback readiness. Link to approved private trace storage only when needed; do not commit traces or screenshots.
 
 ## Activation Procedure
 
@@ -59,4 +59,4 @@ PRODUCTION_EVIDENCE_BASE_URL="<verified-primary-production-origin>" \
 
 ## Evidence Limits
 
-Use [GitHub issue #225](https://github.com/Tugeru/project-cloie/issues/225) as the redacted activation evidence record. Include deployment identifier, pre-activation result, activation timestamp, post-activation result, boundary-check result, and rollback readiness. Never record project-reference values, environment values, credentials, cookies, tokens, account identifiers, headers, private response bodies, or screenshots containing private data. Store trace files only in approved private storage and link to them without publishing sensitive content.
+Use [GitHub issue #225](https://github.com/KinetiqDev/system-cloie/issues/225) as the redacted activation evidence record. Include deployment identifier, pre-activation result, activation timestamp, post-activation result, boundary-check result, and rollback readiness. Never record project-reference values, environment values, credentials, cookies, tokens, account identifiers, headers, private response bodies, or screenshots containing private data. Store trace files only in approved private storage and link to them without publishing sensitive content.

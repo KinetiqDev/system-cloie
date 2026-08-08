@@ -33,7 +33,7 @@ function Swatch({
       >
         <span className="font-mono text-xs">{name}</span>
       </div>
-      <p className="text-xs text-muted-foreground">{note}</p>
+      <p className="text-muted-foreground text-xs">{note}</p>
     </div>
   );
 }
@@ -47,7 +47,12 @@ const SURFACE_SWATCHES = [
   { className: "bg-surface-input", name: "surface-input", note: "Input fill" },
   { className: "bg-surface-popover", name: "surface-popover", note: "Popover and menu fill" },
   { className: "bg-card", name: "card", note: "Card surface" },
-  { className: "bg-primary", name: "primary", note: "Operational primary" },
+  {
+    className: "bg-primary",
+    name: "primary",
+    note: "Operational primary",
+    textClassName: "text-primary-foreground",
+  },
   { className: "bg-secondary", name: "secondary", note: "Neutral secondary" },
   { className: "bg-accent", name: "accent", note: "Neutral contextual hover" },
   { className: "bg-muted", name: "muted", note: "Muted interactive fill" },
@@ -56,7 +61,7 @@ const SURFACE_SWATCHES = [
 const TEXT_SWATCHES = [
   { className: "text-foreground", name: "foreground", note: "Primary text" },
   { className: "text-muted-foreground", name: "muted-foreground", note: "Secondary text" },
-  { className: "text-primary", name: "primary", note: "Interactive text" },
+  { className: "text-link", name: "link", note: "Interactive text and links" },
   { className: "text-secondary-foreground", name: "secondary-foreground", note: "On secondary" },
 ];
 
@@ -128,11 +133,7 @@ export function TokenReference() {
           {SURFACE_SWATCHES.map((swatch) => (
             <Swatch key={swatch.name} {...swatch} />
           ))}
-          <Swatch
-            className="bg-scrim text-background"
-            name="scrim"
-            note="Overlay backdrop"
-          />
+          <Swatch className="bg-scrim text-background" name="scrim" note="Overlay backdrop" />
         </div>
       </div>
 
@@ -141,10 +142,15 @@ export function TokenReference() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {TEXT_SWATCHES.map((swatch) => (
             <div key={swatch.name} className="flex flex-col gap-2">
-              <div className={cn("flex h-16 items-end rounded-lg border border-border p-2", swatch.className)}>
+              <div
+                className={cn(
+                  "border-border flex h-16 items-end rounded-lg border p-2",
+                  swatch.className
+                )}
+              >
                 <span className="font-mono text-xs">Aa</span>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 <span className="font-mono">{swatch.name}</span> — {swatch.note}
               </p>
             </div>
@@ -167,7 +173,7 @@ export function TokenReference() {
                 <swatch.Icon aria-hidden className="size-3.5" />
                 <span className="font-mono text-xs">{swatch.name}</span>
               </span>
-              <span className="text-xs opacity-80">{swatch.note}</span>
+              <span className="text-xs">{swatch.note}</span>
             </div>
           ))}
         </div>
@@ -185,24 +191,24 @@ export function TokenReference() {
         <div className="flex flex-wrap items-end gap-4">
           {RADIUS_STEPS.map((radius) => (
             <div key={radius.name} className="flex flex-col items-center gap-2">
-              <div className={cn("border-border size-14 border bg-surface", radius.className)} />
-              <span className="font-mono text-xs text-muted-foreground">{radius.name}</span>
+              <div className={cn("border-border bg-surface size-14 border", radius.className)} />
+              <span className="text-muted-foreground font-mono text-xs">{radius.name}</span>
             </div>
           ))}
           <div className="flex flex-col items-center gap-2">
-            <div className="size-14 rounded-lg bg-surface shadow-xl ring-1 ring-border" />
-            <span className="font-mono text-xs text-muted-foreground">elevation</span>
+            <div className="bg-surface ring-border size-14 rounded-lg shadow-xl ring-1" />
+            <span className="text-muted-foreground font-mono text-xs">elevation</span>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col gap-3">
         <BlockTitle>Type scale</BlockTitle>
-        <div className="flex flex-col divide-y divide-border rounded-lg border border-border bg-card">
+        <div className="divide-border border-border bg-card flex flex-col divide-y rounded-lg border">
           {TYPE_SCALE.map((type) => (
             <div key={type.name} className="flex items-baseline justify-between gap-4 px-3 py-2.5">
               <span className={cn("text-foreground", type.className)}>{type.label}</span>
-              <span className="font-mono text-xs text-muted-foreground">{type.name}</span>
+              <span className="text-muted-foreground font-mono text-xs">{type.name}</span>
             </div>
           ))}
         </div>

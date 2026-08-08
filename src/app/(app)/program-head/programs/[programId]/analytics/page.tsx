@@ -25,7 +25,7 @@ export default async function SelectedProgramAnalyticsPage({
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Analytics</h1>
         <p className="text-body-md text-text-secondary">
-          <span className="text-primary font-semibold">
+          <span className="text-link font-semibold">
             {dashboard.programCode} — {dashboard.programLabel}
           </span>{" "}
           · Program-scoped mean summaries and qualitative insights

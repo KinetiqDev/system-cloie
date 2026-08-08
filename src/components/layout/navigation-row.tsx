@@ -32,7 +32,7 @@ export function NavigationRow({
       {...props}
       className={cn(
         "group flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 font-medium transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2",
         active
           ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
@@ -59,8 +59,8 @@ export function BottomNavRow({ active = false, className, ...props }: BottomNavR
       {...props}
       className={cn(
         "flex min-h-11 flex-1 flex-col items-center justify-center gap-1 rounded-md px-1 transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-        active ? "text-primary" : "text-sidebar-foreground/60 hover:text-sidebar-foreground",
+        "focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2",
+        active ? "text-link" : "text-sidebar-foreground/60 hover:text-sidebar-foreground",
         className
       )}
     />

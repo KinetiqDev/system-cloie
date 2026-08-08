@@ -53,7 +53,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
             height={513}
             className={LOGO_CLASS_NAME}
           />
-          <span className="text-title-lg text-primary font-bold tracking-tight">System CLOIE</span>
+          <span className="text-title-lg text-link font-bold tracking-tight">System CLOIE</span>
         </div>
       </div>
 
@@ -163,7 +163,7 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
     <aside className="border-sidebar-border bg-sidebar fixed inset-y-0 left-0 z-50 hidden w-16 flex-col border-r md:flex lg:w-64">
       <div className="border-sidebar-border flex h-16 shrink-0 items-center justify-center border-b px-3 lg:justify-start lg:px-6">
         <Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={486} height={513} className={LOGO_CLASS_NAME} />
-        <span className="text-title-lg text-primary ml-3 hidden font-bold tracking-tight lg:inline">System CLOIE</span>
+        <span className="text-title-lg text-link ml-3 hidden font-bold tracking-tight lg:inline">System CLOIE</span>
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6 lg:px-4" aria-label="Dean navigation">
         {renderLink(dashboard, true)}

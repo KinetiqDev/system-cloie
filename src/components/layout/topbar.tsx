@@ -59,9 +59,9 @@ export function Topbar({
               alt="System CLOIE Logo"
               width={486}
               height={513}
-              className="h-7 w-auto rounded border border-border bg-white p-0.5"
+              className="border-border h-7 w-auto rounded border bg-white p-0.5"
             />
-            <span className="text-title-md text-primary font-bold tracking-tight">System CLOIE</span>
+            <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
           </>
         )}
       </div>
@@ -71,7 +71,7 @@ export function Topbar({
         {children}
         {/* Profile avatar + dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground flex min-h-11 items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          <DropdownMenuTrigger className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground focus-visible:outline-ring flex min-h-11 items-center gap-2 rounded-full py-1 pr-2 pl-1 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2">
             <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
               <span className="text-caption font-semibold">{initials}</span>
             </div>
@@ -88,7 +88,7 @@ export function Topbar({
             {appearanceEnabled && (
               <>
                 <div className="px-3 pt-1 pb-2">
-                  <p className="text-caption text-text-muted mb-1 px-1 font-medium uppercase tracking-wide">
+                  <p className="text-caption text-text-muted mb-1 px-1 font-medium tracking-wide uppercase">
                     Appearance
                   </p>
                   <AppearanceMenuItems />

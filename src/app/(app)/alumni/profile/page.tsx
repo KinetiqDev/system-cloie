@@ -83,7 +83,7 @@ export default async function AlumniProfilePage() {
         {/* Program Context */}
         <Card className="border-border shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-secondary-soft text-secondary rounded-lg p-2">
+            <div className="bg-secondary-soft text-text-secondary rounded-lg p-2">
               <Book className="size-5" />
             </div>
             <div>

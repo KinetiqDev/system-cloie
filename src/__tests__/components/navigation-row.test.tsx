@@ -60,7 +60,7 @@ describe("NavigationRow", () => {
 });
 
 describe("BottomNavRow", () => {
-  it("uses the operational primary for the active destination", () => {
+  it("uses the link role for the active destination", () => {
     render(
       <BottomNavRow href="/student/dashboard" active aria-current="page">
         Home
@@ -68,7 +68,7 @@ describe("BottomNavRow", () => {
     );
 
     const link = screen.getByRole("link", { name: "Home" });
-    expect(link).toHaveClass("text-primary", "min-h-11");
+    expect(link).toHaveClass("text-link", "min-h-11");
     expect(link).toHaveAttribute("aria-current", "page");
   });
 

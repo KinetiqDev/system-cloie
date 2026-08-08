@@ -150,11 +150,9 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
                 alt="System CLOIE Logo"
                 width={486}
                 height={513}
-                className="h-7 w-auto rounded border border-border bg-white p-0.5"
+                className="border-border h-7 w-auto rounded border bg-white p-0.5"
               />
-              <span className="text-title-md text-primary font-bold tracking-tight">
-                System CLOIE
-              </span>
+              <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
             </div>
             <button
               type="button"

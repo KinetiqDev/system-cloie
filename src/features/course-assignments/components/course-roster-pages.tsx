@@ -132,7 +132,7 @@ export function CourseRosterDiscoveryPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <div className="text-primary flex items-center gap-2">
+        <div className="text-link flex items-center gap-2">
           <UsersRound aria-hidden="true" />
           <span className="text-sm font-medium">Faculty workspace</span>
         </div>
@@ -296,7 +296,7 @@ function DiscoveryPagination({
       {page > 1 ? (
         <Link
           href={href(page - 1)}
-          className="focus-visible:ring-ring text-primary inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           <ChevronLeft aria-hidden="true" /> Previous
         </Link>
@@ -309,7 +309,7 @@ function DiscoveryPagination({
       {page < totalPages ? (
         <Link
           href={href(page + 1)}
-          className="focus-visible:ring-ring text-primary inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           Next <ChevronRight aria-hidden="true" />
         </Link>
@@ -345,7 +345,7 @@ export function CourseRosterDetailPage({
       <div className="flex flex-col gap-3">
         <Link
           href={backHref}
-          className="focus-visible:ring-ring text-primary inline-flex min-h-11 w-fit items-center gap-2 rounded-md text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="focus-visible:ring-ring text-link inline-flex min-h-11 w-fit items-center gap-2 rounded-md text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           <ArrowLeft aria-hidden="true" /> {backLabel}
         </Link>
@@ -447,7 +447,7 @@ function RosterFilters({
         <Link
           href={`${rosterBasePath ?? "/course-rosters"}/${assignmentId}?${sortParams}`}
           aria-label={`Sort by name ${data.sortDirection === "asc" ? "descending" : "ascending"}`}
-          className="focus-visible:ring-ring text-primary inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           Sort by name {data.sortDirection === "asc" ? "descending" : "ascending"}
         </Link>
@@ -532,7 +532,7 @@ function RosterTable({
                     {member.isActive ? "Active membership" : "Removed"}
                   </Badge>
                   {member.isActive && member.eligibility.eligible ? (
-                    <span className="text-primary inline-flex items-center gap-1 text-xs">
+                    <span className="text-link inline-flex items-center gap-1 text-xs">
                       <CheckCircle2 aria-hidden="true" /> Evaluation-eligible
                     </span>
                   ) : !member.isActive ? (
@@ -605,7 +605,7 @@ function DetailPagination({
       {data.page > 1 ? (
         <Link
           href={href(data.page - 1)}
-          className="focus-visible:ring-ring text-primary inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           <ChevronLeft aria-hidden="true" /> Previous
         </Link>
@@ -618,7 +618,7 @@ function DetailPagination({
       {data.page < data.totalPages ? (
         <Link
           href={href(data.page + 1)}
-          className="focus-visible:ring-ring text-primary inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           Next <ChevronRight aria-hidden="true" />
         </Link>

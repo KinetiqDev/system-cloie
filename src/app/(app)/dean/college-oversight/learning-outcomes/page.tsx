@@ -96,10 +96,7 @@ export default async function DeanLearningOutcomesPage({
           </p>
         </div>
         <Suspense fallback={<DeanLearningOutcomesLoading />}>
-          <LearningOutcomesDetails
-            detailPromise={detailPromise}
-            selectedProgram={params.program}
-          />
+          <LearningOutcomesDetails detailPromise={detailPromise} selectedProgram={params.program} />
         </Suspense>
       </section>
     </div>
@@ -350,7 +347,7 @@ function EmptyPage({
         <CardContent>
           <Link
             href="/dean/dashboard"
-            className="text-primary focus-visible:ring-ring font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+            className="text-link focus-visible:ring-ring font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
           >
             Return to Dashboard
           </Link>

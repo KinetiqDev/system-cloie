@@ -17,7 +17,7 @@ export default async function AddNewUserPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <Link
         href="/secretary/users"
-        className="text-primary inline-flex items-center gap-2 text-sm font-medium hover:underline"
+        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
       >
         <ArrowLeft className="size-4" />
         Back

@@ -86,7 +86,7 @@ export function IndustryPartnerOnboardingForm({
   return (
     <Card className="border-border overflow-hidden shadow-sm">
       <div className="border-border bg-surface flex items-center justify-between border-b px-6 py-3">
-        <span className="text-label-md text-primary font-bold tracking-wider uppercase">
+        <span className="text-label-md text-link font-bold tracking-wider uppercase">
           Onboarding
         </span>
         <span className="text-caption text-muted-foreground">Industry Partner Profile</span>
@@ -126,7 +126,7 @@ export function IndustryPartnerOnboardingForm({
             {/* Identity Information */}
             <div className="flex items-center gap-2 pt-4">
               <UserCircle className="text-primary size-5" />
-              <h2 className="text-label-lg text-primary font-bold tracking-wider uppercase">
+              <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">
                 Identity Information
               </h2>
             </div>
@@ -180,7 +180,7 @@ export function IndustryPartnerOnboardingForm({
 
             <div className="flex items-center gap-2 pt-4">
               <Briefcase className="text-primary size-5" />
-              <h2 className="text-label-lg text-primary font-bold tracking-wider uppercase">
+              <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">
                 Professional Details
               </h2>
             </div>

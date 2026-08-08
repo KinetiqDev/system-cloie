@@ -1,23 +1,23 @@
 # DESIGN.md — System CLOIE
 
 > **Status:** Approved unified light/dark design specification  
-> **Repository status:** Light is implemented on `main`; dark and System appearance are approved but not yet implemented.  
-> **Reviewed against `main`:** 2026-08-04
+> **Repository status:** Light, Dark, and System are implemented on `main`; Dark/System selection is gated in primary Production behind the server-owned `CLOIE_APPEARANCE_ENABLED` release control (ADR 0010).  
+> **Reviewed against `main`:** 2026-08-08
 
 ## 1. Authority and Scope
 
 This file defines System CLOIE's visual language, theme behavior, page patterns, components, responsive behavior, interaction, and accessibility. It applies to both light and dark themes.
 
-| Subject | Source of truth |
-| --- | --- |
-| Architecture, stack, binding engineering rules | `openspec/config.yaml` |
-| Product workflows and requirements | `docs/cloie-prd.md`, `docs/cloie-srs.md` |
-| Domain terms and invariants | `CONTEXT-MAP.md`, feature `CONTEXT.md`, ADRs |
-| Visual and interaction behavior | `docs/design.md` |
-| Numerical design values | `src/styles/tokens.css` |
-| Tailwind/shadcn mappings and type utilities | `src/app/globals.css` |
-| Current behavior | existing code and tests |
-| Execution and verification | `AGENTS.md` |
+| Subject                                        | Source of truth                              |
+| ---------------------------------------------- | -------------------------------------------- |
+| Architecture, stack, binding engineering rules | `openspec/config.yaml`                       |
+| Product workflows and requirements             | `docs/cloie-prd.md`, `docs/cloie-srs.md`     |
+| Domain terms and invariants                    | `CONTEXT-MAP.md`, feature `CONTEXT.md`, ADRs |
+| Visual and interaction behavior                | `docs/design.md`                             |
+| Numerical design values                        | `src/styles/tokens.css`                      |
+| Tailwind/shadcn mappings and type utilities    | `src/app/globals.css`                        |
+| Current behavior                               | existing code and tests                      |
+| Execution and verification                     | `AGENTS.md`                                  |
 
 Surface conflicts explicitly. This file does not define product scope, authorization, database behavior, or engineering workflow.
 
@@ -70,23 +70,23 @@ System CLOIE has **Light**, **Dark**, and **System** appearance settings. Themes
 
 > **Values adapt. Roles and meanings remain constant.**
 
-| Appearance | Design | Implementation on `main` |
-| --- | --- | --- |
-| Light | Approved | Implemented |
-| Dark | Approved | Not implemented |
-| System | Approved | Not implemented |
+| Appearance | Design   | Implementation on `main`                 |
+| ---------- | -------- | ---------------------------------------- |
+| Light      | Approved | Implemented                              |
+| Dark       | Approved | Implemented, gated in primary Production |
+| System     | Approved | Implemented, gated in primary Production |
 
-Do not present dark mode as shipped until tokens, provider, persistence, first-paint resolution, and component verification are complete.
+Dark and System are shipped in the repository. In primary Production they activate only when the server-only `CLOIE_APPEARANCE_ENABLED` release setting is exactly `"true"` (see ADR 0010 and `docs/runbooks/appearance-production-activation.md`); development and the dedicated demo deployment render them directly.
 
 ### 4.2 Brand Roles
 
-| Role | Use | Do not use as |
-| --- | --- | --- |
-| Institutional navy | formal ACD/report framing | routine action color |
-| Operational primary | CTA, links, active nav, selection, progress | status color |
-| ACD cyan accent | analytics, categories, specialized accents | default secondary action |
-| Neutral secondary | secondary actions, neutral controls | brand accent |
-| Semantic colors | success, warning, danger, information | decoration/categories |
+| Role                | Use                                         | Do not use as            |
+| ------------------- | ------------------------------------------- | ------------------------ |
+| Institutional navy  | formal ACD/report framing                   | routine action color     |
+| Operational primary | CTA, links, active nav, selection, progress | status color             |
+| ACD cyan accent     | analytics, categories, specialized accents  | default secondary action |
+| Neutral secondary   | secondary actions, neutral controls         | brand accent             |
+| Semantic colors     | success, warning, danger, information       | decoration/categories    |
 
 **ACD cyan and neutral secondary actions are separate roles.**
 
@@ -144,63 +144,63 @@ Token layers:
 
 ### 5.2 Core Light–Dark Mapping
 
-| Role | Light | Dark |
-| --- | ---: | ---: |
-| Background | `#F8FAFC` | `#0B1120` |
-| Surface/card | `#FFFFFF` | `#111827` |
-| Surface alternate | `#F1F5F9` | `#172033` |
-| Surface muted | `#E2E8F0` | `#1E293B` |
-| Surface hover | `#F1F5F9` | `#273449` |
-| Input | `#FFFFFF` | `#0F172A` |
-| Popover | `#FFFFFF` | `#172033` |
-| Scrim | `rgba(15, 23, 42, 0.5)` | `rgba(2, 6, 23, 0.6)` |
-| Border | `#E2E8F0` | `#334155` |
-| Border strong | `#CBD5E1` | `#475569` |
-| Text primary | `#0F172A` | `#F8FAFC` |
-| Text secondary | `#334155` | `#CBD5E1` |
-| Text muted | `#64748B` | `#94A3B8` |
-| Text disabled | `#94A3B8` | `#64748B` |
-| Primary | `#2563EB` | `#2563EB` |
-| Link | `#1D4ED8` | `#60A5FA` |
-| Focus ring | `#0284C7` | `#38BDF8` |
-| Selected background | `#EFF6FF` | `#172554` |
-| Selected foreground | `#1E40AF` | `#BFDBFE` |
-| Neutral secondary | `#F1F5F9` | `#1E293B` |
-| Secondary hover | `#E2E8F0` | `#273449` |
+| Role                |                   Light |                  Dark |
+| ------------------- | ----------------------: | --------------------: |
+| Background          |               `#F8FAFC` |             `#0B1120` |
+| Surface/card        |               `#FFFFFF` |             `#111827` |
+| Surface alternate   |               `#F1F5F9` |             `#172033` |
+| Surface muted       |               `#E2E8F0` |             `#1E293B` |
+| Surface hover       |               `#F1F5F9` |             `#273449` |
+| Input               |               `#FFFFFF` |             `#0F172A` |
+| Popover             |               `#FFFFFF` |             `#172033` |
+| Scrim               | `rgba(15, 23, 42, 0.5)` | `rgba(2, 6, 23, 0.6)` |
+| Border              |               `#E2E8F0` |             `#334155` |
+| Border strong       |               `#CBD5E1` |             `#475569` |
+| Text primary        |               `#0F172A` |             `#F8FAFC` |
+| Text secondary      |               `#334155` |             `#CBD5E1` |
+| Text muted          |               `#64748B` |             `#94A3B8` |
+| Text disabled       |               `#94A3B8` |             `#64748B` |
+| Primary             |               `#2563EB` |             `#2563EB` |
+| Link                |               `#1D4ED8` |             `#60A5FA` |
+| Focus ring          |               `#0284C7` |             `#38BDF8` |
+| Selected background |               `#EFF6FF` |             `#172554` |
+| Selected foreground |               `#1E40AF` |             `#BFDBFE` |
+| Neutral secondary   |               `#F1F5F9` |             `#1E293B` |
+| Secondary hover     |               `#E2E8F0` |             `#273449` |
 
 ### 5.3 Brand and Interactive Families
 
 #### Institutional navy
 
-| Role | Value |
-| --- | ---: |
-| Reference | `#221D60` |
-| Dark surface | `#1E1B4B` |
-| Dark border | `#3730A3` |
+| Role            |     Value |
+| --------------- | --------: |
+| Reference       | `#221D60` |
+| Dark surface    | `#1E1B4B` |
+| Dark border     | `#3730A3` |
 | Dark foreground | `#C7D2FE` |
 
 Use only for formal report/institutional framing.
 
 #### Operational primary
 
-| Role | Light/shared | Dark |
-| --- | ---: | ---: |
-| Primary | `#2563EB` | `#2563EB` |
-| Hover | `#1D4ED8` | `#1D4ED8` |
-| Active | `#1E40AF` | `#1E40AF` |
-| Soft/selected | `#EFF6FF` | `#172554` |
-| Highlight/link | `#1D4ED8` | `#60A5FA` |
-| On primary | `#FFFFFF` | `#FFFFFF` |
+| Role           | Light/shared |      Dark |
+| -------------- | -----------: | --------: |
+| Primary        |    `#2563EB` | `#2563EB` |
+| Hover          |    `#1D4ED8` | `#1D4ED8` |
+| Active         |    `#1E40AF` | `#1E40AF` |
+| Soft/selected  |    `#EFF6FF` | `#172554` |
+| Highlight/link |    `#1D4ED8` | `#60A5FA` |
+| On primary     |    `#FFFFFF` | `#FFFFFF` |
 
 #### ACD cyan accent
 
-| Role | Light | Dark |
-| --- | ---: | ---: |
-| Accent | `#0369A1` | `#0369A1` |
-| Hover | `#075985` | `#0E7490` |
-| Active | `#0C4A6E` | `#075985` |
-| Soft | `#F0F9FF` | `#082F49` |
-| Border | `#BAE6FD` | `#0E7490` |
+| Role      |     Light |      Dark |
+| --------- | --------: | --------: |
+| Accent    | `#0369A1` | `#0369A1` |
+| Hover     | `#075985` | `#0E7490` |
+| Active    | `#0C4A6E` | `#075985` |
+| Soft      | `#F0F9FF` | `#082F49` |
+| Border    | `#BAE6FD` | `#0E7490` |
 | Highlight | `#25AAE1` | `#38BDF8` |
 | On accent | `#FFFFFF` | `#FFFFFF` |
 
@@ -208,28 +208,28 @@ Use for category badges, analytics accents, chart 2, and a separately named spec
 
 #### Neutral secondary action
 
-| Role | Light | Dark |
-| --- | ---: | ---: |
+| Role       |     Light |      Dark |
+| ---------- | --------: | --------: |
 | Background | `#F1F5F9` | `#1E293B` |
-| Hover | `#E2E8F0` | `#273449` |
-| Border | `#CBD5E1` | `#475569` |
+| Hover      | `#E2E8F0` | `#273449` |
+| Border     | `#CBD5E1` | `#475569` |
 | Foreground | `#0F172A` | `#F8FAFC` |
 
 ### 5.4 Semantic Status Tokens
 
-| Status | Light main / soft | Dark main / soft | Meaning |
-| --- | --- | --- | --- |
-| Success | `#047857` / `#ECFDF5` | `#34D399` / `#052E2B` | completed, valid |
-| Warning | `#B45309` / `#FFFBEB` | `#FBBF24` / `#451A03` | attention required |
-| Danger | `#B91C1C` / `#FEF2F2` | `#F87171` / `#450A0A` | error, destructive |
+| Status      | Light main / soft     | Dark main / soft      | Meaning             |
+| ----------- | --------------------- | --------------------- | ------------------- |
+| Success     | `#047857` / `#ECFDF5` | `#34D399` / `#052E2B` | completed, valid    |
+| Warning     | `#B45309` / `#FFFBEB` | `#FBBF24` / `#451A03` | attention required  |
+| Danger      | `#B91C1C` / `#FEF2F2` | `#F87171` / `#450A0A` | error, destructive  |
 | Information | `#4F46E5` / `#EEF2FF` | `#A5B4FC` / `#1E1B4B` | neutral information |
 
 Use soft surfaces for alerts and badges. Filled danger is reserved for the confirmed destructive action. Information is indigo and separate from links, focus, primary, and cyan.
 
 ### 5.5 Data Visualization
 
-| Series | Light | Dark |
-| --- | ---: | ---: |
+| Series  |     Light |      Dark |
+| ------- | --------: | --------: |
 | Chart 1 | `#2563EB` | `#60A5FA` |
 | Chart 2 | `#0369A1` | `#22D3EE` |
 | Chart 3 | `#047857` | `#34D399` |
@@ -264,14 +264,14 @@ Use soft surfaces for alerts and badges. Filled danger is reserved for the confi
 - **Inter 400/500/600:** body, labels, controls
 - **`tabular-nums`:** KPIs, percentages, counts, aligned table data
 
-| Group | Utilities |
-| --- | --- |
+| Group   | Utilities                              |
+| ------- | -------------------------------------- |
 | Display | `.text-display-lg`, `.text-display-md` |
-| Heading | `.text-heading-xl`, `lg`, `md` |
-| Title | `.text-title-lg`, `md`, `sm` |
-| Body | `.text-body-lg`, `md`, `sm` |
-| Label | `.text-label-lg`, `md`, `sm` |
-| Caption | `.text-caption` |
+| Heading | `.text-heading-xl`, `lg`, `md`         |
+| Title   | `.text-title-lg`, `md`, `sm`           |
+| Body    | `.text-body-lg`, `md`, `sm`            |
+| Label   | `.text-label-lg`, `md`, `sm`           |
+| Caption | `.text-caption`                        |
 
 Exact sizes live in `globals.css`.
 
@@ -287,14 +287,14 @@ Exact sizes live in `globals.css`.
 - Admin pages: medium density; respondent/onboarding: low density.
 - Mobile targets: at least 44 × 44 px.
 
-| Context | Layout |
-| --- | --- |
+| Context         | Layout                                              |
+| --------------- | --------------------------------------------------- |
 | Operational app | existing `AppShell`, `max-w-[1600px]`, `p-4 sm:p-6` |
-| Public/landing | `max-w-7xl` |
-| Legal/prose | `max-w-3xl` |
-| Focused form | `max-w-2xl` |
-| KPI grid | 1 / 2 / 4 columns |
-| Forms/wizards | single column by default |
+| Public/landing  | `max-w-7xl`                                         |
+| Legal/prose     | `max-w-3xl`                                         |
+| Focused form    | `max-w-2xl`                                         |
+| KPI grid        | 1 / 2 / 4 columns                                   |
+| Forms/wizards   | single column by default                            |
 
 Reuse `app-shell.tsx`, `sidebar.tsx`, `topbar.tsx`, `mobile-nav.tsx`, and `mobile-sidebar-drawer.tsx`.
 
@@ -315,16 +315,16 @@ Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only
 
 ## 7. Page-Type Patterns
 
-| Page type | Density | Structure | Emphasize | Avoid |
-| --- | --- | --- | --- | --- |
-| Landing / portal | low | brand header, role cards | trust, role paths | admin density |
-| Auth / onboarding | low | focused centered form | minimal distraction | app chrome |
-| Operational dashboard | medium | shell, KPIs, tools, tables | scanability | hero styling |
-| Respondent flow | low | single-column wizard | progress, mobile comfort | sidebars/admin actions |
-| Analytics | medium-high | filters, KPIs, charts | comparison, direct labels | decorative charts |
-| Reports | medium | formal header, filters, export | evidence, legibility | promotional styling |
-| Legal | low | narrow prose | readability | extra controls |
-| Settings | medium | grouped forms | clear persistent preferences | analytics density |
+| Page type             | Density     | Structure                      | Emphasize                    | Avoid                  |
+| --------------------- | ----------- | ------------------------------ | ---------------------------- | ---------------------- |
+| Landing / portal      | low         | brand header, role cards       | trust, role paths            | admin density          |
+| Auth / onboarding     | low         | focused centered form          | minimal distraction          | app chrome             |
+| Operational dashboard | medium      | shell, KPIs, tools, tables     | scanability                  | hero styling           |
+| Respondent flow       | low         | single-column wizard           | progress, mobile comfort     | sidebars/admin actions |
+| Analytics             | medium-high | filters, KPIs, charts          | comparison, direct labels    | decorative charts      |
+| Reports               | medium      | formal header, filters, export | evidence, legibility         | promotional styling    |
+| Legal                 | low         | narrow prose                   | readability                  | extra controls         |
+| Settings              | medium      | grouped forms                  | clear persistent preferences | analytics density      |
 
 Theme selection must not change the page pattern.
 
@@ -345,17 +345,17 @@ The installable PWA shell exists. Offline data caching and mutation queues remai
 
 ### 8.1 Required States
 
-| State | Requirement |
-| --- | --- |
-| Default | canonical semantic tokens |
-| Hover | subtle color/surface change |
-| Focus | visible `ring-ring` |
-| Pressed | optional 1 px translation |
-| Selected | semantic surface plus accessible state |
-| Disabled | noninteractive but readable |
-| Loading | preserve width; spinner and/or label |
-| Error | adjacent semantic message |
-| Success | confirmation without replacing selection |
+| State    | Requirement                              |
+| -------- | ---------------------------------------- |
+| Default  | canonical semantic tokens                |
+| Hover    | subtle color/surface change              |
+| Focus    | visible `ring-ring`                      |
+| Pressed  | optional 1 px translation                |
+| Selected | semantic surface plus accessible state   |
+| Disabled | noninteractive but readable              |
+| Loading  | preserve width; spinner and/or label     |
+| Error    | adjacent semantic message                |
+| Success  | confirmation without replacing selection |
 
 ### 8.2 Buttons
 
@@ -447,17 +447,17 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 
 ## 9. Module-Specific Rules
 
-| Module | Emphasis | Required pattern |
-| --- | --- | --- |
-| Auth / sessions | focused public form | never expose dev/demo auth in primary production |
-| Academic calendar / structure | managed records/forms | existing shells; Dialog → Drawer where established |
-| Course assignments | dense roster/membership tables | domain `CONTEXT.md`, existing page shell and constraints |
-| Outcomes / instruments / evaluations | authoring/deployment | progressive disclosure, explicit status, destructive confirmation |
-| Responses | guided low-density flow | `wizard-shell.tsx`, visible progress, mobile-first |
-| Analytics | KPIs, filters, charts | theme chart tokens, legends, summaries, export |
-| Reports | formal evidence/export | limited institutional navy |
-| Dean PWA | stable installable shell | offline data remains deferred by ADR 0006 |
-| Navigation | role-filtered structure | edit central constants only |
+| Module                               | Emphasis                       | Required pattern                                                  |
+| ------------------------------------ | ------------------------------ | ----------------------------------------------------------------- |
+| Auth / sessions                      | focused public form            | never expose dev/demo auth in primary production                  |
+| Academic calendar / structure        | managed records/forms          | existing shells; Dialog → Drawer where established                |
+| Course assignments                   | dense roster/membership tables | domain `CONTEXT.md`, existing page shell and constraints          |
+| Outcomes / instruments / evaluations | authoring/deployment           | progressive disclosure, explicit status, destructive confirmation |
+| Responses                            | guided low-density flow        | `wizard-shell.tsx`, visible progress, mobile-first                |
+| Analytics                            | KPIs, filters, charts          | theme chart tokens, legends, summaries, export                    |
+| Reports                              | formal evidence/export         | limited institutional navy                                        |
+| Dean PWA                             | stable installable shell       | offline data remains deferred by ADR 0006                         |
+| Navigation                           | role-filtered structure        | edit central constants only                                       |
 
 ---
 
@@ -549,24 +549,22 @@ Exceptions must be documented, scoped, and tokenized when reusable. Example: ins
 
 ## 15. Implementation Status and Known Gaps
 
-Do not propagate these issues:
+All previously tracked gaps were resolved during the unified design-system migration (`openspec/changes/migrate-unified-design-system/`), verified by the appearance readiness gate (#270):
 
-| Gap on `main` | Required direction |
-| --- | --- |
-| Legacy gold and light-only values in `tokens.css` | replace with approved light values and `.dark` overrides |
-| No appearance provider/selector | add Light/Dark/System, persistence, OS detection, first-paint resolution |
-| `accent` and `ring` coupled to legacy info blue | separate neutral accent, focus ring, indigo information |
-| `bg-surface-hover` undefined | add semantic hover token |
-| manifest/layout use `#0051C3`, primary is `#2563EB` | reconcile metadata with approved theme strategy |
-| hardcoded `cta-success` | remove or replace with semantic variant |
-| hardcoded chart palettes | migrate to theme `--chart-*` and support tokens |
-| toast uses light hardcoded colors and lacks information | tokenize and add information |
-| `text-display-sm` used but undefined | define or migrate usage |
-| `CardAction` defined but not exported | export or remove |
-| token comment references missing `design-system.txt` | reference `docs/design.md` |
-| light-only raw surfaces remain | audit and replace with semantic classes |
+- Legacy gold and light-only values: replaced by approved Light values and `.dark` overrides in `tokens.css`.
+- Appearance provider/selector: added with persistence, OS detection, and first-paint resolution.
+- `accent` and `ring`: separated from legacy info blue; indigo `information` introduced.
+- `bg-surface-hover`: defined as a semantic hover token.
+- Manifest/layout metadata: reconciled with approved theme strategy (theme-neutral values).
+- Hardcoded `cta-success`: removed with its sole caller.
+- Hardcoded chart palettes: migrated to theme `--chart-*` roles with hatch/pattern distinction beyond five categories.
+- Toast hardcoded colors: tokenized with an `information` kind.
+- `text-display-sm`: migrated to the approved type scale.
+- `CardAction`: exported from `card.tsx`.
+- Token comment reference: points to `docs/design.md`.
+- Light-only raw surfaces: audited and replaced with semantic classes (raw-color audit passes; exceptions are allowlisted in `src/features/design-system/data/raw-color-allowlist.ts`).
 
-Remove resolved entries promptly; this is not an issue archive.
+New exceptions must be documented, scoped, and tokenized when reusable. Example: institutional navy is valid for formal report cards, not ordinary cards.
 
 ---
 

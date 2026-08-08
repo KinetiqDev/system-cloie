@@ -229,7 +229,7 @@ function ViewEditCilosModal({
                     key={cilo.id}
                     className="border-border bg-surface flex items-start gap-3 rounded-lg border p-3"
                   >
-                    <span className="bg-primary/10 text-primary mt-1 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                    <span className="bg-primary/10 text-link mt-1 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                       {index + 1}
                     </span>
                     <Input

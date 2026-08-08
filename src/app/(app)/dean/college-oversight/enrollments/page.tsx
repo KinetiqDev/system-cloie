@@ -320,7 +320,7 @@ function RosterLink({ periodId, assignmentId }: { periodId: string; assignmentId
   return (
     <Link
       href={`/dean/college-oversight/enrollments/roster?period=${encodeURIComponent(periodId)}&assignment=${encodeURIComponent(assignmentId)}`}
-      className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+      className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
     >
       Open roster
       <ArrowUpRight aria-hidden="true" />
@@ -340,7 +340,7 @@ function EmptyPage({ heading, message }: { heading: string; message: string }) {
         <CardContent>
           <Link
             href="/dean/dashboard"
-            className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+            className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
           >
             Return to Dashboard
           </Link>

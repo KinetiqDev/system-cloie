@@ -12,7 +12,7 @@ export default async function DeanEditProgramPage({ params }: { params: Promise<
     <div className="space-y-6">
       <Link
         href="/dean/academic-structure/programs"
-        className="text-primary inline-flex min-h-11 items-center"
+        className="text-link inline-flex min-h-11 items-center"
       >
         Back to Programs
       </Link>

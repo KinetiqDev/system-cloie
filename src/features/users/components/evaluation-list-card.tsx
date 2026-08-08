@@ -63,7 +63,7 @@ export function EvaluationListCard({
           {isResuming && (
             <div className="w-full space-y-1.5 md:w-48">
               <div className="text-text-muted flex items-center justify-between text-xs font-bold">
-                <span className="text-secondary">{progress}% Complete</span>
+                <span className="text-text-secondary">{progress}% Complete</span>
               </div>
               <Progress
                 value={progress}

@@ -308,7 +308,7 @@ export function CourseAssignmentsTable({
                             ? `/course-rosters/${assignment.id}`
                             : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id)
                         }
-                        className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+                        className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
                       >
                         Open roster
                       </Link>

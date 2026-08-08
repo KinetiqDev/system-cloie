@@ -18,7 +18,7 @@ describe("Tabs", () => {
       expect(screen.getByText("One")).toHaveAttribute("data-slot", "tabs-trigger");
     });
 
-    it("uses the semantic muted foreground role for the inactive trigger text", () => {
+    it("uses the semantic secondary text role for the inactive trigger text", () => {
       render(
         <Tabs defaultValue="one">
           <TabsList>
@@ -28,7 +28,7 @@ describe("Tabs", () => {
         </Tabs>
       );
       const trigger = screen.getByText("Two");
-      expect(trigger).toHaveClass("text-muted-foreground");
+      expect(trigger).toHaveClass("text-text-secondary");
     });
 
     it("does not retain raw-theme dark palette selectors that bypass the semantic tokens", () => {

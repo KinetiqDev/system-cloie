@@ -16,11 +16,10 @@ export function DesignSystemShowcasePage() {
         <h1 className="text-heading-xl font-heading text-foreground tracking-tight">
           Design System Showcase
         </h1>
-        <p className="text-sm text-muted-foreground">
-          A protected, read-only visual reference. Every example is composed
-          from the production design system (tokens, shared primitives, and
-          centralized navigation) with static fixture data — no database
-          query, Server Action, mutation, or user data is involved.
+        <p className="text-muted-foreground text-sm">
+          A protected, read-only visual reference. Every example is composed from the production
+          design system (tokens, shared primitives, and centralized navigation) with static fixture
+          data — no database query, Server Action, mutation, or user data is involved.
         </p>
       </header>
 
@@ -31,7 +30,7 @@ export function DesignSystemShowcasePage() {
             <li key={section.id}>
               <a
                 href={`#${section.id}`}
-                className="text-sm text-primary underline-offset-4 hover:underline"
+                className="text-link text-sm underline-offset-4 hover:underline"
               >
                 {section.title}
               </a>

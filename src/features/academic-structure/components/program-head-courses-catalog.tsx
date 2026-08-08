@@ -472,7 +472,7 @@ export function ProgramHeadCoursesCatalog({
         <div>
           <h1 className="font-heading text-text-primary text-2xl font-black">Courses</h1>
           <div className="mt-2 flex items-center gap-3">
-            <span className="font-heading text-primary text-xl font-medium">{programLabel}</span>
+            <span className="font-heading text-link text-xl font-medium">{programLabel}</span>
             <span className="bg-border-strong h-1.5 w-1.5 rounded-full" />
             <span className="text-body-md text-text-muted">
               Manage courses for this program only

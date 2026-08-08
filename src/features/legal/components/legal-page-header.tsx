@@ -2,16 +2,16 @@ import type { LegalDocument } from "../types";
 
 export function LegalPageHeader({ document }: { document: LegalDocument }) {
   return (
-    <header className="border-b border-border/80 bg-background">
+    <header className="border-border/80 bg-background border-b">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="max-w-3xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+          <p className="text-link mb-3 text-sm font-semibold tracking-[0.16em] uppercase">
             System CLOIE legal document
           </p>
-          <h1 className="text-display-sm font-bold tracking-tight text-text-primary sm:text-display-md">
+          <h1 className="text-heading-xl text-text-primary sm:text-display-md font-bold tracking-tight">
             {document.title}
           </h1>
-          <p className="mt-5 max-w-2xl text-body-lg leading-8 text-text-secondary">
+          <p className="text-body-lg text-text-secondary mt-5 max-w-2xl leading-8">
             {document.description}
           </p>
         </div>
@@ -23,16 +23,16 @@ export function LegalPageHeader({ document }: { document: LegalDocument }) {
         </div>
         <dl className="grid gap-4 text-sm sm:grid-cols-3">
           <div>
-            <dt className="font-semibold text-text-primary">Version</dt>
-            <dd className="mt-1 text-text-secondary">{document.version}</dd>
+            <dt className="text-text-primary font-semibold">Version</dt>
+            <dd className="text-text-secondary mt-1">{document.version}</dd>
           </div>
           <div>
-            <dt className="font-semibold text-text-primary">Effective date</dt>
-            <dd className="mt-1 text-text-secondary">{document.effectiveDate}</dd>
+            <dt className="text-text-primary font-semibold">Effective date</dt>
+            <dd className="text-text-secondary mt-1">{document.effectiveDate}</dd>
           </div>
           <div>
-            <dt className="font-semibold text-text-primary">Last updated</dt>
-            <dd className="mt-1 text-text-secondary">{document.lastUpdated}</dd>
+            <dt className="text-text-primary font-semibold">Last updated</dt>
+            <dd className="text-text-secondary mt-1">{document.lastUpdated}</dd>
           </div>
         </dl>
       </div>
