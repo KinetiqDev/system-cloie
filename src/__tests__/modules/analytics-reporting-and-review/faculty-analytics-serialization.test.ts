@@ -84,6 +84,11 @@ describe("faculty analytics serialization", () => {
                   response_id: "response-2",
                   text_content: "Practical examples supported learning",
                 },
+                {
+                  id: "qualitative-item-blank",
+                  response_id: "response-2",
+                  text_content: "   ",
+                },
               ],
             },
           },

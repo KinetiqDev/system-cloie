@@ -144,6 +144,7 @@ describe("getCourseBoundReviewDetail", () => {
                 section_key: "teaching",
                 text_content: "Very organized lectures",
               },
+              { prompt_key: "feedback", section_key: "teaching", text_content: "   " },
             ],
             quant_items: [
               { item_key: "clarity", rating_value: 4, section_key: "teaching" },

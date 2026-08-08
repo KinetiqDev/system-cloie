@@ -266,7 +266,7 @@ async function getProgramHeadDashboardForScope(
       pendingResponses: centralPendingAssignments + courseBoundPendingAssignments,
     },
     stakeholderMeans,
-    qualitativeItemCount: qualResponses.length,
+    qualitativeItemCount: texts.length,
     wordCloudTokens,
   };
 }

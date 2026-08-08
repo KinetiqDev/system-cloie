@@ -263,7 +263,7 @@ async function readFacultyDashboardVisualizations(
 
   return {
     courseMeans,
-    qualitativeItemCount: qualResponses.length,
+    qualitativeItemCount: texts.length,
     wordCloudTokens: prepareFacultyWordCloudTokens(buildReviewWordCloudTokens(texts)),
   };
 }

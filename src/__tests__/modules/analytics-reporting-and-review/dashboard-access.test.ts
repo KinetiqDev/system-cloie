@@ -306,6 +306,7 @@ describe("analytics dashboard access", () => {
     ]);
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
       { text_content: "Private respondent@example.com student123 comment" },
+      { text_content: "   " },
     ]);
     buildWordCloudTokensMock.mockReturnValue([
       { text: "private", value: 1 },
@@ -318,6 +319,7 @@ describe("analytics dashboard access", () => {
       courseMeans: [
         { courseCode: "IT101", courseTitle: "Foundations", mean: 4.5, responseCount: 1 },
       ],
+      qualitativeItemCount: 1,
       wordCloudTokens: [{ text: "private", value: 1 }],
     });
     expect(JSON.stringify(result)).not.toContain("Private respondent comment");
@@ -373,7 +375,7 @@ describe("analytics dashboard access", () => {
     expect(result).not.toBeNull();
     if (!result) return;
 
-    expect(result.qualitativeItemCount).toBe(2);
+    expect(result.qualitativeItemCount).toBe(1);
     expect(result.wordCloudTokens).toEqual([{ text: "private", value: 1 }]);
     expect(buildWordCloudTokensMock).toHaveBeenCalledWith([
       "Private respondent@example.com student123 comment",
