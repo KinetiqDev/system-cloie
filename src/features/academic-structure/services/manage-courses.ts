@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import type { CreateCourseInput, UpdateCourseInput } from "../schemas/course";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
-import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+import { isForeignKeyConstraintError, isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
 async function ensureCourseScopeContext(input: {
   course_scope: CourseScope;
@@ -228,7 +228,18 @@ export async function deleteCourse(id: string): Promise<ServiceResult> {
     };
   }
 
-  await prisma.course.delete({ where: { id } });
+  try {
+    await prisma.course.delete({ where: { id } });
+  } catch (error) {
+    if (isForeignKeyConstraintError(error)) {
+      return {
+        success: false,
+        error: "Cannot delete course; it has existing assignments. Deactivate it instead.",
+      };
+    }
+
+    throw error;
+  }
 
   return { success: true, data: undefined };
 }

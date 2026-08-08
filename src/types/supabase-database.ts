@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.15"
+  }
   public: {
     Tables: {
       academic_period_readiness_snapshots: {
@@ -1473,39 +1478,64 @@ export type Database = {
       }
       school_years: {
         Row: {
+          active_semester:
+            | Database["public"]["Enums"]["academic_semester"]
+            | null
+          active_semester_activated_at: string | null
+          active_semester_activated_by: string | null
           archived_at: string | null
           archived_by: string | null
           code: string
           created_at: string
           end_date: string | null
           id: string
+          is_active: boolean
           is_archived: boolean
           start_date: string | null
           updated_at: string
         }
         Insert: {
+          active_semester?:
+            | Database["public"]["Enums"]["academic_semester"]
+            | null
+          active_semester_activated_at?: string | null
+          active_semester_activated_by?: string | null
           archived_at?: string | null
           archived_by?: string | null
           code: string
           created_at?: string
           end_date?: string | null
           id?: string
+          is_active?: boolean
           is_archived?: boolean
           start_date?: string | null
           updated_at: string
         }
         Update: {
+          active_semester?:
+            | Database["public"]["Enums"]["academic_semester"]
+            | null
+          active_semester_activated_at?: string | null
+          active_semester_activated_by?: string | null
           archived_at?: string | null
           archived_by?: string | null
           code?: string
           created_at?: string
           end_date?: string | null
           id?: string
+          is_active?: boolean
           is_archived?: boolean
           start_date?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "school_years_active_semester_activated_by_fkey"
+            columns: ["active_semester_activated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "school_years_archived_by_fkey"
             columns: ["archived_by"]
@@ -1915,4 +1945,3 @@ export const Constants = {
     },
   },
 } as const
-
