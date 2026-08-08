@@ -1486,6 +1486,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "layout"
   },
   {
+    "path": "src/components/layout/navigation-row.tsx",
+    "disposition": "task",
+    "taskId": 11,
+    "category": "layout"
+  },
+  {
     "path": "src/components/layout/operational-route-error.tsx",
     "disposition": "task",
     "taskId": 25,

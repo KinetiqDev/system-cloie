@@ -4,7 +4,9 @@ import { ComponentStateMatrix } from "./component-state-matrix";
 import { DataShowcase } from "./data-showcase";
 import { FeedbackAndStateShowcase } from "./feedback-and-state-showcase";
 import { FormControlsShowcase } from "./form-controls-showcase";
+import { NavigationShowcase } from "./navigation-showcase";
 import { OverlayAndFeedbackShowcase } from "./overlay-and-feedback-showcase";
+import { ResponsiveShowcase } from "./responsive-showcase";
 import { TableSelectionShowcase } from "./table-selection-showcase";
 import { TokenReference } from "./token-reference";
 
@@ -78,5 +80,19 @@ export const SHOWCASE_SECTIONS: readonly ShowcaseSectionEntry[] = [
     description:
       "Dialog, alert dialog, sheet, drawer, popover, dropdown menu, tooltip, and the single toast contract with semantic scrim and focus behavior.",
     component: OverlayAndFeedbackShowcase,
+  },
+  {
+    id: "navigation",
+    title: "Role-aware navigation",
+    description:
+      "The real centralized role declarations and the shared navigation presentation rows: hover, active, focus, selected, pending, and the interactive admin drawer.",
+    component: NavigationShowcase,
+  },
+  {
+    id: "responsive",
+    title: "Responsive behavior",
+    description:
+      "Desktop sidebar, Dean tablet rail, and mobile drawer plus bottom navigation rendered from the real presentation rows at each breakpoint.",
+    component: ResponsiveShowcase,
   },
 ];
