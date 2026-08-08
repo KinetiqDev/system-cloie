@@ -33,7 +33,7 @@ PRODUCTION_EVIDENCE_BASE_URL="<verified-primary-production-origin>" \
 
 1. Confirm task 26 completion evidence includes the approved Light/Dark/System viewport matrix, accessibility checks, raw-color allowlist, type-scale audit, focused tests, `pnpm lint`, `pnpm test`, `pnpm build`, effective CSP check, and protected deployment-boundary checks.
 2. In a fresh browser context with OS Dark selected, verify the primary Production target remains Light before paint, has no appearance selector, and returns not-found UI for Settings Appearance.
-3. Record the required redacted evidence in a comment on [GitHub issue #225](https://github.com/KinetiqDev/system-cloie/issues/225): deployment identifier, pre-activation forced-Light result, activation timestamp, post-activation selector and OS-Dark result, boundary-check result, and rollback readiness. Link to approved private trace storage only when needed; do not commit traces or screenshots.
+3. Record the required redacted evidence in a comment on [GitHub issue #225](https://github.com/Tugeru/project-cloie/issues/225): deployment identifier, pre-activation forced-Light result, activation timestamp, post-activation selector and OS-Dark result, boundary-check result, and rollback readiness. Link to approved private trace storage only when needed; do not commit traces or screenshots.
 
 ## Activation Procedure
 
@@ -59,4 +59,4 @@ PRODUCTION_EVIDENCE_BASE_URL="<verified-primary-production-origin>" \
 
 ## Evidence Limits
 
-Use [GitHub issue #225](https://github.com/KinetiqDev/system-cloie/issues/225) as the redacted activation evidence record. Include deployment identifier, pre-activation result, activation timestamp, post-activation result, boundary-check result, and rollback readiness. Never record project-reference values, environment values, credentials, cookies, tokens, account identifiers, headers, private response bodies, or screenshots containing private data. Store trace files only in approved private storage and link to them without publishing sensitive content.
+Use [GitHub issue #225](https://github.com/Tugeru/project-cloie/issues/225) as the redacted activation evidence record. Include deployment identifier, pre-activation result, activation timestamp, post-activation result, boundary-check result, and rollback readiness. Never record project-reference values, environment values, credentials, cookies, tokens, account identifiers, headers, private response bodies, or screenshots containing private data. Store trace files only in approved private storage and link to them without publishing sensitive content.

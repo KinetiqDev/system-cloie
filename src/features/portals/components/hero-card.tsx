@@ -28,7 +28,7 @@ export function HeroCard({
           <Button
             render={<Link href={evaluationsHref} />}
             variant="outline"
-            className="border-on-primary text-on-primary hover:bg-on-primary/10 focus-visible:border-on-primary focus-visible:ring-on-primary/50 font-semibold"
+            className="border-on-primary text-on-primary hover:bg-primary-hover hover:text-on-primary focus-visible:border-on-primary focus-visible:ring-on-primary/50 bg-transparent font-semibold"
           >
             My Evaluations
           </Button>
