@@ -306,6 +306,7 @@ describe("analytics dashboard access", () => {
     ]);
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
       { text_content: "Private respondent@example.com student123 comment" },
+      { text_content: "   " },
     ]);
     buildWordCloudTokensMock.mockReturnValue([
       { text: "private", value: 1 },
@@ -318,11 +319,16 @@ describe("analytics dashboard access", () => {
       courseMeans: [
         { courseCode: "IT101", courseTitle: "Foundations", mean: 4.5, responseCount: 1 },
       ],
+      qualitativeItemCount: 1,
       wordCloudTokens: [{ text: "private", value: 1 }],
     });
     expect(JSON.stringify(result)).not.toContain("Private respondent comment");
     expect(JSON.stringify(result)).not.toContain("faculty-1");
-    expect(Object.keys(result ?? {})).toEqual(["courseMeans", "wordCloudTokens"]);
+    expect(Object.keys(result ?? {})).toEqual([
+      "courseMeans",
+      "qualitativeItemCount",
+      "wordCloudTokens",
+    ]);
     expect(Object.keys(result?.courseMeans[0] ?? {})).toEqual([
       "courseCode",
       "courseTitle",
@@ -333,6 +339,65 @@ describe("analytics dashboard access", () => {
     expect(JSON.stringify(result)).not.toContain("respondent@example.com");
     expect(JSON.stringify(result)).not.toContain("student123");
     expect(buildWordCloudTokensMock).toHaveBeenCalledWith(["Private comment"]);
+  });
+
+  it("returns aggregate-only Program Head visualization data without raw qualitative text", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "program-head-1",
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+    });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "program-head-1",
+        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
+        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
+      },
+    });
+    prismaMock.centralDeployment.count.mockResolvedValue(0);
+    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
+    prismaMock.response.count.mockResolvedValue(0);
+    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
+    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
+      _avg: { rating_value: null },
+    });
+    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
+    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
+      { text_content: "Private respondent@example.com student123 comment" },
+      { text_content: "   " },
+    ]);
+    countEligibleMock.mockResolvedValue(0);
+    buildWordCloudTokensMock.mockReturnValue([{ text: "private", value: 1 }]);
+
+    const result = await getProgramHeadDashboard("program-1");
+
+    expect(result).not.toBeNull();
+    if (!result) return;
+
+    expect(result.qualitativeItemCount).toBe(1);
+    expect(result.wordCloudTokens).toEqual([{ text: "private", value: 1 }]);
+    expect(buildWordCloudTokensMock).toHaveBeenCalledWith([
+      "Private respondent@example.com student123 comment",
+    ]);
+
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("Private respondent comment");
+    expect(serialized).not.toContain("respondent@example.com");
+    expect(serialized).not.toContain("student123");
+    expect(serialized).not.toContain("program-head-1");
+    expect(serialized).not.toContain("text_content");
+    expect(Object.keys(result).sort()).toEqual(
+      [
+        "kpi",
+        "programCode",
+        "programLabel",
+        "qualitativeItemCount",
+        "stakeholderMeans",
+        "wordCloudTokens",
+      ].sort()
+    );
+    expect(Object.keys(result.wordCloudTokens[0]).sort()).toEqual(["text", "value"]);
   });
 });
 

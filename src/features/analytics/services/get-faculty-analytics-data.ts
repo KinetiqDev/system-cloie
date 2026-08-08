@@ -136,9 +136,9 @@ export async function getFacultyAnalyticsData(
       );
 
       // Aggregate qualitative texts
-      const qualitativeTexts = submittedResponses.flatMap((r) =>
-        r.qual_items.map((item) => item.text_content)
-      );
+      const qualitativeTexts = submittedResponses
+        .flatMap((r) => r.qual_items.map((item) => item.text_content))
+        .filter((text) => text.trim().length > 0);
 
       // Calculate CILO metrics
       const ciloMetrics: FacultyCiloMetric[] = evaluation.cilo_question_bindings.map(

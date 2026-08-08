@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render } from "@testing-library/react";
 
-const { notFoundMock, dashboardMock } = vi.hoisted(() => ({
+const { notFoundMock, dashboardMock, wordCloudPropsMock } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),
   dashboardMock: vi.fn(),
+  wordCloudPropsMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
@@ -15,7 +17,10 @@ vi.mock("@/features/analytics/components/stakeholder-mean-pie-chart", () => ({
   StakeholderMeanPieChart: () => null,
 }));
 vi.mock("@/features/analytics/components/qualitative-word-cloud", () => ({
-  QualitativeWordCloud: () => null,
+  QualitativeWordCloud: (props: { tokens: unknown[]; responseCount: number }) => {
+    wordCloudPropsMock(props);
+    return null;
+  },
 }));
 
 describe("selected Program dashboard route", () => {
@@ -27,6 +32,7 @@ describe("selected Program dashboard route", () => {
       kpi: { activeDeployments: 0, totalResponses: 0, overallMean: null, pendingResponses: 0 },
       stakeholderMeans: [],
       wordCloudTokens: [],
+      qualitativeItemCount: 2,
     });
   });
 
@@ -36,6 +42,19 @@ describe("selected Program dashboard route", () => {
     await Page({ params: Promise.resolve({ programId: "program-2" }) });
 
     expect(dashboardMock).toHaveBeenCalledWith("program-2");
+  });
+
+  it("passes the qualitative response count to the word cloud", async () => {
+    const Page = await loadPage();
+
+    const page = await Page({ params: Promise.resolve({ programId: "program-2" }) });
+    render(page);
+
+    expect(wordCloudPropsMock).toHaveBeenCalledWith({
+      responseCount: 2,
+      title: "Qualitative Response Insights",
+      tokens: [],
+    });
   });
 
   it("renders no dashboard data when the public dashboard service denies a selected Program", async () => {

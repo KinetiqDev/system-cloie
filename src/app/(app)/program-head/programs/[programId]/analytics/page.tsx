@@ -34,7 +34,11 @@ export default async function SelectedProgramAnalyticsPage({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <MeanBarChart title="Mean Attainment by Stakeholder" data={stakeholderMeanData} />
-        <QualitativeWordCloud title="Qualitative Response Insights" tokens={dashboard.wordCloudTokens} />
+        <QualitativeWordCloud
+          title="Qualitative Response Insights"
+          tokens={dashboard.wordCloudTokens}
+          responseCount={dashboard.qualitativeItemCount}
+        />
       </div>
     </div>
   );

@@ -235,3 +235,28 @@ export const SHOWCASE_CHART_PIE: readonly ShowcaseChartPieSlice[] = [
   { label: "Support Staff", mean: 3.94, responseCount: 27 },
   { label: "Graduate Student", mean: 4.3, responseCount: 19 },
 ];
+
+interface ShowcaseWordCloudToken {
+  text: string;
+  value: number;
+}
+
+/**
+ * Thirteen tokens over the approved five-token palette with repeated values
+ * so the word cloud exercises hatch distinction beyond five categories.
+ */
+export const SHOWCASE_WORD_CLOUD: readonly ShowcaseWordCloudToken[] = [
+  { text: "clarity", value: 12 },
+  { text: "supportive", value: 9 },
+  { text: "engaging", value: 8 },
+  { text: "organized", value: 7 },
+  { text: "feedback", value: 6 },
+  { text: "practical", value: 5 },
+  { text: "patient", value: 4 },
+  { text: "thorough", value: 4 },
+  { text: "challenging", value: 3 },
+  { text: "approachable", value: 3 },
+  { text: "structured", value: 2 },
+  { text: "interactive", value: 2 },
+  { text: "inspiring", value: 2 },
+] as const;

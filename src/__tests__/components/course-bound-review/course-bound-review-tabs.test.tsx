@@ -31,11 +31,13 @@ vi.mock("@/features/analytics/components/qualitative-word-cloud", () => ({
   QualitativeWordCloud: ({
     title,
     tokens,
+    responseCount,
   }: {
     title: string;
     tokens: Array<{ text: string; value: number }>;
+    responseCount?: number;
   }) => {
-    qualitativeWordCloudMock({ title, tokens });
+    qualitativeWordCloudMock({ title, tokens, responseCount });
     return <div>Word cloud: {title}</div>;
   },
 }));
@@ -59,6 +61,7 @@ const detail: CourseBoundReviewDetail = {
   ],
   responseCount: 1,
   reviewerRole: "FACULTY",
+  qualitativeItemCount: 2,
   sections: [
     {
       id: "teaching",
@@ -118,6 +121,7 @@ describe("CourseBoundReviewTabs", () => {
         { text: "clear", value: 3 },
         { text: "helpful", value: 2 },
       ],
+      responseCount: 2,
     });
   });
 

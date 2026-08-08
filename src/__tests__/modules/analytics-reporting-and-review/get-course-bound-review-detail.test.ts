@@ -144,6 +144,7 @@ describe("getCourseBoundReviewDetail", () => {
                 section_key: "teaching",
                 text_content: "Very organized lectures",
               },
+              { prompt_key: "feedback", section_key: "teaching", text_content: "   " },
             ],
             quant_items: [
               { item_key: "clarity", rating_value: 4, section_key: "teaching" },
@@ -199,6 +200,7 @@ describe("getCourseBoundReviewDetail", () => {
       evaluationTitle: "Post-Term CILO Evaluation Tool",
       overallMean: 3.67,
       programLabel: "BSIT",
+      qualitativeItemCount: 2,
       responseCards: [
         {
           overallMean: 3,
@@ -235,6 +237,85 @@ describe("getCourseBoundReviewDetail", () => {
         { text: "pacing", value: 1 },
       ],
     });
+  });
+
+  // fallow-ignore-next-line code-duplication
+  it("serializes the review payload aggregate-only without raw qualitative text", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.DEAN, roles: [ROLES.DEAN], userId: "dean-1" });
+    resolveReviewerProgramScopeMock.mockResolvedValue(null);
+    courseBoundEvaluationFindFirstMock.mockResolvedValue({
+      id: "eval-1",
+      term_instance: { semester: "SECOND", term: null, school_year: { code: "2025-2026" } },
+      assignments: [
+        {
+          respondent_id: "student-1",
+          response: {
+            id: "response-1",
+            qual_items: [
+              {
+                prompt_key: "feedback",
+                section_key: "teaching",
+                text_content: "Supportive examples improved practical learning",
+              },
+            ],
+            quant_items: [{ item_key: "clarity", rating_value: 4, section_key: "teaching" }],
+            submitted_at: new Date("2026-01-04T08:00:00.000Z"),
+          },
+        },
+      ],
+      cilo_question_bindings: [],
+      deadline_at: new Date("2026-01-10T00:00:00.000Z"),
+      instrument: {
+        structure_snapshot: [
+          {
+            items: [
+              { key: "clarity", kind: "quantitative", prompt: "Clarity", scale: [1, 2, 3, 4, 5] },
+              { key: "feedback", kind: "qualitative", prompt: "Feedback" },
+            ],
+            key: "teaching",
+            title: "Teaching Effectiveness",
+          },
+        ],
+        template: { name: "Post-Term CILO Evaluation Tool" },
+      },
+      course_assignment: {
+        course: { title: "Capstone 2", major: null },
+        program: { name: "BSIT" },
+      },
+    });
+
+    const result = await getCourseBoundReviewDetail("eval-1");
+    expect(result).not.toBeNull();
+    if (!result) return;
+
+    expect(Object.keys(result).sort()).toEqual(
+      [
+        "ciloMetrics",
+        "courseTitle",
+        "deadlineAt",
+        "evaluationId",
+        "evaluationTitle",
+        "overallMean",
+        "programLabel",
+        "qualitativeItemCount",
+        "responseCards",
+        "responseCount",
+        "reviewerRole",
+        "sections",
+        "termInstanceLabel",
+        "wordCloudTokens",
+      ].sort()
+    );
+    expect(
+      result.wordCloudTokens.every((token) => Object.keys(token).sort().join(",") === "text,value")
+    ).toBe(true);
+    expect(result.qualitativeItemCount).toBe(1);
+
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("Supportive examples improved practical learning");
+    expect(serialized).not.toContain("qual_items");
+    expect(serialized).not.toContain("assignments");
+    expect(serialized).not.toContain("text_content");
   });
 
   it("returns null when reviewer scope resolves to empty set", async () => {

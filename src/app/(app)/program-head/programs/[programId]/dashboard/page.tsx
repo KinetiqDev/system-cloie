@@ -38,7 +38,11 @@ export default async function SelectedProgramDashboardPage({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <StakeholderMeanPieChart data={dashboard.stakeholderMeans} />
-        <QualitativeWordCloud title="Qualitative Response Insights" tokens={dashboard.wordCloudTokens} />
+        <QualitativeWordCloud
+          title="Qualitative Response Insights"
+          tokens={dashboard.wordCloudTokens}
+          responseCount={dashboard.qualitativeItemCount}
+        />
       </div>
     </div>
   );

@@ -20,11 +20,16 @@ const QualitativeWordCloud = dynamic(
 export function FacultyDashboardVisualizations({
   courseMeans,
   wordCloudTokens,
+  qualitativeItemCount,
 }: FacultyDashboardVisualizations) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <CourseMeanPieChart data={courseMeans} />
-      <QualitativeWordCloud title="Qualitative Response Insights" tokens={wordCloudTokens} />
+      <QualitativeWordCloud
+        title="Qualitative Response Insights"
+        tokens={wordCloudTokens}
+        responseCount={qualitativeItemCount}
+      />
     </div>
   );
 }

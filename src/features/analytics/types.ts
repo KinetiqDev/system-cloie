@@ -62,6 +62,7 @@ export type CourseBoundReviewDetail = {
   responseCount: number;
   overallMean: number | null;
   reviewerRole: ReviewerRole;
+  qualitativeItemCount: number;
   ciloMetrics: CourseBoundCiloMetric[];
   sections: CourseBoundReviewSectionMetric[];
   responseCards: CourseBoundReviewResponseCard[];

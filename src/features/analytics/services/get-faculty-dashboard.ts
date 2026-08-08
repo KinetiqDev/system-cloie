@@ -30,6 +30,7 @@ export type FacultyDashboardData = {
   kpi: FacultyDashboardKPI;
   courseMeans: CourseMeanItem[];
   wordCloudTokens: WordCloudToken[];
+  qualitativeItemCount: number;
 };
 
 export type FacultyDashboardMetrics = Pick<
@@ -39,7 +40,7 @@ export type FacultyDashboardMetrics = Pick<
 
 export type FacultyDashboardVisualizations = Pick<
   FacultyDashboardData,
-  "courseMeans" | "wordCloudTokens"
+  "courseMeans" | "wordCloudTokens" | "qualitativeItemCount"
 >;
 
 type AuthorizedFacultyScope = {
@@ -262,6 +263,7 @@ async function readFacultyDashboardVisualizations(
 
   return {
     courseMeans,
+    qualitativeItemCount: texts.length,
     wordCloudTokens: prepareFacultyWordCloudTokens(buildReviewWordCloudTokens(texts)),
   };
 }

@@ -143,9 +143,9 @@ export async function getCourseBoundReviewDetail(
   const allQuantRatings = submittedResponses.flatMap((response) =>
     response.quant_items.map((item) => item.rating_value)
   );
-  const qualitativeTexts = submittedResponses.flatMap((response) =>
-    response.qual_items.map((item) => item.text_content)
-  );
+  const qualitativeTexts = submittedResponses
+    .flatMap((response) => response.qual_items.map((item) => item.text_content))
+    .filter((text) => text.trim().length > 0);
 
   const sections = (
     Array.isArray(evaluation.instrument.structure_snapshot)
@@ -236,6 +236,7 @@ export async function getCourseBoundReviewDetail(
     evaluationTitle: evaluation.deployment_name ?? evaluation.instrument.template.name,
     overallMean: mean(allQuantRatings),
     programLabel: ca.course.major?.name ?? ca.program.name,
+    qualitativeItemCount: qualitativeTexts.length,
     responseCards,
     responseCount: submittedResponses.length,
     reviewerRole,

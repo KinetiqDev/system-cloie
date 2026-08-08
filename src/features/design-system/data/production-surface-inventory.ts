@@ -1830,13 +1830,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   {
     "path": "src/features/analytics/components/faculty-dashboard-visualization-fallbacks.tsx",
     "disposition": "task",
-    "taskId": 9,
+    "taskId": 10,
     "category": "feature_component"
   },
   {
     "path": "src/features/analytics/components/faculty-dashboard-visualizations.tsx",
     "disposition": "task",
-    "taskId": 9,
+    "taskId": 10,
     "category": "feature_component"
   },
   {

@@ -1,29 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { WordCloud } from "@isoterik/react-word-cloud";
 import type { WordCloudConfig } from "@isoterik/react-word-cloud";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartPatternDefs, chartFill } from "@/components/ui/chart";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { WordCloudToken } from "@/features/analytics/types";
 
 type QualitativeWordCloudProps = {
   title: string;
   tokens: WordCloudToken[];
+  /** Number of qualitative responses the tokens were aggregated from. */
+  responseCount: number;
 };
-
-const WORD_COLORS = [
-  "#1d4ed8", // blue
-  "#059669", // emerald
-  "#d97706", // amber
-  "#dc2626", // red
-  "#7c3aed", // violet
-  "#0891b2", // cyan
-  "#c026d3", // fuchsia
-  "#ea580c", // orange
-  "#4f46e5", // indigo
-  "#15803d", // green
-  "#be185d", // pink
-  "#0d9488", // teal
-];
 
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 960;
@@ -40,7 +38,11 @@ function buildDimensions(containerWidth: number): Pick<WordCloudConfig, "height"
   return { height, width };
 }
 
-export function QualitativeWordCloud({ title, tokens }: QualitativeWordCloudProps) {
+export function QualitativeWordCloud({ title, tokens, responseCount }: QualitativeWordCloudProps) {
+  const instanceId = useId().replace(/[:]/g, "");
+  const chartId = `word-cloud-${instanceId}`;
+  const titleId = `${chartId}-title`;
+  const insightId = `${chartId}-insight`;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState<Pick<WordCloudConfig, "height" | "width">>({
     height: 320,
@@ -70,27 +72,93 @@ export function QualitativeWordCloud({ title, tokens }: QualitativeWordCloudProp
     return () => observer.disconnect();
   }, []);
 
+  if (tokens.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle id={titleId} className="text-title-sm">
+            {title}
+          </CardTitle>
+          <CardDescription>Frequent words from qualitative feedback</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Empty className="h-64">
+            <EmptyTitle>No qualitative responses yet</EmptyTitle>
+            <EmptyDescription>No qualitative response data available yet.</EmptyDescription>
+          </Empty>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalOccurrences = tokens.reduce((sum, token) => sum + token.value, 0);
+  const topToken = tokens[0];
+  const summary = `Top ${tokens.length} words from ${responseCount} qualitative ${
+    responseCount === 1 ? "response" : "responses"
+  }`;
+
   return (
-    <div className="space-y-3">
-      <h3 className="text-base font-semibold">{title}</h3>
-      {tokens.length === 0 ? (
-        <div className="border-border text-text-muted rounded-lg border border-dashed p-4 text-sm">
-          No qualitative responses yet.
+    <Card>
+      <CardHeader>
+        <CardTitle id={titleId} className="text-title-sm">
+          {title}
+        </CardTitle>
+        <CardDescription>{summary}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <div
+          role="region"
+          aria-labelledby={titleId}
+          aria-describedby={insightId}
+          className="border-border rounded-xl border p-3"
+        >
+          <svg aria-hidden="true" className="absolute h-0 w-0">
+            <ChartPatternDefs chartId={chartId} categoryCount={tokens.length} />
+          </svg>
+          <div ref={containerRef} className="flex w-full justify-center">
+            <WordCloud
+              words={tokens}
+              width={dimensions.width}
+              height={dimensions.height}
+              font="ui-sans-serif, system-ui, sans-serif"
+              fill={(_word, index) => chartFill(chartId, index)}
+              fontSize={(word) => 16 + word.value * 4}
+              rotate={() => 0}
+              enableTooltip
+            />
+          </div>
         </div>
-      ) : (
-        <div ref={containerRef} className="border-border rounded-xl border p-3">
-          <WordCloud
-            words={tokens}
-            width={dimensions.width}
-            height={dimensions.height}
-            font="ui-sans-serif, system-ui, sans-serif"
-            fill={(_word: WordCloudToken, index: number) => WORD_COLORS[index % WORD_COLORS.length]}
-            fontSize={(word) => 16 + word.value * 4}
-            rotate={() => 0}
-            enableTooltip
-          />
-        </div>
-      )}
-    </div>
+        <p id={insightId} className="text-body-sm text-text-secondary">
+          Most frequent word: {topToken.text} ({topToken.value}).
+        </p>
+        <details>
+          <summary className="text-label-sm text-text-secondary cursor-pointer">
+            View exact values
+          </summary>
+          <div className="border-border mt-3 overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Word</TableHead>
+                  <TableHead className="text-right">Count</TableHead>
+                  <TableHead className="text-right">Percentage</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tokens.map((token) => (
+                  <TableRow key={token.text}>
+                    <TableCell className="font-medium">{token.text}</TableCell>
+                    <TableCell className="text-right tabular-nums">{token.value}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {((token.value / totalOccurrences) * 100).toFixed(1)}%
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </details>
+      </CardContent>
+    </Card>
   );
 }
