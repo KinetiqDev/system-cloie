@@ -1,0 +1,81 @@
+import type {
+  AcademicSemester,
+  AcademicTerm,
+  CurriculumVersionStatus,
+  YearLevel,
+} from "@prisma/client";
+
+/**
+ * A Curriculum Version entity as displayed in lists.
+ */
+export interface CurriculumVersionItem {
+  id: string;
+  programId: string;
+  majorId: string | null;
+  code: string;
+  name: string | null;
+  status: CurriculumVersionStatus;
+  effectiveFromSchoolYearId: string | null;
+  publishedAt: Date | null;
+  publishedBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * A single Course placement within a Curriculum Version.
+ */
+export interface CurriculumCourseItem {
+  id: string;
+  curriculumVersionId: string;
+  courseId: string;
+  yearLevel: YearLevel;
+  semester: AcademicSemester;
+  term: AcademicTerm | null;
+  courseCodeSnapshot: string;
+  courseTitleSnapshot: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * A Curriculum Version with its courses and program/major context.
+ */
+export interface CurriculumVersionDetail extends CurriculumVersionItem {
+  program: { id: string; code: string; name: string } | null;
+  major: { id: string; name: string } | null;
+  courses: CurriculumCourseItem[];
+}
+
+/**
+ * Input for creating a DRAFT Curriculum Version.
+ */
+export interface CreateCurriculumVersionInput {
+  programId: string;
+  majorId?: string | null;
+  code: string;
+  name?: string | null;
+  effectiveFromSchoolYearId?: string | null;
+}
+
+/**
+ * Input for adding a Course placement to a DRAFT Curriculum Version.
+ */
+export interface AddCurriculumCourseInput {
+  curriculumVersionId: string;
+  courseId: string;
+  yearLevel: YearLevel;
+  semester: AcademicSemester;
+  term?: AcademicTerm | null;
+}
+
+/**
+ * Input for updating a Course placement within a DRAFT Curriculum Version.
+ * The course row is identified by the `id` parameter of
+ * {@link updateCurriculumCourse}.
+ */
+export interface UpdateCurriculumCourseInput {
+  yearLevel?: YearLevel;
+  semester?: AcademicSemester;
+  term?: AcademicTerm | null;
+}
