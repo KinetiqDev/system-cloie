@@ -44,6 +44,17 @@ const YEAR_LEVEL_PROMOTION: Record<YearLevel, YearLevel | null> = {
   FOURTH_YEAR: null, // Graduating
 };
 
+/**
+ * The year level for the target term: carried unchanged within the same
+ * School Year, promoted (1st->2nd->3rd->4th->graduating) across School Years.
+ */
+function nextYearLevelFor(
+  currentYearLevel: YearLevel,
+  sameSchoolYear: boolean
+): YearLevel | null {
+  return sameSchoolYear ? currentYearLevel : YEAR_LEVEL_PROMOTION[currentYearLevel];
+}
+
 // ─── Main Service ──────────────────────────────────────────────────────────────
 
 /**
@@ -137,9 +148,7 @@ export async function runTermRollover({
 
   for (const enrollment of sourceEnrollments) {
     const student = enrollment.student;
-    const nextYearLevel = sameSchoolYear
-      ? enrollment.year_level
-      : YEAR_LEVEL_PROMOTION[enrollment.year_level];
+    const nextYearLevel = nextYearLevelFor(enrollment.year_level, sameSchoolYear);
 
     // Check for graduating students (4th year)
     if (nextYearLevel === null) {
@@ -307,9 +316,7 @@ export async function previewTermRollover({
 
   for (const enrollment of sourceEnrollments) {
     const student = enrollment.student;
-    const nextYearLevel = sameSchoolYear
-      ? enrollment.year_level
-      : YEAR_LEVEL_PROMOTION[enrollment.year_level];
+    const nextYearLevel = nextYearLevelFor(enrollment.year_level, sameSchoolYear);
 
     if (nextYearLevel === null) {
       exceptions.push({
