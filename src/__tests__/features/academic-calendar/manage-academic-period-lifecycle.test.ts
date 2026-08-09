@@ -102,6 +102,8 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
       id: "p-new",
       end_date: null,
       status: "PLANNED",
+      semester: "FIRST",
+      school_year: { is_archived: false, is_active: true, active_semester: "FIRST" },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.academicTermInstance.updateMany).mockResolvedValue({ count: 1 } as never);
@@ -125,6 +127,8 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
       id: "p-new",
       end_date: null,
       status: "PLANNED",
+      semester: "FIRST",
+      school_year: { is_archived: false, is_active: true, active_semester: "FIRST" },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({
       id: "p-prior",
@@ -153,6 +157,8 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
       id: "p-new",
       end_date: null,
       status: "PLANNED",
+      semester: "FIRST",
+      school_year: { is_archived: false, is_active: true, active_semester: "FIRST" },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({
       id: "p-prior",
@@ -219,6 +225,59 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
     expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
       activePeriodChanged: false,
     });
+  });
+
+  it("invalidates the active-period projection when an ACTIVE period is cancelled", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "p-active",
+      end_date: new Date("2026-05-31"),
+      status: "ACTIVE",
+    } as never);
+    vi.mocked(prisma.academicTermInstance.updateMany).mockResolvedValue({ count: 1 } as never);
+
+    const r = await transitionPeriodStatus("p-active", "CANCELLED");
+
+    expect(r.success).toBe(true);
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
+      activePeriodChanged: true,
+    });
+  });
+
+  it("rejects activating a period in a school year that is not active", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "p-new",
+      end_date: null,
+      status: "PLANNED",
+      semester: "FIRST",
+      school_year: { is_archived: false, is_active: false, active_semester: "FIRST" },
+    } as never);
+
+    const r = await transitionPeriodStatus("p-new", "ACTIVE");
+    expect(r).toEqual({
+      success: false,
+      error: "Cannot activate a term in a school year that is not active",
+    });
+    expect(prisma.academicTermInstance.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects activating a period whose semester does not match the active semester", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "p-new",
+      end_date: null,
+      status: "PLANNED",
+      semester: "SECOND",
+      school_year: { is_archived: false, is_active: true, active_semester: "FIRST" },
+    } as never);
+
+    const r = await transitionPeriodStatus("p-new", "ACTIVE");
+    expect(r).toEqual({
+      success: false,
+      error: "Period semester does not match the school year's active semester",
+    });
+    expect(prisma.academicTermInstance.updateMany).not.toHaveBeenCalled();
   });
 
   it("rejects stale transitions without overwriting the current status", async () => {

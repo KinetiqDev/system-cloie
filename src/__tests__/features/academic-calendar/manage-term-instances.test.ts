@@ -1,21 +1,28 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { AcademicSemester } from "@prisma/client";
 import {
   deleteTermInstance,
   updateTermInstance,
   verifySecretaryAccess,
+  setActiveTermInstance,
 } from "@/features/academic-calendar/services/manage-term-instances";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
 
 const invalidateAcademicPeriodReadModelTagsMock = vi.hoisted(() => vi.fn());
+const transitionPeriodStatusMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/features/auth/services/resolve-auth-session");
+vi.mock("@/features/academic-calendar/services/manage-academic-period-lifecycle", () => ({
+  transitionPeriodStatus: transitionPeriodStatusMock,
+}));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     academicTermInstance: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
@@ -369,5 +376,91 @@ describe("manage-term-instances / deleteTermInstance", () => {
 
     expect(result.success).toBe(false);
     expect(prisma.academicTermInstance.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("manage-term-instances / setActiveTermInstance hierarchy validation", () => {
+  const mockSecretarySession = createAuthSessionSnapshot({
+    userId: "sec-1",
+    email: "secretary@test.com",
+    roles: [ROLES.SECRETARY],
+  });
+
+  let prisma: Awaited<typeof import("@/lib/db/prisma")>["prisma"];
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockSecretarySession);
+    prisma = (await import("@/lib/db/prisma")).prisma;
+  });
+
+  it("rejects activating a term in a school year that is not active", async () => {
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "ti-1",
+      semester: AcademicSemester.FIRST,
+      school_year: {
+        id: "sy-1",
+        code: "2026-2027",
+        is_archived: false,
+        is_active: false,
+        active_semester: AcademicSemester.FIRST,
+      },
+    } as never);
+
+    const result = await setActiveTermInstance("ti-1");
+
+    expect(result).toEqual({
+      success: false,
+      error: "Cannot activate a term in a school year that is not active",
+    });
+    expect(transitionPeriodStatusMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects activating a term whose semester does not match the active semester", async () => {
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "ti-1",
+      semester: AcademicSemester.SECOND,
+      school_year: {
+        id: "sy-1",
+        code: "2026-2027",
+        is_archived: false,
+        is_active: true,
+        active_semester: AcademicSemester.FIRST,
+      },
+    } as never);
+
+    const result = await setActiveTermInstance("ti-1");
+
+    expect(result).toEqual({
+      success: false,
+      error: "Period semester does not match the school year's active semester",
+    });
+    expect(transitionPeriodStatusMock).not.toHaveBeenCalled();
+  });
+
+  it("delegates to the lifecycle transition when the hierarchy checks pass", async () => {
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "ti-1",
+      semester: AcademicSemester.FIRST,
+      term: "FIRST_TERM",
+      school_year: {
+        id: "sy-1",
+        code: "2026-2027",
+        is_archived: false,
+        is_active: true,
+        active_semester: AcademicSemester.FIRST,
+      },
+    } as never);
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(null);
+    vi.mocked(transitionPeriodStatusMock).mockResolvedValue({
+      success: true,
+      data: { id: "ti-1", status: "ACTIVE" },
+    });
+    vi.mocked(prisma.academicTermInstance.findMany).mockResolvedValue([] as never);
+
+    const result = await setActiveTermInstance("ti-1");
+
+    expect(result.success).toBe(true);
+    expect(transitionPeriodStatusMock).toHaveBeenCalledWith("ti-1", "ACTIVE");
   });
 });

@@ -133,7 +133,7 @@ export async function setActiveTermInstance(
     where: { id: termInstanceId },
     include: {
       school_year: {
-        select: { is_archived: true, code: true, id: true },
+        select: { is_archived: true, is_active: true, active_semester: true, code: true, id: true },
       },
     },
   });
@@ -144,6 +144,20 @@ export async function setActiveTermInstance(
 
   if (termInstance.school_year.is_archived) {
     return { success: false, error: "Cannot activate a term in an archived school year" };
+  }
+
+  if (!termInstance.school_year.is_active) {
+    return {
+      success: false,
+      error: "Cannot activate a term in a school year that is not active",
+    };
+  }
+
+  if (termInstance.semester !== termInstance.school_year.active_semester) {
+    return {
+      success: false,
+      error: "Period semester does not match the school year's active semester",
+    };
   }
 
   const priorActive = await prisma.academicTermInstance.findFirst({

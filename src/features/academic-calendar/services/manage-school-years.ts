@@ -1,11 +1,16 @@
 "use server";
 
-import { Prisma, AcademicPeriodStatus } from "@prisma/client";
+import { Prisma, AcademicPeriodStatus, AcademicSemester } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { CANONICAL_TERMS, formatSchoolYearCode } from "@/lib/constants/academic-period";
-import { canArchiveSchoolYear } from "../policies";
+import {
+  canActivateSchoolYear,
+  canArchiveSchoolYear,
+  canDeactivateSchoolYear,
+  canSetActiveSemester,
+} from "../policies";
 import type {
   CreateSchoolYearInput,
   UpdateSchoolYearInput,
@@ -15,13 +20,13 @@ import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
 
 /**
- * Verify admin authentication.
+ * Verify secretary authentication through the active account role.
  */
 async function verifyAdminAccess(): Promise<ServiceResult<{ userId: string }>> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.SECRETARY)) {
-    return { success: false, error: "Admin access required" };
+  if (!session || session.activeRole !== ROLES.SECRETARY) {
+    return { success: false, error: "Secretary access required" };
   }
 
   return { success: true, data: { userId: session.userId } };
@@ -163,6 +168,9 @@ export async function updateSchoolYear(
 
 /**
  * Archive a School Year.
+ * Rejects the active School Year and any School Year containing the active
+ * period. All reads, checks, and the write run in one Serializable transaction
+ * so a concurrent activation cannot leave an archived School Year active.
  */
 export async function archiveSchoolYear(
   id: string
@@ -170,47 +178,328 @@ export async function archiveSchoolYear(
   const auth = await verifyAdminAccess();
   if (!auth.success) return auth;
 
-  const schoolYear = await prisma.schoolYear.findUnique({
-    where: { id },
-    include: {
-      term_instances: {
-        select: { id: true },
+  try {
+    const result = await prisma.$transaction(
+      async (tx): Promise<ServiceResult<{ id: string }>> => {
+        const schoolYear = await tx.schoolYear.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            is_archived: true,
+            is_active: true,
+            term_instances: { select: { id: true } },
+          },
+        });
+
+        if (!schoolYear) {
+          return { success: false, error: "School year not found" };
+        }
+
+        if (schoolYear.is_active) {
+          return {
+            success: false,
+            error: "Cannot archive the active school year; deactivate it first",
+          };
+        }
+
+        const activeTerm = await tx.academicTermInstance.findFirst({
+          where: { school_year_id: id, status: "ACTIVE" },
+          select: { id: true },
+        });
+
+        const termInstanceIds = schoolYear.term_instances.map((t) => t.id);
+        const check = canArchiveSchoolYear(
+          id,
+          activeTerm?.id ?? null,
+          schoolYear.is_archived,
+          termInstanceIds
+        );
+
+        if (!check.allowed) {
+          return { success: false, error: check.reason };
+        }
+
+        await tx.schoolYear.update({
+          where: { id },
+          data: {
+            is_archived: true,
+            archived_by: auth.data.userId,
+            archived_at: new Date(),
+          },
+        });
+
+        return { success: true, data: { id } };
       },
-    },
-  });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
 
-  if (!schoolYear) {
-    return { success: false, error: "School year not found" };
+    if (result.success) {
+      invalidateAcademicPeriodReadModelTags();
+    }
+
+    return result;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      return { success: false, error: "School year changed; retry the archive" };
+    }
+    throw error;
   }
-
-  // Get active term instance to check constraint
-  const activeTerm = await prisma.academicTermInstance.findFirst({
-    where: { status: "ACTIVE" },
-    select: { id: true },
-  });
-
-  const termInstanceIds = schoolYear.term_instances.map((t) => t.id);
-  const check = canArchiveSchoolYear(
-    id,
-    activeTerm?.id ?? null,
-    schoolYear.is_archived,
-    termInstanceIds
-  );
-
-  if (!check.allowed) {
-    return { success: false, error: check.reason };
-  }
-
-  const archived = await prisma.schoolYear.update({
-    where: { id },
-    data: {
-      is_archived: true,
-      archived_by: auth.data.userId,
-      archived_at: new Date(),
-    },
-  });
-
-  invalidateAcademicPeriodReadModelTags();
-  return { success: true, data: { id: archived.id } };
 }
 
+/**
+ * Activate a School Year.
+ *
+ * A School Year must have an active_semester before it can be activated: it
+ * either already carries one, or the caller supplies it via `semester` and it
+ * is persisted atomically with the activation (the database CHECK constraint
+ * forbids an inactive School Year holding an active_semester, so the semester
+ * cannot be set ahead of time). Any prior active School Year is deactivated
+ * atomically inside the same Serializable transaction; the one-active-school-
+ * year partial unique index in Postgres is the final authority under
+ * concurrency (P2002 on a loser).
+ *
+ * All prerequisite reads and writes run inside the transaction so a concurrent
+ * archive or deactivation cannot leave an invalid state behind.
+ */
+export async function activateSchoolYear(
+  schoolYearId: string,
+  semester?: AcademicSemester
+): Promise<ServiceResult<{ id: string }>> {
+  const auth = await verifyAdminAccess();
+  if (!auth.success) return auth;
+
+  try {
+    const result = await prisma.$transaction(
+      async (tx): Promise<ServiceResult<{ id: string }>> => {
+        const existing = await tx.schoolYear.findUnique({
+          where: { id: schoolYearId },
+          select: { id: true, is_active: true, is_archived: true, active_semester: true },
+        });
+
+        if (!existing) {
+          return { success: false, error: "School year not found" };
+        }
+
+        if (existing.is_archived) {
+          return { success: false, error: "Cannot activate an archived school year" };
+        }
+
+        const effectiveSemester = existing.active_semester ?? semester ?? null;
+        const check = canActivateSchoolYear(existing.is_active, effectiveSemester);
+        if (!check.allowed) {
+          return { success: false, error: check.reason };
+        }
+
+        // Replacing the active School Year must not silently deactivate one
+        // that still contains an ACTIVE period — same guard as deactivation.
+        const priorActiveWithPeriod = await tx.academicTermInstance.findFirst({
+          where: {
+            status: "ACTIVE",
+            school_year: { is_active: true, id: { not: schoolYearId } },
+          },
+          select: { id: true },
+        });
+
+        if (priorActiveWithPeriod) {
+          return {
+            success: false,
+            error:
+              "Cannot activate a school year while the current active school year contains an active period",
+          };
+        }
+
+        await tx.schoolYear.updateMany({
+          where: { is_active: true, id: { not: schoolYearId } },
+          data: {
+            is_active: false,
+            active_semester: null,
+            active_semester_activated_by: null,
+            active_semester_activated_at: null,
+          },
+        });
+
+        await tx.schoolYear.update({
+          where: { id: schoolYearId },
+          data: {
+            is_active: true,
+            ...(existing.active_semester === null && effectiveSemester !== null
+              ? {
+                  active_semester: effectiveSemester,
+                  active_semester_activated_by: auth.data.userId,
+                  active_semester_activated_at: new Date(),
+                }
+              : {}),
+          },
+        });
+
+        return { success: true, data: { id: schoolYearId } };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    if (result.success) {
+      invalidateAcademicPeriodReadModelTags({ activePeriodChanged: true });
+    }
+
+    return result;
+  } catch (error) {
+    if (
+      isUniqueConstraintError(error) ||
+      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
+    ) {
+      return {
+        success: false,
+        error: "Another school year is already active; retry the activation",
+      };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Deactivate a School Year. Rejects while any of its AcademicTermInstances is
+ * ACTIVE. On success clears active_semester and its audit fields (the database
+ * CHECK constraint requires active_semester IS NULL when is_active = false).
+ *
+ * The active-period check and the state flip run in one Serializable
+ * transaction so a concurrent period activation cannot leave an inactive
+ * School Year holding an ACTIVE period.
+ */
+export async function deactivateSchoolYear(
+  schoolYearId: string
+): Promise<ServiceResult<{ id: string }>> {
+  const auth = await verifyAdminAccess();
+  if (!auth.success) return auth;
+
+  try {
+    const result = await prisma.$transaction(
+      async (tx): Promise<ServiceResult<{ id: string }>> => {
+        const existing = await tx.schoolYear.findUnique({
+          where: { id: schoolYearId },
+          select: { id: true, is_active: true, is_archived: true },
+        });
+
+        if (!existing) {
+          return { success: false, error: "School year not found" };
+        }
+
+        if (existing.is_archived) {
+          return { success: false, error: "Cannot modify an archived school year" };
+        }
+
+        const activePeriod = await tx.academicTermInstance.findFirst({
+          where: { school_year_id: schoolYearId, status: "ACTIVE" },
+          select: { id: true },
+        });
+
+        const check = canDeactivateSchoolYear(existing.is_active, activePeriod !== null);
+        if (!check.allowed) {
+          return { success: false, error: check.reason };
+        }
+
+        await tx.schoolYear.update({
+          where: { id: schoolYearId },
+          data: {
+            is_active: false,
+            active_semester: null,
+            active_semester_activated_by: null,
+            active_semester_activated_at: null,
+          },
+        });
+
+        return { success: true, data: { id: schoolYearId } };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    if (result.success) {
+      invalidateAcademicPeriodReadModelTags({ activePeriodChanged: true });
+    }
+
+    return result;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      return { success: false, error: "School year changed; retry the deactivation" };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Set the active semester of an active School Year, recording the activating
+ * user and timestamp for audit. Mid-year changes move the active semester
+ * without touching is_active, but are rejected while an AcademicTermInstance
+ * in a different semester is still ACTIVE — the active period must be
+ * completed first so the hierarchy stays consistent.
+ */
+export async function setActiveSemester(
+  schoolYearId: string,
+  semester: AcademicSemester
+): Promise<ServiceResult<{ id: string }>> {
+  const auth = await verifyAdminAccess();
+  if (!auth.success) return auth;
+
+  try {
+    const result = await prisma.$transaction(
+      async (tx): Promise<ServiceResult<{ id: string }>> => {
+        const existing = await tx.schoolYear.findUnique({
+          where: { id: schoolYearId },
+          select: { id: true, is_active: true, is_archived: true },
+        });
+
+        if (!existing) {
+          return { success: false, error: "School year not found" };
+        }
+
+        if (existing.is_archived) {
+          return { success: false, error: "Cannot modify an archived school year" };
+        }
+
+        const check = canSetActiveSemester(existing.is_active, semester);
+        if (!check.allowed) {
+          return { success: false, error: check.reason };
+        }
+
+        const conflictingActivePeriod = await tx.academicTermInstance.findFirst({
+          where: {
+            school_year_id: schoolYearId,
+            status: "ACTIVE",
+            semester: { not: semester },
+          },
+          select: { id: true },
+        });
+
+        if (conflictingActivePeriod) {
+          return {
+            success: false,
+            error:
+              "Cannot change the active semester while a period in another semester is active",
+          };
+        }
+
+        await tx.schoolYear.update({
+          where: { id: schoolYearId },
+          data: {
+            active_semester: semester,
+            active_semester_activated_by: auth.data.userId,
+            active_semester_activated_at: new Date(),
+          },
+        });
+
+        return { success: true, data: { id: schoolYearId } };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    if (result.success) {
+      invalidateAcademicPeriodReadModelTags({ activePeriodChanged: true });
+    }
+
+    return result;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      return { success: false, error: "School year changed; retry the change" };
+    }
+    throw error;
+  }
+}

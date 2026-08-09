@@ -59,6 +59,16 @@ export const archiveSchoolYearSchema = z.object({
 export type ArchiveSchoolYearInput = z.infer<typeof archiveSchoolYearSchema>;
 
 /**
+ * Zod schema for setting the active semester of a School Year.
+ */
+export const setActiveSemesterSchema = z.object({
+  schoolYearId: z.string().uuid("Invalid school year ID"),
+  semester: z.enum(["FIRST", "SECOND", "SUMMER"], {
+    message: "Semester must be FIRST, SECOND, or SUMMER",
+  }),
+});
+
+/**
  * Derive the school year code from a start year.
  */
 export function deriveSchoolYearCode(startYear: number): string {

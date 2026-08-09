@@ -58,6 +58,78 @@ export function canTransitionPeriod(
 }
 
 /**
+ * Check if a School Year can be activated.
+ * Requirements:
+ * - Must not already be active.
+ * - Must have an active_semester set before activation.
+ */
+export function canActivateSchoolYear(
+  isActive: boolean,
+  activeSemester: AcademicSemester | null
+): { allowed: true } | { allowed: false; reason: string } {
+  if (isActive) {
+    return { allowed: false, reason: "School year is already active" };
+  }
+
+  if (activeSemester === null) {
+    return {
+      allowed: false,
+      reason: "Set an active semester before activating the school year",
+    };
+  }
+
+  return { allowed: true };
+}
+
+/**
+ * Check if a School Year can be deactivated.
+ * Requirements:
+ * - Must currently be active.
+ * - Must not contain an ACTIVE AcademicTermInstance.
+ */
+export function canDeactivateSchoolYear(
+  isActive: boolean,
+  hasActivePeriod: boolean
+): { allowed: true } | { allowed: false; reason: string } {
+  if (!isActive) {
+    return { allowed: false, reason: "School year is not active" };
+  }
+
+  if (hasActivePeriod) {
+    return {
+      allowed: false,
+      reason: "Cannot deactivate a school year that contains an active period",
+    };
+  }
+
+  return { allowed: true };
+}
+
+/**
+ * Check if an active semester can be set on a School Year.
+ * Requirements:
+ * - School Year must be active.
+ * - Semester must be one of FIRST, SECOND, SUMMER (never null).
+ */
+export function canSetActiveSemester(
+  isActive: boolean,
+  semester: AcademicSemester | null
+): { allowed: true } | { allowed: false; reason: string } {
+  if (!isActive) {
+    return {
+      allowed: false,
+      reason: "Activate the school year before setting an active semester",
+    };
+  }
+
+  if (semester === null) {
+    return { allowed: false, reason: "A semester is required" };
+  }
+
+  return { allowed: true };
+}
+
+/**
  * Check if a School Year can be archived.
  * Requirements:
  * - Must not have the active term instance.

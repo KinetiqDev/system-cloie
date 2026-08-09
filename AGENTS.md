@@ -89,13 +89,14 @@ Active OpenSpec changes: `add-dedicated-demo-auth`, `improve-navigation-renderin
 
 ### Database Invariant Test Gate
 
-`pnpm test` must never write to a hosted database. The five invariant suites below are gated on `RUN_DATABASE_INTEGRATION_TESTS=1` in addition to `DATABASE_URL`:
+`pnpm test` must never write to a hosted database. The invariant suites below are gated on `RUN_DATABASE_INTEGRATION_TESTS=1` in addition to `DATABASE_URL`:
 
 - `src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts`
 - `src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts`
 - `src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts`
 - `src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts`
 - `src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts`
+- `src/__tests__/features/academic-calendar/school-year-active-constraint.test.ts`
 
 The gate is enforced by `describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1")` and a meta-test in `src/__tests__/features/course-assignments/db-invariants-gate.test.ts`. See #149 for the audit finding.
 

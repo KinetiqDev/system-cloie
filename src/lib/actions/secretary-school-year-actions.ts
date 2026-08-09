@@ -1,12 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import {
   createSchoolYear,
   updateSchoolYear,
   archiveSchoolYear,
+  activateSchoolYear,
+  deactivateSchoolYear,
+  setActiveSemester,
 } from "@/features/academic-calendar/services/manage-school-years";
 import {
   updateTermInstance,
@@ -16,6 +20,7 @@ import {
 import {
   createSchoolYearSchema,
   updateSchoolYearSchema,
+  setActiveSemesterSchema,
 } from "@/features/academic-calendar/schemas/school-year";
 import {
   updateTermInstanceSchema,
@@ -30,7 +35,7 @@ import { revalidateAcademicPeriodReadModelRoutes } from "@/lib/cache/academic-pe
 
 export async function verifySecretaryAccess(): Promise<ServiceResult<{ userId: string }>> {
   const session = await resolveAuthSession();
-  if (!session || !session.roles.includes(ROLES.SECRETARY)) {
+  if (!session || session.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Secretary access required" };
   }
   return { success: true, data: { userId: session.userId } };
@@ -119,6 +124,99 @@ export async function archiveSchoolYearAction(
   if (result.success) {
     revalidatePath("/secretary/school-years");
     revalidatePath(`/secretary/school-years/${result.data.id}`);
+    revalidateAcademicPeriodReadModelRoutes();
+  }
+
+  return result;
+}
+
+const schoolYearIdSchema = z.string().uuid("Invalid school year ID");
+
+export async function activateSchoolYearAction(
+  formData: FormData
+): Promise<ServiceResult<{ id: string }>> {
+  const auth = await verifySecretaryAccess();
+  if (!auth.success) return auth;
+
+  const idParsed = schoolYearIdSchema.safeParse(formData.get("id"));
+  if (!idParsed.success) {
+    return { success: false, error: idParsed.error.issues[0]?.message ?? "Invalid school year ID" };
+  }
+
+  // The starting semester may ride along with activation for a fresh School
+  // Year (an inactive School Year cannot persist an active_semester).
+  const semesterRaw = formData.get("semester");
+  const semesterParsed = semesterRaw
+    ? z.enum(["FIRST", "SECOND", "SUMMER"]).safeParse(semesterRaw)
+    : { success: true, data: undefined };
+
+  if (!semesterParsed.success) {
+    return { success: false, error: "Semester must be FIRST, SECOND, or SUMMER" };
+  }
+
+  const result = await activateSchoolYear(idParsed.data, semesterParsed.data);
+
+  if (result.success) {
+    revalidatePath("/secretary/school-years");
+    revalidatePath(`/secretary/school-years/${result.data.id}`);
+    revalidatePath("/secretary/dashboard");
+    revalidatePath("/program-head/dashboard");
+    revalidatePath("/faculty/dashboard");
+    revalidateAcademicPeriodReadModelRoutes();
+  }
+
+  return result;
+}
+
+export async function deactivateSchoolYearAction(
+  formData: FormData
+): Promise<ServiceResult<{ id: string }>> {
+  const auth = await verifySecretaryAccess();
+  if (!auth.success) return auth;
+
+  const idParsed = schoolYearIdSchema.safeParse(formData.get("id"));
+  if (!idParsed.success) {
+    return { success: false, error: idParsed.error.issues[0]?.message ?? "Invalid school year ID" };
+  }
+
+  const result = await deactivateSchoolYear(idParsed.data);
+
+  if (result.success) {
+    revalidatePath("/secretary/school-years");
+    revalidatePath(`/secretary/school-years/${result.data.id}`);
+    revalidatePath("/secretary/dashboard");
+    revalidatePath("/program-head/dashboard");
+    revalidatePath("/faculty/dashboard");
+    revalidateAcademicPeriodReadModelRoutes();
+  }
+
+  return result;
+}
+
+export async function setActiveSemesterAction(
+  formData: FormData
+): Promise<ServiceResult<{ id: string }>> {
+  const auth = await verifySecretaryAccess();
+  if (!auth.success) return auth;
+
+  const parsed = setActiveSemesterSchema.safeParse({
+    schoolYearId: formData.get("schoolYearId"),
+    semester: formData.get("semester"),
+  });
+
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
+    return { success: false, error: firstError?.message ?? "Invalid input" };
+  }
+
+  const result = await setActiveSemester(parsed.data.schoolYearId, parsed.data.semester);
+
+  if (result.success) {
+    revalidatePath("/secretary/school-years");
+    revalidatePath(`/secretary/school-years/${result.data.id}`);
+    revalidatePath("/secretary/dashboard");
+    revalidatePath("/program-head/dashboard");
+    revalidatePath("/faculty/dashboard");
     revalidateAcademicPeriodReadModelRoutes();
   }
 
