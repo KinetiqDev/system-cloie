@@ -35,3 +35,31 @@ _Avoid_: Optional term, ad-hoc term
 **Legacy non-canonical term**:
 An AcademicTermInstance outside the canonical 5-term set, created by pre-canonical manual CRUD. Remains queryable and date-mutable but cannot be recreated once deleted.
 _Avoid_: Structural term
+
+**Active School Year**:
+The single School Year flagged `is_active = true`, carrying the `active_semester` used for live academic work. At most one exists at any time (partial unique index `one_active_school_year`).
+_Avoid_: Current year, selected year
+
+**School Year activation**:
+The Secretary-controlled flip of a School Year to `is_active = true`, atomically persisting the starting `active_semester` (an inactive School Year cannot hold one) and deactivating any prior active School Year. Rejected while the current active School Year contains an ACTIVE period.
+_Avoid_: Year switching, default year
+
+**School Year deactivation**:
+The Secretary-controlled flip of the active School Year to `is_active = false`, clearing `active_semester` and its audit fields. Rejected while any of its terms is ACTIVE.
+_Avoid_: Disabling the year, archiving
+
+**Active semester**:
+The `active_semester` value of the active School Year; the semester within which academic periods may be activated. Changes mid-year require any ACTIVE period in another semester to be completed first.
+_Avoid_: Current semester without the active-year qualifier
+
+**Term lifecycle transition**:
+The Secretary-controlled status change of an AcademicTermInstance (PLANNED→ACTIVE|CANCELLED, ACTIVE→COMPLETED|CANCELLED). Terminal states are immutable; `end_date` is informational and never gates a transition.
+_Avoid_: Term editing, status editing
+
+**Structural calendar view**:
+The fixed Secretary UI rendering School Year → Semester → Term with per-state lifecycle buttons. There are no Add/Delete Term affordances; the 5 canonical terms are enforced by construction.
+_Avoid_: Expandable term list, term CRUD screen
+
+**Active state backfill**:
+A one-shot script (`scripts/backfill-school-year-active-state.ts`) that derives `is_active` and `active_semester` on existing School Years from the single ACTIVE AcademicTermInstance.
+_Avoid_: Manual state migration, production data editing

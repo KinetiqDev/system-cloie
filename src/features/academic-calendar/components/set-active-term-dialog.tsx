@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Info } from "lucide-react";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
-import { setActiveTermInstanceAction } from "@/lib/actions/secretary-school-year-actions";
+import { transitionPeriodStatusAction } from "@/lib/actions/secretary-school-year-actions";
 import { showToast } from "@/components/ui/toast";
 import type { TermInstanceItem } from "../types";
 
@@ -25,7 +25,8 @@ interface SetActiveTermDialogProps {
 }
 
 /**
- * Confirmation dialog for setting a term instance as active.
+ * Confirmation dialog for activating a term instance through the lifecycle
+ * transition service.
  */
 export function SetActiveTermDialog({
   open,
@@ -41,9 +42,10 @@ export function SetActiveTermDialog({
     setIsSubmitting(true);
 
     const formData = new FormData();
-    formData.append("termInstanceId", termInstance.id);
+    formData.append("periodId", termInstance.id);
+    formData.append("target", "ACTIVE");
 
-    const result = await setActiveTermInstanceAction(formData);
+    const result = await transitionPeriodStatusAction(formData);
 
     if (result.success) {
       const label = formatTermInstanceLabel(

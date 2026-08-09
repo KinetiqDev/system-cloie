@@ -13,6 +13,8 @@ const activeTerm: ActiveTermContext = {
     startDate: null,
     endDate: null,
     isArchived: false,
+    isActive: true,
+    activeSemester: "FIRST",
     archivedAt: null,
     archivedBy: null,
     createdAt: new Date("2025-06-01"),
