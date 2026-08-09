@@ -51,7 +51,15 @@ export async function transitionPeriodStatus(
       async (tx): Promise<ServiceResult<{ id: string; status: AcademicPeriodStatus }>> => {
         const existing = await tx.academicTermInstance.findUnique({
           where: { id: periodId },
-          select: { id: true, end_date: true, status: true },
+          select: {
+            id: true,
+            end_date: true,
+            status: true,
+            semester: true,
+            school_year: {
+              select: { is_archived: true, is_active: true, active_semester: true },
+            },
+          },
         });
 
         if (!existing) {
@@ -61,6 +69,34 @@ export async function transitionPeriodStatus(
         const decision = canTransitionPeriod(existing.status, target);
         if (!decision.allowed) {
           return { success: false, error: decision.reason };
+        }
+
+        // Revalidate the School Year hierarchy inside the transaction: a
+        // concurrent archive/deactivate/semester change must not leave an
+        // active period in an inactive School Year or mismatched semester.
+        if (target === "ACTIVE") {
+          const schoolYear = existing.school_year;
+          if (!schoolYear) {
+            return { success: false, error: "Academic period has no school year" };
+          }
+          if (schoolYear.is_archived) {
+            return {
+              success: false,
+              error: "Cannot activate a term in an archived school year",
+            };
+          }
+          if (!schoolYear.is_active) {
+            return {
+              success: false,
+              error: "Cannot activate a term in a school year that is not active",
+            };
+          }
+          if (existing.semester !== schoolYear.active_semester) {
+            return {
+              success: false,
+              error: "Period semester does not match the school year's active semester",
+            };
+          }
         }
 
         activePeriodChanged = existing.status === "ACTIVE" || target === "ACTIVE";

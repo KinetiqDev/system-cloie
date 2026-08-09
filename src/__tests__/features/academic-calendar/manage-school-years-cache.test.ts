@@ -78,6 +78,7 @@ describe("Academic Calendar School Year writers", () => {
     vi.mocked(prisma.schoolYear.findUnique).mockResolvedValue({
       id: "sy-1",
       is_archived: false,
+      is_active: false,
       term_instances: [],
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(null);
@@ -90,12 +91,28 @@ describe("Academic Calendar School Year writers", () => {
     expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith();
   });
 
+  it("rejects archiving the active school year even without an active term", async () => {
+    vi.mocked(prisma.schoolYear.findUnique).mockResolvedValue({
+      id: "sy-1",
+      is_archived: false,
+      is_active: true,
+      term_instances: [],
+    } as never);
+
+    await expect(archiveSchoolYear("sy-1")).resolves.toEqual({
+      success: false,
+      error: "Cannot archive the active school year; deactivate it first",
+    });
+    expect(prisma.schoolYear.update).not.toHaveBeenCalled();
+    expect(invalidateAcademicPeriodReadModelTagsMock).not.toHaveBeenCalled();
+  });
+
   it("does not invalidate after authorization failure", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
 
     await expect(createSchoolYear({ startYear: 2026 })).resolves.toEqual({
       success: false,
-      error: "Admin access required",
+      error: "Secretary access required",
     });
     expect(invalidateAcademicPeriodReadModelTagsMock).not.toHaveBeenCalled();
   });
