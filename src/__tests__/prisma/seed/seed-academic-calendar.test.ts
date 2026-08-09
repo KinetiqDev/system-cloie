@@ -1,0 +1,186 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AcademicSemester, AcademicTerm } from "@prisma/client";
+
+const { backfillCanonicalTermInstancesMock, prisma } = vi.hoisted(() => ({
+  backfillCanonicalTermInstancesMock: vi.fn(),
+  prisma: {
+    schoolYear: { upsert: vi.fn() },
+    qualitativeResponseItem: { deleteMany: vi.fn() },
+    quantitativeResponseItem: { deleteMany: vi.fn() },
+    response: { deleteMany: vi.fn() },
+    evaluationAssignment: { deleteMany: vi.fn() },
+    courseBoundCiloQuestionBinding: { deleteMany: vi.fn() },
+    courseBoundEvaluationTarget: { deleteMany: vi.fn() },
+    courseBoundEvaluation: { deleteMany: vi.fn() },
+    centralDeployment: { deleteMany: vi.fn() },
+    courseAssignmentMembership: { deleteMany: vi.fn() },
+    courseAssignment: { deleteMany: vi.fn() },
+    studentEnrollment: { deleteMany: vi.fn() },
+    $executeRawUnsafe: vi.fn(),
+    academicPeriodReadinessSnapshot: { deleteMany: vi.fn() },
+    academicTermInstance: { findFirst: vi.fn(), createMany: vi.fn(), update: vi.fn() },
+  },
+}));
+
+vi.mock("@/lib/db/prisma", () => ({ prisma }));
+vi.mock("@/features/academic-calendar/services/manage-school-years", () => ({
+  backfillCanonicalTermInstances: backfillCanonicalTermInstancesMock,
+}));
+
+import { D } from "@/../prisma/seed/constants/ids";
+import { academicTermDefinitions } from "@/../prisma/seed/fixtures/academic-calendar";
+import { seedAcademicCalendar } from "@/../prisma/seed/runners/seed-academic-calendar";
+
+const schoolYearIdFor = (code: string) =>
+  code === "2026-2027" ? D.SY_2026_2027 : D.SY_2027_2028;
+
+describe("seed-academic-calendar runner", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    backfillCanonicalTermInstancesMock.mockResolvedValue([]);
+    prisma.schoolYear.upsert.mockImplementation(async ({ where }) => ({ id: where.id }));
+    prisma.academicTermInstance.findFirst.mockImplementation(async ({ where }) => {
+      const definition = academicTermDefinitions.find(
+        (d) =>
+          schoolYearIdFor(d.schoolYear) === where.school_year_id &&
+          d.semester === where.semester &&
+          (d.term ?? null) === (where.term ?? null)
+      );
+      return definition ? { id: definition.id } : null;
+    });
+    prisma.academicTermInstance.createMany.mockResolvedValue({ count: 4 });
+    prisma.academicTermInstance.update.mockImplementation(
+      async ({ where }: { where: { id: string } }) => ({ id: where.id })
+    );
+  });
+
+  it("creates fixture terms with stable ids, then backfills, then applies lifecycle statuses", async () => {
+    const context = await seedAcademicCalendar();
+
+    expect(prisma.schoolYear.upsert).toHaveBeenCalledTimes(2);
+    expect(prisma.academicTermInstance.createMany).toHaveBeenCalledWith({
+      data: academicTermDefinitions.map((definition) => ({
+        id: definition.id,
+        school_year_id: schoolYearIdFor(definition.schoolYear),
+        semester: definition.semester,
+        term: definition.term,
+        start_date: new Date(definition.startDate),
+        end_date: new Date(definition.endDate),
+        status: definition.status,
+      })),
+      skipDuplicates: true,
+    });
+    expect(backfillCanonicalTermInstancesMock).toHaveBeenCalledTimes(1);
+    expect(prisma.academicTermInstance.update).toHaveBeenCalledTimes(
+      academicTermDefinitions.length
+    );
+
+    for (const definition of academicTermDefinitions) {
+      expect(prisma.academicTermInstance.update).toHaveBeenCalledWith({
+        where: { id: definition.id },
+        data: {
+          start_date: new Date(definition.startDate),
+          end_date: new Date(definition.endDate),
+          status: definition.status,
+        },
+      });
+    }
+
+    expect(context.termInstance.id).toBe(D.TI_2026_2027_2ND);
+  });
+
+  it("creates fixture rows before backfill so updates by fixed id never miss on a fresh database", async () => {
+    await seedAcademicCalendar();
+
+    const createManyOrder = prisma.academicTermInstance.createMany.mock.invocationCallOrder[0];
+    const backfillOrder = backfillCanonicalTermInstancesMock.mock.invocationCallOrder[0];
+    const updateOrder = prisma.academicTermInstance.update.mock.invocationCallOrder[0];
+
+    expect(createManyOrder).toBeDefined();
+    expect(backfillOrder).toBeDefined();
+    expect(updateOrder).toBeDefined();
+    expect(createManyOrder).toBeLessThan(backfillOrder);
+    expect(backfillOrder).toBeLessThan(updateOrder);
+  });
+
+  it("reconciles fixture rows by canonical pair when the pair already exists under a generated id", async () => {
+    prisma.academicTermInstance.findFirst.mockResolvedValue({ id: "generated-id" } as never);
+
+    const context = await seedAcademicCalendar();
+
+    for (const definition of academicTermDefinitions) {
+      expect(prisma.academicTermInstance.update).toHaveBeenCalledWith({
+        where: { id: "generated-id" },
+        data: {
+          start_date: new Date(definition.startDate),
+          end_date: new Date(definition.endDate),
+          status: definition.status,
+        },
+      });
+    }
+    expect(context.termInstance.id).toBe("generated-id");
+    expect(context.termInstances.ti2026First.id).toBe("generated-id");
+    expect(prisma.studentEnrollment.deleteMany).toHaveBeenCalledWith({
+      where: { term_instance_id: { in: ["generated-id", "generated-id", "generated-id", "generated-id"] } },
+    });
+  });
+
+  it("updates the row that actually holds the fixture pair after canonical creation, never a collided fixed id", async () => {
+    prisma.academicTermInstance.findFirst.mockImplementation(async () =>
+      prisma.academicTermInstance.createMany.mock.calls.length > 0
+        ? { id: "generated-id" }
+        : null
+    );
+
+    const context = await seedAcademicCalendar();
+
+    for (const definition of academicTermDefinitions) {
+      expect(prisma.academicTermInstance.update).toHaveBeenCalledWith({
+        where: { id: "generated-id" },
+        data: {
+          start_date: new Date(definition.startDate),
+          end_date: new Date(definition.endDate),
+          status: definition.status,
+        },
+      });
+    }
+    expect(context.termInstance.id).toBe("generated-id");
+    expect(prisma.studentEnrollment.deleteMany).toHaveBeenCalledWith({
+      where: { term_instance_id: { in: ["generated-id", "generated-id", "generated-id", "generated-id"] } },
+    });
+  });
+
+  it("fails loudly when a fixture pair cannot be resolved after canonical creation", async () => {
+    prisma.academicTermInstance.findFirst.mockResolvedValue(null);
+
+    await expect(seedAcademicCalendar()).rejects.toThrow(/missing after canonical creation/i);
+  });
+
+  it("returns the expected lifecycle fixture term ids", async () => {
+    const context = await seedAcademicCalendar();
+
+    expect(context.termInstances.ti2026First.id).toBe(D.TI_2026_2027_1ST);
+    expect(context.termInstances.ti2026Second.id).toBe(D.TI_2026_2027_2ND);
+    expect(context.termInstances.ti2027First.id).toBe(D.TI_2027_2028_1ST);
+    expect(context.termInstances.ti2027SecondCancelled.id).toBe(
+      D.TI_2027_2028_2ND_CANCELLED
+    );
+  });
+
+  it("uses a canonical fixture set (all fixture pairs are structural terms)", () => {
+    const canonical = new Set(
+      [
+        [AcademicSemester.FIRST, AcademicTerm.FIRST_TERM],
+        [AcademicSemester.FIRST, AcademicTerm.SECOND_TERM],
+        [AcademicSemester.SECOND, AcademicTerm.FIRST_TERM],
+        [AcademicSemester.SECOND, AcademicTerm.SECOND_TERM],
+        [AcademicSemester.SUMMER, null],
+      ].map(([semester, term]) => `${semester}:${term ?? ""}`)
+    );
+
+    expect(academicTermDefinitions).toHaveLength(4);
+    for (const definition of academicTermDefinitions) {
+      expect(canonical.has(`${definition.semester}:${definition.term ?? ""}`)).toBe(true);
+    }
+  });
+});

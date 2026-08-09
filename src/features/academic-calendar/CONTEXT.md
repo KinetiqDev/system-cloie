@@ -27,3 +27,11 @@ _Avoid_: Summer term, calendar period
 **Active academic period**:
 The current semester or term used by CLOIE for live academic work.
 _Avoid_: Upcoming period, historical period
+
+**Canonical term (structural term)**:
+One of the 5 fixed AcademicTermInstance definitions every School Year SHALL contain (First/First, First/Second, Second/First, Second/Second, Summer/null), created transactionally with the School Year. Canonical terms must never be deleted.
+_Avoid_: Optional term, ad-hoc term
+
+**Legacy non-canonical term**:
+An AcademicTermInstance outside the canonical 5-term set, created by pre-canonical manual CRUD. Remains queryable and date-mutable but cannot be recreated once deleted.
+_Avoid_: Structural term

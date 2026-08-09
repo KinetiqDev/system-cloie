@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import {
@@ -10,7 +9,6 @@ import {
   archiveSchoolYear,
 } from "@/features/academic-calendar/services/manage-school-years";
 import {
-  addTermInstance,
   updateTermInstance,
   deleteTermInstance,
   setActiveTermInstance,
@@ -20,10 +18,8 @@ import {
   updateSchoolYearSchema,
 } from "@/features/academic-calendar/schemas/school-year";
 import {
-  createTermInstanceSchema,
   updateTermInstanceSchema,
   setActiveTermSchema,
-  deleteTermInstanceSchema,
 } from "@/features/academic-calendar/schemas/term-instance";
 import type { ServiceResult } from "@/lib/utils/service-result";
 import { revalidateAcademicPeriodReadModelRoutes } from "@/lib/cache/academic-periods";
@@ -132,42 +128,6 @@ export async function archiveSchoolYearAction(
 // ============================================================================
 // Term Instance Actions
 // ============================================================================
-
-export async function addTermInstanceAction(
-  formData: FormData
-): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifySecretaryAccess();
-  if (!auth.success) return auth;
-
-  const schoolYearId = formData.get("schoolYearId");
-  const semester = formData.get("semester");
-  const term = formData.get("term");
-  const startDateStr = formData.get("startDate");
-  const endDateStr = formData.get("endDate");
-
-  const parsed = createTermInstanceSchema.safeParse({
-    schoolYearId,
-    semester,
-    term: term || undefined,
-    startDate: startDateStr ? new Date(startDateStr as string) : undefined,
-    endDate: endDateStr ? new Date(endDateStr as string) : undefined,
-  });
-
-  if (!parsed.success) {
-    const firstError = parsed.error.issues[0];
-    return { success: false, error: firstError?.message ?? "Invalid input" };
-  }
-
-  const result = await addTermInstance(parsed.data);
-
-  if (result.success) {
-    revalidatePath("/secretary/school-years");
-    revalidatePath(`/secretary/school-years/${schoolYearId}`);
-    revalidateAcademicPeriodReadModelRoutes();
-  }
-
-  return result;
-}
 
 export async function updateTermInstanceAction(
   formData: FormData

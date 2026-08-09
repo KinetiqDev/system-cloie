@@ -1,6 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
-  addTermInstance,
   deleteTermInstance,
   updateTermInstance,
   verifySecretaryAccess,
@@ -18,10 +17,8 @@ vi.mock("@/lib/db/prisma", () => ({
       findUnique: vi.fn(),
       findFirst: vi.fn(),
       update: vi.fn(),
-      create: vi.fn(),
       delete: vi.fn(),
     },
-    schoolYear: { findUnique: vi.fn() },
     studentEnrollment: { count: vi.fn() },
     courseAssignment: { count: vi.fn() },
     courseBoundEvaluation: { count: vi.fn() },
@@ -158,6 +155,8 @@ describe("manage-term-instances / deleteTermInstance", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "ti-1",
+      semester: "FIRST",
+      term: null,
       school_year: { is_archived: false },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "ti-other" } as never);
@@ -179,6 +178,8 @@ describe("manage-term-instances / deleteTermInstance", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "ti-1",
+      semester: "FIRST",
+      term: null,
       school_year: { is_archived: false },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "ti-other" } as never);
@@ -200,6 +201,8 @@ describe("manage-term-instances / deleteTermInstance", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "ti-1",
+      semester: "FIRST",
+      term: null,
       school_year: { is_archived: false },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "ti-other" } as never);
@@ -221,6 +224,8 @@ describe("manage-term-instances / deleteTermInstance", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "ti-1",
+      semester: "FIRST",
+      term: null,
       school_year: { is_archived: false },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "ti-other" } as never);
@@ -242,6 +247,8 @@ describe("manage-term-instances / deleteTermInstance", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "ti-1",
+      semester: "FIRST",
+      term: null,
       school_year: { is_archived: false },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "ti-other" } as never);
@@ -261,21 +268,35 @@ describe("manage-term-instances / deleteTermInstance", () => {
     expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith();
   });
 
-  it("invalidates the shared period projection after adding a term", async () => {
+  it("should block deletion of a structural (canonical) term", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
-    vi.mocked(prisma.schoolYear.findUnique).mockResolvedValue({
-      id: "school-year-1",
-      is_archived: false,
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "ti-1",
+      semester: "FIRST",
+      term: "FIRST_TERM",
+      school_year: { is_archived: false },
     } as never);
-    vi.mocked(prisma.academicTermInstance.create).mockResolvedValue({ id: "new-period" } as never);
 
-    const result = await addTermInstance({
-      schoolYearId: "school-year-1",
+    const result = await deleteTermInstance("ti-1");
+
+    expect(result).toEqual({ success: false, error: "Structural terms cannot be deleted" });
+    expect(prisma.academicTermInstance.delete).not.toHaveBeenCalled();
+  });
+
+  it("should block structural term deletion even when it has dependent records", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "ti-1",
       semester: "SUMMER",
-    });
+      term: null,
+      school_year: { is_archived: false },
+    } as never);
+    vi.mocked(prisma.studentEnrollment.count).mockResolvedValue(3 as never);
 
-    expect(result).toEqual({ success: true, data: { id: "new-period" } });
-    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith();
+    const result = await deleteTermInstance("ti-1");
+
+    expect(result).toEqual({ success: false, error: "Structural terms cannot be deleted" });
+    expect(prisma.academicTermInstance.delete).not.toHaveBeenCalled();
   });
 
   it("invalidates the shared period projection after updating a term", async () => {
@@ -283,6 +304,8 @@ describe("manage-term-instances / deleteTermInstance", () => {
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "ti-1",
       status: "PLANNED",
+      semester: "FIRST",
+      term: null,
       school_year: { is_archived: false },
     } as never);
     vi.mocked(prisma.academicTermInstance.update).mockResolvedValue({ id: "ti-1" } as never);
@@ -301,6 +324,8 @@ describe("manage-term-instances / deleteTermInstance", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "ti-1",
+      semester: "FIRST",
+      term: null,
       school_year: { is_archived: false },
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "ti-other" } as never);
@@ -332,7 +357,7 @@ describe("manage-term-instances / deleteTermInstance", () => {
 
   it("should block deletion when term has a readiness snapshot", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
-    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({ id: "ti-1", school_year: { is_archived: false } } as never);
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({ id: "ti-1", semester: "FIRST", term: null, school_year: { is_archived: false } } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "ti-other" } as never);
     vi.mocked(prisma.studentEnrollment.count).mockResolvedValue(0 as never);
     vi.mocked(prisma.courseAssignment.count).mockResolvedValue(0 as never);

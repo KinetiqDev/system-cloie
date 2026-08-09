@@ -72,17 +72,6 @@ export interface UpdateSchoolYearInput {
 }
 
 /**
- * Input for creating a Term Instance.
- */
-export interface CreateTermInstanceInput {
-  schoolYearId: string;
-  semester: AcademicSemester;
-  term?: AcademicTerm | null;
-  startDate?: Date;
-  endDate?: Date;
-}
-
-/**
  * Input for updating a Term Instance.
  */
 export interface UpdateTermInstanceInput {

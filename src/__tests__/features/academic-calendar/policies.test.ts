@@ -4,10 +4,27 @@ import {
   canSetActiveTerm,
   canDeleteTermInstance,
   canDeleteSchoolYear,
+  isStructuralTerm,
 } from "@/features/academic-calendar/policies";
 import { AcademicSemester, AcademicTerm } from "@prisma/client";
 
 describe("academic-calendar/policies", () => {
+  describe("isStructuralTerm", () => {
+    it("returns true for all 5 canonical terms", () => {
+      expect(isStructuralTerm({ semester: AcademicSemester.FIRST, term: AcademicTerm.FIRST_TERM })).toBe(true);
+      expect(isStructuralTerm({ semester: AcademicSemester.FIRST, term: AcademicTerm.SECOND_TERM })).toBe(true);
+      expect(isStructuralTerm({ semester: AcademicSemester.SECOND, term: AcademicTerm.FIRST_TERM })).toBe(true);
+      expect(isStructuralTerm({ semester: AcademicSemester.SECOND, term: AcademicTerm.SECOND_TERM })).toBe(true);
+      expect(isStructuralTerm({ semester: AcademicSemester.SUMMER, term: null })).toBe(true);
+    });
+
+    it("returns false for legacy non-canonical terms", () => {
+      expect(isStructuralTerm({ semester: AcademicSemester.FIRST, term: null })).toBe(false);
+      expect(isStructuralTerm({ semester: AcademicSemester.SUMMER, term: AcademicTerm.FIRST_TERM })).toBe(false);
+      expect(isStructuralTerm({ semester: "SECOND", term: "THIRD_TERM" } as never)).toBe(false);
+    });
+  });
+
   describe("canArchiveSchoolYear", () => {
     it("allows archiving when no active term in school year", () => {
       const result = canArchiveSchoolYear("sy-1", "ti-other", false, ["ti-1", "ti-2"]);

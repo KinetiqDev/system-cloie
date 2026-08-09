@@ -103,12 +103,12 @@ describe("SchoolYearList", () => {
     });
   });
 
-  it("disables Add Term and Set Active for an archived year", async () => {
+  it("offers no Add Term action and no Set Active for an archived year", async () => {
     const archived = schoolYear({ isArchived: true });
     render(<SchoolYearList schoolYears={[archived]} onRefresh={vi.fn()} />);
 
     expect(screen.getByText("Archived")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add Term" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Add Term" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Set Active" })).not.toBeInTheDocument();
   });
 
