@@ -22,7 +22,7 @@ export async function generateBaselineCurricula(): Promise<GenerateBaselineResul
   let skippedCourses = 0;
 
   for (const program of programs) {
-    const result = await createBaselineForProgram(program.id, program.code);
+    const result = await createBaselineForProgram(program.id);
     if (result.status === "created") created += 1;
     else skippedPrograms += 1;
     skippedCourses += result.skippedCourses;
@@ -32,8 +32,7 @@ export async function generateBaselineCurricula(): Promise<GenerateBaselineResul
 }
 
 async function createBaselineForProgram(
-  programId: string,
-  programCode: string
+  programId: string
 ): Promise<{ status: "created" | "skipped"; skippedCourses: number }> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
@@ -44,6 +43,12 @@ async function createBaselineForProgram(
             select: { id: true },
           });
           if (existing) return { status: "skipped" as const, skippedCourses: 0 };
+
+          const program = await tx.program.findUnique({
+            where: { id: programId },
+            select: { code: true },
+          });
+          if (!program) return { status: "skipped" as const, skippedCourses: 0 };
 
           const courses = await tx.course.findMany({
             where: { program_id: programId },
@@ -66,7 +71,7 @@ async function createBaselineForProgram(
           await tx.curriculumVersion.create({
             data: {
               program_id: programId,
-              code: `${programCode}-BASELINE`,
+              code: `${program.code}-BASELINE`,
               status: "DRAFT",
               courses: {
                 create: eligibleCourses.map((course) => ({

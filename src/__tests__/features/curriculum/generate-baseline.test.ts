@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     $transaction: vi.fn(),
-    program: { findMany: vi.fn() },
+    program: { findMany: vi.fn(), findUnique: vi.fn() },
     course: { findMany: vi.fn() },
     curriculumVersion: { findFirst: vi.fn(), create: vi.fn() },
   },
@@ -22,6 +22,9 @@ describe("generateBaselineCurricula", () => {
     vi.mocked(prisma.program.findMany).mockResolvedValue([
       { id: PROGRAM_ID, code: "BSIT" },
     ] as never);
+    vi.mocked(prisma.program.findUnique).mockResolvedValue(
+      { id: PROGRAM_ID, code: "BSIT" } as never
+    );
     vi.mocked(prisma.course.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.$transaction).mockImplementation((callback) => callback(prisma as never));
     vi.mocked(prisma.curriculumVersion.findFirst).mockResolvedValue(null);
@@ -239,5 +242,29 @@ describe("generateBaselineCurricula", () => {
         }),
       })
     );
+  });
+
+  it("uses current program code from inside the baseline transaction", async () => {
+    vi.mocked(prisma.program.findUnique).mockResolvedValue(
+      { id: PROGRAM_ID, code: "BIT" } as never
+    );
+
+    await generateBaselineCurricula();
+
+    expect(prisma.curriculumVersion.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ code: "BIT-BASELINE" }),
+      })
+    );
+  });
+
+  it("skips a program deleted after the outer scan", async () => {
+    vi.mocked(prisma.program.findUnique).mockResolvedValue(null);
+
+    const result = await generateBaselineCurricula();
+
+    expect(result).toEqual({ created: 0, skippedPrograms: 1, skippedCourses: 0 });
+    expect(prisma.course.findMany).not.toHaveBeenCalled();
+    expect(prisma.curriculumVersion.create).not.toHaveBeenCalled();
   });
 });
