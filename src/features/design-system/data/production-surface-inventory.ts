@@ -887,6 +887,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "route"
   },
   {
+    "path": "src/app/(app)/program-head/programs/[programId]/curricula/page.tsx",
+    "disposition": "already_compliant",
+    "category": "route"
+  },
+  {
     "path": "src/app/(app)/program-head/programs/[programId]/dashboard/loading.tsx",
     "disposition": "task",
     "taskId": 14,
@@ -1076,6 +1081,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "path": "src/app/(app)/secretary/courses/page.tsx",
     "disposition": "task",
     "taskId": 14,
+    "category": "route"
+  },
+  {
+    "path": "src/app/(app)/secretary/curricula/page.tsx",
+    "disposition": "already_compliant",
     "category": "route"
   },
   {
@@ -1993,6 +2003,22 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "path": "src/features/dean/components/dean-oversight-loading.tsx",
     "disposition": "task",
     "taskId": 19,
+    "category": "feature_component"
+  },
+
+  {
+    "path": "src/features/curriculum/components/curriculum-course-table.tsx",
+    "disposition": "already_compliant",
+    "category": "feature_component"
+  },
+  {
+    "path": "src/features/curriculum/components/curriculum-version-form.tsx",
+    "disposition": "already_compliant",
+    "category": "feature_component"
+  },
+  {
+    "path": "src/features/curriculum/components/curriculum-version-list.tsx",
+    "disposition": "already_compliant",
     "category": "feature_component"
   },
 

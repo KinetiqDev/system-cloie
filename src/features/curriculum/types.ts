@@ -39,6 +39,41 @@ export interface CurriculumCourseItem {
 }
 
 /**
+ * A Curriculum Version as displayed in lists, with its course count.
+ */
+export interface CurriculumVersionSummaryItem extends CurriculumVersionItem {
+  courseCount: number;
+}
+
+/**
+ * A Program option for curriculum page selectors.
+ */
+export interface CurriculumPageProgram {
+  id: string;
+  code: string;
+  name: string;
+}
+
+/**
+ * A Course option for the add-course picker.
+ */
+export interface CurriculumCourseOption {
+  id: string;
+  code: string;
+  title: string;
+  /** Owning program, null for shared General Education courses. */
+  programId: string | null;
+}
+
+/**
+ * A School Year option for the effective school year selector.
+ */
+export interface SchoolYearOption {
+  id: string;
+  code: string;
+}
+
+/**
  * A Curriculum Version with its courses and program/major context.
  */
 export interface CurriculumVersionDetail extends CurriculumVersionItem {

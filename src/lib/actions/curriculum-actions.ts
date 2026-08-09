@@ -29,14 +29,18 @@ import {
 import {
   getCurriculumVersionDetail,
   getCurriculumCourseProgramId,
-  listProgramCurricula,
   getCurriculumVersionProgramId,
 } from "@/features/curriculum/services/read-curriculum";
+import {
+  listProgramCurriculaSummary,
+  listCurriculumCourseOptions,
+} from "@/features/curriculum/services/read-curriculum-pages";
 import type {
   AddCurriculumCourseInput,
   CreateCurriculumVersionInput,
+  CurriculumCourseOption,
   CurriculumVersionDetail,
-  CurriculumVersionItem,
+  CurriculumVersionSummaryItem,
   UpdateCurriculumCourseInput,
 } from "@/features/curriculum/types";
 import { buildProgramHeadCurriculaPath } from "@/lib/constants/program-head-routes";
@@ -210,16 +214,37 @@ export async function updateCurriculumCourseAction(
   return result;
 }
 
-export async function listProgramCurriculaAction(
+/**
+ * List the Curriculum Versions of one program with course counts, newest
+ * first. Authorized for the Secretary or the Program Head's selected program.
+ */
+export async function listProgramCurriculaSummaryAction(
   programId: string
-): Promise<ServiceResult<CurriculumVersionItem[]>> {
+): Promise<ServiceResult<CurriculumVersionSummaryItem[]>> {
   const parsed = idSchema.safeParse(programId);
   if (!parsed.success) return { success: false, error: "Invalid program ID." };
 
   const access = await authorizeCurriculumRead(parsed.data);
   if (!access.success) return access;
 
-  return { success: true, data: await listProgramCurricula(parsed.data) };
+  return { success: true, data: await listProgramCurriculaSummary(parsed.data) };
+}
+
+/**
+ * List active course options for the add-course picker, scoped to one program
+ * (program-specific plus General Education). Authorized for the Secretary or
+ * the Program Head's selected program.
+ */
+export async function listProgramCourseOptionsAction(
+  programId: string
+): Promise<ServiceResult<CurriculumCourseOption[]>> {
+  const parsed = idSchema.safeParse(programId);
+  if (!parsed.success) return { success: false, error: "Invalid program ID." };
+
+  const access = await authorizeCurriculumRead(parsed.data);
+  if (!access.success) return access;
+
+  return { success: true, data: await listCurriculumCourseOptions(parsed.data) };
 }
 
 export async function getCurriculumVersionDetailAction(

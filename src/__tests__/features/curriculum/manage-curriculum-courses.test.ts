@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AcademicSemester, AcademicTerm, YearLevel } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
 
@@ -68,6 +68,9 @@ describe("manage-curriculum-courses / addCurriculumCourse", () => {
       id: COURSE_ID,
       code: "IT201",
       title: "Introduction to Programming",
+      program_id: PROGRAM_ID,
+      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      is_active: true,
     } as never);
     vi.mocked(prisma.curriculumCourse.create).mockResolvedValue({ id: COURSE_ROW_ID } as never);
 
@@ -100,6 +103,9 @@ describe("manage-curriculum-courses / addCurriculumCourse", () => {
       id: COURSE_ID,
       code: "IT201",
       title: "Introduction to Programming",
+      program_id: PROGRAM_ID,
+      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      is_active: true,
     } as never);
     vi.mocked(prisma.curriculumCourse.create).mockResolvedValue({ id: COURSE_ROW_ID } as never);
 
@@ -190,6 +196,32 @@ describe("manage-curriculum-courses / addCurriculumCourse", () => {
     expect(prisma.curriculumCourse.create).not.toHaveBeenCalled();
   });
 
+  it("rejects adding an inactive course", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue(draftVersion() as never);
+    vi.mocked(prisma.course.findUnique).mockResolvedValue({
+      id: COURSE_ID,
+      code: "IT201",
+      title: "Introduction to Programming",
+      program_id: PROGRAM_ID,
+      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      is_active: false,
+    } as never);
+
+    const result = await addCurriculumCourse({
+      curriculumVersionId: VERSION_ID,
+      courseId: COURSE_ID,
+      yearLevel: YearLevel.FIRST_YEAR,
+      semester: AcademicSemester.FIRST,
+      term: AcademicTerm.FIRST_TERM,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Inactive courses cannot be added to curricula",
+    });
+    expect(prisma.curriculumCourse.create).not.toHaveBeenCalled();
+  });
+
   it("rejects an invalid semester/term pair at the schema layer", async () => {
     const result = await addCurriculumCourse({
       curriculumVersionId: VERSION_ID,
@@ -220,6 +252,56 @@ describe("manage-curriculum-courses / addCurriculumCourse", () => {
       success: false,
       error: "Program Head access is limited to assigned programs",
     });
+  });
+
+  it("rejects a program-specific course owned by another program", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue(draftVersion() as never);
+    vi.mocked(prisma.course.findUnique).mockResolvedValue({
+      id: COURSE_ID,
+      code: "BSBA-101",
+      title: "Business Fundamentals",
+      program_id: "99999999-9999-4999-8999-999999999999",
+      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      is_active: true,
+    } as never);
+
+    const result = await addCurriculumCourse({
+      curriculumVersionId: VERSION_ID,
+      courseId: COURSE_ID,
+      yearLevel: YearLevel.FIRST_YEAR,
+      semester: AcademicSemester.FIRST,
+      term: AcademicTerm.FIRST_TERM,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Course does not belong to this program",
+    });
+    expect(prisma.curriculumCourse.create).not.toHaveBeenCalled();
+  });
+
+  it("accepts a shared General Education course on any program version", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue(draftVersion() as never);
+    vi.mocked(prisma.course.findUnique).mockResolvedValue({
+      id: COURSE_ID,
+      code: "GEGS101",
+      title: "General Education Foundations",
+      program_id: null,
+      course_scope: CourseScope.GENERAL_EDUCATION,
+      is_active: true,
+    } as never);
+    vi.mocked(prisma.curriculumCourse.create).mockResolvedValue({ id: COURSE_ROW_ID } as never);
+
+    const result = await addCurriculumCourse({
+      curriculumVersionId: VERSION_ID,
+      courseId: COURSE_ID,
+      yearLevel: YearLevel.FIRST_YEAR,
+      semester: AcademicSemester.FIRST,
+      term: AcademicTerm.FIRST_TERM,
+    });
+
+    expect(result).toEqual({ success: true, data: { id: COURSE_ROW_ID } });
+    expect(prisma.curriculumCourse.create).toHaveBeenCalled();
   });
 });
 
@@ -432,6 +514,9 @@ describe("manage-curriculum-courses / duplicate placements", () => {
       id: COURSE_ID,
       code: "IT201",
       title: "Introduction to Programming",
+      program_id: PROGRAM_ID,
+      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      is_active: true,
     } as never);
     vi.mocked(prisma.curriculumCourse.create)
       .mockResolvedValueOnce({ id: `${COURSE_ROW_ID}1` } as never)

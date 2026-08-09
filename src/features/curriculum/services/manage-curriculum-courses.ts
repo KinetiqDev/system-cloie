@@ -3,9 +3,11 @@
 import {
   AcademicSemester,
   AcademicTerm,
+  CourseScope,
   CurriculumVersionStatus,
   Prisma,
   type Prisma as PrismaTypes,
+  YearLevel,
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { type ServiceResult } from "@/lib/utils/service-result";
@@ -56,6 +58,27 @@ async function resolveVersionScope(
 }
 
 /**
+ * A Course may be placed in a Curriculum Version when it is a shared General
+ * Education Course or belongs to the version's program. Rejects program-specific
+ * Courses owned by another program, matching the browser picker filter.
+ */
+function resolveCoursePlacementEligibility(
+  course: { program_id: string | null; course_scope: CourseScope },
+  programId: string
+): { allowed: true } | { allowed: false; error: string } {
+  if (course.course_scope === CourseScope.GENERAL_EDUCATION || course.program_id === null) {
+    return { allowed: true };
+  }
+  if (course.program_id !== programId) {
+    return {
+      allowed: false,
+      error: "Course does not belong to this program",
+    };
+  }
+  return { allowed: true };
+}
+
+/**
  * Add a Course placement to a DRAFT Curriculum Version. Captures the Course's
  * current code and title as snapshots. The same Course may appear multiple
  * times in one version.
@@ -87,10 +110,25 @@ export async function addCurriculumCourse(
 
         const course = await tx.course.findUnique({
           where: { id: parsed.data.courseId },
-          select: { id: true, code: true, title: true },
+          select: {
+            id: true,
+            code: true,
+            title: true,
+            program_id: true,
+            course_scope: true,
+            is_active: true,
+          },
         });
         if (!course) {
           return { success: false, error: "Course not found" };
+        }
+        if (!course.is_active) {
+          return { success: false, error: "Inactive courses cannot be added to curricula" };
+        }
+
+        const placement = resolveCoursePlacementEligibility(course, scope.data.program_id);
+        if (!placement.allowed) {
+          return { success: false, error: placement.error };
         }
 
         const created = await tx.curriculumCourse.create({
@@ -226,11 +264,7 @@ export async function updateCurriculumCourse(
 
         await tx.curriculumCourse.update({
           where: { id },
-          data: {
-            ...(parsed.data.yearLevel !== undefined ? { year_level: parsed.data.yearLevel } : {}),
-            ...(parsed.data.semester !== undefined ? { semester: parsed.data.semester } : {}),
-            ...(parsed.data.term !== undefined ? { term: parsed.data.term } : {}),
-          },
+          data: buildPlacementUpdateData(parsed.data),
         });
 
         return { success: true, data: { id } };
@@ -245,4 +279,20 @@ export async function updateCurriculumCourse(
     }
     throw error;
   }
+}
+
+/**
+ * Build the Prisma update data for a placement, applying only the fields the
+ * caller supplied. Keeps the transaction callback branch-light.
+ */
+function buildPlacementUpdateData(input: UpdateCurriculumCourseInput): {
+  year_level?: YearLevel;
+  semester?: AcademicSemester;
+  term?: AcademicTerm | null;
+} {
+  return {
+    ...(input.yearLevel !== undefined ? { year_level: input.yearLevel } : {}),
+    ...(input.semester !== undefined ? { semester: input.semester } : {}),
+    ...(input.term !== undefined ? { term: input.term } : {}),
+  };
 }
