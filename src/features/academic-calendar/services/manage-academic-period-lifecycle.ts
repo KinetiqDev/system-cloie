@@ -55,7 +55,8 @@ class LifecycleConflictError extends Error {}
 
 /**
  * Atomically complete the currently active period (if any) so a new period can
- * take over the one-active slot. Rejects when the prior period has no end_date.
+ * take over the one-active slot. end_date is informational and never gates the
+ * completion.
  */
 async function completePriorActivePeriod(
   tx: Tx,
@@ -63,19 +64,11 @@ async function completePriorActivePeriod(
 ): Promise<ServiceResult<{ completed: boolean }>> {
   const priorActive = await tx.academicTermInstance.findFirst({
     where: { status: "ACTIVE", id: { not: periodId } },
-    select: { id: true, end_date: true },
+    select: { id: true },
   });
 
   if (!priorActive) {
     return { success: true, data: { completed: false } };
-  }
-
-  if (!priorActive.end_date) {
-    return {
-      success: false,
-      error:
-        "Current active period is missing end_date; cannot complete it before activating a new period",
-    };
   }
 
   const completed = await tx.academicTermInstance.updateMany({
@@ -95,8 +88,7 @@ async function completePriorActivePeriod(
  * - PLANNED -> ACTIVE | CANCELLED
  * - ACTIVE  -> COMPLETED | CANCELLED
  * - terminal states immutable
- * - activating a period atomically completes the prior active period,
- *   rejecting when prior period has no end_date
+ * - activating a period atomically completes the prior active period
  * - one-active is enforced by a partial unique index in Postgres
  */
 export async function transitionPeriodStatus(
