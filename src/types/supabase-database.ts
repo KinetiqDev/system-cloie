@@ -903,11 +903,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "curriculum_versions_major_id_fkey"
-            columns: ["major_id"]
+            foreignKeyName: "curriculum_versions_major_id_program_id_fkey"
+            columns: ["major_id", "program_id"]
             isOneToOne: false
             referencedRelation: "majors"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "program_id"]
           },
           {
             foreignKeyName: "curriculum_versions_program_id_fkey"

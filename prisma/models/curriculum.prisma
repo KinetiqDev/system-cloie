@@ -20,7 +20,7 @@ model CurriculumVersion {
   updated_at                    DateTime                 @updatedAt
 
   program             Program            @relation(fields: [program_id], references: [id], onDelete: Restrict)
-  major               Major?             @relation(fields: [major_id], references: [id], onDelete: SetNull)
+  major               Major?             @relation(fields: [major_id, program_id], references: [id, program_id], onDelete: Restrict)
   effective_from_year SchoolYear?        @relation(fields: [effective_from_school_year_id], references: [id], onDelete: Restrict)
   published_by_user   User?              @relation("CurriculumVersionPublisher", fields: [published_by], references: [id], onDelete: SetNull)
   courses             CurriculumCourse[]
