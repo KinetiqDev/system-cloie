@@ -40,6 +40,7 @@ model SchoolYear {
   term_instances                  AcademicTermInstance[]
   archived_by_user                User?                           @relation("ArchivedSchoolYears", fields: [archived_by], references: [id], onDelete: SetNull)
   active_semester_activated_by_user User?                         @relation("ActiveSemesterActivator", fields: [active_semester_activated_by], references: [id], onDelete: SetNull)
+  curriculum_versions             CurriculumVersion[]
 
   // Prisma cannot express the partial unique index (at most one active School Year); the real constraint is managed via Supabase migration
   @@index([is_active])

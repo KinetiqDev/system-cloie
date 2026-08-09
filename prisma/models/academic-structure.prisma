@@ -22,6 +22,7 @@ model Program {
   alumni_profiles              AlumniProfile[]
   student_enrollments          StudentEnrollment[]
   course_assignments           CourseAssignment[]
+  curriculum_versions          CurriculumVersion[]
 
   @@map("programs")
 }
@@ -41,6 +42,7 @@ model Major {
   central_deployments        CentralDeployment[]
   bound_instrument_templates InstrumentTemplate[]     @relation("BoundInstrumentTemplateMajor")
   student_enrollments        StudentEnrollment[]
+  curriculum_versions        CurriculumVersion[]
 
   @@unique([program_id, name])
   @@unique([id, program_id])
