@@ -1,0 +1,51 @@
+enum CurriculumVersionStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+
+  @@map("curriculum_version_status")
+}
+
+model CurriculumVersion {
+  id                            String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  program_id                    String                   @db.Uuid
+  major_id                      String?                  @db.Uuid
+  code                          String
+  name                          String?
+  status                        CurriculumVersionStatus  @default(DRAFT)
+  effective_from_school_year_id String?                  @db.Uuid
+  published_at                  DateTime?
+  published_by                  String?                  @db.Uuid
+  created_at                    DateTime                 @default(now())
+  updated_at                    DateTime                 @updatedAt
+
+  program             Program            @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  major               Major?             @relation(fields: [major_id, program_id], references: [id, program_id], onDelete: Restrict)
+  effective_from_year SchoolYear?        @relation(fields: [effective_from_school_year_id], references: [id], onDelete: Restrict)
+  published_by_user   User?              @relation("CurriculumVersionPublisher", fields: [published_by], references: [id], onDelete: SetNull)
+  courses             CurriculumCourse[]
+
+  @@unique([program_id, code])
+  @@index([program_id, status])
+  @@map("curriculum_versions")
+}
+
+model CurriculumCourse {
+  id                    String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  curriculum_version_id String           @db.Uuid
+  course_id             String           @db.Uuid
+  year_level            YearLevel
+  semester              AcademicSemester
+  term                  AcademicTerm?
+  course_code_snapshot  String
+  course_title_snapshot String
+  created_at            DateTime         @default(now())
+  updated_at            DateTime         @updatedAt
+
+  curriculum_version CurriculumVersion @relation(fields: [curriculum_version_id], references: [id], onDelete: Cascade)
+  course             Course            @relation(fields: [course_id], references: [id], onDelete: Restrict)
+
+  @@index([curriculum_version_id, course_id])
+  @@index([course_id])
+  @@map("curriculum_courses")
+}

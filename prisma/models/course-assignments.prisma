@@ -74,6 +74,7 @@ model Course {
   cilos                      CILO[]
   bound_instrument_templates InstrumentTemplate[] @relation("BoundInstrumentTemplateCourse")
   course_assignments         CourseAssignment[]
+  curriculum_courses         CurriculumCourse[]
 
   @@index([default_semester, default_term])
   @@map("courses")

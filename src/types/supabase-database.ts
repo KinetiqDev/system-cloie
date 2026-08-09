@@ -800,6 +800,131 @@ export type Database = {
           },
         ]
       }
+      curriculum_courses: {
+        Row: {
+          course_code_snapshot: string
+          course_id: string
+          course_title_snapshot: string
+          created_at: string
+          curriculum_version_id: string
+          id: string
+          semester: Database["public"]["Enums"]["academic_semester"]
+          term: Database["public"]["Enums"]["academic_term"] | null
+          updated_at: string
+          year_level: Database["public"]["Enums"]["year_level"]
+        }
+        Insert: {
+          course_code_snapshot: string
+          course_id: string
+          course_title_snapshot: string
+          created_at?: string
+          curriculum_version_id: string
+          id?: string
+          semester: Database["public"]["Enums"]["academic_semester"]
+          term?: Database["public"]["Enums"]["academic_term"] | null
+          updated_at: string
+          year_level: Database["public"]["Enums"]["year_level"]
+        }
+        Update: {
+          course_code_snapshot?: string
+          course_id?: string
+          course_title_snapshot?: string
+          created_at?: string
+          curriculum_version_id?: string
+          id?: string
+          semester?: Database["public"]["Enums"]["academic_semester"]
+          term?: Database["public"]["Enums"]["academic_term"] | null
+          updated_at?: string
+          year_level?: Database["public"]["Enums"]["year_level"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculum_courses_curriculum_version_id_fkey"
+            columns: ["curriculum_version_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_versions: {
+        Row: {
+          code: string
+          created_at: string
+          effective_from_school_year_id: string | null
+          id: string
+          major_id: string | null
+          name: string | null
+          program_id: string
+          published_at: string | null
+          published_by: string | null
+          status: Database["public"]["Enums"]["curriculum_version_status"]
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          effective_from_school_year_id?: string | null
+          id?: string
+          major_id?: string | null
+          name?: string | null
+          program_id: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: Database["public"]["Enums"]["curriculum_version_status"]
+          updated_at: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          effective_from_school_year_id?: string | null
+          id?: string
+          major_id?: string | null
+          name?: string | null
+          program_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: Database["public"]["Enums"]["curriculum_version_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_versions_effective_from_school_year_id_fkey"
+            columns: ["effective_from_school_year_id"]
+            isOneToOne: false
+            referencedRelation: "school_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculum_versions_major_id_program_id_fkey"
+            columns: ["major_id", "program_id"]
+            isOneToOne: false
+            referencedRelation: "majors"
+            referencedColumns: ["id", "program_id"]
+          },
+          {
+            foreignKeyName: "curriculum_versions_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculum_versions_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evaluation_assignments: {
         Row: {
           assigned_at: string
@@ -1762,6 +1887,7 @@ export type Database = {
         | "APPROVED_LATE_PARTICIPATION"
         | "OTHER"
       CourseScope: "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC"
+      curriculum_version_status: "DRAFT" | "PUBLISHED" | "RETIRED"
       DeploymentStatus: "DRAFT" | "SCHEDULED" | "ACTIVE" | "CLOSED" | "ARCHIVED"
       DeploymentType: "COURSE_BOUND" | "CENTRAL"
       enrollment_source: "ONBOARDING" | "ROLLOVER" | "SECRETARY"
@@ -1923,6 +2049,7 @@ export const Constants = {
         "OTHER",
       ],
       CourseScope: ["GENERAL_EDUCATION", "PROGRAM_SPECIFIC"],
+      curriculum_version_status: ["DRAFT", "PUBLISHED", "RETIRED"],
       DeploymentStatus: ["DRAFT", "SCHEDULED", "ACTIVE", "CLOSED", "ARCHIVED"],
       DeploymentType: ["COURSE_BOUND", "CENTRAL"],
       enrollment_source: ["ONBOARDING", "ROLLOVER", "SECRETARY"],
