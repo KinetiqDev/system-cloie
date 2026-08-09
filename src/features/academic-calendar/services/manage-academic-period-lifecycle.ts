@@ -117,7 +117,6 @@ export async function transitionPeriodStatus(
           where: { id: periodId },
           select: {
             id: true,
-            end_date: true,
             status: true,
             semester: true,
             school_year: {
@@ -150,12 +149,6 @@ export async function transitionPeriodStatus(
           }
           activePeriodChanged = true;
         } else if (target === "COMPLETED") {
-          if (!existing.end_date) {
-            return {
-              success: false,
-              error: "Cannot complete a period without an end_date",
-            };
-          }
           activePeriodChanged = true;
         } else if (existing.status === "ACTIVE") {
           // ACTIVE -> CANCELLED also changes which period is live.

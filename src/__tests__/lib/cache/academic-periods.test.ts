@@ -13,6 +13,7 @@ vi.mock("next/cache", () => ({
 import {
   ACADEMIC_PERIODS_TAG,
   ACTIVE_ACADEMIC_PERIOD_TAG,
+  ACTIVE_SCHOOL_YEAR_TAG,
   invalidateAcademicPeriodReadModelTags,
   revalidateAcademicPeriodReadModelRoutes,
 } from "@/lib/cache/academic-periods";
@@ -30,6 +31,17 @@ describe("academic-period cache ownership", () => {
     invalidateAcademicPeriodReadModelTags();
     expect(revalidateTagMock).toHaveBeenCalledWith(ACADEMIC_PERIODS_TAG, "max");
     expect(revalidateTagMock).not.toHaveBeenCalledWith(ACTIVE_ACADEMIC_PERIOD_TAG, "max");
+  });
+
+  it("invalidates the active school year tag only when school year state changed", () => {
+    invalidateAcademicPeriodReadModelTags({ schoolYearStateChanged: true });
+
+    expect(revalidateTagMock).toHaveBeenCalledWith(ACADEMIC_PERIODS_TAG, "max");
+    expect(revalidateTagMock).toHaveBeenCalledWith(ACTIVE_SCHOOL_YEAR_TAG, "max");
+
+    revalidateTagMock.mockClear();
+    invalidateAcademicPeriodReadModelTags({ activePeriodChanged: true });
+    expect(revalidateTagMock).not.toHaveBeenCalledWith(ACTIVE_SCHOOL_YEAR_TAG, "max");
   });
 
   it("retains the complete Dean route invalidation set during migration", () => {

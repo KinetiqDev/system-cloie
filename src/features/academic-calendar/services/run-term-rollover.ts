@@ -85,6 +85,11 @@ export async function runTermRollover({
     return { success: false, error: "Cannot rollover from/to archived school years." };
   }
 
+  // Year levels advance only between School Years. A transition within the
+  // same School Year (First Term -> Second Term, or semester to semester)
+  // carries each student's year level unchanged.
+  const sameSchoolYear = sourceTerm.school_year.id === targetTerm.school_year.id;
+
   // 3. Fetch active enrollments from source term
   const sourceEnrollments = await prisma.studentEnrollment.findMany({
     where: {
@@ -132,7 +137,9 @@ export async function runTermRollover({
 
   for (const enrollment of sourceEnrollments) {
     const student = enrollment.student;
-    const nextYearLevel = YEAR_LEVEL_PROMOTION[enrollment.year_level];
+    const nextYearLevel = sameSchoolYear
+      ? enrollment.year_level
+      : YEAR_LEVEL_PROMOTION[enrollment.year_level];
 
     // Check for graduating students (4th year)
     if (nextYearLevel === null) {
@@ -245,15 +252,25 @@ export async function previewTermRollover({
   const [sourceTerm, targetTerm] = await Promise.all([
     prisma.academicTermInstance.findUnique({
       where: { id: sourceTermInstanceId },
+      include: { school_year: { select: { id: true, is_archived: true } } },
     }),
     prisma.academicTermInstance.findUnique({
       where: { id: targetTermInstanceId },
+      include: { school_year: { select: { id: true, is_archived: true } } },
     }),
   ]);
 
   if (!sourceTerm || !targetTerm) {
     return { success: false, error: "Term instance not found." };
   }
+
+  if (sourceTerm.school_year.is_archived || targetTerm.school_year.is_archived) {
+    return { success: false, error: "Cannot rollover from/to archived school years." };
+  }
+
+  // Year levels advance only between School Years; within one School Year the
+  // year level is carried over unchanged.
+  const sameSchoolYear = sourceTerm.school_year.id === targetTerm.school_year.id;
 
   // 3. Fetch source enrollments
   const sourceEnrollments = await prisma.studentEnrollment.findMany({
@@ -290,7 +307,9 @@ export async function previewTermRollover({
 
   for (const enrollment of sourceEnrollments) {
     const student = enrollment.student;
-    const nextYearLevel = YEAR_LEVEL_PROMOTION[enrollment.year_level];
+    const nextYearLevel = sameSchoolYear
+      ? enrollment.year_level
+      : YEAR_LEVEL_PROMOTION[enrollment.year_level];
 
     if (nextYearLevel === null) {
       exceptions.push({

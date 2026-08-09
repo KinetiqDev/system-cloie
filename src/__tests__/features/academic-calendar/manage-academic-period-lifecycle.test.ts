@@ -194,16 +194,27 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
     });
   });
 
-  it("rejects completing without end_date", async () => {
+  it("completes an ACTIVE period with null end_date and persists the readiness snapshot", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "p-active",
       end_date: null,
       status: "ACTIVE",
     } as never);
+    vi.mocked(prisma.academicTermInstance.updateMany).mockResolvedValue({ count: 1 } as never);
+
     const r = await transitionPeriodStatus("p-active", "COMPLETED");
-    expect(r.success).toBe(false);
-    if (!r.success) expect(r.error).toMatch(/end_date/i);
+    expect(r.success).toBe(true);
+    expect(prisma.academicTermInstance.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "p-active", status: "ACTIVE" },
+        data: expect.objectContaining({ status: "COMPLETED" }),
+      })
+    );
+    expect(persistPeriodReadinessSnapshot).toHaveBeenCalledWith("p-active", prisma);
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
+      activePeriodChanged: true,
+    });
   });
 
   it("cancels a PLANNED period", async () => {

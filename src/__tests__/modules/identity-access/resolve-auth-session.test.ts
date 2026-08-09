@@ -66,7 +66,10 @@ describe("resolveAuthSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-    findFirstTermInstanceMock.mockResolvedValue({ id: "term-1" });
+    findFirstTermInstanceMock.mockResolvedValue({
+      id: "term-1",
+      school_year: { id: "sy-1", code: "2025-2026", is_active: true },
+    });
     findUniqueStudentEnrollmentMock.mockResolvedValue({ is_active: true });
     findFirstFacultyAffiliationMock.mockResolvedValue({ id: "affiliation-1" });
     readDemoAuthCookieMock.mockResolvedValue(null);
@@ -501,7 +504,10 @@ describe("dedicated demo authorization boundaries", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-    findFirstTermInstanceMock.mockResolvedValue({ id: "term-1" });
+    findFirstTermInstanceMock.mockResolvedValue({
+      id: "term-1",
+      school_year: { id: "sy-1", code: "2025-2026", is_active: true },
+    });
     findUniqueStudentEnrollmentMock.mockResolvedValue({ is_active: true });
     findFirstFacultyAffiliationMock.mockResolvedValue(null);
     readDemoAuthCookieMock.mockResolvedValue(null);

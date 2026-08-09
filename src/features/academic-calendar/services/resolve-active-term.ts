@@ -3,6 +3,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import type { ActiveTermContext } from "../types";
+import { resolveActiveAcademicContext } from "./resolve-active-academic-context";
 
 /**
  * Resolve the currently active Academic Period.
@@ -10,8 +11,13 @@ import type { ActiveTermContext } from "../types";
  * Returns null if no ACTIVE period is set.
  */
 export const resolveActiveTerm = cache(async (): Promise<ActiveTermContext | null> => {
-  const termInstance = await prisma.academicTermInstance.findFirst({
-    where: { status: "ACTIVE" },
+  const context = await resolveActiveAcademicContext();
+  if (!context.assignmentPeriod) {
+    return null;
+  }
+
+  const termInstance = await prisma.academicTermInstance.findUnique({
+    where: { id: context.assignmentPeriod.id },
     include: {
       school_year: true,
     },
@@ -52,19 +58,14 @@ export const resolveActiveTerm = cache(async (): Promise<ActiveTermContext | nul
  * Check if an active period is configured.
  */
 export async function hasActiveTerm(): Promise<boolean> {
-  const count = await prisma.academicTermInstance.count({
-    where: { status: "ACTIVE" },
-  });
-  return count > 0;
+  const context = await resolveActiveAcademicContext();
+  return context.assignmentPeriod !== null;
 }
 
 /**
  * Get the active period ID, or null if none exists.
  */
 export async function getActiveTermId(): Promise<string | null> {
-  const active = await prisma.academicTermInstance.findFirst({
-    where: { status: "ACTIVE" },
-    select: { id: true },
-  });
-  return active?.id ?? null;
+  const context = await resolveActiveAcademicContext();
+  return context.assignmentPeriod?.id ?? null;
 }

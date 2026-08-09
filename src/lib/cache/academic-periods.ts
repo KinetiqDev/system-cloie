@@ -2,6 +2,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 
 export const ACADEMIC_PERIODS_TAG = "academic-periods";
 export const ACTIVE_ACADEMIC_PERIOD_TAG = "active-academic-period";
+export const ACTIVE_SCHOOL_YEAR_TAG = "active-school-year";
 export const ACADEMIC_PERIOD_SUMMARIES_REVALIDATE_SECONDS = 300;
 
 const ACADEMIC_PERIOD_READ_MODEL_PATHS = [
@@ -12,11 +13,17 @@ const ACADEMIC_PERIOD_READ_MODEL_PATHS = [
 ] as const;
 
 /** Call after a successful academic-period mutation has committed. */
-export function invalidateAcademicPeriodReadModelTags(options: { activePeriodChanged?: boolean } = {}) {
+export function invalidateAcademicPeriodReadModelTags(
+  options: { activePeriodChanged?: boolean; schoolYearStateChanged?: boolean } = {}
+) {
   revalidateTag(ACADEMIC_PERIODS_TAG, "max");
 
   if (options.activePeriodChanged) {
     revalidateTag(ACTIVE_ACADEMIC_PERIOD_TAG, "max");
+  }
+
+  if (options.schoolYearStateChanged) {
+    revalidateTag(ACTIVE_SCHOOL_YEAR_TAG, "max");
   }
 }
 

@@ -54,6 +54,17 @@ export interface ActiveTermContext {
 }
 
 /**
+ * Active academic context returned by resolveActiveAcademicContext(): the
+ * active School Year, Semester, and assignment period in a single read.
+ * Null-safe: each projection is null when it does not exist.
+ */
+export interface ActiveAcademicContext {
+  schoolYear: { id: string; code: string } | null;
+  semester: AcademicSemester | null;
+  assignmentPeriod: { id: string; semester: AcademicSemester; term: AcademicTerm | null } | null;
+}
+
+/**
  * Input for creating a School Year.
  */
 export interface CreateSchoolYearInput {

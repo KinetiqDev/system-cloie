@@ -119,10 +119,10 @@ describe("runTermRollover", () => {
     });
   });
 
-  it("promotes 1st year to 2nd year", async () => {
+  it("promotes 1st year to 2nd year across school years", async () => {
     mockAuthenticatedAdmin();
 
-    // Mock term instances
+    // Mock term instances in different school years
     termInstanceFindUniqueMock
       .mockResolvedValueOnce({
         id: "term-1",
@@ -130,7 +130,7 @@ describe("runTermRollover", () => {
       })
       .mockResolvedValueOnce({
         id: "term-2",
-        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+        school_year: { is_archived: false, code: "2026-2027", id: "sy-2" },
       });
 
     // Mock source enrollments - 1st year student
@@ -177,9 +177,19 @@ describe("runTermRollover", () => {
       expect(result.data.createdCount).toBe(1);
       expect(result.data.exceptions).toHaveLength(0);
     }
+    expect(studentEnrollmentCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          student_user_id: "student-1",
+          term_instance_id: "term-2",
+          year_level: "SECOND_YEAR",
+        }),
+      ],
+      skipDuplicates: true,
+    });
   });
 
-  it("flags 4th year students as graduating exception", async () => {
+  it("preserves year level within the same school year", async () => {
     mockAuthenticatedAdmin();
 
     termInstanceFindUniqueMock
@@ -190,6 +200,131 @@ describe("runTermRollover", () => {
       .mockResolvedValueOnce({
         id: "term-2",
         school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+      });
+
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([
+      {
+        student_user_id: "student-1",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "SECOND_YEAR",
+        section: null,
+        is_active: true,
+        student: {
+          id: "student-1",
+          email: "student1@test.com",
+          first_name: "John",
+          last_name: "Doe",
+        },
+      },
+    ]);
+
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([]);
+    studentEnrollmentCreateManyMock.mockResolvedValue({ count: 1 });
+    transactionMock.mockImplementation(async (callback) => {
+      return await callback({
+        studentEnrollment: {
+          createMany: studentEnrollmentCreateManyMock,
+        },
+      });
+    });
+
+    const result = await runTermRollover({
+      sourceTermInstanceId: "term-1",
+      targetTermInstanceId: "term-2",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.processedCount).toBe(1);
+      expect(result.data.createdCount).toBe(1);
+      expect(result.data.exceptions).toHaveLength(0);
+    }
+    expect(studentEnrollmentCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          student_user_id: "student-1",
+          term_instance_id: "term-2",
+          year_level: "SECOND_YEAR",
+        }),
+      ],
+      skipDuplicates: true,
+    });
+  });
+
+  it("carries a 4th year student unchanged within the same school year", async () => {
+    mockAuthenticatedAdmin();
+
+    termInstanceFindUniqueMock
+      .mockResolvedValueOnce({
+        id: "term-1",
+        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+      })
+      .mockResolvedValueOnce({
+        id: "term-2",
+        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+      });
+
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([
+      {
+        student_user_id: "student-4",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "FOURTH_YEAR",
+        section: null,
+        is_active: true,
+        student: {
+          id: "student-4",
+          email: "senior@test.com",
+          first_name: "Jane",
+          last_name: "Smith",
+        },
+      },
+    ]);
+
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([]);
+    studentEnrollmentCreateManyMock.mockResolvedValue({ count: 1 });
+    transactionMock.mockImplementation(async (callback) => {
+      return await callback({
+        studentEnrollment: {
+          createMany: studentEnrollmentCreateManyMock,
+        },
+      });
+    });
+
+    const result = await runTermRollover({
+      sourceTermInstanceId: "term-1",
+      targetTermInstanceId: "term-2",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.processedCount).toBe(1);
+      expect(result.data.createdCount).toBe(1);
+      expect(result.data.exceptions).toHaveLength(0);
+    }
+    expect(studentEnrollmentCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          student_user_id: "student-4",
+          year_level: "FOURTH_YEAR",
+        }),
+      ],
+      skipDuplicates: true,
+    });
+  });
+
+  it("flags 4th year students as graduating exception on cross-school-year rollover", async () => {
+    mockAuthenticatedAdmin();
+
+    termInstanceFindUniqueMock
+      .mockResolvedValueOnce({
+        id: "term-1",
+        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+      })
+      .mockResolvedValueOnce({
+        id: "term-2",
+        school_year: { is_archived: false, code: "2026-2027", id: "sy-2" },
       });
 
     // 4th year student (graduating)
@@ -326,7 +461,7 @@ describe("previewTermRollover", () => {
     vi.clearAllMocks();
   });
 
-  it("returns preview without creating enrollments", async () => {
+  it("returns preview without creating enrollments across school years", async () => {
     mockAuthenticatedAdmin();
 
     termInstanceFindUniqueMock
@@ -336,7 +471,7 @@ describe("previewTermRollover", () => {
       })
       .mockResolvedValueOnce({
         id: "term-2",
-        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+        school_year: { is_archived: false, code: "2026-2027", id: "sy-2" },
       });
 
     studentEnrollmentFindManyMock.mockResolvedValueOnce([
@@ -385,6 +520,68 @@ describe("previewTermRollover", () => {
     }
 
     // Verify no database writes occurred
+    expect(studentEnrollmentCreateManyMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("previews preserved year levels within the same school year", async () => {
+    mockAuthenticatedAdmin();
+
+    termInstanceFindUniqueMock
+      .mockResolvedValueOnce({
+        id: "term-1",
+        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+      })
+      .mockResolvedValueOnce({
+        id: "term-2",
+        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+      });
+
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([
+      {
+        student_user_id: "student-1",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "SECOND_YEAR",
+        section: null,
+        is_active: true,
+        student: {
+          id: "student-1",
+          email: "student1@test.com",
+          first_name: "John",
+          last_name: "Doe",
+        },
+      },
+      {
+        student_user_id: "student-4",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "FOURTH_YEAR",
+        section: null,
+        is_active: true,
+        student: {
+          id: "student-4",
+          email: "senior@test.com",
+          first_name: "Jane",
+          last_name: "Smith",
+        },
+      },
+    ]);
+
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([]);
+
+    const result = await previewTermRollover({
+      sourceTermInstanceId: "term-1",
+      targetTermInstanceId: "term-2",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.wouldProcessCount).toBe(2);
+      expect(result.data.wouldCreateCount).toBe(2); // Both carried over unchanged
+      expect(result.data.exceptions).toHaveLength(0); // No graduation within a school year
+    }
+
     expect(studentEnrollmentCreateManyMock).not.toHaveBeenCalled();
     expect(transactionMock).not.toHaveBeenCalled();
   });
