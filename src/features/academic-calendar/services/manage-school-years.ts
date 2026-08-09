@@ -338,7 +338,10 @@ export async function activateSchoolYear(
     );
 
     if (result.success) {
-      invalidateAcademicPeriodReadModelTags({ activePeriodChanged: true });
+      invalidateAcademicPeriodReadModelTags({
+        activePeriodChanged: true,
+        schoolYearStateChanged: true,
+      });
     }
 
     return result;
@@ -413,7 +416,10 @@ export async function deactivateSchoolYear(
     );
 
     if (result.success) {
-      invalidateAcademicPeriodReadModelTags({ activePeriodChanged: true });
+      invalidateAcademicPeriodReadModelTags({
+        activePeriodChanged: true,
+        schoolYearStateChanged: true,
+      });
     }
 
     return result;
@@ -492,7 +498,10 @@ export async function setActiveSemester(
     );
 
     if (result.success) {
-      invalidateAcademicPeriodReadModelTags({ activePeriodChanged: true });
+      invalidateAcademicPeriodReadModelTags({
+        activePeriodChanged: true,
+        schoolYearStateChanged: true,
+      });
     }
 
     return result;

@@ -151,7 +151,7 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
     expect(activatedCall?.[0]?.data).toMatchObject({ status: "ACTIVE" });
   });
 
-  it("rejects activating when prior active lacks end_date and leaves state unchanged", async () => {
+  it("activates a successor and atomically completes an undated prior active period", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "p-new",
@@ -162,13 +162,24 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
     } as never);
     vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({
       id: "p-prior",
+      end_date: null,
     } as never);
     vi.mocked(prisma.academicTermInstance.updateMany).mockResolvedValue({ count: 1 } as never);
 
     const r = await transitionPeriodStatus("p-new", "ACTIVE");
-    expect(r.success).toBe(false);
-    if (!r.success) expect(r.error).toMatch(/end_date/i);
-    expect(prisma.academicTermInstance.updateMany).not.toHaveBeenCalled();
+    expect(r.success).toBe(true);
+
+    const updateCalls = vi.mocked(prisma.academicTermInstance.updateMany).mock.calls;
+    const completedCall = updateCalls.find(
+      (c) => c[0]?.where?.id === "p-prior"
+    );
+    expect(completedCall?.[0]?.data).toMatchObject({ status: "COMPLETED" });
+    expect(persistPeriodReadinessSnapshot).toHaveBeenCalledWith("p-prior", prisma);
+
+    const activatedCall = updateCalls.find(
+      (c) => c[0]?.where?.id === "p-new"
+    );
+    expect(activatedCall?.[0]?.data).toMatchObject({ status: "ACTIVE" });
   });
 
   it("completes the active period without changing its end_date", async () => {
@@ -194,16 +205,27 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
     });
   });
 
-  it("rejects completing without end_date", async () => {
+  it("completes an ACTIVE period with null end_date and persists the readiness snapshot", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
       id: "p-active",
       end_date: null,
       status: "ACTIVE",
     } as never);
+    vi.mocked(prisma.academicTermInstance.updateMany).mockResolvedValue({ count: 1 } as never);
+
     const r = await transitionPeriodStatus("p-active", "COMPLETED");
-    expect(r.success).toBe(false);
-    if (!r.success) expect(r.error).toMatch(/end_date/i);
+    expect(r.success).toBe(true);
+    expect(prisma.academicTermInstance.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "p-active", status: "ACTIVE" },
+        data: expect.objectContaining({ status: "COMPLETED" }),
+      })
+    );
+    expect(persistPeriodReadinessSnapshot).toHaveBeenCalledWith("p-active", prisma);
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
+      activePeriodChanged: true,
+    });
   });
 
   it("cancels a PLANNED period", async () => {

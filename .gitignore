@@ -64,3 +64,6 @@ skills-lock.json
 # IDE
 .idea
 .vscode
+
+# redundant ci
+.depot/workflows

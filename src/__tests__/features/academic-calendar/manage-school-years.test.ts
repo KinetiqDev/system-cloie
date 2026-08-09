@@ -327,6 +327,7 @@ describe("manage-school-years / activateSchoolYear", () => {
     });
     expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
       activePeriodChanged: true,
+      schoolYearStateChanged: true,
     });
   });
 
@@ -424,6 +425,7 @@ describe("manage-school-years / deactivateSchoolYear", () => {
     });
     expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
       activePeriodChanged: true,
+      schoolYearStateChanged: true,
     });
   });
 
@@ -528,6 +530,7 @@ describe("manage-school-years / setActiveSemester", () => {
     });
     expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
       activePeriodChanged: true,
+      schoolYearStateChanged: true,
     });
   });
 
