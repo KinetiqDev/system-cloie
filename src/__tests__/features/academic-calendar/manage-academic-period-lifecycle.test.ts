@@ -227,6 +227,23 @@ describe("manage-academic-period-lifecycle / transitionPeriodStatus", () => {
     });
   });
 
+  it("invalidates the active-period projection when an ACTIVE period is cancelled", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
+    vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({
+      id: "p-active",
+      end_date: new Date("2026-05-31"),
+      status: "ACTIVE",
+    } as never);
+    vi.mocked(prisma.academicTermInstance.updateMany).mockResolvedValue({ count: 1 } as never);
+
+    const r = await transitionPeriodStatus("p-active", "CANCELLED");
+
+    expect(r.success).toBe(true);
+    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
+      activePeriodChanged: true,
+    });
+  });
+
   it("rejects activating a period in a school year that is not active", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary());
     vi.mocked(prisma.academicTermInstance.findUnique).mockResolvedValue({

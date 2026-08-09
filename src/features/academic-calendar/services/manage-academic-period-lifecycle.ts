@@ -1,6 +1,6 @@
 "use server";
 
-import { AcademicPeriodStatus, Prisma, type Prisma as PrismaTypes } from "@prisma/client";
+import { AcademicPeriodStatus, AcademicSemester, Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -10,6 +10,35 @@ import { persistPeriodReadinessSnapshot } from "./read-period-readiness";
 import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
 
 type Tx = PrismaTypes.TransactionClient;
+
+type PeriodWithSchoolYear = {
+  semester: AcademicSemester | null;
+  school_year: {
+    is_archived: boolean;
+    is_active: boolean;
+    active_semester: AcademicSemester | null;
+  } | null;
+};
+
+/**
+ * Validate the School Year hierarchy before activating a period: the School
+ * Year must be unarchived, active, and its active_semester must match the
+ * period's semester. Returns an error message, or null when valid.
+ */
+function checkActivationHierarchy(period: PeriodWithSchoolYear): string | null {
+  const schoolYear = period.school_year;
+  if (!schoolYear) return "Academic period has no school year";
+  if (schoolYear.is_archived) {
+    return "Cannot activate a term in an archived school year";
+  }
+  if (!schoolYear.is_active) {
+    return "Cannot activate a term in a school year that is not active";
+  }
+  if (period.semester !== schoolYear.active_semester) {
+    return "Period semester does not match the school year's active semester";
+  }
+  return null;
+}
 
 /**
  * Stable completion seam for readiness snapshot persistence.
@@ -23,6 +52,41 @@ async function onPeriodCompleted(
 }
 
 class LifecycleConflictError extends Error {}
+
+/**
+ * Atomically complete the currently active period (if any) so a new period can
+ * take over the one-active slot. Rejects when the prior period has no end_date.
+ */
+async function completePriorActivePeriod(
+  tx: Tx,
+  periodId: string
+): Promise<ServiceResult<{ completed: boolean }>> {
+  const priorActive = await tx.academicTermInstance.findFirst({
+    where: { status: "ACTIVE", id: { not: periodId } },
+    select: { id: true, end_date: true },
+  });
+
+  if (!priorActive) {
+    return { success: true, data: { completed: false } };
+  }
+
+  if (!priorActive.end_date) {
+    return {
+      success: false,
+      error:
+        "Current active period is missing end_date; cannot complete it before activating a new period",
+    };
+  }
+
+  const completed = await tx.academicTermInstance.updateMany({
+    where: { id: priorActive.id, status: "ACTIVE" },
+    data: { status: "COMPLETED" },
+  });
+  if (completed.count !== 1) throw new LifecycleConflictError();
+
+  await onPeriodCompleted(priorActive.id, tx);
+  return { success: true, data: { completed: true } };
+}
 
 /**
  * Secretary-only Academic Period lifecycle transition.
@@ -71,64 +135,31 @@ export async function transitionPeriodStatus(
           return { success: false, error: decision.reason };
         }
 
-        // Revalidate the School Year hierarchy inside the transaction: a
-        // concurrent archive/deactivate/semester change must not leave an
-        // active period in an inactive School Year or mismatched semester.
         if (target === "ACTIVE") {
-          const schoolYear = existing.school_year;
-          if (!schoolYear) {
-            return { success: false, error: "Academic period has no school year" };
+          // Revalidate the School Year hierarchy inside the transaction: a
+          // concurrent archive/deactivate/semester change must not leave an
+          // active period in an inactive School Year or mismatched semester.
+          const hierarchyError = checkActivationHierarchy(existing);
+          if (hierarchyError) {
+            return { success: false, error: hierarchyError };
           }
-          if (schoolYear.is_archived) {
+
+          const prior = await completePriorActivePeriod(tx, periodId);
+          if (!prior.success) {
+            return prior;
+          }
+          activePeriodChanged = true;
+        } else if (target === "COMPLETED") {
+          if (!existing.end_date) {
             return {
               success: false,
-              error: "Cannot activate a term in an archived school year",
+              error: "Cannot complete a period without an end_date",
             };
           }
-          if (!schoolYear.is_active) {
-            return {
-              success: false,
-              error: "Cannot activate a term in a school year that is not active",
-            };
-          }
-          if (existing.semester !== schoolYear.active_semester) {
-            return {
-              success: false,
-              error: "Period semester does not match the school year's active semester",
-            };
-          }
-        }
-
-        activePeriodChanged = existing.status === "ACTIVE" || target === "ACTIVE";
-
-        if (target === "ACTIVE") {
-          const priorActive = await tx.academicTermInstance.findFirst({
-            where: { status: "ACTIVE", id: { not: periodId } },
-            select: { id: true, end_date: true },
-          });
-
-          if (priorActive) {
-            if (!priorActive.end_date) {
-              return {
-                success: false,
-                error:
-                  "Current active period is missing end_date; cannot complete it before activating a new period",
-              };
-            }
-            const completed = await tx.academicTermInstance.updateMany({
-              where: { id: priorActive.id, status: "ACTIVE" },
-              data: { status: "COMPLETED" },
-            });
-            if (completed.count !== 1) throw new LifecycleConflictError();
-            await onPeriodCompleted(priorActive.id, tx);
-          }
-        }
-
-        if (target === "COMPLETED" && !existing.end_date) {
-          return {
-            success: false,
-            error: "Cannot complete a period without an end_date",
-          };
+          activePeriodChanged = true;
+        } else if (existing.status === "ACTIVE") {
+          // ACTIVE -> CANCELLED also changes which period is live.
+          activePeriodChanged = true;
         }
 
         const updated = await tx.academicTermInstance.updateMany({

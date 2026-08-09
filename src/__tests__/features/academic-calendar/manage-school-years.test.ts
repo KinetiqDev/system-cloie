@@ -475,12 +475,36 @@ describe("manage-school-years / deactivateSchoolYear", () => {
     });
     expect(prisma.schoolYear.update).not.toHaveBeenCalled();
   });
+
+  it("maps a serialization conflict to a retry error", async () => {
+    vi.mocked(prisma.schoolYear.findUnique).mockResolvedValue({
+      id: "sy-1",
+      is_active: true,
+      is_archived: false,
+    } as never);
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.schoolYear.update).mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("conflict", { code: "P2034", clientVersion: "6" })
+    );
+
+    const result = await deactivateSchoolYear("sy-1");
+
+    expect(result).toEqual({
+      success: false,
+      error: "School year changed; retry the deactivation",
+    });
+    expect(invalidateAcademicPeriodReadModelTagsMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("manage-school-years / setActiveSemester", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary);
+    vi.mocked(prisma.academicTermInstance.findFirst).mockReset();
+    vi.mocked(prisma.$transaction).mockImplementation((callback) =>
+      callback(prisma as never)
+    );
   });
 
   it("updates active_semester with activation audit fields on an active school year", async () => {
@@ -505,6 +529,26 @@ describe("manage-school-years / setActiveSemester", () => {
     expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith({
       activePeriodChanged: true,
     });
+  });
+
+  it("rejects changing the semester while a period in another semester is active", async () => {
+    vi.mocked(prisma.schoolYear.findUnique).mockResolvedValue({
+      id: "sy-1",
+      is_active: true,
+      is_archived: false,
+    } as never);
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({
+      id: "ti-active-first",
+    } as never);
+
+    const result = await setActiveSemester("sy-1", AcademicSemester.SECOND);
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "Cannot change the active semester while a period in another semester is active",
+    });
+    expect(prisma.schoolYear.update).not.toHaveBeenCalled();
   });
 
   it("rejects setting a semester on an inactive school year", async () => {
