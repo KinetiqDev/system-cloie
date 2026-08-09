@@ -1,0 +1,143 @@
+import { AcademicSemester, Prisma, type Prisma as PrismaTypes } from "@prisma/client";
+import { prisma } from "@/lib/db/prisma";
+import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+
+type GenerateBaselineResult = {
+  created: number;
+  skippedPrograms: number;
+  skippedCourses: number;
+};
+
+/**
+ * Create one DRAFT baseline for each program that has no curriculum version.
+ * Courses without a complete valid default placement are left out.
+ */
+export async function generateBaselineCurricula(): Promise<GenerateBaselineResult> {
+  const programs = await prisma.program.findMany({
+    select: { id: true, code: true },
+  });
+  const courses = await prisma.course.findMany({
+    where: { program_id: { not: null } },
+    select: {
+      id: true,
+      program_id: true,
+      code: true,
+      title: true,
+      default_year_level: true,
+      default_semester: true,
+      default_term: true,
+      program: { select: { code: true } },
+    },
+  });
+  const grouped = new Map<
+    string,
+    {
+      programCode: string;
+      courses: typeof courses;
+    }
+  >();
+  for (const program of programs) {
+    grouped.set(program.id, { programCode: program.code, courses: [] });
+  }
+  let skippedCourses = 0;
+
+  for (const course of courses) {
+    if (!course.program_id || !course.program) {
+      skippedCourses += 1;
+      continue;
+    }
+
+    const group = grouped.get(course.program_id) ?? {
+      programCode: course.program.code,
+      courses: [],
+    };
+    grouped.set(course.program_id, group);
+
+    if (
+      !course.default_year_level ||
+      !course.default_semester ||
+      (course.default_semester !== AcademicSemester.SUMMER && !course.default_term)
+    ) {
+      skippedCourses += 1;
+      continue;
+    }
+
+    group.courses.push(course);
+  }
+
+  let created = 0;
+  let skippedPrograms = 0;
+
+  for (const [programId, group] of grouped) {
+    const result = await createBaselineForProgram(programId, group);
+    if (result === "created") created += 1;
+    else skippedPrograms += 1;
+  }
+
+  return { created, skippedPrograms, skippedCourses };
+}
+
+type BaselineGroup = {
+  programCode: string;
+  courses: Array<{
+    id: string;
+    code: string;
+    title: string;
+    default_year_level: Awaited<ReturnType<typeof prisma.course.findMany>>[number]["default_year_level"];
+    default_semester: Awaited<ReturnType<typeof prisma.course.findMany>>[number]["default_semester"];
+    default_term: Awaited<ReturnType<typeof prisma.course.findMany>>[number]["default_term"];
+  }>;
+};
+
+async function createBaselineForProgram(
+  programId: string,
+  group: BaselineGroup
+): Promise<"created" | "skipped"> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const result = await prisma.$transaction(
+        async (tx: PrismaTypes.TransactionClient) => {
+          const existing = await tx.curriculumVersion.findFirst({
+            where: { program_id: programId },
+            select: { id: true },
+          });
+          if (existing) return "skipped" as const;
+
+          await tx.curriculumVersion.create({
+            data: {
+              program_id: programId,
+              code: `${group.programCode}-BASELINE`,
+              status: "DRAFT",
+              courses: {
+                create: group.courses.map((course) => ({
+                  course_id: course.id,
+                  year_level: course.default_year_level!,
+                  semester: course.default_semester!,
+                  term:
+                    course.default_semester === AcademicSemester.SUMMER
+                      ? null
+                      : course.default_term,
+                  course_code_snapshot: course.code,
+                  course_title_snapshot: course.title,
+                })),
+              },
+            },
+            select: { id: true },
+          });
+
+          return "created" as const;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      );
+      return result;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+        continue;
+      }
+      if (isUniqueConstraintError(error)) return "skipped";
+      throw error;
+    }
+  }
+
+  throw new Error(`Unable to generate baseline curriculum for program ${programId}; retry later`);
+}

@@ -12,7 +12,9 @@ import {
 import type { CreateCurriculumVersionInput } from "../types";
 import {
   createCurriculumVersionSchema,
+  cloneCurriculumVersionSchema,
   publishCurriculumVersionSchema,
+  retireCurriculumVersionSchema,
 } from "../schemas/curriculum";
 import { assertProgramAccess, resolveWriteActor } from "./curriculum-write-auth";
 
@@ -86,7 +88,7 @@ export async function createCurriculumVersion(
 export async function publishCurriculumVersion(
   id: string
 ): Promise<ServiceResult<{ id: string; status: "PUBLISHED" }>> {
-  const parsed = publishCurriculumVersionSchema.safeParse({ id });
+  const parsed = retireCurriculumVersionSchema.safeParse({ id });
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
@@ -151,7 +153,7 @@ export async function publishCurriculumVersion(
 export async function retireCurriculumVersion(
   id: string
 ): Promise<ServiceResult<{ id: string; status: "RETIRED" }>> {
-  const parsed = publishCurriculumVersionSchema.safeParse({ id });
+  const parsed = cloneCurriculumVersionSchema.safeParse({ id });
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }

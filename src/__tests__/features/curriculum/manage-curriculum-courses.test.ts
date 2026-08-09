@@ -405,6 +405,16 @@ describe("manage-curriculum-courses / updateCurriculumCourse", () => {
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+
+  it("rejects an empty placement update before touching the database", async () => {
+    const result = await updateCurriculumCourse(COURSE_ROW_ID, {});
+
+    expect(result).toEqual({
+      success: false,
+      error: "At least one placement field is required",
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
 });
 
 describe("manage-curriculum-courses / duplicate placements", () => {

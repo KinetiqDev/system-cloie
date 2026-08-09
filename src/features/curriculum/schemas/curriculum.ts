@@ -87,7 +87,12 @@ export const updateCurriculumCourseSchema = z
     if (!check.valid) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: check.error, path: ["term"] });
     }
-  });
+  })
+  .refine(
+    (data) =>
+      data.yearLevel !== undefined || data.semester !== undefined || data.term !== undefined,
+    { message: "At least one placement field is required" }
+  );
 
 /**
  * Zod schema for removing a Curriculum Course placement.
@@ -95,9 +100,3 @@ export const updateCurriculumCourseSchema = z
 export const removeCurriculumCourseSchema = z.object({
   id: z.string().uuid("Invalid curriculum course ID"),
 });
-
-export type CreateCurriculumVersionSchema = z.infer<typeof createCurriculumVersionSchema>;
-export type PublishCurriculumVersionSchema = z.infer<typeof publishCurriculumVersionSchema>;
-export type AddCurriculumCourseSchema = z.infer<typeof addCurriculumCourseSchema>;
-export type UpdateCurriculumCourseSchema = z.infer<typeof updateCurriculumCourseSchema>;
-export type RemoveCurriculumCourseSchema = z.infer<typeof removeCurriculumCourseSchema>;

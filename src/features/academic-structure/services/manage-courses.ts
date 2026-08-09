@@ -105,6 +105,7 @@ async function listCourses() {
       _count: {
         select: {
           cilos: { where: { is_active: true } },
+          curriculum_courses: true,
         },
       },
     },
@@ -210,6 +211,7 @@ export async function deleteCourse(id: string): Promise<ServiceResult> {
       _count: {
         select: {
           cilos: { where: { is_active: true } },
+          curriculum_courses: true,
         },
       },
     },
@@ -217,6 +219,13 @@ export async function deleteCourse(id: string): Promise<ServiceResult> {
 
   if (!course) {
     return { success: false, error: "Course not found." };
+  }
+
+  if (course._count.curriculum_courses > 0) {
+    return {
+      success: false,
+      error: "This course is referenced by one or more curriculum versions. Deactivate it instead.",
+    };
   }
 
   const dependentCount = course._count.cilos + countCourseEvaluations(course);
@@ -232,6 +241,16 @@ export async function deleteCourse(id: string): Promise<ServiceResult> {
     await prisma.course.delete({ where: { id } });
   } catch (error) {
     if (isForeignKeyConstraintError(error)) {
+      const curriculumReferenceCount = await prisma.curriculumCourse.count({
+        where: { course_id: id },
+      });
+      if (curriculumReferenceCount > 0) {
+        return {
+          success: false,
+          error:
+            "This course is referenced by one or more curriculum versions. Deactivate it instead.",
+        };
+      }
       return {
         success: false,
         error: "Cannot delete course; it has existing assignments. Deactivate it instead.",
