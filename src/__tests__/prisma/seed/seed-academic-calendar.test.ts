@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AcademicPeriodStatus, AcademicSemester, AcademicTerm } from "@prisma/client";
+import { AcademicSemester, AcademicTerm } from "@prisma/client";
 
 const { backfillCanonicalTermInstancesMock, prisma } = vi.hoisted(() => ({
   backfillCanonicalTermInstancesMock: vi.fn(),
@@ -18,7 +18,7 @@ const { backfillCanonicalTermInstancesMock, prisma } = vi.hoisted(() => ({
     studentEnrollment: { deleteMany: vi.fn() },
     $executeRawUnsafe: vi.fn(),
     academicPeriodReadinessSnapshot: { deleteMany: vi.fn() },
-    academicTermInstance: { createMany: vi.fn(), update: vi.fn() },
+    academicTermInstance: { findFirst: vi.fn(), createMany: vi.fn(), update: vi.fn() },
   },
 }));
 
@@ -36,6 +36,7 @@ describe("seed-academic-calendar runner", () => {
     vi.clearAllMocks();
     backfillCanonicalTermInstancesMock.mockResolvedValue([]);
     prisma.schoolYear.upsert.mockResolvedValue({ id: "sy" });
+    prisma.academicTermInstance.findFirst.mockResolvedValue(null);
     prisma.academicTermInstance.createMany.mockResolvedValue({ count: 4 });
     prisma.academicTermInstance.update.mockImplementation(
       async ({ where }: { where: { id: string } }) => ({ id: where.id })
@@ -89,6 +90,28 @@ describe("seed-academic-calendar runner", () => {
     expect(updateOrder).toBeDefined();
     expect(createManyOrder).toBeLessThan(backfillOrder);
     expect(backfillOrder).toBeLessThan(updateOrder);
+  });
+
+  it("reconciles fixture rows by canonical pair when the pair already exists under a generated id", async () => {
+    prisma.academicTermInstance.findFirst.mockResolvedValue({ id: "generated-id" } as never);
+
+    const context = await seedAcademicCalendar();
+
+    for (const definition of academicTermDefinitions) {
+      expect(prisma.academicTermInstance.update).toHaveBeenCalledWith({
+        where: { id: "generated-id" },
+        data: {
+          start_date: new Date(definition.startDate),
+          end_date: new Date(definition.endDate),
+          status: definition.status,
+        },
+      });
+    }
+    expect(context.termInstance.id).toBe("generated-id");
+    expect(context.termInstances.ti2026First.id).toBe("generated-id");
+    expect(prisma.studentEnrollment.deleteMany).toHaveBeenCalledWith({
+      where: { term_instance_id: { in: ["generated-id", "generated-id", "generated-id", "generated-id"] } },
+    });
   });
 
   it("returns the expected lifecycle fixture term ids", async () => {

@@ -1,7 +1,7 @@
 import { prisma } from "../../../src/lib/db/prisma";
 import { backfillCanonicalTermInstances } from "../../../src/features/academic-calendar/services/manage-school-years";
 import { D } from "../constants/ids";
-import { academicTermDefinitions, managedTermInstanceIds } from "../fixtures/academic-calendar";
+import { academicTermDefinitions } from "../fixtures/academic-calendar";
 import type { AcademicCalendarContext } from "../types";
 
 export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
@@ -21,33 +21,51 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
     "2027-2028": sy2027_2028.id,
   };
 
+  console.log("  → Resolving lifecycle fixture terms by canonical pair...");
+  const fixtureTermIds: Record<string, string> = {};
+  for (const definition of academicTermDefinitions) {
+    const existing = await prisma.academicTermInstance.findFirst({
+      where: {
+        school_year_id: schoolYearIds[definition.schoolYear],
+        semester: definition.semester,
+        term: definition.term,
+      },
+      select: { id: true },
+    });
+    // A fixture pair may already exist under a generated id (e.g. a school
+    // year created by the app); reconcile on the actual row so the fixed-id
+    // createMany + id-based update below never target a missing row.
+    fixtureTermIds[definition.id] = existing?.id ?? definition.id;
+  }
+  const fixtureTermIdList = academicTermDefinitions.map((d) => fixtureTermIds[d.id]);
+
   console.log("  → Resetting mock Academic Period fixtures...");
   await prisma.qualitativeResponseItem.deleteMany({ where: { response: { OR: [
-    { assignment: { course_bound: { term_instance_id: { in: managedTermInstanceIds } } } },
-    { assignment: { central_deployment: { term_instance_id: { in: managedTermInstanceIds } } } },
+    { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
+    { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
   ] } } });
   await prisma.quantitativeResponseItem.deleteMany({ where: { response: { OR: [
-    { assignment: { course_bound: { term_instance_id: { in: managedTermInstanceIds } } } },
-    { assignment: { central_deployment: { term_instance_id: { in: managedTermInstanceIds } } } },
+    { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
+    { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
   ] } } });
   await prisma.response.deleteMany({ where: { OR: [
-    { assignment: { course_bound: { term_instance_id: { in: managedTermInstanceIds } } } },
-    { assignment: { central_deployment: { term_instance_id: { in: managedTermInstanceIds } } } },
+    { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
+    { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
   ] } });
   await prisma.evaluationAssignment.deleteMany({ where: { OR: [
-    { course_bound: { term_instance_id: { in: managedTermInstanceIds } } },
-    { central_deployment: { term_instance_id: { in: managedTermInstanceIds } } },
+    { course_bound: { term_instance_id: { in: fixtureTermIdList } } },
+    { central_deployment: { term_instance_id: { in: fixtureTermIdList } } },
   ] } });
-  await prisma.courseBoundCiloQuestionBinding.deleteMany({ where: { course_bound_evaluation: { term_instance_id: { in: managedTermInstanceIds } } } });
-  await prisma.courseBoundEvaluationTarget.deleteMany({ where: { course_bound_evaluation: { term_instance_id: { in: managedTermInstanceIds } } } });
-  await prisma.courseBoundEvaluation.deleteMany({ where: { term_instance_id: { in: managedTermInstanceIds } } });
-  await prisma.centralDeployment.deleteMany({ where: { term_instance_id: { in: managedTermInstanceIds } } });
-  await prisma.courseAssignmentMembership.deleteMany({ where: { term_instance_id: { in: managedTermInstanceIds } } });
-  await prisma.courseAssignment.deleteMany({ where: { term_instance_id: { in: managedTermInstanceIds } } });
-  await prisma.studentEnrollment.deleteMany({ where: { term_instance_id: { in: managedTermInstanceIds } } });
+  await prisma.courseBoundCiloQuestionBinding.deleteMany({ where: { course_bound_evaluation: { term_instance_id: { in: fixtureTermIdList } } } });
+  await prisma.courseBoundEvaluationTarget.deleteMany({ where: { course_bound_evaluation: { term_instance_id: { in: fixtureTermIdList } } } });
+  await prisma.courseBoundEvaluation.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
+  await prisma.centralDeployment.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
+  await prisma.courseAssignmentMembership.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
+  await prisma.courseAssignment.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
+  await prisma.studentEnrollment.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
   await prisma.$executeRawUnsafe('ALTER TABLE "academic_period_readiness_snapshots" DISABLE TRIGGER "academic_period_readiness_snapshots_immutable"');
   try {
-    await prisma.academicPeriodReadinessSnapshot.deleteMany({ where: { period_id: { in: managedTermInstanceIds } } });
+    await prisma.academicPeriodReadinessSnapshot.deleteMany({ where: { period_id: { in: fixtureTermIdList } } });
   } finally {
     await prisma.$executeRawUnsafe('ALTER TABLE "academic_period_readiness_snapshots" ENABLE TRIGGER "academic_period_readiness_snapshots_immutable"');
   }
@@ -73,7 +91,7 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
   const terms = {} as Record<string, Awaited<ReturnType<typeof prisma.academicTermInstance.update>>>;
   for (const definition of academicTermDefinitions) {
     terms[definition.id] = await prisma.academicTermInstance.update({
-      where: { id: definition.id },
+      where: { id: fixtureTermIds[definition.id] },
       data: {
         start_date: new Date(definition.startDate),
         end_date: new Date(definition.endDate),

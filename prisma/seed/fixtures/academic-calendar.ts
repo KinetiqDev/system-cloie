@@ -1,13 +1,6 @@
 import { AcademicPeriodStatus, AcademicSemester, AcademicTerm } from "@prisma/client";
 import { D } from "../constants/ids";
 
-export const managedTermInstanceIds = [
-  D.TI_2026_2027_1ST,
-  D.TI_2026_2027_2ND,
-  D.TI_2027_2028_1ST,
-  D.TI_2027_2028_2ND_CANCELLED,
-];
-
 export const academicTermDefinitions = [
   {
     id: D.TI_2026_2027_1ST,
