@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -63,10 +63,10 @@ const schoolYear = (overrides: Partial<SchoolYearWithTerms> = {}): SchoolYearWit
   createdAt: new Date("2026-06-01"),
   updatedAt: new Date("2026-06-01"),
   termInstances: [
-    term({ status: "COMPLETED" }),
+    term({ status: "PLANNED" }),
     term({ id: "ti-FIRST-SECOND_TERM", term: "SECOND_TERM", status: "ACTIVE" }),
     term({ id: "ti-SECOND-FIRST_TERM", semester: "SECOND" }),
-    term({ id: "ti-SECOND-SECOND_TERM", semester: "SECOND", term: "SECOND_TERM" }),
+    term({ id: "ti-SECOND-SECOND_TERM", semester: "SECOND", term: "SECOND_TERM", status: "COMPLETED" }),
     term({ id: "ti-SUMMER", semester: "SUMMER", term: null }),
   ],
   ...overrides,
@@ -123,12 +123,28 @@ describe("CalendarStructureView", () => {
     expect(screen.queryByRole("button", { name: /Cancel/ })).not.toBeInTheDocument();
   });
 
-  it("shows per-status term actions: Make Active on PLANNED, Complete/Cancel on ACTIVE, none on terminal", () => {
+  it("shows per-status term actions: Make Active only on hierarchy-eligible PLANNED, Complete/Cancel on ACTIVE, none on terminal", () => {
     render(<CalendarStructureView schoolYears={[schoolYear()]} />);
 
-    expect(screen.getAllByRole("button", { name: /Make Active/ }).length).toBe(3); // SECOND x2 + SUMMER
+    expect(screen.getAllByRole("button", { name: /Make Active/ }).length).toBe(1); // FIRST/FIRST_TERM only
     expect(screen.getAllByRole("button", { name: /Complete/ }).length).toBe(1);
     expect(screen.getAllByRole("button", { name: /Cancel/ }).length).toBe(1);
+  });
+
+  it("offers no Make Active for planned terms outside the active semester", () => {
+    render(<CalendarStructureView schoolYears={[schoolYear()]} />);
+
+    const secondSemesterBlock = screen.getByText("2nd Semester").closest("div")?.parentElement;
+    expect(secondSemesterBlock).not.toBeNull();
+    expect(
+      within(secondSemesterBlock as HTMLElement).queryByRole("button", { name: /Make Active/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers no Make Active when the school year is inactive", () => {
+    render(<CalendarStructureView schoolYears={[schoolYear({ isActive: false, activeSemester: null })]} />);
+
+    expect(screen.queryByRole("button", { name: /Make Active/ })).not.toBeInTheDocument();
   });
 
   it("activates a PLANNED term through the transition action on confirm", async () => {
@@ -143,7 +159,7 @@ describe("CalendarStructureView", () => {
       expect(transitionPeriodStatusActionMock).toHaveBeenCalledTimes(1);
     });
     const formData = transitionPeriodStatusActionMock.mock.calls[0][0];
-    expect(formData.get("periodId")).toBe("ti-SECOND-FIRST_TERM");
+    expect(formData.get("periodId")).toBe("ti-FIRST-FIRST_TERM");
     expect(formData.get("target")).toBe("ACTIVE");
     await waitFor(() => expect(refreshMock).toHaveBeenCalled());
   });

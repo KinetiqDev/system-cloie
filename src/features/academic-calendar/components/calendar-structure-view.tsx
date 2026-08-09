@@ -281,6 +281,7 @@ function SchoolYearCard({
             terms={year.termInstances.filter((t) => t.semester === semester)}
             isActiveSemester={year.isActive && year.activeSemester === semester}
             yearActive={year.isActive}
+            activeSemester={year.activeSemester}
             archived={archived}
             busy={busy}
             pendingSemesterKey={pendingAction === `semester:${year.id}`}
@@ -358,6 +359,7 @@ interface SemesterSectionProps {
   terms: TermInstanceItem[];
   isActiveSemester: boolean;
   yearActive: boolean;
+  activeSemester: AcademicSemester | null;
   archived: boolean;
   busy: boolean;
   pendingSemesterKey: boolean;
@@ -372,6 +374,7 @@ function SemesterSection({
   terms,
   isActiveSemester,
   yearActive,
+  activeSemester,
   archived,
   busy,
   pendingSemesterKey,
@@ -411,6 +414,7 @@ function SemesterSection({
             </div>
             <TermActions
               term={term}
+              canActivate={yearActive && activeSemester === term.semester}
               archived={archived}
               busy={busy}
               onMakeActive={onMakeActive}
@@ -426,6 +430,7 @@ function SemesterSection({
 
 interface TermActionsProps {
   term: TermInstanceItem;
+  canActivate: boolean;
   archived: boolean;
   busy: boolean;
   onMakeActive: (term: TermInstanceItem) => void;
@@ -435,6 +440,7 @@ interface TermActionsProps {
 
 function TermActions({
   term,
+  canActivate,
   archived,
   busy,
   onMakeActive,
@@ -445,7 +451,13 @@ function TermActions({
     return null;
   }
 
+  // The lifecycle service rejects activation outside the active hierarchy
+  // (School Year active + semester matching the active semester), so the
+  // action is only offered when that hierarchy already permits it.
   if (term.status === "PLANNED") {
+    if (!canActivate) {
+      return null;
+    }
     return (
       <Button variant="outline" size="sm" onClick={() => onMakeActive(term)} disabled={busy}>
         <Play className="mr-1 h-3.5 w-3.5" />

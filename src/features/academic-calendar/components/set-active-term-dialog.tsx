@@ -41,26 +41,30 @@ export function SetActiveTermDialog({
     setError(null);
     setIsSubmitting(true);
 
-    const formData = new FormData();
-    formData.append("periodId", termInstance.id);
-    formData.append("target", "ACTIVE");
+    try {
+      const formData = new FormData();
+      formData.append("periodId", termInstance.id);
+      formData.append("target", "ACTIVE");
 
-    const result = await transitionPeriodStatusAction(formData);
+      const result = await transitionPeriodStatusAction(formData);
 
-    if (result.success) {
-      const label = formatTermInstanceLabel(
-        termInstance.schoolYearCode,
-        termInstance.semester,
-        termInstance.term
-      );
-      showToast(`${label} is now the active term`, "success");
-      onOpenChange(false);
-      onSuccess?.();
-    } else {
-      setError(result.error);
+      if (result.success) {
+        const label = formatTermInstanceLabel(
+          termInstance.schoolYearCode,
+          termInstance.semester,
+          termInstance.term
+        );
+        showToast(`${label} is now the active term`, "success");
+        onOpenChange(false);
+        onSuccess?.();
+      } else {
+        setError(result.error);
+      }
+    } catch {
+      setError("Action failed; please try again");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   }
 
   const termLabel = formatTermInstanceLabel(

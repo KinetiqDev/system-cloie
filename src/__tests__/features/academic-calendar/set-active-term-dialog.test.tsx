@@ -73,6 +73,22 @@ describe("SetActiveTermDialog", () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
+  it("recovers the dialog when the transition action throws", async () => {
+    transitionPeriodStatusActionMock.mockRejectedValue(new Error("network"));
+    const onOpenChange = vi.fn();
+    render(
+      <SetActiveTermDialog termInstance={term()} open onOpenChange={onOpenChange} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Set as Active" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Action failed; please try again")).toBeInTheDocument();
+    });
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Set as Active" })).not.toBeDisabled();
+  });
+
   it("disables the submit button when the term is already active", () => {
     render(
       <SetActiveTermDialog
