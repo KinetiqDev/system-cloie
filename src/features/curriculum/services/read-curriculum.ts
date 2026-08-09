@@ -69,6 +69,15 @@ export async function listProgramCurricula(
   return versions.map(toCurriculumVersionItem);
 }
 
+export async function getCurriculumVersionProgramId(id: string): Promise<string | null> {
+  const version = await prisma.curriculumVersion.findUnique({
+    where: { id },
+    select: { program_id: true },
+  });
+
+  return version?.program_id ?? null;
+}
+
 /**
  * Get a single Curriculum Version with its courses and program/major context.
  * Returns null when the version does not exist.
@@ -97,4 +106,13 @@ export async function getCurriculumVersionDetail(
     major: version.major,
     courses: version.courses.map(toCurriculumCourseItem),
   };
+}
+
+export async function getCurriculumCourseProgramId(id: string): Promise<string | null> {
+  const course = await prisma.curriculumCourse.findUnique({
+    where: { id },
+    select: { curriculum_version: { select: { program_id: true } } },
+  });
+
+  return course?.curriculum_version.program_id ?? null;
 }

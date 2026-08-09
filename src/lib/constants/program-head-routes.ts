@@ -23,6 +23,10 @@ export function buildProgramHeadCoursesPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "courses");
 }
 
+export function buildProgramHeadCurriculaPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "curricula");
+}
+
 export function buildProgramHeadCourseAssignmentsPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "course-assignments");
 }
