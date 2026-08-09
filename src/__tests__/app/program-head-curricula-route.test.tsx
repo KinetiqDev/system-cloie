@@ -25,9 +25,7 @@ describe("selected Program Curricula route", () => {
       success: true,
       data: {
         program,
-        curricula: [],
-        courses: [],
-        schoolYears: [],
+        schoolYears: [{ id: "year-1", code: "2025-2026" }],
       },
     });
     const Page = (await import("../../app/(app)/program-head/programs/[programId]/curricula/page"))
@@ -39,9 +37,8 @@ describe("selected Program Curricula route", () => {
     expect(rendered).toMatchObject({
       props: {
         programs: [program],
-        curricula: [],
-        courses: [],
-        schoolYears: [],
+        schoolYears: [{ id: "year-1", code: "2025-2026" }],
+        defaultProgramId: PROGRAM_ID,
       },
     });
   });

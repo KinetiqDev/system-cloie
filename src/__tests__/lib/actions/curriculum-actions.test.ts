@@ -39,14 +39,16 @@ vi.mock("@/features/curriculum/services/read-curriculum", () => ({
   getCurriculumVersionDetail: getCurriculumVersionDetailMock,
   getCurriculumVersionProgramId: vi.fn(),
   getCurriculumCourseProgramId: getCurriculumCourseProgramIdMock,
-  listProgramCurricula: vi.fn(),
+}));
+vi.mock("@/features/curriculum/services/read-curriculum-pages", () => ({
+  listProgramCurriculaSummary: vi.fn(),
+  listCurriculumCourseOptions: vi.fn(),
 }));
 
 import {
   createCurriculumVersionAction,
   addCurriculumCourseAction,
   cloneCurriculumVersionAction,
-  listProgramCurriculaAction,
   publishCurriculumVersionAction,
   removeCurriculumCourseAction,
   retireCurriculumVersionAction,
@@ -91,24 +93,6 @@ describe("curriculum actions", () => {
 
     expect(result.success).toBe(false);
     expect(revalidatePathMock).not.toHaveBeenCalled();
-  });
-
-  it("requires Program Head scope for curriculum reads", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      userId: "ph-1",
-      activeRole: ROLES.PROGRAM_HEAD,
-    });
-    resolveProgramHeadContextMock.mockResolvedValue({
-      success: false,
-      error: "Selected Program is not assigned.",
-    });
-
-    const result = await listProgramCurriculaAction(PROGRAM_ID);
-
-    expect(result).toEqual({
-      success: false,
-      error: "Selected Program is not assigned.",
-    });
   });
 
   it("authorizes an id-only mutation against its version program", async () => {
@@ -203,5 +187,124 @@ describe("curriculum actions", () => {
       error: "At least one placement field is required",
     });
     expect(updateCurriculumCourseMock).not.toHaveBeenCalled();
+  });
+
+  it("authorizes the on-demand curricula summary read for the requested program", async () => {
+    const {
+      listProgramCurriculaSummaryAction,
+    } = await import("@/lib/actions/curriculum-actions");
+    const pagesModule = await import(
+      "@/features/curriculum/services/read-curriculum-pages"
+    );
+    const summaryMock = vi.mocked(pagesModule.listProgramCurriculaSummary);
+    summaryMock.mockResolvedValue([
+      {
+        id: VERSION_ID,
+        programId: PROGRAM_ID,
+        majorId: null,
+        code: "BSIT-2030",
+        name: null,
+        status: "DRAFT",
+        effectiveFromSchoolYearId: null,
+        publishedAt: null,
+        publishedBy: null,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        courseCount: 1,
+      },
+    ]);
+
+    const result = await listProgramCurriculaSummaryAction(PROGRAM_ID);
+
+    expect(result).toEqual({
+      success: true,
+      data: [
+        {
+          id: VERSION_ID,
+          programId: PROGRAM_ID,
+          majorId: null,
+          code: "BSIT-2030",
+          name: null,
+          status: "DRAFT",
+          effectiveFromSchoolYearId: null,
+          publishedAt: null,
+          publishedBy: null,
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+          courseCount: 1,
+        },
+      ],
+    });
+    expect(summaryMock).toHaveBeenCalledWith(PROGRAM_ID);
+  });
+
+  it("authorizes the scoped course options read for the requested program", async () => {
+    const { listProgramCourseOptionsAction } = await import("@/lib/actions/curriculum-actions");
+    const pagesModule = await import(
+      "@/features/curriculum/services/read-curriculum-pages"
+    );
+    const optionsMock = vi.mocked(pagesModule.listCurriculumCourseOptions);
+    optionsMock.mockResolvedValue([
+      { id: "course-1", code: "CS-101", title: "Intro", programId: PROGRAM_ID },
+    ]);
+
+    const result = await listProgramCourseOptionsAction(PROGRAM_ID);
+
+    expect(result).toEqual({
+      success: true,
+      data: [{ id: "course-1", code: "CS-101", title: "Intro", programId: PROGRAM_ID }],
+    });
+    expect(optionsMock).toHaveBeenCalledWith(PROGRAM_ID);
+  });
+
+  it("rejects an invalid program id for on-demand reads before calling services", async () => {
+    const {
+      listProgramCurriculaSummaryAction,
+      listProgramCourseOptionsAction,
+    } = await import("@/lib/actions/curriculum-actions");
+    const pagesModule = await import(
+      "@/features/curriculum/services/read-curriculum-pages"
+    );
+    const summaryMock = vi.mocked(pagesModule.listProgramCurriculaSummary);
+    const optionsMock = vi.mocked(pagesModule.listCurriculumCourseOptions);
+
+    expect(await listProgramCurriculaSummaryAction("not-a-uuid")).toEqual({
+      success: false,
+      error: "Invalid program ID.",
+    });
+    expect(await listProgramCourseOptionsAction("not-a-uuid")).toEqual({
+      success: false,
+      error: "Invalid program ID.",
+    });
+    expect(summaryMock).not.toHaveBeenCalled();
+    expect(optionsMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks out-of-scope on-demand reads for Program Heads", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "ph-1", activeRole: ROLES.PROGRAM_HEAD });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "Selected Program is not assigned.",
+    });
+    const {
+      listProgramCurriculaSummaryAction,
+      listProgramCourseOptionsAction,
+    } = await import("@/lib/actions/curriculum-actions");
+    const pagesModule = await import(
+      "@/features/curriculum/services/read-curriculum-pages"
+    );
+    const summaryMock = vi.mocked(pagesModule.listProgramCurriculaSummary);
+    const optionsMock = vi.mocked(pagesModule.listCurriculumCourseOptions);
+
+    expect(await listProgramCurriculaSummaryAction(PROGRAM_ID)).toEqual({
+      success: false,
+      error: "Selected Program is not assigned.",
+    });
+    expect(await listProgramCourseOptionsAction(PROGRAM_ID)).toEqual({
+      success: false,
+      error: "Selected Program is not assigned.",
+    });
+    expect(summaryMock).not.toHaveBeenCalled();
+    expect(optionsMock).not.toHaveBeenCalled();
   });
 });

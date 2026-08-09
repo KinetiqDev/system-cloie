@@ -23,9 +23,8 @@ export default async function SelectedProgramCurriculaPage({
   return (
     <CurriculumVersionList
       programs={[result.data.program]}
-      curricula={result.data.curricula}
-      courses={result.data.courses}
       schoolYears={result.data.schoolYears}
+      defaultProgramId={result.data.program.id}
     />
   );
 }

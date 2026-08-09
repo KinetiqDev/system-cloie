@@ -12,6 +12,7 @@ import type {
 
 /**
  * All program options for the Secretary curriculum pages, ordered by code.
+ * Programs are a bounded selector list (id/code/name per program).
  */
 async function listAllCurriculumPrograms(): Promise<CurriculumPageProgram[]> {
   return prisma.program.findMany({
@@ -21,34 +22,10 @@ async function listAllCurriculumPrograms(): Promise<CurriculumPageProgram[]> {
 }
 
 /**
- * All curricula across every program, newest first, with course counts.
- */
-async function listAllCurricula(): Promise<CurriculumVersionSummaryItem[]> {
-  const versions = await prisma.curriculumVersion.findMany({
-    include: { _count: { select: { courses: true } } },
-    orderBy: { created_at: "desc" },
-  });
-
-  return versions.map((version) => ({
-    id: version.id,
-    programId: version.program_id,
-    majorId: version.major_id,
-    code: version.code,
-    name: version.name,
-    status: version.status,
-    effectiveFromSchoolYearId: version.effective_from_school_year_id,
-    publishedAt: version.published_at,
-    publishedBy: version.published_by,
-    createdAt: version.created_at,
-    updatedAt: version.updated_at,
-    courseCount: version._count.courses,
-  }));
-}
-
-/**
  * Curriculum versions for one program, newest first, with course counts.
+ * Scoped to a single program so page reads stay bounded.
  */
-async function listProgramCurriculaSummary(
+export async function listProgramCurriculaSummary(
   programId: string
 ): Promise<CurriculumVersionSummaryItem[]> {
   const versions = await prisma.curriculumVersion.findMany({
@@ -74,23 +51,18 @@ async function listProgramCurriculaSummary(
 }
 
 /**
- * Active course options for the add-course picker. PROGRAM_HEAD callers pass
- * their selected program so only that program's program-specific courses and
- * shared General Education courses are offered.
+ * Active course options for the add-course picker, scoped to one program:
+ * that program's program-specific courses plus shared General Education
+ * courses. Loaded on demand when adding courses, never as a global catalog.
  */
-async function listCurriculumCourseOptions(
-  programId?: string
+export async function listCurriculumCourseOptions(
+  programId: string
 ): Promise<CurriculumCourseOption[]> {
-  const where =
-    programId === undefined
-      ? { is_active: true }
-      : {
-          is_active: true,
-          OR: [{ program_id: programId }, { course_scope: CourseScope.GENERAL_EDUCATION }],
-        };
-
   const courses = await prisma.course.findMany({
-    where,
+    where: {
+      is_active: true,
+      OR: [{ program_id: programId }, { course_scope: CourseScope.GENERAL_EDUCATION }],
+    },
     select: { id: true, code: true, title: true, program_id: true },
     orderBy: { code: "asc" },
   });
@@ -112,24 +84,20 @@ async function listSchoolYearOptions(): Promise<SchoolYearOption[]> {
 }
 
 /**
- * Secretary curriculum page data: every program, every curriculum, the full
- * active course catalog, and school years.
+ * Secretary curriculum page data: the bounded program selector list and school
+ * years. Curricula and course options load on demand per selected program.
  */
 export async function listSecretaryCurriculumPageData() {
-  const [programs, curricula, courses, schoolYears] = await Promise.all([
+  const [programs, schoolYears] = await Promise.all([
     listAllCurriculumPrograms(),
-    listAllCurricula(),
-    listCurriculumCourseOptions(),
     listSchoolYearOptions(),
   ]);
 
-  return { programs, curricula, courses, schoolYears };
+  return { programs, schoolYears };
 }
 
 type ProgramHeadCurriculumPageData = {
   program: CurriculumPageProgram;
-  curricula: CurriculumVersionSummaryItem[];
-  courses: CurriculumCourseOption[];
   schoolYears: SchoolYearOption[];
 };
 
@@ -143,18 +111,12 @@ export async function listProgramHeadCurriculumPageData(
   const context = await resolveProgramHeadContext(programId);
   if (!context.success) return context;
 
-  const [curricula, courses, schoolYears] = await Promise.all([
-    listProgramCurriculaSummary(programId),
-    listCurriculumCourseOptions(programId),
-    listSchoolYearOptions(),
-  ]);
+  const schoolYears = await listSchoolYearOptions();
 
   return {
     success: true,
     data: {
       program: context.data.selectedProgram,
-      curricula,
-      courses,
       schoolYears,
     },
   };

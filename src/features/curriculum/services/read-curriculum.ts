@@ -55,20 +55,6 @@ function toCurriculumCourseItem(course: {
   };
 }
 
-/**
- * List the Curriculum Versions of a program, newest first.
- */
-export async function listProgramCurricula(
-  programId: string
-): Promise<CurriculumVersionItem[]> {
-  const versions = await prisma.curriculumVersion.findMany({
-    where: { program_id: programId },
-    orderBy: { created_at: "desc" },
-  });
-
-  return versions.map(toCurriculumVersionItem);
-}
-
 export async function getCurriculumVersionProgramId(id: string): Promise<string | null> {
   const version = await prisma.curriculumVersion.findUnique({
     where: { id },

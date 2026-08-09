@@ -19,5 +19,5 @@ export default async function SecretaryCurriculaPage() {
 
   const data = await listSecretaryCurriculumPageData();
 
-  return <CurriculumVersionList {...data} />;
+  return <CurriculumVersionList programs={data.programs} schoolYears={data.schoolYears} />;
 }

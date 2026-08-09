@@ -110,10 +110,20 @@ export async function addCurriculumCourse(
 
         const course = await tx.course.findUnique({
           where: { id: parsed.data.courseId },
-          select: { id: true, code: true, title: true, program_id: true, course_scope: true },
+          select: {
+            id: true,
+            code: true,
+            title: true,
+            program_id: true,
+            course_scope: true,
+            is_active: true,
+          },
         });
         if (!course) {
           return { success: false, error: "Course not found" };
+        }
+        if (!course.is_active) {
+          return { success: false, error: "Inactive courses cannot be added to curricula" };
         }
 
         const placement = resolveCoursePlacementEligibility(course, scope.data.program_id);

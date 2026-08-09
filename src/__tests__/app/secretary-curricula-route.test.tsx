@@ -33,8 +33,6 @@ describe("Secretary Curricula route", () => {
     });
     listDataMock.mockResolvedValue({
       programs: [],
-      curricula: [],
-      courses: [],
       schoolYears: [],
     });
   });
@@ -59,9 +57,7 @@ describe("Secretary Curricula route", () => {
   it("passes Secretary page data into the client version list", async () => {
     const data = {
       programs: [{ id: "prog-1", code: "BSIT", name: "BS Information Technology" }],
-      curricula: [],
-      courses: [],
-      schoolYears: [],
+      schoolYears: [{ id: "year-1", code: "2025-2026" }],
     };
     listDataMock.mockResolvedValue(data);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ import { AlertCircle, BookOpen, Plus } from "lucide-react";
 import {
   cloneCurriculumVersionAction,
   getCurriculumVersionDetailAction,
+  listProgramCourseOptionsAction,
+  listProgramCurriculaSummaryAction,
   publishCurriculumVersionAction,
   retireCurriculumVersionAction,
 } from "@/lib/actions/curriculum-actions";
@@ -55,37 +57,48 @@ const STATUS_BADGE_VARIANT: Record<VersionStatus, "warning" | "success" | "secon
 
 interface CurriculumVersionListProps {
   programs: CurriculumPageProgram[];
-  curricula: CurriculumVersionSummaryItem[];
-  courses: CurriculumCourseOption[];
   schoolYears: SchoolYearOption[];
+  defaultProgramId?: string;
 }
 
 /**
  * Client shell for curriculum management. Owns program selection (Secretary
  * sees all programs; Program Head receives one), the DRAFT/PUBLISHED/RETIRED
  * tabs, per-version lifecycle actions, the create dialog, and the selected
- * version's course table.
+ * version's course table. Curricula and course options load on demand for the
+ * selected program rather than preloading the global catalog.
  */
 export function CurriculumVersionList({
   programs,
-  curricula,
-  courses,
   schoolYears,
+  defaultProgramId,
 }: CurriculumVersionListProps) {
   const router = useRouter();
-  const [selectedProgramId, setSelectedProgramId] = useState<string>(programs[0]?.id ?? "");
+  const [selectedProgramId, setSelectedProgramId] = useState<string>(
+    defaultProgramId ?? programs[0]?.id ?? ""
+  );
+  const [curricula, setCurricula] = useState<CurriculumVersionSummaryItem[]>([]);
+  const [curriculaLoading, setCurriculaLoading] = useState(
+    Boolean(defaultProgramId ?? programs[0]?.id)
+  );
   const [activeTab, setActiveTab] = useState<VersionStatus>("DRAFT");
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [versionDetail, setVersionDetail] = useState<CurriculumVersionDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [courseOptions, setCourseOptions] = useState<CurriculumCourseOption[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const detailRequestRef = useRef(0);
+  const curriculaRequestRef = useRef(0);
+  const courseOptionsRequestRef = useRef(0);
+  const selectedProgramIdRef = useRef(
+    defaultProgramId ?? programs[0]?.id ?? ""
+  );
+  const selectedVersionIdRef = useRef<string | null>(null);
 
-  const programCurricula = curricula.filter((c) => c.programId === selectedProgramId);
-  const tabCurricula = programCurricula.filter((c) => c.status === activeTab);
+  const tabCurricula = curricula.filter((c) => c.status === activeTab);
   const showProgramSelector = programs.length > 1;
 
   const loadDetail = useCallback(async (versionId: string) => {
@@ -93,6 +106,7 @@ export function CurriculumVersionList({
     setDetailLoading(true);
     const result = await getCurriculumVersionDetailAction(versionId);
     if (requestId !== detailRequestRef.current) return;
+    if (versionId !== selectedVersionIdRef.current) return;
     setDetailLoading(false);
     if (result.success) {
       setVersionDetail(result.data);
@@ -102,13 +116,53 @@ export function CurriculumVersionList({
     }
   }, []);
 
+  const loadCurricula = useCallback(async (programId: string) => {
+    const requestId = ++curriculaRequestRef.current;
+    const result = await listProgramCurriculaSummaryAction(programId);
+    if (requestId !== curriculaRequestRef.current) return;
+    if (programId !== selectedProgramIdRef.current) return;
+    setCurriculaLoading(false);
+    if (result.success) {
+      setCurricula(result.data);
+    } else {
+      showToast(result.error, "error");
+      setCurricula([]);
+    }
+  }, []);
+
+  const loadCourseOptions = useCallback(async (programId: string) => {
+    const requestId = ++courseOptionsRequestRef.current;
+    const result = await listProgramCourseOptionsAction(programId);
+    if (requestId !== courseOptionsRequestRef.current) return;
+    if (programId !== selectedProgramIdRef.current) return;
+    if (result.success) {
+      setCourseOptions(result.data);
+    } else {
+      showToast(result.error, "error");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProgramId) return;
+    void Promise.resolve().then(() => loadCurricula(selectedProgramId));
+  }, [loadCurricula, selectedProgramId]);
+
   function refreshRoutes() {
     router.refresh();
   }
 
+  function refreshCurricula() {
+    const programId = selectedProgramIdRef.current;
+    if (programId) void loadCurricula(programId);
+  }
+
   function handleVersionSelect(versionId: string) {
     setSelectedVersionId(versionId);
+    selectedVersionIdRef.current = versionId;
+    setVersionDetail(null);
     void loadDetail(versionId);
+    const programId = selectedProgramIdRef.current;
+    if (programId && activeTab === "DRAFT") void loadCourseOptions(programId);
   }
 
   function runConfirm() {
@@ -134,7 +188,8 @@ export function CurriculumVersionList({
               : `Clone of ${version.code} created as a draft`;
         showToast(message, "success");
         refreshRoutes();
-        if (selectedVersionId) void loadDetail(selectedVersionId);
+        refreshCurricula();
+        if (selectedVersionIdRef.current) void loadDetail(selectedVersionIdRef.current);
       } else {
         setActionError(result.error);
       }
@@ -143,9 +198,15 @@ export function CurriculumVersionList({
 
   function handleProgramChange(value: string | null) {
     if (!value) return;
+    selectedProgramIdRef.current = value;
     setSelectedProgramId(value);
+    setCurriculaLoading(true);
     setSelectedVersionId(null);
+    selectedVersionIdRef.current = null;
     setVersionDetail(null);
+    setCourseOptions([]);
+    curriculaRequestRef.current++;
+    courseOptionsRequestRef.current++;
     detailRequestRef.current++;
     setActiveTab("DRAFT");
   }
@@ -185,7 +246,9 @@ export function CurriculumVersionList({
         </div>
       )}
 
-      {programCurricula.length === 0 ? (
+      {curriculaLoading ? (
+        <p className="text-muted-foreground py-10 text-center text-sm">Loading curricula…</p>
+      ) : curricula.length === 0 ? (
         <Empty>
           <EmptyMedia>
             <BookOpen />
@@ -203,13 +266,23 @@ export function CurriculumVersionList({
           </Button>
         </Empty>
       ) : (
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as VersionStatus)}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            setActiveTab(value as VersionStatus);
+            setSelectedVersionId(null);
+            selectedVersionIdRef.current = null;
+            setVersionDetail(null);
+            setDetailLoading(false);
+            detailRequestRef.current++;
+          }}
+        >
           <TabsList>
             {STATUS_TABS.map((status) => (
               <TabsTrigger key={status} value={status}>
                 {status}
                 <Badge variant="secondary">
-                  {programCurricula.filter((c) => c.status === status).length}
+                  {curricula.filter((c) => c.status === status).length}
                 </Badge>
               </TabsTrigger>
             ))}
@@ -259,10 +332,11 @@ export function CurriculumVersionList({
         <div className="flex flex-col gap-2">
           <CurriculumCourseTable
             version={versionDetail}
-            courses={courses}
+            courses={courseOptions}
             onChanged={() => {
               refreshRoutes();
-              if (selectedVersionId) void loadDetail(selectedVersionId);
+              refreshCurricula();
+              if (selectedVersionIdRef.current) void loadDetail(selectedVersionIdRef.current);
             }}
           />
           {detailLoading && !versionDetail && (
@@ -278,7 +352,10 @@ export function CurriculumVersionList({
         programs={programs}
         schoolYears={schoolYears}
         defaultProgramId={selectedProgramId}
-        onSuccess={refreshRoutes}
+        onSuccess={() => {
+          refreshRoutes();
+          refreshCurricula();
+        }}
       />
 
       <VersionConfirmDialog
