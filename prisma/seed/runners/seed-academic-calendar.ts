@@ -21,7 +21,27 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
     "2027-2028": sy2027_2028.id,
   };
 
-  console.log("  → Resolving lifecycle fixture terms by canonical pair...");
+  console.log("  → Creating canonical lifecycle fixtures (fixed ids where free)...");
+  await prisma.academicTermInstance.createMany({
+    data: academicTermDefinitions.map((definition) => ({
+      id: definition.id,
+      school_year_id: schoolYearIds[definition.schoolYear],
+      semester: definition.semester,
+      term: definition.term,
+      start_date: new Date(definition.startDate),
+      end_date: new Date(definition.endDate),
+      status: definition.status,
+    })),
+    skipDuplicates: true,
+  });
+
+  console.log("  → Ensuring remaining canonical term instances per school year...");
+  await backfillCanonicalTermInstances();
+
+  // Resolve each fixture row by its canonical pair AFTER creation/backfill.
+  // The fixed id may already be owned by an unrelated row (createMany skips on
+  // the PK conflict) or the pair may live under a generated id; the pair lookup
+  // always lands on the real fixture row.
   const fixtureTermIds: Record<string, string> = {};
   for (const definition of academicTermDefinitions) {
     const existing = await prisma.academicTermInstance.findFirst({
@@ -32,10 +52,13 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
       },
       select: { id: true },
     });
-    // A fixture pair may already exist under a generated id (e.g. a school
-    // year created by the app); reconcile on the actual row so the fixed-id
-    // createMany + id-based update below never target a missing row.
-    fixtureTermIds[definition.id] = existing?.id ?? definition.id;
+    if (!existing) {
+      throw new Error(
+        `Fixture term pair ${definition.semester}/${definition.term ?? "null"} ` +
+          `for school year ${definition.schoolYear} is missing after canonical creation`
+      );
+    }
+    fixtureTermIds[definition.id] = existing.id;
   }
   const fixtureTermIdList = academicTermDefinitions.map((d) => fixtureTermIds[d.id]);
 
@@ -69,23 +92,6 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
   } finally {
     await prisma.$executeRawUnsafe('ALTER TABLE "academic_period_readiness_snapshots" ENABLE TRIGGER "academic_period_readiness_snapshots_immutable"');
   }
-
-  console.log("  → Creating canonical lifecycle fixtures (fixed ids)...");
-  await prisma.academicTermInstance.createMany({
-    data: academicTermDefinitions.map((definition) => ({
-      id: definition.id,
-      school_year_id: schoolYearIds[definition.schoolYear],
-      semester: definition.semester,
-      term: definition.term,
-      start_date: new Date(definition.startDate),
-      end_date: new Date(definition.endDate),
-      status: definition.status,
-    })),
-    skipDuplicates: true,
-  });
-
-  console.log("  → Ensuring remaining canonical term instances per school year...");
-  await backfillCanonicalTermInstances();
 
   console.log("  → Applying lifecycle fixture statuses...");
   const terms = {} as Record<string, Awaited<ReturnType<typeof prisma.academicTermInstance.update>>>;

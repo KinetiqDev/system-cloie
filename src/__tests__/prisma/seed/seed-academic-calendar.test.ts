@@ -31,12 +31,23 @@ import { D } from "@/../prisma/seed/constants/ids";
 import { academicTermDefinitions } from "@/../prisma/seed/fixtures/academic-calendar";
 import { seedAcademicCalendar } from "@/../prisma/seed/runners/seed-academic-calendar";
 
+const schoolYearIdFor = (code: string) =>
+  code === "2026-2027" ? D.SY_2026_2027 : D.SY_2027_2028;
+
 describe("seed-academic-calendar runner", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     backfillCanonicalTermInstancesMock.mockResolvedValue([]);
-    prisma.schoolYear.upsert.mockResolvedValue({ id: "sy" });
-    prisma.academicTermInstance.findFirst.mockResolvedValue(null);
+    prisma.schoolYear.upsert.mockImplementation(async ({ where }) => ({ id: where.id }));
+    prisma.academicTermInstance.findFirst.mockImplementation(async ({ where }) => {
+      const definition = academicTermDefinitions.find(
+        (d) =>
+          schoolYearIdFor(d.schoolYear) === where.school_year_id &&
+          d.semester === where.semester &&
+          (d.term ?? null) === (where.term ?? null)
+      );
+      return definition ? { id: definition.id } : null;
+    });
     prisma.academicTermInstance.createMany.mockResolvedValue({ count: 4 });
     prisma.academicTermInstance.update.mockImplementation(
       async ({ where }: { where: { id: string } }) => ({ id: where.id })
@@ -50,7 +61,7 @@ describe("seed-academic-calendar runner", () => {
     expect(prisma.academicTermInstance.createMany).toHaveBeenCalledWith({
       data: academicTermDefinitions.map((definition) => ({
         id: definition.id,
-        school_year_id: "sy",
+        school_year_id: schoolYearIdFor(definition.schoolYear),
         semester: definition.semester,
         term: definition.term,
         start_date: new Date(definition.startDate),
@@ -112,6 +123,37 @@ describe("seed-academic-calendar runner", () => {
     expect(prisma.studentEnrollment.deleteMany).toHaveBeenCalledWith({
       where: { term_instance_id: { in: ["generated-id", "generated-id", "generated-id", "generated-id"] } },
     });
+  });
+
+  it("updates the row that actually holds the fixture pair after canonical creation, never a collided fixed id", async () => {
+    prisma.academicTermInstance.findFirst.mockImplementation(async () =>
+      prisma.academicTermInstance.createMany.mock.calls.length > 0
+        ? { id: "generated-id" }
+        : null
+    );
+
+    const context = await seedAcademicCalendar();
+
+    for (const definition of academicTermDefinitions) {
+      expect(prisma.academicTermInstance.update).toHaveBeenCalledWith({
+        where: { id: "generated-id" },
+        data: {
+          start_date: new Date(definition.startDate),
+          end_date: new Date(definition.endDate),
+          status: definition.status,
+        },
+      });
+    }
+    expect(context.termInstance.id).toBe("generated-id");
+    expect(prisma.studentEnrollment.deleteMany).toHaveBeenCalledWith({
+      where: { term_instance_id: { in: ["generated-id", "generated-id", "generated-id", "generated-id"] } },
+    });
+  });
+
+  it("fails loudly when a fixture pair cannot be resolved after canonical creation", async () => {
+    prisma.academicTermInstance.findFirst.mockResolvedValue(null);
+
+    await expect(seedAcademicCalendar()).rejects.toThrow(/missing after canonical creation/i);
   });
 
   it("returns the expected lifecycle fixture term ids", async () => {
