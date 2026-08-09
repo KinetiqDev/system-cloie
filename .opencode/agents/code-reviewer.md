@@ -1,7 +1,7 @@
 ---
 description: Independently review code changes against the specification, project standards, security invariants, and established architecture
 mode: subagent
-model: 9router/cx/gpt-5.6-terra(medium)
+model: 9router/cx/gpt-5.6-terra(high)
 temperature: 0.1
 
 permission:
