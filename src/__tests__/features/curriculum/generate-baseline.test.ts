@@ -167,4 +167,77 @@ describe("generateBaselineCurricula", () => {
     );
     expect(prisma.$transaction).toHaveBeenCalledTimes(3);
   });
+
+  it("uses course ownership and defaults read inside the baseline transaction", async () => {
+    let transactionStarted = false;
+    vi.mocked(prisma.$transaction).mockImplementation(async (callback) => {
+      transactionStarted = true;
+      return callback(prisma as never);
+    });
+    vi.mocked(prisma.course.findMany).mockImplementation((async () => {
+      if (!transactionStarted) {
+        return [
+          {
+            id: COURSE_ID,
+            program_id: PROGRAM_ID,
+            code: "IT101",
+            title: "Programming",
+            default_year_level: YearLevel.FIRST_YEAR,
+            default_semester: AcademicSemester.FIRST,
+            default_term: AcademicTerm.FIRST_TERM,
+            program: { code: "BSIT" },
+          },
+        ] as never;
+      }
+      return [] as never;
+    }) as never);
+
+    await generateBaselineCurricula();
+
+    expect(prisma.curriculumVersion.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ courses: { create: [] } }) })
+    );
+  });
+
+  it("persists current placement defaults from inside the baseline transaction", async () => {
+    let transactionStarted = false;
+    vi.mocked(prisma.$transaction).mockImplementation(async (callback) => {
+      transactionStarted = true;
+      return callback(prisma as never);
+    });
+    vi.mocked(prisma.course.findMany).mockImplementation((async () => {
+      return [
+        {
+          id: COURSE_ID,
+          program_id: PROGRAM_ID,
+          code: "IT101",
+          title: "Programming",
+          default_year_level: transactionStarted ? YearLevel.SECOND_YEAR : YearLevel.FIRST_YEAR,
+          default_semester: transactionStarted
+            ? AcademicSemester.SECOND
+            : AcademicSemester.FIRST,
+          default_term: transactionStarted ? AcademicTerm.SECOND_TERM : AcademicTerm.FIRST_TERM,
+          program: { code: "BSIT" },
+        },
+      ];
+    }) as never);
+
+    await generateBaselineCurricula();
+
+    expect(prisma.curriculumVersion.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          courses: {
+            create: [
+              expect.objectContaining({
+                year_level: YearLevel.SECOND_YEAR,
+                semester: AcademicSemester.SECOND,
+                term: AcademicTerm.SECOND_TERM,
+              }),
+            ],
+          },
+        }),
+      })
+    );
+  });
 });
