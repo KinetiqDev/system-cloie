@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { AcademicPeriodStatus } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import {
@@ -17,6 +18,7 @@ import {
   deleteTermInstance,
   setActiveTermInstance,
 } from "@/features/academic-calendar/services/manage-term-instances";
+import { transitionPeriodStatus } from "@/features/academic-calendar/services/manage-academic-period-lifecycle";
 import {
   createSchoolYearSchema,
   updateSchoolYearSchema,
@@ -301,6 +303,41 @@ export async function setActiveTermInstanceAction(
   if (result.success) {
     revalidatePath("/secretary/school-years");
     // Also revalidate any pages that show the active term badge
+    revalidatePath("/secretary/dashboard");
+    revalidatePath("/program-head/dashboard");
+    revalidatePath("/faculty/dashboard");
+    revalidateAcademicPeriodReadModelRoutes();
+  }
+
+  return result;
+}
+
+export async function transitionPeriodStatusAction(
+  formData: FormData
+): Promise<ServiceResult<{ id: string; status: AcademicPeriodStatus }>> {
+  const auth = await verifySecretaryAccess();
+  if (!auth.success) return auth;
+
+  const periodId = formData.get("periodId");
+  const target = formData.get("target");
+
+  const parsed = z
+    .object({
+      periodId: z.string().uuid("Invalid period ID"),
+      target: z.enum(["ACTIVE", "COMPLETED", "CANCELLED"]),
+    })
+    .safeParse({ periodId, target });
+
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0];
+    return { success: false, error: firstError?.message ?? "Invalid input" };
+  }
+
+  const result = await transitionPeriodStatus(parsed.data.periodId, parsed.data.target);
+
+  if (result.success) {
+    revalidatePath("/secretary/school-years");
+    revalidatePath(`/secretary/school-years/${result.data.id}`);
     revalidatePath("/secretary/dashboard");
     revalidatePath("/program-head/dashboard");
     revalidatePath("/faculty/dashboard");

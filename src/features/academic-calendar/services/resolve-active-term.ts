@@ -34,6 +34,8 @@ export const resolveActiveTerm = cache(async (): Promise<ActiveTermContext | nul
       startDate: termInstance.school_year.start_date,
       endDate: termInstance.school_year.end_date,
       isArchived: termInstance.school_year.is_archived,
+      isActive: termInstance.school_year.is_active,
+      activeSemester: termInstance.school_year.active_semester,
       archivedAt: termInstance.school_year.archived_at,
       archivedBy: null, // Not needed for active term context
       createdAt: termInstance.school_year.created_at,

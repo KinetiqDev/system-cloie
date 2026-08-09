@@ -9,6 +9,8 @@ export interface SchoolYearItem {
   startDate: Date | null;
   endDate: Date | null;
   isArchived: boolean;
+  isActive: boolean;
+  activeSemester: AcademicSemester | null;
   archivedAt: Date | null;
   archivedBy: { id: string; firstName: string; lastName: string } | null;
   createdAt: Date;

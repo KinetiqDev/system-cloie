@@ -1,30 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ArrowLeft, Archive, CheckCircle, CalendarX2 } from "lucide-react";
-import { formatDateRange } from "@/lib/utils/date-format";
-import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
-import { SetActiveTermDialog } from "@/features/academic-calendar/components/set-active-term-dialog";
-import type { SchoolYearWithTerms, TermInstanceItem } from "@/features/academic-calendar/types";
+import { ArrowLeft } from "lucide-react";
+import { CalendarStructureView } from "@/features/academic-calendar/components/calendar-structure-view";
+import type { SchoolYearWithTerms } from "@/features/academic-calendar/types";
 
 interface SchoolYearDetailClientPageProps {
   schoolYear: SchoolYearWithTerms;
@@ -34,112 +14,20 @@ export function SchoolYearDetailClientPage({
   schoolYear,
 }: SchoolYearDetailClientPageProps) {
   const router = useRouter();
-  const [settingActiveTerm, setSettingActiveTerm] = useState<TermInstanceItem | null>(null);
 
   return (
     <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/secretary/school-years")}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to School Years
-        </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.push("/secretary/school-years")}
+        className="mb-4"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to School Years
+      </Button>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">{schoolYear.code}</h1>
-              {schoolYear.isArchived && (
-                <Badge variant="secondary">
-                  <Archive className="mr-1 h-3 w-3" />
-                  Archived
-                </Badge>
-              )}
-            </div>
-            <p className="text-muted-foreground mt-1">
-              {formatDateRange(schoolYear.startDate, schoolYear.endDate)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Term Instances</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {schoolYear.termInstances.length === 0 ? (
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <CalendarX2 />
-                </EmptyMedia>
-                <EmptyTitle>No term instances yet</EmptyTitle>
-                <EmptyDescription>
-                  School year structure is created with its canonical terms.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Semester</TableHead>
-                  <TableHead>Term</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>Dates</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {schoolYear.termInstances.map((term) => (
-                  <TableRow key={term.id}>
-                    <TableCell>{getSemesterLabel(term.semester)}</TableCell>
-                    <TableCell>{term.term ? getTermLabel(term.term) : "—"}</TableCell>
-                    <TableCell>
-                      {term.status === "ACTIVE" ? (
-                        <Badge variant="success">
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          Active
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatDateRange(term.startDate, term.endDate)}
-                    </TableCell>
-                    <TableCell>
-                      {term.status === "PLANNED" && !schoolYear.isArchived && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSettingActiveTerm(term)}
-                        >
-                          Set Active
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {settingActiveTerm && (
-        <SetActiveTermDialog
-          open={!!settingActiveTerm}
-          onOpenChange={(open: boolean) => !open && setSettingActiveTerm(null)}
-          termInstance={settingActiveTerm}
-          onSuccess={() => setSettingActiveTerm(null)}
-        />
-      )}
+      <CalendarStructureView schoolYears={[schoolYear]} />
     </div>
   );
 }

@@ -55,6 +55,8 @@ export async function listSchoolYears(
     startDate: sy.start_date,
     endDate: sy.end_date,
     isArchived: sy.is_archived,
+    isActive: sy.is_active,
+    activeSemester: sy.active_semester,
     archivedAt: sy.archived_at,
     archivedBy: sy.archived_by_user
       ? {
@@ -121,6 +123,8 @@ export async function getSchoolYearById(
     startDate: sy.start_date,
     endDate: sy.end_date,
     isArchived: sy.is_archived,
+    isActive: sy.is_active,
+    activeSemester: sy.active_semester,
     archivedAt: sy.archived_at,
     archivedBy: sy.archived_by_user
       ? {

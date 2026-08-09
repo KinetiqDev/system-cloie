@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { SchoolYearList } from "@/features/academic-calendar/components/school-year-list";
+import { CalendarStructureView } from "@/features/academic-calendar/components/calendar-structure-view";
 import { SchoolYearForm } from "@/features/academic-calendar/components/school-year-form";
 import type { SchoolYearWithTerms } from "@/features/academic-calendar/types";
 
@@ -20,7 +20,7 @@ export function SchoolYearsClientPage({ initialData }: SchoolYearsClientPageProp
         <div>
           <h1 className="text-2xl font-bold tracking-tight">School Years</h1>
           <p className="text-muted-foreground mt-1">
-            Manage academic years and their term instances
+            Manage academic years, semesters, and their terms
           </p>
         </div>
         <Button onClick={() => setOpen(true)}>
@@ -35,12 +35,7 @@ export function SchoolYearsClientPage({ initialData }: SchoolYearsClientPageProp
         onSuccess={() => setOpen(false)}
       />
 
-      <SchoolYearList
-        schoolYears={initialData}
-        onRefresh={() => {
-          // Server actions handle revalidation
-        }}
-      />
+      <CalendarStructureView schoolYears={initialData} />
     </div>
   );
 }

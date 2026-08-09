@@ -12,6 +12,7 @@ const {
   updateTermInstanceMock,
   deleteTermInstanceMock,
   setActiveTermInstanceMock,
+  transitionPeriodStatusMock,
   revalidateAcademicPeriodReadModelRoutesMock,
 } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
@@ -25,6 +26,7 @@ const {
   updateTermInstanceMock: vi.fn(),
   deleteTermInstanceMock: vi.fn(),
   setActiveTermInstanceMock: vi.fn(),
+  transitionPeriodStatusMock: vi.fn(),
   revalidateAcademicPeriodReadModelRoutesMock: vi.fn(),
 }));
 
@@ -45,6 +47,9 @@ vi.mock("@/features/academic-calendar/services/manage-term-instances", () => ({
   deleteTermInstance: deleteTermInstanceMock,
   setActiveTermInstance: setActiveTermInstanceMock,
 }));
+vi.mock("@/features/academic-calendar/services/manage-academic-period-lifecycle", () => ({
+  transitionPeriodStatus: transitionPeriodStatusMock,
+}));
 vi.mock("@/lib/cache/academic-periods", () => ({
   revalidateAcademicPeriodReadModelRoutes: revalidateAcademicPeriodReadModelRoutesMock,
 }));
@@ -57,6 +62,7 @@ import {
   deleteTermInstanceAction,
   setActiveSemesterAction,
   setActiveTermInstanceAction,
+  transitionPeriodStatusAction,
   updateSchoolYearAction,
   updateTermInstanceAction,
 } from "@/lib/actions/secretary-school-year-actions";
@@ -160,6 +166,30 @@ describe("Secretary academic-period actions", () => {
 
     await setActiveSemesterAction(form({ schoolYearId: SCHOOL_YEAR_ID, semester: "SECOND" }));
     expect(setActiveSemesterMock).toHaveBeenCalledWith(SCHOOL_YEAR_ID, "SECOND");
+  });
+
+  it("delegates term lifecycle transitions to the lifecycle service and revalidates", async () => {
+    transitionPeriodStatusMock.mockResolvedValue({
+      success: true,
+      data: { id: PERIOD_ID, status: "COMPLETED" },
+    });
+
+    const result = await transitionPeriodStatusAction(
+      form({ periodId: PERIOD_ID, target: "COMPLETED" })
+    );
+
+    expect(result.success).toBe(true);
+    expect(transitionPeriodStatusMock).toHaveBeenCalledWith(PERIOD_ID, "COMPLETED");
+    expect(revalidateAcademicPeriodReadModelRoutesMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an invalid transition target", async () => {
+    const result = await transitionPeriodStatusAction(
+      form({ periodId: PERIOD_ID, target: "PLANNED" })
+    );
+
+    expect(result.success).toBe(false);
+    expect(transitionPeriodStatusMock).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid semester on setActiveSemester", async () => {

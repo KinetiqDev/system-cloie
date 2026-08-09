@@ -33,6 +33,49 @@ async function verifyAdminAccess(): Promise<ServiceResult<{ userId: string }>> {
 }
 
 /**
+ * Create a School Year together with its 5 canonical AcademicTermInstance
+ * rows, all with status PLANNED. The whole operation is one Serializable
+ * transaction: any term creation failure rolls back the School Year too.
+ *
+ * Auth-free and cache-free so the seed and backfill scripts can reuse the same
+ * canonical structure creation; the Secretary service wraps it with access
+ * control and read-model invalidation.
+ */
+export async function createSchoolYearWithCanonicalTerms(
+  input: CreateSchoolYearInput & { id?: string }
+): Promise<{ id: string; code: string }> {
+  const code = formatSchoolYearCode(input.startYear);
+
+  return prisma.$transaction(
+    async (tx) => {
+      const created = await tx.schoolYear.create({
+        data: {
+          id: input.id,
+          code,
+          start_date: input.startDate ?? null,
+          end_date: input.endDate ?? null,
+          is_archived: false,
+        },
+      });
+
+      for (const canonical of CANONICAL_TERMS) {
+        await tx.academicTermInstance.create({
+          data: {
+            school_year_id: created.id,
+            semester: canonical.semester,
+            term: canonical.term,
+            status: AcademicPeriodStatus.PLANNED,
+          },
+        });
+      }
+
+      return created;
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+  );
+}
+
+/**
  * Create a new School Year together with its 5 canonical AcademicTermInstance
  * rows, all with status PLANNED. The whole operation is one Serializable
  * transaction: any term creation failure rolls back the School Year too.
@@ -43,35 +86,8 @@ export async function createSchoolYear(
   const auth = await verifyAdminAccess();
   if (!auth.success) return auth;
 
-  const code = formatSchoolYearCode(input.startYear);
-
   try {
-    const schoolYear = await prisma.$transaction(
-      async (tx) => {
-        const created = await tx.schoolYear.create({
-          data: {
-            code,
-            start_date: input.startDate ?? null,
-            end_date: input.endDate ?? null,
-            is_archived: false,
-          },
-        });
-
-        for (const canonical of CANONICAL_TERMS) {
-          await tx.academicTermInstance.create({
-            data: {
-              school_year_id: created.id,
-              semester: canonical.semester,
-              term: canonical.term,
-              status: AcademicPeriodStatus.PLANNED,
-            },
-          });
-        }
-
-        return created;
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-    );
+    const schoolYear = await createSchoolYearWithCanonicalTerms(input);
 
     invalidateAcademicPeriodReadModelTags();
     return {
@@ -82,7 +98,7 @@ export async function createSchoolYear(
     if (isUniqueConstraintError(error)) {
       return {
         success: false,
-        error: `A school year with code "${code}" already exists`,
+        error: `A school year with code "${formatSchoolYearCode(input.startYear)}" already exists`,
       };
     }
     throw error;

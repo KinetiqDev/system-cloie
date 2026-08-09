@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { setActiveTermInstanceActionMock } = vi.hoisted(() => ({
-  setActiveTermInstanceActionMock: vi.fn(),
+const { transitionPeriodStatusActionMock } = vi.hoisted(() => ({
+  transitionPeriodStatusActionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/actions/secretary-school-year-actions", () => ({
   createSchoolYearAction: vi.fn(),
-  setActiveTermInstanceAction: setActiveTermInstanceActionMock,
+  transitionPeriodStatusAction: transitionPeriodStatusActionMock,
 }));
 
 import { SetActiveTermDialog } from "@/features/academic-calendar/components/set-active-term-dialog";
@@ -33,7 +33,7 @@ describe("SetActiveTermDialog", () => {
   });
 
   it("submits the term instance id and closes on success", async () => {
-    setActiveTermInstanceActionMock.mockResolvedValue({ success: true });
+    transitionPeriodStatusActionMock.mockResolvedValue({ success: true });
     const onOpenChange = vi.fn();
     render(
       <SetActiveTermDialog termInstance={term()} open onOpenChange={onOpenChange} />
@@ -45,17 +45,18 @@ describe("SetActiveTermDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Set as Active" }));
 
     await waitFor(() => {
-      expect(setActiveTermInstanceActionMock).toHaveBeenCalledTimes(1);
+      expect(transitionPeriodStatusActionMock).toHaveBeenCalledTimes(1);
     });
-    const formData = setActiveTermInstanceActionMock.mock.calls[0][0];
-    expect(formData.get("termInstanceId")).toBe("ti-1");
+    const formData = transitionPeriodStatusActionMock.mock.calls[0][0];
+    expect(formData.get("periodId")).toBe("ti-1");
+    expect(formData.get("target")).toBe("ACTIVE");
     await waitFor(() => {
       expect(onOpenChange).toHaveBeenCalledWith(false);
     });
   });
 
   it("surfaces a server error and keeps the dialog open", async () => {
-    setActiveTermInstanceActionMock.mockResolvedValue({
+    transitionPeriodStatusActionMock.mockResolvedValue({
       success: false,
       error: "Failed to update active term",
     });
@@ -70,6 +71,22 @@ describe("SetActiveTermDialog", () => {
       expect(screen.getByText("Failed to update active term")).toBeInTheDocument();
     });
     expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("recovers the dialog when the transition action throws", async () => {
+    transitionPeriodStatusActionMock.mockRejectedValue(new Error("network"));
+    const onOpenChange = vi.fn();
+    render(
+      <SetActiveTermDialog termInstance={term()} open onOpenChange={onOpenChange} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Set as Active" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Action failed; please try again")).toBeInTheDocument();
+    });
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Set as Active" })).not.toBeDisabled();
   });
 
   it("disables the submit button when the term is already active", () => {

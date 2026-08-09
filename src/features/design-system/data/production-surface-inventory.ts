@@ -1702,13 +1702,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "feature_component"
   },
   {
-    "path": "src/features/academic-calendar/components/school-year-form.tsx",
+    "path": "src/features/academic-calendar/components/calendar-structure-view.tsx",
     "disposition": "task",
     "taskId": 13,
     "category": "feature_component"
   },
   {
-    "path": "src/features/academic-calendar/components/school-year-list.tsx",
+    "path": "src/features/academic-calendar/components/school-year-form.tsx",
     "disposition": "task",
     "taskId": 13,
     "category": "feature_component"
