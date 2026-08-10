@@ -9,6 +9,8 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
     it("allows only one of two concurrent activations to succeed (P2002)", async () => {
       const suffix = crypto.randomUUID();
 
+      // Read-only capture of the seeded fixture state; every mutation below
+      // lives inside the try/finally so any partial setup is restored.
       const priorActive = await prisma.schoolYear.findFirst({
         where: { is_active: true },
         select: {
@@ -19,37 +21,39 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         },
       });
 
-      // The seeded fixture keeps the demo School Year active, so the
-      // one-active partial unique index is already occupied. Deactivate it
-      // (restored in the finally block) so the race below arbitrates on the
-      // index instead of failing both attempts up front.
-      await prisma.schoolYear.updateMany({
-        where: { is_active: true },
-        data: {
-          is_active: false,
-          active_semester: null,
-          active_semester_activated_by: null,
-          active_semester_activated_at: null,
-        },
-      });
-
-      const first = await prisma.schoolYear.create({
-        data: {
-          code: `CONC-A-${suffix}`,
-          is_active: false,
-          active_semester: null,
-        },
-      });
-      const second = await prisma.schoolYear.create({
-        data: {
-          code: `CONC-B-${suffix}`,
-          is_active: false,
-          active_semester: null,
-        },
-      });
-
+      let first: { id: string } | null = null;
+      let second: { id: string } | null = null;
       let bodyFailed = false;
       try {
+        // The seeded fixture keeps the demo School Year active, so the
+        // one-active partial unique index is already occupied. Deactivate it
+        // (restored in the finally block) so the race below arbitrates on the
+        // index instead of failing both attempts up front.
+        await prisma.schoolYear.updateMany({
+          where: { is_active: true },
+          data: {
+            is_active: false,
+            active_semester: null,
+            active_semester_activated_by: null,
+            active_semester_activated_at: null,
+          },
+        });
+
+        first = await prisma.schoolYear.create({
+          data: {
+            code: `CONC-A-${suffix}`,
+            is_active: false,
+            active_semester: null,
+          },
+        });
+        second = await prisma.schoolYear.create({
+          data: {
+            code: `CONC-B-${suffix}`,
+            is_active: false,
+            active_semester: null,
+          },
+        });
+
         // Two raw activations against the one-active partial unique index:
         // exactly one row can carry is_active = true, so one of the two
         // concurrent updates must fail with a unique-constraint violation
@@ -84,15 +88,18 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         bodyFailed = true;
         throw error;
       } finally {
-        await prisma.schoolYear
-          .updateMany({
-            where: { id: { in: [first.id, second.id] }, is_active: true },
-            data: { is_active: false, active_semester: null },
-          })
-          .catch(() => undefined);
-        await prisma.schoolYear.deleteMany({
-          where: { id: { in: [first.id, second.id] } },
-        });
+        const createdIds = [first?.id, second?.id].filter(
+          (id): id is string => id !== undefined && id !== null
+        );
+        if (createdIds.length > 0) {
+          await prisma.schoolYear
+            .updateMany({
+              where: { id: { in: createdIds }, is_active: true },
+              data: { is_active: false, active_semester: null },
+            })
+            .catch(() => undefined);
+          await prisma.schoolYear.deleteMany({ where: { id: { in: createdIds } } });
+        }
         // Restore the exact prior active state so the fixture database is left
         // untouched for later suites. Restoration failures surface loudly
         // unless the test body already failed (which keeps the body error).
