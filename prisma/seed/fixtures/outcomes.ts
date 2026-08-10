@@ -113,19 +113,19 @@ export const goDefs = [
 
 export const ciloDefsIT = [
   {
-    courseCode: "IT-OD-401",
+    courseCode: "ITRES1",
     desc: "Defend the proposed capstone scope and methodology.",
     order: 1,
     createdBy: U.FAC_BSIT,
   },
   {
-    courseCode: "IT-OD-401",
+    courseCode: "ITRES1",
     desc: "Present a coherent research and implementation plan.",
     order: 2,
     createdBy: U.FAC_BSIT,
   },
   {
-    courseCode: "IT-OD-401",
+    courseCode: "ITRES1",
     desc: "Demonstrate technical feasibility of the proposed solution.",
     order: 3,
     createdBy: U.FAC_BSIT,
@@ -134,13 +134,13 @@ export const ciloDefsIT = [
 
 export const ciloDefsMKT = [
   {
-    courseCode: "MKT301",
+    courseCode: "MM201",
     desc: "Develop a comprehensive marketing plan for a real or simulated business.",
     order: 1,
     createdBy: U.FAC_BSBA,
   },
   {
-    courseCode: "MKT301",
+    courseCode: "MM201",
     desc: "Analyze market trends and consumer behavior using research methodologies.",
     order: 2,
     createdBy: U.FAC_BSBA,
@@ -148,7 +148,7 @@ export const ciloDefsMKT = [
 ] as const;
 
 export const ciloDefsNewCourses = [
-  // IT201 — Data Structures and Algorithms
+  // IT201 — Data Structures
   {
     courseCode: "IT201",
     desc: "Implement fundamental data structures (arrays, linked lists, trees, graphs) in a programming language.",
@@ -167,73 +167,73 @@ export const ciloDefsNewCourses = [
     order: 3,
     createdBy: U.FAC_BSIT,
   },
-  // FIN101 — Financial Accounting
+  // FM200 — Financial Management
   {
-    courseCode: "FIN101",
+    courseCode: "FM200",
     desc: "Prepare and interpret financial statements in accordance with accounting standards.",
     order: 1,
     createdBy: U.FAC_BSBA,
   },
   {
-    courseCode: "FIN101",
+    courseCode: "FM200",
     desc: "Apply the accounting cycle to record, classify, and summarize business transactions.",
     order: 2,
     createdBy: U.FAC_BSBA,
   },
-  // EDUC301 — Assessment and Evaluation in Education
+  // ENG2 — Principles and Theories of Language Acquisition and Learning
   {
-    courseCode: "EDUC301",
+    courseCode: "ENG2",
     desc: "Design valid and reliable assessment tools aligned with intended learning outcomes.",
     order: 1,
     createdBy: U.FAC_BSED,
   },
   {
-    courseCode: "EDUC301",
+    courseCode: "ENG2",
     desc: "Analyze and interpret assessment results to inform instructional decisions.",
     order: 2,
     createdBy: U.FAC_BSED,
   },
   {
-    courseCode: "EDUC301",
+    courseCode: "ENG2",
     desc: "Apply principles of authentic and formative assessment in diverse learning contexts.",
     order: 3,
     createdBy: U.FAC_BSED,
   },
-  // HM401 — Events Management
+  // HTC401 — Entrepreneurship in Tourism and Hospitality
   {
-    courseCode: "HM401",
+    courseCode: "HTC401",
     desc: "Plan and organize hospitality and tourism events applying industry standards and protocols.",
     order: 1,
     createdBy: U.FAC_BSHM,
   },
   {
-    courseCode: "HM401",
+    courseCode: "HTC401",
     desc: "Manage event logistics, budgeting, and stakeholder coordination effectively.",
     order: 2,
     createdBy: U.FAC_BSHM,
   },
-  // BEED301 — Teaching Practicum in Elementary Education
+  // EDUC11E — Teaching Internship (Elementary)
   {
-    courseCode: "BEED301",
+    courseCode: "EDUC11E",
     desc: "Demonstrate effective classroom management and age-appropriate instructional strategies.",
     order: 1,
     createdBy: U.FAC_BSED,
   },
   {
-    courseCode: "BEED301",
+    courseCode: "EDUC11E",
     desc: "Design and implement lesson plans that address diverse learner needs in elementary grades.",
     order: 2,
     createdBy: U.FAC_BSED,
   },
-  // SW301 — Social Welfare and Social Work in the Philippines
+  // SW312 — Social Work Research 1 (Development of a Research Design)
   {
-    courseCode: "SW301",
+    courseCode: "SW312",
     desc: "Analyze the historical development and current state of social welfare and social work in the Philippines.",
     order: 1,
     createdBy: U.FAC_BSED,
   },
   {
-    courseCode: "SW301",
+    courseCode: "SW312",
     desc: "Apply social work frameworks to assess community needs and propose appropriate interventions.",
     order: 2,
     createdBy: U.FAC_BSED,

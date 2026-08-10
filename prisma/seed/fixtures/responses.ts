@@ -3,7 +3,7 @@ import { D, U } from "../constants/ids";
 
 export interface ResponseSequence {
   log: string;
-  // Deployment locator: "cbEval1" (IT-OD-401), "cbEval2" (MKT301), or "newCb:<courseCode>" (IT201/FIN101/EDUC301/HM401/BEED301),
+  // Deployment locator: "cbEval1" (ITRES1), "cbEval2" (MM201), or "newCb:<courseCode>" (IT201/FM200/ENG2/HTC401/EDUC11E),
   // or "central:<D constant>" for central deployments
   deploymentKey: { kind: "cb1" | "cb2" | "newCb"; courseCode: string } | { kind: "central"; id: string };
   respondentKey: keyof typeof U;
@@ -17,7 +17,7 @@ export const responseSequences: ResponseSequence[] = [
   // ── 1. BSIT Course-Bound: STU_BSIT → SUBMITTED ──────────────────────
   {
     log: "    • BSIT student submitted CILO eval...",
-    deploymentKey: { kind: "cb1", courseCode: "IT-OD-401" },
+    deploymentKey: { kind: "cb1", courseCode: "ITRES1" },
     respondentKey: "STU_BSIT",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-20T14:30:00Z",
@@ -53,7 +53,7 @@ export const responseSequences: ResponseSequence[] = [
   // ── 2. BSIT Course-Bound: GRAD_BSIT → IN_PROGRESS (draft) ───────────
   {
     log: "    • BSIT grad in-progress CILO eval...",
-    deploymentKey: { kind: "cb1", courseCode: "IT-OD-401" },
+    deploymentKey: { kind: "cb1", courseCode: "ITRES1" },
     respondentKey: "GRAD_BSIT",
     status: ResponseStatus.IN_PROGRESS,
     quantItems: [
@@ -65,7 +65,7 @@ export const responseSequences: ResponseSequence[] = [
   // ── 3. BSBA Course-Bound: STU_BSBA → SUBMITTED ──────────────────────
   {
     log: "    • BSBA student submitted CILO eval...",
-    deploymentKey: { kind: "cb2", courseCode: "MKT301" },
+    deploymentKey: { kind: "cb2", courseCode: "MM201" },
     respondentKey: "STU_BSBA",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-22T10:15:00Z",
@@ -374,10 +374,10 @@ export const responseSequences: ResponseSequence[] = [
     ],
     qualItems: [],
   },
-  // ── 11. FIN101: STU_BSBA_G → SUBMITTED ──────────────────────────────
+  // ── 11. FM200: STU_BSBA_G → SUBMITTED ──────────────────────────────
   {
-    log: "    • BSBA FIN101 student submitted CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "FIN101" },
+    log: "    • BSBA FM200 student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "FM200" },
     respondentKey: "STU_BSBA_G",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-25T09:30:00Z",
@@ -404,19 +404,19 @@ export const responseSequences: ResponseSequence[] = [
       },
     ],
   },
-  // ── 12. FIN101: STU_BSBA → IN_PROGRESS ──────────────────────────────
+  // ── 12. FM200: STU_BSBA → IN_PROGRESS ──────────────────────────────
   {
-    log: "    • BSBA FIN101 student in-progress CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "FIN101" },
+    log: "    • BSBA FM200 student in-progress CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "FM200" },
     respondentKey: "STU_BSBA",
     status: ResponseStatus.IN_PROGRESS,
     quantItems: [{ sk: "cilo-items", ik: "cilo-attainment-1", val: 4 }],
     qualItems: [],
   },
-  // ── 13. EDUC301: STU_BSED → SUBMITTED ───────────────────────────────
+  // ── 13. ENG2: STU_BSED → SUBMITTED ───────────────────────────────
   {
-    log: "    • BSED EDUC301 student submitted CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "EDUC301" },
+    log: "    • BSED ENG2 student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "ENG2" },
     respondentKey: "STU_BSED",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-24T14:00:00Z",
@@ -449,10 +449,10 @@ export const responseSequences: ResponseSequence[] = [
       },
     ],
   },
-  // ── 14. HM401: STU_BSHM_G → SUBMITTED ───────────────────────────────
+  // ── 14. HTC401: STU_BSHM_G → SUBMITTED ───────────────────────────────
   {
-    log: "    • BSHM HM401 student submitted CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "HM401" },
+    log: "    • BSHM HTC401 student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "HTC401" },
     respondentKey: "STU_BSHM_G",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-26T11:00:00Z",
@@ -484,10 +484,10 @@ export const responseSequences: ResponseSequence[] = [
       },
     ],
   },
-  // ── 15. HM401: STU_BSHM → IN_PROGRESS ───────────────────────────────
+  // ── 15. HTC401: STU_BSHM → IN_PROGRESS ───────────────────────────────
   {
-    log: "    • BSHM HM401 student in-progress CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "HM401" },
+    log: "    • BSHM HTC401 student in-progress CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "HTC401" },
     respondentKey: "STU_BSHM",
     status: ResponseStatus.IN_PROGRESS,
     quantItems: [
@@ -496,10 +496,10 @@ export const responseSequences: ResponseSequence[] = [
     ],
     qualItems: [],
   },
-  // ── 16. BEED301: STU_BEED → SUBMITTED ───────────────────────────────
+  // ── 16. EDUC11E: STU_BEED → SUBMITTED ───────────────────────────────
   {
-    log: "    • BEED BEED301 student submitted CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "BEED301" },
+    log: "    • BEED EDUC11E student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "EDUC11E" },
     respondentKey: "STU_BEED",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-25T15:00:00Z",

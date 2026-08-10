@@ -117,7 +117,7 @@ describe("production browser evidence auth boundary", () => {
       // Seeded user UUID (matches the well-known UUID pattern marker).
       '<span data-user-id="77777777-7777-4777-8777-777777777777">user</span>',
       // Seeded course code (matches the course identifier marker).
-      "<td>IT-OD-401</td>",
+      "<td>ITRES1</td>",
     ];
 
     for (const body of protectedFixtures) {
