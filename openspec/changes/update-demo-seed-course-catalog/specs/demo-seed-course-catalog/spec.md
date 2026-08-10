@@ -15,7 +15,7 @@ The system SHALL seed the demo `courses` table from the ACD curriculum defined i
 
 #### Scenario: Fabricated placeholder courses are gone
 - **WHEN** the seed completes against a database holding only the previous fixture catalog
-- **THEN** no record exists for any previously fabricated course code (GEGS101, IT-OD-401, IT401, IT-CAP-401, EDUC101, EDUC201, EDUC301, ENG201 as BSED, MATH201, SCI201, BEED101, BEED102, BEED201, BEED201B, BEED301, BA101, MKT301, HRDM201, HRDM302, FIN101, FIN303, SW101, SW201, SW202, SW301, SW401, HM101, HM201, HM301, HM302, HM401)
+- **THEN** no fabricated course code remains active: seed-managed rows absent from the fixture (identified by the seeded description marker) are deactivated, and no record exists for courses only present in the prior fixture (GEGS101, IT-OD-401, IT401, IT-CAP-401, EDUC101, EDUC201, EDUC301, ENG201 as BSED, MATH201, SCI201, BEED101, BEED102, BEED201, BEED201B, BEED301, BA101, MKT301, HRDM201, HRDM302, FIN101, FIN303, SW101, SW201, SW202, SW301, SW401, HM101, HM201, HM301, HM302, HM401)
 
 ### Requirement: Normalized course codes
 Course codes SHALL be stored space-stripped (`IT 101` → `IT101`, `HM-PRAC 2` → `HM-PRAC2`, `NSTP 1` → `NSTP1`) and SHALL be globally unique. The CSV remains the canonical human-readable reference; the fixture SHALL document the normalization rule.

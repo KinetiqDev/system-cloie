@@ -67,5 +67,17 @@ export async function seedFoundation(): Promise<FoundationContext> {
     cMap.set(d.code, { id: c.id, code: c.code, title: c.title });
   }
 
+  // Converge the catalog: deactivate seed-managed courses removed from the
+  // fixture since the last run (identified by the seeded description marker).
+  // Rows are preserved and user-created courses are never touched.
+  await prisma.course.updateMany({
+    where: {
+      is_active: true,
+      description: { endsWith: "— seeded course." },
+      NOT: { code: { in: courseDefinitions.map((d) => d.code) } },
+    },
+    data: { is_active: false },
+  });
+
   return { pMap, mMap, cMap };
 }

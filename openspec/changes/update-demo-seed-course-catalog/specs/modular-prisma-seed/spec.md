@@ -19,4 +19,4 @@ The system SHALL preserve every existing seed fixture record, deterministic UUID
 
 #### Scenario: Course catalog reflects the ACD curriculum
 - **WHEN** the seed completes after the `update-demo-seed-course-catalog` change
-- **THEN** the `courses` table holds the 102 ACD curriculum courses with normalized codes and complete placement defaults, and prior fabricated placeholder courses are absent
+- **THEN** the `courses` table holds the 102 ACD curriculum courses with normalized codes and complete placement defaults, and prior fabricated placeholder courses absent from the fixture are deactivated (seed-managed rows only; user-created courses are untouched)
