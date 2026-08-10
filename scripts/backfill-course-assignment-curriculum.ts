@@ -88,6 +88,61 @@ function isApplicableToSchoolYear(
     effectiveStart <= assignmentStart;
 }
 
+function effectiveStartForAssignment(
+  curriculumCourse: CurriculumCourseForBackfill,
+  assignment: AssignmentForBackfill
+): Date | null {
+  const version = curriculumCourse.curriculum_version;
+  if (!version.effective_from_school_year_id) return null;
+  if (version.effective_from_school_year_id === assignment.term_instance.school_year.id) {
+    return version.effective_from_year?.start_date ?? assignment.term_instance.school_year.start_date;
+  }
+  return version.effective_from_year?.start_date ?? null;
+}
+
+function isEffectiveFromAssignmentSchoolYear(
+  curriculumCourse: CurriculumCourseForBackfill,
+  assignment: AssignmentForBackfill
+) {
+  return (
+    curriculumCourse.curriculum_version.effective_from_school_year_id ===
+    assignment.term_instance.school_year.id
+  );
+}
+
+function selectLatestApplicableMatches(
+  candidates: CurriculumCourseForBackfill[],
+  assignment: AssignmentForBackfill
+) {
+  const applicable = candidates.filter((curriculumCourse) =>
+    isApplicableToSchoolYear(curriculumCourse, assignment)
+  );
+  if (applicable.length < 2) return applicable;
+
+  if (applicable.some((curriculumCourse) =>
+    !curriculumCourse.curriculum_version.effective_from_school_year_id
+  )) {
+    return applicable;
+  }
+
+  const exactSchoolYear = applicable.filter((curriculumCourse) =>
+    isEffectiveFromAssignmentSchoolYear(curriculumCourse, assignment)
+  );
+  if (exactSchoolYear.length) return exactSchoolYear;
+
+  const latestStart = applicable.reduce<Date | null>((latest, curriculumCourse) => {
+    const start = effectiveStartForAssignment(curriculumCourse, assignment);
+    if (!start || (latest && start <= latest)) return latest;
+    return start;
+  }, null);
+
+  if (!latestStart) return applicable;
+  return applicable.filter((curriculumCourse) => {
+    const start = effectiveStartForAssignment(curriculumCourse, assignment);
+    return start?.getTime() === latestStart.getTime();
+  });
+}
+
 async function runBackfill(
   db: BackfillModels
 ): Promise<CourseAssignmentCurriculumBackfillCounts> {
@@ -148,7 +203,8 @@ async function runBackfill(
   for (const assignment of assignments) {
     if (assignment.curriculum_course_id) continue;
 
-    const matches = (matchesByPlacement.get(
+    const matches = selectLatestApplicableMatches(
+      matchesByPlacement.get(
       placementKey({
         courseId: assignment.course_id,
         programId: assignment.program_id,
@@ -156,8 +212,8 @@ async function runBackfill(
         semester: assignment.term_instance.semester,
         term: assignment.term_instance.term,
       })
-    ) ?? []).filter((curriculumCourse) =>
-      isApplicableToSchoolYear(curriculumCourse, assignment)
+      ) ?? [],
+      assignment
     );
 
     if (!matches?.length) {

@@ -352,4 +352,171 @@ describe("backfillCourseAssignmentCurriculum", () => {
       ambiguous: 0,
     });
   });
+
+  it("selects the latest applicable published version", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-2026", {
+        term_instance: termInstance({ term: "FIRST_TERM" }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-2025", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-0",
+          effective_from_year: {
+            id: "school-year-0",
+            start_date: new Date("2025-06-01"),
+          },
+        },
+      }),
+      curriculumCourse("curriculum-2026", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-1",
+          effective_from_year: {
+            id: "school-year-1",
+            start_date: new Date("2026-06-01"),
+          },
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toMatchObject({
+      linked: 1,
+      unmatched: 0,
+      ambiguous: 0,
+    });
+    expect(prismaMock.courseAssignment.updateMany).toHaveBeenCalledWith({
+      where: { id: "assignment-2026", curriculum_course_id: null },
+      data: { curriculum_course_id: "curriculum-2026" },
+    });
+  });
+
+  it("keeps mixed undated and dated published versions ambiguous", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-2026", {
+        term_instance: termInstance({ term: "FIRST_TERM" }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-undated", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: null,
+          effective_from_year: null,
+        },
+      }),
+      curriculumCourse("curriculum-2025", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-0",
+          effective_from_year: {
+            id: "school-year-0",
+            start_date: new Date("2025-06-01"),
+          },
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toMatchObject({
+      linked: 0,
+      unmatched: 0,
+      ambiguous: 1,
+    });
+    expect(prismaMock.courseAssignment.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("prefers exact school-year effectivity over an earlier dated version", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-2026", {
+        term_instance: termInstance({ term: "FIRST_TERM" }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-2025", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-0",
+          effective_from_year: {
+            id: "school-year-0",
+            start_date: new Date("2025-06-01"),
+          },
+        },
+      }),
+      curriculumCourse("curriculum-2026", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-1",
+          effective_from_year: { id: "school-year-1", start_date: null },
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toMatchObject({
+      linked: 1,
+      unmatched: 0,
+      ambiguous: 0,
+    });
+    expect(prismaMock.courseAssignment.updateMany).toHaveBeenCalledWith({
+      where: { id: "assignment-2026", curriculum_course_id: null },
+      data: { curriculum_course_id: "curriculum-2026" },
+    });
+  });
+
+  it("keeps equal-latest effective versions ambiguous", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-2027", {
+        term_instance: termInstance({
+          term: "FIRST_TERM",
+          school_year: { id: "school-year-2", start_date: new Date("2027-06-01") },
+        }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-2026-a", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-1",
+          effective_from_year: {
+            id: "school-year-1",
+            start_date: new Date("2026-06-01"),
+          },
+        },
+      }),
+      curriculumCourse("curriculum-2026-b", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-1b",
+          effective_from_year: {
+            id: "school-year-1b",
+            start_date: new Date("2026-06-01"),
+          },
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toMatchObject({
+      linked: 0,
+      unmatched: 0,
+      ambiguous: 1,
+    });
+    expect(prismaMock.courseAssignment.updateMany).not.toHaveBeenCalled();
+  });
 });
