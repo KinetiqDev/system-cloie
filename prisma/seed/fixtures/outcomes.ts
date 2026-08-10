@@ -170,45 +170,45 @@ export const ciloDefsNewCourses = [
   // FM200 — Financial Management
   {
     courseCode: "FM200",
-    desc: "Prepare and interpret financial statements in accordance with accounting standards.",
+    desc: "Apply financial management concepts to evaluate organizational financial decisions.",
     order: 1,
     createdBy: U.FAC_BSBA,
   },
   {
     courseCode: "FM200",
-    desc: "Apply the accounting cycle to record, classify, and summarize business transactions.",
+    desc: "Analyze financial statements and ratios to support management planning and control.",
     order: 2,
     createdBy: U.FAC_BSBA,
   },
   // ENG2 — Principles and Theories of Language Acquisition and Learning
   {
     courseCode: "ENG2",
-    desc: "Design valid and reliable assessment tools aligned with intended learning outcomes.",
+    desc: "Explain major theories of language acquisition and learning and their classroom implications.",
     order: 1,
     createdBy: U.FAC_BSED,
   },
   {
     courseCode: "ENG2",
-    desc: "Analyze and interpret assessment results to inform instructional decisions.",
+    desc: "Compare first- and second-language acquisition processes and the factors that affect language learning.",
     order: 2,
     createdBy: U.FAC_BSED,
   },
   {
     courseCode: "ENG2",
-    desc: "Apply principles of authentic and formative assessment in diverse learning contexts.",
+    desc: "Apply principles and theories of language learning to instructional practices.",
     order: 3,
     createdBy: U.FAC_BSED,
   },
   // HTC401 — Entrepreneurship in Tourism and Hospitality
   {
     courseCode: "HTC401",
-    desc: "Plan and organize hospitality and tourism events applying industry standards and protocols.",
+    desc: "Identify entrepreneurial opportunities and develop a business plan for tourism and hospitality ventures.",
     order: 1,
     createdBy: U.FAC_BSHM,
   },
   {
     courseCode: "HTC401",
-    desc: "Manage event logistics, budgeting, and stakeholder coordination effectively.",
+    desc: "Evaluate the feasibility, marketing, and financial viability of tourism and hospitality enterprises.",
     order: 2,
     createdBy: U.FAC_BSHM,
   },
@@ -228,13 +228,13 @@ export const ciloDefsNewCourses = [
   // SW312 — Social Work Research 1 (Development of a Research Design)
   {
     courseCode: "SW312",
-    desc: "Analyze the historical development and current state of social welfare and social work in the Philippines.",
+    desc: "Formulate a research design that addresses a social work practice problem.",
     order: 1,
     createdBy: U.FAC_BSED,
   },
   {
     courseCode: "SW312",
-    desc: "Apply social work frameworks to assess community needs and propose appropriate interventions.",
+    desc: "Critique research methods and ethical considerations applicable to social work research.",
     order: 2,
     createdBy: U.FAC_BSED,
   },
