@@ -49,8 +49,9 @@ export type CreateCourseAssignmentInput = {
   facultyId: string;
   courseId: string;
   programId: string;
-  yearLevel: YearLevel;
+  yearLevel?: YearLevel;
   section: StudentSection;
+  curriculumCourseId?: string | null;
   selectedProgramId?: string;
 };
 

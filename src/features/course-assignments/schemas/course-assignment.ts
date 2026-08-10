@@ -9,8 +9,9 @@ export const createCourseAssignmentSchema = z.object({
   facultyId: z.string().uuid(),
   courseId: z.string().uuid(),
   programId: z.string().uuid(),
-  yearLevel: z.nativeEnum(YearLevel),
+  yearLevel: z.nativeEnum(YearLevel).optional(),
   section: z.nativeEnum(StudentSection),
+  curriculumCourseId: z.string().uuid().nullable().optional(),
   selectedProgramId: z.string().uuid().optional(),
 });
 

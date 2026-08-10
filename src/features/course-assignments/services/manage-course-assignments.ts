@@ -116,6 +116,103 @@ function unexpectedLifecycleFailure(
   };
 }
 
+async function resolveCurriculumCourseForAssignment(
+  tx: Prisma.TransactionClient,
+  curriculumCourseId: string | null | undefined,
+  courseId: string,
+  programId: string
+) {
+  if (!curriculumCourseId) return null;
+
+  await tx.$queryRaw`
+    SELECT id
+    FROM "curriculum_versions"
+    WHERE id = (
+      SELECT curriculum_version_id
+      FROM "curriculum_courses"
+      WHERE id = ${curriculumCourseId}
+    )
+    FOR UPDATE
+  `;
+
+  const curriculumCourse = await tx.curriculumCourse.findUnique({
+    where: { id: curriculumCourseId },
+    select: {
+      course_id: true,
+      year_level: true,
+      course: { select: { is_active: true } },
+      curriculum_version: { select: { program_id: true, status: true } },
+    },
+  });
+
+  if (!curriculumCourse) throw new Error("CURRICULUM_COURSE_NOT_FOUND");
+  if (curriculumCourse.course_id !== courseId) {
+    throw new Error("CURRICULUM_COURSE_MISMATCH");
+  }
+  if (!curriculumCourse.course.is_active) {
+    throw new Error("COURSE_INACTIVE");
+  }
+  if (curriculumCourse.curriculum_version.status !== "PUBLISHED") {
+    throw new Error("CURRICULUM_COURSE_NOT_PUBLISHED");
+  }
+  if (curriculumCourse.curriculum_version.program_id !== programId) {
+    throw new Error("CURRICULUM_PROGRAM_MISMATCH");
+  }
+
+  return curriculumCourse;
+}
+
+async function resolveAssignmentCourse(
+  tx: Prisma.TransactionClient,
+  input: CreateCourseAssignmentInput
+) {
+  const course = await tx.course.findUnique({
+    where: { id: input.courseId },
+    select: { program_id: true, is_active: true },
+  });
+  if (!course) throw new Error("COURSE_NOT_FOUND");
+  if (course.is_active === false) throw new Error("COURSE_INACTIVE");
+  if (course.program_id !== null && course.program_id !== input.programId) {
+    throw new Error("COURSE_PROGRAM_MISMATCH");
+  }
+
+  const curriculumCourse = await resolveCurriculumCourseForAssignment(
+    tx,
+    input.curriculumCourseId,
+    input.courseId,
+    input.programId
+  );
+  const yearLevel = input.yearLevel ?? curriculumCourse?.year_level;
+  if (!yearLevel) throw new Error("YEAR_LEVEL_REQUIRED");
+
+  return { course, yearLevel };
+}
+
+function assignmentCreationError(error: unknown): string | null {
+  if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+    return "An identical assignment already exists. If inactive, please activate it instead of creating a new one.";
+  }
+  if (error instanceof Error) {
+    const errors: Record<string, string> = {
+      COURSE_NOT_FOUND: "Course not found.",
+      COURSE_PROGRAM_MISMATCH: "Assignment program must match the Course's owning program.",
+      CURRICULUM_COURSE_NOT_FOUND: "Selected curriculum course was not found.",
+      CURRICULUM_COURSE_MISMATCH: "Selected curriculum course does not match the assigned course",
+      CURRICULUM_COURSE_NOT_PUBLISHED:
+        "Only published curriculum courses can be linked to new assignments.",
+      COURSE_INACTIVE: "Inactive courses cannot receive new assignments.",
+      CURRICULUM_PROGRAM_MISMATCH:
+        "Selected curriculum course does not belong to the assignment program.",
+      YEAR_LEVEL_REQUIRED: "Year level is required.",
+      SELECTED_PROGRAM_INACTIVE: "Selected Program is no longer assigned.",
+    };
+    if (error.message.startsWith("PERMISSION:")) return error.message.slice("PERMISSION:".length);
+    return errors[error.message] ?? null;
+  }
+
+  return null;
+}
+
 /**
  * Create a new course assignment.
  */
@@ -140,14 +237,7 @@ export async function createCourseAssignment(
         if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
       }
 
-      const course = await tx.course.findUnique({
-        where: { id: input.courseId },
-        select: { program_id: true },
-      });
-      if (!course) throw new Error("COURSE_NOT_FOUND");
-      if (course.program_id !== null && course.program_id !== input.programId) {
-        throw new Error("COURSE_PROGRAM_MISMATCH");
-      }
+      const { course, yearLevel } = await resolveAssignmentCourse(tx, input);
       const permission = canManageCourseAssignment(
         authSession,
         course.program_id,
@@ -161,8 +251,9 @@ export async function createCourseAssignment(
           faculty_id: input.facultyId,
           course_id: input.courseId,
           program_id: input.programId,
-          year_level: input.yearLevel,
+          year_level: yearLevel,
           section: input.section,
+          ...(input.curriculumCourseId ? { curriculum_course_id: input.curriculumCourseId } : {}),
           is_active: true,
           ...(authSession?.userId ? { assigned_by: authSession.userId } : {}),
         },
@@ -171,26 +262,8 @@ export async function createCourseAssignment(
 
     return { success: true, data: { id: assignment.id, programIds: [input.programId] } };
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === "COURSE_NOT_FOUND") return { success: false, error: "Course not found." };
-      if (error.message === "COURSE_PROGRAM_MISMATCH") {
-        return { success: false, error: "Assignment program must match the Course's owning program." };
-      }
-      if (error.message === "SELECTED_PROGRAM_INACTIVE") {
-        return { success: false, error: "Selected Program is no longer assigned." };
-      }
-      if (error.message.startsWith("PERMISSION:")) {
-        return { success: false, error: error.message.slice("PERMISSION:".length) };
-      }
-    }
-    // Handle unique constraint violation (database enforces uniqueness)
-    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
-      return {
-        success: false,
-        error:
-          "An identical assignment already exists. If inactive, please activate it instead of creating a new one.",
-      };
-    }
+    const knownError = assignmentCreationError(error);
+    if (knownError) return { success: false, error: knownError };
     return unexpectedLifecycleFailure(
       "create_assignment",
       authSession?.userId,
@@ -301,7 +374,11 @@ export async function updateCourseAssignment(
       return {
         success: true,
         data: {
-          programIds: [...new Set([existing.program_id, input.programId].filter((id): id is string => Boolean(id)))],
+          programIds: [
+            ...new Set(
+              [existing.program_id, input.programId].filter((id): id is string => Boolean(id))
+            ),
+          ],
         },
       };
     });
@@ -355,10 +432,13 @@ export async function deactivateCourseAssignment(
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message === "ASSIGNMENT_NOT_FOUND") return { success: false, error: "Assignment not found." };
+      if (error.message === "ASSIGNMENT_NOT_FOUND")
+        return { success: false, error: "Assignment not found." };
       if (error.message === "SELECTED_PROGRAM_REQUIRED") return missingSelectedProgram();
-      if (error.message === "OUT_OF_SCOPE") return { success: false, error: "Course assignment is outside the selected Program." };
-      if (error.message.startsWith("PERMISSION:")) return { success: false, error: error.message.slice(11) };
+      if (error.message === "OUT_OF_SCOPE")
+        return { success: false, error: "Course assignment is outside the selected Program." };
+      if (error.message.startsWith("PERMISSION:"))
+        return { success: false, error: error.message.slice(11) };
     }
     return unexpectedLifecycleFailure(
       "deactivate_assignment",
@@ -399,17 +479,23 @@ export async function activateCourseAssignment(
         authSession && isProgramHead(authSession) && input.programId ? [input.programId] : []
       );
       if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
-      await tx.courseAssignment.update({ where: { id: input.assignmentId }, data: { is_active: true } });
+      await tx.courseAssignment.update({
+        where: { id: input.assignmentId },
+        data: { is_active: true },
+      });
       return { programIds: [existing.program_id] };
     });
 
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message === "ASSIGNMENT_NOT_FOUND") return { success: false, error: "Assignment not found." };
+      if (error.message === "ASSIGNMENT_NOT_FOUND")
+        return { success: false, error: "Assignment not found." };
       if (error.message === "SELECTED_PROGRAM_REQUIRED") return missingSelectedProgram();
-      if (error.message === "OUT_OF_SCOPE") return { success: false, error: "Course assignment is outside the selected Program." };
-      if (error.message.startsWith("PERMISSION:")) return { success: false, error: error.message.slice(11) };
+      if (error.message === "OUT_OF_SCOPE")
+        return { success: false, error: "Course assignment is outside the selected Program." };
+      if (error.message.startsWith("PERMISSION:"))
+        return { success: false, error: error.message.slice(11) };
     }
     return unexpectedLifecycleFailure(
       "activate_assignment",
@@ -437,7 +523,11 @@ export async function preflightCourseAssignmentDeletion(
     if (authSession && isProgramHead(authSession)) {
       if (!selectedProgramId) return missingSelectedProgram();
       const context = await resolveProgramHeadContext(selectedProgramId);
-      if (!context.success || context.data.userId !== authSession?.userId || existing.program_id !== selectedProgramId) {
+      if (
+        !context.success ||
+        context.data.userId !== authSession?.userId ||
+        existing.program_id !== selectedProgramId
+      ) {
         return { success: false, error: "Course assignment is outside the selected Program." };
       }
     }
@@ -500,20 +590,20 @@ export async function deleteCourseAssignment(
       });
       if (!existing) return { success: false, error: "Assignment not found." };
 
-       if (isProgramHead(authSession)) {
-         if (!input.programId) return missingSelectedProgram();
-         const selected = await revalidateProgramHeadAssignment(tx, {
-           userId: authSession.userId,
-           programId: input.programId,
-         });
-         if (!selected || existing.program_id !== input.programId) {
-           return { success: false, error: "Course assignment is outside the selected Program." };
-         }
-       }
-       const permission = canManageCourseAssignment(
-         authSession,
-         existing.course.program_id,
-         isProgramHead(authSession) && input.programId ? [input.programId] : []
+      if (isProgramHead(authSession)) {
+        if (!input.programId) return missingSelectedProgram();
+        const selected = await revalidateProgramHeadAssignment(tx, {
+          userId: authSession.userId,
+          programId: input.programId,
+        });
+        if (!selected || existing.program_id !== input.programId) {
+          return { success: false, error: "Course assignment is outside the selected Program." };
+        }
+      }
+      const permission = canManageCourseAssignment(
+        authSession,
+        existing.course.program_id,
+        isProgramHead(authSession) && input.programId ? [input.programId] : []
       );
       if (!permission.allowed) return { success: false, error: permission.reason };
 
@@ -634,14 +724,7 @@ export async function bulkCreateCourseAssignments(
           });
           if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
         }
-        const course = await tx.course.findUnique({
-          where: { id: input.courseId },
-          select: { program_id: true },
-        });
-        if (!course) throw new Error("COURSE_NOT_FOUND");
-        if (course.program_id !== null && course.program_id !== input.programId) {
-          throw new Error("COURSE_PROGRAM_MISMATCH");
-        }
+        const { course, yearLevel } = await resolveAssignmentCourse(tx, input);
         const permission = canManageCourseAssignment(
           authSession,
           course.program_id,
@@ -654,8 +737,9 @@ export async function bulkCreateCourseAssignments(
             faculty_id: input.facultyId,
             course_id: input.courseId,
             program_id: input.programId,
-            year_level: input.yearLevel,
+            year_level: yearLevel,
             section: input.section,
+            ...(input.curriculumCourseId ? { curriculum_course_id: input.curriculumCourseId } : {}),
             is_active: true,
             assigned_by: authSession.userId,
           },
@@ -664,38 +748,19 @@ export async function bulkCreateCourseAssignments(
 
       created++;
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message === "COURSE_NOT_FOUND") {
-          errors.push({ index: i, error: "Course not found." });
-          continue;
-        }
-        if (error.message === "COURSE_PROGRAM_MISMATCH") {
-          errors.push({ index: i, error: "Assignment program must match the Course's owning program." });
-          continue;
-        }
-        if (error.message === "SELECTED_PROGRAM_INACTIVE") {
-          errors.push({ index: i, error: "Selected Program is no longer assigned." });
-          continue;
-        }
-        if (error.message.startsWith("PERMISSION:")) {
-          errors.push({ index: i, error: error.message.slice("PERMISSION:".length) });
-          continue;
-        }
-      }
-      if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      const knownError = assignmentCreationError(error);
+      if (knownError) {
+        errors.push({ index: i, error: knownError });
+      } else {
         errors.push({
           index: i,
-          error:
-            "An identical assignment already exists. If inactive, please activate it instead of creating a new one.",
+          error: unexpectedLifecycleFailure(
+            "bulk_create_assignment",
+            authSession?.userId,
+            input.courseId,
+            error
+          ).error,
         });
-      } else {
-        const failure = unexpectedLifecycleFailure(
-          "bulk_create_assignment",
-          authSession?.userId,
-          input.courseId,
-          error
-        );
-        errors.push({ index: i, error: failure.error, referenceId: failure.referenceId });
       }
     }
   }

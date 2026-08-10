@@ -1,7 +1,7 @@
 ---
 description: Research official documentation, dependency behavior, upstream source, and version-specific guidance for System CLOIE
 mode: subagent
-model: 9router/oc/deepseek-v4-flash-free
+model: 9router/ocg/deepseek-v4-flash
 temperature: 0.1
 steps: 12
 
