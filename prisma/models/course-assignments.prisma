@@ -82,21 +82,23 @@ model Course {
 }
 
 model CourseAssignment {
-  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  term_instance_id String         @db.Uuid
-  faculty_id       String         @db.Uuid
-  course_id        String         @db.Uuid
-  program_id       String         @db.Uuid
-  year_level       YearLevel
-  section          StudentSection
-  assigned_by      String?        @db.Uuid
-  is_active        Boolean        @default(true)
-  created_at       DateTime       @default(now())
-  updated_at       DateTime       @updatedAt
+  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  term_instance_id     String         @db.Uuid
+  faculty_id           String         @db.Uuid
+  course_id            String         @db.Uuid
+  curriculum_course_id String?        @db.Uuid
+  program_id           String         @db.Uuid
+  year_level           YearLevel
+  section              StudentSection
+  assigned_by          String?        @db.Uuid
+  is_active            Boolean        @default(true)
+  created_at           DateTime       @default(now())
+  updated_at           DateTime       @updatedAt
 
   term_instance            AcademicTermInstance         @relation(fields: [term_instance_id], references: [id], onDelete: Cascade)
   faculty                  User                         @relation("faculty", fields: [faculty_id], references: [id], onDelete: Restrict)
   course                   Course                       @relation(fields: [course_id], references: [id], onDelete: Restrict)
+  curriculumCourse         CurriculumCourse?            @relation(fields: [curriculum_course_id], references: [id], onDelete: SetNull)
   program                  Program                      @relation(fields: [program_id], references: [id], onDelete: Restrict)
   assigner                 User?                        @relation("AssignmentAssigner", fields: [assigned_by], references: [id], onDelete: SetNull)
   course_bound_evaluations CourseBoundEvaluation[]
@@ -109,6 +111,7 @@ model CourseAssignment {
   @@index([term_instance_id, course_id, program_id, year_level, section])
   @@index([term_instance_id, faculty_id])
   @@index([term_instance_id, course_id])
+  @@index([curriculum_course_id])
   @@index([is_active])
   @@map("course_assignments")
 }

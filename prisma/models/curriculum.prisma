@@ -44,6 +44,7 @@ model CurriculumCourse {
 
   curriculum_version CurriculumVersion @relation(fields: [curriculum_version_id], references: [id], onDelete: Cascade)
   course             Course            @relation(fields: [course_id], references: [id], onDelete: Restrict)
+  course_assignments CourseAssignment[]
 
   @@index([curriculum_version_id, course_id])
   @@index([course_id])
