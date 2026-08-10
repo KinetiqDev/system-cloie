@@ -519,4 +519,39 @@ describe("backfillCourseAssignmentCurriculum", () => {
     });
     expect(prismaMock.courseAssignment.updateMany).not.toHaveBeenCalled();
   });
+
+  it("keeps dated versions applicable when assignment school-year date is unknown", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-legacy", {
+        term_instance: termInstance({
+          term: "FIRST_TERM",
+          school_year: { id: "school-year-legacy", start_date: null },
+        }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-dated", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-0",
+          effective_from_year: {
+            id: "school-year-0",
+            start_date: new Date("2025-06-01"),
+          },
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toMatchObject({
+      linked: 1,
+      unmatched: 0,
+      ambiguous: 0,
+    });
+    expect(prismaMock.courseAssignment.updateMany).toHaveBeenCalledWith({
+      where: { id: "assignment-legacy", curriculum_course_id: null },
+      data: { curriculum_course_id: "curriculum-dated" },
+    });
+  });
 });

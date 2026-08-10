@@ -83,9 +83,9 @@ function isApplicableToSchoolYear(
 
   const effectiveStart = version.effective_from_year?.start_date;
   const assignmentStart = assignment.term_instance.school_year.start_date;
-  return effectiveStart !== null && effectiveStart !== undefined &&
-    assignmentStart !== null && assignmentStart !== undefined &&
-    effectiveStart <= assignmentStart;
+  if (effectiveStart === null || effectiveStart === undefined) return false;
+  if (assignmentStart === null || assignmentStart === undefined) return true;
+  return effectiveStart <= assignmentStart;
 }
 
 function effectiveStartForAssignment(
