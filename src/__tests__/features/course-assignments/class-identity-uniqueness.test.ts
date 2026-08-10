@@ -9,8 +9,8 @@ describe.skipIf(
   it("rejects duplicate classes while allowing separate sections and GE program contexts", async () => {
     const [term, firstProgram, secondProgram, firstFaculty, secondFaculty] = await Promise.all([
       prisma.academicTermInstance.findFirst(),
-      prisma.program.findFirst(),
-      prisma.program.findFirst({ skip: 1 }),
+      prisma.program.findFirst({ orderBy: { id: "asc" } }),
+      prisma.program.findFirst({ skip: 1, orderBy: { id: "asc" } }),
       prisma.user.findFirst({ where: { roles: { some: { role: "FACULTY" } } } }),
       prisma.user.findFirst({
         where: { roles: { some: { role: "FACULTY" } } },

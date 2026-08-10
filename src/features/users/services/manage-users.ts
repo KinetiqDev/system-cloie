@@ -568,7 +568,7 @@ export async function lockProgramHeadAssignmentSet(
   tx: Prisma.TransactionClient,
   userId: string
 ): Promise<ProgramHeadAssignmentSetLock> {
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`cloie:program-head-assignment-set:${userId}`}, 0))`;
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`cloie:program-head-assignment-set:${userId}`}, 0))::text`;
   return tx as ProgramHeadAssignmentSetLock;
 }
 

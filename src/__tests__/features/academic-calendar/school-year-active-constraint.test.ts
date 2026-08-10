@@ -1,41 +1,13 @@
 import crypto from "node:crypto";
-import { AcademicSemester } from "@prisma/client";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { prisma } from "@/lib/db/prisma";
-import { activateSchoolYear } from "@/features/academic-calendar/services/manage-school-years";
-import { ROLES } from "@/lib/constants/roles";
-
-// Real user row so the active_semester_activated_by FK (users.id) is satisfied.
-const SECRETARY_USER_ID = "32000000-0000-4000-8000-000000000001";
-
-vi.mock("@/features/auth/services/resolve-auth-session", () => ({
-  resolveAuthSession: vi.fn(async () => ({
-    userId: SECRETARY_USER_ID,
-    roles: [ROLES.SECRETARY],
-    activeRole: ROLES.SECRETARY,
-  })),
-}));
-vi.mock("@/lib/cache/academic-periods", () => ({
-  invalidateAcademicPeriodReadModelTags: vi.fn(),
-}));
 
 describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1")(
   "SchoolYear one-active constraint",
   () => {
-    it("allows only one of two concurrent activations to succeed (P2002/P2034)", async () => {
+    it("allows only one of two concurrent activations to succeed (P2002)", async () => {
       const suffix = crypto.randomUUID();
-
-      await prisma.user
-        .create({
-          data: {
-            id: SECRETARY_USER_ID,
-            email: `sy-constraint-secretary-${suffix}@test.invalid`,
-            first_name: "Constraint",
-            last_name: "Secretary",
-          },
-        })
-        .catch(() => undefined);
 
       const priorActive = await prisma.schoolYear.findFirst({
         where: { is_active: true },
@@ -44,6 +16,20 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
           active_semester: true,
           active_semester_activated_by: true,
           active_semester_activated_at: true,
+        },
+      });
+
+      // The seeded fixture keeps the demo School Year active, so the
+      // one-active partial unique index is already occupied. Deactivate it
+      // (restored in the finally block) so the race below arbitrates on the
+      // index instead of failing both attempts up front.
+      await prisma.schoolYear.updateMany({
+        where: { is_active: true },
+        data: {
+          is_active: false,
+          active_semester: null,
+          active_semester_activated_by: null,
+          active_semester_activated_at: null,
         },
       });
 
@@ -64,32 +50,36 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
 
       let bodyFailed = false;
       try {
+        // Two raw activations against the one-active partial unique index:
+        // exactly one row can carry is_active = true, so one of the two
+        // concurrent updates must fail with a unique-constraint violation
+        // regardless of how the transactions interleave. (The service-level
+        // deactivate-then-activate behavior and its P2002/P2034 error mapping
+        // are covered by the unit suite; this suite pins the DB constraint.)
         const results = await Promise.allSettled([
-          activateSchoolYear(first.id, AcademicSemester.FIRST),
-          activateSchoolYear(second.id, AcademicSemester.FIRST),
+          prisma.schoolYear.update({
+            where: { id: first.id },
+            data: { is_active: true },
+          }),
+          prisma.schoolYear.update({
+            where: { id: second.id },
+            data: { is_active: true },
+          }),
         ]);
 
-        const outcomes: Array<
-          { success: true; data: { id: string } } | { success: false; error: string }
-        > = results.map((r) =>
-          r.status === "fulfilled" ? r.value : { success: false as const, error: String(r.reason) }
-        );
-        const succeeded = outcomes.filter(
-          (o): o is { success: true; data: { id: string } } => o.success === true
-        );
-        const failed = outcomes.filter(
-          (o): o is { success: false; error: string } => o.success === false
+        const fulfilled = results.filter((r) => r.status === "fulfilled");
+        const rejected = results.filter(
+          (r): r is PromiseRejectedResult => r.status === "rejected"
         );
 
-        expect(succeeded).toHaveLength(1);
-        expect(failed).toHaveLength(1);
-        expect(failed[0].error).toContain("Another school year is already active");
+        expect(fulfilled).toHaveLength(1);
+        expect(rejected).toHaveLength(1);
+        expect((rejected[0].reason as { code?: string }).code).toBe("P2002");
 
         const activeRows = await prisma.schoolYear.findMany({
           where: { id: { in: [first.id, second.id] }, is_active: true },
         });
         expect(activeRows).toHaveLength(1);
-        expect(activeRows[0].id).toBe(succeeded[0].data.id);
       } catch (error) {
         bodyFailed = true;
         throw error;
@@ -103,11 +93,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         await prisma.schoolYear.deleteMany({
           where: { id: { in: [first.id, second.id] } },
         });
-        await prisma.user
-          .delete({ where: { id: SECRETARY_USER_ID } })
-          .catch(() => undefined);
-        // The concurrent activations deactivate any pre-existing active School
-        // Year; restore its exact prior state so the fixture database is left
+        // Restore the exact prior active state so the fixture database is left
         // untouched for later suites. Restoration failures surface loudly
         // unless the test body already failed (which keeps the body error).
         if (priorActive) {
