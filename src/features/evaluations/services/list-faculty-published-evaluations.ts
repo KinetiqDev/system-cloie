@@ -35,11 +35,11 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
   // Use first affiliation's program
   const program = affiliations[0].program;
 
-  // Find course assignments for this faculty member
+  // Find course assignments for this faculty member. Published evaluations are
+  // historical records and must remain visible after an assignment is deactivated.
   const facultyAssignments = await prisma.courseAssignment.findMany({
     where: {
       faculty_id: session.userId,
-      is_active: true,
     },
     select: {
       id: true,

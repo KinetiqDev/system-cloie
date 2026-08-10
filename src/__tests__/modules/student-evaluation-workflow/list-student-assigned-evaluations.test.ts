@@ -227,4 +227,52 @@ describe("listStudentAssignedEvaluations", () => {
       select: expect.any(Object),
     });
   });
+
+  it("keeps submitted evaluations visible when the linked curriculum version is retired", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "student-1" });
+    findManyMock.mockResolvedValue([
+      {
+        central_deployment: null,
+        course_bound: {
+          activation_at: new Date("2026-04-01T00:00:00.000Z"),
+          course_assignment: {
+            id: "course-assignment-retired",
+            program_id: "program-1",
+            term_instance_id: "term-1",
+            course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Legacy Course" },
+            program: { name: "BSIT" },
+            faculty: { first_name: "Alan", last_name: "Turing" },
+          },
+          deadline_at: new Date("2026-05-01T00:00:00.000Z"),
+          deployment_name: "Retired Curriculum Evaluation",
+          instrument: {
+            structure_snapshot: [{ key: "section-c", title: "Section C" }],
+            template: { name: "Course Evaluation" },
+          },
+          status: "ACTIVE",
+        },
+        id: "assignment-retired",
+        response: {
+          id: "response-retired",
+          qual_items: [],
+          quant_items: [],
+          submitted_at: new Date("2026-05-02T00:00:00.000Z"),
+        },
+      },
+    ]);
+
+    const result = await listStudentAssignedEvaluations();
+
+    const findManyArgs = findManyMock.mock.calls[0][0] as { where: Record<string, unknown> };
+    expect(findManyArgs.where).not.toHaveProperty("curriculumCourse");
+    expect(JSON.stringify(findManyArgs.where)).not.toContain("curriculum_version");
+    expect(result.active).toEqual([]);
+    expect(result.submitted).toEqual([
+      expect.objectContaining({
+        assignmentId: "assignment-retired",
+        href: "/student/history/response-retired",
+        status: "SUBMITTED",
+      }),
+    ]);
+  });
 });

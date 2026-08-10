@@ -320,7 +320,10 @@ describe("publishCourseBoundEvaluation", () => {
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
-    courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+    courseAssignmentFindUniqueMock.mockResolvedValue({
+      ...MOCK_ASSIGNMENT,
+      curriculumCourse: null,
+    });
     getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
     instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
     courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
@@ -363,6 +366,18 @@ describe("publishCourseBoundEvaluation", () => {
         instrument_version_id: "version-1",
       }),
     });
+    expect(courseBoundEvaluationCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        course_info_snapshot: {
+          courseCode: "IT-401",
+          courseScope: "PROGRAM_SPECIFIC",
+          courseTitle: "Capstone 1",
+          majorName: null,
+          programCode: "BSIT",
+          programName: "BS Information Technology",
+        },
+      }),
+    });
     expect(bindingCreateManyMock).toHaveBeenCalledWith({
       data: [
         {
@@ -395,6 +410,46 @@ describe("publishCourseBoundEvaluation", () => {
         { course_bound_id: "evaluation-1", respondent_id: "student-1" },
         { course_bound_id: "evaluation-1", respondent_id: "student-2" },
       ],
+    });
+  });
+
+  it("captures curriculum version and course in the snapshot when the assignment is linked", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    courseAssignmentFindUniqueMock.mockResolvedValue({
+      ...MOCK_ASSIGNMENT,
+      curriculumCourse: {
+        id: "curriculum-course-1",
+        curriculum_version_id: "curriculum-version-1",
+      },
+    });
+    getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
+    instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
+    courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
+
+    await publishCourseBoundEvaluation({
+      assignmentId: "assignment-1",
+      deploymentName: "Linked Curriculum Evaluation",
+      templateId: "template-1",
+    });
+
+    expect(courseBoundEvaluationCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        course_info_snapshot: {
+          courseCode: "IT-401",
+          courseScope: "PROGRAM_SPECIFIC",
+          courseTitle: "Capstone 1",
+          curriculumCourseId: "curriculum-course-1",
+          curriculumVersionId: "curriculum-version-1",
+          majorName: null,
+          programCode: "BSIT",
+          programName: "BS Information Technology",
+        },
+      }),
     });
   });
 
