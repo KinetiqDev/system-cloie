@@ -203,6 +203,19 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
     );
   });
 
+  it("never filters assignments by course is_active so inactive courses stay visible", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+    await listCourseAssignments({});
+
+    const callArgs = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0][0];
+    const where = (callArgs as { where: Record<string, unknown> }).where;
+    if ("course" in where) {
+      expect(where.course as Record<string, unknown>).not.toHaveProperty("is_active");
+    }
+    expect(JSON.stringify(where)).not.toContain("is_active");
+  });
+
   it("searches only approved assignment display fields", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
 

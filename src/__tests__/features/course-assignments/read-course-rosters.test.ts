@@ -226,13 +226,35 @@ describe("read course rosters", () => {
     );
   });
 
+  it("returns roster detail for an assignment on an inactive course", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "secretary-1", roles: [ROLES.SECRETARY] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+      ...assignment,
+      course: { ...assignment.course, is_active: false },
+    } as never);
+    vi.mocked(prisma.courseAssignmentMembership.count).mockResolvedValue(0);
+    vi.mocked(prisma.courseAssignmentMembership.findMany).mockResolvedValue([] as never);
+
+    const result = await getCourseRosterDetail("assignment-1");
+
+    expect(result).toMatchObject({
+      success: true,
+      data: { totalMembers: 0, activeRosterCount: 0, evaluationEligibleCount: 0 },
+    });
+    expect(prisma.courseAssignment.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "assignment-1" } })
+    );
+  });
+
   it("rejects a cross-Program detail request without disclosing assignment data", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
       createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
     );
-    const { resolveProgramHeadContext } = await import(
-      "@/features/auth/services/resolve-program-head-context"
-    );
+    const { resolveProgramHeadContext } =
+      await import("@/features/auth/services/resolve-program-head-context");
     vi.mocked(resolveProgramHeadContext).mockResolvedValue({
       success: true,
       data: {
@@ -247,7 +269,9 @@ describe("read course rosters", () => {
       program_id: "program-2",
     } as never);
 
-    await expect(getCourseRosterDetail("assignment-1", { programId: "program-1" })).resolves.toEqual({
+    await expect(
+      getCourseRosterDetail("assignment-1", { programId: "program-1" })
+    ).resolves.toEqual({
       success: false,
       error: "Course assignment not found.",
     });
@@ -257,9 +281,8 @@ describe("read course rosters", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
       createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
     );
-    const { resolveProgramHeadContext } = await import(
-      "@/features/auth/services/resolve-program-head-context"
-    );
+    const { resolveProgramHeadContext } =
+      await import("@/features/auth/services/resolve-program-head-context");
     vi.mocked(resolveProgramHeadContext).mockResolvedValue({
       success: false,
       error: "Selected Program is not assigned.",

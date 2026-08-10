@@ -256,6 +256,7 @@ export async function publishCourseBoundEvaluation({
                 program: true,
                 term_instance: true,
                 course_bound_evaluations: { select: { published_at: true } },
+                curriculumCourse: { select: { id: true, curriculum_version_id: true } },
               },
             });
 
@@ -467,6 +468,10 @@ export async function publishCourseBoundEvaluation({
                   majorName: lockedAssignment.course.major?.name ?? null,
                   programCode: lockedAssignment.program.code,
                   programName: lockedAssignment.program.name,
+                  ...(lockedAssignment.curriculumCourse && {
+                    curriculumCourseId: lockedAssignment.curriculumCourse.id,
+                    curriculumVersionId: lockedAssignment.curriculumCourse.curriculum_version_id,
+                  }),
                 },
                 deadline_at: deadlineAt,
                 deployment_name: deploymentName.trim(),

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
-import { canManageCourseRoster } from "@/features/course-assignments/policies";
+import { canViewCourseRoster } from "@/features/course-assignments/policies";
 import { CourseScope } from "@prisma/client";
 import type { FacultyEvaluationDetail, GetFacultyEvaluationDetailResult } from "../types";
 
@@ -120,7 +120,9 @@ export async function getFacultyEvaluationDetail(
           })
         ).map((row) => row.program_id)
       : [];
-  const authorization = canManageCourseRoster(
+  // Read authorization: published evaluations are historical records and must
+  // stay readable even after the course assignment is deactivated.
+  const authorization = canViewCourseRoster(
     session,
     {
       facultyId: evaluation.course_assignment.faculty_id,
