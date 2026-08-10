@@ -51,7 +51,7 @@ async function createBaselineForProgram(
           if (!program) return { status: "skipped" as const, skippedCourses: 0 };
 
           const courses = await tx.course.findMany({
-            where: { program_id: programId },
+            where: { program_id: programId, is_active: true },
             select: {
               id: true,
               code: true,

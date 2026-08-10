@@ -113,19 +113,19 @@ export const goDefs = [
 
 export const ciloDefsIT = [
   {
-    courseCode: "IT-OD-401",
+    courseCode: "ITRES1",
     desc: "Defend the proposed capstone scope and methodology.",
     order: 1,
     createdBy: U.FAC_BSIT,
   },
   {
-    courseCode: "IT-OD-401",
+    courseCode: "ITRES1",
     desc: "Present a coherent research and implementation plan.",
     order: 2,
     createdBy: U.FAC_BSIT,
   },
   {
-    courseCode: "IT-OD-401",
+    courseCode: "ITRES1",
     desc: "Demonstrate technical feasibility of the proposed solution.",
     order: 3,
     createdBy: U.FAC_BSIT,
@@ -134,13 +134,13 @@ export const ciloDefsIT = [
 
 export const ciloDefsMKT = [
   {
-    courseCode: "MKT301",
+    courseCode: "MM201",
     desc: "Develop a comprehensive marketing plan for a real or simulated business.",
     order: 1,
     createdBy: U.FAC_BSBA,
   },
   {
-    courseCode: "MKT301",
+    courseCode: "MM201",
     desc: "Analyze market trends and consumer behavior using research methodologies.",
     order: 2,
     createdBy: U.FAC_BSBA,
@@ -148,7 +148,7 @@ export const ciloDefsMKT = [
 ] as const;
 
 export const ciloDefsNewCourses = [
-  // IT201 — Data Structures and Algorithms
+  // IT201 — Data Structures
   {
     courseCode: "IT201",
     desc: "Implement fundamental data structures (arrays, linked lists, trees, graphs) in a programming language.",
@@ -167,74 +167,74 @@ export const ciloDefsNewCourses = [
     order: 3,
     createdBy: U.FAC_BSIT,
   },
-  // FIN101 — Financial Accounting
+  // FM200 — Financial Management
   {
-    courseCode: "FIN101",
-    desc: "Prepare and interpret financial statements in accordance with accounting standards.",
+    courseCode: "FM200",
+    desc: "Apply financial management concepts to evaluate organizational financial decisions.",
     order: 1,
     createdBy: U.FAC_BSBA,
   },
   {
-    courseCode: "FIN101",
-    desc: "Apply the accounting cycle to record, classify, and summarize business transactions.",
+    courseCode: "FM200",
+    desc: "Analyze financial statements and ratios to support management planning and control.",
     order: 2,
     createdBy: U.FAC_BSBA,
   },
-  // EDUC301 — Assessment and Evaluation in Education
+  // ENG2 — Principles and Theories of Language Acquisition and Learning
   {
-    courseCode: "EDUC301",
-    desc: "Design valid and reliable assessment tools aligned with intended learning outcomes.",
+    courseCode: "ENG2",
+    desc: "Explain major theories of language acquisition and learning and their classroom implications.",
     order: 1,
     createdBy: U.FAC_BSED,
   },
   {
-    courseCode: "EDUC301",
-    desc: "Analyze and interpret assessment results to inform instructional decisions.",
+    courseCode: "ENG2",
+    desc: "Compare first- and second-language acquisition processes and the factors that affect language learning.",
     order: 2,
     createdBy: U.FAC_BSED,
   },
   {
-    courseCode: "EDUC301",
-    desc: "Apply principles of authentic and formative assessment in diverse learning contexts.",
+    courseCode: "ENG2",
+    desc: "Apply principles and theories of language learning to instructional practices.",
     order: 3,
     createdBy: U.FAC_BSED,
   },
-  // HM401 — Events Management
+  // HTC401 — Entrepreneurship in Tourism and Hospitality
   {
-    courseCode: "HM401",
-    desc: "Plan and organize hospitality and tourism events applying industry standards and protocols.",
+    courseCode: "HTC401",
+    desc: "Identify entrepreneurial opportunities and develop a business plan for tourism and hospitality ventures.",
     order: 1,
     createdBy: U.FAC_BSHM,
   },
   {
-    courseCode: "HM401",
-    desc: "Manage event logistics, budgeting, and stakeholder coordination effectively.",
+    courseCode: "HTC401",
+    desc: "Evaluate the feasibility, marketing, and financial viability of tourism and hospitality enterprises.",
     order: 2,
     createdBy: U.FAC_BSHM,
   },
-  // BEED301 — Teaching Practicum in Elementary Education
+  // EDUC11E — Teaching Internship (Elementary)
   {
-    courseCode: "BEED301",
+    courseCode: "EDUC11E",
     desc: "Demonstrate effective classroom management and age-appropriate instructional strategies.",
     order: 1,
     createdBy: U.FAC_BSED,
   },
   {
-    courseCode: "BEED301",
+    courseCode: "EDUC11E",
     desc: "Design and implement lesson plans that address diverse learner needs in elementary grades.",
     order: 2,
     createdBy: U.FAC_BSED,
   },
-  // SW301 — Social Welfare and Social Work in the Philippines
+  // SW312 — Social Work Research 1 (Development of a Research Design)
   {
-    courseCode: "SW301",
-    desc: "Analyze the historical development and current state of social welfare and social work in the Philippines.",
+    courseCode: "SW312",
+    desc: "Formulate a research design that addresses a social work practice problem.",
     order: 1,
     createdBy: U.FAC_BSED,
   },
   {
-    courseCode: "SW301",
-    desc: "Apply social work frameworks to assess community needs and propose appropriate interventions.",
+    courseCode: "SW312",
+    desc: "Critique research methods and ethical considerations applicable to social work research.",
     order: 2,
     createdBy: U.FAC_BSED,
   },

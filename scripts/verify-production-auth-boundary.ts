@@ -14,7 +14,7 @@ const PROTECTED_CONTENT_MARKERS = [
   // Seeded user IDs (well-known UUID pattern) indicate account data exposure.
   "77777777-7777-4777-8777-777777777777",
   // Course identifiers in unprotected responses indicate data leakage.
-  "IT-OD-401",
+  "ITRES1",
 ];
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const REQUEST_TIMEOUT_MS = 30_000;

@@ -39,8 +39,8 @@ export async function seedOutcomes(
 
   // CILO Mappings
   console.log("  → CILO Mappings...");
-  const itCilos = ciloMap.get("IT-OD-401") ?? [];
-  const mktCilos = ciloMap.get("MKT301") ?? [];
+  const itCilos = ciloMap.get("ITRES1") ?? [];
+  const mktCilos = ciloMap.get("MM201") ?? [];
 
   // IT CILOs → BSIT GOs
   for (const cilo of itCilos) {

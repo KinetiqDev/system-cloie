@@ -3,7 +3,7 @@ import { D, U } from "../constants/ids";
 
 export interface ResponseSequence {
   log: string;
-  // Deployment locator: "cbEval1" (IT-OD-401), "cbEval2" (MKT301), or "newCb:<courseCode>" (IT201/FIN101/EDUC301/HM401/BEED301),
+  // Deployment locator: "cbEval1" (ITRES1), "cbEval2" (MM201), or "newCb:<courseCode>" (IT201/FM200/ENG2/HTC401/EDUC11E),
   // or "central:<D constant>" for central deployments
   deploymentKey: { kind: "cb1" | "cb2" | "newCb"; courseCode: string } | { kind: "central"; id: string };
   respondentKey: keyof typeof U;
@@ -17,7 +17,7 @@ export const responseSequences: ResponseSequence[] = [
   // ── 1. BSIT Course-Bound: STU_BSIT → SUBMITTED ──────────────────────
   {
     log: "    • BSIT student submitted CILO eval...",
-    deploymentKey: { kind: "cb1", courseCode: "IT-OD-401" },
+    deploymentKey: { kind: "cb1", courseCode: "ITRES1" },
     respondentKey: "STU_BSIT",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-20T14:30:00Z",
@@ -53,7 +53,7 @@ export const responseSequences: ResponseSequence[] = [
   // ── 2. BSIT Course-Bound: GRAD_BSIT → IN_PROGRESS (draft) ───────────
   {
     log: "    • BSIT grad in-progress CILO eval...",
-    deploymentKey: { kind: "cb1", courseCode: "IT-OD-401" },
+    deploymentKey: { kind: "cb1", courseCode: "ITRES1" },
     respondentKey: "GRAD_BSIT",
     status: ResponseStatus.IN_PROGRESS,
     quantItems: [
@@ -65,7 +65,7 @@ export const responseSequences: ResponseSequence[] = [
   // ── 3. BSBA Course-Bound: STU_BSBA → SUBMITTED ──────────────────────
   {
     log: "    • BSBA student submitted CILO eval...",
-    deploymentKey: { kind: "cb2", courseCode: "MKT301" },
+    deploymentKey: { kind: "cb2", courseCode: "MM201" },
     respondentKey: "STU_BSBA",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-22T10:15:00Z",
@@ -374,10 +374,10 @@ export const responseSequences: ResponseSequence[] = [
     ],
     qualItems: [],
   },
-  // ── 11. FIN101: STU_BSBA_G → SUBMITTED ──────────────────────────────
+  // ── 11. FM200: STU_BSBA_G → SUBMITTED ──────────────────────────────
   {
-    log: "    • BSBA FIN101 student submitted CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "FIN101" },
+    log: "    • BSBA FM200 student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "FM200" },
     respondentKey: "STU_BSBA_G",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-25T09:30:00Z",
@@ -395,28 +395,28 @@ export const responseSequences: ResponseSequence[] = [
       {
         sk: "qualitative",
         pk: "qualitative-1",
-        text: "Preparing the complete accounting cycle from journal entries to financial statements was highly practical.",
+        text: "Comparing financing options and evaluating their effect on organizational decisions made financial management concepts practical.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-2",
-        text: "More case studies involving local SMEs would make the content more relatable.",
+        text: "More examples using financial ratios and management scenarios would help connect analysis to planning and control.",
       },
     ],
   },
-  // ── 12. FIN101: STU_BSBA → IN_PROGRESS ──────────────────────────────
+  // ── 12. FM200: STU_BSBA → IN_PROGRESS ──────────────────────────────
   {
-    log: "    • BSBA FIN101 student in-progress CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "FIN101" },
+    log: "    • BSBA FM200 student in-progress CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "FM200" },
     respondentKey: "STU_BSBA",
     status: ResponseStatus.IN_PROGRESS,
     quantItems: [{ sk: "cilo-items", ik: "cilo-attainment-1", val: 4 }],
     qualItems: [],
   },
-  // ── 13. EDUC301: STU_BSED → SUBMITTED ───────────────────────────────
+  // ── 13. ENG2: STU_BSED → SUBMITTED ───────────────────────────────
   {
-    log: "    • BSED EDUC301 student submitted CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "EDUC301" },
+    log: "    • BSED ENG2 student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "ENG2" },
     respondentKey: "STU_BSED",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-24T14:00:00Z",
@@ -435,24 +435,24 @@ export const responseSequences: ResponseSequence[] = [
       {
         sk: "qualitative",
         pk: "qualitative-1",
-        text: "Designing rubrics and formative assessments was fully achieved — the workshop format was excellent.",
+        text: "Comparing first- and second-language acquisition theories helped me connect language learning factors to classroom practice.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-2",
-        text: "More practice in interpreting standardized test results would strengthen CILO 2 attainment.",
+        text: "More classroom examples showing how acquisition theories shape instruction would strengthen my understanding.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-3",
-        text: "Access to more sample assessment tools from actual schools would be helpful for reference.",
+        text: "Discussing learner differences and language development made the principles easier to apply.",
       },
     ],
   },
-  // ── 14. HM401: STU_BSHM_G → SUBMITTED ───────────────────────────────
+  // ── 14. HTC401: STU_BSHM_G → SUBMITTED ───────────────────────────────
   {
-    log: "    • BSHM HM401 student submitted CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "HM401" },
+    log: "    • BSHM HTC401 student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "HTC401" },
     respondentKey: "STU_BSHM_G",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-26T11:00:00Z",
@@ -470,24 +470,24 @@ export const responseSequences: ResponseSequence[] = [
       {
         sk: "qualitative",
         pk: "qualitative-1",
-        text: "The actual event simulation with industry guests made CILO 1 highly engaging and professionally relevant.",
+        text: "Developing a tourism and hospitality business plan made entrepreneurial opportunity assessment practical.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-2",
-        text: "Budget management tools like spreadsheets and event planning software should be taught more deeply.",
+        text: "More local venture case studies would help us evaluate feasibility, marketing, and financial viability.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-3",
-        text: "The event venue and AV equipment were excellent and contributed to a realistic learning experience.",
+        text: "Market research and budgeting exercises made the realities of hospitality entrepreneurship clearer.",
       },
     ],
   },
-  // ── 15. HM401: STU_BSHM → IN_PROGRESS ───────────────────────────────
+  // ── 15. HTC401: STU_BSHM → IN_PROGRESS ───────────────────────────────
   {
-    log: "    • BSHM HM401 student in-progress CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "HM401" },
+    log: "    • BSHM HTC401 student in-progress CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "HTC401" },
     respondentKey: "STU_BSHM",
     status: ResponseStatus.IN_PROGRESS,
     quantItems: [
@@ -496,10 +496,10 @@ export const responseSequences: ResponseSequence[] = [
     ],
     qualItems: [],
   },
-  // ── 16. BEED301: STU_BEED → SUBMITTED ───────────────────────────────
+  // ── 16. EDUC11E: STU_BEED → SUBMITTED ───────────────────────────────
   {
-    log: "    • BEED BEED301 student submitted CILO eval...",
-    deploymentKey: { kind: "newCb", courseCode: "BEED301" },
+    log: "    • BEED EDUC11E student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "EDUC11E" },
     respondentKey: "STU_BEED",
     status: ResponseStatus.SUBMITTED,
     submittedAt: "2026-04-25T15:00:00Z",

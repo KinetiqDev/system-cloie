@@ -31,10 +31,10 @@ export async function seedEvaluations(
   const bsed = pMap.get("BSED")!;
   const beed = pMap.get("BEED")!;
 
-  // ── Course-Bound 1: BSIT IT-OD-401 ──────────────────────────────────
-  console.log("  → Course-bound eval: IT-OD-401...");
-  const itCourse = cMap.get("IT-OD-401")!;
-  const itCilos = ciloMap.get("IT-OD-401") ?? [];
+  // ── Course-Bound 1: BSIT ITRES1 ──────────────────────────────────
+  console.log("  → Course-bound eval: ITRES1...");
+  const itCourse = cMap.get("ITRES1")!;
+  const itCilos = ciloMap.get("ITRES1") ?? [];
   const ciloSnap1: Prisma.InputJsonValue = itCilos.map((c) => ({
     description: c.description,
     order: c.order,
@@ -48,7 +48,7 @@ export async function seedEvaluations(
 
   const cbEval1AssignmentId = requireCourseAssignment(
     assignmentMap,
-    "IT-OD-401",
+    "ITRES1",
     "BSIT",
     YearLevel.FOURTH_YEAR,
     "MORNING"
@@ -62,7 +62,7 @@ export async function seedEvaluations(
   });
 
   const cbEval1Data = {
-    deployment_name: "IT-OD-401 Post-Term CILO Evaluation",
+    deployment_name: "ITRES1 Post-Term CILO Evaluation",
     instrument_version_id: ciloVer.id,
     cilos_snapshot: ciloSnap1,
     course_info_snapshot: courseSnap1,
@@ -117,10 +117,10 @@ export async function seedEvaluations(
     await ensureAssignment({ courseBoundId: cbEval1.id, respondentId: sid });
   }
 
-  // ── Course-Bound 2: BSBA MKT301 ─────────────────────────────────────
-  console.log("  → Course-bound eval: MKT301...");
-  const mktCourse = cMap.get("MKT301")!;
-  const mktCilos = ciloMap.get("MKT301") ?? [];
+  // ── Course-Bound 2: BSBA MM201 ─────────────────────────────────────
+  console.log("  → Course-bound eval: MM201...");
+  const mktCourse = cMap.get("MM201")!;
+  const mktCilos = ciloMap.get("MM201") ?? [];
   const ciloSnap2: Prisma.InputJsonValue = mktCilos.map((c) => ({
     description: c.description,
     order: c.order,
@@ -134,7 +134,7 @@ export async function seedEvaluations(
 
   const cbEval2AssignmentId = requireCourseAssignment(
     assignmentMap,
-    "MKT301",
+    "MM201",
     "BSBA",
     YearLevel.FOURTH_YEAR,
     "MORNING"
@@ -148,7 +148,7 @@ export async function seedEvaluations(
   });
 
   const cbEval2Data = {
-    deployment_name: "MKT301 Post-Term CILO Evaluation",
+    deployment_name: "MM201 Post-Term CILO Evaluation",
     instrument_version_id: ciloVer.id,
     cilos_snapshot: ciloSnap2,
     course_info_snapshot: courseSnap2,
