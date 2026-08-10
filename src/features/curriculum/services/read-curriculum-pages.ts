@@ -6,6 +6,7 @@ import { resolveProgramHeadContext } from "@/features/auth/services/resolve-prog
 import type {
   CurriculumCourseOption,
   CurriculumPageProgram,
+  PublishedCurriculumCourseOption,
   CurriculumVersionSummaryItem,
   SchoolYearOption,
 } from "../types";
@@ -73,6 +74,52 @@ export async function listCurriculumCourseOptions(
     title: course.title,
     programId: course.program_id,
   }));
+}
+
+/**
+ * Published CurriculumCourses available when creating an assignment. Retired
+ * versions remain available to historical reads, but never enter this picker.
+ */
+export async function listPublishedCurriculumCourseOptions(
+  programId: string
+): Promise<PublishedCurriculumCourseOption[]> {
+  const versions = await prisma.curriculumVersion.findMany({
+    where: { program_id: programId, status: "PUBLISHED" },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      courses: {
+        where: { course: { is_active: true } },
+        select: {
+          id: true,
+          course_id: true,
+          year_level: true,
+          semester: true,
+          term: true,
+          course: { select: { code: true, title: true, course_scope: true, is_active: true } },
+        },
+        orderBy: [{ year_level: "asc" }, { semester: "asc" }, { term: "asc" }],
+      },
+    },
+    orderBy: { created_at: "desc" },
+  });
+
+  return versions.flatMap((version) =>
+    version.courses.map((course) => ({
+      id: course.id,
+      curriculumVersionId: version.id,
+      curriculumVersionCode: version.code,
+      curriculumVersionName: version.name,
+      courseId: course.course_id,
+      courseCode: course.course.code,
+      courseTitle: course.course.title,
+      courseScope: course.course.course_scope,
+      yearLevel: course.year_level,
+      semester: course.semester,
+      term: course.term,
+    }))
+  );
 }
 
 /**

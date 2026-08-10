@@ -12,7 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { showToast } from "@/components/ui/toast";
 import { UserIcon } from "lucide-react";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
@@ -20,8 +26,12 @@ import { ClassIdentityFields } from "./shared/class-identity-fields";
 import { FacultySearchPopover } from "./shared/faculty-search-popover";
 import { WizardStepper } from "./shared/wizard-stepper";
 import { AssignmentSummaryBlock } from "./shared/assignment-summary-block";
-import { createCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
+import {
+  createCourseAssignmentAction,
+  loadCurriculumCoursesForProgramAction,
+} from "@/lib/actions/course-assignment-actions";
 import type { AssignableCourse, FacultySearchResult } from "@/features/course-assignments/types";
+import type { PublishedCurriculumCourseOption } from "@/features/curriculum/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
@@ -59,7 +69,7 @@ interface CourseAssignmentFormDialogProps {
   selectedProgramId?: string;
 }
 
-type Step = "term" | "course" | "class" | "faculty" | "confirm";
+type Step = "term" | "course" | "class" | "curriculum" | "faculty" | "confirm";
 
 export function CourseAssignmentFormDialog({
   open,
@@ -77,16 +87,23 @@ export function CourseAssignmentFormDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
-  const [termInstanceId, setTermInstanceId] = useState<string | null>(defaultTermInstanceId ?? null);
+  const [termInstanceId, setTermInstanceId] = useState<string | null>(
+    defaultTermInstanceId ?? null
+  );
   const [courseId, setCourseId] = useState<string | null>(defaultCourseId ?? null);
   const [programId, setProgramId] = useState<string | null>(
-    getInitialProgramId(defaultCourseId, availableCourses)
+    selectedProgramId ?? getInitialProgramId(defaultCourseId, availableCourses)
   );
   const [yearLevel, setYearLevel] = useState<YearLevel>(YearLevel.FIRST_YEAR);
   const [section, setSection] = useState<StudentSection>(StudentSection.MORNING);
   const [selectedFaculty, setSelectedFaculty] = useState<FacultySearchResult | null>(null);
   const [showCrossProgramWarning, setShowCrossProgramWarning] = useState(false);
   const [hasTouchedYearLevel, setHasTouchedYearLevel] = useState(false);
+  const [curriculumOptions, setCurriculumOptions] = useState<PublishedCurriculumCourseOption[]>([]);
+  const [curriculumCourseId, setCurriculumCourseId] = useState<string | null>(null);
+  const [curriculumLoadedProgramId, setCurriculumLoadedProgramId] = useState<string | null>(null);
+  const [curriculumLoadError, setCurriculumLoadError] = useState<string | null>(null);
+  const [curriculumLoadAttempt, setCurriculumLoadAttempt] = useState(0);
 
   const previousCourseId = useRef<string | null>(null);
 
@@ -96,13 +113,77 @@ export function CourseAssignmentFormDialog({
       : availableCourses.filter(
           (c) =>
             c.course_scope === CourseScope.PROGRAM_SPECIFIC &&
-            (selectedProgramId ? c.program_id === selectedProgramId : availablePrograms.some((p) => p.id === c.program_id))
+            (selectedProgramId
+              ? c.program_id === selectedProgramId
+              : availablePrograms.some((p) => p.id === c.program_id))
         );
 
   const selectedCourse = assignableCourses.find((c) => c.id === courseId);
   const isGeneralEducation = selectedCourse?.course_scope === CourseScope.GENERAL_EDUCATION;
   const programLocked = !isGeneralEducation;
   const selectedProgram = availablePrograms.find((p) => p.id === programId);
+  const curriculumPickerEnabled = mode === "all-program" || !!programId;
+  const availableCurriculumOptions = defaultCourseId
+    ? curriculumOptions.filter((option) => option.courseId === courseId)
+    : curriculumOptions;
+  const isCurriculumLoading =
+    curriculumPickerEnabled && !!programId && curriculumLoadedProgramId !== programId;
+  const hasCurriculumStep =
+    curriculumPickerEnabled &&
+    (step === "curriculum" ||
+      isCurriculumLoading ||
+      !!curriculumLoadError ||
+      availableCurriculumOptions.length > 0);
+
+  useEffect(() => {
+    if (!programId || !curriculumPickerEnabled) {
+      return;
+    }
+
+    let cancelled = false;
+    loadCurriculumCoursesForProgramAction(programId)
+      .then((result) => {
+        if (cancelled) return;
+        if (result.success) {
+          setCurriculumOptions(result.data);
+          setCurriculumLoadError(null);
+          setCurriculumLoadedProgramId(programId);
+        } else {
+          setCurriculumOptions([]);
+          setCurriculumLoadError("Unable to load published curriculum courses. Please try again.");
+          setCurriculumLoadedProgramId(programId);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCurriculumOptions([]);
+          setCurriculumLoadError("Unable to load published curriculum courses. Please try again.");
+          setCurriculumLoadedProgramId(programId);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [curriculumLoadAttempt, curriculumPickerEnabled, programId]);
+
+  const nextStepAfter = (current: Step): Step => {
+    if (current === "term") return "course";
+    if (current === "course") return "class";
+    if (current === "class") return hasCurriculumStep ? "curriculum" : "faculty";
+    if (current === "curriculum") return "faculty";
+    if (current === "faculty") return "confirm";
+    return "confirm";
+  };
+
+  const previousStepBefore = (current: Step): Step => {
+    if (current === "course") return "term";
+    if (current === "class") return "course";
+    if (current === "curriculum") return "class";
+    if (current === "faculty")
+      return hasCurriculumStep && !curriculumCourseId ? "curriculum" : "class";
+    return "faculty";
+  };
 
   // Pre-fill year level from course default when course changes (only if user hasn't touched it)
   useEffect(() => {
@@ -121,13 +202,22 @@ export function CourseAssignmentFormDialog({
     setYearLevel(value);
   };
 
+  const handleProgramChange = (value: string) => {
+    if (value === programId) return;
+    setProgramId(value);
+    setCurriculumCourseId(null);
+    setCurriculumOptions([]);
+    setCurriculumLoadedProgramId(null);
+    setCurriculumLoadError(null);
+  };
+
   const handleNext = () => {
     if (isSubmitting) return;
 
-    if (step === "term") setStep("course");
-    else if (step === "course") setStep("class");
-    else if (step === "class") setStep("faculty");
-    else if (step === "faculty") {
+    if (step === "term" || step === "course" || step === "class" || step === "curriculum") {
+      if (step === "curriculum" && (isCurriculumLoading || curriculumLoadError)) return;
+      setStep(nextStepAfter(step));
+    } else if (step === "faculty") {
       // Check for cross-program assignment
       if (
         selectedFaculty &&
@@ -145,10 +235,11 @@ export function CourseAssignmentFormDialog({
   const handleBack = () => {
     if (isSubmitting) return;
 
-    if (step === "course") setStep("term");
-    else if (step === "class") setStep("course");
-    else if (step === "faculty") setStep("class");
-    else if (step === "confirm") {
+    if (step === "term") return;
+    if (step === "course" || step === "class" || step === "curriculum" || step === "faculty") {
+      setStep(previousStepBefore(step));
+    }
+    if (step === "confirm") {
       setShowCrossProgramWarning(false);
       setStep("faculty");
     }
@@ -171,6 +262,7 @@ export function CourseAssignmentFormDialog({
       programId,
       yearLevel,
       section,
+      ...(curriculumCourseId ? { curriculumCourseId } : {}),
       ...(selectedProgramId ? { selectedProgramId } : {}),
     });
 
@@ -194,7 +286,12 @@ export function CourseAssignmentFormDialog({
     setStep(defaultTermInstanceId ? "course" : "term");
     setTermInstanceId(defaultTermInstanceId ?? null);
     setCourseId(defaultCourseId ?? null);
-    setProgramId(getInitialProgramId(defaultCourseId, availableCourses));
+    setProgramId(selectedProgramId ?? getInitialProgramId(defaultCourseId, availableCourses));
+    setCurriculumOptions([]);
+    setCurriculumCourseId(null);
+    setCurriculumLoadedProgramId(null);
+    setCurriculumLoadError(null);
+    setCurriculumLoadAttempt(0);
     setYearLevel(YearLevel.FIRST_YEAR);
     setSection(StudentSection.MORNING);
     setSelectedFaculty(null);
@@ -222,6 +319,8 @@ export function CourseAssignmentFormDialog({
         return !!selectedCourse;
       case "class":
         return !!programId && !!section;
+      case "curriculum":
+        return !isCurriculumLoading && !!curriculumCourseId;
       case "faculty":
         return !!selectedFaculty;
       case "confirm":
@@ -233,6 +332,7 @@ export function CourseAssignmentFormDialog({
     { key: "term", label: "Term" },
     { key: "course", label: "Course" },
     { key: "class", label: "Class" },
+    ...(hasCurriculumStep ? [{ key: "curriculum" as const, label: "Curriculum" }] : []),
     { key: "faculty", label: "Faculty" },
     { key: "confirm", label: "Confirm" },
   ];
@@ -247,15 +347,15 @@ export function CourseAssignmentFormDialog({
         <WizardStepper steps={STEPS} currentStep={step} />
 
         {step === "term" && (
-           <div className="space-y-4">
-             <TermInstancePicker
-                 id="course-assignment-term-instance"
-                 termInstances={termInstances}
-                 value={termInstanceId ?? ""}
-                 onChange={(val) => setTermInstanceId(val || null)}
-                 label="Academic Term"
-             />
-           </div>
+          <div className="space-y-4">
+            <TermInstancePicker
+              id="course-assignment-term-instance"
+              termInstances={termInstances}
+              value={termInstanceId ?? ""}
+              onChange={(val) => setTermInstanceId(val || null)}
+              label="Academic Term"
+            />
+          </div>
         )}
 
         {step === "course" && (
@@ -264,33 +364,34 @@ export function CourseAssignmentFormDialog({
               <FieldLabel htmlFor="assignment-course">Course</FieldLabel>
               <FieldContent>
                 <Select
-                value={courseId ?? ""}
-                onValueChange={(value) => {
-                  if (!value) return;
-                  setCourseId(value);
-                  const nextCourse = assignableCourses.find((c) => c.id === value);
-                  setProgramId(nextCourse?.program_id ?? null);
-                  setHasTouchedYearLevel(false);
-                }}
-              >
-                <SelectTrigger id="assignment-course">
-                  <SelectValue placeholder="Select a course...">
-                    {courseId
-                      ? (() => {
-                          const c = assignableCourses.find((c) => c.id === courseId);
-                          return c ? `${c.code} — ${c.title}` : null;
-                        })()
-                      : null}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {assignableCourses.map((course) => (
-                    <SelectItem key={course.id} value={course.id}>
-                      {course.code} — {course.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  value={courseId ?? ""}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setCourseId(value);
+                    setCurriculumCourseId(null);
+                    const nextCourse = assignableCourses.find((c) => c.id === value);
+                    setProgramId(nextCourse?.program_id ?? null);
+                    setHasTouchedYearLevel(false);
+                  }}
+                >
+                  <SelectTrigger id="assignment-course">
+                    <SelectValue placeholder="Select a course...">
+                      {courseId
+                        ? (() => {
+                            const c = assignableCourses.find((c) => c.id === courseId);
+                            return c ? `${c.code} — ${c.title}` : null;
+                          })()
+                        : null}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignableCourses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.code} — {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FieldContent>
             </Field>
           </div>
@@ -303,12 +404,89 @@ export function CourseAssignmentFormDialog({
               yearLevel={yearLevel}
               section={section}
               availablePrograms={availablePrograms}
-              onProgramChange={setProgramId}
+              onProgramChange={handleProgramChange}
               onYearLevelChange={handleYearLevelChange}
               onSectionChange={(value) => value && setSection(value)}
               programDisabled={programLocked}
               suggestedYearLevel={selectedCourse?.default_year_level ?? null}
             />
+          </div>
+        )}
+
+        {step === "curriculum" && (
+          <div className="space-y-4">
+            <Field>
+              <FieldLabel htmlFor="assignment-curriculum-course">
+                Curriculum course (optional)
+              </FieldLabel>
+              <FieldContent>
+                {isCurriculumLoading ? (
+                  <p className="text-muted-foreground text-sm">
+                    Loading published curriculum courses...
+                  </p>
+                ) : curriculumLoadError ? (
+                  <div className="space-y-2">
+                    <p role="alert" className="text-danger text-sm">
+                      {curriculumLoadError}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCurriculumLoadError(null);
+                        setCurriculumLoadedProgramId(null);
+                        setCurriculumLoadAttempt((attempt) => attempt + 1);
+                      }}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={curriculumCourseId ?? ""}
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        setCurriculumCourseId(null);
+                        return;
+                      }
+                      const option = availableCurriculumOptions.find((item) => item.id === value);
+                      if (!option) return;
+                      setCurriculumCourseId(option.id);
+                      previousCourseId.current = option.courseId;
+                      setCourseId(option.courseId);
+                      setYearLevel(option.yearLevel);
+                      setHasTouchedYearLevel(false);
+                    }}
+                  >
+                    <SelectTrigger id="assignment-curriculum-course" className="w-full">
+                      <SelectValue placeholder="Select a curriculum course...">
+                        {curriculumCourseId
+                          ? (() => {
+                              const option = availableCurriculumOptions.find(
+                                (item) => item.id === curriculumCourseId
+                              );
+                              return option ? `${option.courseCode} — ${option.courseTitle}` : null;
+                            })()
+                          : null}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No curriculum link</SelectItem>
+                      {availableCurriculumOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.courseCode} — {option.courseTitle} ({option.curriculumVersionCode}
+                          )
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </FieldContent>
+            </Field>
+            <p className="text-muted-foreground text-xs">
+              Select a published placement to prefill course and year level. Both remain editable.
+            </p>
           </div>
         )}
 
@@ -333,17 +511,17 @@ export function CourseAssignmentFormDialog({
             </Field>
 
             {selectedFaculty && (
-              <div className="flex items-start gap-3 rounded-xl border bg-muted/40 p-4">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <UserIcon className="h-4 w-4 text-primary" />
+              <div className="bg-muted/40 flex items-start gap-3 rounded-xl border p-4">
+                <div className="bg-primary/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                  <UserIcon className="text-primary h-4 w-4" />
                 </div>
                 <div className="min-w-0 space-y-0.5">
-                  <p className="text-sm font-medium leading-snug">
+                  <p className="text-sm leading-snug font-medium">
                     {selectedFaculty.firstName} {selectedFaculty.lastName}
                   </p>
-                  <p className="text-xs text-muted-foreground">{selectedFaculty.email}</p>
+                  <p className="text-muted-foreground text-xs">{selectedFaculty.email}</p>
                   {selectedFaculty.primaryAffiliation && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {selectedFaculty.primaryAffiliation}
                     </p>
                   )}
@@ -366,26 +544,30 @@ export function CourseAssignmentFormDialog({
             <AssignmentSummaryBlock title="Assignment Summary">
               <div className="space-y-1.5 text-sm">
                 <div className="flex gap-2">
-                  <span className="w-16 shrink-0 text-muted-foreground">Course</span>
-                  <span className="font-medium">{selectedCourse?.code} — {selectedCourse?.title}</span>
+                  <span className="text-muted-foreground w-16 shrink-0">Course</span>
+                  <span className="font-medium">
+                    {selectedCourse?.code} — {selectedCourse?.title}
+                  </span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="w-16 shrink-0 text-muted-foreground">Program</span>
+                  <span className="text-muted-foreground w-16 shrink-0">Program</span>
                   <span>{selectedProgram?.code}</span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="w-16 shrink-0 text-muted-foreground">Year</span>
+                  <span className="text-muted-foreground w-16 shrink-0">Year</span>
                   <span>{getYearLevelDisplay(yearLevel)}</span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="w-16 shrink-0 text-muted-foreground">Section</span>
+                  <span className="text-muted-foreground w-16 shrink-0">Section</span>
                   <span>
                     {STUDENT_SECTION_OPTIONS.find((o) => o.value === section)?.label ?? section}
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="w-16 shrink-0 text-muted-foreground">Faculty</span>
-                  <span>{selectedFaculty?.firstName} {selectedFaculty?.lastName}</span>
+                  <span className="text-muted-foreground w-16 shrink-0">Faculty</span>
+                  <span>
+                    {selectedFaculty?.firstName} {selectedFaculty?.lastName}
+                  </span>
                 </div>
               </div>
             </AssignmentSummaryBlock>
@@ -406,7 +588,11 @@ export function CourseAssignmentFormDialog({
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+            <Button
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             {step === "confirm" ? (
@@ -414,9 +600,20 @@ export function CourseAssignmentFormDialog({
                 Confirm Assignment
               </Button>
             ) : (
-              <Button loading={isSubmitting} onClick={handleNext} disabled={!canProceed()}>
-                Next
-              </Button>
+              <>
+                {step === "curriculum" && !isCurriculumLoading && !curriculumLoadError && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setStep(nextStepAfter(step))}
+                    disabled={isSubmitting}
+                  >
+                    Skip
+                  </Button>
+                )}
+                <Button loading={isSubmitting} onClick={handleNext} disabled={!canProceed()}>
+                  Next
+                </Button>
+              </>
             )}
           </div>
         </DialogFooter>

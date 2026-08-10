@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import {
   createCourseAssignmentSchema,
   updateCourseAssignmentSchema,
@@ -22,6 +23,12 @@ import {
 import { listCourseAssignmentsForFaculty } from "@/features/course-assignments/services/list-course-assignments-for-faculty";
 import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import { searchFacultyPool } from "@/features/course-assignments/services/search-faculty-pool";
+import { listPublishedCurriculumCourseOptions } from "@/features/curriculum/services/read-curriculum-pages";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
+import { ROLES } from "@/lib/constants/roles";
+import type { PublishedCurriculumCourseOption } from "@/features/curriculum/types";
+import type { ServiceResult } from "@/lib/utils/service-result";
 import type {
   CreateCourseAssignmentInput,
   UpdateCourseAssignmentInput,
@@ -37,7 +44,11 @@ import type {
 import { buildProgramHeadCourseAssignmentsPath } from "@/lib/constants/program-head-routes";
 
 function revalidateCourseAssignmentRoutes(programIds?: string | string[]) {
-  for (const programId of programIds ? (Array.isArray(programIds) ? programIds : [programIds]) : []) {
+  for (const programId of programIds
+    ? Array.isArray(programIds)
+      ? programIds
+      : [programIds]
+    : []) {
     revalidatePath(buildProgramHeadCourseAssignmentsPath(programId));
   }
   revalidatePath("/secretary/course-assignments");
@@ -45,11 +56,38 @@ function revalidateCourseAssignmentRoutes(programIds?: string | string[]) {
   revalidatePath("/faculty/course-rosters");
 }
 
+type CreateCourseAssignmentActionInput = CreateCourseAssignmentInput | FormData;
+
+function formDataValue(formData: FormData, ...keys: string[]) {
+  for (const key of keys) {
+    const value = formData.get(key);
+    if (typeof value === "string" && value.trim()) return value;
+  }
+  return undefined;
+}
+
+function normalizeCreateCourseAssignmentInput(input: CreateCourseAssignmentActionInput) {
+  if (!(input instanceof FormData)) return input;
+
+  return {
+    termInstanceId: formDataValue(input, "termInstanceId", "term_instance_id"),
+    facultyId: formDataValue(input, "facultyId", "faculty_id"),
+    courseId: formDataValue(input, "courseId", "course_id"),
+    programId: formDataValue(input, "programId", "program_id"),
+    yearLevel: formDataValue(input, "yearLevel", "year_level"),
+    section: formDataValue(input, "section"),
+    curriculumCourseId: formDataValue(input, "curriculumCourseId", "curriculum_course_id"),
+    selectedProgramId: formDataValue(input, "selectedProgramId", "selected_program_id"),
+  };
+}
+
 /**
  * Create a new course assignment.
  */
-export async function createCourseAssignmentAction(input: CreateCourseAssignmentInput) {
-  const parsed = createCourseAssignmentSchema.safeParse(input);
+export async function createCourseAssignmentAction(input: CreateCourseAssignmentActionInput) {
+  const parsed = createCourseAssignmentSchema.safeParse(
+    normalizeCreateCourseAssignmentInput(input)
+  );
 
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -58,12 +96,52 @@ export async function createCourseAssignmentAction(input: CreateCourseAssignment
   const result = await createCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidateCourseAssignmentRoutes(
-      result.data?.programIds ?? parsed.data.selectedProgramId
-    );
+    revalidateCourseAssignmentRoutes(result.data?.programIds ?? parsed.data.selectedProgramId);
   }
 
   return result;
+}
+
+const curriculumProgramIdSchema = z.string().uuid();
+
+/**
+ * Load published CurriculumCourses for the assignment picker. Dean access is
+ * explicit here because curriculum authoring reads intentionally exclude Dean.
+ */
+export async function loadCurriculumCoursesForProgramAction(
+  programId: string
+): Promise<ServiceResult<PublishedCurriculumCourseOption[]>> {
+  const parsed = curriculumProgramIdSchema.safeParse(programId);
+  if (!parsed.success) return { success: false, error: "Invalid program ID." };
+
+  const session = await resolveAuthSession();
+  if (!session) return { success: false, error: "Authentication is required." };
+
+  if (session.activeRole === ROLES.PROGRAM_HEAD) {
+    const context = await resolveProgramHeadContext(parsed.data);
+    if (!context.success) return context;
+  } else if (session.activeRole !== ROLES.SECRETARY && session.activeRole !== ROLES.DEAN) {
+    return { success: false, error: "Course assignment management access required." };
+  }
+
+  try {
+    return {
+      success: true,
+      data: (await listPublishedCurriculumCourseOptions(parsed.data)).filter(
+        (option) =>
+          session.activeRole !== ROLES.PROGRAM_HEAD || option.courseScope !== "GENERAL_EDUCATION"
+      ),
+    };
+  } catch (error) {
+    console.error("Failed to load curriculum course options", {
+      programId: parsed.data,
+      error: error instanceof Error ? { name: error.name } : { type: typeof error },
+    });
+    return {
+      success: false,
+      error: "Unable to load published curriculum courses. Please try again.",
+    };
+  }
 }
 
 /**
@@ -79,9 +157,7 @@ export async function updateCourseAssignmentAction(input: UpdateCourseAssignment
   const result = await updateCourseAssignment(parsed.data);
 
   if (result.success) {
-    revalidateCourseAssignmentRoutes(
-      result.data?.programIds ?? parsed.data.selectedProgramId
-    );
+    revalidateCourseAssignmentRoutes(result.data?.programIds ?? parsed.data.selectedProgramId);
   }
 
   return result;
@@ -174,7 +250,8 @@ export async function bulkCreateCourseAssignmentsAction(input: BulkCreateCourseA
 
   if (result.success) {
     revalidateCourseAssignmentRoutes(
-      parsed.data.selectedProgramId ?? parsed.data.assignments.map((assignment) => assignment.programId)
+      parsed.data.selectedProgramId ??
+        parsed.data.assignments.map((assignment) => assignment.programId)
     );
   }
 

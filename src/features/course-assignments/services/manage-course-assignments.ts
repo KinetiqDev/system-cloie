@@ -116,6 +116,52 @@ function unexpectedLifecycleFailure(
   };
 }
 
+async function resolveCurriculumCourseForAssignment(
+  tx: Prisma.TransactionClient,
+  curriculumCourseId: string | null | undefined,
+  courseId: string,
+  programId: string
+) {
+  if (!curriculumCourseId) return null;
+
+  await tx.$queryRaw`
+    SELECT id
+    FROM "curriculum_versions"
+    WHERE id = (
+      SELECT curriculum_version_id
+      FROM "curriculum_courses"
+      WHERE id = ${curriculumCourseId}
+    )
+    FOR UPDATE
+  `;
+
+  const curriculumCourse = await tx.curriculumCourse.findUnique({
+    where: { id: curriculumCourseId },
+    select: {
+      course_id: true,
+      year_level: true,
+      course: { select: { is_active: true } },
+      curriculum_version: { select: { program_id: true, status: true } },
+    },
+  });
+
+  if (!curriculumCourse) throw new Error("CURRICULUM_COURSE_NOT_FOUND");
+  if (curriculumCourse.course_id !== courseId) {
+    throw new Error("CURRICULUM_COURSE_MISMATCH");
+  }
+  if (!curriculumCourse.course.is_active) {
+    throw new Error("COURSE_INACTIVE");
+  }
+  if (curriculumCourse.curriculum_version.status !== "PUBLISHED") {
+    throw new Error("CURRICULUM_COURSE_NOT_PUBLISHED");
+  }
+  if (curriculumCourse.curriculum_version.program_id !== programId) {
+    throw new Error("CURRICULUM_PROGRAM_MISMATCH");
+  }
+
+  return curriculumCourse;
+}
+
 /**
  * Create a new course assignment.
  */
@@ -142,12 +188,21 @@ export async function createCourseAssignment(
 
       const course = await tx.course.findUnique({
         where: { id: input.courseId },
-        select: { program_id: true },
+        select: { program_id: true, is_active: true },
       });
       if (!course) throw new Error("COURSE_NOT_FOUND");
+      if (course.is_active === false) throw new Error("COURSE_INACTIVE");
       if (course.program_id !== null && course.program_id !== input.programId) {
         throw new Error("COURSE_PROGRAM_MISMATCH");
       }
+      const curriculumCourse = await resolveCurriculumCourseForAssignment(
+        tx,
+        input.curriculumCourseId,
+        input.courseId,
+        input.programId
+      );
+      const assignmentYearLevel = input.yearLevel ?? curriculumCourse?.year_level;
+      if (!assignmentYearLevel) throw new Error("YEAR_LEVEL_REQUIRED");
       const permission = canManageCourseAssignment(
         authSession,
         course.program_id,
@@ -161,8 +216,9 @@ export async function createCourseAssignment(
           faculty_id: input.facultyId,
           course_id: input.courseId,
           program_id: input.programId,
-          year_level: input.yearLevel,
+          year_level: assignmentYearLevel,
           section: input.section,
+          ...(input.curriculumCourseId ? { curriculum_course_id: input.curriculumCourseId } : {}),
           is_active: true,
           ...(authSession?.userId ? { assigned_by: authSession.userId } : {}),
         },
@@ -172,9 +228,40 @@ export async function createCourseAssignment(
     return { success: true, data: { id: assignment.id, programIds: [input.programId] } };
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message === "COURSE_NOT_FOUND") return { success: false, error: "Course not found." };
+      if (error.message === "COURSE_NOT_FOUND")
+        return { success: false, error: "Course not found." };
       if (error.message === "COURSE_PROGRAM_MISMATCH") {
-        return { success: false, error: "Assignment program must match the Course's owning program." };
+        return {
+          success: false,
+          error: "Assignment program must match the Course's owning program.",
+        };
+      }
+      if (error.message === "CURRICULUM_COURSE_NOT_FOUND") {
+        return { success: false, error: "Selected curriculum course was not found." };
+      }
+      if (error.message === "CURRICULUM_COURSE_MISMATCH") {
+        return {
+          success: false,
+          error: "Selected curriculum course does not match the assigned course",
+        };
+      }
+      if (error.message === "CURRICULUM_COURSE_NOT_PUBLISHED") {
+        return {
+          success: false,
+          error: "Only published curriculum courses can be linked to new assignments.",
+        };
+      }
+      if (error.message === "COURSE_INACTIVE") {
+        return { success: false, error: "Inactive courses cannot receive new assignments." };
+      }
+      if (error.message === "CURRICULUM_PROGRAM_MISMATCH") {
+        return {
+          success: false,
+          error: "Selected curriculum course does not belong to the assignment program.",
+        };
+      }
+      if (error.message === "YEAR_LEVEL_REQUIRED") {
+        return { success: false, error: "Year level is required." };
       }
       if (error.message === "SELECTED_PROGRAM_INACTIVE") {
         return { success: false, error: "Selected Program is no longer assigned." };
@@ -301,7 +388,11 @@ export async function updateCourseAssignment(
       return {
         success: true,
         data: {
-          programIds: [...new Set([existing.program_id, input.programId].filter((id): id is string => Boolean(id)))],
+          programIds: [
+            ...new Set(
+              [existing.program_id, input.programId].filter((id): id is string => Boolean(id))
+            ),
+          ],
         },
       };
     });
@@ -355,10 +446,13 @@ export async function deactivateCourseAssignment(
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message === "ASSIGNMENT_NOT_FOUND") return { success: false, error: "Assignment not found." };
+      if (error.message === "ASSIGNMENT_NOT_FOUND")
+        return { success: false, error: "Assignment not found." };
       if (error.message === "SELECTED_PROGRAM_REQUIRED") return missingSelectedProgram();
-      if (error.message === "OUT_OF_SCOPE") return { success: false, error: "Course assignment is outside the selected Program." };
-      if (error.message.startsWith("PERMISSION:")) return { success: false, error: error.message.slice(11) };
+      if (error.message === "OUT_OF_SCOPE")
+        return { success: false, error: "Course assignment is outside the selected Program." };
+      if (error.message.startsWith("PERMISSION:"))
+        return { success: false, error: error.message.slice(11) };
     }
     return unexpectedLifecycleFailure(
       "deactivate_assignment",
@@ -399,17 +493,23 @@ export async function activateCourseAssignment(
         authSession && isProgramHead(authSession) && input.programId ? [input.programId] : []
       );
       if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
-      await tx.courseAssignment.update({ where: { id: input.assignmentId }, data: { is_active: true } });
+      await tx.courseAssignment.update({
+        where: { id: input.assignmentId },
+        data: { is_active: true },
+      });
       return { programIds: [existing.program_id] };
     });
 
     return { success: true, data: result };
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message === "ASSIGNMENT_NOT_FOUND") return { success: false, error: "Assignment not found." };
+      if (error.message === "ASSIGNMENT_NOT_FOUND")
+        return { success: false, error: "Assignment not found." };
       if (error.message === "SELECTED_PROGRAM_REQUIRED") return missingSelectedProgram();
-      if (error.message === "OUT_OF_SCOPE") return { success: false, error: "Course assignment is outside the selected Program." };
-      if (error.message.startsWith("PERMISSION:")) return { success: false, error: error.message.slice(11) };
+      if (error.message === "OUT_OF_SCOPE")
+        return { success: false, error: "Course assignment is outside the selected Program." };
+      if (error.message.startsWith("PERMISSION:"))
+        return { success: false, error: error.message.slice(11) };
     }
     return unexpectedLifecycleFailure(
       "activate_assignment",
@@ -437,7 +537,11 @@ export async function preflightCourseAssignmentDeletion(
     if (authSession && isProgramHead(authSession)) {
       if (!selectedProgramId) return missingSelectedProgram();
       const context = await resolveProgramHeadContext(selectedProgramId);
-      if (!context.success || context.data.userId !== authSession?.userId || existing.program_id !== selectedProgramId) {
+      if (
+        !context.success ||
+        context.data.userId !== authSession?.userId ||
+        existing.program_id !== selectedProgramId
+      ) {
         return { success: false, error: "Course assignment is outside the selected Program." };
       }
     }
@@ -500,20 +604,20 @@ export async function deleteCourseAssignment(
       });
       if (!existing) return { success: false, error: "Assignment not found." };
 
-       if (isProgramHead(authSession)) {
-         if (!input.programId) return missingSelectedProgram();
-         const selected = await revalidateProgramHeadAssignment(tx, {
-           userId: authSession.userId,
-           programId: input.programId,
-         });
-         if (!selected || existing.program_id !== input.programId) {
-           return { success: false, error: "Course assignment is outside the selected Program." };
-         }
-       }
-       const permission = canManageCourseAssignment(
-         authSession,
-         existing.course.program_id,
-         isProgramHead(authSession) && input.programId ? [input.programId] : []
+      if (isProgramHead(authSession)) {
+        if (!input.programId) return missingSelectedProgram();
+        const selected = await revalidateProgramHeadAssignment(tx, {
+          userId: authSession.userId,
+          programId: input.programId,
+        });
+        if (!selected || existing.program_id !== input.programId) {
+          return { success: false, error: "Course assignment is outside the selected Program." };
+        }
+      }
+      const permission = canManageCourseAssignment(
+        authSession,
+        existing.course.program_id,
+        isProgramHead(authSession) && input.programId ? [input.programId] : []
       );
       if (!permission.allowed) return { success: false, error: permission.reason };
 
@@ -636,12 +740,21 @@ export async function bulkCreateCourseAssignments(
         }
         const course = await tx.course.findUnique({
           where: { id: input.courseId },
-          select: { program_id: true },
+          select: { program_id: true, is_active: true },
         });
         if (!course) throw new Error("COURSE_NOT_FOUND");
+        if (course.is_active === false) throw new Error("COURSE_INACTIVE");
         if (course.program_id !== null && course.program_id !== input.programId) {
           throw new Error("COURSE_PROGRAM_MISMATCH");
         }
+        const curriculumCourse = await resolveCurriculumCourseForAssignment(
+          tx,
+          input.curriculumCourseId,
+          input.courseId,
+          input.programId
+        );
+        const assignmentYearLevel = input.yearLevel ?? curriculumCourse?.year_level;
+        if (!assignmentYearLevel) throw new Error("YEAR_LEVEL_REQUIRED");
         const permission = canManageCourseAssignment(
           authSession,
           course.program_id,
@@ -654,8 +767,9 @@ export async function bulkCreateCourseAssignments(
             faculty_id: input.facultyId,
             course_id: input.courseId,
             program_id: input.programId,
-            year_level: input.yearLevel,
+            year_level: assignmentYearLevel,
             section: input.section,
+            ...(input.curriculumCourseId ? { curriculum_course_id: input.curriculumCourseId } : {}),
             is_active: true,
             assigned_by: authSession.userId,
           },
@@ -670,7 +784,43 @@ export async function bulkCreateCourseAssignments(
           continue;
         }
         if (error.message === "COURSE_PROGRAM_MISMATCH") {
-          errors.push({ index: i, error: "Assignment program must match the Course's owning program." });
+          errors.push({
+            index: i,
+            error: "Assignment program must match the Course's owning program.",
+          });
+          continue;
+        }
+        if (error.message === "CURRICULUM_COURSE_NOT_FOUND") {
+          errors.push({ index: i, error: "Selected curriculum course was not found." });
+          continue;
+        }
+        if (error.message === "CURRICULUM_COURSE_MISMATCH") {
+          errors.push({
+            index: i,
+            error: "Selected curriculum course does not match the assigned course",
+          });
+          continue;
+        }
+        if (error.message === "CURRICULUM_COURSE_NOT_PUBLISHED") {
+          errors.push({
+            index: i,
+            error: "Only published curriculum courses can be linked to new assignments.",
+          });
+          continue;
+        }
+        if (error.message === "COURSE_INACTIVE") {
+          errors.push({ index: i, error: "Inactive courses cannot receive new assignments." });
+          continue;
+        }
+        if (error.message === "CURRICULUM_PROGRAM_MISMATCH") {
+          errors.push({
+            index: i,
+            error: "Selected curriculum course does not belong to the assignment program.",
+          });
+          continue;
+        }
+        if (error.message === "YEAR_LEVEL_REQUIRED") {
+          errors.push({ index: i, error: "Year level is required." });
           continue;
         }
         if (error.message === "SELECTED_PROGRAM_INACTIVE") {

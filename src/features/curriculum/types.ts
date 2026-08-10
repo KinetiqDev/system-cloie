@@ -1,6 +1,7 @@
 import type {
   AcademicSemester,
   AcademicTerm,
+  CourseScope,
   CurriculumVersionStatus,
   YearLevel,
 } from "@prisma/client";
@@ -63,6 +64,23 @@ export interface CurriculumCourseOption {
   title: string;
   /** Owning program, null for shared General Education courses. */
   programId: string | null;
+}
+
+/**
+ * Published CurriculumCourse option for CourseAssignment creation.
+ */
+export interface PublishedCurriculumCourseOption {
+  id: string;
+  curriculumVersionId: string;
+  curriculumVersionCode: string;
+  curriculumVersionName: string | null;
+  courseId: string;
+  courseCode: string;
+  courseTitle: string;
+  courseScope: CourseScope;
+  yearLevel: YearLevel;
+  semester: AcademicSemester;
+  term: AcademicTerm | null;
 }
 
 /**
