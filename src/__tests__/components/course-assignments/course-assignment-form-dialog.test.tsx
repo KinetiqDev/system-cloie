@@ -459,7 +459,9 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     fireEvent.click(await screen.findByRole("option", { name: /cs101 — intro/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByText(/select a curriculum course/i).closest('[role="combobox"]')!);
+    fireEvent.click(
+      (await screen.findByText(/select a curriculum course/i)).closest('[role="combobox"]')!
+    );
     const curriculumOption = await screen.findByRole("option", {
       name: /cs201 — data structures/i,
     });
@@ -503,7 +505,9 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     await waitFor(() => expect(screen.getByText("Curriculum")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByText(/select a curriculum course/i).closest('[role="combobox"]')!);
+    fireEvent.click(
+      (await screen.findByText(/select a curriculum course/i)).closest('[role="combobox"]')!
+    );
     const curriculumOption = await screen.findByRole("option", {
       name: /cs201 — data structures/i,
     });
@@ -540,7 +544,8 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     expect(
       await screen.findByText(/unable to load published curriculum courses/i)
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /skip/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
+    expect(await screen.findByText(/select faculty/i)).toBeInTheDocument();
   });
 
   it("clears a curriculum link when target program changes", async () => {
@@ -646,6 +651,7 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
@@ -697,6 +703,7 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
@@ -735,6 +742,7 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
@@ -826,9 +834,10 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
     expect(programTrigger).not.toHaveTextContent(/bscs/i);
 
     await openAndSelect(/program/i, "BSED — BS Education");
-    await waitFor(() => expect(loadCurriculumCoursesForProgramAction).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    await waitFor(() => expect(loadCurriculumCoursesForProgramAction).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 

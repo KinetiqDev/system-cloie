@@ -162,6 +162,57 @@ async function resolveCurriculumCourseForAssignment(
   return curriculumCourse;
 }
 
+async function resolveAssignmentCourse(
+  tx: Prisma.TransactionClient,
+  input: CreateCourseAssignmentInput
+) {
+  const course = await tx.course.findUnique({
+    where: { id: input.courseId },
+    select: { program_id: true, is_active: true },
+  });
+  if (!course) throw new Error("COURSE_NOT_FOUND");
+  if (course.is_active === false) throw new Error("COURSE_INACTIVE");
+  if (course.program_id !== null && course.program_id !== input.programId) {
+    throw new Error("COURSE_PROGRAM_MISMATCH");
+  }
+
+  const curriculumCourse = await resolveCurriculumCourseForAssignment(
+    tx,
+    input.curriculumCourseId,
+    input.courseId,
+    input.programId
+  );
+  const yearLevel = input.yearLevel ?? curriculumCourse?.year_level;
+  if (!yearLevel) throw new Error("YEAR_LEVEL_REQUIRED");
+
+  return { course, yearLevel };
+}
+
+function assignmentCreationError(error: unknown): string | null {
+  if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+    return "An identical assignment already exists. If inactive, please activate it instead of creating a new one.";
+  }
+  if (error instanceof Error) {
+    const errors: Record<string, string> = {
+      COURSE_NOT_FOUND: "Course not found.",
+      COURSE_PROGRAM_MISMATCH: "Assignment program must match the Course's owning program.",
+      CURRICULUM_COURSE_NOT_FOUND: "Selected curriculum course was not found.",
+      CURRICULUM_COURSE_MISMATCH: "Selected curriculum course does not match the assigned course",
+      CURRICULUM_COURSE_NOT_PUBLISHED:
+        "Only published curriculum courses can be linked to new assignments.",
+      COURSE_INACTIVE: "Inactive courses cannot receive new assignments.",
+      CURRICULUM_PROGRAM_MISMATCH:
+        "Selected curriculum course does not belong to the assignment program.",
+      YEAR_LEVEL_REQUIRED: "Year level is required.",
+      SELECTED_PROGRAM_INACTIVE: "Selected Program is no longer assigned.",
+    };
+    if (error.message.startsWith("PERMISSION:")) return error.message.slice("PERMISSION:".length);
+    return errors[error.message] ?? null;
+  }
+
+  return null;
+}
+
 /**
  * Create a new course assignment.
  */
@@ -186,23 +237,7 @@ export async function createCourseAssignment(
         if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
       }
 
-      const course = await tx.course.findUnique({
-        where: { id: input.courseId },
-        select: { program_id: true, is_active: true },
-      });
-      if (!course) throw new Error("COURSE_NOT_FOUND");
-      if (course.is_active === false) throw new Error("COURSE_INACTIVE");
-      if (course.program_id !== null && course.program_id !== input.programId) {
-        throw new Error("COURSE_PROGRAM_MISMATCH");
-      }
-      const curriculumCourse = await resolveCurriculumCourseForAssignment(
-        tx,
-        input.curriculumCourseId,
-        input.courseId,
-        input.programId
-      );
-      const assignmentYearLevel = input.yearLevel ?? curriculumCourse?.year_level;
-      if (!assignmentYearLevel) throw new Error("YEAR_LEVEL_REQUIRED");
+      const { course, yearLevel } = await resolveAssignmentCourse(tx, input);
       const permission = canManageCourseAssignment(
         authSession,
         course.program_id,
@@ -216,7 +251,7 @@ export async function createCourseAssignment(
           faculty_id: input.facultyId,
           course_id: input.courseId,
           program_id: input.programId,
-          year_level: assignmentYearLevel,
+          year_level: yearLevel,
           section: input.section,
           ...(input.curriculumCourseId ? { curriculum_course_id: input.curriculumCourseId } : {}),
           is_active: true,
@@ -227,57 +262,8 @@ export async function createCourseAssignment(
 
     return { success: true, data: { id: assignment.id, programIds: [input.programId] } };
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === "COURSE_NOT_FOUND")
-        return { success: false, error: "Course not found." };
-      if (error.message === "COURSE_PROGRAM_MISMATCH") {
-        return {
-          success: false,
-          error: "Assignment program must match the Course's owning program.",
-        };
-      }
-      if (error.message === "CURRICULUM_COURSE_NOT_FOUND") {
-        return { success: false, error: "Selected curriculum course was not found." };
-      }
-      if (error.message === "CURRICULUM_COURSE_MISMATCH") {
-        return {
-          success: false,
-          error: "Selected curriculum course does not match the assigned course",
-        };
-      }
-      if (error.message === "CURRICULUM_COURSE_NOT_PUBLISHED") {
-        return {
-          success: false,
-          error: "Only published curriculum courses can be linked to new assignments.",
-        };
-      }
-      if (error.message === "COURSE_INACTIVE") {
-        return { success: false, error: "Inactive courses cannot receive new assignments." };
-      }
-      if (error.message === "CURRICULUM_PROGRAM_MISMATCH") {
-        return {
-          success: false,
-          error: "Selected curriculum course does not belong to the assignment program.",
-        };
-      }
-      if (error.message === "YEAR_LEVEL_REQUIRED") {
-        return { success: false, error: "Year level is required." };
-      }
-      if (error.message === "SELECTED_PROGRAM_INACTIVE") {
-        return { success: false, error: "Selected Program is no longer assigned." };
-      }
-      if (error.message.startsWith("PERMISSION:")) {
-        return { success: false, error: error.message.slice("PERMISSION:".length) };
-      }
-    }
-    // Handle unique constraint violation (database enforces uniqueness)
-    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
-      return {
-        success: false,
-        error:
-          "An identical assignment already exists. If inactive, please activate it instead of creating a new one.",
-      };
-    }
+    const knownError = assignmentCreationError(error);
+    if (knownError) return { success: false, error: knownError };
     return unexpectedLifecycleFailure(
       "create_assignment",
       authSession?.userId,
@@ -738,23 +724,7 @@ export async function bulkCreateCourseAssignments(
           });
           if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
         }
-        const course = await tx.course.findUnique({
-          where: { id: input.courseId },
-          select: { program_id: true, is_active: true },
-        });
-        if (!course) throw new Error("COURSE_NOT_FOUND");
-        if (course.is_active === false) throw new Error("COURSE_INACTIVE");
-        if (course.program_id !== null && course.program_id !== input.programId) {
-          throw new Error("COURSE_PROGRAM_MISMATCH");
-        }
-        const curriculumCourse = await resolveCurriculumCourseForAssignment(
-          tx,
-          input.curriculumCourseId,
-          input.courseId,
-          input.programId
-        );
-        const assignmentYearLevel = input.yearLevel ?? curriculumCourse?.year_level;
-        if (!assignmentYearLevel) throw new Error("YEAR_LEVEL_REQUIRED");
+        const { course, yearLevel } = await resolveAssignmentCourse(tx, input);
         const permission = canManageCourseAssignment(
           authSession,
           course.program_id,
@@ -767,7 +737,7 @@ export async function bulkCreateCourseAssignments(
             faculty_id: input.facultyId,
             course_id: input.courseId,
             program_id: input.programId,
-            year_level: assignmentYearLevel,
+            year_level: yearLevel,
             section: input.section,
             ...(input.curriculumCourseId ? { curriculum_course_id: input.curriculumCourseId } : {}),
             is_active: true,
@@ -778,74 +748,19 @@ export async function bulkCreateCourseAssignments(
 
       created++;
     } catch (error) {
-      if (error instanceof Error) {
-        if (error.message === "COURSE_NOT_FOUND") {
-          errors.push({ index: i, error: "Course not found." });
-          continue;
-        }
-        if (error.message === "COURSE_PROGRAM_MISMATCH") {
-          errors.push({
-            index: i,
-            error: "Assignment program must match the Course's owning program.",
-          });
-          continue;
-        }
-        if (error.message === "CURRICULUM_COURSE_NOT_FOUND") {
-          errors.push({ index: i, error: "Selected curriculum course was not found." });
-          continue;
-        }
-        if (error.message === "CURRICULUM_COURSE_MISMATCH") {
-          errors.push({
-            index: i,
-            error: "Selected curriculum course does not match the assigned course",
-          });
-          continue;
-        }
-        if (error.message === "CURRICULUM_COURSE_NOT_PUBLISHED") {
-          errors.push({
-            index: i,
-            error: "Only published curriculum courses can be linked to new assignments.",
-          });
-          continue;
-        }
-        if (error.message === "COURSE_INACTIVE") {
-          errors.push({ index: i, error: "Inactive courses cannot receive new assignments." });
-          continue;
-        }
-        if (error.message === "CURRICULUM_PROGRAM_MISMATCH") {
-          errors.push({
-            index: i,
-            error: "Selected curriculum course does not belong to the assignment program.",
-          });
-          continue;
-        }
-        if (error.message === "YEAR_LEVEL_REQUIRED") {
-          errors.push({ index: i, error: "Year level is required." });
-          continue;
-        }
-        if (error.message === "SELECTED_PROGRAM_INACTIVE") {
-          errors.push({ index: i, error: "Selected Program is no longer assigned." });
-          continue;
-        }
-        if (error.message.startsWith("PERMISSION:")) {
-          errors.push({ index: i, error: error.message.slice("PERMISSION:".length) });
-          continue;
-        }
-      }
-      if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      const knownError = assignmentCreationError(error);
+      if (knownError) {
+        errors.push({ index: i, error: knownError });
+      } else {
         errors.push({
           index: i,
-          error:
-            "An identical assignment already exists. If inactive, please activate it instead of creating a new one.",
+          error: unexpectedLifecycleFailure(
+            "bulk_create_assignment",
+            authSession?.userId,
+            input.courseId,
+            error
+          ).error,
         });
-      } else {
-        const failure = unexpectedLifecycleFailure(
-          "bulk_create_assignment",
-          authSession?.userId,
-          input.courseId,
-          error
-        );
-        errors.push({ index: i, error: failure.error, referenceId: failure.referenceId });
       }
     }
   }
