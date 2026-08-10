@@ -24,7 +24,20 @@ const curriculumCourse = (id: string, overrides = {}) => ({
   course_id: "course-1",
   year_level: "FIRST_YEAR",
   semester: "1ST",
-  curriculum_version: { program_id: "program-1" },
+  term: null,
+  curriculum_version: {
+    program_id: "program-1",
+    status: "PUBLISHED",
+    effective_from_school_year_id: null,
+    effective_from_year: null,
+  },
+  ...overrides,
+});
+
+const termInstance = (overrides = {}) => ({
+  semester: "1ST",
+  term: null,
+  school_year: { id: "school-year-1", start_date: new Date("2026-06-01") },
   ...overrides,
 });
 
@@ -34,7 +47,7 @@ const assignment = (id: string, overrides = {}) => ({
   course_id: "course-1",
   program_id: "program-1",
   year_level: "FIRST_YEAR",
-  term_instance: { semester: "1ST", term: null },
+  term_instance: termInstance(),
   ...overrides,
 });
 
@@ -49,7 +62,7 @@ describe("backfillCourseAssignmentCurriculum", () => {
 
   it("links an assignment with one matching CurriculumCourse", async () => {
     prismaMock.courseAssignment.findMany.mockResolvedValue([
-      assignment("assignment-1", { term_instance: { semester: "1ST", term: "FIRST_TERM" } }),
+      assignment("assignment-1", { term_instance: termInstance({ term: "FIRST_TERM" }) }),
     ]);
     prismaMock.curriculumCourse.findMany.mockResolvedValue([
       curriculumCourse("curriculum-1", { term: "FIRST_TERM" }),
@@ -69,7 +82,7 @@ describe("backfillCourseAssignmentCurriculum", () => {
 
   it("leaves an assignment with no matching CurriculumCourse null", async () => {
     prismaMock.courseAssignment.findMany.mockResolvedValue([
-      assignment("assignment-1", { term_instance: { semester: "1ST", term: "FIRST_TERM" } }),
+      assignment("assignment-1", { term_instance: termInstance({ term: "FIRST_TERM" }) }),
     ]);
     prismaMock.curriculumCourse.findMany.mockResolvedValue([]);
 
@@ -84,7 +97,7 @@ describe("backfillCourseAssignmentCurriculum", () => {
 
   it("leaves an assignment with multiple matching CurriculumCourses null", async () => {
     prismaMock.courseAssignment.findMany.mockResolvedValue([
-      assignment("assignment-1", { term_instance: { semester: "1ST", term: "FIRST_TERM" } }),
+      assignment("assignment-1", { term_instance: termInstance({ term: "FIRST_TERM" }) }),
     ]);
     prismaMock.curriculumCourse.findMany.mockResolvedValue([
       curriculumCourse("curriculum-1", { term: "FIRST_TERM" }),
@@ -102,7 +115,7 @@ describe("backfillCourseAssignmentCurriculum", () => {
 
   it("skips already-linked assignments on rerun", async () => {
     const linkedAssignment = assignment("assignment-1", {
-      term_instance: { semester: "1ST", term: "FIRST_TERM" },
+      term_instance: termInstance({ term: "FIRST_TERM" }),
     });
     prismaMock.courseAssignment.findMany.mockResolvedValue([linkedAssignment]);
     prismaMock.curriculumCourse.findMany.mockResolvedValue([
@@ -128,16 +141,16 @@ describe("backfillCourseAssignmentCurriculum", () => {
   it("matches regular terms exactly and requires null term for Summer", async () => {
     prismaMock.courseAssignment.findMany.mockResolvedValue([
       assignment("assignment-first-term", {
-        term_instance: { semester: "1ST", term: "FIRST_TERM" },
+        term_instance: termInstance({ term: "FIRST_TERM" }),
       }),
       assignment("assignment-second-term", {
-        term_instance: { semester: "1ST", term: "SECOND_TERM" },
+        term_instance: termInstance({ term: "SECOND_TERM" }),
       }),
       assignment("assignment-summer", {
-        term_instance: { semester: "SUMMER", term: null },
+        term_instance: termInstance({ semester: "SUMMER", term: null }),
       }),
       assignment("assignment-invalid-summer", {
-        term_instance: { semester: "SUMMER", term: "FIRST_TERM" },
+        term_instance: termInstance({ semester: "SUMMER", term: "FIRST_TERM" }),
       }),
     ]);
     prismaMock.curriculumCourse.findMany.mockResolvedValue([
@@ -199,5 +212,144 @@ describe("backfillCourseAssignmentCurriculum", () => {
     expect(log).toHaveBeenCalledWith(
       "CourseAssignment curriculum backfill: total=0 linked=0 unmatched=0 ambiguous=0"
     );
+  });
+
+  it("ignores draft and retired versions when a published match exists", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-published", {
+        term_instance: termInstance({ term: "FIRST_TERM" }),
+      }),
+      assignment("assignment-retired", {
+        course_id: "course-2",
+        term_instance: termInstance({ term: "FIRST_TERM" }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-published", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: null,
+          effective_from_year: null,
+        },
+      }),
+      curriculumCourse("curriculum-draft", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "DRAFT",
+          effective_from_school_year_id: null,
+          effective_from_year: null,
+        },
+      }),
+      curriculumCourse("curriculum-retired", {
+        course_id: "course-2",
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "RETIRED",
+          effective_from_school_year_id: null,
+          effective_from_year: null,
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toEqual({
+      totalAssignments: 2,
+      linked: 1,
+      unmatched: 1,
+      ambiguous: 0,
+    });
+    expect(prismaMock.courseAssignment.updateMany).toHaveBeenCalledWith({
+      where: { id: "assignment-published", curriculum_course_id: null },
+      data: { curriculum_course_id: "curriculum-published" },
+    });
+  });
+
+  it("ignores a published version that starts after the assignment school year", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-2026", {
+        term_instance: termInstance({ term: "FIRST_TERM" }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-2027", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-2",
+          effective_from_year: {
+            id: "school-year-2",
+            start_date: new Date("2027-06-01"),
+          },
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toEqual({
+      totalAssignments: 1,
+      linked: 0,
+      unmatched: 1,
+      ambiguous: 0,
+    });
+    expect(prismaMock.courseAssignment.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("links a published version effective from the assignment school year", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-2026", {
+        term_instance: termInstance({ term: "FIRST_TERM" }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-2026", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-1",
+          effective_from_year: { id: "school-year-1", start_date: null },
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toMatchObject({
+      linked: 1,
+      unmatched: 0,
+      ambiguous: 0,
+    });
+    expect(prismaMock.curriculumCourse.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { curriculum_version: { status: "PUBLISHED" } } })
+    );
+  });
+
+  it("links a published version effective from an earlier school year", async () => {
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      assignment("assignment-2026", {
+        term_instance: termInstance({ term: "FIRST_TERM" }),
+      }),
+    ]);
+    prismaMock.curriculumCourse.findMany.mockResolvedValue([
+      curriculumCourse("curriculum-2025", {
+        term: "FIRST_TERM",
+        curriculum_version: {
+          program_id: "program-1",
+          status: "PUBLISHED",
+          effective_from_school_year_id: "school-year-0",
+          effective_from_year: {
+            id: "school-year-0",
+            start_date: new Date("2025-06-01"),
+          },
+        },
+      }),
+    ]);
+
+    await expect(backfillCourseAssignmentCurriculum(prismaMock as never)).resolves.toMatchObject({
+      linked: 1,
+      unmatched: 0,
+      ambiguous: 0,
+    });
   });
 });

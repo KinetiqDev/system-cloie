@@ -19,7 +19,7 @@ import { prisma } from "../src/lib/db/prisma";
 type BackfillModels = Pick<PrismaClient, "courseAssignment" | "curriculumCourse">;
 type BackfillDb = BackfillModels & Pick<PrismaClient, "$transaction">;
 
-export type CourseAssignmentCurriculumBackfillCounts = {
+type CourseAssignmentCurriculumBackfillCounts = {
   totalAssignments: number;
   linked: number;
   unmatched: number;
@@ -32,7 +32,11 @@ type AssignmentForBackfill = {
   course_id: string;
   program_id: string;
   year_level: string;
-  term_instance: { semester: string; term: string | null };
+  term_instance: {
+    semester: string;
+    term: string | null;
+    school_year: { id: string; start_date: Date | null };
+  };
 };
 
 type CurriculumCourseForBackfill = {
@@ -41,7 +45,12 @@ type CurriculumCourseForBackfill = {
   year_level: string;
   semester: string;
   term: string | null;
-  curriculum_version: { program_id: string };
+  curriculum_version: {
+    program_id: string;
+    status: string;
+    effective_from_school_year_id: string | null;
+    effective_from_year: { id: string; start_date: Date | null } | null;
+  };
 };
 
 function placementKey(input: {
@@ -60,6 +69,25 @@ function placementKey(input: {
   ].join(":");
 }
 
+function isApplicableToSchoolYear(
+  curriculumCourse: CurriculumCourseForBackfill,
+  assignment: AssignmentForBackfill
+) {
+  const version = curriculumCourse.curriculum_version;
+  if (version.status !== "PUBLISHED") return false;
+
+  if (!version.effective_from_school_year_id) return true;
+  if (version.effective_from_school_year_id === assignment.term_instance.school_year.id) {
+    return true;
+  }
+
+  const effectiveStart = version.effective_from_year?.start_date;
+  const assignmentStart = assignment.term_instance.school_year.start_date;
+  return effectiveStart !== null && effectiveStart !== undefined &&
+    assignmentStart !== null && assignmentStart !== undefined &&
+    effectiveStart <= assignmentStart;
+}
+
 async function runBackfill(
   db: BackfillModels
 ): Promise<CourseAssignmentCurriculumBackfillCounts> {
@@ -70,22 +98,36 @@ async function runBackfill(
       course_id: true,
       program_id: true,
       year_level: true,
-      term_instance: { select: { semester: true, term: true } },
+      term_instance: {
+        select: {
+          semester: true,
+          term: true,
+          school_year: { select: { id: true, start_date: true } },
+        },
+      },
     },
   })) as AssignmentForBackfill[];
 
   const curriculumCourses = (await db.curriculumCourse.findMany({
+    where: { curriculum_version: { status: "PUBLISHED" } },
     select: {
       id: true,
       course_id: true,
       year_level: true,
       semester: true,
       term: true,
-      curriculum_version: { select: { program_id: true } },
+      curriculum_version: {
+        select: {
+          program_id: true,
+          status: true,
+          effective_from_school_year_id: true,
+          effective_from_year: { select: { id: true, start_date: true } },
+        },
+      },
     },
   })) as CurriculumCourseForBackfill[];
 
-  const matchesByPlacement = new Map<string, string[]>();
+  const matchesByPlacement = new Map<string, CurriculumCourseForBackfill[]>();
   for (const curriculumCourse of curriculumCourses) {
     const key = placementKey({
       courseId: curriculumCourse.course_id,
@@ -95,7 +137,7 @@ async function runBackfill(
       term: curriculumCourse.term,
     });
     const matches = matchesByPlacement.get(key) ?? [];
-    matches.push(curriculumCourse.id);
+    matches.push(curriculumCourse);
     matchesByPlacement.set(key, matches);
   }
 
@@ -106,7 +148,7 @@ async function runBackfill(
   for (const assignment of assignments) {
     if (assignment.curriculum_course_id) continue;
 
-    const matches = matchesByPlacement.get(
+    const matches = (matchesByPlacement.get(
       placementKey({
         courseId: assignment.course_id,
         programId: assignment.program_id,
@@ -114,6 +156,8 @@ async function runBackfill(
         semester: assignment.term_instance.semester,
         term: assignment.term_instance.term,
       })
+    ) ?? []).filter((curriculumCourse) =>
+      isApplicableToSchoolYear(curriculumCourse, assignment)
     );
 
     if (!matches?.length) {
@@ -128,7 +172,7 @@ async function runBackfill(
 
     const result = await db.courseAssignment.updateMany({
       where: { id: assignment.id, curriculum_course_id: null },
-      data: { curriculum_course_id: matches[0] },
+      data: { curriculum_course_id: matches[0].id },
     });
     linked += result.count;
   }
