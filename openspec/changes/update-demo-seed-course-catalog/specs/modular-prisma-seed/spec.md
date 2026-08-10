@@ -15,8 +15,8 @@ The system SHALL preserve every existing seed fixture record, deterministic UUID
 
 #### Scenario: Response fixture exists
 - **WHEN** the seed completes
-- **THEN** representative submitted and in-progress responses retain their existing response status, submission timestamp, quantitative ratings, qualitative text, section keys, and item keys
+- **THEN** representative submitted and in-progress responses retain their existing response status, submission timestamp, quantitative ratings, section keys, and item keys; remapped-course qualitative text matches its current course
 
 #### Scenario: Course catalog reflects the ACD curriculum
 - **WHEN** the seed completes after the `update-demo-seed-course-catalog` change
-- **THEN** the `courses` table holds the 102 ACD curriculum courses with normalized codes and complete placement defaults, and prior fabricated placeholder courses absent from the fixture are deactivated (seed-managed rows only; user-created courses are untouched)
+- **THEN** the `courses` table holds the 102 ACD curriculum courses with normalized codes and complete placement defaults, and prior fabricated placeholder courses absent from the fixture are deactivated by immutable seed provenance (user-created courses are untouched)

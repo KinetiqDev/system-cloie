@@ -59,6 +59,7 @@ model Course {
   code               String            @unique
   title              String
   description        String?
+  seed_source        String?
   program_id         String?           @db.Uuid
   major_id           String?           @db.Uuid
   course_scope       CourseScope       @default(PROGRAM_SPECIFIC)

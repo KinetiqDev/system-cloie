@@ -746,6 +746,7 @@ export type Database = {
           is_active: boolean
           major_id: string | null
           program_id: string | null
+          seed_source: string | null
           title: string
           updated_at: string
         }
@@ -763,6 +764,7 @@ export type Database = {
           is_active?: boolean
           major_id?: string | null
           program_id?: string | null
+          seed_source?: string | null
           title: string
           updated_at: string
         }
@@ -780,6 +782,7 @@ export type Database = {
           is_active?: boolean
           major_id?: string | null
           program_id?: string | null
+          seed_source?: string | null
           title?: string
           updated_at?: string
         }

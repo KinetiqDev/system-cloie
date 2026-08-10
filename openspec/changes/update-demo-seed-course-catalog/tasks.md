@@ -9,6 +9,7 @@
 
 - [x] 2.1 Rewrite `courseDefinitions` in `prisma/seed/fixtures/academic-structure.ts` with the 102 CSV courses: space-stripped codes, semester→term fill for blank terms, grouped by program, comment documenting source CSV and transformation rules
 - [x] 2.2 Add `src/__tests__/seed/academic-structure-fixture.test.ts`: normalized codes unique; every `pc`/`mk` resolves; every course has year+semester, non-SUMMER has term
+- [x] 2.3 Add nullable immutable `Course.seed_source` to Prisma and Supabase migration; leave legacy ownership unclaimed and fail closed on unprovenanced code collisions
 
 ## 3. Dependent fixtures
 
@@ -17,6 +18,8 @@
 - [x] 3.3 Remap `prisma/seed/fixtures/evaluations.ts` `newCourseBoundDefs` and `prisma/seed/runners/seed-evaluations.ts` (cbEval1 IT-OD-401→ITRES1, cbEval2 MKT301→MM201, newCb courses, deployment names)
 - [x] 3.4 Remap `prisma/seed/fixtures/responses.ts` deployment keys + header comment
 - [x] 3.5 Update `src/__tests__/scripts/verify-production-auth-boundary.test.ts` marker `IT-OD-401` → `ITRES1`
+- [x] 3.6 Replace inherited qualitative response text for FM200, ENG2, and HTC401 with current-course feedback and add fixture regression test
+- [x] 3.7 Exclude inactive Courses from baseline generation and add regression test for obsolete seeded Courses
 
 ## 4. Verification
 
@@ -24,3 +27,4 @@
 - [x] 4.2 `pnpm lint` + `pnpm build`
 - [x] 4.3 `pnpm test` (unit) including new fixture test
 - [x] 4.4 Optional (disposable DB only): `RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db`, `pnpm db:seed` twice (idempotency), baseline generation spot check
+- [x] 4.5 Apply migration on disposable PostgreSQL, regenerate Supabase types, verify provenance initialization/trigger and run seed twice

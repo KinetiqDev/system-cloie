@@ -68,6 +68,38 @@ describe("generateBaselineCurricula", () => {
       },
       select: { id: true },
     });
+    expect(prisma.course.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { program_id: PROGRAM_ID, is_active: true } })
+    );
+  });
+
+  it("does not include inactive courses in a new baseline", async () => {
+    vi.mocked(prisma.course.findMany).mockImplementation(((args: { where?: { is_active?: boolean } }) =>
+      Promise.resolve(
+        args.where?.is_active
+          ? []
+          : [
+              {
+                id: COURSE_ID,
+                program_id: PROGRAM_ID,
+                code: "IT-OD-401",
+                title: "Outline Defense Demo Course",
+                is_active: false,
+                default_year_level: YearLevel.FOURTH_YEAR,
+                default_semester: AcademicSemester.SECOND,
+                default_term: AcademicTerm.SECOND_TERM,
+              },
+            ]
+      )) as never);
+
+    await generateBaselineCurricula();
+
+    expect(prisma.course.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { program_id: PROGRAM_ID, is_active: true } })
+    );
+    expect(prisma.curriculumVersion.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ courses: { create: [] } }) })
+    );
   });
 
   it("creates an empty baseline when all program courses lack placements", async () => {

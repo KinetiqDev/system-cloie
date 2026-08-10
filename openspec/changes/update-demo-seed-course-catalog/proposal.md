@@ -26,4 +26,7 @@ The demo seed catalog contains 35 fabricated placeholder courses (GEGS101, IT-OD
 - `src/__tests__/scripts/verify-production-auth-boundary.test.ts` — marker course code updated (string only, no DB dependency).
 - New: `src/__tests__/seed/academic-structure-fixture.test.ts`.
 - `docs/acd_programs_demo_seed_recommended_expanded.csv` — malformed row fixed.
-- No schema, migration, RLS, or API changes. Curriculum baseline generation (`generate-baseline.ts`) consumes the new course placement defaults unchanged.
+- `prisma/models/course-assignments.prisma`, `prisma/seed/runners/seed-foundation.ts`, `src/features/curriculum/services/generate-baseline.ts`, and `supabase/migrations/20260810055056_add_course_seed_provenance.sql` — provenance-safe reconciliation and active-only baseline input.
+- Add immutable `Course.seed_source` provenance so reseeding cannot claim user-authored courses from editable descriptions. A Supabase migration adds the field and protects it from updates; legacy rows require explicit operator attestation rather than unsafe automatic backfill. No RLS or API contract changes.
+- Fail closed before any seed mutation when a fixture code exists without matching ACD provenance; operators must resolve that code collision explicitly.
+- Baseline generation continues to consume course placement defaults, but excludes inactive Courses so removed fabricated Courses cannot enter new baseline DRAFTs.

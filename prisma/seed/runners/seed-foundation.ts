@@ -2,7 +2,25 @@ import { prisma } from "../../../src/lib/db/prisma";
 import { courseDefinitions, majorDefinitions, programDefinitions } from "../fixtures/academic-structure";
 import type { CourseSeed, FoundationContext, MajorSeed, ProgramSeed } from "../types";
 
+const ACD_DEMO_CATALOG_SEED_SOURCE = "ACD_DEMO_CATALOG";
+
 export async function seedFoundation(): Promise<FoundationContext> {
+  const courseCodes = courseDefinitions.map((d) => d.code);
+  const unprovenancedCourses = await prisma.course.findMany({
+    where: {
+      code: { in: courseCodes },
+      OR: [
+        { seed_source: null },
+        { seed_source: { not: ACD_DEMO_CATALOG_SEED_SOURCE } },
+      ],
+    },
+    select: { code: true },
+  });
+  if (unprovenancedCourses.length > 0) {
+    const codes = unprovenancedCourses.map((course) => course.code).join(", ");
+    throw new Error(`Cannot reconcile catalog; unprovenanced course code collision: ${codes}`);
+  }
+
   console.log("  → Programs...");
   const pMap = new Map<string, ProgramSeed>();
   for (const d of programDefinitions) {
@@ -56,6 +74,7 @@ export async function seedFoundation(): Promise<FoundationContext> {
         title: d.title,
         course_scope: d.scope,
         description: `${d.title} — seeded course.`,
+        seed_source: ACD_DEMO_CATALOG_SEED_SOURCE,
         is_active: true,
         program_id: d.pc ? (pMap.get(d.pc)?.id ?? null) : null,
         major_id: d.mk ? (mMap.get(d.mk)?.id ?? null) : null,
@@ -68,13 +87,12 @@ export async function seedFoundation(): Promise<FoundationContext> {
   }
 
   // Converge the catalog: deactivate seed-managed courses removed from the
-  // fixture since the last run (identified by the seeded description marker).
-  // Rows are preserved and user-created courses are never touched.
+  // fixture since the last run. User-authored course descriptions are ignored.
   await prisma.course.updateMany({
     where: {
       is_active: true,
-      description: { endsWith: "— seeded course." },
-      NOT: { code: { in: courseDefinitions.map((d) => d.code) } },
+      seed_source: ACD_DEMO_CATALOG_SEED_SOURCE,
+      NOT: { code: { in: courseCodes } },
     },
     data: { is_active: false },
   });

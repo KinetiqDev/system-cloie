@@ -395,12 +395,12 @@ export const responseSequences: ResponseSequence[] = [
       {
         sk: "qualitative",
         pk: "qualitative-1",
-        text: "Preparing the complete accounting cycle from journal entries to financial statements was highly practical.",
+        text: "Comparing financing options and evaluating their effect on organizational decisions made financial management concepts practical.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-2",
-        text: "More case studies involving local SMEs would make the content more relatable.",
+        text: "More examples using financial ratios and management scenarios would help connect analysis to planning and control.",
       },
     ],
   },
@@ -435,17 +435,17 @@ export const responseSequences: ResponseSequence[] = [
       {
         sk: "qualitative",
         pk: "qualitative-1",
-        text: "Designing rubrics and formative assessments was fully achieved — the workshop format was excellent.",
+        text: "Comparing first- and second-language acquisition theories helped me connect language learning factors to classroom practice.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-2",
-        text: "More practice in interpreting standardized test results would strengthen CILO 2 attainment.",
+        text: "More classroom examples showing how acquisition theories shape instruction would strengthen my understanding.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-3",
-        text: "Access to more sample assessment tools from actual schools would be helpful for reference.",
+        text: "Discussing learner differences and language development made the principles easier to apply.",
       },
     ],
   },
@@ -470,17 +470,17 @@ export const responseSequences: ResponseSequence[] = [
       {
         sk: "qualitative",
         pk: "qualitative-1",
-        text: "The actual event simulation with industry guests made CILO 1 highly engaging and professionally relevant.",
+        text: "Developing a tourism and hospitality business plan made entrepreneurial opportunity assessment practical.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-2",
-        text: "Budget management tools like spreadsheets and event planning software should be taught more deeply.",
+        text: "More local venture case studies would help us evaluate feasibility, marketing, and financial viability.",
       },
       {
         sk: "qualitative",
         pk: "qualitative-3",
-        text: "The event venue and AV equipment were excellent and contributed to a realistic learning experience.",
+        text: "Market research and budgeting exercises made the realities of hospitality entrepreneurship clearer.",
       },
     ],
   },
