@@ -405,6 +405,7 @@ export type Database = {
           assigned_by: string | null
           course_id: string
           created_at: string
+          curriculum_course_id: string | null
           faculty_id: string
           id: string
           is_active: boolean
@@ -418,6 +419,7 @@ export type Database = {
           assigned_by?: string | null
           course_id: string
           created_at?: string
+          curriculum_course_id?: string | null
           faculty_id: string
           id?: string
           is_active?: boolean
@@ -431,6 +433,7 @@ export type Database = {
           assigned_by?: string | null
           course_id?: string
           created_at?: string
+          curriculum_course_id?: string | null
           faculty_id?: string
           id?: string
           is_active?: boolean
@@ -453,6 +456,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_assignments_curriculum_course_id_fkey"
+            columns: ["curriculum_course_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_courses"
             referencedColumns: ["id"]
           },
           {
