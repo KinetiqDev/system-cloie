@@ -12,7 +12,16 @@ import {
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { COURSE_ROSTER_MAX_ROWS } from "../services/course-roster-csv";
 import type {
@@ -203,23 +212,19 @@ export function CourseRosterDiscoveryPage({
                 <label htmlFor="roster-search" className="text-sm font-medium">
                   Search assignments
                 </label>
-                <input
+                <Input
                   id="roster-search"
                   name="search"
                   type="search"
                   defaultValue={data.search}
                   maxLength={100}
                   placeholder="Course, program, or Faculty"
-                  className="border-input bg-background focus-visible:ring-ring h-11 rounded-lg border px-3 text-base outline-none focus-visible:ring-3"
                 />
               </div>
-              <button
-                type="submit"
-                className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium outline-none focus-visible:ring-3"
-              >
-                <Search aria-hidden="true" />
+              <Button type="submit" className="w-full sm:w-auto">
+                <Search data-icon="inline-start" aria-hidden="true" />
                 Search
-              </button>
+              </Button>
             </div>
             <label className="flex min-h-11 items-center gap-3 text-sm">
               <input
@@ -413,15 +418,18 @@ export function CourseRosterDetailPage({
       />
       {canWrite && (
         <Card>
-          <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 flex-col gap-1">
-              <CardTitle>Manage roster</CardTitle>
-              <CardDescription>
-                Add one Student, or import up to {COURSE_ROSTER_MAX_ROWS} Students from a CSV.
-                Review per-row results before closing.
-              </CardDescription>
-            </div>
-            <RosterManagementDialog assignmentId={assignment.assignmentId} programId={programId} />
+          <CardHeader className="has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
+            <CardTitle>Manage roster</CardTitle>
+            <CardDescription>
+              Add one Student, or import up to {COURSE_ROSTER_MAX_ROWS} Students from a CSV. Review
+              per-row results before closing.
+            </CardDescription>
+            <CardAction className="col-start-1 row-start-auto mt-2 w-full justify-self-stretch sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
+              <RosterManagementDialog
+                assignmentId={assignment.assignmentId}
+                programId={programId}
+              />
+            </CardAction>
           </CardHeader>
         </Card>
       )}
@@ -480,24 +488,20 @@ function RosterFilters({
           <label htmlFor="member-search" className="text-sm font-medium">
             Search students
           </label>
-          <input
+          <Input
             id="member-search"
             name="search"
             type="search"
             defaultValue={data.search}
             maxLength={100}
             placeholder="Search by name or email"
-            className="border-input bg-background focus-visible:ring-ring h-11 rounded-lg border px-3 text-base outline-none focus-visible:ring-3"
           />
         </div>
-        <input type="hidden" name="sort" value={data.sortDirection} />
-        <button
-          type="submit"
-          className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium outline-none focus-visible:ring-3"
-        >
-          <Search aria-hidden="true" /> Search
-        </button>
+        <Button type="submit" className="w-full sm:w-auto">
+          <Search data-icon="inline-start" aria-hidden="true" /> Search
+        </Button>
       </div>
+      <input type="hidden" name="sort" value={data.sortDirection} />
       <div className="flex flex-wrap items-center gap-4">
         <label className="flex min-h-11 items-center gap-3 text-sm">
           <input

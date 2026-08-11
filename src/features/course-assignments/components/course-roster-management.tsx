@@ -458,13 +458,13 @@ function ManagementBody({
           onValueChange={(value) => onMethodChange(value as RosterManagementMethod)}
           className="flex-col gap-3"
         >
-          <TabsList variant="line" className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="import" className="min-h-11 px-2 sm:min-h-9">
-              Import from CSV
-            </TabsTrigger>
-            <TabsTrigger value="single" className="min-h-11 px-2 sm:min-h-9">
-              Add one Student
-            </TabsTrigger>
+          <TabsList
+            variant="pill"
+            aria-label="Roster management methods"
+            className="w-full justify-start overflow-x-auto"
+          >
+            <TabsTrigger value="import">Import from CSV</TabsTrigger>
+            <TabsTrigger value="single">Add one Student</TabsTrigger>
           </TabsList>
           <TabsContent value="import">
             <CsvImportMethod
@@ -597,7 +597,12 @@ export function RosterManagementDialog({
   );
 
   const trigger = (
-    <Button ref={triggerRef} type="button" onClick={() => handleOpenChange(true)}>
+    <Button
+      ref={triggerRef}
+      type="button"
+      className="w-full sm:w-auto"
+      onClick={() => handleOpenChange(true)}
+    >
       <ManagementTriggerContent />
     </Button>
   );
@@ -691,7 +696,7 @@ function AddRosterMember({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-4">
+    <div className="flex flex-col gap-3">
       <div>
         <h2 className="text-title-md">Add Student to roster</h2>
         <p className="text-body-sm text-muted-foreground">
