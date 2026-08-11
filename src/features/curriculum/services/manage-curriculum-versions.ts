@@ -9,12 +9,13 @@ import {
   canPublishCurriculumVersion,
   canRetireCurriculumVersion,
 } from "../policies";
-import type { CreateCurriculumVersionInput } from "../types";
+import type { CreateCurriculumVersionInput, UpdateCurriculumVersionInput } from "../types";
 import {
   createCurriculumVersionSchema,
   cloneCurriculumVersionSchema,
   publishCurriculumVersionSchema,
   retireCurriculumVersionSchema,
+  updateCurriculumVersionSchema,
 } from "../schemas/curriculum";
 import { assertProgramAccess, resolveWriteActor } from "./curriculum-write-auth";
 
@@ -36,10 +37,9 @@ export async function createCurriculumVersion(
   if (!actor.success) return actor;
 
   try {
-    const result = await prisma.$transaction(
-      async (tx): Promise<ServiceResult<{ id: string }>> => {
-        const access = await assertProgramAccess(actor.data, tx, parsed.data.programId);
-        if (!access.success) return access;
+    const result = await prisma.$transaction(async (tx): Promise<ServiceResult<{ id: string }>> => {
+      const access = await assertProgramAccess(actor.data, tx, parsed.data.programId);
+      if (!access.success) return access;
 
       if (parsed.data.majorId) {
         const major = await tx.major.findFirst({
@@ -73,6 +73,78 @@ export async function createCurriculumVersion(
         success: false,
         error: `A curriculum with code "${parsed.data.code}" already exists for this program`,
       };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Update a DRAFT Curriculum Version's metadata (code, name, effective school
+ * year). Program and major scope are immutable once the version exists.
+ * Rejected on PUBLISHED and RETIRED versions. Runs in a Serializable
+ * transaction so a concurrent publish cannot race an edit.
+ */
+export async function updateCurriculumVersion(
+  id: string,
+  input: UpdateCurriculumVersionInput
+): Promise<ServiceResult<{ id: string }>> {
+  const parsed = updateCurriculumVersionSchema.safeParse({ ...input, id });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const actor = await resolveWriteActor();
+  if (!actor.success) return actor;
+
+  try {
+    const result = await prisma.$transaction(
+      async (tx): Promise<ServiceResult<{ id: string }>> => {
+        const existing = await tx.curriculumVersion.findUnique({
+          where: { id },
+          select: { id: true, status: true, program_id: true },
+        });
+
+        if (!existing) {
+          return { success: false, error: "Curriculum version not found" };
+        }
+
+        const access = await assertProgramAccess(actor.data, tx, existing.program_id);
+        if (!access.success) return access;
+
+        const decision = canEditCurriculumVersion(existing.status);
+        if (!decision.allowed) {
+          return { success: false, error: decision.reason };
+        }
+
+        const updated = await tx.curriculumVersion.updateMany({
+          where: { id, status: "DRAFT" },
+          data: {
+            ...(parsed.data.code !== undefined ? { code: parsed.data.code } : {}),
+            ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+            ...(parsed.data.effectiveFromSchoolYearId !== undefined
+              ? { effective_from_school_year_id: parsed.data.effectiveFromSchoolYearId }
+              : {}),
+          },
+        });
+        if (updated.count !== 1) {
+          return { success: false, error: "Curriculum version changed; retry the edit" };
+        }
+
+        return { success: true, data: { id } };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    return result;
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return {
+        success: false,
+        error: `A curriculum with code "${parsed.data.code}" already exists for this program`,
+      };
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
+      return { success: false, error: "Curriculum version changed; retry the edit" };
     }
     throw error;
   }

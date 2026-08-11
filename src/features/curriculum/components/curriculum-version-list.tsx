@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -45,7 +51,12 @@ import type {
 } from "@/features/curriculum/types";
 
 type VersionStatus = CurriculumVersionSummaryItem["status"];
-type ConfirmAction = { type: "publish" | "retire" | "clone"; version: CurriculumVersionSummaryItem };
+type LoadErrorScope = "curricula" | "detail" | "options";
+type LoadErrors = Record<LoadErrorScope, string | null>;
+type ConfirmAction = {
+  type: "publish" | "retire" | "clone";
+  version: CurriculumVersionSummaryItem;
+};
 
 const STATUS_TABS: VersionStatus[] = ["DRAFT", "PUBLISHED", "RETIRED"];
 
@@ -87,15 +98,19 @@ export function CurriculumVersionList({
   const [detailLoading, setDetailLoading] = useState(false);
   const [courseOptions, setCourseOptions] = useState<CurriculumCourseOption[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingVersion, setEditingVersion] = useState<CurriculumVersionSummaryItem | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [loadErrors, setLoadErrors] = useState<LoadErrors>({
+    curricula: null,
+    detail: null,
+    options: null,
+  });
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const detailRequestRef = useRef(0);
   const curriculaRequestRef = useRef(0);
   const courseOptionsRequestRef = useRef(0);
-  const selectedProgramIdRef = useRef(
-    defaultProgramId ?? programs[0]?.id ?? ""
-  );
+  const selectedProgramIdRef = useRef(defaultProgramId ?? programs[0]?.id ?? "");
   const selectedVersionIdRef = useRef<string | null>(null);
 
   const tabCurricula = curricula.filter((c) => c.status === activeTab);
@@ -104,43 +119,94 @@ export function CurriculumVersionList({
   const loadDetail = useCallback(async (versionId: string) => {
     const requestId = ++detailRequestRef.current;
     setDetailLoading(true);
-    const result = await getCurriculumVersionDetailAction(versionId);
-    if (requestId !== detailRequestRef.current) return;
-    if (versionId !== selectedVersionIdRef.current) return;
-    setDetailLoading(false);
-    if (result.success) {
-      setVersionDetail(result.data);
-    } else {
-      showToast(result.error, "error");
+    try {
+      const result = await getCurriculumVersionDetailAction(versionId);
+      if (requestId !== detailRequestRef.current) return;
+      if (versionId !== selectedVersionIdRef.current) return;
+      setDetailLoading(false);
+      if (result.success) {
+        setLoadErrors((prev) => ({ ...prev, detail: null }));
+        setVersionDetail(result.data);
+      } else {
+        setLoadErrors((prev) => ({ ...prev, detail: result.error }));
+        setVersionDetail(null);
+      }
+    } catch {
+      if (requestId !== detailRequestRef.current) return;
+      setDetailLoading(false);
+      setLoadErrors((prev) => ({
+        ...prev,
+        detail: "Unable to load the curriculum. Please try again.",
+      }));
       setVersionDetail(null);
     }
   }, []);
 
   const loadCurricula = useCallback(async (programId: string) => {
     const requestId = ++curriculaRequestRef.current;
-    const result = await listProgramCurriculaSummaryAction(programId);
-    if (requestId !== curriculaRequestRef.current) return;
-    if (programId !== selectedProgramIdRef.current) return;
-    setCurriculaLoading(false);
-    if (result.success) {
-      setCurricula(result.data);
-    } else {
-      showToast(result.error, "error");
+    try {
+      const result = await listProgramCurriculaSummaryAction(programId);
+      if (requestId !== curriculaRequestRef.current) return;
+      if (programId !== selectedProgramIdRef.current) return;
+      setCurriculaLoading(false);
+      if (result.success) {
+        setLoadErrors((prev) => ({ ...prev, curricula: null }));
+        setCurricula(result.data);
+      } else {
+        setLoadErrors((prev) => ({ ...prev, curricula: result.error }));
+        setCurricula([]);
+      }
+    } catch {
+      if (requestId !== curriculaRequestRef.current) return;
+      setCurriculaLoading(false);
+      setLoadErrors((prev) => ({
+        ...prev,
+        curricula: "Unable to load curricula. Please try again.",
+      }));
       setCurricula([]);
     }
   }, []);
 
   const loadCourseOptions = useCallback(async (programId: string) => {
     const requestId = ++courseOptionsRequestRef.current;
-    const result = await listProgramCourseOptionsAction(programId);
-    if (requestId !== courseOptionsRequestRef.current) return;
-    if (programId !== selectedProgramIdRef.current) return;
-    if (result.success) {
-      setCourseOptions(result.data);
-    } else {
-      showToast(result.error, "error");
+    try {
+      const result = await listProgramCourseOptionsAction(programId);
+      if (requestId !== courseOptionsRequestRef.current) return;
+      if (programId !== selectedProgramIdRef.current) return;
+      if (result.success) {
+        setLoadErrors((prev) => ({ ...prev, options: null }));
+        setCourseOptions(result.data);
+      } else {
+        setLoadErrors((prev) => ({ ...prev, options: result.error }));
+        setCourseOptions([]);
+      }
+    } catch {
+      if (requestId !== courseOptionsRequestRef.current) return;
+      setLoadErrors((prev) => ({
+        ...prev,
+        options: "Unable to load courses. Please try again.",
+      }));
+      setCourseOptions([]);
     }
   }, []);
+
+  function retryLoad(scope: LoadErrorScope) {
+    setLoadErrors((prev) => ({ ...prev, [scope]: null }));
+    if (scope === "curricula") {
+      const programId = selectedProgramIdRef.current;
+      if (programId) {
+        setCurriculaLoading(true);
+        void loadCurricula(programId);
+      }
+    }
+    if (scope === "detail" && selectedVersionIdRef.current) {
+      void loadDetail(selectedVersionIdRef.current);
+    }
+    if (scope === "options") {
+      const programId = selectedProgramIdRef.current;
+      if (programId) void loadCourseOptions(programId);
+    }
+  }
 
   useEffect(() => {
     if (!selectedProgramId) return;
@@ -205,6 +271,7 @@ export function CurriculumVersionList({
     selectedVersionIdRef.current = null;
     setVersionDetail(null);
     setCourseOptions([]);
+    setLoadErrors({ curricula: null, detail: null, options: null });
     curriculaRequestRef.current++;
     courseOptionsRequestRef.current++;
     detailRequestRef.current++;
@@ -231,9 +298,7 @@ export function CurriculumVersionList({
           <span className="text-muted-foreground text-sm">Program:</span>
           <Select value={selectedProgramId} onValueChange={handleProgramChange}>
             <SelectTrigger className="w-[280px]">
-              <SelectValue>
-                {programs.find((p) => p.id === selectedProgramId)?.name}
-              </SelectValue>
+              <SelectValue>{programs.find((p) => p.id === selectedProgramId)?.name}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {programs.map((program) => (
@@ -247,7 +312,17 @@ export function CurriculumVersionList({
       )}
 
       {curriculaLoading ? (
-        <p className="text-muted-foreground py-10 text-center text-sm">Loading curricula…</p>
+        <CurriculaSkeleton />
+      ) : loadErrors.curricula ? (
+        <Alert variant="destructive" className="flex-col items-start gap-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="size-4 shrink-0" />
+            <AlertDescription>{loadErrors.curricula}</AlertDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => retryLoad("curricula")}>
+            Retry
+          </Button>
+        </Alert>
       ) : curricula.length === 0 ? (
         <Empty>
           <EmptyMedia>
@@ -256,8 +331,7 @@ export function CurriculumVersionList({
           <EmptyHeader>
             <EmptyTitle>No curricula yet</EmptyTitle>
             <EmptyDescription>
-              Create a curriculum draft to start organizing courses for this
-              program.
+              Create a curriculum draft to start organizing courses for this program.
             </EmptyDescription>
           </EmptyHeader>
           <Button variant="outline" onClick={() => setCreateOpen(true)}>
@@ -301,26 +375,30 @@ export function CurriculumVersionList({
                 </Empty>
               ) : (
                 <div className="flex flex-col gap-3">
-                      {tabCurricula.map((version) => (
-                        <VersionRow
-                          key={version.id}
-                          version={version}
-                          selected={version.id === selectedVersionId}
-                          onSelect={() => handleVersionSelect(version.id)}
-                          onPublish={() => {
-                            setActionError(null);
-                            setConfirmAction({ type: "publish", version });
-                          }}
-                          onRetire={() => {
-                            setActionError(null);
-                            setConfirmAction({ type: "retire", version });
-                          }}
-                          onClone={() => {
-                            setActionError(null);
-                            setConfirmAction({ type: "clone", version });
-                          }}
-                        />
-                      ))}
+                  {tabCurricula.map((version) => (
+                    <VersionRow
+                      key={version.id}
+                      version={version}
+                      selected={version.id === selectedVersionId}
+                      onSelect={() => handleVersionSelect(version.id)}
+                      onEdit={() => {
+                        setActionError(null);
+                        setEditingVersion(version);
+                      }}
+                      onPublish={() => {
+                        setActionError(null);
+                        setConfirmAction({ type: "publish", version });
+                      }}
+                      onRetire={() => {
+                        setActionError(null);
+                        setConfirmAction({ type: "retire", version });
+                      }}
+                      onClone={() => {
+                        setActionError(null);
+                        setConfirmAction({ type: "clone", version });
+                      }}
+                    />
+                  ))}
                 </div>
               )}
             </TabsContent>
@@ -342,6 +420,7 @@ export function CurriculumVersionList({
           {detailLoading && !versionDetail && (
             <p className="text-muted-foreground text-sm">Loading courses…</p>
           )}
+          <LoadErrorAlerts errors={loadErrors} onRetry={retryLoad} />
         </div>
       )}
 
@@ -355,6 +434,21 @@ export function CurriculumVersionList({
         onSuccess={() => {
           refreshRoutes();
           refreshCurricula();
+        }}
+      />
+
+      <CurriculumVersionForm
+        key={`edit:${editingVersion?.id ?? "none"}`}
+        open={!!editingVersion}
+        onOpenChange={(open) => !open && setEditingVersion(null)}
+        programs={programs}
+        schoolYears={schoolYears}
+        defaultProgramId={selectedProgramId}
+        version={editingVersion}
+        onSuccess={() => {
+          refreshRoutes();
+          refreshCurricula();
+          if (selectedVersionIdRef.current) void loadDetail(selectedVersionIdRef.current);
         }}
       />
 
@@ -380,15 +474,75 @@ type ConfirmLabels = {
   button: string;
 };
 
+/**
+ * Destructive alerts for failed version-detail and course-options loads, one
+ * per failed scope, each with its own retry control. Kept separate from the
+ * curricula-list error state so concurrent read failures stay independently
+ * retryable instead of one overwriting the other.
+ */
+function LoadErrorAlerts({
+  errors,
+  onRetry,
+}: {
+  errors: LoadErrors;
+  onRetry: (scope: LoadErrorScope) => void;
+}) {
+  const failedScopes = (["detail", "options"] as const).filter((scope) => errors[scope]);
+  if (failedScopes.length === 0) return null;
+  return (
+    <>
+      {failedScopes.map((scope) => (
+        <Alert key={scope} variant="destructive" className="flex-col items-start gap-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="size-4 shrink-0" />
+            <AlertDescription>{errors[scope]}</AlertDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => onRetry(scope)}>
+            Retry
+          </Button>
+        </Alert>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Structural loading placeholder for the curricula list: tab strip plus
+ * version-card rows shaped like the loaded content.
+ */
+function CurriculaSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" role="status" aria-label="Loading curricula">
+      <div className="flex gap-1">
+        {[0, 1, 2].map((tab) => (
+          <div key={tab} className="bg-muted h-9 w-24 animate-pulse rounded-md" />
+        ))}
+      </div>
+      {[0, 1, 2].map((row) => (
+        <div
+          key={row}
+          className="border-border bg-card flex h-20 animate-pulse items-center gap-3 rounded-lg border px-4"
+        >
+          <div className="bg-muted h-4 w-32 rounded" />
+          <div className="bg-muted h-4 w-20 rounded" />
+          <div className="bg-muted ml-auto h-8 w-24 rounded-md" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const CONFIRM_LABELS: Record<ConfirmAction["type"], (code: string) => ConfirmLabels> = {
   publish: (code) => ({
     title: `Publish ${code}?`,
-    description: "Publishing makes this curriculum immutable and selectable for new course assignments.",
+    description:
+      "Publishing makes this curriculum immutable and selectable for new course assignments.",
     button: "Publish",
   }),
   retire: (code) => ({
     title: `Retire ${code}?`,
-    description: "Retiring keeps this curriculum queryable but removes it from new course assignments.",
+    description:
+      "Retiring keeps this curriculum queryable but removes it from new course assignments.",
     button: "Retire",
   }),
   clone: (code) => ({
@@ -451,6 +605,7 @@ function VersionRow({
   version,
   selected,
   onSelect,
+  onEdit,
   onPublish,
   onRetire,
   onClone,
@@ -458,6 +613,7 @@ function VersionRow({
   version: CurriculumVersionSummaryItem;
   selected: boolean;
   onSelect: () => void;
+  onEdit: () => void;
   onPublish: () => void;
   onRetire: () => void;
   onClone: () => void;
@@ -472,7 +628,7 @@ function VersionRow({
           type="button"
           onClick={onSelect}
           aria-pressed={selected}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none rounded-md"
+          className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:ring-2 focus-visible:outline-none"
         >
           <span className="min-w-0">
             <span className="block text-base font-semibold">{version.code}</span>
@@ -486,6 +642,11 @@ function VersionRow({
           </Badge>
         </button>
         <div className="flex shrink-0 items-center gap-2">
+          {isDraft && (
+            <Button size="sm" variant="outline" onClick={onEdit}>
+              Edit
+            </Button>
+          )}
           {isDraft && (
             <Button size="sm" onClick={onPublish}>
               Publish

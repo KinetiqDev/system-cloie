@@ -103,3 +103,46 @@
 
 **Verification:** `pnpm test`, `pnpm lint`, `pnpm build`, `pnpm db:seed`
 **Commit:** `test: add regression coverage for curriculum feature`
+
+## 10. Curriculum Role Navigation
+
+- [x] 10.1 Add Secretary and Program Head Curriculum management destinations to shared role navigation, preserving selected Program context for PROGRAM_HEAD
+- [x] 10.2 Update navigation showcase fixtures and focused navigation/sidebar tests without positional assumptions
+- [x] 10.3 Run focused navigation tests, `pnpm lint`, `pnpm test`, and `pnpm build`
+
+**Scope:** `src/lib/constants/navigation.ts`, `src/features/design-system/components/navigation-showcase.tsx`, `src/__tests__/lib/navigation.test.ts`, `src/__tests__/components/sidebar.test.tsx`
+**Verification:** focused Vitest navigation/sidebar tests, `pnpm lint`, `pnpm test`, `pnpm build`
+**Commit:** `feat(curriculum): expose curricula routes in role navigation`
+
+## 11. RLS DRAFT-Only Write Guard
+
+- [x] 11.1 Restrict curriculum RLS write policies to DRAFT rows: INSERT/UPDATE/DELETE per role, DRAFT-status guard on CurriculumVersion and DRAFT-parent guard on CurriculumCourse
+- [x] 11.2 Add migration-ledger integrity tests asserting the final policy shape (no FOR ALL writes, DRAFT guards present, role predicates retained)
+- [x] 11.3 Run focused RLS ledger tests, `pnpm lint`, `pnpm test`, and `pnpm build`
+
+**Scope:** `supabase/migrations/20260811063000_restrict_curriculum_writes_to_draft.sql`, `src/__tests__/features/curriculum/curriculum-rls-draft-write-guard.test.ts`, `specs/curriculum-rls-security/spec.md`
+**Verification:** focused Vitest ledger tests, `pnpm lint`, `pnpm test`, `pnpm build`
+**Commit:** `fix(curriculum): restrict direct curriculum writes to draft versions`
+
+## 12. Editable DRAFT Curriculum Versions
+
+- [x] 12.1 Add `updateCurriculumVersion` service, schema, and action with DRAFT-only guard and program-scope authorization
+- [x] 12.2 Add version metadata edit mode to the version form and an Edit action on DRAFT rows
+- [x] 12.3 Add course placement edit dialog wired to `updateCurriculumCourseAction` with snapshot preservation
+- [x] 12.4 Add service, action, and component tests for metadata and placement edits
+- [x] 12.5 Run focused tests, `pnpm lint`, `pnpm test`, and `pnpm build`
+
+**Scope:** `src/features/curriculum/schemas/curriculum.ts`, `src/features/curriculum/types.ts`, `src/features/curriculum/services/manage-curriculum-versions.ts`, `src/lib/actions/curriculum-actions.ts`, `src/features/curriculum/components/curriculum-version-form.tsx`, `src/features/curriculum/components/curriculum-version-list.tsx`, `src/features/curriculum/components/curriculum-course-table.tsx`, related tests, `specs/curriculum-version-lifecycle/spec.md`, `specs/curriculum-course-placement/spec.md`
+**Verification:** focused Vitest tests, `pnpm lint`, `pnpm test`, `pnpm build`
+**Commit:** `feat(curriculum): make draft curricula fully editable`
+
+## 13. Curriculum Page Read Recovery
+
+- [x] 13.1 Make curricula/detail/options loads rejection-safe with inline retry controls, preserving stale-response guards
+- [x] 13.2 Replace the text-only list loader with a structural skeleton
+- [x] 13.3 Add component tests for read failures and retry recovery
+- [x] 13.4 Run focused tests, `pnpm lint`, `pnpm test`, and `pnpm build`
+
+**Scope:** `src/features/curriculum/components/curriculum-version-list.tsx`, `src/__tests__/features/curriculum/curriculum-version-list.test.tsx`, `specs/curriculum-page-read-recovery/spec.md`
+**Verification:** focused Vitest tests, `pnpm lint`, `pnpm test`, `pnpm build`
+**Commit:** `fix(curriculum): recover curriculum page from failed reads`

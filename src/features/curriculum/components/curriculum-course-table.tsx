@@ -41,10 +41,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertCircle, ArrowUpDown, Plus, Search, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowUpDown, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
   addCurriculumCourseAction,
   removeCurriculumCourseAction,
+  updateCurriculumCourseAction,
 } from "@/lib/actions/curriculum-actions";
 import { showToast } from "@/components/ui/toast";
 import {
@@ -55,10 +56,7 @@ import {
   YEAR_LEVEL_OPTIONS,
 } from "@/lib/constants/academic";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
-import type {
-  CurriculumCourseOption,
-  CurriculumVersionDetail,
-} from "@/features/curriculum/types";
+import type { CurriculumCourseOption, CurriculumVersionDetail } from "@/features/curriculum/types";
 
 type SortKey = "code" | "title" | "yearLevel" | "semester" | "term";
 type SortDirection = "asc" | "desc";
@@ -82,14 +80,13 @@ interface CurriculumCourseTableProps {
  * placement rows can be added and removed only while the version is DRAFT;
  * PUBLISHED and RETIRED versions are read-only.
  */
-export function CurriculumCourseTable({
-  version,
-  courses,
-  onChanged,
-}: CurriculumCourseTableProps) {
+export function CurriculumCourseTable({ version, courses, onChanged }: CurriculumCourseTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("yearLevel");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [addOpen, setAddOpen] = useState(false);
+  const [editCourse, setEditCourse] = useState<CurriculumVersionDetail["courses"][number] | null>(
+    null
+  );
   const [removeCourse, setRemoveCourse] = useState<
     CurriculumVersionDetail["courses"][number] | null
   >(null);
@@ -129,6 +126,9 @@ export function CurriculumCourseTable({
         } else {
           showToast(result.error, "error");
         }
+      })
+      .catch(() => {
+        showToast("Unable to remove the course. Please try again.", "error");
       })
       .finally(() => setIsMutating(false));
   }
@@ -171,68 +171,15 @@ export function CurriculumCourseTable({
           </EmptyDescription>
         </Empty>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <SortableHead
-                  label="Code"
-                  active={sortKey === "code"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("code")}
-                />
-                <SortableHead
-                  label="Title"
-                  active={sortKey === "title"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("title")}
-                />
-                <SortableHead
-                  label="Year Level"
-                  active={sortKey === "yearLevel"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("yearLevel")}
-                />
-                <SortableHead
-                  label="Semester"
-                  active={sortKey === "semester"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("semester")}
-                />
-                <SortableHead
-                  label="Term"
-                  active={sortKey === "term"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("term")}
-                />
-                {isDraft && <TableHead className="w-12" aria-label="Actions" />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedCourses.map((course) => (
-                <TableRow key={course.id}>
-                  <TableCell className="font-medium">{course.courseCodeSnapshot}</TableCell>
-                  <TableCell>{course.courseTitleSnapshot}</TableCell>
-                  <TableCell>{getYearLevelDisplay(course.yearLevel)}</TableCell>
-                  <TableCell>{getSemesterLabel(course.semester)}</TableCell>
-                  <TableCell>{course.term ? getTermLabel(course.term) : "—"}</TableCell>
-                  {isDraft && (
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Remove ${course.courseCodeSnapshot}`}
-                        onClick={() => setRemoveCourse(course)}
-                      >
-                        <Trash2 className="text-destructive" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CourseTableBody
+          courses={sortedCourses}
+          isDraft={isDraft}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onToggleSort={toggleSort}
+          onEdit={setEditCourse}
+          onRemove={setRemoveCourse}
+        />
       )}
 
       {version && isDraft && (
@@ -244,6 +191,16 @@ export function CurriculumCourseTable({
             (course) => course.programId === version.programId || course.programId === null
           )}
           curriculumVersionId={version.id}
+          onChanged={onChanged}
+        />
+      )}
+
+      {version && isDraft && editCourse && (
+        <EditPlacementDialog
+          key={editCourse.id}
+          course={editCourse}
+          open={!!editCourse}
+          onOpenChange={(open) => !open && setEditCourse(null)}
           onChanged={onChanged}
         />
       )}
@@ -289,12 +246,105 @@ function SortableHead({
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex items-center gap-1.5 text-left font-medium hover:text-foreground"
+        className="hover:text-foreground inline-flex items-center gap-1.5 text-left font-medium"
       >
         {label}
         <ArrowUpDown className="text-muted-foreground size-3.5" />
       </button>
     </TableHead>
+  );
+}
+
+function CourseTableBody({
+  courses,
+  isDraft,
+  sortKey,
+  sortDirection,
+  onToggleSort,
+  onEdit,
+  onRemove,
+}: {
+  courses: CurriculumVersionDetail["courses"];
+  isDraft: boolean;
+  sortKey: SortKey;
+  sortDirection: SortDirection;
+  onToggleSort: (key: SortKey) => void;
+  onEdit: (course: CurriculumVersionDetail["courses"][number]) => void;
+  onRemove: (course: CurriculumVersionDetail["courses"][number]) => void;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <SortableHead
+              label="Code"
+              active={sortKey === "code"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("code")}
+            />
+            <SortableHead
+              label="Title"
+              active={sortKey === "title"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("title")}
+            />
+            <SortableHead
+              label="Year Level"
+              active={sortKey === "yearLevel"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("yearLevel")}
+            />
+            <SortableHead
+              label="Semester"
+              active={sortKey === "semester"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("semester")}
+            />
+            <SortableHead
+              label="Term"
+              active={sortKey === "term"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("term")}
+            />
+            {isDraft && <TableHead className="w-12" aria-label="Actions" />}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {courses.map((course) => (
+            <TableRow key={course.id}>
+              <TableCell className="font-medium">{course.courseCodeSnapshot}</TableCell>
+              <TableCell>{course.courseTitleSnapshot}</TableCell>
+              <TableCell>{getYearLevelDisplay(course.yearLevel)}</TableCell>
+              <TableCell>{getSemesterLabel(course.semester)}</TableCell>
+              <TableCell>{course.term ? getTermLabel(course.term) : "—"}</TableCell>
+              {isDraft && (
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edit ${course.courseCodeSnapshot} placement`}
+                      onClick={() => onEdit(course)}
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Remove ${course.courseCodeSnapshot}`}
+                      onClick={() => onRemove(course)}
+                    >
+                      <Trash2 className="text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -368,6 +418,7 @@ function AddCourseDialog({
           setError(result.error);
         }
       })
+      .catch(() => setError("Unable to add the course. Please try again."))
       .finally(() => setIsSubmitting(false));
   }
 
@@ -422,7 +473,7 @@ function AddCourseDialog({
                             setCourseId(course.id);
                             setError(null);
                           }}
-                          className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted data-pressed:bg-muted"
+                          className="hover:bg-muted data-pressed:bg-muted flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm"
                         >
                           <span className="min-w-0">
                             <span className="font-medium">{course.code}</span>{" "}
@@ -441,7 +492,10 @@ function AddCourseDialog({
               <Field>
                 <FieldLabel htmlFor="year-level">Year Level</FieldLabel>
                 <FieldContent>
-                  <Select value={yearLevel} onValueChange={(value) => setYearLevel(value as YearLevel)}>
+                  <Select
+                    value={yearLevel}
+                    onValueChange={(value) => setYearLevel(value as YearLevel)}
+                  >
                     <SelectTrigger id="year-level" className="w-full">
                       <SelectValue>{getYearLevelDisplay(yearLevel)}</SelectValue>
                     </SelectTrigger>
@@ -497,8 +551,8 @@ function AddCourseDialog({
 
             {selectedCourse && (
               <p className="text-muted-foreground text-xs">
-                Snapshot will record <strong>{selectedCourse.code}</strong> —{" "}
-                {selectedCourse.title} as approved.
+                Snapshot will record <strong>{selectedCourse.code}</strong> — {selectedCourse.title}{" "}
+                as approved.
               </p>
             )}
           </div>
@@ -514,6 +568,158 @@ function AddCourseDialog({
             </Button>
             <Button type="submit" loading={isSubmitting}>
               {isSubmitting ? "Adding…" : "Add Course"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface EditPlacementDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  course: CurriculumVersionDetail["courses"][number];
+  onChanged: () => void;
+}
+
+/**
+ * Dialog for editing a Course placement (year level, semester, term) within a
+ * DRAFT Curriculum Version. Editing the placement never rewrites the frozen
+ * course code/title snapshots.
+ */
+function EditPlacementDialog({ open, onOpenChange, course, onChanged }: EditPlacementDialogProps) {
+  const [yearLevel, setYearLevel] = useState<YearLevel>(course.yearLevel);
+  const [semester, setSemester] = useState<AcademicSemester>(course.semester);
+  const [term, setTerm] = useState<AcademicTerm | null>(course.term);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSemesterChange(value: string | null) {
+    if (!value) return;
+    setSemester(value as AcademicSemester);
+    if (value === AcademicSemester.SUMMER) {
+      setTerm(null);
+    } else if (term === null) {
+      setTerm(AcademicTerm.FIRST_TERM);
+    }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    updateCurriculumCourseAction(course.id, {
+      yearLevel,
+      semester,
+      term: semester === AcademicSemester.SUMMER ? null : term,
+    })
+      .then((result) => {
+        if (result.success) {
+          showToast("Course placement updated", "success");
+          onOpenChange(false);
+          onChanged();
+        } else {
+          setError(result.error);
+        }
+      })
+      .catch(() => setError("Unable to update the course placement. Please try again."))
+      .finally(() => setIsSubmitting(false));
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit} noValidate>
+          <DialogHeader>
+            <DialogTitle>Edit Course Placement</DialogTitle>
+            <DialogDescription>
+              {course.courseCodeSnapshot} — {course.courseTitleSnapshot}. The approved course code
+              and title snapshots stay unchanged.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="size-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid grid-cols-3 gap-3">
+              <Field>
+                <FieldLabel htmlFor="edit-year-level">Year Level</FieldLabel>
+                <FieldContent>
+                  <Select
+                    value={yearLevel}
+                    onValueChange={(value) => setYearLevel(value as YearLevel)}
+                  >
+                    <SelectTrigger id="edit-year-level" className="w-full">
+                      <SelectValue>{getYearLevelDisplay(yearLevel)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {YEAR_LEVEL_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="edit-semester">Semester</FieldLabel>
+                <FieldContent>
+                  <Select value={semester} onValueChange={handleSemesterChange}>
+                    <SelectTrigger id="edit-semester" className="w-full">
+                      <SelectValue>{getSemesterLabel(semester)}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SEMESTER_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldContent>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="edit-term">Term</FieldLabel>
+                <FieldContent>
+                  <Select
+                    value={semester === AcademicSemester.SUMMER ? null : term}
+                    onValueChange={(value) => setTerm(value ? (value as AcademicTerm) : null)}
+                    disabled={semester === AcademicSemester.SUMMER}
+                  >
+                    <SelectTrigger id="edit-term" className="w-full">
+                      <SelectValue>{term ? getTermLabel(term) : "None"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TERM_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FieldContent>
+              </Field>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={isSubmitting}>
+              {isSubmitting ? "Saving…" : "Save Placement"}
             </Button>
           </DialogFooter>
         </form>

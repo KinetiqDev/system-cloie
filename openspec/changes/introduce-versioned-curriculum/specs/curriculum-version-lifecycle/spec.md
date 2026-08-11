@@ -15,6 +15,25 @@ The system SHALL allow a SECRETARY or PROGRAM_HEAD to create a CurriculumVersion
 - **WHEN** a PROGRAM_HEAD attempts to create a CurriculumVersion for a program they are not assigned to
 - **THEN** the operation is rejected
 
+### Requirement: Edit DRAFT Curriculum Version metadata
+The system SHALL allow a SECRETARY or in-scope PROGRAM_HEAD to update a DRAFT CurriculumVersion's `code`, `name`, and `effective_from_school_year_id`. Editing SHALL NOT change program or major scope, and SHALL be rejected for PUBLISHED and RETIRED versions.
+
+#### Scenario: Update DRAFT metadata
+- **WHEN** Secretary changes a DRAFT CurriculumVersion's code from "BSIT-2030" to "BSIT-2031"
+- **THEN** the code is updated while status, program, and major remain unchanged
+
+#### Scenario: Clear optional metadata
+- **WHEN** Secretary clears a DRAFT CurriculumVersion's name and effective school year
+- **THEN** both values are stored as null
+
+#### Scenario: Edit published version rejected
+- **WHEN** Secretary attempts to update the metadata of a PUBLISHED CurriculumVersion
+- **THEN** the operation is rejected with "Published curricula are immutable"
+
+#### Scenario: Code collision rejected
+- **WHEN** Secretary sets a DRAFT's code to a code already used by another version of the same program
+- **THEN** the operation is rejected with a code-conflict message
+
 ### Requirement: Publish Curriculum Version
 The system SHALL allow publishing a DRAFT CurriculumVersion. Published CurriculumVersions SHALL be immutable. Publication SHALL require at least one CurriculumCourse.
 

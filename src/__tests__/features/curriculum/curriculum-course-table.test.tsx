@@ -3,18 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const addCourseMock = vi.hoisted(() => vi.fn());
 const removeCourseMock = vi.hoisted(() => vi.fn());
+const updateCourseMock = vi.hoisted(() => vi.fn());
+const toastMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/actions/curriculum-actions", () => ({
   addCurriculumCourseAction: addCourseMock,
   removeCurriculumCourseAction: removeCourseMock,
+  updateCurriculumCourseAction: updateCourseMock,
 }));
-vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
+vi.mock("@/components/ui/toast", () => ({ showToast: toastMock }));
 
 import { CurriculumCourseTable } from "@/features/curriculum/components/curriculum-course-table";
-import type {
-  CurriculumCourseOption,
-  CurriculumVersionDetail,
-} from "@/features/curriculum/types";
+import type { CurriculumCourseOption, CurriculumVersionDetail } from "@/features/curriculum/types";
 
 const COURSE_OPTIONS: CurriculumCourseOption[] = [
   { id: "course-1", code: "CS-101", title: "Intro to Computing", programId: "prog-1" },
@@ -22,9 +22,7 @@ const COURSE_OPTIONS: CurriculumCourseOption[] = [
   { id: "course-3", code: "BSBA-101", title: "Business Fundamentals", programId: "prog-2" },
 ];
 
-function makeVersion(
-  overrides: Partial<CurriculumVersionDetail> = {}
-): CurriculumVersionDetail {
+function makeVersion(overrides: Partial<CurriculumVersionDetail> = {}): CurriculumVersionDetail {
   return {
     id: "version-1",
     programId: "prog-1",
@@ -78,7 +76,11 @@ describe("CurriculumCourseTable", () => {
 
   it("renders snapshot code and title with placement columns", () => {
     render(
-      <CurriculumCourseTable version={makeVersion()} courses={COURSE_OPTIONS} onChanged={() => {}} />
+      <CurriculumCourseTable
+        version={makeVersion()}
+        courses={COURSE_OPTIONS}
+        onChanged={() => {}}
+      />
     );
 
     expect(screen.getByText("CS-101")).toBeInTheDocument();
@@ -90,14 +92,19 @@ describe("CurriculumCourseTable", () => {
 
   it("shows Add Course and remove buttons on DRAFT versions", () => {
     render(
-      <CurriculumCourseTable version={makeVersion()} courses={COURSE_OPTIONS} onChanged={() => {}} />
+      <CurriculumCourseTable
+        version={makeVersion()}
+        courses={COURSE_OPTIONS}
+        onChanged={() => {}}
+      />
     );
 
     expect(screen.getByRole("button", { name: "Add Course" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit CS-101 placement" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove CS-101" })).toBeInTheDocument();
   });
 
-  it("hides add and remove buttons on PUBLISHED versions", () => {
+  it("hides add, edit, and remove buttons on PUBLISHED versions", () => {
     render(
       <CurriculumCourseTable
         version={makeVersion({ status: "PUBLISHED" })}
@@ -107,7 +114,120 @@ describe("CurriculumCourseTable", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Add Course" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit .* placement/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Remove/ })).not.toBeInTheDocument();
+  });
+
+  it("edits a DRAFT placement through the update action and preserves snapshots", async () => {
+    updateCourseMock.mockResolvedValue({ success: true, data: { id: "cc-1" } });
+    render(
+      <CurriculumCourseTable
+        version={makeVersion()}
+        courses={COURSE_OPTIONS}
+        onChanged={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit CS-101 placement" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit Course Placement")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/The approved course code and title snapshots stay unchanged/)
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Placement" }));
+
+    await waitFor(() =>
+      expect(updateCourseMock).toHaveBeenCalledWith("cc-1", {
+        yearLevel: "FIRST_YEAR",
+        semester: "FIRST",
+        term: "FIRST_TERM",
+      })
+    );
+  });
+
+  it("surfaces a placement update failure inside the dialog", async () => {
+    updateCourseMock.mockResolvedValue({
+      success: false,
+      error: "Published curricula are immutable",
+    });
+    render(
+      <CurriculumCourseTable
+        version={makeVersion()}
+        courses={COURSE_OPTIONS}
+        onChanged={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit CS-101 placement" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Placement" }));
+
+    await waitFor(() =>
+      expect(within(dialog).getByText("Published curricula are immutable")).toBeInTheDocument()
+    );
+  });
+
+  it("surfaces a rejected placement update inside the dialog", async () => {
+    updateCourseMock.mockRejectedValue(new Error("network"));
+    render(
+      <CurriculumCourseTable
+        version={makeVersion()}
+        courses={COURSE_OPTIONS}
+        onChanged={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit CS-101 placement" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Placement" }));
+
+    expect(
+      await screen.findByText("Unable to update the course placement. Please try again.")
+    ).toBeInTheDocument();
+    expect(dialog).toBeInTheDocument();
+  });
+
+  it("surfaces a rejected add inside the dialog", async () => {
+    addCourseMock.mockRejectedValue(new Error("network"));
+    render(
+      <CurriculumCourseTable
+        version={makeVersion({ courses: [] })}
+        courses={COURSE_OPTIONS}
+        onChanged={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Course" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Intro to Computing/ }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add Course" }));
+
+    expect(
+      await screen.findByText("Unable to add the course. Please try again.")
+    ).toBeInTheDocument();
+    expect(dialog).toBeInTheDocument();
+  });
+
+  it("surfaces a rejected remove with an error toast", async () => {
+    removeCourseMock.mockRejectedValue(new Error("network"));
+    render(
+      <CurriculumCourseTable
+        version={makeVersion()}
+        courses={COURSE_OPTIONS}
+        onChanged={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove CS-101" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Course" }));
+
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith(
+        "Unable to remove the course. Please try again.",
+        "error"
+      )
+    );
   });
 
   it("renders an empty state when a DRAFT has no courses", () => {
@@ -155,7 +275,11 @@ describe("CurriculumCourseTable", () => {
   it("removes a course after confirmation on DRAFT", async () => {
     const onChanged = vi.fn();
     render(
-      <CurriculumCourseTable version={makeVersion()} courses={COURSE_OPTIONS} onChanged={onChanged} />
+      <CurriculumCourseTable
+        version={makeVersion()}
+        courses={COURSE_OPTIONS}
+        onChanged={onChanged}
+      />
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Remove CS-101" }));
@@ -211,7 +335,11 @@ describe("CurriculumCourseTable", () => {
 
   it("sorts courses when a column header is clicked", () => {
     render(
-      <CurriculumCourseTable version={makeVersion()} courses={COURSE_OPTIONS} onChanged={() => {}} />
+      <CurriculumCourseTable
+        version={makeVersion()}
+        courses={COURSE_OPTIONS}
+        onChanged={() => {}}
+      />
     );
 
     const rows = () =>

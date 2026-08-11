@@ -11,7 +11,11 @@ vi.mock("next/image", () => ({
   default: (props: React.ComponentProps<"img">) => <img alt={props.alt ?? ""} {...props} />,
 }));
 vi.mock("next/link", () => ({
-  default: ({ children, prefetch, ...props }: React.ComponentProps<"a"> & { prefetch?: boolean }) => {
+  default: ({
+    children,
+    prefetch,
+    ...props
+  }: React.ComponentProps<"a"> & { prefetch?: boolean }) => {
     void prefetch;
     return <a {...props}>{children}</a>;
   },
@@ -35,8 +39,24 @@ describe("Program Head desktop navigation", () => {
       "href",
       "/program-head/programs/program-2/tools"
     );
+    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-2/curricula"
+    );
     expect(screen.getByRole("link", { name: "Tools" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page")).toHaveLength(1);
+    expect(
+      screen.getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page")
+    ).toHaveLength(1);
+  });
+
+  it("marks Curricula current within selected Program context", () => {
+    pathnameMock.mockReturnValue("/program-head/programs/program-2/curricula");
+    render(<Sidebar roles={[ROLES.PROGRAM_HEAD]} />);
+
+    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page")
+    ).toHaveLength(1);
   });
 
   it.each(["/program-head/profile", "/program-head/courses"])(
@@ -47,7 +67,7 @@ describe("Program Head desktop navigation", () => {
 
       render(<Sidebar roles={[ROLES.PROGRAM_HEAD]} />);
 
-      expect(screen.getAllByRole("link")).toHaveLength(8);
+      expect(screen.getAllByRole("link")).toHaveLength(9);
       expect(screen.getAllByRole("link", { name: "Dashboard" })[0]).toHaveAttribute(
         "href",
         "/program-head"
@@ -80,5 +100,26 @@ describe("Program Head desktop navigation", () => {
     const structure = screen.getByRole("link", { name: "Academic Structure" });
     expect(structure).not.toHaveClass("bg-sidebar-accent");
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("md:min-w-11");
+  });
+});
+
+describe("Secretary desktop navigation", () => {
+  afterEach(() => {
+    pathnameMock.mockReturnValue("/program-head/programs/program-2/tools/new");
+    vi.restoreAllMocks();
+  });
+
+  it("exposes Curricula and marks it as the one current destination", () => {
+    pathnameMock.mockReturnValue("/secretary/curricula");
+    render(<Sidebar roles={[ROLES.SECRETARY]} />);
+
+    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute(
+      "href",
+      "/secretary/curricula"
+    );
+    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page")
+    ).toHaveLength(1);
   });
 });

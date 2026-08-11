@@ -9,6 +9,7 @@ System CLOIE currently has no concept of a versioned Curriculum. Course placemen
 - Add `CurriculumCourse` model: placement of a stable `Course` within a `CurriculumVersion` with year_level, semester, term, and course metadata snapshots
 - Add `prisma/models/curriculum.prisma`
 - Secretary/Program Head create, edit, clone, publish, retire Curriculum Versions
+- Secretary and Program Head role navigation exposes their authorized Curriculum management routes
 - Published Curriculum Versions are immutable; revisions use clone→edit→publish
 - Retired Curricula remain historically viewable but not selectable for new operations
 - Same Course may appear in multiple Curriculum Versions with different placements, or be omitted from newer versions
@@ -19,6 +20,7 @@ System CLOIE currently has no concept of a versioned Curriculum. Course placemen
 ## Capabilities
 
 ### New Capabilities
+
 - `curriculum-version-lifecycle`: DRAFT→PUBLISHED→RETIRED; published immutable; clone for revision
 - `curriculum-course-placement`: Course placement within CurriculumVersion with year_level, semester, term
 - `curriculum-course-snapshot`: course code/title frozen at publish time
@@ -27,6 +29,7 @@ System CLOIE currently has no concept of a versioned Curriculum. Course placemen
 - `curriculum-rls-security`: new tables have RLS enabled with role-scoped policies
 
 ### Modified Capabilities
+
 None — no existing curriculum specifications.
 
 ## Impact
@@ -36,6 +39,7 @@ None — no existing curriculum specifications.
 - **Supabase types**: regenerate after migration
 - **New feature**: `src/features/curriculum/` with types, policies, schemas, services, components
 - **New routes**: `/secretary/curricula/`, `/program-head/programs/[id]/curricula/`
+- **Role navigation**: Secretary and Program Head sidebar and mobile drawer entries for Curriculum management
 - **Courses schema**: Add deprecation comments on `default_year_level`/`default_semester`/`default_term` — not removed
 - **CONTEXT-MAP.md**: Add Curriculum context entry
 - **ADR**: `0013-versioned-curriculum-course-placement.md`

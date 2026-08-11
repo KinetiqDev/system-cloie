@@ -2,13 +2,18 @@ import { z } from "zod";
 import { AcademicSemester, AcademicTerm, YearLevel } from "@prisma/client";
 import { assertValidSemesterTerm } from "@/lib/constants/academic-period";
 
-const semesterEnum = z.enum([AcademicSemester.FIRST, AcademicSemester.SECOND, AcademicSemester.SUMMER], {
-  message: "Semester must be FIRST, SECOND, or SUMMER",
-});
+const semesterEnum = z.enum(
+  [AcademicSemester.FIRST, AcademicSemester.SECOND, AcademicSemester.SUMMER],
+  {
+    message: "Semester must be FIRST, SECOND, or SUMMER",
+  }
+);
 
-const termEnum = z.enum([AcademicTerm.FIRST_TERM, AcademicTerm.SECOND_TERM], {
-  message: "Term must be FIRST_TERM or SECOND_TERM",
-}).nullable();
+const termEnum = z
+  .enum([AcademicTerm.FIRST_TERM, AcademicTerm.SECOND_TERM], {
+    message: "Term must be FIRST_TERM or SECOND_TERM",
+  })
+  .nullable();
 
 const yearLevelEnum = z.enum(
   [YearLevel.FIRST_YEAR, YearLevel.SECOND_YEAR, YearLevel.THIRD_YEAR, YearLevel.FOURTH_YEAR],
@@ -22,11 +27,7 @@ const yearLevelEnum = z.enum(
 export const createCurriculumVersionSchema = z.object({
   programId: z.string().uuid("Invalid program ID"),
   majorId: z.string().uuid("Invalid major ID").nullable().optional(),
-  code: z
-    .string()
-    .trim()
-    .min(1, "Code is required")
-    .max(50, "Code must be at most 50 characters"),
+  code: z.string().trim().min(1, "Code is required").max(50, "Code must be at most 50 characters"),
   name: z.string().trim().max(200, "Name must be at most 200 characters").nullable().optional(),
   effectiveFromSchoolYearId: z.string().uuid("Invalid school year ID").nullable().optional(),
 });
@@ -37,6 +38,32 @@ export const createCurriculumVersionSchema = z.object({
 export const publishCurriculumVersionSchema = z.object({
   id: z.string().uuid("Invalid curriculum version ID"),
 });
+
+/**
+ * Zod schema for updating a DRAFT Curriculum Version's metadata. Code, name,
+ * and effective school year may change; program and major scope are immutable
+ * once the version exists. At least one metadata field is required. `name` and
+ * `effectiveFromSchoolYearId` accept explicit null to clear the stored value.
+ */
+export const updateCurriculumVersionSchema = z
+  .object({
+    id: z.string().uuid("Invalid curriculum version ID"),
+    code: z
+      .string()
+      .trim()
+      .min(1, "Code is required")
+      .max(50, "Code must be at most 50 characters")
+      .optional(),
+    name: z.string().trim().max(200, "Name must be at most 200 characters").nullable().optional(),
+    effectiveFromSchoolYearId: z.string().uuid("Invalid school year ID").nullable().optional(),
+  })
+  .refine(
+    (data) =>
+      data.code !== undefined ||
+      data.name !== undefined ||
+      data.effectiveFromSchoolYearId !== undefined,
+    { message: "At least one metadata field is required" }
+  );
 
 /**
  * Zod schema for retiring a Curriculum Version.

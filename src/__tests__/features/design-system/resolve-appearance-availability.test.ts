@@ -91,6 +91,20 @@ describe("resolveAppearanceAvailability", () => {
 
     vi.unstubAllEnvs();
     vi.stubEnv("NODE_ENV", "production");
+    // Environment isolation: unstubAllEnvs may leave previously stubbed
+    // dedicated-demo keys in process.env (Vitest 4 stub-restore quirk), so
+    // explicitly unset every key the resolution branch reads before the
+    // unset assertion.
+    delete process.env.CLOIE_DEMO_ENABLED;
+    delete process.env.CLOIE_DEPLOYMENT_KIND;
+    delete process.env.CLOIE_DEMO_SESSION_SECRET;
+    delete process.env.CLOIE_DEMO_ALLOWED_USERS;
+    delete process.env.CLOIE_DEMO_SUPABASE_PROJECT_REF;
+    delete process.env.CLOIE_PRIMARY_SUPABASE_PROJECT_REF;
+    delete process.env.SUPABASE_PROJECT_REF;
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.DATABASE_URL;
+    delete process.env.CLOIE_APPEARANCE_ENABLED;
     expect(resolveAppearanceAvailability()).toBe(false);
   });
 });

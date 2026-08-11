@@ -34,7 +34,7 @@ const ROLE_LABELS: Record<Role, string> = {
 
 function ItemLine({ item }: { item: NavItem }) {
   return (
-    <li className="text-body-sm flex items-center gap-2 text-muted-foreground">
+    <li className="text-body-sm text-muted-foreground flex items-center gap-2">
       <item.icon className="size-4 shrink-0" aria-hidden="true" />
       <span className="text-foreground">{item.name}</span>
       <span className="text-caption truncate font-mono">{item.href}</span>
@@ -48,7 +48,10 @@ export function NavigationShowcase() {
   const [deanDashboard, deanProfile] = getDeanStandaloneNav();
   const studentMobile = getMobileNavByRoles([ROLES.STUDENT]);
   const SecretaryDashboardIcon = secretary[0].icon;
-  const CourseAssignmentsIcon = secretary[5].icon;
+  const courseAssignments = secretary.find(
+    (item) => item.href === "/secretary/course-assignments"
+  )!;
+  const CourseAssignmentsIcon = courseAssignments.icon;
   const DeanDashboardIcon = deanDashboard.icon;
   const DeanProfileIcon = deanProfile.icon;
 
@@ -58,13 +61,12 @@ export function NavigationShowcase() {
         <h3 className="font-heading text-title-sm text-foreground">
           Central role-aware declarations
         </h3>
-        <p className="text-body-sm max-w-2xl text-muted-foreground">
+        <p className="text-body-sm text-muted-foreground max-w-2xl">
           Every item below is rendered from the real{" "}
-          <code className="rounded border border-border bg-card px-1 py-0.5 font-mono">
+          <code className="border-border bg-card rounded border px-1 py-0.5 font-mono">
             src/lib/constants/navigation.ts
           </code>{" "}
-          arrays through the production getters — nothing is re-declared for
-          the showcase.
+          arrays through the production getters — nothing is re-declared for the showcase.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {ROLE_ORDER.map((role) => {
@@ -73,15 +75,15 @@ export function NavigationShowcase() {
             return (
               <div
                 key={role}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4"
+                className="border-border bg-card flex flex-col gap-3 rounded-lg border p-4"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-label-md text-foreground">{ROLE_LABELS[role]}</span>
                   <span
                     className={
                       mode === "bottom-nav"
-                        ? "rounded-full bg-info-soft px-2 py-0.5 text-label-sm text-info"
-                        : "rounded-full bg-primary px-2 py-0.5 text-label-sm text-primary-foreground"
+                        ? "bg-info-soft text-label-sm text-info rounded-full px-2 py-0.5"
+                        : "bg-primary text-label-sm text-primary-foreground rounded-full px-2 py-0.5"
                     }
                   >
                     {mode === "bottom-nav" ? "Bottom navigation" : "Hamburger drawer"}
@@ -100,16 +102,15 @@ export function NavigationShowcase() {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Navigation link states</h3>
-        <p className="text-body-sm max-w-2xl text-muted-foreground">
-          The real shared presentation rows — sidebar, Dean rail, admin drawer,
-          and respondent bottom navigation all render through these components.
-          The selected row carries the same{" "}
-          <code className="rounded border border-border bg-card px-1 py-0.5 font-mono">
+        <p className="text-body-sm text-muted-foreground max-w-2xl">
+          The real shared presentation rows — sidebar, Dean rail, admin drawer, and respondent
+          bottom navigation all render through these components. The selected row carries the same{" "}
+          <code className="border-border bg-card rounded border px-1 py-0.5 font-mono">
             aria-current=&quot;page&quot;
           </code>{" "}
           marking used by the shells.
         </p>
-        <div className="divide-y divide-border rounded-lg border border-border bg-card">
+        <div className="divide-border border-border bg-card divide-y rounded-lg border">
           <div className="grid grid-cols-1 items-center gap-3 px-3 py-3 md:grid-cols-[10rem_1fr]">
             <span className="text-body-sm text-muted-foreground">Default</span>
             <div className="flex flex-wrap items-center gap-2.5">
@@ -123,16 +124,16 @@ export function NavigationShowcase() {
             <span className="text-body-sm text-muted-foreground">Selected (current page)</span>
             <div className="flex flex-wrap items-center gap-2.5">
               <NavigationRow
-                href={secretary[5].href}
+                href={courseAssignments.href}
                 active
                 aria-current="page"
                 className="justify-between"
               >
                 <div className="flex items-center gap-3">
                   <CourseAssignmentsIcon className="size-5 shrink-0" aria-hidden="true" />
-                  {secretary[5].name}
+                  {courseAssignments.name}
                 </div>
-                <span className="bg-sidebar-primary text-sidebar-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-label-sm leading-none">
+                <span className="bg-sidebar-primary text-sidebar-primary-foreground text-label-sm flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 leading-none">
                   5
                 </span>
               </NavigationRow>
@@ -186,24 +187,26 @@ export function NavigationShowcase() {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Pending feedback</h3>
-        <p className="text-body-sm max-w-2xl text-muted-foreground">
-          During slow route transitions each navigation link shows a local pulse
-          dot and announces &ldquo;Loading&rdquo; through a screen-reader-only
-          status region without disabling the link. The behavior is exercised
-          by the NavigationLink unit tests and appears during real client
-          navigation, so it is not simulated here.
+        <p className="text-body-sm text-muted-foreground max-w-2xl">
+          During slow route transitions each navigation link shows a local pulse dot and announces
+          &ldquo;Loading&rdquo; through a screen-reader-only status region without disabling the
+          link. The behavior is exercised by the NavigationLink unit tests and appears during real
+          client navigation, so it is not simulated here.
         </p>
       </section>
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Interactive admin drawer</h3>
-        <p className="text-body-sm max-w-2xl text-muted-foreground">
-          This is the real <code className="rounded border border-border bg-card px-1 py-0.5 font-mono">MobileSidebarDrawer</code>:
-          it traps and restores focus, locks scroll, closes on Escape and
-          backdrop, and marks only the deepest destination current. It is
-          interactive below the large-screen breakpoint, matching the shell.
+        <p className="text-body-sm text-muted-foreground max-w-2xl">
+          This is the real{" "}
+          <code className="border-border bg-card rounded border px-1 py-0.5 font-mono">
+            MobileSidebarDrawer
+          </code>
+          : it traps and restores focus, locks scroll, closes on Escape and backdrop, and marks only
+          the deepest destination current. It is interactive below the large-screen breakpoint,
+          matching the shell.
         </p>
-        <div className="flex w-fit items-center gap-3 rounded-lg border border-border bg-card p-4">
+        <div className="border-border bg-card flex w-fit items-center gap-3 rounded-lg border p-4">
           <MobileSidebarDrawer roles={[ROLES.SECRETARY]} />
           <span className="text-body-sm text-muted-foreground">Open navigation menu</span>
         </div>
