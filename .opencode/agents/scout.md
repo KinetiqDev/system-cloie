@@ -1,7 +1,8 @@
 ---
 description: Research official documentation, dependency behavior, upstream source, and version-specific guidance for System CLOIE
 mode: subagent
-model: 9router/cx/gpt-5.6-luna(xhigh)
+model: openai/gpt-5.6-luna-fast
+variant: medium
 temperature: 0.1
 steps: 12
 
