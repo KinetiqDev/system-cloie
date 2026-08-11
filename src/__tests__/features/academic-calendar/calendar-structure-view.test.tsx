@@ -36,19 +36,20 @@ vi.mock("@/components/ui/toast", () => ({
 import { CalendarStructureView } from "@/features/academic-calendar/components/calendar-structure-view";
 import type { SchoolYearWithTerms } from "@/features/academic-calendar/types";
 
-const term = (overrides: Partial<SchoolYearWithTerms["termInstances"][number]> = {}) => ({
-  id: `ti-${overrides.semester ?? "FIRST"}-${overrides.term ?? "FIRST_TERM"}`,
-  schoolYearId: "sy-1",
-  schoolYearCode: "2026-2027",
-  semester: overrides.semester ?? "FIRST",
-  term: overrides.term ?? "FIRST_TERM",
-  startDate: null,
-  endDate: null,
-  status: overrides.status ?? "PLANNED",
-  createdAt: new Date("2026-06-01"),
-  updatedAt: new Date("2026-06-01"),
-  ...overrides,
-}) as SchoolYearWithTerms["termInstances"][number];
+const term = (overrides: Partial<SchoolYearWithTerms["termInstances"][number]> = {}) =>
+  ({
+    id: `ti-${overrides.semester ?? "FIRST"}-${overrides.term ?? "FIRST_TERM"}`,
+    schoolYearId: "sy-1",
+    schoolYearCode: "2026-2027",
+    semester: overrides.semester ?? "FIRST",
+    term: overrides.term ?? "FIRST_TERM",
+    startDate: null,
+    endDate: null,
+    status: overrides.status ?? "PLANNED",
+    createdAt: new Date("2026-06-01"),
+    updatedAt: new Date("2026-06-01"),
+    ...overrides,
+  }) as SchoolYearWithTerms["termInstances"][number];
 
 const schoolYear = (overrides: Partial<SchoolYearWithTerms> = {}): SchoolYearWithTerms => ({
   id: "sy-1",
@@ -66,7 +67,12 @@ const schoolYear = (overrides: Partial<SchoolYearWithTerms> = {}): SchoolYearWit
     term({ status: "PLANNED" }),
     term({ id: "ti-FIRST-SECOND_TERM", term: "SECOND_TERM", status: "ACTIVE" }),
     term({ id: "ti-SECOND-FIRST_TERM", semester: "SECOND" }),
-    term({ id: "ti-SECOND-SECOND_TERM", semester: "SECOND", term: "SECOND_TERM", status: "COMPLETED" }),
+    term({
+      id: "ti-SECOND-SECOND_TERM",
+      semester: "SECOND",
+      term: "SECOND_TERM",
+      status: "COMPLETED",
+    }),
     term({ id: "ti-SUMMER", semester: "SUMMER", term: null }),
   ],
   ...overrides,
@@ -103,7 +109,11 @@ describe("CalendarStructureView", () => {
   });
 
   it("shows Activate and Archive for an inactive School Year", () => {
-    render(<CalendarStructureView schoolYears={[schoolYear({ isActive: false, activeSemester: null })]} />);
+    render(
+      <CalendarStructureView
+        schoolYears={[schoolYear({ isActive: false, activeSemester: null })]}
+      />
+    );
 
     expect(screen.queryByText("Active")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Activate/ })).toBeInTheDocument();
@@ -142,7 +152,11 @@ describe("CalendarStructureView", () => {
   });
 
   it("offers no Make Active when the school year is inactive", () => {
-    render(<CalendarStructureView schoolYears={[schoolYear({ isActive: false, activeSemester: null })]} />);
+    render(
+      <CalendarStructureView
+        schoolYears={[schoolYear({ isActive: false, activeSemester: null })]}
+      />
+    );
 
     expect(screen.queryByRole("button", { name: /Make Active/ })).not.toBeInTheDocument();
   });
@@ -180,7 +194,11 @@ describe("CalendarStructureView", () => {
 
   it("activates a School Year with a chosen semester and refreshes the view", async () => {
     activateSchoolYearActionMock.mockResolvedValue({ success: true });
-    render(<CalendarStructureView schoolYears={[schoolYear({ isActive: false, activeSemester: null })]} />);
+    render(
+      <CalendarStructureView
+        schoolYears={[schoolYear({ isActive: false, activeSemester: null })]}
+      />
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /Activate/ }));
     expect(screen.getByText("Activate School Year")).toBeInTheDocument();
@@ -235,5 +253,81 @@ describe("CalendarStructureView", () => {
       expect(screen.getByText("Action failed; please try again")).toBeInTheDocument();
     });
     expect(screen.getByRole("button", { name: /Complete/ })).not.toBeDisabled();
+  });
+
+  it("confirms before archiving a School Year and fires the action once", async () => {
+    archiveSchoolYearActionMock.mockResolvedValue({ success: true });
+    render(
+      <CalendarStructureView
+        schoolYears={[schoolYear({ isActive: false, activeSemester: null })]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Archive/ }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText("Archive this School Year?")).toBeInTheDocument();
+    expect(archiveSchoolYearActionMock).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Archive School Year" }));
+
+    await waitFor(() => expect(archiveSchoolYearActionMock).toHaveBeenCalledTimes(1));
+    const formData = archiveSchoolYearActionMock.mock.calls[0][0];
+    expect(formData.get("id")).toBe("sy-1");
+    await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+  });
+
+  it("does not archive when the confirmation is dismissed", async () => {
+    render(
+      <CalendarStructureView
+        schoolYears={[schoolYear({ isActive: false, activeSemester: null })]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Archive/ }));
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Keep Current State" }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(archiveSchoolYearActionMock).not.toHaveBeenCalled();
+  });
+
+  it("confirms before cancelling an ACTIVE term and fires the transition once", async () => {
+    transitionPeriodStatusActionMock.mockResolvedValue({ success: true });
+    render(<CalendarStructureView schoolYears={[schoolYear()]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/ }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText("Cancel this term?")).toBeInTheDocument();
+    expect(transitionPeriodStatusActionMock).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel Term" }));
+
+    await waitFor(() => expect(transitionPeriodStatusActionMock).toHaveBeenCalledTimes(1));
+    const formData = transitionPeriodStatusActionMock.mock.calls[0][0];
+    expect(formData.get("periodId")).toBe("ti-FIRST-SECOND_TERM");
+    expect(formData.get("target")).toBe("CANCELLED");
+    await waitFor(() => expect(refreshMock).toHaveBeenCalled());
+  });
+
+  it("does not cancel the term when the confirmation is dismissed", async () => {
+    render(<CalendarStructureView schoolYears={[schoolYear()]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/ }));
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Keep Current State" }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(transitionPeriodStatusActionMock).not.toHaveBeenCalled();
+  });
+
+  it("uses destructive semantics on the confirmation action", async () => {
+    render(<CalendarStructureView schoolYears={[schoolYear()]} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/ }));
+    const dialog = await screen.findByRole("alertdialog");
+
+    expect(within(dialog).getByRole("button", { name: "Cancel Term" })).toHaveClass(
+      "text-destructive"
+    );
   });
 });

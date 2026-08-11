@@ -22,7 +22,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Archive, CalendarClock, CheckCircle2, Play, Power, PowerOff, XCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  AlertCircle,
+  Archive,
+  CalendarClock,
+  CheckCircle2,
+  Play,
+  Power,
+  PowerOff,
+  XCircle,
+} from "lucide-react";
 import { formatDateRange } from "@/lib/utils/date-format";
 import { SEMESTER_OPTIONS, getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
 import {
@@ -36,9 +54,16 @@ import { showToast } from "@/components/ui/toast";
 import { SetActiveTermDialog } from "./set-active-term-dialog";
 import type { SchoolYearWithTerms, TermInstanceItem } from "../types";
 
-const SEMESTER_ORDER: AcademicSemester[] = [AcademicSemester.FIRST, AcademicSemester.SECOND, AcademicSemester.SUMMER];
+const SEMESTER_ORDER: AcademicSemester[] = [
+  AcademicSemester.FIRST,
+  AcademicSemester.SECOND,
+  AcademicSemester.SUMMER,
+];
 
-const STATUS_BADGE_VARIANT: Record<AcademicPeriodStatus, "outline" | "success" | "secondary" | "destructive"> = {
+const STATUS_BADGE_VARIANT: Record<
+  AcademicPeriodStatus,
+  "outline" | "success" | "secondary" | "destructive"
+> = {
   PLANNED: "outline",
   ACTIVE: "success",
   COMPLETED: "secondary",
@@ -49,6 +74,10 @@ function termLabel(term: TermInstanceItem["term"]): string {
   return term ? getTermLabel(term) : "Summer";
 }
 
+type PendingDestructiveAction =
+  | { type: "archive"; schoolYearId: string; code: string }
+  | { type: "cancel"; schoolYearId: string; termId: string; label: string };
+
 interface CalendarStructureViewProps {
   schoolYears: SchoolYearWithTerms[];
 }
@@ -57,11 +86,15 @@ interface CalendarStructureViewProps {
  * Fixed structural calendar view: School Year -> Semester -> Term hierarchy
  * with lifecycle action buttons per state. Receives serialized data from a
  * Server Component page; every mutation runs through the Secretary lifecycle
- * server actions and refreshes the read model via router.refresh().
+ * server actions and refreshes the read model via router.refresh(). Archive
+ * and Cancel are terminal and require explicit destructive confirmation.
  */
 export function CalendarStructureView({ schoolYears }: CalendarStructureViewProps) {
   const router = useRouter();
   const [settingActiveTerm, setSettingActiveTerm] = useState<TermInstanceItem | null>(null);
+  const [pendingDestructive, setPendingDestructive] = useState<PendingDestructiveAction | null>(
+    null
+  );
   const [semesterDialog, setSemesterDialog] = useState<{
     schoolYearId: string;
     title: string;
@@ -104,9 +137,29 @@ export function CalendarStructureView({ schoolYears }: CalendarStructureViewProp
     setSemesterDialog({ schoolYearId, title, initialSemester, onSubmit });
   }
 
+  function confirmDestructive() {
+    if (!pendingDestructive) return;
+    const action = pendingDestructive;
+    setPendingDestructive(null);
+    if (action.type === "archive") {
+      const formData = new FormData();
+      formData.append("id", action.schoolYearId);
+      void runAction(action.schoolYearId, `archive:${action.schoolYearId}`, () =>
+        archiveSchoolYearAction(formData)
+      );
+      return;
+    }
+    const formData = new FormData();
+    formData.append("periodId", action.termId);
+    formData.append("target", "CANCELLED");
+    void runAction(action.schoolYearId, `cancel:${action.termId}`, () =>
+      transitionPeriodStatusAction(formData)
+    );
+  }
+
   if (schoolYears.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-lg border bg-card p-8 text-center text-sm">
+      <div className="text-muted-foreground bg-card rounded-lg border p-8 text-center text-sm">
         No school years yet. Create one to start building the academic calendar.
       </div>
     );
@@ -124,57 +177,53 @@ export function CalendarStructureView({ schoolYears }: CalendarStructureViewProp
             pendingAction={pendingAction}
             actionError={errorFor}
             onActivate={() =>
-            openSemesterDialog(
-              year.id,
-              AcademicSemester.FIRST,
-              "Activate School Year",
-              async (semester) => {
+              openSemesterDialog(
+                year.id,
+                AcademicSemester.FIRST,
+                "Activate School Year",
+                async (semester) => {
+                  const formData = new FormData();
+                  formData.append("id", year.id);
+                  formData.append("semester", semester);
+                  return activateSchoolYearAction(formData);
+                }
+              )
+            }
+            onDeactivate={() =>
+              runAction(year.id, `deactivate:${year.id}`, async () => {
                 const formData = new FormData();
                 formData.append("id", year.id);
+                return deactivateSchoolYearAction(formData);
+              })
+            }
+            onArchive={() =>
+              setPendingDestructive({ type: "archive", schoolYearId: year.id, code: year.code })
+            }
+            onSetSemester={(semester) =>
+              runAction(year.id, `semester:${year.id}`, async () => {
+                const formData = new FormData();
+                formData.append("schoolYearId", year.id);
                 formData.append("semester", semester);
-                return activateSchoolYearAction(formData);
-              }
-            )
-          }
-          onDeactivate={() =>
-            runAction(year.id, `deactivate:${year.id}`, async () => {
-              const formData = new FormData();
-              formData.append("id", year.id);
-              return deactivateSchoolYearAction(formData);
-            })
-          }
-          onArchive={() =>
-            runAction(year.id, `archive:${year.id}`, async () => {
-              const formData = new FormData();
-              formData.append("id", year.id);
-              return archiveSchoolYearAction(formData);
-            })
-          }
-          onSetSemester={(semester) =>
-            runAction(year.id, `semester:${year.id}`, async () => {
-              const formData = new FormData();
-              formData.append("schoolYearId", year.id);
-              formData.append("semester", semester);
-              return setActiveSemesterAction(formData);
-            })
-          }
-          onMakeActive={(term) => setSettingActiveTerm(term)}
-          onComplete={(termId) =>
-            runAction(year.id, `complete:${termId}`, async () => {
-              const formData = new FormData();
-              formData.append("periodId", termId);
-              formData.append("target", "COMPLETED");
-              return transitionPeriodStatusAction(formData);
-            })
-          }
-          onCancel={(termId) =>
-            runAction(year.id, `cancel:${termId}`, async () => {
-              const formData = new FormData();
-              formData.append("periodId", termId);
-              formData.append("target", "CANCELLED");
-              return transitionPeriodStatusAction(formData);
-            })
-          }
+                return setActiveSemesterAction(formData);
+              })
+            }
+            onMakeActive={(term) => setSettingActiveTerm(term)}
+            onComplete={(termId) =>
+              runAction(year.id, `complete:${termId}`, async () => {
+                const formData = new FormData();
+                formData.append("periodId", termId);
+                formData.append("target", "COMPLETED");
+                return transitionPeriodStatusAction(formData);
+              })
+            }
+            onCancel={(term) =>
+              setPendingDestructive({
+                type: "cancel",
+                schoolYearId: year.id,
+                termId: term.id,
+                label: `${year.code} — ${termLabel(term.term)}`,
+              })
+            }
           />
         );
       })}
@@ -208,6 +257,32 @@ export function CalendarStructureView({ schoolYears }: CalendarStructureViewProp
           }}
         />
       )}
+
+      <AlertDialog
+        open={!!pendingDestructive}
+        onOpenChange={(open: boolean) => !open && !pendingAction && setPendingDestructive(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDestructive?.type === "archive"
+                ? "Archive this School Year?"
+                : "Cancel this term?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDestructive?.type === "archive"
+                ? `${pendingDestructive.code} will be archived and can no longer be activated or modified. This cannot be undone.`
+                : `${pendingDestructive?.label} will be cancelled permanently. This cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!pendingAction}>Keep Current State</AlertDialogCancel>
+            <Button variant="destructive" onClick={confirmDestructive} loading={!!pendingAction}>
+              {pendingDestructive?.type === "archive" ? "Archive School Year" : "Cancel Term"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -222,7 +297,7 @@ interface SchoolYearCardProps {
   onSetSemester: (semester: AcademicSemester) => void;
   onMakeActive: (term: TermInstanceItem) => void;
   onComplete: (termId: string) => void;
-  onCancel: (termId: string) => void;
+  onCancel: (term: TermInstanceItem) => void;
 }
 
 function SchoolYearCard({
@@ -241,7 +316,7 @@ function SchoolYearCard({
   const busy = pendingAction !== null;
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="bg-card overflow-hidden rounded-lg border">
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="flex items-center gap-3">
           <span className="text-lg font-semibold">{year.code}</span>
@@ -295,7 +370,6 @@ function SchoolYearCard({
     </div>
   );
 }
-
 interface SchoolYearHeaderActionsProps {
   yearId: string;
   isActive: boolean;
@@ -366,7 +440,7 @@ interface SemesterSectionProps {
   onSetSemester: (semester: AcademicSemester) => void;
   onMakeActive: (term: TermInstanceItem) => void;
   onComplete: (termId: string) => void;
-  onCancel: (termId: string) => void;
+  onCancel: (term: TermInstanceItem) => void;
 }
 
 function SemesterSection({
@@ -385,9 +459,9 @@ function SemesterSection({
 }: SemesterSectionProps) {
   return (
     <div className="border-b last:border-b-0">
-      <div className="flex items-center justify-between bg-muted/50 px-4 py-2">
+      <div className="bg-muted/50 flex items-center justify-between px-4 py-2">
         <div className="flex items-center gap-3">
-          <span className="font-medium text-sm">{getSemesterLabel(semester)}</span>
+          <span className="text-sm font-medium">{getSemesterLabel(semester)}</span>
           {isActiveSemester && <Badge variant="success">Active semester</Badge>}
         </div>
         {yearActive && !archived && (
@@ -435,7 +509,7 @@ interface TermActionsProps {
   busy: boolean;
   onMakeActive: (term: TermInstanceItem) => void;
   onComplete: (termId: string) => void;
-  onCancel: (termId: string) => void;
+  onCancel: (term: TermInstanceItem) => void;
 }
 
 function TermActions({
@@ -472,7 +546,7 @@ function TermActions({
         <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
         Complete
       </Button>
-      <Button variant="outline" size="sm" onClick={() => onCancel(term.id)} disabled={busy}>
+      <Button variant="outline" size="sm" onClick={() => onCancel(term)} disabled={busy}>
         <XCircle className="mr-1 h-3.5 w-3.5" />
         Cancel
       </Button>
@@ -531,7 +605,10 @@ function SemesterSelectionDialog({
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="semester-select">Semester</Label>
-            <Select value={semester} onValueChange={(value) => setSemester(value as AcademicSemester)}>
+            <Select
+              value={semester}
+              onValueChange={(value) => setSemester(value as AcademicSemester)}
+            >
               <SelectTrigger id="semester-select" className="w-full">
                 <SelectValue />
               </SelectTrigger>
