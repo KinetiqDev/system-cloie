@@ -30,7 +30,7 @@ The same Course may appear multiple times in one version (e.g., in different sem
 
 ### 3. PUBLISHED immutability enforced in the application layer
 
-PUBLISHED and RETIRED `CurriculumVersion` records and their `CurriculumCourse` rows reject all mutation at the service layer (e.g., "Published curricula are immutable", "Only published or retired curricula can be cloned"). Revisions use clone → edit → publish: `cloneCurriculumVersion` copies the source's placements and snapshots into a new DRAFT (code suffixed `-COPY`, `-COPY-2`, ...), keeping major scope and name but resetting status, effectivity, and publish metadata. Database-level triggers were considered and rejected — they would complicate legitimate clone-then-edit workflows.
+PUBLISHED and RETIRED `CurriculumVersion` records and their `CurriculumCourse` rows reject all mutation at the service layer (e.g., "Published curricula are immutable", "Only published or retired curricula can be cloned"). Revisions use clone → edit → publish: `cloneCurriculumVersion` copies the source's placements and snapshots into a new DRAFT (code suffixed `-COPY`, `-COPY-2`, ...), keeping major scope and name but resetting status, effectivity, and publish metadata. Database-level triggers were considered and rejected — they would complicate legitimate clone-then-edit workflows. The RLS write policies additionally restrict direct authenticated writes to DRAFT rows (migration `20260811063000_restrict_curriculum_writes_to_draft.sql`), closing the direct PostgREST bypass while lifecycle transitions remain on the Prisma service role.
 
 ### 4. RETIRED means historical, not hidden
 
