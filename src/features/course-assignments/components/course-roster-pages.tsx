@@ -443,7 +443,11 @@ export function CourseRosterDetailPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <RosterFilters data={data} />
+          <RosterFilters
+            data={data}
+            assignmentId={assignment.assignmentId}
+            rosterBasePath={rosterBasePath}
+          />
           <RosterTable
             members={data.members}
             includeRemoved={data.includeRemoved}
@@ -462,7 +466,21 @@ export function CourseRosterDetailPage({
   );
 }
 
-function RosterFilters({ data }: { data: CourseRosterDetail }) {
+function RosterFilters({
+  data,
+  assignmentId,
+  rosterBasePath,
+}: {
+  data: CourseRosterDetail;
+  assignmentId: string;
+  rosterBasePath?: string;
+}) {
+  const sortParams = new URLSearchParams({
+    search: data.search,
+    sort: data.sortDirection === "asc" ? "desc" : "asc",
+  });
+  if (data.includeRemoved) sortParams.set("removed", "1");
+
   return (
     <form method="get" className="flex flex-col gap-4" role="search">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -484,16 +502,25 @@ function RosterFilters({ data }: { data: CourseRosterDetail }) {
         </Button>
       </div>
       <input type="hidden" name="sort" value={data.sortDirection} />
-      <label className="flex min-h-11 items-center gap-3 text-sm">
-        <input
-          type="checkbox"
-          name="removed"
-          value="1"
-          defaultChecked={data.includeRemoved}
-          className="accent-primary size-4"
-        />
-        Include removed students
-      </label>
+      <div className="flex flex-wrap items-center gap-4">
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            name="removed"
+            value="1"
+            defaultChecked={data.includeRemoved}
+            className="accent-primary size-4"
+          />
+          Include removed students
+        </label>
+        <Link
+          href={`${rosterBasePath ?? "/course-rosters"}/${assignmentId}?${sortParams}`}
+          aria-label={`Sort by name ${data.sortDirection === "asc" ? "descending" : "ascending"}`}
+          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+        >
+          Sort by name {data.sortDirection === "asc" ? "descending" : "ascending"}
+        </Link>
+      </div>
     </form>
   );
 }

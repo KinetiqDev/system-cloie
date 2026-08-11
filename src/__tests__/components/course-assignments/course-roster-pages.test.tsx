@@ -214,13 +214,19 @@ describe("course roster pages", () => {
     expect(screen.getByText("2", { selector: '[data-slot="card-title"]' })).toBeInTheDocument();
   });
 
-  it("omits the name sort control from roster filters", () => {
+  it("provides a name sort control that preserves roster filters and route scope", () => {
     render(
-      <CourseRosterDetailPage data={{ ...detail, sortDirection: "desc" }} />
+      <CourseRosterDetailPage
+        data={{ ...detail, search: "grace", includeRemoved: true, sortDirection: "desc" }}
+        programId="program-1"
+        rosterBasePath="/program-head/programs/program-1/course-rosters"
+      />
     );
 
-    expect(screen.queryByRole("link", { name: /sort by name/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/sort by name/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sort by name ascending" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/course-rosters/assignment-1?search=grace&sort=asc&removed=1"
+    );
     expect(document.querySelector('input[name="sort"]')).toHaveValue("desc");
   });
 
