@@ -310,6 +310,12 @@ Point `DATABASE_URL` at a disposable test database — never a shared Supabase p
 - `src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts`
 - `src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts`
 
+The destructive dedicated-demo migration replay has a separate gate. Run it only after confirming that the linked Supabase project is the isolated demo target:
+
+```bash
+RUN_DEMO_RESET_INTEGRATION_TESTS=1 pnpm vitest run src/__tests__/scripts/demo-reset-fresh-replay.test.ts
+```
+
 ### Testing Patterns
 
 For modules using React `cache()`, tests must reset modules:

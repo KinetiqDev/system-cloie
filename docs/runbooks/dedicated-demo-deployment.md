@@ -56,11 +56,11 @@ Before accepting an authenticated trace, verify the deployment marker, database 
 1. Create or select the isolated demo Supabase project or disposable PostgreSQL database. Confirm that its database URL is not the primary Production target.
 2. Configure the normal application environment plus the four server-only `CLOIE_DEMO_*` values. Do not configure them on primary Production.
 3. Confirm `SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_SUPABASE_URL`, `DATABASE_URL`, and `DIRECT_URL` all identify `CLOIE_DEMO_SUPABASE_PROJECT_REF`, and that it differs from `CLOIE_PRIMARY_SUPABASE_PROJECT_REF`.
-4. Run `pnpm demo:reset`. It validates that positive identity before it can invoke Prisma, force-resets the isolated database, applies the schema, and seeds known fixtures.
+4. Run `pnpm supabase:link` with `SUPABASE_PROJECT_REF` set to the dedicated demo project, then run `pnpm demo:reset`. The reset validates that the CLI's linked project matches the configured demo identity before it can invoke Supabase, resets the isolated database through the linked migration history (including SQL-only triggers and policies), generates Prisma, and seeds known fixtures.
 5. Build and start the production server with `pnpm build` and `pnpm start`.
 6. Verify the deployment boundary before browser work: run `pnpm verify:production-auth-boundary` against primary Production and `pnpm verify:dedicated-demo-auth-boundary` against the dedicated demo deployment.
 
-Reset before repeatable traces and after demonstrations with `pnpm demo:reset`. Do not use `pnpm db:push` or `pnpm db:seed` as a demo reset procedure: they do not establish target identity and do not remove arbitrary mutations. The reset command fails before running Prisma unless every configured project identifier agrees with the dedicated demo project and rejects the configured primary Production project.
+Reset before repeatable traces and after demonstrations with `pnpm demo:reset`. Do not use `pnpm db:push` or `pnpm db:seed` as a demo reset procedure: they do not establish target identity and do not remove arbitrary mutations. The reset command fails before running Supabase or Prisma unless every configured project identifier and the CLI's linked project agree with the dedicated demo project; it also rejects the configured primary Production project.
 
 ## Rollback And Incident Disable
 

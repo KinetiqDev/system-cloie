@@ -61,6 +61,26 @@ describe("dedicated demo database reset", () => {
     expect(runCommand).not.toHaveBeenCalled();
   });
 
+  it("rejects a stale Supabase CLI link before the destructive reset", () => {
+    const runCommand = vi.fn();
+
+    expect(() =>
+      resetDemoDatabase(createEnvironment(), runCommand, () => PRIMARY_PROJECT_REF)
+    ).toThrow('Supabase linked project is "primaryprojectref"');
+
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unlinked Supabase CLI project before the destructive reset", () => {
+    const runCommand = vi.fn();
+
+    expect(() => resetDemoDatabase(createEnvironment(), runCommand, () => null)).toThrow(
+      'Supabase linked project is "<unlinked>"'
+    );
+
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
   it("does not trust a demo-looking database username on an arbitrary host", () => {
     const runCommand = vi.fn();
 
@@ -77,13 +97,13 @@ describe("dedicated demo database reset", () => {
     expect(runCommand).not.toHaveBeenCalled();
   });
 
-  it("force-resets the validated demo target before generating and seeding fixtures", () => {
+  it("resets the validated demo target through migrations before generating and seeding fixtures", () => {
     const runCommand = vi.fn();
 
-    resetDemoDatabase(createEnvironment(), runCommand);
+    resetDemoDatabase(createEnvironment(), runCommand, () => DEMO_PROJECT_REF);
 
     expect(runCommand.mock.calls).toEqual([
-      ["prisma", ["db", "push", "--schema", "prisma", "--force-reset", "--accept-data-loss"]],
+      ["supabase", ["db", "reset", "--linked", "--no-seed", "--yes"]],
       ["prisma", ["generate", "--schema", "prisma"]],
       ["prisma", ["db", "seed"]],
     ]);

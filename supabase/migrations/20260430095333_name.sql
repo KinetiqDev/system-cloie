@@ -1,1 +1,1 @@
-ALTER TABLE "public"."gos" ADD COLUMN "order" integer NOT NULL DEFAULT 0;
+ALTER TABLE "public"."gos" ADD COLUMN IF NOT EXISTS "order" integer NOT NULL DEFAULT 0;
