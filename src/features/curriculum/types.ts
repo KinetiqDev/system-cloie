@@ -94,6 +94,17 @@ export interface CreateCurriculumVersionInput {
 }
 
 /**
+ * Input for updating a DRAFT Curriculum Version's metadata. Program and major
+ * scope are immutable; `name` and `effectiveFromSchoolYearId` accept explicit
+ * null to clear the stored value.
+ */
+export interface UpdateCurriculumVersionInput {
+  code?: string;
+  name?: string | null;
+  effectiveFromSchoolYearId?: string | null;
+}
+
+/**
  * Input for adding a Course placement to a DRAFT Curriculum Version.
  */
 export interface AddCurriculumCourseInput {

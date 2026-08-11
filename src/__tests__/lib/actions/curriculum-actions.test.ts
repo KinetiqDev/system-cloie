@@ -8,6 +8,7 @@ const revalidatePathMock = vi.hoisted(() => vi.fn());
 const resolveAuthSessionMock = vi.hoisted(() => vi.fn());
 const resolveProgramHeadContextMock = vi.hoisted(() => vi.fn());
 const createCurriculumVersionMock = vi.hoisted(() => vi.fn());
+const updateCurriculumVersionMock = vi.hoisted(() => vi.fn());
 const publishCurriculumVersionMock = vi.hoisted(() => vi.fn());
 const retireCurriculumVersionMock = vi.hoisted(() => vi.fn());
 const cloneCurriculumVersionMock = vi.hoisted(() => vi.fn());
@@ -26,6 +27,7 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 }));
 vi.mock("@/features/curriculum/services/manage-curriculum-versions", () => ({
   createCurriculumVersion: createCurriculumVersionMock,
+  updateCurriculumVersion: updateCurriculumVersionMock,
   publishCurriculumVersion: publishCurriculumVersionMock,
   retireCurriculumVersion: retireCurriculumVersionMock,
   cloneCurriculumVersion: cloneCurriculumVersionMock,
@@ -47,6 +49,7 @@ vi.mock("@/features/curriculum/services/read-curriculum-pages", () => ({
 
 import {
   createCurriculumVersionAction,
+  updateCurriculumVersionAction,
   addCurriculumCourseAction,
   cloneCurriculumVersionAction,
   publishCurriculumVersionAction,
@@ -127,12 +130,14 @@ describe("curriculum actions", () => {
   it("revalidates both routes for every curriculum mutation", async () => {
     vi.mocked(getCurriculumVersionProgramId).mockResolvedValue(PROGRAM_ID);
     getCurriculumCourseProgramIdMock.mockResolvedValue(PROGRAM_ID);
+    updateCurriculumVersionMock.mockResolvedValue({ success: true, data: { id: VERSION_ID } });
     retireCurriculumVersionMock.mockResolvedValue({ success: true, data: { id: VERSION_ID, status: "RETIRED" } });
     cloneCurriculumVersionMock.mockResolvedValue({ success: true, data: { id: VERSION_ID, code: "COPY" } });
     addCurriculumCourseMock.mockResolvedValue({ success: true, data: { id: VERSION_ID } });
     removeCurriculumCourseMock.mockResolvedValue({ success: true, data: { id: VERSION_ID } });
     updateCurriculumCourseMock.mockResolvedValue({ success: true, data: { id: VERSION_ID } });
 
+    await updateCurriculumVersionAction(VERSION_ID, { code: "BSIT-2031" });
     await retireCurriculumVersionAction(VERSION_ID);
     await cloneCurriculumVersionAction(VERSION_ID);
     await addCurriculumCourseAction({
@@ -145,7 +150,16 @@ describe("curriculum actions", () => {
     await removeCurriculumCourseAction(VERSION_ID);
     await updateCurriculumCourseAction(VERSION_ID, { yearLevel: "SECOND_YEAR" });
 
-    expect(revalidatePathMock).toHaveBeenCalledTimes(10);
+    expect(updateCurriculumVersionMock).toHaveBeenCalledWith(VERSION_ID, { code: "BSIT-2031" });
+    expect(revalidatePathMock).toHaveBeenCalledTimes(12);
+  });
+
+  it("rejects a malformed version metadata update before calling its service", async () => {
+    const result = await updateCurriculumVersionAction("not-a-uuid", { code: "BSIT-2031" });
+
+    expect(result).toEqual({ success: false, error: "Invalid curriculum version ID" });
+    expect(updateCurriculumVersionMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
   it("returns null detail for an unknown version without exposing data", async () => {

@@ -33,6 +33,7 @@ import {
   createCurriculumVersion,
   publishCurriculumVersion,
   retireCurriculumVersion,
+  updateCurriculumVersion,
 } from "@/features/curriculum/services/manage-curriculum-versions";
 
 const VERSION_ID = "11111111-1111-4111-8111-111111111111";
@@ -506,5 +507,168 @@ describe("manage-curriculum-versions / cloneCurriculumVersion", () => {
       success: false,
       error: "Program Head access is limited to assigned programs",
     });
+  });
+});
+
+describe("manage-curriculum-versions / updateCurriculumVersion", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary);
+    vi.mocked(prisma.$transaction).mockImplementation((callback) =>
+      callback(prisma as never)
+    );
+  });
+
+  it("updates DRAFT metadata without touching program or major scope", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue({
+      id: VERSION_ID,
+      status: "DRAFT",
+      program_id: PROGRAM_ID,
+    } as never);
+    vi.mocked(prisma.curriculumVersion.updateMany).mockResolvedValue({ count: 1 } as never);
+
+    const result = await updateCurriculumVersion(VERSION_ID, {
+      code: "BSIT-2031",
+      name: "2031 Curriculum",
+      effectiveFromSchoolYearId: null,
+    });
+
+    expect(result).toEqual({ success: true, data: { id: VERSION_ID } });
+    expect(prisma.curriculumVersion.updateMany).toHaveBeenCalledWith({
+      where: { id: VERSION_ID, status: "DRAFT" },
+      data: {
+        code: "BSIT-2031",
+        name: "2031 Curriculum",
+        effective_from_school_year_id: null,
+      },
+    });
+  });
+
+  it("applies only the supplied metadata fields", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue({
+      id: VERSION_ID,
+      status: "DRAFT",
+      program_id: PROGRAM_ID,
+    } as never);
+    vi.mocked(prisma.curriculumVersion.updateMany).mockResolvedValue({ count: 1 } as never);
+
+    await updateCurriculumVersion(VERSION_ID, { name: "Renamed" });
+
+    expect(prisma.curriculumVersion.updateMany).toHaveBeenCalledWith({
+      where: { id: VERSION_ID, status: "DRAFT" },
+      data: { name: "Renamed" },
+    });
+  });
+
+  it("rejects metadata edits on PUBLISHED versions", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue({
+      id: VERSION_ID,
+      status: "PUBLISHED",
+      program_id: PROGRAM_ID,
+    } as never);
+
+    const result = await updateCurriculumVersion(VERSION_ID, { code: "BSIT-2031" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Published curricula are immutable",
+    });
+    expect(prisma.curriculumVersion.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects metadata edits on RETIRED versions", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue({
+      id: VERSION_ID,
+      status: "RETIRED",
+      program_id: PROGRAM_ID,
+    } as never);
+
+    const result = await updateCurriculumVersion(VERSION_ID, { code: "BSIT-2031" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Published curricula are immutable",
+    });
+    expect(prisma.curriculumVersion.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects unknown versions", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue(null);
+
+    const result = await updateCurriculumVersion(VERSION_ID, { code: "BSIT-2031" });
+
+    expect(result).toEqual({ success: false, error: "Curriculum version not found" });
+  });
+
+  it("rejects a malformed version ID before touching the database", async () => {
+    const result = await updateCurriculumVersion("not-a-uuid", { code: "BSIT-2031" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid curriculum version ID",
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty update with no metadata fields", async () => {
+    const result = await updateCurriculumVersion(VERSION_ID, {});
+
+    expect(result).toEqual({
+      success: false,
+      error: "At least one metadata field is required",
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("reports a code collision with the program-scoped uniqueness message", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue({
+      id: VERSION_ID,
+      status: "DRAFT",
+      program_id: PROGRAM_ID,
+    } as never);
+    vi.mocked(prisma.curriculumVersion.updateMany).mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError("dup", { code: "P2002", clientVersion: "6" })
+    );
+
+    const result = await updateCurriculumVersion(VERSION_ID, { code: "BSIT-2026" });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'A curriculum with code "BSIT-2026" already exists for this program',
+    });
+  });
+
+  it("reports a concurrent change as retryable", async () => {
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue({
+      id: VERSION_ID,
+      status: "DRAFT",
+      program_id: PROGRAM_ID,
+    } as never);
+    vi.mocked(prisma.curriculumVersion.updateMany).mockResolvedValue({ count: 0 } as never);
+
+    const result = await updateCurriculumVersion(VERSION_ID, { code: "BSIT-2031" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Curriculum version changed; retry the edit",
+    });
+  });
+
+  it("rejects a Program Head editing outside their assignment set", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(programHead);
+    vi.mocked(prisma.curriculumVersion.findUnique).mockResolvedValue({
+      id: VERSION_ID,
+      status: "DRAFT",
+      program_id: PROGRAM_ID,
+    } as never);
+    vi.mocked(prisma.programHeadAssignment.findFirst).mockResolvedValue(null);
+
+    const result = await updateCurriculumVersion(VERSION_ID, { code: "BSIT-2031" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Program Head access is limited to assigned programs",
+    });
+    expect(prisma.curriculumVersion.updateMany).not.toHaveBeenCalled();
   });
 });

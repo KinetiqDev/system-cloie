@@ -26,6 +26,17 @@ The system SHALL allow removing a CurriculumCourse from a DRAFT CurriculumVersio
 - **WHEN** Secretary attempts to remove a CurriculumCourse from a PUBLISHED CurriculumVersion
 - **THEN** the operation is rejected
 
+### Requirement: Update Course placement in Curriculum Version
+The system SHALL allow updating a CurriculumCourse's year_level, semester, and term within a DRAFT CurriculumVersion. The update SHALL NOT rewrite the course code or title snapshots. Rejected for courses under PUBLISHED or RETIRED versions.
+
+#### Scenario: Move course placement within a draft
+- **WHEN** Secretary changes an existing CurriculumCourse placement from FIRST_YEAR/FIRST/FIRST_TERM to SECOND_YEAR/SECOND/SECOND_TERM in a DRAFT CurriculumVersion
+- **THEN** the placement is updated and the course code and title snapshots remain unchanged
+
+#### Scenario: Edit course under published version rejected
+- **WHEN** Secretary attempts to update a CurriculumCourse whose parent CurriculumVersion is PUBLISHED
+- **THEN** the operation is rejected with "Published curricula are immutable"
+
 ### Requirement: Same Course may appear multiple times
 The system SHALL allow the same Course to appear more than once within one CurriculumVersion (e.g., in different semesters), OR across different CurriculumVersions.
 

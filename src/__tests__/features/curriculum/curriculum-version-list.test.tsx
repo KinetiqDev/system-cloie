@@ -5,6 +5,7 @@ const publishMock = vi.hoisted(() => vi.fn());
 const retireMock = vi.hoisted(() => vi.fn());
 const cloneMock = vi.hoisted(() => vi.fn());
 const createVersionMock = vi.hoisted(() => vi.fn());
+const updateVersionMock = vi.hoisted(() => vi.fn());
 const detailMock = vi.hoisted(() => vi.fn());
 const curriculaSummaryMock = vi.hoisted(() => vi.fn());
 const courseOptionsMock = vi.hoisted(() => vi.fn());
@@ -16,6 +17,7 @@ vi.mock("@/lib/actions/curriculum-actions", () => ({
   retireCurriculumVersionAction: retireMock,
   cloneCurriculumVersionAction: cloneMock,
   createCurriculumVersionAction: createVersionMock,
+  updateCurriculumVersionAction: updateVersionMock,
   getCurriculumVersionDetailAction: detailMock,
   listProgramCurriculaSummaryAction: curriculaSummaryMock,
   listProgramCourseOptionsAction: courseOptionsMock,
@@ -171,6 +173,63 @@ describe("CurriculumVersionList", () => {
     expect(screen.queryByRole("button", { name: "Clone" })).not.toBeInTheDocument();
   });
 
+  it("shows an Edit button on DRAFT versions only", async () => {
+    await renderLoaded([DRAFT, PUBLISHED, RETIRED]);
+
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /PUBLISHED/ }));
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /RETIRED/ }));
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
+  it("edits a DRAFT version's metadata through the update action", async () => {
+    updateVersionMock.mockResolvedValue({ success: true, data: { id: "version-1" } });
+    await renderLoaded([DRAFT]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit Curriculum Version")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Code")).toHaveValue("BSIT-2030");
+
+    fireEvent.change(within(dialog).getByLabelText("Code"), {
+      target: { value: "BSIT-2031" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() =>
+      expect(updateVersionMock).toHaveBeenCalledWith("version-1", {
+        code: "BSIT-2031",
+        name: "2030 Curriculum",
+        effectiveFromSchoolYearId: null,
+      })
+    );
+    expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it("surfaces an edit failure inside the dialog", async () => {
+    updateVersionMock.mockResolvedValue({
+      success: false,
+      error: 'A curriculum with code "BSIT-2026" already exists for this program',
+    });
+    await renderLoaded([DRAFT]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Code"), {
+      target: { value: "BSIT-2026" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() =>
+      expect(
+        within(dialog).getByText('A curriculum with code "BSIT-2026" already exists for this program')
+      ).toBeInTheDocument()
+    );
+  });
+
   it("shows Retire and Clone on PUBLISHED versions, no Publish", async () => {
     await renderLoaded([PUBLISHED]);
 
@@ -315,6 +374,69 @@ describe("CurriculumVersionList", () => {
 
     fireEvent.click(await screen.findByText("BSED-2030"));
     await waitFor(() => expect(courseOptionsMock).toHaveBeenCalledWith("prog-2"));
+  });
+
+  it("recovers from a rejected curricula load with an inline retry", async () => {
+    curriculaSummaryMock
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce({ success: true, data: [DRAFT] });
+
+    render(<CurriculumVersionList programs={PROGRAMS} schoolYears={SCHOOL_YEARS} />);
+
+    const errorText = await screen.findByText("Unable to load curricula. Please try again.");
+    expect(errorText).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(await screen.findByText("BSIT-2030")).toBeInTheDocument();
+    expect(screen.queryByText("Unable to load curricula. Please try again.")).not.toBeInTheDocument();
+  });
+
+  it("recovers from a rejected version detail load", async () => {
+    detailMock.mockRejectedValueOnce(new Error("network"));
+    await renderLoaded([DRAFT]);
+
+    fireEvent.click(screen.getByText("BSIT-2030"));
+
+    expect(
+      await screen.findByText("Unable to load the curriculum. Please try again.")
+    ).toBeInTheDocument();
+
+    detailMock.mockResolvedValue({
+      success: true,
+      data: {
+        id: "version-1",
+        programId: "prog-1",
+        majorId: null,
+        code: "BSIT-2030",
+        name: null,
+        status: "DRAFT",
+        effectiveFromSchoolYearId: null,
+        publishedAt: null,
+        publishedBy: null,
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        program: { id: "prog-1", code: "BSIT", name: "BS Information Technology" },
+        major: null,
+        courses: [],
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Unable to load the curriculum. Please try again.")).not.toBeInTheDocument()
+    );
+    expect(detailMock.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("surfaces a safe failure when course options fail to load", async () => {
+    courseOptionsMock.mockRejectedValueOnce(new Error("network"));
+    await renderLoaded([DRAFT]);
+
+    fireEvent.click(screen.getByText("BSIT-2030"));
+
+    expect(await screen.findByText("Unable to load courses. Please try again.")).toBeInTheDocument();
   });
 
   it("fetches curricula for the selected program on demand", async () => {

@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -19,12 +27,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createCurriculumVersionAction } from "@/lib/actions/curriculum-actions";
+import {
+  createCurriculumVersionAction,
+  updateCurriculumVersionAction,
+} from "@/lib/actions/curriculum-actions";
 import { showToast } from "@/components/ui/toast";
-import type {
-  CurriculumPageProgram,
-  SchoolYearOption,
-} from "@/features/curriculum/types";
+import type { CurriculumPageProgram, SchoolYearOption } from "@/features/curriculum/types";
+
+export type CurriculumVersionEditTarget = {
+  id: string;
+  code: string;
+  name: string | null;
+  effectiveFromSchoolYearId: string | null;
+};
 
 interface CurriculumVersionFormProps {
   open: boolean;
@@ -32,13 +47,16 @@ interface CurriculumVersionFormProps {
   programs: CurriculumPageProgram[];
   schoolYears: SchoolYearOption[];
   defaultProgramId?: string;
+  version?: CurriculumVersionEditTarget | null;
   onSuccess?: () => void;
 }
 
 /**
- * Dialog form for creating a new DRAFT Curriculum Version. The program
- * selector appears only when multiple programs are offered (Secretary);
- * a single program is locked into place (Program Head).
+ * Dialog form for creating a new DRAFT Curriculum Version, or editing a DRAFT
+ * version's metadata when `version` is supplied. The program selector appears
+ * only when multiple programs are offered (Secretary); a single program is
+ * locked into place (Program Head). Editing never changes program or major
+ * scope.
  */
 export function CurriculumVersionForm({
   open,
@@ -46,21 +64,26 @@ export function CurriculumVersionForm({
   programs,
   schoolYears,
   defaultProgramId,
+  version,
   onSuccess,
 }: CurriculumVersionFormProps) {
   const [programId, setProgramId] = useState<string>(defaultProgramId ?? "");
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [effectiveFromSchoolYearId, setEffectiveFromSchoolYearId] = useState<string>("");
+  const [code, setCode] = useState(version?.code ?? "");
+  const [name, setName] = useState(version?.name ?? "");
+  const [effectiveFromSchoolYearId, setEffectiveFromSchoolYearId] = useState<string>(
+    version?.effectiveFromSchoolYearId ?? ""
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ program?: string; code?: string }>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const showProgramSelector = programs.length > 1;
+  const showProgramSelector = !version && programs.length > 1;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitError(null);
     const nextErrors: { program?: string; code?: string } = {};
-    if (!programId) nextErrors.program = "Select a program";
+    if (!version && !programId) nextErrors.program = "Select a program";
     if (!code.trim()) nextErrors.code = "Code is required";
     setErrors(nextErrors);
     if (nextErrors.program || nextErrors.code) return;
@@ -68,28 +91,39 @@ export function CurriculumVersionForm({
     setErrors({});
     setIsSubmitting(true);
 
-    createCurriculumVersionAction({
-      programId,
-      code: code.trim(),
-      name: name.trim() || null,
-      effectiveFromSchoolYearId: effectiveFromSchoolYearId || null,
-    })
+    const submit = version
+      ? updateCurriculumVersionAction(version.id, {
+          code: code.trim(),
+          name: name.trim() || null,
+          effectiveFromSchoolYearId: effectiveFromSchoolYearId || null,
+        })
+      : createCurriculumVersionAction({
+          programId,
+          code: code.trim(),
+          name: name.trim() || null,
+          effectiveFromSchoolYearId: effectiveFromSchoolYearId || null,
+        });
+
+    submit
       .then((result) => {
         if (result.success) {
-          showToast(`Curriculum version ${code.trim()} created as a draft`, "success");
-          setCode("");
-          setName("");
-          setEffectiveFromSchoolYearId("");
+          showToast(
+            version
+              ? `Curriculum version ${code.trim()} updated`
+              : `Curriculum version ${code.trim()} created as a draft`,
+            "success"
+          );
           onOpenChange(false);
           onSuccess?.();
         } else {
+          setSubmitError(result.error);
           showToast(result.error, "error");
         }
       })
       .finally(() => setIsSubmitting(false));
   }
 
-  const selectedProgram = showProgramSelector ? programId : defaultProgramId ?? "";
+  const selectedProgram = showProgramSelector ? programId : (defaultProgramId ?? "");
 
   const programHasError = !!errors.program;
 
@@ -98,19 +132,31 @@ export function CurriculumVersionForm({
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit} noValidate>
           <DialogHeader>
-            <DialogTitle>Create Curriculum Version</DialogTitle>
+            <DialogTitle>
+              {version ? "Edit Curriculum Version" : "Create Curriculum Version"}
+            </DialogTitle>
             <DialogDescription>
-              Create a new curriculum version draft for a program. Published and
-              retired curricula are immutable; new revisions start as drafts.
+              {version
+                ? "Update this draft's metadata. Published and retired curricula are immutable."
+                : "Create a new curriculum version draft for a program. Published and retired curricula are immutable; new revisions start as drafts."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            {submitError && (
+              <Alert variant="destructive">
+                <AlertCircle className="size-4" />
+                <AlertDescription>{submitError}</AlertDescription>
+              </Alert>
+            )}
             {showProgramSelector ? (
               <Field data-invalid={programHasError}>
                 <FieldLabel htmlFor="programId">Program</FieldLabel>
                 <FieldContent>
-                  <Select value={selectedProgram} onValueChange={(value) => setProgramId(value ?? "")}>
+                  <Select
+                    value={selectedProgram}
+                    onValueChange={(value) => setProgramId(value ?? "")}
+                  >
                     <SelectTrigger
                       id="programId"
                       className="w-full"
@@ -176,7 +222,9 @@ export function CurriculumVersionForm({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="effectiveFromSchoolYearId">Effective School Year (optional)</FieldLabel>
+              <FieldLabel htmlFor="effectiveFromSchoolYearId">
+                Effective School Year (optional)
+              </FieldLabel>
               <FieldContent>
                 <Select
                   value={effectiveFromSchoolYearId || null}
@@ -209,7 +257,7 @@ export function CurriculumVersionForm({
               Cancel
             </Button>
             <Button type="submit" loading={isSubmitting}>
-              {isSubmitting ? "Creating…" : "Create Draft"}
+              {isSubmitting ? "Saving…" : version ? "Save Changes" : "Create Draft"}
             </Button>
           </DialogFooter>
         </form>

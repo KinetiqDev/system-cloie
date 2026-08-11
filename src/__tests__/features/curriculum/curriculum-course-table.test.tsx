@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const addCourseMock = vi.hoisted(() => vi.fn());
 const removeCourseMock = vi.hoisted(() => vi.fn());
+const updateCourseMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/actions/curriculum-actions", () => ({
   addCurriculumCourseAction: addCourseMock,
   removeCurriculumCourseAction: removeCourseMock,
+  updateCurriculumCourseAction: updateCourseMock,
 }));
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
 
@@ -94,10 +96,11 @@ describe("CurriculumCourseTable", () => {
     );
 
     expect(screen.getByRole("button", { name: "Add Course" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit CS-101 placement" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove CS-101" })).toBeInTheDocument();
   });
 
-  it("hides add and remove buttons on PUBLISHED versions", () => {
+  it("hides add, edit, and remove buttons on PUBLISHED versions", () => {
     render(
       <CurriculumCourseTable
         version={makeVersion({ status: "PUBLISHED" })}
@@ -107,7 +110,47 @@ describe("CurriculumCourseTable", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Add Course" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Edit .* placement/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Remove/ })).not.toBeInTheDocument();
+  });
+
+  it("edits a DRAFT placement through the update action and preserves snapshots", async () => {
+    updateCourseMock.mockResolvedValue({ success: true, data: { id: "cc-1" } });
+    render(
+      <CurriculumCourseTable version={makeVersion()} courses={COURSE_OPTIONS} onChanged={() => {}} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit CS-101 placement" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit Course Placement")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/The approved course code and title snapshots stay unchanged/)
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Placement" }));
+
+    await waitFor(() =>
+      expect(updateCourseMock).toHaveBeenCalledWith("cc-1", {
+        yearLevel: "FIRST_YEAR",
+        semester: "FIRST",
+        term: "FIRST_TERM",
+      })
+    );
+  });
+
+  it("surfaces a placement update failure inside the dialog", async () => {
+    updateCourseMock.mockResolvedValue({ success: false, error: "Published curricula are immutable" });
+    render(
+      <CurriculumCourseTable version={makeVersion()} courses={COURSE_OPTIONS} onChanged={() => {}} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit CS-101 placement" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Placement" }));
+
+    await waitFor(() =>
+      expect(within(dialog).getByText("Published curricula are immutable")).toBeInTheDocument()
+    );
   });
 
   it("renders an empty state when a DRAFT has no courses", () => {

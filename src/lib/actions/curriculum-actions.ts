@@ -14,6 +14,7 @@ import {
   removeCurriculumCourseSchema,
   retireCurriculumVersionSchema,
   updateCurriculumCourseSchema,
+  updateCurriculumVersionSchema,
 } from "@/features/curriculum/schemas/curriculum";
 import {
   addCurriculumCourse,
@@ -25,6 +26,7 @@ import {
   createCurriculumVersion,
   publishCurriculumVersion,
   retireCurriculumVersion,
+  updateCurriculumVersion,
 } from "@/features/curriculum/services/manage-curriculum-versions";
 import {
   getCurriculumVersionDetail,
@@ -42,6 +44,7 @@ import type {
   CurriculumVersionDetail,
   CurriculumVersionSummaryItem,
   UpdateCurriculumCourseInput,
+  UpdateCurriculumVersionInput,
 } from "@/features/curriculum/types";
 import { buildProgramHeadCurriculaPath } from "@/lib/constants/program-head-routes";
 
@@ -81,15 +84,11 @@ async function findProgramIdForVersion(versionId: string): Promise<string | null
   return getCurriculumVersionProgramId(versionId);
 }
 
-async function authorizeCurriculumWrite(
-  programId: string
-): Promise<ServiceResult<null>> {
+async function authorizeCurriculumWrite(programId: string): Promise<ServiceResult<null>> {
   return authorizeCurriculumRead(programId);
 }
 
-export async function createCurriculumVersionAction(
-  input: CreateCurriculumVersionInput
-) {
+export async function createCurriculumVersionAction(input: CreateCurriculumVersionInput) {
   const parsed = createCurriculumVersionSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -100,6 +99,28 @@ export async function createCurriculumVersionAction(
 
   const result = await createCurriculumVersion(parsed.data);
   if (result.success) revalidateCurriculumRoutes(parsed.data.programId);
+  return result;
+}
+
+export async function updateCurriculumVersionAction(
+  id: string,
+  input: UpdateCurriculumVersionInput
+) {
+  const parsed = updateCurriculumVersionSchema.safeParse({ ...input, id });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const requestAccess = await authorizeCurriculumWriteRequest();
+  if (!requestAccess.success) return requestAccess;
+  const programId = await findProgramIdForVersion(parsed.data.id);
+  if (programId) {
+    const access = await authorizeCurriculumWrite(programId);
+    if (!access.success) return access;
+  }
+  const { id: versionId, ...metadata } = parsed.data;
+  const result = await updateCurriculumVersion(versionId, metadata);
+  if (result.success && programId) revalidateCurriculumRoutes(programId);
   return result;
 }
 
@@ -192,10 +213,7 @@ export async function removeCurriculumCourseAction(id: string) {
   return result;
 }
 
-export async function updateCurriculumCourseAction(
-  id: string,
-  input: UpdateCurriculumCourseInput
-) {
+export async function updateCurriculumCourseAction(id: string, input: UpdateCurriculumCourseInput) {
   const parsed = updateCurriculumCourseSchema.safeParse({ ...input, id });
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
