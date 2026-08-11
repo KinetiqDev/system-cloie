@@ -10,7 +10,7 @@ My Course Rosters is functionally complete but visually drifts from CLOIE's oper
 - Add an accessible List/Card view selector inspired by familiar file browsers while retaining CLOIE's institutional visual language and domain vocabulary.
 - Make List the default compact view and provide Card as an alternate responsive view; both present Course-assignment scope, lifecycle state, active-roster count, current evaluation-eligible count, and one clear open-roster action.
 - Store the selected presentation in validated URL state so it survives search, history filtering, pagination, refresh, bookmarks, and navigation without browser storage or client-owned server data.
-- Keep the route and assignment rendering server-owned, with only a narrow client interaction boundary for the shadcn/Base UI view selector.
+- Keep the route and assignment rendering server-owned, with two narrow Client Component leaves: the shadcn/Base UI view selector and a safe-error retry control.
 - Align route loading, empty, focus, touch, light/dark, and mobile/tablet/desktop states with `docs/design.md` and the production Design System.
 
 ## Capabilities
@@ -26,7 +26,7 @@ None. Existing Course-assignment discovery, authorization, lifecycle, count, sea
 ## Impact
 
 - **Affected contexts:** Course Catalog and Assignments; Design System.
-- **Affected modules:** Faculty Course-roster route URL parsing, Course-roster discovery Server Components, one narrow view-selector Client Component, shadcn/Base UI component inventory, route loading state, component/route tests, and production-surface inventory.
+- **Affected modules:** Faculty Course-roster route URL parsing, Course-roster discovery Server Components, narrow view-selector and retry Client Components, shadcn/Base UI component inventory, route loading state, component/route tests, and production-surface inventory.
 - **Related tracking:** builds on issue #136's authorized discovery behavior; issue #143 remains owner for complete browser-level roster workflow acceptance.
 - **Authorization:** unchanged. Faculty-only discovery and all Course-assignment detail authorization remain server-enforced.
 - **Privacy:** unchanged. Course-assignment roster data and counts remain request-scoped and are never shared-cached or fetched by a new client data layer.

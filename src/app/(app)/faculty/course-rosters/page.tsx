@@ -9,6 +9,7 @@ export const metadata = { title: "My Course Rosters - Faculty | CLOIE" };
 const searchParamsSchema = z.object({
   search: z.string().trim().max(100).optional(),
   history: z.enum(["1"]).optional(),
+  view: z.enum(["list", "card"]).default("list"),
   page: z
     .string()
     .regex(/^[1-9]\d*$/)
@@ -16,12 +17,36 @@ const searchParamsSchema = z.object({
     .optional(),
 });
 
+function buildCanonicalCourseRostersUrl({
+  page,
+  includePage,
+  search,
+  includeHistory,
+  view,
+}: {
+  page: number;
+  includePage: boolean;
+  search: string;
+  includeHistory: boolean;
+  view: "list" | "card";
+}) {
+  const params = new URLSearchParams();
+  if (includePage) params.set("page", String(page + 1));
+  if (search) params.set("search", search);
+  if (includeHistory) params.set("history", "1");
+  if (view === "card") params.set("view", "card");
+  const query = params.toString();
+
+  return `/faculty/course-rosters${query ? `?${query}` : ""}`;
+}
+
 export default async function FacultyCourseRostersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; history?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; history?: string; view?: string; page?: string }>;
 }) {
-  const parsed = searchParamsSchema.safeParse(await searchParams);
+  const requestedSearchParams = await searchParams;
+  const parsed = searchParamsSchema.safeParse(requestedSearchParams);
   if (!parsed.success) notFound();
   const result = await listAuthorizedCourseRosterAssignments({
     facultyOnly: true,
@@ -31,14 +56,26 @@ export default async function FacultyCourseRostersPage({
   });
   if (!result.success) {
     const supportSuffix = result.referenceId ? ` Support reference: ${result.referenceId}.` : "";
-    return <CourseRosterDiscoveryPage data={null} error={`${result.error}${supportSuffix}`} />;
+    return (
+      <CourseRosterDiscoveryPage
+        data={null}
+        error={`${result.error}${supportSuffix}`}
+        view={parsed.data.view}
+      />
+    );
   }
   const requestedPage = (parsed.data.page ?? 1) - 1;
-  if (result.data.page !== requestedPage) {
-    const params = new URLSearchParams({ page: String(result.data.page + 1) });
-    if (result.data.search) params.set("search", result.data.search);
-    if (result.data.includeHistory) params.set("history", "1");
-    redirect(`/faculty/course-rosters?${params}`);
+  const pageChanged = result.data.page !== requestedPage;
+  if (pageChanged || requestedSearchParams.view === "list") {
+    redirect(
+      buildCanonicalCourseRostersUrl({
+        page: result.data.page,
+        includePage: pageChanged || parsed.data.page !== undefined,
+        search: result.data.search,
+        includeHistory: result.data.includeHistory,
+        view: parsed.data.view,
+      })
+    );
   }
-  return <CourseRosterDiscoveryPage data={result.data} />;
+  return <CourseRosterDiscoveryPage data={result.data} view={parsed.data.view} />;
 }

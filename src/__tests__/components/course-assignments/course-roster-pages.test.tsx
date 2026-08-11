@@ -13,6 +13,15 @@ import type {
   CourseRosterDiscoveryResult,
 } from "@/features/course-assignments/types";
 
+const { replaceMock, refreshMock } = vi.hoisted(() => ({
+  replaceMock: vi.fn(),
+  refreshMock: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: replaceMock, refresh: refreshMock }),
+}));
+
 function mockMatchMedia(matches: boolean) {
   vi.stubGlobal(
     "matchMedia",
@@ -29,7 +38,10 @@ function mockMatchMedia(matches: boolean) {
   );
 }
 
-beforeEach(() => mockMatchMedia(true));
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockMatchMedia(true);
+});
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -98,18 +110,170 @@ const detail: CourseRosterDetail = {
 };
 
 describe("course roster pages", () => {
-  it("renders labelled discovery filters, counts, state, and open action", () => {
-    render(<CourseRosterDiscoveryPage data={discovery} />);
+  it("renders the complete default List presentation with one action and no Faculty identity", () => {
+    render(<CourseRosterDiscoveryPage data={discovery} view="list" />);
 
     expect(screen.getByRole("heading", { name: "My Course Rosters" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search assignments" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /include inactive/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /open roster/i })).toBeInTheDocument();
-    expect(screen.getByText("Evaluation-eligible")).toBeInTheDocument();
+    expect(screen.getByRole("toolbar", { name: "Course roster view" })).toBeInTheDocument();
+    const selectedList = screen.getByRole("button", { name: "List view" });
+    expect(selectedList).toHaveAttribute("aria-pressed", "true");
+    expect(selectedList).toHaveClass("aria-pressed:font-semibold");
+    expect(selectedList).toHaveClass("aria-pressed:shadow-sm");
+    expect(screen.getByRole("table", { name: "Course assignments" })).toBeInTheDocument();
+    for (const column of [
+      "Course",
+      "Program",
+      "Class",
+      "Academic Period",
+      "Active roster",
+      "Evaluation-eligible",
+      "State",
+      "Action",
+    ]) {
+      expect(screen.getByRole("columnheader", { name: column })).toBeInTheDocument();
+    }
+    expect(screen.getByText("CS101")).toBeInTheDocument();
+    expect(screen.getByText("Computer Science")).toBeInTheDocument();
+    expect(screen.getByText("2nd Year | Morning")).toBeInTheDocument();
+    expect(screen.getByText(discovery.items[0].termLabel)).toBeInTheDocument();
+    expect(
+      screen.getByText("Open roster", { selector: '[data-slot="badge"]' })
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Open roster" })).toHaveLength(1);
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+    expect(screen.queryByText("ada@example.com")).not.toBeInTheDocument();
+  });
+
+  it("renders complete Card facts, separate counts, one action, and no Faculty identity", () => {
+    render(
+      <CourseRosterDiscoveryPage
+        data={{
+          ...discovery,
+          items: [{ ...assignment, activeRosterCount: 3, evaluationEligibleCount: 2 }],
+        }}
+        view="card"
+      />
+    );
+
+    const selectedCard = screen.getByRole("button", { name: "Card view" });
+    expect(selectedCard).toHaveAttribute("aria-pressed", "true");
+    expect(selectedCard).toHaveClass("aria-pressed:font-semibold");
+    expect(selectedCard).toHaveClass("aria-pressed:shadow-sm");
+    expect(screen.queryByRole("table", { name: "Course assignments" })).not.toBeInTheDocument();
+    expect(screen.getByText("CS101", { selector: '[data-slot="card-title"]' })).toBeInTheDocument();
+    for (const label of ["Program", "Year level", "Class section", "Academic Period"]) {
+      expect(screen.getByText(label, { selector: "dt" })).toBeInTheDocument();
+    }
+    expect(screen.getByText("3", { selector: "dd" })).toBeInTheDocument();
+    expect(screen.getByText("2", { selector: "dd" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Open roster" })).toHaveLength(1);
+    expect(screen.queryByText(/Ada Lovelace|ada@example.com/)).not.toBeInTheDocument();
+  });
+
+  it("switches views with replace navigation, preserves scope, resets page, and ignores deselection", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage
+        data={{ ...discovery, search: "CS", includeHistory: true, page: 4 }}
+        view="list"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "List view" }));
+    expect(replaceMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Card view" }));
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/faculty/course-rosters?search=CS&history=1&view=card"
+    );
+
+    replaceMock.mockClear();
+    rerender(
+      <CourseRosterDiscoveryPage
+        data={{ ...discovery, search: "CS", includeHistory: true, page: 4 }}
+        view="card"
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "List view" }));
+    expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?search=CS&history=1");
+  });
+
+  it("preserves Card in the GET form and paginated links", () => {
+    render(
+      <CourseRosterDiscoveryPage
+        data={{ ...discovery, total: 40, search: "CS", includeHistory: true }}
+        view="card"
+      />
+    );
+
+    expect(document.querySelector('input[type="hidden"][name="view"]')).toHaveValue("card");
+    expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
+      "href",
+      "/faculty/course-rosters?page=2&search=CS&history=1&view=card"
+    );
+  });
+
+  it("distinguishes search-empty results and clears search while preserving history and Card", () => {
+    render(
+      <CourseRosterDiscoveryPage
+        data={{ ...discovery, items: [], total: 0, search: "missing", includeHistory: true }}
+        view="card"
+      />
+    );
+
+    expect(screen.getByText("No Course rosters match your search")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute(
+      "href",
+      "/faculty/course-rosters?history=1&view=card"
+    );
+  });
+
+  it("offers history when no current assignments exist and preserves Card", () => {
+    render(
+      <CourseRosterDiscoveryPage
+        data={{ ...discovery, items: [], total: 0, activePeriodId: null }}
+        view="card"
+      />
+    );
+
+    expect(screen.getByText("No current Course rosters")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Include assignment history" })).toHaveAttribute(
+      "href",
+      "/faculty/course-rosters?history=1&view=card"
+    );
+  });
+
+  it("distinguishes a history-inclusive zero state", () => {
+    render(
+      <CourseRosterDiscoveryPage
+        data={{ ...discovery, items: [], total: 0, includeHistory: true }}
+        view="list"
+      />
+    );
+
+    expect(screen.getByText("No Course rosters available")).toBeInTheDocument();
+    expect(
+      screen.getByText("No current or historical Course assignments are assigned to you.")
+    ).toBeInTheDocument();
+  });
+
+  it("keeps discovery errors opaque and provides an accessible current-URL retry", () => {
+    render(
+      <CourseRosterDiscoveryPage
+        data={null}
+        error="The roster request could not be completed. Support reference: safe-123."
+        view="list"
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/support reference: safe-123/i);
+    expect(screen.getByRole("alert")).not.toHaveTextContent(/prisma|database|sql/i);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refreshMock).toHaveBeenCalledOnce();
   });
 
   it("states active-roster management and lifecycle read-only scope in discovery copy", () => {
-    render(<CourseRosterDiscoveryPage data={discovery} />);
+    render(<CourseRosterDiscoveryPage data={discovery} view="list" />);
 
     expect(
       screen.getByText(/review and manage active Course assignments you own/i)
