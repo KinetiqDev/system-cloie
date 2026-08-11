@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
+import { COURSE_ROSTER_MAX_ROWS } from "../services/course-roster-csv";
 import type {
   CourseRosterAssignmentSummary,
   CourseRosterDetail,
@@ -23,11 +24,10 @@ import type {
   RosterState,
 } from "../types";
 import {
-  AddRosterMember,
   RemoveRosterMember,
+  RosterManagementDialog,
   RestoreRosterMember,
 } from "./course-roster-management";
-import { ImportRosterCsv } from "./course-roster-management";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
   UNKNOWN_ACCOUNT: "Unknown account",
@@ -95,6 +95,51 @@ function AssignmentContext({ assignment }: { assignment: CourseRosterAssignmentS
   );
 }
 
+function RosterDetailContext({ assignment }: { assignment: CourseRosterAssignmentSummary }) {
+  return (
+    <dl className="bg-card grid gap-x-6 gap-y-3 rounded-xl border p-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex min-w-0 flex-col gap-1">
+        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
+          Course code
+        </dt>
+        <dd className="font-medium">{assignment.courseCode}</dd>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
+          Course title
+        </dt>
+        <dd className="font-medium">{assignment.courseTitle}</dd>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
+          Program
+        </dt>
+        <dd>
+          {assignment.programName} ({assignment.programCode})
+        </dd>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
+          Year level
+        </dt>
+        <dd>{getYearLevelDisplay(assignment.yearLevel)}</dd>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
+          Class section
+        </dt>
+        <dd>{getSectionLabel(assignment.section)}</dd>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1 sm:col-span-2 lg:col-span-1">
+        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
+          Academic Period
+        </dt>
+        <dd>{assignment.termLabel}</dd>
+      </div>
+    </dl>
+  );
+}
+
 function CountCards({
   activeRosterCount,
   evaluationEligibleCount,
@@ -104,13 +149,13 @@ function CountCards({
       <Card size="sm">
         <CardHeader>
           <CardDescription>Active roster</CardDescription>
-          <CardTitle className="text-2xl tabular-nums">{activeRosterCount}</CardTitle>
+          <CardTitle className="text-heading-xl tabular-nums">{activeRosterCount}</CardTitle>
         </CardHeader>
       </Card>
       <Card size="sm">
         <CardHeader>
           <CardDescription>Currently evaluation-eligible</CardDescription>
-          <CardTitle className="text-2xl tabular-nums">{evaluationEligibleCount}</CardTitle>
+          <CardTitle className="text-heading-xl tabular-nums">{evaluationEligibleCount}</CardTitle>
         </CardHeader>
       </Card>
     </div>
@@ -360,14 +405,26 @@ export function CourseRosterDetailPage({
         </div>
       </div>
 
-      <AssignmentContext assignment={assignment} />
+      <RosterDetailContext assignment={assignment} />
       <RosterStateBanner state={assignment.rosterState} />
       <CountCards
         activeRosterCount={data.activeRosterCount}
         evaluationEligibleCount={data.evaluationEligibleCount}
       />
-      {canWrite && <AddRosterMember assignmentId={assignment.assignmentId} programId={programId} />}
-      {canWrite && <ImportRosterCsv assignmentId={assignment.assignmentId} programId={programId} />}
+      {canWrite && (
+        <Card>
+          <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-col gap-1">
+              <CardTitle>Manage roster</CardTitle>
+              <CardDescription>
+                Add one Student, or import up to {COURSE_ROSTER_MAX_ROWS} Students from a CSV.
+                Review per-row results before closing.
+              </CardDescription>
+            </div>
+            <RosterManagementDialog assignmentId={assignment.assignmentId} programId={programId} />
+          </CardHeader>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -378,7 +435,11 @@ export function CourseRosterDetailPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <RosterFilters data={data} assignmentId={assignment.assignmentId} rosterBasePath={rosterBasePath} />
+          <RosterFilters
+            data={data}
+            assignmentId={assignment.assignmentId}
+            rosterBasePath={rosterBasePath}
+          />
           <RosterTable
             members={data.members}
             includeRemoved={data.includeRemoved}
@@ -386,7 +447,11 @@ export function CourseRosterDetailPage({
             canWrite={canWrite}
             programId={programId}
           />
-          <DetailPagination data={data} assignmentId={assignment.assignmentId} rosterBasePath={rosterBasePath} />
+          <DetailPagination
+            data={data}
+            assignmentId={assignment.assignmentId}
+            rosterBasePath={rosterBasePath}
+          />
         </CardContent>
       </Card>
     </div>
@@ -563,7 +628,11 @@ function RosterTable({
               {canWrite && (
                 <td className="px-3 py-4">
                   {member.isActive ? (
-                    <RemoveRosterMember assignment={assignment} member={member} programId={programId} />
+                    <RemoveRosterMember
+                      assignment={assignment}
+                      member={member}
+                      programId={programId}
+                    />
                   ) : (
                     <RestoreRosterMember
                       assignmentId={assignment.assignmentId}

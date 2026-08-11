@@ -38,7 +38,7 @@ export function WizardStepper({ steps, currentStep, className }: WizardStepperPr
             <div className="flex flex-col items-center gap-1 px-1">
               <div
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors",
+                  "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors motion-reduce:transition-none",
                   isCompleted && "bg-primary text-primary-foreground",
                   isActive &&
                     "bg-primary text-primary-foreground ring-primary ring-2 ring-offset-2",
@@ -62,7 +62,7 @@ export function WizardStepper({ steps, currentStep, className }: WizardStepperPr
             {!isLast && (
               <div
                 className={cn(
-                  "mx-1 mb-4 h-px flex-1 transition-colors",
+                  "mx-1 mb-4 h-px flex-1 transition-colors motion-reduce:transition-none",
                   i < currentIndex ? "bg-primary" : "bg-border"
                 )}
               />
