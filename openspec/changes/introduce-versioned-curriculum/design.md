@@ -7,6 +7,7 @@ Stakeholders require: stable Course identity, versioned placement within curricu
 ## Goals / Non-Goals
 
 **Goals:**
+
 - `CurriculumVersion` with DRAFT/PUBLISHED/RETIRED lifecycle, owned by Program
 - `CurriculumCourse` linking stable Course identity to versioned placement
 - Published immutability; revisions via clone→edit→publish
@@ -14,6 +15,7 @@ Stakeholders require: stable Course identity, versioned placement within curricu
 - Baseline DRAFT generation from existing Course temporal defaults as migration hints
 
 **Non-Goals:**
+
 - Curriculum rules engine (prerequisites, sequencing, credit tracking)
 - Per-student curriculum affiliation tracking
 - Drag-and-drop curriculum builder
@@ -75,6 +77,8 @@ cloneCurriculumVersion(id): creates new DRAFT with same courses
 
 **Rationale:** Database-level immutability (triggers) would complicate legitimate clone-then-edit workflows. Application-layer guard with clear error messages is sufficient and simpler to evolve.
 
+The RLS write policies additionally require the target CurriculumVersion — or, for a CurriculumCourse, its parent version — to be `status = 'DRAFT'` (migration `20260811063000_restrict_curriculum_writes_to_draft.sql`). This closes the direct PostgREST/Supabase bypass for PUBLISHED and RETIRED rows while keeping lifecycle transitions on the Prisma service role, which bypasses RLS.
+
 ### Decision 4: RETIRED means historical, not hidden
 
 Inactive Course (`is_active = false`) and RETIRED Curriculum remain fully queryable. Historical queries filter on `status` explicitly rather than generic `is_active` filters. Adding `curriculum_course_id` to `CourseAssignment` in the next change enables historical traceability.
@@ -111,6 +115,19 @@ src/features/curriculum/
 ```
 
 Follows the modular monolith pattern used by other features. Services are `"use server"`. Components are Client Components where interactivity requires it (forms, dialogs).
+
+### Decision 8: Curriculum routes are role-navigation destinations
+
+`src/lib/constants/navigation.ts` remains the single declaration point for role navigation. The Secretary navigation includes a static `/secretary/curricula` destination. The Program Head navigation includes a `programHeadChildPath: "curricula"` destination so `getProgramHeadNav` resolves it to the selected Program's canonical `/program-head/programs/[programId]/curricula` path.
+
+The existing Sidebar and MobileSidebarDrawer consume these getters, so no role-specific navigation renderer changes. The shared deepest-route matcher continues to expose `aria-current="page"` only on the active destination. The design-system navigation showcase identifies its Course Assignments fixture by route rather than array position, preventing unrelated navigation insertions from changing showcase content.
+
+**Affected paths:**
+
+- Modify `src/lib/constants/navigation.ts`
+- Modify `src/features/design-system/components/navigation-showcase.tsx`
+- Modify `src/__tests__/lib/navigation.test.ts`
+- Modify `src/__tests__/components/sidebar.test.tsx`
 
 ## Risks / Trade-offs
 

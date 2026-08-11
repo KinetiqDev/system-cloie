@@ -31,6 +31,19 @@ describe("navigation helpers", () => {
     );
   });
 
+  it("exposes curricula management to Secretary and Program Head users", () => {
+    const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
+    expect(secretaryNav.find((item) => item.href === "/secretary/curricula")?.name).toBe(
+      "Curricula"
+    );
+
+    const programHeadNav = getProgramHeadNav("/program-head/programs/program-2/curricula");
+    expect(
+      programHeadNav.find((item) => item.href === "/program-head/programs/program-2/curricula")
+        ?.name
+    ).toBe("Curricula");
+  });
+
   it("orders faculty navigation correctly", () => {
     expect(getMainNavByRoles([ROLES.FACULTY]).map((item) => item.name)).toEqual([
       "Dashboard",
@@ -67,6 +80,7 @@ describe("navigation helpers", () => {
     expect(hrefs).toEqual([
       "/program-head/programs/program-2/dashboard",
       "/program-head/programs/program-2/courses",
+      "/program-head/programs/program-2/curricula",
       "/program-head/programs/program-2/course-assignments",
       "/program-head/programs/program-2/outcomes",
       "/program-head/programs/program-2/tools",
@@ -78,6 +92,7 @@ describe("navigation helpers", () => {
 
   it("returns Program Head management navigation to entry when no context is selected", () => {
     expect(getProgramHeadNav("/program-head/profile").map((item) => item.href)).toEqual([
+      "/program-head",
       "/program-head",
       "/program-head",
       "/program-head",
@@ -108,7 +123,9 @@ describe("navigation helpers", () => {
       "/dean/college-oversight",
       "/dean/profile",
     ]);
-    expect(getMobileNavByRoles([ROLES.DEAN]).map((item) => item.href)).toEqual(deanNav.map((item) => item.href));
+    expect(getMobileNavByRoles([ROLES.DEAN]).map((item) => item.href)).toEqual(
+      deanNav.map((item) => item.href)
+    );
   });
 
   it("prefers dean and program-head navigation over faculty navigation for multi-role reviewers", () => {
@@ -122,9 +139,7 @@ describe("navigation helpers", () => {
 
   it("uses one highest role for navigation and layout decisions", () => {
     expect(getHighestNavRole([ROLES.DEAN, ROLES.SECRETARY])).toBe(ROLES.SECRETARY);
-    expect(getMainNavByRoles([ROLES.DEAN, ROLES.SECRETARY])[0]?.href).toBe(
-      "/secretary/dashboard"
-    );
+    expect(getMainNavByRoles([ROLES.DEAN, ROLES.SECRETARY])[0]?.href).toBe("/secretary/dashboard");
     expect(getMobileNavByRoles([ROLES.DEAN, ROLES.SECRETARY])[0]?.href).toBe(
       "/secretary/dashboard"
     );
@@ -136,11 +151,14 @@ describe("navigation helpers", () => {
 
   it("marks deepest Dean route active and keeps its parent group discoverable", () => {
     expect(getDeanActiveItem("/dean/academic-structure/courses/abc/edit")?.name).toBe("Courses");
-    expect(getDeanActiveGroup("/dean/academic-structure/courses/abc/edit")?.name).toBe("Academic Structure");
-    expect(getDeanNavGroups().find((group) => group.name === "College Oversight")?.items.map((item) => item.name)).toEqual([
-      "Learning Outcomes",
-      "Enrollments",
-    ]);
+    expect(getDeanActiveGroup("/dean/academic-structure/courses/abc/edit")?.name).toBe(
+      "Academic Structure"
+    );
+    expect(
+      getDeanNavGroups()
+        .find((group) => group.name === "College Oversight")
+        ?.items.map((item) => item.name)
+    ).toEqual(["Learning Outcomes", "Enrollments"]);
   });
 
   it.each([

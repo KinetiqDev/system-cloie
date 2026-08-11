@@ -66,18 +66,55 @@ const SECRETARY_NAV: NavItem[] = [
   { name: "School Years", href: "/secretary/school-years", icon: Calendar },
   { name: "Programs", href: "/secretary/programs", icon: Building2 },
   { name: "Courses", href: "/secretary/courses", icon: BookOpen },
+  { name: "Curricula", href: "/secretary/curricula", icon: Layers3 },
   { name: "Course Assignments", href: "/secretary/course-assignments", icon: UsersRound },
   { name: "Tools", href: "/secretary/instruments", icon: ClipboardList },
 ];
 
 const PROGRAM_HEAD_NAV: NavItem[] = [
-  { name: "Dashboard", href: "/program-head/dashboard", icon: LayoutDashboard, programHeadChildPath: "dashboard" },
-  { name: "Courses", href: "/program-head/courses", icon: BookOpen, programHeadChildPath: "courses" },
-  { name: "Course Assignments", href: "/program-head/course-assignments", icon: UsersRound, programHeadChildPath: "course-assignments" },
-  { name: "Outcomes", href: "/program-head/outcomes", icon: Layers3, programHeadChildPath: "outcomes" },
+  {
+    name: "Dashboard",
+    href: "/program-head/dashboard",
+    icon: LayoutDashboard,
+    programHeadChildPath: "dashboard",
+  },
+  {
+    name: "Courses",
+    href: "/program-head/courses",
+    icon: BookOpen,
+    programHeadChildPath: "courses",
+  },
+  {
+    name: "Curricula",
+    href: "/program-head/curricula",
+    icon: Layers3,
+    programHeadChildPath: "curricula",
+  },
+  {
+    name: "Course Assignments",
+    href: "/program-head/course-assignments",
+    icon: UsersRound,
+    programHeadChildPath: "course-assignments",
+  },
+  {
+    name: "Outcomes",
+    href: "/program-head/outcomes",
+    icon: Layers3,
+    programHeadChildPath: "outcomes",
+  },
   { name: "Tools", href: "/program-head/tools", icon: FileText, programHeadChildPath: "tools" },
-  { name: "Analytics", href: "/program-head/analytics", icon: BarChart3, programHeadChildPath: "analytics" },
-  { name: "Reports", href: "/program-head/reports", icon: FileText, programHeadChildPath: "reports" },
+  {
+    name: "Analytics",
+    href: "/program-head/analytics",
+    icon: BarChart3,
+    programHeadChildPath: "analytics",
+  },
+  {
+    name: "Reports",
+    href: "/program-head/reports",
+    icon: FileText,
+    programHeadChildPath: "reports",
+  },
   { name: "Profile", href: "/program-head/profile", icon: UserCircle },
 ];
 
@@ -101,11 +138,12 @@ export function getProgramHeadNav(pathname = PROGRAM_HEAD_ENTRY_PATH): NavItem[]
 
     return {
       ...item,
-      href: childPath && programId
-        ? buildProgramHeadProgramPath(programId, childPath)
-        : childPath
-          ? PROGRAM_HEAD_ENTRY_PATH
-          : item.href,
+      href:
+        childPath && programId
+          ? buildProgramHeadProgramPath(programId, childPath)
+          : childPath
+            ? PROGRAM_HEAD_ENTRY_PATH
+            : item.href,
     };
   });
 }
