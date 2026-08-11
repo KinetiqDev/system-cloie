@@ -1,7 +1,7 @@
 ---
 description: Research official documentation, dependency behavior, upstream source, and version-specific guidance for System CLOIE
 mode: subagent
-model: 9router/ocg/deepseek-v4-flash
+model: 9router/ps/poolside/laguna-s-2.1(xhigh)
 temperature: 0.1
 steps: 12
 
