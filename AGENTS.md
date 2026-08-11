@@ -102,7 +102,7 @@ The gate is enforced by `describe.skipIf(!process.env.DATABASE_URL || process.en
 
 ### Demo Deployment Verification
 
-- `pnpm demo:reset` — destructive reset of the isolated demo database. Validates `CLOIE_DEMO_SUPABASE_PROJECT_REF` identity before invoking Prisma. Fails if any project identifier matches `CLOIE_PRIMARY_SUPABASE_PROJECT_REF`.
+- `pnpm demo:reset` — destructive reset of the isolated demo database. Validates `CLOIE_DEMO_SUPABASE_PROJECT_REF` and the linked Supabase project identity before invoking Supabase or Prisma. Fails if any project identifier matches `CLOIE_PRIMARY_SUPABASE_PROJECT_REF`.
 - `pnpm verify:production-auth-boundary` — confirms primary Production remains OAuth-only.
 - `pnpm verify:dedicated-demo-auth-boundary` — confirms demo deployment has signed-session auth active.
 - `pnpm verify:demo-target-isolation` — validates the demo target is properly isolated.
