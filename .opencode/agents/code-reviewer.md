@@ -64,8 +64,6 @@ permission:
     domain-modeling: allow
     codebase-design: allow
     ui-ux-pro-max: allow
-    a11y-debugging: allow
-    fallow: allow
 
   external_directory: deny
   webfetch: deny
