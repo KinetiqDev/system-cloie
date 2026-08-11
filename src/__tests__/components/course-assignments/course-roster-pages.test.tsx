@@ -181,6 +181,14 @@ describe("course roster pages", () => {
     expect(screen.getByRole("button", { name: /remove/i })).toBeInTheDocument();
   });
 
+  it("places management action at card end on desktop", () => {
+    render(<CourseRosterDetailPage data={detail} />);
+
+    const action = screen.getByRole("button", { name: /manage roster/i }).parentElement;
+    expect(action).toHaveAttribute("data-slot", "card-action");
+    expect(action).toHaveClass("sm:justify-self-end");
+  });
+
   it("presents labelled assignment context and distinct prepared counts", () => {
     render(
       <CourseRosterDetailPage
@@ -204,6 +212,16 @@ describe("course roster pages", () => {
     }
     expect(screen.getByText("3", { selector: '[data-slot="card-title"]' })).toBeInTheDocument();
     expect(screen.getByText("2", { selector: '[data-slot="card-title"]' })).toBeInTheDocument();
+  });
+
+  it("omits the name sort control from roster filters", () => {
+    render(
+      <CourseRosterDetailPage data={{ ...detail, sortDirection: "desc" }} />
+    );
+
+    expect(screen.queryByRole("link", { name: /sort by name/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/sort by name/i)).not.toBeInTheDocument();
+    expect(document.querySelector('input[name="sort"]')).toHaveValue("desc");
   });
 
   it("preserves selected Program roster navigation and action scope", async () => {
@@ -326,13 +344,17 @@ describe("course roster pages", () => {
     render(<CourseRosterDetailPage data={detail} programId="program-1" />);
     fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("tablist", { name: "Roster management methods" })).toHaveAttribute(
+      "data-variant",
+      "pill"
+    );
     expect(screen.getByRole("tab", { name: /import from csv/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /download template/i }));
     expect(createObjectURL).toHaveBeenCalled();
     expect(click).toHaveBeenCalled();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:test");
 
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = screen.getByLabelText("Roster CSV file");
     const file = new File(["email\nok@example.com\nbad@example.com\n"], "roster.csv", {
       type: "text/csv",
     });
