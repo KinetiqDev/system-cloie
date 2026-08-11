@@ -127,6 +127,9 @@ export function CurriculumCourseTable({ version, courses, onChanged }: Curriculu
           showToast(result.error, "error");
         }
       })
+      .catch(() => {
+        showToast("Unable to remove the course. Please try again.", "error");
+      })
       .finally(() => setIsMutating(false));
   }
 
@@ -168,78 +171,15 @@ export function CurriculumCourseTable({ version, courses, onChanged }: Curriculu
           </EmptyDescription>
         </Empty>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <SortableHead
-                  label="Code"
-                  active={sortKey === "code"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("code")}
-                />
-                <SortableHead
-                  label="Title"
-                  active={sortKey === "title"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("title")}
-                />
-                <SortableHead
-                  label="Year Level"
-                  active={sortKey === "yearLevel"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("yearLevel")}
-                />
-                <SortableHead
-                  label="Semester"
-                  active={sortKey === "semester"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("semester")}
-                />
-                <SortableHead
-                  label="Term"
-                  active={sortKey === "term"}
-                  direction={sortDirection}
-                  onClick={() => toggleSort("term")}
-                />
-                {isDraft && <TableHead className="w-12" aria-label="Actions" />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedCourses.map((course) => (
-                <TableRow key={course.id}>
-                  <TableCell className="font-medium">{course.courseCodeSnapshot}</TableCell>
-                  <TableCell>{course.courseTitleSnapshot}</TableCell>
-                  <TableCell>{getYearLevelDisplay(course.yearLevel)}</TableCell>
-                  <TableCell>{getSemesterLabel(course.semester)}</TableCell>
-                  <TableCell>{course.term ? getTermLabel(course.term) : "—"}</TableCell>
-                  {isDraft && (
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Edit ${course.courseCodeSnapshot} placement`}
-                          onClick={() => setEditCourse(course)}
-                        >
-                          <Pencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Remove ${course.courseCodeSnapshot}`}
-                          onClick={() => setRemoveCourse(course)}
-                        >
-                          <Trash2 className="text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <CourseTableBody
+          courses={sortedCourses}
+          isDraft={isDraft}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onToggleSort={toggleSort}
+          onEdit={setEditCourse}
+          onRemove={setRemoveCourse}
+        />
       )}
 
       {version && isDraft && (
@@ -315,6 +255,99 @@ function SortableHead({
   );
 }
 
+function CourseTableBody({
+  courses,
+  isDraft,
+  sortKey,
+  sortDirection,
+  onToggleSort,
+  onEdit,
+  onRemove,
+}: {
+  courses: CurriculumVersionDetail["courses"];
+  isDraft: boolean;
+  sortKey: SortKey;
+  sortDirection: SortDirection;
+  onToggleSort: (key: SortKey) => void;
+  onEdit: (course: CurriculumVersionDetail["courses"][number]) => void;
+  onRemove: (course: CurriculumVersionDetail["courses"][number]) => void;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <SortableHead
+              label="Code"
+              active={sortKey === "code"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("code")}
+            />
+            <SortableHead
+              label="Title"
+              active={sortKey === "title"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("title")}
+            />
+            <SortableHead
+              label="Year Level"
+              active={sortKey === "yearLevel"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("yearLevel")}
+            />
+            <SortableHead
+              label="Semester"
+              active={sortKey === "semester"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("semester")}
+            />
+            <SortableHead
+              label="Term"
+              active={sortKey === "term"}
+              direction={sortDirection}
+              onClick={() => onToggleSort("term")}
+            />
+            {isDraft && <TableHead className="w-12" aria-label="Actions" />}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {courses.map((course) => (
+            <TableRow key={course.id}>
+              <TableCell className="font-medium">{course.courseCodeSnapshot}</TableCell>
+              <TableCell>{course.courseTitleSnapshot}</TableCell>
+              <TableCell>{getYearLevelDisplay(course.yearLevel)}</TableCell>
+              <TableCell>{getSemesterLabel(course.semester)}</TableCell>
+              <TableCell>{course.term ? getTermLabel(course.term) : "—"}</TableCell>
+              {isDraft && (
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Edit ${course.courseCodeSnapshot} placement`}
+                      onClick={() => onEdit(course)}
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Remove ${course.courseCodeSnapshot}`}
+                      onClick={() => onRemove(course)}
+                    >
+                      <Trash2 className="text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 interface AddCourseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -385,6 +418,7 @@ function AddCourseDialog({
           setError(result.error);
         }
       })
+      .catch(() => setError("Unable to add the course. Please try again."))
       .finally(() => setIsSubmitting(false));
   }
 
@@ -589,6 +623,7 @@ function EditPlacementDialog({ open, onOpenChange, course, onChanged }: EditPlac
           setError(result.error);
         }
       })
+      .catch(() => setError("Unable to update the course placement. Please try again."))
       .finally(() => setIsSubmitting(false));
   }
 

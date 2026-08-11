@@ -9,10 +9,7 @@ vi.mock("@/lib/actions/curriculum-actions", () => ({
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
 
 import { CurriculumVersionForm } from "@/features/curriculum/components/curriculum-version-form";
-import type {
-  CurriculumPageProgram,
-  SchoolYearOption,
-} from "@/features/curriculum/types";
+import type { CurriculumPageProgram, SchoolYearOption } from "@/features/curriculum/types";
 
 const PROGRAMS: CurriculumPageProgram[] = [
   { id: "prog-1", code: "BSIT", name: "BS Information Technology" },
@@ -49,7 +46,12 @@ describe("CurriculumVersionForm", () => {
 
   it("requires a program when more than one is offered", async () => {
     render(
-      <CurriculumVersionForm open onOpenChange={() => {}} programs={PROGRAMS} schoolYears={SCHOOL_YEARS} />
+      <CurriculumVersionForm
+        open
+        onOpenChange={() => {}}
+        programs={PROGRAMS}
+        schoolYears={SCHOOL_YEARS}
+      />
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Create Draft" }));
@@ -59,7 +61,14 @@ describe("CurriculumVersionForm", () => {
   });
 
   it("shows a program error when no program exists", async () => {
-    render(<CurriculumVersionForm open onOpenChange={() => {}} programs={[]} schoolYears={SCHOOL_YEARS} />);
+    render(
+      <CurriculumVersionForm
+        open
+        onOpenChange={() => {}}
+        programs={[]}
+        schoolYears={SCHOOL_YEARS}
+      />
+    );
 
     fireEvent.change(screen.getByLabelText("Code"), { target: { value: "BSIT-2030" } });
     fireEvent.click(screen.getByRole("button", { name: "Create Draft" }));
@@ -129,5 +138,26 @@ describe("CurriculumVersionForm", () => {
       name: null,
       effectiveFromSchoolYearId: null,
     });
+  });
+
+  it("surfaces a rejected create inside the dialog", async () => {
+    createVersionMock.mockRejectedValue(new Error("network"));
+    render(
+      <CurriculumVersionForm
+        open
+        onOpenChange={() => {}}
+        programs={[PROGRAMS[0]]}
+        schoolYears={SCHOOL_YEARS}
+        defaultProgramId="prog-1"
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Code"), { target: { value: "BSIT-2030" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create Draft" }));
+
+    expect(
+      await screen.findByText("Unable to save the curriculum version. Please try again.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

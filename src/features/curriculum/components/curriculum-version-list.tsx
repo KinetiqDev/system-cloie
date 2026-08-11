@@ -51,6 +51,8 @@ import type {
 } from "@/features/curriculum/types";
 
 type VersionStatus = CurriculumVersionSummaryItem["status"];
+type LoadErrorScope = "curricula" | "detail" | "options";
+type LoadErrors = Record<LoadErrorScope, string | null>;
 type ConfirmAction = {
   type: "publish" | "retire" | "clone";
   version: CurriculumVersionSummaryItem;
@@ -98,10 +100,11 @@ export function CurriculumVersionList({
   const [createOpen, setCreateOpen] = useState(false);
   const [editingVersion, setEditingVersion] = useState<CurriculumVersionSummaryItem | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
-  const [loadError, setLoadError] = useState<{
-    scope: "curricula" | "detail" | "options";
-    message: string;
-  } | null>(null);
+  const [loadErrors, setLoadErrors] = useState<LoadErrors>({
+    curricula: null,
+    detail: null,
+    options: null,
+  });
   const [actionError, setActionError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const detailRequestRef = useRef(0);
@@ -122,19 +125,19 @@ export function CurriculumVersionList({
       if (versionId !== selectedVersionIdRef.current) return;
       setDetailLoading(false);
       if (result.success) {
-        setLoadError((prev) => (prev?.scope === "detail" ? null : prev));
+        setLoadErrors((prev) => ({ ...prev, detail: null }));
         setVersionDetail(result.data);
       } else {
-        setLoadError({ scope: "detail", message: result.error });
+        setLoadErrors((prev) => ({ ...prev, detail: result.error }));
         setVersionDetail(null);
       }
     } catch {
       if (requestId !== detailRequestRef.current) return;
       setDetailLoading(false);
-      setLoadError({
-        scope: "detail",
-        message: "Unable to load the curriculum. Please try again.",
-      });
+      setLoadErrors((prev) => ({
+        ...prev,
+        detail: "Unable to load the curriculum. Please try again.",
+      }));
       setVersionDetail(null);
     }
   }, []);
@@ -147,16 +150,19 @@ export function CurriculumVersionList({
       if (programId !== selectedProgramIdRef.current) return;
       setCurriculaLoading(false);
       if (result.success) {
-        setLoadError((prev) => (prev?.scope === "curricula" ? null : prev));
+        setLoadErrors((prev) => ({ ...prev, curricula: null }));
         setCurricula(result.data);
       } else {
-        setLoadError({ scope: "curricula", message: result.error });
+        setLoadErrors((prev) => ({ ...prev, curricula: result.error }));
         setCurricula([]);
       }
     } catch {
       if (requestId !== curriculaRequestRef.current) return;
       setCurriculaLoading(false);
-      setLoadError({ scope: "curricula", message: "Unable to load curricula. Please try again." });
+      setLoadErrors((prev) => ({
+        ...prev,
+        curricula: "Unable to load curricula. Please try again.",
+      }));
       setCurricula([]);
     }
   }, []);
@@ -168,21 +174,24 @@ export function CurriculumVersionList({
       if (requestId !== courseOptionsRequestRef.current) return;
       if (programId !== selectedProgramIdRef.current) return;
       if (result.success) {
-        setLoadError((prev) => (prev?.scope === "options" ? null : prev));
+        setLoadErrors((prev) => ({ ...prev, options: null }));
         setCourseOptions(result.data);
       } else {
-        setLoadError({ scope: "options", message: result.error });
+        setLoadErrors((prev) => ({ ...prev, options: result.error }));
         setCourseOptions([]);
       }
     } catch {
       if (requestId !== courseOptionsRequestRef.current) return;
-      setLoadError({ scope: "options", message: "Unable to load courses. Please try again." });
+      setLoadErrors((prev) => ({
+        ...prev,
+        options: "Unable to load courses. Please try again.",
+      }));
       setCourseOptions([]);
     }
   }, []);
 
-  function retryLoad(scope: "curricula" | "detail" | "options") {
-    setLoadError((prev) => (prev?.scope === scope ? null : prev));
+  function retryLoad(scope: LoadErrorScope) {
+    setLoadErrors((prev) => ({ ...prev, [scope]: null }));
     if (scope === "curricula") {
       const programId = selectedProgramIdRef.current;
       if (programId) {
@@ -262,6 +271,7 @@ export function CurriculumVersionList({
     selectedVersionIdRef.current = null;
     setVersionDetail(null);
     setCourseOptions([]);
+    setLoadErrors({ curricula: null, detail: null, options: null });
     curriculaRequestRef.current++;
     courseOptionsRequestRef.current++;
     detailRequestRef.current++;
@@ -303,11 +313,11 @@ export function CurriculumVersionList({
 
       {curriculaLoading ? (
         <CurriculaSkeleton />
-      ) : loadError?.scope === "curricula" ? (
+      ) : loadErrors.curricula ? (
         <Alert variant="destructive" className="flex-col items-start gap-3">
           <div className="flex items-start gap-2">
             <AlertCircle className="size-4 shrink-0" />
-            <AlertDescription>{loadError.message}</AlertDescription>
+            <AlertDescription>{loadErrors.curricula}</AlertDescription>
           </div>
           <Button variant="outline" size="sm" onClick={() => retryLoad("curricula")}>
             Retry
@@ -410,17 +420,7 @@ export function CurriculumVersionList({
           {detailLoading && !versionDetail && (
             <p className="text-muted-foreground text-sm">Loading courses…</p>
           )}
-          {(loadError?.scope === "detail" || loadError?.scope === "options") && (
-            <Alert variant="destructive" className="flex-col items-start gap-3">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="size-4 shrink-0" />
-                <AlertDescription>{loadError.message}</AlertDescription>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => retryLoad(loadError.scope)}>
-                Retry
-              </Button>
-            </Alert>
-          )}
+          <LoadErrorAlerts errors={loadErrors} onRetry={retryLoad} />
         </div>
       )}
 
@@ -473,6 +473,38 @@ type ConfirmLabels = {
   description: string;
   button: string;
 };
+
+/**
+ * Destructive alerts for failed version-detail and course-options loads, one
+ * per failed scope, each with its own retry control. Kept separate from the
+ * curricula-list error state so concurrent read failures stay independently
+ * retryable instead of one overwriting the other.
+ */
+function LoadErrorAlerts({
+  errors,
+  onRetry,
+}: {
+  errors: LoadErrors;
+  onRetry: (scope: LoadErrorScope) => void;
+}) {
+  const failedScopes = (["detail", "options"] as const).filter((scope) => errors[scope]);
+  if (failedScopes.length === 0) return null;
+  return (
+    <>
+      {failedScopes.map((scope) => (
+        <Alert key={scope} variant="destructive" className="flex-col items-start gap-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="size-4 shrink-0" />
+            <AlertDescription>{errors[scope]}</AlertDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => onRetry(scope)}>
+            Retry
+          </Button>
+        </Alert>
+      ))}
+    </>
+  );
+}
 
 /**
  * Structural loading placeholder for the curricula list: tab strip plus
