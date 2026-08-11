@@ -1,7 +1,7 @@
 ---
 description: Research official documentation, dependency behavior, upstream source, and version-specific guidance for System CLOIE
 mode: subagent
-model: 9router/ps/poolside/laguna-s-2.1(xhigh)
+model: 9router/cx/gpt-5.6-luna(xhigh)
 temperature: 0.1
 steps: 12
 
