@@ -4,10 +4,10 @@
 
 Before any implementation, design, or investigation, orient through these in order:
 
-1. **`openspec/config.yaml`** — canonical architecture, stack, rules, and workflow contract. The single source of truth.
-2. **`CONTEXT-MAP.md`** — index of domain contexts and their relationships.
-3. **`src/features/<domain>/CONTEXT.md`** — per-domain glossary, rules, and invariants for the area you're working in.
-4. **`docs/adr/`** — architectural decision records. Surface conflicts explicitly rather than silently overriding.
+1. `**openspec/config.yaml**` — canonical architecture, stack, rules, and workflow contract. The single source of truth.
+2. `**CONTEXT-MAP.md**` — index of domain contexts and their relationships.
+3. `**src/features/<domain>/CONTEXT.md**` — per-domain glossary, rules, and invariants for the area you're working in.
+4. `**docs/adr/**` — architectural decision records. Surface conflicts explicitly rather than silently overriding.
 5. **Existing code, tests, and GitHub issues** in the affected domain.
 
 The `openspec/config.yaml` rules section is binding — proposal, specs, design, and tasks must follow it. Run `pnpm lint` and `pnpm build` before considering any change complete.
@@ -20,14 +20,14 @@ The project uses two overlapping, complementary workflows. Which path you take d
 
 Artifact-driven change management: `proposal → design → specs → tasks`. Driven by the `openspec-*` skills:
 
-- **`openspec-explore`** — thinking partner for exploring ideas and clarifying requirements.
-- **`openspec-propose`** — draft proposal, design, specs, and tasks in one step.
-- **`openspec-ff-change`** — fast-forward through all artifacts when the direction is clear.
-- **`openspec-continue-change`** — progress a change by creating the next artifact.
-- **`openspec-apply-change`** — implement tasks from the change.
-- **`openspec-verify-change`** — validate implementation matches artifacts.
-- **`openspec-sync-specs`** — sync delta specs to main specs without archiving.
-- **`openspec-archive-change`** — archive a completed change.
+- `**openspec-explore**` — thinking partner for exploring ideas and clarifying requirements.
+- `**openspec-propose**` — draft proposal, design, specs, and tasks in one step.
+- `**openspec-ff-change**` — fast-forward through all artifacts when the direction is clear.
+- `**openspec-continue-change**` — progress a change by creating the next artifact.
+- `**openspec-apply-change**` — implement tasks from the change.
+- `**openspec-verify-change**` — validate implementation matches artifacts.
+- `**openspec-sync-specs**` — sync delta specs to main specs without archiving.
+- `**openspec-archive-change**` — archive a completed change.
 
 These skills live in `.opencode/skills/` and operate on `openspec/changes/<name>/` directories containing `proposal.md`, `design.md`, `specs/`, and `tasks.md`.
 
@@ -35,17 +35,18 @@ These skills live in `.opencode/skills/` and operate on `openspec/changes/<name>
 
 Conversation-driven planning and execution:
 
-- **`wayfinder`** — chart large explorations as a map of investigation tickets on the issue tracker. Resolve them one at a time until the route is clear. Never resolve more than one ticket per session.
-- **`grill-me`** / **`grill-with-docs`** — relentless interview to stress-test a plan or design. `grill-with-docs` also creates ADRs and glossary entries as decisions are resolved.
-- **`prototype`** — build a throwaway artifact (UI or logic) to sanity-check a design question.
-- **`to-spec`** — synthesize the current conversation into a published spec.
-- **`to-tickets`** — break a spec or plan into dependency-ordered vertical-slice tickets with blocking edges, published to GitHub Issues.
-- **`triage`** — move issues through the triage state machine (categorize, verify, grill, write agent-ready briefs).
-- **`ask-matt`** — route to the right skill for your situation.
+- `**wayfinder**` — chart large explorations as a map of investigation tickets on the issue tracker. Resolve them one at a time until the route is clear. Never resolve more than one ticket per session.
+- `**grill-me**` / `**grill-with-docs**` — relentless interview to stress-test a plan or design. `grill-with-docs` also creates ADRs and glossary entries as decisions are resolved.
+- `**prototype**` — build a throwaway artifact (UI or logic) to sanity-check a design question.
+- `**to-spec**` — synthesize the current conversation into a published spec.
+- `**to-tickets**` — break a spec or plan into dependency-ordered vertical-slice tickets with blocking edges, published to GitHub Issues.
+- `**triage**` — move issues through the triage state machine (categorize, verify, grill, write agent-ready briefs).
+- `**ask-matt**` — route to the right skill for your situation.
 
 ### Composing Them
 
 For a **big feature or refactor**:
+
 1. `openspec-explore` + `openspec-propose` → draft proposal, design, specs, tasks
 2. `grill-with-docs` → stress-test, resolve terminology, record ADRs and glossary
 3. `to-tickets` → split approved tasks into GitHub issues with dependency edges
@@ -54,11 +55,13 @@ For a **big feature or refactor**:
 6. `openspec-archive-change` → archive when done
 
 For **scouting without a clear destination**:
+
 1. `wayfinder` → chart a map of investigation tickets
 2. Resolve map tickets one at a time
 3. Resolved tickets feed into `openspec-propose` or `to-spec`
 
 For a **quick design question**:
+
 1. `prototype` → build a throwaway
 2. React, then decide whether it needs `openspec-propose` or just a quick `to-tickets`
 
@@ -202,36 +205,38 @@ Other reference: `docs/agents/discrepancies-prd-srs-vs-current.md` (known spec g
 
 ### Project Skills (`.agents/skills/`)
 
-| Category | Skills |
-| --- | --- |
-| **Planning & Tracking** | ask-matt, triage, to-spec, to-tickets, wayfinder |
-| **Architecture & Design** | codebase-design, domain-modeling, improve-codebase-architecture, prototype |
-| **UI/UX** | design-taste-frontend, shadcn, emil-design-eng, ui-ux-pro-max |
-| **Implementation & Testing** | implement, tdd, code-review |
-| **Debugging & Research** | a11y-debugging, chrome-devtools, debug-optimize-lcp, diagnosing-bugs, fallow, memory-leak-debugging, research, troubleshooting |
-| **Process & Docs** | grill-me, grill-with-docs, grilling, handoff, teach, write-a-skill, writing-great-skills |
-| **Framework** | next-best-practices, supabase, supabase-postgres-best-practices |
-| **Other** | agent-browser, setup-matt-pocock-skills, zoom-out, model-relay |
+
+| Category                         | Skills                                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Planning &amp; Tracking**      | ask-matt, triage, to-spec, to-tickets, wayfinder                                                                               |
+| **Architecture &amp; Design**    | codebase-design, domain-modeling, improve-codebase-architecture, prototype                                                     |
+| **UI/UX**                        | design-taste-frontend, shadcn, emil-design-eng, ui-ux-pro-max                                                                  |
+| **Implementation &amp; Testing** | implement, tdd, code-review                                                                                                    |
+| **Debugging &amp; Research**     | a11y-debugging, chrome-devtools, debug-optimize-lcp, diagnosing-bugs, fallow, memory-leak-debugging, research, troubleshooting |
+| **Process &amp; Docs**           | grill-me, grill-with-docs, grilling, handoff, teach, write-a-skill, writing-great-skills                                       |
+| **Framework**                    | next-best-practices, supabase, supabase-postgres-best-practices                                                                |
+| **Other**                        | agent-browser, setup-matt-pocock-skills, zoom-out, model-relay                                                                 |
+
 
 ### OpenSpec Skills (`.opencode/skills/`)
 
-| Category | Skills |
-| --- | --- |
-| **Change Management** | openspec-explore, openspec-propose, openspec-ff-change |
-| **Implementation** | openspec-apply-change, openspec-continue-change |
-| **Verification & Finalize** | openspec-verify-change, openspec-sync-specs, openspec-archive-change |
+
+| Category                        | Skills                                                               |
+| ------------------------------- | -------------------------------------------------------------------- |
+| **Change Management**           | openspec-explore, openspec-propose, openspec-ff-change               |
+| **Implementation**              | openspec-apply-change, openspec-continue-change                      |
+| **Verification &amp; Finalize** | openspec-verify-change, openspec-sync-specs, openspec-archive-change |
+
 
 ### Globally Installed Skills
 
 `~/.agents/skills/` — available across repos:
+
 - **find-skills** — Discover and install skills via `npx skills`
 - **git-commit** — Intelligent commit with convention message generation
-- **humanizer** — Remove signs of AI-generated writing from text
 
 ### MCP Tools
 
 - **context7** — Query current docs for any library, framework, SDK, or CLI
 - **fallow** — Codebase intelligence via the project-local `fallow-mcp` server (see the Code Intelligence section)
 - **supabase** — Schema, SQL, migrations, Edge Functions, project management
-- **notion** — Read/write pages, databases, comments; search workspace
-- **Chrome DevTools** — Browser automation (navigate, click, screenshot, trace, Lighthouse audit)
