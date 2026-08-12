@@ -8,13 +8,11 @@ describe("bootstrap outline defense demo", () => {
       assertSafeDemoUserReuse(
         {
           email: "faculty@acd.edu.ph",
-          first_name: "Alice",
-          last_name: "Santos",
+          name: "Alice Santos",
         },
         {
           email: "faculty@acd.edu.ph",
-          firstName: "Outline Demo",
-          lastName: "Faculty",
+          name: "Outline Demo Faculty",
         }
       )
     ).toThrowError(
@@ -27,15 +25,28 @@ describe("bootstrap outline defense demo", () => {
       assertSafeDemoUserReuse(
         {
           email: "faculty@acd.edu.ph",
-          first_name: "Outline Demo",
-          last_name: "Faculty",
+          name: "Outline Demo Faculty",
         },
         {
           email: "faculty@acd.edu.ph",
-          firstName: "Outline Demo",
-          lastName: "Faculty",
+          name: "Outline Demo Faculty",
         }
       )
     ).not.toThrow();
+  });
+
+  it("compares the complete canonical name rather than split first/last fields", () => {
+    expect(() =>
+      assertSafeDemoUserReuse(
+        {
+          email: "dean@acd.edu.ph",
+          name: "Outline Demo Dean",
+        },
+        {
+          email: "dean@acd.edu.ph",
+          name: "Outline Demo Faculty",
+        }
+      )
+    ).toThrowError(/does not match the outline defense demo marker/);
   });
 });

@@ -17,8 +17,8 @@ export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" |
   for (const u of allUsers) {
     await prisma.user.upsert({
       where: { id: u.id },
-      update: { email: u.email, first_name: u.fn, last_name: u.ln, is_active: true },
-      create: { id: u.id, email: u.email, first_name: u.fn, last_name: u.ln, is_active: true },
+      update: { email: u.email, name: u.name, is_active: true },
+      create: { id: u.id, email: u.email, name: u.name, is_active: true },
     });
     await prisma.userRole.upsert({
       where: { user_id: u.id },

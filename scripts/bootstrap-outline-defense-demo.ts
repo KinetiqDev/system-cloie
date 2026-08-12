@@ -33,18 +33,16 @@ function startOfNextWeek() {
 
 type DemoUserInput = {
   email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
 };
 
 type ExistingDemoUser = {
   email: string;
-  first_name: string;
-  last_name: string;
+  name: string;
 };
 
 export function assertSafeDemoUserReuse(existingUser: ExistingDemoUser, input: DemoUserInput) {
-  if (existingUser.first_name !== input.firstName || existingUser.last_name !== input.lastName) {
+  if (existingUser.name !== input.name) {
     throw new Error(
       `Refusing to reuse existing user ${input.email} because it does not match the outline defense demo marker.`
     );
@@ -60,9 +58,8 @@ async function ensureUser(input: DemoUserInput) {
     return prisma.user.create({
       data: {
         email: input.email,
-        first_name: input.firstName,
         is_active: true,
-        last_name: input.lastName,
+        name: input.name,
       },
     });
   }
@@ -124,23 +121,19 @@ async function main() {
 
   const faculty = await ensureUser({
     email: facultyEmail,
-    firstName: "Outline Demo",
-    lastName: "Faculty",
+    name: "Outline Demo Faculty",
   });
   const programHead = await ensureUser({
     email: programHeadEmail,
-    firstName: "Outline Demo",
-    lastName: "Program Head",
+    name: "Outline Demo Program Head",
   });
   const dean = await ensureUser({
     email: deanEmail,
-    firstName: "Outline Demo",
-    lastName: "Dean",
+    name: "Outline Demo Dean",
   });
   const student = await ensureUser({
     email: studentEmail,
-    firstName: "Outline Demo",
-    lastName: "Student",
+    name: "Outline Demo Student",
   });
 
   await Promise.all([
