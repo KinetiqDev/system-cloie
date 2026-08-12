@@ -68,7 +68,11 @@ describe("Secretary Users route", () => {
     [{ page: ["2", "3"] }, "/secretary/users?page=2"],
     [{ role: "NOT_A_ROLE", sort: "createdAt" }, "/secretary/users"],
     [{ page: "10001" }, "/secretary/users"],
-    [{ page: "1", sort: "lastName", dir: "asc" }, "/secretary/users"],
+    [{ page: "1", sort: "name", dir: "asc" }, "/secretary/users"],
+    // Legacy first/last sort bookmarks canonicalize to complete-name default.
+    [{ sort: "firstName" }, "/secretary/users"],
+    [{ sort: "lastName" }, "/secretary/users"],
+    [{ sort: "lastName", dir: "desc" }, "/secretary/users?sort=name&dir=desc"],
   ])("redirects non-canonical list URLs %#", async (rawParams, expectedPath) => {
     const Page = await loadPage();
     await expect(Page({ searchParams: Promise.resolve(rawParams) })).rejects.toThrow(

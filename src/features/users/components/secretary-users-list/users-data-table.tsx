@@ -84,9 +84,7 @@ export function UsersDataTable({
                 key={user.id}
                 className="motion-safe:transition-colors motion-safe:duration-150"
               >
-                <TableCell className="font-medium">
-                  {user.firstName} {user.lastName}
-                </TableCell>
+                <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>
                   {user.activeRole ? (
                     <Badge className={getRoleBadgeClass(user.activeRole)}>
@@ -151,9 +149,7 @@ export function UsersDataTable({
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-heading text-title-sm text-foreground">
-                    {user.firstName} {user.lastName}
-                  </h3>
+                  <h3 className="font-heading text-title-sm text-foreground">{user.name}</h3>
                   <div className="mt-1 flex items-center gap-2">
                     {user.activeRole ? (
                       <Badge className={getRoleBadgeClass(user.activeRole)}>
