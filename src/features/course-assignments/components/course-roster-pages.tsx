@@ -5,24 +5,46 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  History,
   LockKeyhole,
   Search,
+  SearchX,
   UsersRound,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
+import { cn } from "@/lib/utils";
 import { COURSE_ROSTER_MAX_ROWS } from "../services/course-roster-csv";
 import type {
   CourseRosterAssignmentSummary,
@@ -37,6 +59,8 @@ import {
   RosterManagementDialog,
   RestoreRosterMember,
 } from "./course-roster-management";
+import { CourseRosterRetry } from "./course-roster-retry";
+import { CourseRosterViewSelector, type CourseRosterViewMode } from "./course-roster-view-selector";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
   UNKNOWN_ACCOUNT: "Unknown account",
@@ -88,19 +112,6 @@ function RosterStateBanner({ state }: { state: RosterState }) {
       <AlertTitle>{rosterStateLabels[state]}</AlertTitle>
       <AlertDescription>{copy}</AlertDescription>
     </Alert>
-  );
-}
-
-function AssignmentContext({ assignment }: { assignment: CourseRosterAssignmentSummary }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-sm">
-      <Badge variant="outline">{assignment.courseCode}</Badge>
-      <span className="font-medium">{assignment.courseTitle}</span>
-      <span className="text-muted-foreground">{assignment.programCode}</span>
-      <span className="text-muted-foreground">{getYearLevelDisplay(assignment.yearLevel)}</span>
-      <span className="text-muted-foreground">{getSectionLabel(assignment.section)}</span>
-      <span className="text-muted-foreground">{assignment.termLabel}</span>
-    </div>
   );
 }
 
@@ -174,22 +185,22 @@ function CountCards({
 export function CourseRosterDiscoveryPage({
   data,
   error,
+  view,
 }: {
   data: CourseRosterDiscoveryResult | null;
   error?: string;
+  view: CourseRosterViewMode;
 }) {
   if (!data) {
-    return <SafeRosterError message={error ?? "The roster request could not be completed."} />;
+    return (
+      <CourseRosterDiscoveryError message={error ?? "The roster request could not be completed."} />
+    );
   }
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <div className="text-link flex items-center gap-2">
-          <UsersRound aria-hidden="true" />
-          <span className="text-sm font-medium">Faculty workspace</span>
-        </div>
         <h1 className="text-heading-lg">My Course Rosters</h1>
         <p className="text-body-md text-muted-foreground max-w-2xl">
           Review and manage active Course assignments you own. Historical, inactive,
@@ -197,51 +208,51 @@ export function CourseRosterDiscoveryPage({
         </p>
       </div>
 
-      <Card>
+      <Card size="sm">
         <CardHeader>
           <CardTitle>Find a Course roster</CardTitle>
           <CardDescription>
-            Active assignments in the current Academic Period are shown by default. Include history
-            to review inactive and completed assignments.
+            Search current assignments or include history to review inactive and completed Course
+            assignments.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form method="get" className="flex flex-col gap-4" role="search">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <label htmlFor="roster-search" className="text-sm font-medium">
-                  Search assignments
-                </label>
+          <form method="get" role="search">
+            {view === "card" && <input type="hidden" name="view" value="card" />}
+            <FieldGroup className="gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <Field>
+                <FieldLabel htmlFor="roster-search">Search assignments</FieldLabel>
                 <Input
                   id="roster-search"
                   name="search"
                   type="search"
                   defaultValue={data.search}
                   maxLength={100}
-                  placeholder="Course, program, or Faculty"
+                  placeholder="Course or program"
                 />
-              </div>
+              </Field>
               <Button type="submit" className="w-full sm:w-auto">
                 <Search data-icon="inline-start" aria-hidden="true" />
                 Search
               </Button>
-            </div>
-            <label className="flex min-h-11 items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                name="history"
-                value="1"
-                defaultChecked={data.includeHistory}
-                className="accent-primary size-4"
-              />
-              Include inactive and completed assignment history
-            </label>
+              <Field orientation="horizontal" className="min-h-11 sm:col-span-2 sm:w-fit">
+                <Checkbox
+                  id="roster-history"
+                  name="history"
+                  value="1"
+                  defaultChecked={data.includeHistory}
+                />
+                <FieldLabel htmlFor="roster-history">
+                  Include inactive and completed assignment history
+                </FieldLabel>
+              </Field>
+            </FieldGroup>
           </form>
         </CardContent>
       </Card>
 
       <section aria-labelledby="course-roster-results" className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 id="course-roster-results" className="text-heading-md">
               Course assignments
@@ -250,23 +261,21 @@ export function CourseRosterDiscoveryPage({
               {data.total} {data.total === 1 ? "assignment" : "assignments"} found
             </p>
           </div>
-          {data.includeHistory && <Badge variant="secondary">History included</Badge>}
+          <div className="flex flex-wrap items-center gap-2">
+            {data.includeHistory && <Badge variant="secondary">History included</Badge>}
+            <CourseRosterViewSelector
+              value={view}
+              search={data.search}
+              includeHistory={data.includeHistory}
+            />
+          </div>
         </div>
         {data.items.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-              <p className="font-medium">No Course rosters found</p>
-              <p className="text-muted-foreground text-sm">
-                Try a different search or include assignment history.
-              </p>
-            </CardContent>
-          </Card>
+          <CourseRosterDiscoveryEmptyState data={data} view={view} />
+        ) : view === "card" ? (
+          <CourseRosterCardGrid assignments={data.items} />
         ) : (
-          <div className="flex flex-col gap-3">
-            {data.items.map((assignment) => (
-              <AssignmentSummaryCard key={assignment.assignmentId} assignment={assignment} />
-            ))}
-          </div>
+          <CourseRosterList assignments={data.items} />
         )}
       </section>
 
@@ -275,49 +284,262 @@ export function CourseRosterDiscoveryPage({
         totalPages={totalPages}
         search={data.search}
         includeHistory={data.includeHistory}
+        view={view}
       />
     </div>
   );
 }
 
-function AssignmentSummaryCard({ assignment }: { assignment: CourseRosterAssignmentSummary }) {
+function CourseRosterList({ assignments }: { assignments: CourseRosterAssignmentSummary[] }) {
   return (
-    <Card>
-      <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-2">
-          <AssignmentContext assignment={assignment} />
-          <p className="text-muted-foreground text-sm">
-            Assigned Faculty: {assignment.facultyName} ({assignment.facultyEmail})
-          </p>
-        </div>
-        <RosterStateBadge state={assignment.rosterState} />
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Metric label="Active roster" value={assignment.activeRosterCount} />
-          <Metric label="Evaluation-eligible" value={assignment.evaluationEligibleCount} />
-          <Metric label="Academic Period" value={assignment.periodStatus} />
-          <Metric label="Assignment" value={assignment.isActive ? "Active" : "Inactive"} />
-        </div>
-        <Link
-          href={`/course-rosters/${assignment.assignmentId}`}
-          className="bg-primary text-primary-foreground focus-visible:ring-ring inline-flex min-h-11 w-fit items-center gap-2 rounded-lg px-4 text-sm font-medium outline-none focus-visible:ring-3"
-        >
-          Open roster
-          <ArrowRight aria-hidden="true" />
-        </Link>
-      </CardContent>
-    </Card>
+    <div className="bg-card overflow-hidden rounded-xl border" data-view="list">
+      <Table aria-label="Course assignments" className="md:min-w-[72rem]">
+        <TableHeader className="hidden md:table-header-group">
+          <TableRow>
+            <TableHead>Course</TableHead>
+            <TableHead>Program</TableHead>
+            <TableHead>Class</TableHead>
+            <TableHead>Academic Period</TableHead>
+            <TableHead className="text-right">Active roster</TableHead>
+            <TableHead className="text-right">Evaluation-eligible</TableHead>
+            <TableHead>State</TableHead>
+            <TableHead>Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="block md:table-row-group">
+          {assignments.map((assignment) => (
+            <TableRow
+              key={assignment.assignmentId}
+              className="grid gap-3 px-4 py-4 md:table-row md:px-0 md:py-0"
+            >
+              <DiscoveryTableCell label="Course">
+                <span className="block font-medium">{assignment.courseCode}</span>
+                <span className="text-muted-foreground block">{assignment.courseTitle}</span>
+              </DiscoveryTableCell>
+              <DiscoveryTableCell label="Program">
+                <span className="block">{assignment.programName}</span>
+                <span className="text-muted-foreground block">{assignment.programCode}</span>
+              </DiscoveryTableCell>
+              <DiscoveryTableCell label="Class">
+                {getYearLevelDisplay(assignment.yearLevel)} | {getSectionLabel(assignment.section)}
+              </DiscoveryTableCell>
+              <DiscoveryTableCell label="Academic Period">
+                <span className="block">{assignment.termLabel}</span>
+                <span className="text-muted-foreground block">{assignment.periodStatus}</span>
+              </DiscoveryTableCell>
+              <DiscoveryTableCell label="Active roster" numeric>
+                {assignment.activeRosterCount}
+              </DiscoveryTableCell>
+              <DiscoveryTableCell label="Evaluation-eligible" numeric>
+                {assignment.evaluationEligibleCount}
+              </DiscoveryTableCell>
+              <DiscoveryTableCell label="State">
+                <RosterStateBadge state={assignment.rosterState} />
+              </DiscoveryTableCell>
+              <TableCell className="block p-0 whitespace-normal md:table-cell md:p-2">
+                <Link
+                  href={`/course-rosters/${assignment.assignmentId}`}
+                  className={cn(buttonVariants({ size: "sm" }), "w-full md:w-auto")}
+                >
+                  Open roster
+                  <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                </Link>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string | number }) {
+function DiscoveryTableCell({
+  label,
+  numeric = false,
+  children,
+}: {
+  label: string;
+  numeric?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="bg-muted/30 rounded-lg border p-3">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="mt-1 font-semibold tabular-nums">{value}</p>
+    <TableCell
+      className={cn(
+        "flex items-start justify-between gap-4 p-0 whitespace-normal md:table-cell md:p-2",
+        numeric && "md:text-right"
+      )}
+    >
+      <span className="text-muted-foreground shrink-0 text-sm font-medium md:hidden">{label}</span>
+      <div
+        className={cn("min-w-0 text-right md:text-left", numeric && "tabular-nums md:text-right")}
+      >
+        {children}
+      </div>
+    </TableCell>
+  );
+}
+
+function CourseRosterCardGrid({ assignments }: { assignments: CourseRosterAssignmentSummary[] }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-view="card">
+      {assignments.map((assignment) => (
+        <Card key={assignment.assignmentId} className="h-full">
+          <CardHeader>
+            <CardTitle>{assignment.courseCode}</CardTitle>
+            <CardDescription>{assignment.courseTitle}</CardDescription>
+            <CardAction>
+              <RosterStateBadge state={assignment.rosterState} />
+            </CardAction>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col gap-4">
+            <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+              <DiscoveryFact label="Program">
+                {assignment.programName} ({assignment.programCode})
+              </DiscoveryFact>
+              <DiscoveryFact label="Year level">
+                {getYearLevelDisplay(assignment.yearLevel)}
+              </DiscoveryFact>
+              <DiscoveryFact label="Class section">
+                {getSectionLabel(assignment.section)}
+              </DiscoveryFact>
+              <DiscoveryFact label="Academic Period">
+                {assignment.termLabel}
+                <span className="text-muted-foreground block">{assignment.periodStatus}</span>
+              </DiscoveryFact>
+            </dl>
+            <dl className="bg-muted/40 grid grid-cols-2 gap-4 rounded-lg p-3">
+              <DiscoveryCount label="Active roster" value={assignment.activeRosterCount} />
+              <DiscoveryCount
+                label="Evaluation-eligible"
+                value={assignment.evaluationEligibleCount}
+              />
+            </dl>
+          </CardContent>
+          <CardFooter>
+            <Link
+              href={`/course-rosters/${assignment.assignmentId}`}
+              className={cn(buttonVariants(), "w-full")}
+            >
+              Open roster
+              <ArrowRight data-icon="inline-end" aria-hidden="true" />
+            </Link>
+          </CardFooter>
+        </Card>
+      ))}
     </div>
   );
+}
+
+function DiscoveryFact({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
+        {label}
+      </dt>
+      <dd className="mt-1">{children}</dd>
+    </div>
+  );
+}
+
+function DiscoveryCount({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <dt className="text-muted-foreground text-sm">{label}</dt>
+      <dd className="text-title-md mt-1 font-semibold tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+function CourseRosterDiscoveryEmptyState({
+  data,
+  view,
+}: {
+  data: CourseRosterDiscoveryResult;
+  view: CourseRosterViewMode;
+}) {
+  if (data.search) {
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <SearchX aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>No Course rosters match your search</EmptyTitle>
+          <EmptyDescription>
+            No Course assignments match &quot;{data.search}&quot; in the selected assignment scope.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Link
+            href={discoveryHref({ view, includeHistory: data.includeHistory })}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Clear filters
+          </Link>
+        </EmptyContent>
+      </Empty>
+    );
+  }
+
+  if (!data.includeHistory) {
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <UsersRound aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>No current Course rosters</EmptyTitle>
+          <EmptyDescription>
+            No current Course assignments are assigned to you. Include history to review inactive or
+            completed assignments.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Link
+            href={discoveryHref({ view, includeHistory: true })}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <History data-icon="inline-start" aria-hidden="true" />
+            Include assignment history
+          </Link>
+        </EmptyContent>
+      </Empty>
+    );
+  }
+
+  return (
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <UsersRound aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>No Course rosters available</EmptyTitle>
+        <EmptyDescription>
+          No current or historical Course assignments are assigned to you.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
+function discoveryHref({
+  view,
+  search,
+  includeHistory,
+  page,
+}: {
+  view: CourseRosterViewMode;
+  search?: string;
+  includeHistory?: boolean;
+  page?: number;
+}) {
+  const params = new URLSearchParams();
+  if (page) params.set("page", String(page));
+  if (search) params.set("search", search);
+  if (includeHistory) params.set("history", "1");
+  if (view === "card") params.set("view", "card");
+  const query = params.toString();
+  return `/faculty/course-rosters${query ? `?${query}` : ""}`;
 }
 
 function DiscoveryPagination({
@@ -325,19 +547,17 @@ function DiscoveryPagination({
   totalPages,
   search,
   includeHistory,
+  view,
 }: {
   page: number;
   totalPages: number;
   search: string;
   includeHistory: boolean;
+  view: CourseRosterViewMode;
 }) {
   if (totalPages <= 1) return null;
-  const href = (nextPage: number) => {
-    const params = new URLSearchParams({ page: String(nextPage) });
-    if (search) params.set("search", search);
-    if (includeHistory) params.set("history", "1");
-    return `/faculty/course-rosters?${params}`;
-  };
+  const href = (nextPage: number) =>
+    discoveryHref({ page: nextPage, search, includeHistory, view });
   return (
     <nav
       aria-label="Course roster pages"
@@ -367,6 +587,18 @@ function DiscoveryPagination({
         <span />
       )}
     </nav>
+  );
+}
+
+function CourseRosterDiscoveryError({ message }: { message: string }) {
+  return (
+    <Alert variant="destructive" role="alert">
+      <AlertTitle>Unable to load Course rosters</AlertTitle>
+      <AlertDescription className="flex flex-col items-start gap-3">
+        <span>{message}</span>
+        <CourseRosterRetry />
+      </AlertDescription>
+    </Alert>
   );
 }
 

@@ -2,18 +2,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const NOT_FOUND_ERROR = "NEXT_NOT_FOUND";
 
-const { notFoundMock, redirectMock, listMock, detailMock, contextMock, sessionMock } = vi.hoisted(() => ({
-  notFoundMock: vi.fn(() => {
-    throw new Error(NOT_FOUND_ERROR);
-  }),
-  redirectMock: vi.fn((path: string) => {
-    throw new Error(`NEXT_REDIRECT:${path}`);
-  }),
-  listMock: vi.fn(),
-  detailMock: vi.fn(),
-  contextMock: vi.fn(),
-  sessionMock: vi.fn(),
-}));
+const { notFoundMock, redirectMock, listMock, detailMock, contextMock, sessionMock } = vi.hoisted(
+  () => ({
+    notFoundMock: vi.fn(() => {
+      throw new Error(NOT_FOUND_ERROR);
+    }),
+    redirectMock: vi.fn((path: string) => {
+      throw new Error(`NEXT_REDIRECT:${path}`);
+    }),
+    listMock: vi.fn(),
+    detailMock: vi.fn(),
+    contextMock: vi.fn(),
+    sessionMock: vi.fn(),
+  })
+);
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
 vi.mock("@/features/course-assignments/services/read-course-rosters", () => ({
@@ -48,7 +50,9 @@ describe("Course roster routes", () => {
     });
     const Page = (await import("../../app/(app)/faculty/course-rosters/page")).default;
 
-    await Page({ searchParams: Promise.resolve({ search: " CS ", history: "1", page: "1" }) });
+    const rendered = await Page({
+      searchParams: Promise.resolve({ search: " CS ", history: "1", page: "1" }),
+    });
 
     expect(listMock).toHaveBeenCalledWith({
       facultyOnly: true,
@@ -56,6 +60,99 @@ describe("Course roster routes", () => {
       search: "CS",
       page: 0,
     });
+    expect(rendered.props.view).toBe("list");
+  });
+
+  it("passes Card presentation through validated URL state", async () => {
+    listMock.mockResolvedValue({
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+        page: 0,
+        pageSize: 20,
+        includeHistory: false,
+        search: "",
+        activePeriodId: "term-1",
+      },
+    });
+    const Page = (await import("../../app/(app)/faculty/course-rosters/page")).default;
+
+    const rendered = await Page({ searchParams: Promise.resolve({ view: "card" }) });
+
+    expect(rendered.props.view).toBe("card");
+  });
+
+  it("rejects an invalid discovery view before querying the roster service", async () => {
+    const Page = (await import("../../app/(app)/faculty/course-rosters/page")).default;
+
+    await expect(Page({ searchParams: Promise.resolve({ view: "gallery" }) })).rejects.toThrow(
+      NOT_FOUND_ERROR
+    );
+    expect(listMock).not.toHaveBeenCalled();
+  });
+
+  it("canonicalizes explicit List while preserving active filters and page", async () => {
+    listMock.mockResolvedValue({
+      success: true,
+      data: {
+        items: [],
+        total: 40,
+        page: 1,
+        pageSize: 20,
+        includeHistory: true,
+        search: "CS",
+        activePeriodId: "term-1",
+      },
+    });
+    const Page = (await import("../../app/(app)/faculty/course-rosters/page")).default;
+
+    await expect(
+      Page({
+        searchParams: Promise.resolve({
+          search: " CS ",
+          history: "1",
+          view: "list",
+          page: "2",
+        }),
+      })
+    ).rejects.toThrow("NEXT_REDIRECT:/faculty/course-rosters?page=2&search=CS&history=1");
+    expect(listMock).toHaveBeenCalledOnce();
+    expect(listMock).toHaveBeenCalledWith({
+      facultyOnly: true,
+      includeHistory: true,
+      search: "CS",
+      page: 1,
+    });
+  });
+
+  it("passes a safe Card service failure and support reference to the component", async () => {
+    listMock.mockResolvedValue({
+      success: false,
+      error: "The roster request could not be completed.",
+      referenceId: "safe-123",
+    });
+    const Page = (await import("../../app/(app)/faculty/course-rosters/page")).default;
+
+    const rendered = await Page({
+      searchParams: Promise.resolve({ search: " CS ", history: "1", view: "card", page: "2" }),
+    });
+
+    expect(listMock).toHaveBeenCalledOnce();
+    expect(listMock).toHaveBeenCalledWith({
+      facultyOnly: true,
+      includeHistory: true,
+      search: "CS",
+      page: 1,
+    });
+    expect(rendered.props).toEqual({
+      data: null,
+      error: "The roster request could not be completed. Support reference: safe-123.",
+      view: "card",
+    });
+    expect(detailMock).not.toHaveBeenCalled();
+    expect(contextMock).not.toHaveBeenCalled();
+    expect(sessionMock).not.toHaveBeenCalled();
   });
 
   it("maps unauthorized and missing detail results to the same not-found route behavior", async () => {
@@ -109,10 +206,9 @@ describe("Course roster routes", () => {
       success: true,
       data: { page: 1, search: "", includeRemoved: false, sortDirection: "asc" },
     });
-    const Page =
-      (await import(
-        "../../app/(app)/program-head/programs/[programId]/course-rosters/[assignmentId]/page"
-      )).default;
+    const Page = (
+      await import("../../app/(app)/program-head/programs/[programId]/course-rosters/[assignmentId]/page")
+    ).default;
 
     await Page({
       params: Promise.resolve({
@@ -146,5 +242,32 @@ describe("Course roster routes", () => {
     await expect(Page({ searchParams: Promise.resolve({ page: "9" }) })).rejects.toThrow(
       "NEXT_REDIRECT:/faculty/course-rosters?page=1"
     );
+  });
+
+  it("preserves Card and active filters in a canonical page redirect", async () => {
+    listMock.mockResolvedValue({
+      success: true,
+      data: {
+        items: [],
+        total: 1,
+        page: 0,
+        pageSize: 20,
+        includeHistory: true,
+        search: "CS",
+        activePeriodId: "term-1",
+      },
+    });
+    const Page = (await import("../../app/(app)/faculty/course-rosters/page")).default;
+
+    await expect(
+      Page({
+        searchParams: Promise.resolve({
+          search: "CS",
+          history: "1",
+          view: "card",
+          page: "9",
+        }),
+      })
+    ).rejects.toThrow("NEXT_REDIRECT:/faculty/course-rosters?page=1&search=CS&history=1&view=card");
   });
 });

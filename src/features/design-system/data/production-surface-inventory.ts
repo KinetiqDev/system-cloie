@@ -1676,6 +1676,16 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "ui_primitive"
   },
   {
+    "path": "src/components/ui/toggle-group.tsx",
+    "disposition": "already_compliant",
+    "category": "ui_primitive"
+  },
+  {
+    "path": "src/components/ui/toggle.tsx",
+    "disposition": "already_compliant",
+    "category": "ui_primitive"
+  },
+  {
     "path": "src/components/ui/textarea.tsx",
     "disposition": "task",
     "taskId": 4,
@@ -1955,6 +1965,16 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "path": "src/features/course-assignments/components/course-roster-pages.tsx",
     "disposition": "task",
     "taskId": 15,
+    "category": "feature_component"
+  },
+  {
+    "path": "src/features/course-assignments/components/course-roster-retry.tsx",
+    "disposition": "already_compliant",
+    "category": "feature_component"
+  },
+  {
+    "path": "src/features/course-assignments/components/course-roster-view-selector.tsx",
+    "disposition": "already_compliant",
     "category": "feature_component"
   },
   {
