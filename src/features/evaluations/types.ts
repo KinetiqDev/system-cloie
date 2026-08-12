@@ -111,11 +111,11 @@ export type PublishCourseBoundEvaluationResult =
 
 export type PreviewRespondent = {
   email: string;
-  firstName: string;
-  lastName: string;
   majorId: string | null;
   majorName: string | null;
   membershipId: string;
+  /** Canonical opaque account name (ADR 0014). */
+  name: string;
   programCode: string;
   programId: string;
   programName: string;
@@ -256,9 +256,9 @@ export type PreviewCentralDeploymentInput = {
 
 export type PreviewCentralDeploymentRespondent = {
   email: string;
-  firstName: string;
-  lastName: string;
   majorName: string | null;
+  /** Canonical opaque account name (ADR 0014). */
+  name: string;
   programCode: string | null;
   stakeholderType: TargetStakeholder;
   studentId: string | null;

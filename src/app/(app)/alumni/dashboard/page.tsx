@@ -21,7 +21,7 @@ export default async function AlumniDashboardPage() {
 
   const user = session ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
 
-  const displayName = user?.first_name ?? "Alumni";
+  const displayName = user?.name ?? "Alumni";
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">

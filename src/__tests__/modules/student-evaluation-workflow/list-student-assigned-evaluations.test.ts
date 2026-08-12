@@ -119,7 +119,7 @@ describe("listStudentAssignedEvaluations", () => {
             term_instance_id: "term-1",
             course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Capstone 1" },
             program: { name: "BSIT" },
-            faculty: { first_name: "Ada", last_name: "Lovelace" },
+            faculty: { name: "Ada Lovelace" },
           },
           deadline_at: new Date("2027-06-20T00:00:00.000Z"),
           deployment_name: "Eligible Course Evaluation",
@@ -142,7 +142,7 @@ describe("listStudentAssignedEvaluations", () => {
             term_instance_id: "term-1",
             course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Networks" },
             program: { name: "BSIT" },
-            faculty: { first_name: "Grace", last_name: "Hopper" },
+            faculty: { name: "Grace Hopper" },
           },
           deadline_at: new Date("2027-06-20T00:00:00.000Z"),
           deployment_name: "Ineligible Course Evaluation",
@@ -165,7 +165,7 @@ describe("listStudentAssignedEvaluations", () => {
             term_instance_id: "term-1",
             course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Databases" },
             program: { name: "BSIT" },
-            faculty: { first_name: "Alan", last_name: "Turing" },
+            faculty: { name: "Alan Turing" },
           },
           deadline_at: new Date("2027-05-01T00:00:00.000Z"),
           deployment_name: "Submitted Course Evaluation",
@@ -209,9 +209,18 @@ describe("listStudentAssignedEvaluations", () => {
       "assignment-eligible",
       "assignment-central",
     ]);
+    expect(result.active[0]).toEqual(
+      expect.objectContaining({
+        assignmentId: "assignment-eligible",
+        facultyName: "Ada Lovelace",
+      })
+    );
+    expect(result.active[0]).not.toHaveProperty("firstName");
+    expect(result.active[0]).not.toHaveProperty("lastName");
     expect(result.submitted).toEqual([
       expect.objectContaining({
         assignmentId: "assignment-submitted",
+        facultyName: "Alan Turing",
         href: "/student/history/response-submitted",
         status: "SUBMITTED",
       }),
@@ -241,7 +250,7 @@ describe("listStudentAssignedEvaluations", () => {
             term_instance_id: "term-1",
             course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Legacy Course" },
             program: { name: "BSIT" },
-            faculty: { first_name: "Alan", last_name: "Turing" },
+            faculty: { name: "Alan Turing" },
           },
           deadline_at: new Date("2026-05-01T00:00:00.000Z"),
           deployment_name: "Retired Curriculum Evaluation",

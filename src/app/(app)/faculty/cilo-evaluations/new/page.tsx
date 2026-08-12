@@ -96,8 +96,7 @@ export default async function NewFacultyCiloEvaluationPage({
         faculty: {
           select: {
             id: true,
-            first_name: true,
-            last_name: true,
+            name: true,
           },
         },
       },
@@ -111,9 +110,7 @@ export default async function NewFacultyCiloEvaluationPage({
         option.termInstanceId = full.term_instance_id;
         option.programId = full.program_id;
         option.facultyId = full.faculty_id;
-        option.facultyName = full.faculty
-          ? `${full.faculty.first_name} ${full.faculty.last_name}`.trim()
-          : undefined;
+        option.facultyName = full.faculty?.name;
       }
     }
   }

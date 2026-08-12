@@ -180,9 +180,26 @@ describe("previewCourseBoundRespondents", () => {
         student_user_id: "student-1",
         student: {
           email: "student1@school.edu",
-          first_name: "John",
-          last_name: "Doe",
+          name: "John Doe",
           student_profile: { major_id: null, major: null, student_id_number: "S2025-001" },
+        },
+      },
+      {
+        id: "membership-2",
+        student_user_id: "student-2",
+        student: {
+          email: "student2@school.edu",
+          name: "Mary Anne O'Connor",
+          student_profile: { major_id: null, major: null, student_id_number: "S2025-002" },
+        },
+      },
+      {
+        id: "membership-3",
+        student_user_id: "student-3",
+        student: {
+          email: "student3@school.edu",
+          name: "Prince",
+          student_profile: { major_id: null, major: null, student_id_number: "S2025-003" },
         },
       },
     ]);
@@ -190,14 +207,18 @@ describe("previewCourseBoundRespondents", () => {
     const result = await previewCourseBoundRespondents({ assignmentId: "assignment-1" });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toHaveLength(1);
+      expect(result.data).toHaveLength(3);
+      expect(result.data.map((r) => r.name)).toEqual([
+        "John Doe",
+        "Mary Anne O'Connor",
+        "Prince",
+      ]);
       expect(result.data[0]).toEqual({
         email: "student1@school.edu",
-        firstName: "John",
-        lastName: "Doe",
         majorId: null,
         majorName: null,
         membershipId: "membership-1",
+        name: "John Doe",
         programCode: "BSCS",
         programId: "program-1",
         programName: "BS Computer Science",
@@ -206,6 +227,8 @@ describe("previewCourseBoundRespondents", () => {
         userId: "student-1",
         yearLevel: YearLevel.FIRST_YEAR,
       });
+      expect(result.data[0]).not.toHaveProperty("firstName");
+      expect(result.data[0]).not.toHaveProperty("lastName");
     }
 
     expect(membershipFindManyMock).toHaveBeenCalledWith(

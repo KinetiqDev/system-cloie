@@ -15,7 +15,7 @@ export default async function StudentProfilePage() {
           include: {
             major: true,
             program: true,
-            user: { select: { first_name: true, last_name: true, email: true } },
+            user: { select: { name: true, email: true } },
           },
         })
       : Promise.resolve(null),
@@ -30,7 +30,7 @@ export default async function StudentProfilePage() {
       : Promise.resolve(null),
   ]);
 
-  const fullName = profile ? `${profile.user.first_name} ${profile.user.last_name}` : "Student";
+  const fullName = profile ? profile.user.name : "Student";
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in max-w-4xl space-y-8 motion-safe:duration-500">

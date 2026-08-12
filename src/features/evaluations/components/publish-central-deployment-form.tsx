@@ -525,7 +525,7 @@ export function PublishCentralDeploymentForm({
                       >
                         <td className="px-3 py-2">
                           <Checkbox
-                            aria-label={`Include ${respondent.lastName}, ${respondent.firstName}`}
+                            aria-label={`Include ${respondent.name}`}
                             checked={!isExcluded}
                             onCheckedChange={(checked) =>
                               handleExcludeRespondent(respondent.userId, checked !== true)
@@ -533,7 +533,7 @@ export function PublishCentralDeploymentForm({
                           />
                         </td>
                         <td className="px-3 py-2">
-                          {respondent.lastName}, {respondent.firstName}
+                          {respondent.name}
                         </td>
                         <td className="px-3 py-2">{respondent.email}</td>
                         {targetStakeholder === "STUDENT" && (

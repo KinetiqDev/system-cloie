@@ -26,8 +26,7 @@ describe("Program Head profile route", () => {
     vi.clearAllMocks();
     resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
     userFindUniqueMock.mockResolvedValue({
-      first_name: "Program",
-      last_name: "Head",
+      name: "Program Head",
       email: "head@example.com",
       program_head_assignments: [
         { program: { id: "program-1", code: "BEED", name: "Elementary Education" } },
@@ -41,8 +40,17 @@ describe("Program Head profile route", () => {
 
     render(await Page());
 
+    expect(screen.getByText("Program Head")).toBeInTheDocument();
     expect(screen.getByText("Elementary Education")).toBeInTheDocument();
     expect(screen.getByText("Secondary Education")).toBeInTheDocument();
+    expect(userFindUniqueMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          name: true,
+          email: true,
+        }),
+      })
+    );
     expect(screen.getByRole("link", { name: "Choose a Program to manage" })).toHaveAttribute(
       "href",
       "/program-head"

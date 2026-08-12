@@ -15,8 +15,7 @@ export default async function IndustryPartnerProfilePage() {
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     select: {
-      first_name: true,
-      last_name: true,
+      name: true,
       email: true,
       industry_partner_profile: {
         include: {
@@ -26,7 +25,7 @@ export default async function IndustryPartnerProfilePage() {
     },
   });
 
-  const fullName = user ? `${user.first_name} ${user.last_name}` : "Industry Partner";
+  const fullName = user ? user.name : "Industry Partner";
 
   const profile = user?.industry_partner_profile;
 

@@ -95,4 +95,50 @@ describe("getFacultyEvaluationDetail – historical visibility", () => {
     });
     expect(absent).toEqual(missing);
   });
+
+  it("projects opaque exclusion student names without split keys", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    prismaMocks.courseBoundEvaluationFindFirst.mockResolvedValue({
+      ...evaluation,
+      exclusions: [
+        {
+          category: "ADMINISTRATIVE_EXCEPTION",
+          course_assignment_membership_id: "membership-1",
+          reversal_category: null,
+          reversed_at: null,
+          membership: {
+            is_active: true,
+            student: { name: "Mary Anne O'Connor" },
+          },
+        },
+        {
+          category: "OTHER",
+          course_assignment_membership_id: "membership-2",
+          reversal_category: null,
+          reversed_at: null,
+          membership: {
+            is_active: true,
+            student: { name: "Prince" },
+          },
+        },
+      ],
+    });
+
+    const result = await getFacultyEvaluationDetail("evaluation-1");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.exclusions.map((row) => row.studentName)).toEqual([
+        "Mary Anne O'Connor",
+        "Prince",
+      ]);
+      expect(result.data.exclusions[0]).not.toHaveProperty("firstName");
+      expect(result.data.exclusions[0]).not.toHaveProperty("lastName");
+    }
+  });
 });

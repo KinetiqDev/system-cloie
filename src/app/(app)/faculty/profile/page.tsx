@@ -15,8 +15,7 @@ export default async function FacultyProfilePage() {
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     select: {
-      first_name: true,
-      last_name: true,
+      name: true,
       email: true,
       faculty_program_affiliations: {
         where: { is_active: true },
@@ -30,7 +29,7 @@ export default async function FacultyProfilePage() {
     },
   });
 
-  const fullName = user ? `${user.first_name} ${user.last_name}` : "Faculty";
+  const fullName = user ? user.name : "Faculty";
 
   const affiliations = user?.faculty_program_affiliations ?? [];
 

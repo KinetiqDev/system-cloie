@@ -144,8 +144,7 @@ describe("previewCentralDeploymentRespondents", () => {
           {
             userId: "student-1",
             email: "student1@school.edu",
-            firstName: "John",
-            lastName: "Doe",
+            name: "John Doe",
             studentIdNumber: "S2025-001",
             majorId: null,
             majorName: null,
@@ -165,15 +164,16 @@ describe("previewCentralDeploymentRespondents", () => {
         expect(result.data).toHaveLength(1);
         expect(result.data[0]).toEqual({
           email: "student1@school.edu",
-          firstName: "John",
-          lastName: "Doe",
           majorName: null,
+          name: "John Doe",
           programCode: "BSCS",
           stakeholderType: TargetStakeholder.STUDENT,
           studentId: "S2025-001",
           userId: "student-1",
           yearLevel: YearLevel.FIRST_YEAR,
         });
+        expect(result.data[0]).not.toHaveProperty("firstName");
+        expect(result.data[0]).not.toHaveProperty("lastName");
       }
 
       expect(listStudentsForClassMock).toHaveBeenCalledWith({
@@ -197,8 +197,17 @@ describe("previewCentralDeploymentRespondents", () => {
         {
           id: "user-alumni-1",
           email: "alumni1@school.edu",
-          first_name: "Jane",
-          last_name: "Smith",
+          name: "Jane Smith",
+        },
+        {
+          id: "user-alumni-2",
+          email: "alumni2@school.edu",
+          name: "Mary Anne O'Connor",
+        },
+        {
+          id: "user-alumni-3",
+          email: "alumni3@school.edu",
+          name: "Prince",
         },
       ]);
 
@@ -209,19 +218,24 @@ describe("previewCentralDeploymentRespondents", () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toHaveLength(1);
+        expect(result.data).toHaveLength(3);
+        expect(result.data.map((r) => r.name)).toEqual([
+          "Jane Smith",
+          "Mary Anne O'Connor",
+          "Prince",
+        ]);
         expect(result.data[0]).toEqual({
           email: "alumni1@school.edu",
-          firstName: "Jane",
-          lastName: "Smith",
           majorName: null,
+          name: "Jane Smith",
           programCode: null,
-          section: null,
           stakeholderType: TargetStakeholder.ALUMNI,
           studentId: null,
           userId: "user-alumni-1",
           yearLevel: null,
         });
+        expect(result.data[0]).not.toHaveProperty("firstName");
+        expect(result.data[0]).not.toHaveProperty("lastName");
       }
 
       expect(findManyExternalInviteMock).toHaveBeenCalledWith({
@@ -234,8 +248,8 @@ describe("previewCentralDeploymentRespondents", () => {
       });
       expect(findManyUserMock).toHaveBeenCalledWith({
         where: { email: { in: ["alumni1@school.edu"] } },
-        select: { id: true, email: true, first_name: true, last_name: true },
-        orderBy: { last_name: "asc" },
+        select: { id: true, email: true, name: true },
+        orderBy: { name: "asc" },
       });
     });
   });
@@ -250,8 +264,7 @@ describe("previewCentralDeploymentRespondents", () => {
           user: {
             id: "user-ip-1",
             email: "partner1@company.com",
-            first_name: "Bob",
-            last_name: "Builder",
+            name: "Bob Builder",
           },
           program: {
             code: "BSCS",
@@ -269,27 +282,27 @@ describe("previewCentralDeploymentRespondents", () => {
         expect(result.data).toHaveLength(1);
         expect(result.data[0]).toEqual({
           email: "partner1@company.com",
-          firstName: "Bob",
-          lastName: "Builder",
           majorName: null,
+          name: "Bob Builder",
           programCode: "BSCS",
-          section: null,
           stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
           studentId: null,
           userId: "user-ip-1",
           yearLevel: null,
         });
+        expect(result.data[0]).not.toHaveProperty("firstName");
+        expect(result.data[0]).not.toHaveProperty("lastName");
       }
 
       expect(findManyIndustryPartnerMock).toHaveBeenCalledWith({
         where: { program_id: "program-1" },
         include: {
           user: {
-            select: { id: true, email: true, first_name: true, last_name: true },
+            select: { id: true, email: true, name: true },
           },
           program: { select: { code: true } },
         },
-        orderBy: { user: { last_name: "asc" } },
+        orderBy: { user: { name: "asc" } },
       });
     });
   });
