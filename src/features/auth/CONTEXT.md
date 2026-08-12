@@ -21,8 +21,28 @@ An administrator-controlled role change where the administrator must provide the
 _Avoid_: Self-service onboarding, incomplete self-service role claim
 
 **Secretary-created account**:
-A CLOIE account created by a Secretary as either the required path for pre-provisioned roles or an override path for self-service roles, with the selected role's required institution-managed information completed at creation time.
+A CLOIE account created by a Secretary as either the required path for pre-provisioned roles or an override path for self-service roles, with the selected role's required institution-managed information completed at creation time. Its required `User.name` is provisional until the first real Google OAuth link, which replaces it with the Google-derived account name defined by ADR 0014.
 _Avoid_: Seeded user, invited user when no invitation is involved
+
+**Canonical account name**:
+The single opaque human-readable name stored on `User` and displayed throughout CLOIE. It is not a first-name/last-name pair and must not be parsed into semantic name components.
+_Avoid_: First name, last name, surname, email-derived name
+
+**Provisional pre-link name**:
+The required `User.name` entered when a Secretary creates an account before its first real Google OAuth link. It keeps the pre-provisioned account complete before sign-in and is replaced by the Google-derived account name at first link.
+_Avoid_: Placeholder name, permanent Secretary name
+
+**First OAuth link**:
+The first successful association of a Google/Supabase Auth identity with a domain `User`, normally identified by the User having no `auth_user_id` before the callback. The callback matches the account by exact normalized email, stores the Auth link, and replaces a provisional pre-link name with the Google-derived account name.
+_Avoid_: Role claim, account takeover, routine login
+
+**Google-derived account name**:
+The canonical account name resolved from the authenticated Google provider metadata during a new account creation or first OAuth link. Resolution prefers `name`, then `full_name`, then `given_name` plus `family_name`; it never uses the Gmail address local part.
+_Avoid_: Parsed first/last name, email-derived name, synchronized login name
+
+**Secretary name correction**:
+An authorized Secretary update to a linked User's canonical account name. It remains authoritative on later OAuth callbacks because Google name metadata is not synchronized after first link.
+_Avoid_: Student self-edit, automatic Google synchronization
 
 **Bootstrap secretary**:
 The first real Secretary account created through a one-time setup path before normal administrator-managed account creation is available.
@@ -49,19 +69,19 @@ The role selection portal is the primary way people enter CLOIE, whether they ar
 _Avoid_: Role-less login as the main entry point
 
 **Google-authenticated account**:
-A CLOIE account whose identity is proven through Google OAuth rather than a CLOIE-managed password.
-_Avoid_: Password account, email-code account
+A CLOIE account whose identity is proven through Google OAuth rather than a CLOIE-managed password. For real OAuth accounts, the Google profile supplies the canonical account name only when the account is first created or first linked; later callbacks preserve the stored name.
+_Avoid_: Password account, email-code account, synchronized Google profile
 
 **Dedicated demo deployment**:
 An isolated production-mode CLOIE deployment with resettable demo data and explicitly enabled signed demo sessions for demonstrations and route-performance evidence.
 _Avoid_: Primary Production, development server, public demo bypass
 
 **Demo-authenticated account**:
-A seeded CLOIE account selected through the dedicated demo deployment role switcher and represented by a short-lived signed demo session; its identity does not change the account's normal authorization or account-state rules.
+A seeded CLOIE account selected through the dedicated demo deployment role switcher and represented by a short-lived signed demo session; its identity does not change the account's normal authorization or account-state rules. Demo and development authentication retain fixture-controlled names and do not perform Google name derivation or first-link replacement.
 _Avoid_: Real OAuth account, multi-role account, development-only account
 
 **Account email**:
-The trimmed lowercase email address used to match a Google-authenticated identity to a CLOIE account.
+The trimmed lowercase email address used to match a Google-authenticated identity to a CLOIE account during the first OAuth link. It establishes the account match but never supplies the account name. An already-linked User whose email is presented with a different Auth identity fails closed rather than being relinked.
 _Avoid_: Gmail alias, display email when discussing identity matching
 
 **CLOIE account role**:
@@ -173,8 +193,8 @@ A CLOIE account that has been disabled by an administrator and cannot access rol
 _Avoid_: Rejected external account, incomplete account
 
 **Account status page**:
-A non-dashboard page that explains why a Google-authenticated person cannot continue into the selected CLOIE role or dashboard.
-_Avoid_: Login error page, onboarding page
+A non-dashboard page that explains why a Google-authenticated person cannot continue into the selected CLOIE role or dashboard. Safe outcomes include missing Google account name (new account or first OAuth link blocked without mutation) and identity conflict (normalized-email match already linked to a different Auth identity; record preserved, session terminated, no internal IDs disclosed).
+_Avoid_: Login error page, onboarding page, provider diagnostic dump
 
 **External verification**:
 The institutional review state for an Alumni or Industry Partner account after self-service onboarding; Secretary-created external accounts are considered institution-verified at creation time.
