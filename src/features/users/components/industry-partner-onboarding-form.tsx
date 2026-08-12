@@ -35,15 +35,11 @@ type Program = {
 
 type IndustryPartnerOnboardingFormProps = {
   email: string;
-  initialFirstName: string;
-  initialLastName: string;
   programs: Program[];
 };
 
 export function IndustryPartnerOnboardingForm({
   email,
-  initialFirstName,
-  initialLastName,
   programs,
 }: IndustryPartnerOnboardingFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -56,8 +52,6 @@ export function IndustryPartnerOnboardingForm({
   } = useForm<IndustryPartnerProfileFormValues>({
     resolver: customZodResolver(industryPartnerProfileSchema) as Resolver<IndustryPartnerProfileFormValues>,
     defaultValues: {
-      first_name: initialFirstName || "",
-      last_name: initialLastName || "",
       company_name: "",
       position: "",
       program_id: "",
@@ -123,60 +117,17 @@ export function IndustryPartnerOnboardingForm({
               </div>
             </div>
 
-            {/* Identity Information */}
+            {/* Account identity (Google-authoritative, display-only) */}
             <div className="flex items-center gap-2 pt-4">
               <UserCircle className="text-primary size-5" />
               <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">
-                Identity Information
+                Account Identity
               </h2>
             </div>
 
-            {/* First & Last name side-by-side grid */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="first_name"
-                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
-                >
-                  First Name
-                </Label>
-                <Input
-                  id="first_name"
-                  type="text"
-                  placeholder="e.g. John"
-                  {...register("first_name")}
-                  className={errors.first_name ? "border-danger focus-visible:ring-danger" : ""}
-                />
-                {errors.first_name && (
-                  <p className="text-danger flex items-center gap-1 text-xs">
-                    <AlertCircle className="size-3" />
-                    {errors.first_name.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="last_name"
-                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
-                >
-                  Last Name
-                </Label>
-                <Input
-                  id="last_name"
-                  type="text"
-                  placeholder="e.g. Doe"
-                  {...register("last_name")}
-                  className={errors.last_name ? "border-danger focus-visible:ring-danger" : ""}
-                />
-                {errors.last_name && (
-                  <p className="text-danger flex items-center gap-1 text-xs">
-                    <AlertCircle className="size-3" />
-                    {errors.last_name.message}
-                  </p>
-                )}
-              </div>
-            </div>
+            <p className="text-body-sm text-muted-foreground">
+              Your account name comes from your Google account and cannot be edited here.
+            </p>
 
             <div className="flex items-center gap-2 pt-4">
               <Briefcase className="text-primary size-5" />

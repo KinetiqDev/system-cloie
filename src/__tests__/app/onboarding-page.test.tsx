@@ -12,7 +12,6 @@ const {
   programFindManyMock,
   yearLevelFindManyMock,
   getActiveTermIdMock,
-  findFirstUserMock,
 } = vi.hoisted(() => ({
   redirectMock: vi.fn((path: string) => {
     throw new Error(`${REDIRECT_ERROR}:${path}`);
@@ -24,7 +23,6 @@ const {
   programFindManyMock: vi.fn(),
   yearLevelFindManyMock: vi.fn(),
   getActiveTermIdMock: vi.fn(),
-  findFirstUserMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -53,9 +51,6 @@ vi.mock("@/lib/db/prisma", () => ({
     yearLevel: {
       findMany: yearLevelFindManyMock,
     },
-    user: {
-      findFirst: findFirstUserMock,
-    },
   },
 }));
 
@@ -77,18 +72,20 @@ vi.mock("@/app/(public)/onboarding/student-profile-form", () => ({
 }));
 
 vi.mock("@/features/users/components/alumni-onboarding-form", () => ({
-  AlumniOnboardingForm: ({ initialFirstName, initialLastName }: { initialFirstName: string; initialLastName: string }) => (
-    <div data-testid="alumni-form">
-      Alumni: [{initialFirstName}] [{initialLastName}]
-    </div>
+  AlumniOnboardingForm: ({ email }: { email: string }) => (
+    <div data-testid="alumni-form">Alumni form for {email}</div>
   ),
 }));
 
 vi.mock("@/features/users/components/industry-partner-onboarding-form", () => ({
-  IndustryPartnerOnboardingForm: ({ initialFirstName, initialLastName }: { initialFirstName: string; initialLastName: string }) => (
-    <div data-testid="industry-form">
-      Industry: [{initialFirstName}] [{initialLastName}]
-    </div>
+  IndustryPartnerOnboardingForm: ({ email }: { email: string }) => (
+    <div data-testid="industry-form">Industry form for {email}</div>
+  ),
+}));
+
+vi.mock("@/features/users/components/faculty-onboarding-form", () => ({
+  FacultyOnboardingForm: ({ email }: { email: string }) => (
+    <div data-testid="faculty-form">Faculty form for {email}</div>
   ),
 }));
 
@@ -119,7 +116,6 @@ describe("OnboardingPage", () => {
     programFindManyMock.mockResolvedValue([]);
     yearLevelFindManyMock.mockResolvedValue([]);
     getActiveTermIdMock.mockResolvedValue("term-uuid-123");
-    findFirstUserMock.mockResolvedValue(null);
   });
 
   it("redirects unauthenticated requests to login", async () => {
@@ -168,7 +164,7 @@ describe("OnboardingPage", () => {
     });
   });
 
-  it("clears placeholder names in metadata to empty strings", async () => {
+  it("renders alumni onboarding without name fallback props", async () => {
     getUserMock.mockResolvedValue({
       data: {
         user: {
@@ -185,6 +181,27 @@ describe("OnboardingPage", () => {
     });
 
     render(page);
-    expect(screen.getByTestId("alumni-form")).toHaveTextContent("Alumni: [] []");
+    expect(screen.getByTestId("alumni-form")).toHaveTextContent("Alumni form for alumni@example.com");
+  });
+
+  it("renders faculty onboarding without name fallback props", async () => {
+    getUserMock.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-1",
+          email: "teacher@acd.edu.ph",
+        },
+      },
+      error: null,
+    });
+
+    const page = await OnboardingPage({
+      searchParams: Promise.resolve({ intent: "faculty" }),
+    });
+
+    render(page);
+    expect(screen.getByTestId("faculty-form")).toHaveTextContent(
+      "Faculty form for teacher@acd.edu.ph"
+    );
   });
 });
