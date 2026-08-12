@@ -231,7 +231,7 @@ function RosterSearchForm({
           type="search"
           defaultValue={query}
           maxLength={100}
-          placeholder="Search by first or last name"
+          placeholder="Search by complete name"
           className="h-11 px-3"
         />
       </div>
