@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { alumniProfileSchema, type AlumniProfileInput } from "@/lib/schemas/alumni-profile";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
 
 export async function createAlumniProfile(data: AlumniProfileInput) {
   try {
@@ -18,6 +19,7 @@ export async function createAlumniProfile(data: AlumniProfileInput) {
       return { success: false, error: "Authentication session invalid or missing." };
     }
 
+    // Client-injected identity fields are stripped by Zod.
     const validatedData = alumniProfileSchema.parse(data);
 
     // Verify program exists and is active
@@ -52,24 +54,36 @@ export async function createAlumniProfile(data: AlumniProfileInput) {
       }
     }
 
-    // Execute atomic transaction
-    await prisma.$transaction(async (tx) => {
-      // 1. Find or Create domain User by Supabase auth_user_id
-      const domainUser = await tx.user.upsert({
-        where: { auth_user_id: user.id },
-        update: {
-          first_name: validatedData.first_name,
-          last_name: validatedData.last_name,
-        },
-        create: {
-          auth_user_id: user.id,
-          email: user.email!,
-          first_name: validatedData.first_name,
-          last_name: validatedData.last_name,
-        },
-      });
+    const domainUser = await resolveAuthenticatedDomainUser({
+      authUserId: user.id,
+      email: user.email,
+    });
 
-      // 2. Assign Global Role (Idempotent check to prevent role-overwriting)
+    if (!domainUser) {
+      return {
+        success: false,
+        error: "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+      };
+    }
+
+    if (!domainUser.name.trim()) {
+      return {
+        success: false,
+        error: "Your account name is not available. Please sign out and sign in with Google again.",
+      };
+    }
+
+    // Preserve account-state and external verification gates on direct Server Action calls.
+    // Matches profileGate INACTIVE / REJECTED_EXTERNAL_ACCOUNT.
+    if (!domainUser.is_active) {
+      return { success: false, error: "Your CLOIE account is currently inactive." };
+    }
+    if (domainUser.alumni_profile?.verification_status === "REJECTED") {
+      return { success: false, error: "Your registration application was not approved." };
+    }
+
+    // Role + alumni profile only. Never create a User and never write client identity.
+    await prisma.$transaction(async (tx) => {
       const existingRole = await tx.userRole.findUnique({
         where: { user_id: domainUser.id },
       });
@@ -85,7 +99,6 @@ export async function createAlumniProfile(data: AlumniProfileInput) {
         });
       }
 
-      // 3. Create or Update Alumni Profile
       await tx.alumniProfile.upsert({
         where: { user_id: domainUser.id },
         update: {

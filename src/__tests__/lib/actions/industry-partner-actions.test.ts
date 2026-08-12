@@ -6,11 +6,15 @@ import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
 
+const { resolveAuthenticatedDomainUserMock } = vi.hoisted(() => ({
+  resolveAuthenticatedDomainUserMock: vi.fn(),
+}));
+
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     $transaction: vi.fn(),
     user: {
-      upsert: vi.fn(),
+      update: vi.fn(),
     },
     industryPartnerProfile: {
       upsert: vi.fn(),
@@ -30,6 +34,14 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
 }));
 
+vi.mock("@/features/auth/services/resolve-authenticated-domain-user", () => ({
+  resolveAuthenticatedDomainUser: resolveAuthenticatedDomainUserMock,
+}));
+
+const validPayload = {
+  company_name: "Test Corp",
+};
+
 describe("Industry Partner Actions", () => {
   const mockGetUser = vi.fn();
 
@@ -41,18 +53,20 @@ describe("Industry Partner Actions", () => {
       },
     });
 
-    // Mock transaction implementation
     (prisma.$transaction as any).mockImplementation(async (callback: any) => {
       return callback(prisma);
     });
 
-    // Mock user.upsert implementation
-    (prisma.user.upsert as any).mockResolvedValue({
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
       id: "user-123",
       email: "test@example.com",
+      name: "Jane Doe",
+      auth_user_id: "auth-user-123",
+      is_active: true,
+      alumni_profile: null,
+      industry_partner_profile: null,
     });
 
-    // Mock program.findUnique implementation
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
       is_active: true,
@@ -62,11 +76,7 @@ describe("Industry Partner Actions", () => {
   it("should fail if user is not authenticated", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: "No user" } });
 
-    const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
-      company_name: "Test Corp",
-    });
+    const result = await createIndustryPartnerProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Authentication session invalid or missing.");
@@ -74,12 +84,12 @@ describe("Industry Partner Actions", () => {
 
   it("should fail validation for invalid data", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-123", email: "test@example.com" } },
+      data: { user: { id: "auth-user-123", email: "test@example.com" } },
       error: null,
     });
 
     const result = await createIndustryPartnerProfile({
-      company_name: "A", // Min length is 2
+      company_name: "A",
     } as any);
 
     expect(result.success).toBe(false);
@@ -91,37 +101,18 @@ describe("Industry Partner Actions", () => {
     mockGetUser.mockResolvedValue({
       data: {
         user: {
-          id: "user-123",
+          id: "auth-user-123",
           email: "test@example.com",
-          user_metadata: {
-            full_name: "Jane Doe",
-          },
         },
       },
       error: null,
     });
 
-    const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
-      company_name: "Test Corp",
-    });
+    const result = await createIndustryPartnerProfile(validPayload);
 
     expect(result.success).toBe(true);
     expect(prisma.$transaction).toHaveBeenCalled();
-    expect(prisma.user.upsert).toHaveBeenCalledWith({
-      where: { auth_user_id: "user-123" },
-      update: {
-        first_name: "Jane",
-        last_name: "Doe",
-      },
-      create: {
-        auth_user_id: "user-123",
-        email: "test@example.com",
-        first_name: "Jane",
-        last_name: "Doe",
-      },
-    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
     expect(prisma.industryPartnerProfile.upsert).toHaveBeenCalledWith({
       where: { user_id: "user-123" },
       update: {
@@ -147,23 +138,40 @@ describe("Industry Partner Actions", () => {
     });
   });
 
-  it("should create profile and role successfully with all data", async () => {
+  it("preserves stored name when client identity is injected", async () => {
     mockGetUser.mockResolvedValue({
       data: {
         user: {
-          id: "user-123",
+          id: "auth-user-123",
           email: "test@example.com",
-          user_metadata: {
-            full_name: "Jane Doe",
-          },
         },
       },
       error: null,
     });
 
     const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
+      ...validPayload,
+      first_name: "Hacker",
+      last_name: "Name",
+      name: "Hacker Name",
+    } as any);
+
+    expect(result.success).toBe(true);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it("should create profile and role successfully with all data", async () => {
+    mockGetUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "auth-user-123",
+          email: "test@example.com",
+        },
+      },
+      error: null,
+    });
+
+    const result = await createIndustryPartnerProfile({
       company_name: "Test Corp",
       position: "Manager",
       program_id: "550e8400-e29b-41d4-a716-446655440000",
@@ -189,17 +197,13 @@ describe("Industry Partner Actions", () => {
 
   it("should return correct error when duplicate role exists", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-123", email: "test@example.com" } },
+      data: { user: { id: "auth-user-123", email: "test@example.com" } },
       error: null,
     });
 
     (prisma.$transaction as any).mockRejectedValue(createPrismaUniqueConstraintError());
 
-    const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
-      company_name: "Test Corp",
-    });
+    const result = await createIndustryPartnerProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("An unexpected error occurred while processing your request.");
@@ -207,14 +211,12 @@ describe("Industry Partner Actions", () => {
 
   it("should fail if the program does not exist", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-123", email: "test@example.com" } },
+      data: { user: { id: "auth-user-123", email: "test@example.com" } },
       error: null,
     });
     (prisma.program.findUnique as any).mockResolvedValue(null);
 
     const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
       company_name: "Test Corp",
       program_id: "550e8400-e29b-41d4-a716-446655440000",
     });
@@ -225,7 +227,7 @@ describe("Industry Partner Actions", () => {
 
   it("should fail if the program is archived or inactive", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-123", email: "test@example.com" } },
+      data: { user: { id: "auth-user-123", email: "test@example.com" } },
       error: null,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
@@ -234,8 +236,6 @@ describe("Industry Partner Actions", () => {
     });
 
     const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
       company_name: "Test Corp",
       program_id: "550e8400-e29b-41d4-a716-446655440000",
     });
@@ -248,11 +248,8 @@ describe("Industry Partner Actions", () => {
     mockGetUser.mockResolvedValue({
       data: {
         user: {
-          id: "user-123",
+          id: "auth-user-123",
           email: "test@example.com",
-          user_metadata: {
-            full_name: "Jane Doe",
-          },
         },
       },
       error: null,
@@ -263,11 +260,7 @@ describe("Industry Partner Actions", () => {
       role: ROLES.INDUSTRY_PARTNER,
     });
 
-    const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
-      company_name: "Test Corp",
-    });
+    const result = await createIndustryPartnerProfile(validPayload);
 
     expect(result.success).toBe(true);
     expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
@@ -278,7 +271,7 @@ describe("Industry Partner Actions", () => {
 
   it("should log the error and return a generic fallback string when transaction fails with a non-P2002 error", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-123", email: "test@example.com" } },
+      data: { user: { id: "auth-user-123", email: "test@example.com" } },
       error: null,
     });
 
@@ -286,11 +279,7 @@ describe("Industry Partner Actions", () => {
     const customError = new Error("Database connection timeout");
     (prisma.$transaction as any).mockRejectedValue(customError);
 
-    const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
-      company_name: "Test Corp",
-    });
+    const result = await createIndustryPartnerProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("An unexpected error occurred while processing your request.");
@@ -302,11 +291,8 @@ describe("Industry Partner Actions", () => {
     mockGetUser.mockResolvedValue({
       data: {
         user: {
-          id: "user-123",
+          id: "auth-user-123",
           email: "test@example.com",
-          user_metadata: {
-            full_name: "Jane Doe",
-          },
         },
       },
       error: null,
@@ -317,14 +303,53 @@ describe("Industry Partner Actions", () => {
       role: ROLES.STUDENT,
     });
 
-    const result = await createIndustryPartnerProfile({
-      first_name: "Jane",
-      last_name: "Doe",
-      company_name: "Test Corp",
-    });
+    const result = await createIndustryPartnerProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Your account is already registered with a different role.");
   });
-});
 
+  it("rejects registration when the resolved domain user is inactive", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-user-123", email: "test@example.com" } },
+      error: null,
+    });
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
+      id: "user-123",
+      email: "test@example.com",
+      name: "Jane Doe",
+      auth_user_id: "auth-user-123",
+      is_active: false,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await createIndustryPartnerProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Your CLOIE account is currently inactive.");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects registration when industry partner verification status is REJECTED", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-user-123", email: "test@example.com" } },
+      error: null,
+    });
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
+      id: "user-123",
+      email: "test@example.com",
+      name: "Jane Doe",
+      auth_user_id: "auth-user-123",
+      is_active: true,
+      alumni_profile: null,
+      industry_partner_profile: { verification_status: "REJECTED" },
+    });
+
+    const result = await createIndustryPartnerProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Your registration application was not approved.");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});

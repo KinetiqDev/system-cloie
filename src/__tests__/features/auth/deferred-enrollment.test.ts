@@ -65,8 +65,6 @@ describe("resolvePostLoginDestination — DEFERRED_ENROLLMENT routes to /student
 // ---------------------------------------------------------------------------
 describe("deferredStudentProfileSchema", () => {
   const base = {
-    first_name: "Maria",
-    last_name: "Santos",
     program_id: "550e8400-e29b-41d4-a716-446655440000",
     student_id_number: "1000571225",
   };
@@ -85,9 +83,19 @@ describe("deferredStudentProfileSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("fails when first_name is too short", () => {
-    const result = deferredStudentProfileSchema.safeParse({ ...base, first_name: "M" });
-    expect(result.success).toBe(false);
+  it("strips injected identity fields from successful parse output", () => {
+    const result = deferredStudentProfileSchema.safeParse({
+      ...base,
+      first_name: "Injected",
+      last_name: "Identity",
+      name: "Injected Identity",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).not.toHaveProperty("first_name");
+      expect(result.data).not.toHaveProperty("last_name");
+      expect(result.data).not.toHaveProperty("name");
+    }
   });
 
   it("fails when student_id_number is too short", () => {
@@ -106,8 +114,6 @@ describe("deferredStudentProfileSchema", () => {
 // ---------------------------------------------------------------------------
 describe("studentProfileSchema — year_level and section required", () => {
   const base = {
-    first_name: "Maria",
-    last_name: "Santos",
     program_id: "550e8400-e29b-41d4-a716-446655440000",
     student_id_number: "1000571225",
     year_level: "FIRST_YEAR",
@@ -120,13 +126,21 @@ describe("studentProfileSchema — year_level and section required", () => {
   });
 
   it("fails when year_level is missing", () => {
-    const { year_level: _, ...rest } = base;
+    const rest = {
+      program_id: base.program_id,
+      student_id_number: base.student_id_number,
+      section: base.section,
+    };
     const result = studentProfileSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it("fails when section is missing", () => {
-    const { section: _, ...rest } = base;
+    const rest = {
+      program_id: base.program_id,
+      student_id_number: base.student_id_number,
+      year_level: base.year_level,
+    };
     const result = studentProfileSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
