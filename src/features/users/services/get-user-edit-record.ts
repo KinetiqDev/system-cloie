@@ -12,8 +12,8 @@ import { type ServiceResult } from "@/lib/utils/service-result";
  */
 export type SecretaryUserEditRecord = {
   id: string;
-  firstName: string;
-  lastName: string;
+  /** Opaque canonical account name (ADR 0014). */
+  name: string;
   email: string;
   isActive: boolean;
   role: SystemRole;
@@ -151,8 +151,7 @@ export async function getUserEditRecordBySecretary(
     success: true,
     data: {
       id: user.id,
-      firstName: user.first_name,
-      lastName: user.last_name,
+      name: user.name,
       email: user.email,
       isActive: user.is_active,
       role,

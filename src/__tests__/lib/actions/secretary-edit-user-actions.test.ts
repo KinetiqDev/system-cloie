@@ -24,8 +24,7 @@ describe("editUserBySecretaryAction", () => {
   it("forwards the complete Program Head assignment set to service validation", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("first_name", "Ana");
-    formData.set("last_name", "Cruz");
+    formData.set("name", "Ana Cruz");
     formData.set("program_head.present", "1");
     formData.append("program_head.program_ids", "33333333-3333-4333-8333-333333333333");
     formData.append("program_head.program_ids", "44444444-4444-4444-8444-444444444444");
@@ -48,8 +47,7 @@ describe("editUserBySecretaryAction", () => {
   it("forwards an empty assignment set when the Program Head section is submitted without selections", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("first_name", "Ana");
-    formData.set("last_name", "Cruz");
+    formData.set("name", "Ana Cruz");
     formData.set("program_head.present", "1");
 
     const result = await editUserBySecretaryAction(formData);
@@ -65,8 +63,7 @@ describe("editUserBySecretaryAction", () => {
   it("does not include a Program Head section when the form omits it", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("first_name", "Ana");
-    formData.set("last_name", "Cruz");
+    formData.set("name", "Ana Cruz");
 
     const result = await editUserBySecretaryAction(formData);
 
@@ -79,8 +76,7 @@ describe("editUserBySecretaryAction", () => {
   it("rejects duplicate Program IDs before any service call", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("first_name", "Ana");
-    formData.set("last_name", "Cruz");
+    formData.set("name", "Ana Cruz");
     formData.set("program_head.present", "1");
     formData.append("program_head.program_ids", "33333333-3333-4333-8333-333333333333");
     formData.append("program_head.program_ids", "33333333-3333-4333-8333-333333333333");
@@ -95,8 +91,7 @@ describe("editUserBySecretaryAction", () => {
   it("forwards Alumni fields and confirmation token", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("first_name", "Ana");
-    formData.set("last_name", "Cruz");
+    formData.set("name", "Ana Cruz");
     formData.set("alumni.program_id", "33333333-3333-4333-8333-333333333333");
     formData.set("alumni.graduation_year", "2020");
     formData.set("alumni.verification_status", "APPROVED");
@@ -120,8 +115,7 @@ describe("editUserBySecretaryAction", () => {
   it("forwards Industry Partner fields and confirmation token", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("first_name", "Ana");
-    formData.set("last_name", "Cruz");
+    formData.set("name", "Ana Cruz");
     formData.set("industry_partner.company_name", "CLOIE Labs");
     formData.set("industry_partner.position", "Hiring Manager");
     formData.set("industry_partner.program_id", "33333333-3333-4333-8333-333333333333");
@@ -146,8 +140,7 @@ describe("editUserBySecretaryAction", () => {
   it("rejects self-edit before calling the service", async () => {
     const formData = new FormData();
     formData.set("id", "11111111-1111-4111-8111-111111111111");
-    formData.set("first_name", "Ana");
-    formData.set("last_name", "Cruz");
+    formData.set("name", "Ana Cruz");
 
     const result = await editUserBySecretaryAction(formData);
 
@@ -159,8 +152,7 @@ describe("editUserBySecretaryAction", () => {
     resolveAuthSession.mockResolvedValue({ userId: "dean-id", activeRole: "DEAN" });
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");
-    formData.set("first_name", "Ana");
-    formData.set("last_name", "Cruz");
+    formData.set("name", "Ana Cruz");
 
     const result = await editUserBySecretaryAction(formData);
 

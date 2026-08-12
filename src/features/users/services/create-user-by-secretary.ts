@@ -76,8 +76,7 @@ export async function createUserBySecretary(
   input: CreateUserBySecretaryInput
 ): Promise<ServiceResult<{ id: string }>> {
   const {
-    first_name,
-    last_name,
+    name,
     email,
     role,
     program_id,
@@ -168,8 +167,8 @@ export async function createUserBySecretary(
       // a. Create User record
       const newUser = await tx.user.create({
         data: {
-          first_name,
-          last_name,
+          // Provisional opaque name required for complete pre-link accounts.
+          name,
           email,
           is_active: true,
         },

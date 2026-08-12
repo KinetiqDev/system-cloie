@@ -31,8 +31,7 @@ describe("getUserEditRecordBySecretary", () => {
   it("returns the projected edit record for a valid user", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "target-user-id",
-      first_name: "John",
-      last_name: "Doe",
+      name: "John Doe",
       email: "john.doe@acd.edu.ph",
       is_active: true,
       roles: [{ role: SystemRole.DEAN }],
@@ -47,8 +46,7 @@ describe("getUserEditRecordBySecretary", () => {
     if (result.success) {
       expect(result.data).toEqual({
         id: "target-user-id",
-        firstName: "John",
-        lastName: "Doe",
+        name: "John Doe",
         email: "john.doe@acd.edu.ph",
         isActive: true,
         role: SystemRole.DEAN,
@@ -66,8 +64,7 @@ describe("getUserEditRecordBySecretary", () => {
   it("projects student fields when present", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "student-id",
-      first_name: "Sam",
-      last_name: "Student",
+      name: "Sam Student",
       email: "sam@acd.edu.ph",
       is_active: true,
       roles: [{ role: SystemRole.STUDENT }],
@@ -101,8 +98,7 @@ describe("getUserEditRecordBySecretary", () => {
   it("projects active enrollment fields when present", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "student-id",
-      first_name: "Sam",
-      last_name: "Student",
+      name: "Sam Student",
       email: "sam@acd.edu.ph",
       is_active: true,
       roles: [{ role: SystemRole.STUDENT }],
@@ -144,8 +140,7 @@ describe("getUserEditRecordBySecretary", () => {
   it("projects faculty primary program when present", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "faculty-id",
-      first_name: "Frank",
-      last_name: "Faculty",
+      name: "Frank Faculty",
       email: "frank@acd.edu.ph",
       is_active: true,
       roles: [{ role: SystemRole.FACULTY }],
@@ -168,8 +163,7 @@ describe("getUserEditRecordBySecretary", () => {
   it("projects the complete active program head assignment set when present", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "program-head-id",
-      first_name: "Pat",
-      last_name: "Head",
+      name: "Pat Head",
       email: "pat@acd.edu.ph",
       is_active: true,
       roles: [{ role: SystemRole.PROGRAM_HEAD }],
@@ -208,8 +202,7 @@ describe("getUserEditRecordBySecretary", () => {
   it("projects alumni and verification fields when present", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "alumni-id",
-      first_name: "Ally",
-      last_name: "Alum",
+      name: "Ally Alum",
       email: "ally@gmail.com",
       is_active: true,
       roles: [{ role: SystemRole.ALUMNI }],

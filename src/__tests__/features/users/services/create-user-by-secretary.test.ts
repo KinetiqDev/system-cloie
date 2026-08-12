@@ -46,8 +46,7 @@ const majorId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a10";
 
 describe("create-user-by-secretary schema", () => {
   const validSecretaryInput = {
-    first_name: "Jane",
-    last_name: "Doe",
+    name: "Jane Doe",
     email: "secretary@acd.edu.ph",
     role: SystemRole.SECRETARY,
   };
@@ -110,20 +109,23 @@ describe("create-user-by-secretary schema", () => {
     }
   });
 
-  it("rejects missing first name", () => {
+  it("rejects missing provisional name", () => {
     const result = createUserBySecretarySchema.safeParse({
       ...validSecretaryInput,
-      first_name: "",
+      name: "",
     });
     expect(result.success).toBe(false);
   });
 
-  it("rejects missing last name", () => {
+  it("accepts a single-word provisional name", () => {
     const result = createUserBySecretarySchema.safeParse({
       ...validSecretaryInput,
-      last_name: "",
+      name: "Madonna",
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe("Madonna");
+    }
   });
 
   it("rejects invalid email format", () => {
@@ -144,8 +146,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("parses valid Program Head input with a managed program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Alice",
-      last_name: "Smith",
+      name: "Alice Smith",
       email: "ph@acd.edu.ph",
       role: SystemRole.PROGRAM_HEAD,
       program_id: programId,
@@ -159,8 +160,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("parses valid Faculty input with a primary program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Bob",
-      last_name: "Jones",
+      name: "Bob Jones",
       email: "faculty@acdeducation.com",
       role: SystemRole.FACULTY,
       program_id: programId,
@@ -173,8 +173,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Program Head input without a program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Alice",
-      last_name: "Smith",
+      name: "Alice Smith",
       email: "ph@acd.edu.ph",
       role: SystemRole.PROGRAM_HEAD,
     });
@@ -188,8 +187,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Faculty input without a program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Bob",
-      last_name: "Jones",
+      name: "Bob Jones",
       email: "faculty@acdeducation.com",
       role: SystemRole.FACULTY,
     });
@@ -203,8 +201,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Program Head input with a non-institutional email", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Alice",
-      last_name: "Smith",
+      name: "Alice Smith",
       email: "ph@gmail.com",
       role: SystemRole.PROGRAM_HEAD,
       program_id: programId,
@@ -219,8 +216,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Faculty input with a non-institutional email", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Bob",
-      last_name: "Jones",
+      name: "Bob Jones",
       email: "faculty@gmail.com",
       role: SystemRole.FACULTY,
       program_id: programId,
@@ -235,8 +231,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("parses valid Student input with all required fields", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Carlos",
-      last_name: "Santos",
+      name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
@@ -256,8 +251,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Student input with a non-institutional email", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Carlos",
-      last_name: "Santos",
+      name: "Carlos Santos",
       email: "student@gmail.com",
       role: SystemRole.STUDENT,
       program_id: programId,
@@ -275,8 +269,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Student input without a program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Carlos",
-      last_name: "Santos",
+      name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       student_id_number: "2024-0001",
@@ -293,8 +286,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Student input without a student ID number", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Carlos",
-      last_name: "Santos",
+      name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
@@ -310,8 +302,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Student input without a year level", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Carlos",
-      last_name: "Santos",
+      name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
@@ -327,8 +318,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Student input without a section", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Carlos",
-      last_name: "Santos",
+      name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
@@ -344,8 +334,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("parses valid Alumni input with any valid email domain", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Ally",
-      last_name: "Santos",
+      name: "Ally Santos",
       email: "ally.alumni@gmail.com",
       role: SystemRole.ALUMNI,
       program_id: programId,
@@ -361,8 +350,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Alumni input without a program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Ally",
-      last_name: "Santos",
+      name: "Ally Santos",
       email: "ally.alumni@gmail.com",
       role: SystemRole.ALUMNI,
       graduation_year: 2022,
@@ -377,8 +365,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Alumni input without a graduation year", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Ally",
-      last_name: "Santos",
+      name: "Ally Santos",
       email: "ally.alumni@gmail.com",
       role: SystemRole.ALUMNI,
       program_id: programId,
@@ -392,8 +379,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("parses valid Industry Partner input with any valid email domain", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Pat",
-      last_name: "Partner",
+      name: "Pat Partner",
       email: "partner@external-company.com",
       role: SystemRole.INDUSTRY_PARTNER,
       company_name: "External Company",
@@ -411,8 +397,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("parses Industry Partner input without optional position or program", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Pat",
-      last_name: "Partner",
+      name: "Pat Partner",
       email: "partner@example.org",
       role: SystemRole.INDUSTRY_PARTNER,
       company_name: "Solo Firm",
@@ -426,8 +411,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Industry Partner input without a company name", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Pat",
-      last_name: "Partner",
+      name: "Pat Partner",
       email: "partner@example.org",
       role: SystemRole.INDUSTRY_PARTNER,
     });
@@ -440,8 +424,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("rejects Industry Partner input with a too-short company name", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Pat",
-      last_name: "Partner",
+      name: "Pat Partner",
       email: "partner@example.org",
       role: SystemRole.INDUSTRY_PARTNER,
       company_name: "A",
@@ -455,8 +438,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("parses Student input without a major (conditional-major rule lives in the service)", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Sam",
-      last_name: "Student",
+      name: "Sam Student",
       email: "sam.student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
@@ -472,8 +454,7 @@ describe("create-user-by-secretary schema", () => {
 
   it("parses Alumni input without a major (conditional-major rule lives in the service)", () => {
     const result = createUserBySecretarySchema.safeParse({
-      first_name: "Ally",
-      last_name: "Santos",
+      name: "Ally Santos",
       email: "ally.alumni@gmail.com",
       role: SystemRole.ALUMNI,
       program_id: programId,
@@ -488,8 +469,7 @@ describe("create-user-by-secretary schema", () => {
 
 describe("createUserBySecretary service", () => {
   const validSecretaryInput = {
-    first_name: "Jane",
-    last_name: "Doe",
+    name: "Jane Doe",
     email: "secretary@acd.edu.ph",
     role: SystemRole.SECRETARY,
     program_id: undefined,
@@ -518,8 +498,7 @@ describe("createUserBySecretary service", () => {
     }
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: {
-        first_name: "Jane",
-        last_name: "Doe",
+        name: "Jane Doe",
         email: "secretary@acd.edu.ph",
         is_active: true,
       },
@@ -549,8 +528,7 @@ describe("createUserBySecretary service", () => {
     }
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        first_name: "Jane",
-        last_name: "Doe",
+        name: "Jane Doe",
         email: "dean@acdeducation.com",
         is_active: true,
       }),
@@ -604,8 +582,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an active Program Head account with a managed program", async () => {
     const phInput = {
-      first_name: "Alice",
-      last_name: "Smith",
+      name: "Alice Smith",
       email: "ph@acd.edu.ph",
       role: SystemRole.PROGRAM_HEAD,
       program_id: "program-ph",
@@ -648,8 +625,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an active Faculty account with a primary program affiliation", async () => {
     const facultyInput = {
-      first_name: "Bob",
-      last_name: "Jones",
+      name: "Bob Jones",
       email: "faculty@acdeducation.com",
       role: SystemRole.FACULTY,
       program_id: "program-faculty",
@@ -754,8 +730,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an active Student account with a profile and active-term enrollment", async () => {
     const studentInput = {
-      first_name: "Carlos",
-      last_name: "Santos",
+      name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
@@ -810,8 +785,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates a Student profile without enrollment when no active term exists", async () => {
     const studentInput = {
-      first_name: "Carlos",
-      last_name: "Santos",
+      name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
@@ -952,8 +926,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an active Alumni account with an approved profile", async () => {
     const alumniInput = {
-      first_name: "Ally",
-      last_name: "Santos",
+      name: "Ally Santos",
       email: "ally.alumni@gmail.com",
       role: SystemRole.ALUMNI,
       program_id: programId,
@@ -996,8 +969,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an Alumni account with a major when the selected program has active majors", async () => {
     const alumniInput = {
-      first_name: "Ally",
-      last_name: "Santos",
+      name: "Ally Santos",
       email: "ally.alumni@gmail.com",
       role: SystemRole.ALUMNI,
       program_id: programId,
@@ -1034,8 +1006,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an Alumni account with any valid non-ACD email domain", async () => {
     const alumniInput = {
-      first_name: "Ally",
-      last_name: "Santos",
+      name: "Ally Santos",
       email: "alumni@example.org",
       role: SystemRole.ALUMNI,
       program_id: programId,
@@ -1155,8 +1126,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an active Industry Partner account with an approved profile", async () => {
     const industryInput = {
-      first_name: "Pat",
-      last_name: "Partner",
+      name: "Pat Partner",
       email: "partner@external-company.com",
       role: SystemRole.INDUSTRY_PARTNER,
       program_id: programId,
@@ -1197,8 +1167,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an Industry Partner account with any valid non-ACD email domain", async () => {
     const industryInput = {
-      first_name: "Pat",
-      last_name: "Partner",
+      name: "Pat Partner",
       email: "partner@example.org",
       role: SystemRole.INDUSTRY_PARTNER,
       program_id: undefined,
@@ -1224,8 +1193,7 @@ describe("createUserBySecretary service", () => {
 
   it("creates an Industry Partner profile without optional program or position", async () => {
     const industryInput = {
-      first_name: "Pat",
-      last_name: "Partner",
+      name: "Pat Partner",
       email: "partner@example.org",
       role: SystemRole.INDUSTRY_PARTNER,
       program_id: undefined,

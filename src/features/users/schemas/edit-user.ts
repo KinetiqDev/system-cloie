@@ -7,16 +7,13 @@ import { YearLevel, StudentSection, VerificationStatus } from "@prisma/client";
  * and are not part of this schema.
  */
 export const baseIdentityEditSchema = z.object({
-  first_name: z
+  // Opaque canonical account name. Secretary correction is a base identity
+  // edit and must not trigger academic/external protected confirmation.
+  name: z
     .string()
     .trim()
-    .min(1, "First name is required.")
-    .max(100, "First name must be 100 characters or fewer."),
-  last_name: z
-    .string()
-    .trim()
-    .min(1, "Last name is required.")
-    .max(100, "Last name must be 100 characters or fewer."),
+    .min(1, "Name is required.")
+    .max(200, "Name must be 200 characters or fewer."),
 });
 
 export type BaseIdentityEditInput = z.infer<typeof baseIdentityEditSchema>;

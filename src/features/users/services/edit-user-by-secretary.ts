@@ -16,6 +16,31 @@ type ProgramHeadAssignmentRow = {
   program?: { name: string | null; code: string | null } | null;
 };
 
+type ReviewedProtectedSnapshot = {
+  studentProfile: {
+    program_id: string;
+    major_id: string | null;
+  } | null;
+  enrollment: {
+    year_level: string | null;
+    section: string | null;
+  } | null;
+  facultyPrimaryProgramId: string | null;
+  alumniProfile: {
+    program_id: string;
+    major_id: string | null;
+    graduation_year: number;
+    verification_status: string;
+  } | null;
+  industryPartnerProfile: {
+    company_name: string;
+    position: string | null;
+    program_id: string | null;
+    verification_status: string;
+  } | null;
+  activeProgramIds: string[];
+};
+
 function activeAssignmentProgramIds(
   assignments: ProgramHeadAssignmentRow[] | undefined
 ): string[] {
@@ -29,35 +54,47 @@ function formatProgramSet(names: string[]): string {
   return names.sort((a, b) => a.localeCompare(b)).join(", ") || "None";
 }
 
+/** Stable token segment for optional IDs/values (empty string → null). */
+function tokenValue(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "null";
+  return String(value);
+}
+
 /**
  * Derives a deterministic protected payload string for the requested changes.
- * This ensures the confirmation token is bound to exactly these values.
- * For Program Head assignment-set edits the payload signs both the reviewed
- * before set and the desired after set, so a stale confirmation (an
- * intervening administrator change) never silently overwrites the set.
+ * The confirmation token is bound to both the reviewed before-state and the
+ * requested after-state. A current-state re-read on every request therefore
+ * makes a stale confirmation (an intervening administrator change) fail
+ * verification instead of authorizing an overwrite.
  */
 function deriveProtectedPayload(
   parsedData: EditUserBySecretaryInput,
   existingRole: SystemRole,
   userId: string,
-  currentActiveProgramIds: string[]
+  reviewed: ReviewedProtectedSnapshot
 ): string | null {
   if (existingRole === SystemRole.STUDENT && parsedData.student) {
-    return `STUDENT:id=${userId}:program=${parsedData.student.program_id}:major=${parsedData.student.major_id ?? "null"}:year=${parsedData.student.year_level ?? "null"}:section=${parsedData.student.section ?? "null"}`;
+    const before = `program=${tokenValue(reviewed.studentProfile?.program_id)}:major=${tokenValue(reviewed.studentProfile?.major_id)}:year=${tokenValue(reviewed.enrollment?.year_level)}:section=${tokenValue(reviewed.enrollment?.section)}`;
+    const after = `program=${tokenValue(parsedData.student.program_id)}:major=${tokenValue(parsedData.student.major_id)}:year=${tokenValue(parsedData.student.year_level)}:section=${tokenValue(parsedData.student.section)}`;
+    return `STUDENT:id=${userId}:before=${before}:after=${after}`;
   }
   if (existingRole === SystemRole.FACULTY && parsedData.faculty) {
-    return `FACULTY:id=${userId}:program=${parsedData.faculty.program_id}`;
+    return `FACULTY:id=${userId}:before=${tokenValue(reviewed.facultyPrimaryProgramId)}:after=${parsedData.faculty.program_id}`;
   }
   if (existingRole === SystemRole.PROGRAM_HEAD && parsedData.program_head) {
-    const before = currentActiveProgramIds.join(",");
+    const before = reviewed.activeProgramIds.join(",");
     const after = [...parsedData.program_head.program_ids].sort().join(",");
     return `PROGRAM_HEAD:id=${userId}:before=${before}:after=${after}`;
   }
   if (existingRole === SystemRole.ALUMNI && parsedData.alumni) {
-    return `ALUMNI:id=${userId}:program=${parsedData.alumni.program_id}:major=${parsedData.alumni.major_id ?? "null"}:graduationYear=${parsedData.alumni.graduation_year}:verificationStatus=${parsedData.alumni.verification_status}`;
+    const before = `program=${tokenValue(reviewed.alumniProfile?.program_id)}:major=${tokenValue(reviewed.alumniProfile?.major_id)}:graduationYear=${tokenValue(reviewed.alumniProfile?.graduation_year)}:verificationStatus=${tokenValue(reviewed.alumniProfile?.verification_status)}`;
+    const after = `program=${tokenValue(parsedData.alumni.program_id)}:major=${tokenValue(parsedData.alumni.major_id)}:graduationYear=${tokenValue(parsedData.alumni.graduation_year)}:verificationStatus=${tokenValue(parsedData.alumni.verification_status)}`;
+    return `ALUMNI:id=${userId}:before=${before}:after=${after}`;
   }
   if (existingRole === SystemRole.INDUSTRY_PARTNER && parsedData.industry_partner) {
-    return `INDUSTRY_PARTNER:id=${userId}:company=${parsedData.industry_partner.company_name}:position=${parsedData.industry_partner.position ?? "null"}:program=${parsedData.industry_partner.program_id ?? "null"}:verificationStatus=${parsedData.industry_partner.verification_status}`;
+    const before = `company=${tokenValue(reviewed.industryPartnerProfile?.company_name)}:position=${tokenValue(reviewed.industryPartnerProfile?.position)}:program=${tokenValue(reviewed.industryPartnerProfile?.program_id)}:verificationStatus=${tokenValue(reviewed.industryPartnerProfile?.verification_status)}`;
+    const after = `company=${tokenValue(parsedData.industry_partner.company_name)}:position=${tokenValue(parsedData.industry_partner.position)}:program=${tokenValue(parsedData.industry_partner.program_id)}:verificationStatus=${tokenValue(parsedData.industry_partner.verification_status)}`;
+    return `INDUSTRY_PARTNER:id=${userId}:before=${before}:after=${after}`;
   }
   return null;
 }
@@ -130,7 +167,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     return { success: false, error: "Secretary access required." };
   }
 
-  const { id, first_name, last_name, student, faculty, program_head, alumni, industry_partner } =
+  const { id, name, student, faculty, program_head, alumni, industry_partner } =
     parsed.data;
 
   if (id === session.userId) {
@@ -172,13 +209,45 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
 
   // The complete reviewed before-set: every currently active assignment.
   const currentActiveProgramIds = activeAssignmentProgramIds(existing.program_head_assignments);
+  const reviewedSnapshot: ReviewedProtectedSnapshot = {
+    studentProfile: existing.student_profile
+      ? {
+          program_id: existing.student_profile.program_id,
+          major_id: existing.student_profile.major_id ?? null,
+        }
+      : null,
+    enrollment: existing.enrollments[0]
+      ? {
+          year_level: existing.enrollments[0].year_level ?? null,
+          section: existing.enrollments[0].section ?? null,
+        }
+      : null,
+    facultyPrimaryProgramId: existing.faculty_program_affiliations[0]?.program_id ?? null,
+    alumniProfile: existing.alumni_profile
+      ? {
+          program_id: existing.alumni_profile.program_id,
+          major_id: existing.alumni_profile.major_id ?? null,
+          graduation_year: existing.alumni_profile.graduation_year,
+          verification_status: existing.alumni_profile.verification_status,
+        }
+      : null,
+    industryPartnerProfile: existing.industry_partner_profile
+      ? {
+          company_name: existing.industry_partner_profile.company_name,
+          position: existing.industry_partner_profile.position ?? null,
+          program_id: existing.industry_partner_profile.program_id ?? null,
+          verification_status: existing.industry_partner_profile.verification_status,
+        }
+      : null,
+    activeProgramIds: currentActiveProgramIds,
+  };
 
-  // Detect protected changes
+  // Detect protected changes — payload signs reviewed before-state + requested after-state.
   const protectedPayload = deriveProtectedPayload(
     parsed.data,
     existingRole,
     id,
-    currentActiveProgramIds
+    reviewedSnapshot
   );
 
   const confirmationReview: {
@@ -364,7 +433,14 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
       }
     } else if (existingRole === SystemRole.INDUSTRY_PARTNER && industry_partner) {
       const profile = existing.industry_partner_profile;
-      if (!profile || profile.verification_status !== industry_partner.verification_status) {
+      const requestedPosition = industry_partner.position || null;
+      if (
+        !profile ||
+        profile.company_name !== industry_partner.company_name ||
+        (profile.position ?? null) !== requestedPosition ||
+        (profile.program_id ?? null) !== (industry_partner.program_id ?? null) ||
+        profile.verification_status !== industry_partner.verification_status
+      ) {
         requiresConfirmation = true;
       }
     }
@@ -397,12 +473,11 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
   // Perform the transactional update
   try {
     await prisma.$transaction(async (tx) => {
-      // Base identity update
+      // Base identity update — name correction is not a protected academic change.
       await tx.user.update({
         where: { id },
         data: {
-          first_name,
-          last_name,
+          name,
         },
       });
 

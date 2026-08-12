@@ -143,9 +143,8 @@ function EditUserDialogBody({
 }: EditUserDialogBodyProps) {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
 
-  // Base fields
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  // Base identity — opaque canonical account name
+  const [name, setName] = useState("");
 
   // Student fields
   const [studentIdNumber, setStudentIdNumber] = useState("");
@@ -210,8 +209,7 @@ function EditUserDialogBody({
         setLoadState({ status: "error", message: result.error });
         return;
       }
-      setFirstName(result.data.firstName);
-      setLastName(result.data.lastName);
+      setName(result.data.name);
 
       if (result.data.role === SystemRole.STUDENT) {
         setStudentIdNumber(result.data.student?.studentIdNumber ?? "");
@@ -252,10 +250,9 @@ function EditUserDialogBody({
       return;
     }
 
-    const trimmedFirst = firstName.trim();
-    const trimmedLast = lastName.trim();
-    if (!trimmedFirst || !trimmedLast) {
-      setSubmitError("First name and last name are required.");
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setSubmitError("Name is required.");
       return;
     }
 
@@ -264,8 +261,7 @@ function EditUserDialogBody({
     if (loadState.status !== "ready") return;
 
     formData.set("id", userId);
-    formData.set("first_name", trimmedFirst);
-    formData.set("last_name", trimmedLast);
+    formData.set("name", trimmedName);
 
     if (loadState.status === "ready" && loadState.record.role === SystemRole.STUDENT) {
       if (!studentIdNumber.trim()) {
@@ -352,7 +348,7 @@ function EditUserDialogBody({
     }
 
     const record = loadState.status === "ready" ? loadState.record : null;
-    const label = record ? `${record.firstName} ${record.lastName}` : "User";
+    const label = record ? record.name : "User";
 
     startSubmit(async () => {
       const result = await editUserBySecretaryAction(formData);
@@ -433,7 +429,7 @@ function EditUserDialogBody({
           {confirmationToken
             ? "Please review the protected changes before saving."
             : loadState.status === "ready"
-              ? `Update details for ${loadState.record.firstName} ${loadState.record.lastName}.`
+              ? `Update details for ${loadState.record.name}.`
               : "Update the selected user's information."}
         </DialogDescription>
       </DialogHeader>
@@ -466,29 +462,20 @@ function EditUserDialogBody({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="edit-user-first-name">First Name</Label>
+            <Label htmlFor="edit-user-name">Name</Label>
             <Input
-              id="edit-user-first-name"
-              name="first_name"
-              value={firstName}
-              onChange={(event) => setFirstName(event.target.value)}
+              id="edit-user-name"
+              name="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
               required
               disabled={isSubmitting}
               autoComplete="off"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-user-last-name">Last Name</Label>
-            <Input
-              id="edit-user-last-name"
-              name="last_name"
-              value={lastName}
-              onChange={(event) => setLastName(event.target.value)}
-              required
-              disabled={isSubmitting}
-              autoComplete="off"
-            />
+            <p className="text-muted-foreground text-xs">
+              Corrects the canonical account name. Name-only edits do not require academic
+              confirmation.
+            </p>
           </div>
 
           <fieldset className="space-y-2">

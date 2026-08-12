@@ -137,8 +137,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "John",
-        lastName: "Doe",
+        name: "John Doe",
         email: "john@acd.edu.ph",
         isActive: true,
         role: SystemRole.DEAN,
@@ -162,10 +161,8 @@ describe("EditUserDialog", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue("John")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("John Doe")).toBeInTheDocument();
     });
-
-    expect(screen.getByDisplayValue("Doe")).toBeInTheDocument();
     expect(screen.getByText("john@acd.edu.ph")).toBeInTheDocument();
     expect(screen.getByText(/Dean/)).toBeInTheDocument();
   });
@@ -175,8 +172,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "secretary-admin",
-        firstName: "Sec",
-        lastName: "Admin",
+        name: "Sec Admin",
         email: "admin@acd.edu.ph",
         isActive: true,
         role: SystemRole.SECRETARY,
@@ -201,7 +197,7 @@ describe("EditUserDialog", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue("Sec")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Sec Admin")).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
@@ -218,8 +214,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "John",
-        lastName: "Doe",
+        name: "John Doe",
         email: "john@acd.edu.ph",
         isActive: true,
         role: SystemRole.DEAN,
@@ -248,10 +243,10 @@ describe("EditUserDialog", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue("John")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("John Doe")).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Johnny" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Johnny Doe" } });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => {
@@ -261,8 +256,9 @@ describe("EditUserDialog", () => {
     const formData = (editUserBySecretaryAction as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0][0] as FormData;
     expect(formData.get("id")).toBe("target-user");
-    expect(formData.get("first_name")).toBe("Johnny");
-    expect(formData.get("last_name")).toBe("Doe");
+    expect(formData.get("name")).toBe("Johnny Doe");
+    expect(formData.get("first_name")).toBeNull();
+    expect(formData.get("last_name")).toBeNull();
 
     await waitFor(() => {
       expect(mockOnUserUpdated).toHaveBeenCalled();
@@ -291,7 +287,7 @@ describe("EditUserDialog", () => {
       expect(screen.getByRole("alert")).toHaveTextContent(/user not found/i);
     });
 
-    expect(screen.queryByLabelText(/first name/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^name$/i)).not.toBeInTheDocument();
   });
 
   // ─── Faculty-specific UI tests ─────────────────────────────────────────
@@ -306,8 +302,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Jane",
-        lastName: "Smith",
+        name: "Jane Smith",
         email: "jane@acd.edu.ph",
         isActive: true,
         role: SystemRole.FACULTY,
@@ -333,7 +328,7 @@ describe("EditUserDialog", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue("Jane")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Jane Smith")).toBeInTheDocument();
     });
 
     expect(screen.getByLabelText(/primary program affiliation/i)).toBeInTheDocument();
@@ -347,8 +342,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Abbegail",
-        lastName: "Abebon",
+        name: "Abbegail Abebon",
         email: "student@acd.edu.ph",
         isActive: true,
         role: SystemRole.STUDENT,
@@ -394,7 +388,7 @@ describe("EditUserDialog", () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByDisplayValue("Abbegail")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Abbegail Abebon")).toBeInTheDocument());
 
     expect(screen.getByLabelText("Program")).toHaveTextContent("Information Technology");
     expect(screen.getByLabelText("Major")).toHaveTextContent("Networks");
@@ -407,8 +401,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Pat",
-        lastName: "Partner",
+        name: "Pat Partner",
         email: "partner@example.com",
         isActive: true,
         role: SystemRole.INDUSTRY_PARTNER,
@@ -450,8 +443,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Legacy",
-        lastName: "Partner",
+        name: "Legacy Partner",
         email: "legacy@example.com",
         isActive: true,
         role: SystemRole.INDUSTRY_PARTNER,
@@ -475,7 +467,7 @@ describe("EditUserDialog", () => {
         yearLevels={[]}
       />
     );
-    await waitFor(() => expect(screen.getByDisplayValue("Legacy")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Legacy Partner")).toBeInTheDocument());
     expect(screen.getByLabelText(/verification status/i)).toHaveTextContent("Not set");
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
     expect(screen.getByRole("alert")).toHaveTextContent(/verification status must be selected/i);
@@ -487,8 +479,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Deferred",
-        lastName: "Student",
+        name: "Deferred Student",
         email: "student@acd.edu.ph",
         isActive: true,
         role: SystemRole.STUDENT,
@@ -521,7 +512,7 @@ describe("EditUserDialog", () => {
         yearLevels={["FIRST_YEAR"]}
       />
     );
-    await waitFor(() => expect(screen.getByDisplayValue("Deferred")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Deferred Student")).toBeInTheDocument());
     expect(screen.getByText(/does not have an active term enrollment/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Year Level")).toBeDisabled();
     expect(screen.getByLabelText("Section")).toBeDisabled();
@@ -532,8 +523,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Jane",
-        lastName: "Smith",
+        name: "Jane Smith",
         email: "jane@acd.edu.ph",
         isActive: true,
         role: SystemRole.FACULTY,
@@ -574,7 +564,7 @@ describe("EditUserDialog", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue("Jane")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Jane Smith")).toBeInTheDocument();
     });
 
     // Change the primary program select
@@ -600,8 +590,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Jane",
-        lastName: "Smith",
+        name: "Jane Smith",
         email: "jane@acd.edu.ph",
         isActive: true,
         role: SystemRole.FACULTY,
@@ -638,7 +627,7 @@ describe("EditUserDialog", () => {
         yearLevels={[]}
       />
     );
-    await waitFor(() => expect(screen.getByDisplayValue("Jane")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Jane Smith")).toBeInTheDocument());
     fireEvent.click(screen.getByLabelText(/primary program affiliation/i));
     fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
@@ -656,8 +645,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Pat",
-        lastName: "Head",
+        name: "Pat Head",
         email: "pat@acd.edu.ph",
         isActive: true,
         role: SystemRole.PROGRAM_HEAD,
@@ -684,7 +672,7 @@ describe("EditUserDialog", () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Pat Head")).toBeInTheDocument());
 
     const fieldset = screen.getByRole("group", { name: /managed programs/i });
     expect(fieldset).toBeInTheDocument();
@@ -700,8 +688,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Pat",
-        lastName: "Head",
+        name: "Pat Head",
         email: "pat@acd.edu.ph",
         isActive: true,
         role: SystemRole.PROGRAM_HEAD,
@@ -732,7 +719,7 @@ describe("EditUserDialog", () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Pat Head")).toBeInTheDocument());
 
     // Add Information Systems to the set, then save
     fireEvent.click(screen.getByRole("checkbox", { name: /information systems/i }));
@@ -750,8 +737,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Pat",
-        lastName: "Head",
+        name: "Pat Head",
         email: "pat@acd.edu.ph",
         isActive: true,
         role: SystemRole.PROGRAM_HEAD,
@@ -782,7 +768,7 @@ describe("EditUserDialog", () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Pat Head")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("checkbox", { name: /information technology/i }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
@@ -799,8 +785,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Ally",
-        lastName: "Alum",
+        name: "Ally Alum",
         email: "ally@gmail.com",
         isActive: true,
         role: SystemRole.ALUMNI,
@@ -833,7 +818,7 @@ describe("EditUserDialog", () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByDisplayValue("Ally")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Ally Alum")).toBeInTheDocument());
     expect(screen.getByLabelText(/verification status/i)).toHaveTextContent("Pending");
     expect(screen.getByLabelText(/graduation year/i)).toHaveValue(2020);
     expect(screen.getByLabelText(/verification status/i)).toBeInTheDocument();
@@ -847,8 +832,7 @@ describe("EditUserDialog", () => {
       success: true,
       data: {
         id: "target-user",
-        firstName: "Pat",
-        lastName: "Head",
+        name: "Pat Head",
         email: "pat@acd.edu.ph",
         isActive: true,
         role: SystemRole.PROGRAM_HEAD,
@@ -889,7 +873,7 @@ describe("EditUserDialog", () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByDisplayValue("Pat")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByDisplayValue("Pat Head")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("checkbox", { name: /information systems/i }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
