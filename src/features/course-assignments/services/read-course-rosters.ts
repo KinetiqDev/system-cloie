@@ -35,7 +35,7 @@ type AssignmentReadRow = Prisma.CourseAssignmentGetPayload<{
     is_active: true;
     course: { select: { code: true; title: true; course_scope: true } };
     program: { select: { code: true; name: true } };
-    faculty: { select: { first_name: true; last_name: true; email: true } };
+    faculty: { select: { name: true; email: true } };
     term_instance: {
       select: {
         id: true;
@@ -50,8 +50,7 @@ type AssignmentReadRow = Prisma.CourseAssignmentGetPayload<{
 }>;
 
 type MembershipStudentRead = {
-  first_name: string;
-  last_name: string;
+  name: string;
   email: string;
   is_active: boolean;
   roles: Array<{ role: SystemRole }>;
@@ -77,7 +76,7 @@ type ReadMembershipRow = {
   created_at: Date;
   removed_at: Date | null;
   student: MembershipStudentRead;
-  remover: { first_name: string; last_name: string } | null;
+  remover: { name: string } | null;
 };
 
 function projectMembershipEligibility(
@@ -166,7 +165,7 @@ function assignmentSummary(
     courseScope: assignment.course.course_scope,
     programCode: assignment.program.code,
     programName: assignment.program.name,
-    facultyName: `${assignment.faculty.first_name} ${assignment.faculty.last_name}`.trim(),
+    facultyName: assignment.faculty.name,
     facultyEmail: assignment.faculty.email,
     yearLevel: assignment.year_level,
     section: assignment.section,
@@ -220,8 +219,7 @@ function assignmentWhere(
           { course: { title: { contains: term, mode: "insensitive" as const } } },
           { program: { code: { contains: term, mode: "insensitive" as const } } },
           { program: { name: { contains: term, mode: "insensitive" as const } } },
-          { faculty: { first_name: { contains: term, mode: "insensitive" as const } } },
-          { faculty: { last_name: { contains: term, mode: "insensitive" as const } } },
+          { faculty: { name: { contains: term, mode: "insensitive" as const } } },
         ],
       })),
     ],
@@ -246,7 +244,7 @@ async function loadAssignmentRows(
         is_active: true,
         course: { select: { code: true, title: true, course_scope: true } },
         program: { select: { code: true, name: true } },
-        faculty: { select: { first_name: true, last_name: true, email: true } },
+        faculty: { select: { name: true, email: true } },
         term_instance: {
           select: {
             id: true,
@@ -288,8 +286,7 @@ async function loadMembershipRows(assignmentIds: string[], termInstanceIds: stri
       removed_at: true,
       student: {
         select: {
-          first_name: true,
-          last_name: true,
+          name: true,
           email: true,
           is_active: true,
           roles: { select: { role: true } },
@@ -312,7 +309,7 @@ async function loadMembershipRows(assignmentIds: string[], termInstanceIds: stri
           },
         },
       },
-      remover: { select: { first_name: true, last_name: true } },
+      remover: { select: { name: true } },
     },
   });
 }
@@ -412,8 +409,7 @@ function detailSearchWhere(search: string): Prisma.CourseAssignmentMembershipWhe
         AND: terms.map((term) => ({
           student: {
             OR: [
-              { first_name: { contains: term, mode: "insensitive" as const } },
-              { last_name: { contains: term, mode: "insensitive" as const } },
+              { name: { contains: term, mode: "insensitive" as const } },
               { email: { contains: term, mode: "insensitive" as const } },
             ],
           },
@@ -430,7 +426,7 @@ function mapDetailMember(
   const profile = membership.student.student_profile;
   return {
     membershipId: membership.id,
-    studentName: `${membership.student.first_name} ${membership.student.last_name}`.trim(),
+    studentName: membership.student.name,
     email: membership.student.email,
     programCode: currentEnrollment?.program.code ?? profile?.program.code ?? null,
     programName: currentEnrollment?.program.name ?? profile?.program.name ?? null,
@@ -441,9 +437,7 @@ function mapDetailMember(
     isActive: membership.is_active,
     eligibility,
     removedAt: membership.removed_at,
-    removedByName: membership.remover
-      ? `${membership.remover.first_name} ${membership.remover.last_name}`.trim()
-      : null,
+    removedByName: membership.remover?.name ?? null,
   };
 }
 
@@ -460,7 +454,7 @@ async function findDetailedAssignment(assignmentId: string) {
       is_active: true,
       course: { select: { code: true, title: true, course_scope: true } },
       program: { select: { code: true, name: true } },
-      faculty: { select: { first_name: true, last_name: true, email: true } },
+      faculty: { select: { name: true, email: true } },
       term_instance: {
         select: {
           id: true,
@@ -518,8 +512,7 @@ export async function getCourseRosterDetail(
           removed_at: true,
           student: {
             select: {
-              first_name: true,
-              last_name: true,
+              name: true,
               email: true,
               is_active: true,
               roles: { select: { role: true } },
@@ -542,11 +535,10 @@ export async function getCourseRosterDetail(
               },
             },
           },
-          remover: { select: { first_name: true, last_name: true } },
+          remover: { select: { name: true } },
         },
         orderBy: [
-          { student: { last_name: sortDirection } },
-          { student: { first_name: sortDirection } },
+          { student: { name: sortDirection } },
           { student_user_id: sortDirection },
         ],
         skip: (page - 1) * COURSE_ROSTER_DETAIL_PAGE_SIZE,

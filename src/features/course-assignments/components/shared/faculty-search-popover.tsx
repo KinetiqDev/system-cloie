@@ -173,7 +173,7 @@ export function FacultySearchPopover({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate text-sm font-medium">
-                          {faculty.firstName} {faculty.lastName}
+                          {faculty.name}
                         </span>
                         {isSelected && <Check className="text-primary h-3.5 w-3.5 shrink-0" />}
                       </div>

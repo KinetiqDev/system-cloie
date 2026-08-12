@@ -112,14 +112,11 @@ export async function runTermRollover({
         select: {
           id: true,
           email: true,
-          first_name: true,
-          last_name: true,
+          name: true,
         },
       },
     },
-    orderBy: {
-      student: { last_name: "asc" },
-    },
+    orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
   });
 
   // 4. Check for existing enrollments in target term (idempotency)
@@ -154,7 +151,7 @@ export async function runTermRollover({
     if (nextYearLevel === null) {
       exceptions.push({
         studentUserId: student.id,
-        studentName: `${student.first_name} ${student.last_name}`,
+        studentName: student.name,
         studentEmail: student.email,
         exceptionType: "GRADUATING",
         currentYearLevel: enrollment.year_level,
@@ -167,7 +164,7 @@ export async function runTermRollover({
     if (!enrollment.program_id) {
       exceptions.push({
         studentUserId: student.id,
-        studentName: `${student.first_name} ${student.last_name}`,
+        studentName: student.name,
         studentEmail: student.email,
         exceptionType: "MISSING_DATA",
         currentYearLevel: enrollment.year_level,
@@ -292,11 +289,11 @@ export async function previewTermRollover({
         select: {
           id: true,
           email: true,
-          first_name: true,
-          last_name: true,
+          name: true,
         },
       },
     },
+    orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
   });
 
   // 4. Check existing target enrollments
@@ -321,7 +318,7 @@ export async function previewTermRollover({
     if (nextYearLevel === null) {
       exceptions.push({
         studentUserId: student.id,
-        studentName: `${student.first_name} ${student.last_name}`,
+        studentName: student.name,
         studentEmail: student.email,
         exceptionType: "GRADUATING",
         currentYearLevel: enrollment.year_level,
@@ -333,7 +330,7 @@ export async function previewTermRollover({
     if (!enrollment.program_id) {
       exceptions.push({
         studentUserId: student.id,
-        studentName: `${student.first_name} ${student.last_name}`,
+        studentName: student.name,
         studentEmail: student.email,
         exceptionType: "MISSING_DATA",
         currentYearLevel: enrollment.year_level,

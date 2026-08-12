@@ -372,9 +372,7 @@ function FacultyStep({
           <FacultySearchPopover
             id="assignment-faculty"
             selectedFacultyId={selectedFaculty?.id ?? null}
-            selectedFacultyName={
-              selectedFaculty ? `${selectedFaculty.firstName} ${selectedFaculty.lastName}` : null
-            }
+            selectedFacultyName={selectedFaculty?.name ?? null}
             targetProgramId={programId ?? undefined}
             targetProgramName={selectedProgramName}
             onSelect={onFacultySelect}
@@ -387,9 +385,7 @@ function FacultyStep({
             <UserIcon className="text-primary h-4 w-4" />
           </div>
           <div className="min-w-0 space-y-0.5">
-            <p className="text-sm leading-snug font-medium">
-              {selectedFaculty.firstName} {selectedFaculty.lastName}
-            </p>
+            <p className="text-sm leading-snug font-medium">{selectedFaculty.name}</p>
             <p className="text-muted-foreground text-xs">{selectedFaculty.email}</p>
             {selectedFaculty.primaryAffiliation && (
               <p className="text-muted-foreground text-xs">{selectedFaculty.primaryAffiliation}</p>
@@ -422,7 +418,7 @@ function ConfirmStep({
       <Alert variant="warning">
         <AlertTitle>Cross-Program Assignment</AlertTitle>
         <AlertDescription>
-          {selectedFaculty?.firstName} {selectedFaculty?.lastName} is not affiliated with{" "}
+          {selectedFaculty?.name} is not affiliated with{" "}
           {selectedProgramName}. Are you sure you want to proceed?
         </AlertDescription>
       </Alert>
@@ -450,9 +446,7 @@ function ConfirmStep({
           </div>
           <div className="flex gap-2">
             <span className="text-muted-foreground w-16 shrink-0">Faculty</span>
-            <span>
-              {selectedFaculty?.firstName} {selectedFaculty?.lastName}
-            </span>
+            <span>{selectedFaculty?.name}</span>
           </div>
         </div>
       </AssignmentSummaryBlock>

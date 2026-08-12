@@ -208,7 +208,7 @@ describe("Dean oversight read model", () => {
     prismaMock.courseAssignment.findFirst.mockResolvedValue(assignment());
     prismaMock.studentEnrollment.count.mockResolvedValue(1);
     prismaMock.studentEnrollment.findMany.mockResolvedValue([
-      { student: { first_name: "Ada", last_name: "Lovelace" } },
+      { student: { name: "Ada Lovelace" } },
     ]);
 
     const result = await getDeanRoster({
@@ -246,12 +246,8 @@ describe("Dean oversight read model", () => {
           year_level: "FIRST_YEAR",
           section: "MORNING",
         }),
-        select: { student: { select: { first_name: true, last_name: true } } },
-        orderBy: [
-          { student: { first_name: "asc" } },
-          { student: { last_name: "asc" } },
-          { student_user_id: "asc" },
-        ],
+        select: { student: { select: { name: true } } },
+        orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
       })
     );
     expect(JSON.stringify(result)).not.toMatch(/studentId|email|enrollmentId|source|accountId/i);
@@ -262,7 +258,7 @@ describe("Dean oversight read model", () => {
     prismaMock.courseAssignment.findFirst.mockResolvedValue(assignment());
     prismaMock.studentEnrollment.count.mockResolvedValue(26);
     prismaMock.studentEnrollment.findMany.mockResolvedValue([
-      { student: { first_name: "Ada", last_name: "Lovelace" } },
+      { student: { name: "Ada Lovelace" } },
     ]);
 
     const result = await getDeanRoster({
@@ -282,7 +278,7 @@ describe("Dean oversight read model", () => {
     prismaMock.courseAssignment.findFirst.mockResolvedValue(assignment());
     prismaMock.studentEnrollment.count.mockResolvedValue(26);
     prismaMock.studentEnrollment.findMany.mockResolvedValue([
-      { student: { first_name: "Ada", last_name: "Lovelace" } },
+      { student: { name: "Ada Lovelace" } },
     ]);
 
     const pageResult = await getDeanRosterPage({

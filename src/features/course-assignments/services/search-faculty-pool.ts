@@ -35,8 +35,7 @@ export async function searchFacultyPool(
         },
       },
       OR: [
-        { first_name: { contains: query, mode: "insensitive" as const } },
-        { last_name: { contains: query, mode: "insensitive" as const } },
+        { name: { contains: query, mode: "insensitive" as const } },
         { email: { contains: query, mode: "insensitive" as const } },
       ],
     };
@@ -47,8 +46,7 @@ export async function searchFacultyPool(
         select: {
           id: true,
           email: true,
-          first_name: true,
-          last_name: true,
+          name: true,
           faculty_program_affiliations: {
             where: { is_active: true },
             select: {
@@ -65,7 +63,7 @@ export async function searchFacultyPool(
         },
         take: effectivePageSize,
         skip,
-        orderBy: { last_name: "asc" },
+        orderBy: [{ name: "asc" }, { id: "asc" }],
       }),
       prisma.user.count({ where }),
     ]);
@@ -77,8 +75,7 @@ export async function searchFacultyPool(
       return {
         id: f.id,
         email: f.email,
-        firstName: f.first_name,
-        lastName: f.last_name,
+        name: f.name,
         primaryAffiliation: primaryAffiliation?.program.name,
         primaryAffiliationCode: primaryAffiliation?.program.code,
         affiliations,

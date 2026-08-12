@@ -102,8 +102,7 @@ describe("loadAllProgramCourseAssignmentsPageData", () => {
       {
         faculty: {
           id: "faculty-1",
-          first_name: "Ada",
-          last_name: "Lovelace",
+          name: "Ada Lovelace",
           email: "ada@example.com",
         },
       },
@@ -127,8 +126,7 @@ describe("loadAllProgramCourseAssignmentsPageData", () => {
     expect(result.availableFaculty).toEqual([
       {
         id: "faculty-1",
-        firstName: "Ada",
-        lastName: "Lovelace",
+        name: "Ada Lovelace",
         email: "ada@example.com",
       },
     ]);

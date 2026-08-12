@@ -189,8 +189,7 @@ describe("EditCourseAssignmentDialog", () => {
           {
             id: "faculty-2",
             email: "faculty-2@example.com",
-            firstName: "Elena",
-            lastName: "Torres",
+            name: "Elena Torres",
             primaryAffiliation: "BSCS",
             primaryAffiliationCode: "BSCS",
             affiliations: ["BSCS"],

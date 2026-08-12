@@ -12,7 +12,7 @@ export interface SchoolYearItem {
   isActive: boolean;
   activeSemester: AcademicSemester | null;
   archivedAt: Date | null;
-  archivedBy: { id: string; firstName: string; lastName: string } | null;
+  archivedBy: { id: string; name: string } | null;
   createdAt: Date;
   updatedAt: Date;
 }

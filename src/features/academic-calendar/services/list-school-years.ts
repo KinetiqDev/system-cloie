@@ -37,8 +37,7 @@ export async function listSchoolYears(
         archived_by_user: {
           select: {
             id: true,
-            first_name: true,
-            last_name: true,
+            name: true,
           },
         },
       },
@@ -61,8 +60,7 @@ export async function listSchoolYears(
     archivedBy: sy.archived_by_user
       ? {
           id: sy.archived_by_user.id,
-          firstName: sy.archived_by_user.first_name,
-          lastName: sy.archived_by_user.last_name,
+          name: sy.archived_by_user.name,
         }
       : null,
     createdAt: sy.created_at,
@@ -108,8 +106,7 @@ export async function getSchoolYearById(
       archived_by_user: {
         select: {
           id: true,
-          first_name: true,
-          last_name: true,
+          name: true,
         },
       },
     },
@@ -129,8 +126,7 @@ export async function getSchoolYearById(
     archivedBy: sy.archived_by_user
       ? {
           id: sy.archived_by_user.id,
-          firstName: sy.archived_by_user.first_name,
-          lastName: sy.archived_by_user.last_name,
+          name: sy.archived_by_user.name,
         }
       : null,
     createdAt: sy.created_at,

@@ -54,8 +54,7 @@ describe("list-students-for-class", () => {
         student: {
           id: "student-1",
           email: "student1@test.com",
-          first_name: "John",
-          last_name: "Doe",
+          name: "John Doe",
           student_profile: {
             student_id_number: "S001",
           },
@@ -76,8 +75,7 @@ describe("list-students-for-class", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].firstName).toBe("John");
-      expect(result.data[0].lastName).toBe("Doe");
+      expect(result.data[0].name).toBe("John Doe");
     }
   });
 
@@ -102,4 +100,57 @@ describe("list-students-for-class", () => {
       })
     );
   });
+
+  it("projects opaque complete names including compound and punctuation values", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockFacultySession);
+
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.studentEnrollment.findMany).mockResolvedValue([
+      {
+        student_user_id: "student-2",
+        id: "enrollment-2",
+        major_id: null,
+        student: {
+          id: "student-2",
+          email: "mary@test.com",
+          name: "Mary Anne O'Connor",
+          student_profile: {
+            student_id_number: "S002",
+          },
+        },
+        major: null,
+      },
+      {
+        student_user_id: "student-3",
+        id: "enrollment-3",
+        major_id: null,
+        student: {
+          id: "student-3",
+          email: "prince@test.com",
+          name: "Prince",
+          student_profile: {
+            student_id_number: null,
+          },
+        },
+        major: null,
+      },
+    ] as never);
+
+    const result = await listStudentsForClass({
+      termInstanceId: "term-1",
+      programId: "program-1",
+      yearLevel: YearLevel.FIRST_YEAR,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.map((s) => s.name)).toEqual(["Mary Anne O'Connor", "Prince"]);
+    }
+    expect(prisma.studentEnrollment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
+      })
+    );
+  });
+
 });
