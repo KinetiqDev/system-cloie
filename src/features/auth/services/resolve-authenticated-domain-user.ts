@@ -1,7 +1,7 @@
 import type { VerificationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
-export type AuthenticatedDomainUser = {
+type AuthenticatedDomainUser = {
   id: string;
   email: string;
   name: string;

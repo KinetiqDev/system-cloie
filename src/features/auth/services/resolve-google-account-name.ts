@@ -8,7 +8,7 @@
  * Never derives a name from email and never invents placeholders.
  */
 
-export type GoogleAccountNameResolution =
+type GoogleAccountNameResolution =
   | { ok: true; name: string }
   | { ok: false; reason: "missing-name" };
 
