@@ -1,6 +1,5 @@
 import { cache } from "react";
 import { ROLES, type Role } from "@/lib/constants/roles";
-import { DEMO_USER_EMAIL_SET } from "@/lib/constants/demo-users";
 import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { readDevAuthCookie } from "./dev-auth";
@@ -18,6 +17,7 @@ type AuthenticatedUser = {
 type AuthSessionUserRecord = {
   id: string;
   email: string;
+  name: string;
   is_active: boolean;
   roles: Array<{ role: Role }>;
   student_profile: { id: string } | null;
@@ -45,9 +45,6 @@ async function resolveAuthSessionFromAuthenticatedUser(
 ) {
   const isDevAuth = mode === "dev";
   const isDedicatedDemo = mode === "dedicated-demo";
-  const isDemoAllowed = process.env.NODE_ENV === "development";
-  const isDemoUser =
-    isDevAuth && isDemoAllowed && user.email ? DEMO_USER_EMAIL_SET.has(user.email) : false;
   const demoConfig = isDedicatedDemo ? getDemoAuthConfig() : null;
   if (isDedicatedDemo && !demoConfig) {
     return null;
@@ -104,6 +101,8 @@ async function resolveAuthSessionFromAuthenticatedUser(
   return buildAuthSessionSnapshot({
     userId: dbUser?.id ?? user.id,
     email: isDedicatedDemo ? (dbUser?.email ?? null) : user.email,
+    // Domain User.name only — never invent from email or provider metadata here.
+    name: dbUser?.name ?? null,
     roles,
     studentProfileId,
     alumniProfileId,
@@ -114,8 +113,6 @@ async function resolveAuthSessionFromAuthenticatedUser(
       dbUser?.industry_partner_profile?.verification_status ?? null,
     hasActiveEnrollment,
     hasFacultyAffiliation,
-    isDemoUser,
-    isDedicatedDemo,
   });
 }
 

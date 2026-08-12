@@ -15,12 +15,15 @@ export async function AuthenticatedAppShell({ children }: { children: ReactNode 
     : [];
   const appearanceEnabled = resolveAppearanceAvailability();
 
-  const user = session
-    ? {
-        name: session.email?.split("@")[0] || "User", // Fallback name since AuthSessionSnapshot doesn't have it yet
-        email: session.email,
-      }
-    : undefined;
+  // Only surface identity when a canonical domain name is present. Never invent
+  // a display name from the email local-part or a generic placeholder.
+  const user =
+    session?.name != null
+      ? {
+          name: session.name,
+          email: session.email,
+        }
+      : undefined;
 
   return (
     <SessionGuard>

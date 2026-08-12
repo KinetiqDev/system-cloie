@@ -92,6 +92,7 @@ describe("resolveAuthSession", () => {
     findUniqueMock.mockResolvedValue({
       id: "demo-user",
       email: "demo-faculty@cloie.test",
+      name: "Demo Faculty",
       is_active: true,
       roles: [{ role: ROLES.FACULTY }],
       student_profile: null,
@@ -102,6 +103,7 @@ describe("resolveAuthSession", () => {
     await expect(resolveAuthSession()).resolves.toMatchObject({
       userId: "demo-user",
       email: "demo-faculty@cloie.test",
+      name: "Demo Faculty",
       roles: [ROLES.FACULTY],
     });
     expect(getUserMock).not.toHaveBeenCalled();
@@ -124,6 +126,7 @@ describe("resolveAuthSession", () => {
     await expect(resolveAuthSession()).resolves.toEqual({
       userId: "user-1",
       email: "user@acd.edu.ph",
+      name: null,
       roles: [],
       activeRole: null,
       studentProfileId: null,
@@ -149,6 +152,7 @@ describe("resolveAuthSession", () => {
     await expect(resolveAuthSession()).resolves.toEqual({
       userId: "user-2",
       email: "student@acd.edu.ph",
+      name: null,
       roles: [ROLES.STUDENT],
       activeRole: ROLES.STUDENT,
       studentProfileId: null,
@@ -177,6 +181,7 @@ describe("resolveAuthSession", () => {
     await expect(resolveAuthSession()).resolves.toEqual({
       userId: "user-3",
       email: "student@acd.edu.ph",
+      name: null,
       roles: [ROLES.STUDENT],
       activeRole: ROLES.STUDENT,
       studentProfileId: "profile-1",
@@ -224,6 +229,7 @@ describe("resolveAuthSession", () => {
     await expect(resolveAuthSession()).resolves.toEqual({
       userId: "user-4",
       email: "faculty@acd.edu.ph",
+      name: null,
       roles: [ROLES.FACULTY, ROLES.STUDENT],
       activeRole: ROLES.FACULTY,
       studentProfileId: null,
@@ -252,6 +258,7 @@ describe("resolveAuthSession", () => {
     await expect(resolveAuthSession()).resolves.toEqual({
       userId: "user-5",
       email: "unknown@acd.edu.ph",
+      name: null,
       roles: [],
       activeRole: null,
       studentProfileId: null,
@@ -278,6 +285,7 @@ describe("resolveAuthSession", () => {
     await expect(resolveAuthSession()).resolves.toEqual({
       userId: "user-6",
       email: "faculty@acd.edu.ph",
+      name: null,
       roles: [ROLES.FACULTY],
       activeRole: ROLES.FACULTY,
       studentProfileId: null,
@@ -299,14 +307,17 @@ describe("resolveAuthSession", () => {
       error: null,
     });
     findUniqueMock.mockResolvedValue({
+      id: "domain-user-7",
+      name: "Elena Torres",
       roles: [{ role: ROLES.FACULTY }],
       student_profile: null,
     });
     findFirstFacultyAffiliationMock.mockResolvedValue({ id: "affiliation-1" });
 
     await expect(resolveAuthSession()).resolves.toEqual({
-      userId: "user-7",
+      userId: "domain-user-7",
       email: "faculty@acd.edu.ph",
+      name: "Elena Torres",
       roles: [ROLES.FACULTY],
       activeRole: ROLES.FACULTY,
       studentProfileId: null,
@@ -315,6 +326,49 @@ describe("resolveAuthSession", () => {
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
       profileGate: { status: "COMPLETE" },
+    });
+  });
+
+  it("loads canonical domain name for oauth sessions and never invents from email", async () => {
+    const { resolveAuthSession } = await import("@/features/auth/services/resolve-auth-session");
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "auth-user-name", email: "juan.dela.cruz@acd.edu.ph" } },
+      error: null,
+    });
+    findUniqueMock.mockResolvedValue({
+      id: "domain-user-name",
+      email: "juan.dela.cruz@acd.edu.ph",
+      name: "Juan Dela Cruz",
+      is_active: true,
+      roles: [{ role: ROLES.STUDENT }],
+      student_profile: { id: "profile-name" },
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const session = await resolveAuthSession();
+    expect(session).toMatchObject({
+      userId: "domain-user-name",
+      email: "juan.dela.cruz@acd.edu.ph",
+      name: "Juan Dela Cruz",
+      roles: [ROLES.STUDENT],
+    });
+    expect(session?.name).not.toBe("juan.dela.cruz");
+    expect(JSON.stringify(session)).not.toMatch(/firstName|lastName|first_name|last_name/);
+  });
+
+  it("omits name when the domain user record is missing", async () => {
+    const { resolveAuthSession } = await import("@/features/auth/services/resolve-auth-session");
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "auth-only", email: "orphan@acd.edu.ph" } },
+      error: null,
+    });
+    findUniqueMock.mockResolvedValue(null);
+
+    await expect(resolveAuthSession()).resolves.toMatchObject({
+      userId: "auth-only",
+      email: "orphan@acd.edu.ph",
+      name: null,
     });
   });
 
@@ -337,6 +391,129 @@ describe("resolveAuthSession", () => {
         intent: "faculty",
       },
     });
+  });
+
+  it.each([
+    [
+      "an inactive account",
+      {
+        roles: [{ role: ROLES.FACULTY }],
+        student_profile: null,
+        alumni_profile: null,
+        industry_partner_profile: null,
+        is_active: false,
+      },
+      { status: "INACTIVE" },
+      "demo-faculty@cloie.test",
+    ],
+    [
+      "a Student without active enrollment",
+      {
+        roles: [{ role: ROLES.STUDENT }],
+        student_profile: { id: "student-profile" },
+        alumni_profile: null,
+        industry_partner_profile: null,
+        is_active: true,
+      },
+      { status: "DEFERRED_ENROLLMENT" },
+      "demo-student@cloie.test",
+    ],
+    [
+      "a rejected Alumni account",
+      {
+        roles: [{ role: ROLES.ALUMNI }],
+        student_profile: null,
+        alumni_profile: { id: "alumni-profile", verification_status: "REJECTED" },
+        industry_partner_profile: null,
+        is_active: true,
+      },
+      { status: "REJECTED_EXTERNAL_ACCOUNT" },
+      "demo-alumni@cloie.test",
+    ],
+    [
+      "a rejected Industry Partner account",
+      {
+        roles: [{ role: ROLES.INDUSTRY_PARTNER }],
+        student_profile: null,
+        alumni_profile: null,
+        industry_partner_profile: { id: "industry-profile", verification_status: "REJECTED" },
+        is_active: true,
+      },
+      { status: "REJECTED_EXTERNAL_ACCOUNT" },
+      "demo-industry@cloie.test",
+    ],
+    [
+      "a Faculty without program affiliation",
+      {
+        roles: [{ role: ROLES.FACULTY }],
+        student_profile: null,
+        alumni_profile: null,
+        industry_partner_profile: null,
+        is_active: true,
+      },
+      { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
+      "demo-faculty@cloie.test",
+    ],
+  ])(
+    "preserves the normal gate for development fixture %s",
+    async (_description, user, profileGate, email) => {
+      const { resolveAuthSessionFromDevUser } =
+        await import("@/features/auth/services/resolve-auth-session");
+      vi.stubEnv("NODE_ENV", "development");
+      findUniqueMock.mockResolvedValue({
+        id: "dev-fixture-user",
+        email,
+        name: "Fixture Canonical Name",
+        ...user,
+      });
+      findUniqueStudentEnrollmentMock.mockResolvedValue(null);
+      findFirstFacultyAffiliationMock.mockResolvedValue(null);
+
+      await expect(resolveAuthSessionFromDevUser({ id: "dev-fixture-user", email })).resolves.toMatchObject({
+        userId: "dev-fixture-user",
+        email,
+        name: "Fixture Canonical Name",
+        profileGate,
+      });
+      expect(findUniqueMock).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: "dev-fixture-user" } })
+      );
+    }
+  );
+
+  it("loads canonical domain name for development sessions and never invents from email", async () => {
+    const { resolveAuthSessionFromDevUser } =
+      await import("@/features/auth/services/resolve-auth-session");
+    vi.stubEnv("NODE_ENV", "development");
+    findUniqueMock.mockResolvedValue({
+      id: "dev-student-id",
+      email: "demo-student@cloie.test",
+      name: "Demo Student Canonical",
+      is_active: true,
+      roles: [{ role: ROLES.STUDENT }],
+      student_profile: { id: "student-profile" },
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+    findUniqueStudentEnrollmentMock.mockResolvedValue({ is_active: true });
+
+    const session = await resolveAuthSessionFromDevUser({
+      id: "dev-student-id",
+      email: "demo-student@cloie.test",
+    });
+
+    expect(session).toMatchObject({
+      userId: "dev-student-id",
+      email: "demo-student@cloie.test",
+      name: "Demo Student Canonical",
+      roles: [ROLES.STUDENT],
+      profileGate: { status: "COMPLETE" },
+    });
+    expect(session?.name).not.toBe("demo-student");
+    expect(JSON.stringify(session)).not.toMatch(/firstName|lastName|first_name|last_name/);
+    expect(findUniqueMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "dev-student-id" } })
+    );
   });
 
   it("re-resolves dedicated demo identity and preserves profile gates", async () => {
