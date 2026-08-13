@@ -3,12 +3,26 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import RespondentPortalPage from "@/app/(public)/portal/respondents/page";
 import type { RoleCardConfig } from "@/features/portals/lib/role-card-config";
 
-const { resolveAuthSessionMock } = vi.hoisted(() => ({
-  resolveAuthSessionMock: vi.fn(),
+const { redirectMock, resolveAuthSessionMock, resolvePostLoginDestinationMock } = vi.hoisted(
+  () => ({
+    redirectMock: vi.fn((path: string) => {
+      throw new Error(`NEXT_REDIRECT:${path}`);
+    }),
+    resolveAuthSessionMock: vi.fn(),
+    resolvePostLoginDestinationMock: vi.fn(),
+  })
+);
+
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
 }));
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
+}));
+
+vi.mock("@/features/auth/services/resolve-post-login-destination", () => ({
+  resolvePostLoginDestination: resolvePostLoginDestinationMock,
 }));
 
 interface MockPortalShellProps {
@@ -50,19 +64,22 @@ describe("RespondentPortalPage", () => {
     expect(screen.getByText(/Back to portal selection/)).toBeInTheDocument();
   });
 
-  it("renders with session info when user is already signed in", async () => {
+  it("redirects authenticated incomplete alumni to onboarding", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
-      email: "user@example.com",
-      roles: [],
-      profileGate: { status: "COMPLETE" },
+      email: "alumni@example.com",
+      activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
+      profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
+    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
 
-    const page = await RespondentPortalPage();
-    render(page);
-
-    expect(screen.getByText("Welcome to System CLOIE")).toBeInTheDocument();
-    expect(screen.getByTestId("card-count").textContent).toBe("3");
-    expect(screen.getByText(/Signed in as user@example.com/)).toBeInTheDocument();
+    await expect(RespondentPortalPage()).rejects.toThrow("NEXT_REDIRECT:/onboarding?intent=alumni");
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
+      requestedPath: "/dashboard",
+      intent: "alumni",
+      activeRole: "ALUMNI",
+      profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
+    });
   });
 });

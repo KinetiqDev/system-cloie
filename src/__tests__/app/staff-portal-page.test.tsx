@@ -4,12 +4,26 @@ import StaffPortalPage from "@/app/(public)/portal/staff/page";
 import type { RoleCardConfig } from "@/features/portals/lib/role-card-config";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
-const { resolveAuthSessionMock } = vi.hoisted(() => ({
-  resolveAuthSessionMock: vi.fn(),
+const { redirectMock, resolveAuthSessionMock, resolvePostLoginDestinationMock } = vi.hoisted(
+  () => ({
+    redirectMock: vi.fn((path: string) => {
+      throw new Error(`NEXT_REDIRECT:${path}`);
+    }),
+    resolveAuthSessionMock: vi.fn(),
+    resolvePostLoginDestinationMock: vi.fn(),
+  })
+);
+
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
 }));
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
+}));
+
+vi.mock("@/features/auth/services/resolve-post-login-destination", () => ({
+  resolvePostLoginDestination: resolvePostLoginDestinationMock,
 }));
 
 interface MockPortalShellProps {
@@ -48,19 +62,22 @@ describe("StaffPortalPage", () => {
     expect(screen.getByText(/Back to portal selection/)).toBeInTheDocument();
   });
 
-  it("renders with session info when user is already signed in", async () => {
+  it("redirects authenticated staff to their dashboard", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
       email: "staff@acd.edu.ph",
-      roles: [{ role: "FACULTY" }],
+      activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
+    resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
 
-    const page = await StaffPortalPage();
-    render(page);
-
-    expect(screen.getByText("ACD Staff & Faculty Portal")).toBeInTheDocument();
-    expect(screen.getByTestId("card-count").textContent).toBe("4");
-    expect(screen.getByText(/Signed in as staff@acd.edu.ph/)).toBeInTheDocument();
+    await expect(StaffPortalPage()).rejects.toThrow("NEXT_REDIRECT:/faculty/dashboard");
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
+      requestedPath: "/dashboard",
+      intent: null,
+      activeRole: "FACULTY",
+      profileGate: { status: "COMPLETE" },
+    });
   });
 });
