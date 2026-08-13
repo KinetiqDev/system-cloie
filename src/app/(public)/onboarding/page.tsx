@@ -58,7 +58,7 @@ export default async function OnboardingPage({
   if (intent === "faculty") {
     return (
       <div className="mx-auto w-full max-w-2xl py-8">
-        <FacultyOnboardingForm email={user.email!} programs={programs} />
+        <FacultyOnboardingForm email={user.email!} name={session?.name ?? ""} programs={programs} />
       </div>
     );
   }
@@ -66,7 +66,7 @@ export default async function OnboardingPage({
   if (intent === "alumni") {
     return (
       <div className="mx-auto w-full max-w-2xl py-8">
-        <AlumniOnboardingForm email={user.email!} programs={programs} />
+        <AlumniOnboardingForm email={user.email!} name={session?.name ?? ""} programs={programs} />
       </div>
     );
   }
@@ -74,7 +74,11 @@ export default async function OnboardingPage({
   if (intent === "industry-partner") {
     return (
       <div className="mx-auto w-full max-w-2xl py-8">
-        <IndustryPartnerOnboardingForm email={user.email!} programs={programs} />
+        <IndustryPartnerOnboardingForm
+          email={user.email!}
+          name={session?.name ?? ""}
+          programs={programs}
+        />
       </div>
     );
   }
@@ -102,13 +106,13 @@ export default async function OnboardingPage({
       <div className="mx-auto w-full max-w-lg">
         <Card className="border-border overflow-hidden shadow-sm">
           <div className="bg-primary flex items-center justify-center py-10">
-            <div className="flex size-16 items-center justify-center rounded-2xl bg-on-primary/20">
-              <UserPlus className="size-8 text-on-primary" />
+            <div className="bg-on-primary/20 flex size-16 items-center justify-center rounded-2xl">
+              <UserPlus className="text-on-primary size-8" />
             </div>
           </div>
 
           <CardContent className="space-y-6 px-8 py-8">
-            <h1 className="font-heading text-primary text-center text-heading-lg font-bold">
+            <h1 className="font-heading text-primary text-heading-lg text-center font-bold">
               Complete Your Student Profile
             </h1>
 
@@ -128,7 +132,7 @@ export default async function OnboardingPage({
               <ArrowRight className="size-5" />
             </Button>
 
-            <form action={resetIncompleteRoleClaim} className="w-full flex justify-center">
+            <form action={resetIncompleteRoleClaim} className="flex w-full justify-center">
               <Button
                 type="submit"
                 variant="ghost"

@@ -13,6 +13,7 @@ import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
 
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, ArrowLeft, ArrowRight, GraduationCap, Mail, UserCircle } from "lucide-react";
@@ -32,13 +33,11 @@ type Program = {
 
 type FacultyOnboardingFormProps = {
   email: string;
+  name: string;
   programs: Program[];
 };
 
-export function FacultyOnboardingForm({
-  email,
-  programs,
-}: FacultyOnboardingFormProps) {
+export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardingFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
 
   const {
@@ -120,9 +119,27 @@ export function FacultyOnboardingForm({
               </h2>
             </div>
 
-            <p className="text-body-sm text-text-secondary">
-              Your account name comes from your Google account and cannot be edited here.
-            </p>
+            <div className="space-y-2">
+              <Label
+                htmlFor="account-name"
+                className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+              >
+                Account Name
+              </Label>
+              <div className="relative">
+                <UserCircle
+                  aria-hidden="true"
+                  className="text-text-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+                />
+                <Input
+                  id="account-name"
+                  value={name}
+                  readOnly
+                  aria-readonly="true"
+                  className="bg-surface-muted text-text-secondary pl-11"
+                />
+              </div>
+            </div>
 
             {/* Section heading "Program Affiliation" */}
             <div className="flex items-center gap-2 pt-4">

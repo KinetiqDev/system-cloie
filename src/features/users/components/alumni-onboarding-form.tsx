@@ -17,7 +17,15 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ArrowLeft, ArrowRight, GraduationCap, Mail, Calendar, UserCircle } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  GraduationCap,
+  Mail,
+  Calendar,
+  UserCircle,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 
 type Program = {
   id: string;
@@ -36,13 +43,11 @@ type Program = {
 
 type AlumniOnboardingFormProps = {
   email: string;
+  name: string;
   programs: Program[];
 };
 
-export function AlumniOnboardingForm({
-  email,
-  programs,
-}: AlumniOnboardingFormProps) {
+export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboardingFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
 
   const {
@@ -136,9 +141,27 @@ export function AlumniOnboardingForm({
               </h2>
             </div>
 
-            <p className="text-body-sm text-muted-foreground">
-              Your account name comes from your Google account and cannot be edited here.
-            </p>
+            <div className="space-y-2">
+              <Label
+                htmlFor="account-name"
+                className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
+              >
+                Account Name
+              </Label>
+              <div className="relative">
+                <UserCircle
+                  aria-hidden="true"
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+                />
+                <Input
+                  id="account-name"
+                  value={name}
+                  readOnly
+                  aria-readonly="true"
+                  className="bg-surface-muted text-muted-foreground pl-11"
+                />
+              </div>
+            </div>
 
             <div className="flex items-center gap-2 pt-4">
               <GraduationCap className="text-primary size-5" />
@@ -164,7 +187,7 @@ export function AlumniOnboardingForm({
                     </SelectTrigger>
                     <SelectContent>
                       {programs.map((program) => (
-                         <SelectItem key={program.id} value={program.id}>
+                        <SelectItem key={program.id} value={program.id}>
                           {program.code} — {program.name}
                         </SelectItem>
                       ))}
@@ -227,7 +250,7 @@ export function AlumniOnboardingForm({
                 Graduation Year
               </Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
+                <Calendar className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   id="graduation_year"
                   type="number"

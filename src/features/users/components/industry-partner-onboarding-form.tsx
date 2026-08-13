@@ -17,7 +17,15 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ArrowLeft, ArrowRight, Briefcase, Mail, Building2, UserCircle } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Briefcase,
+  Mail,
+  Building2,
+  UserCircle,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
 
 type Program = {
   id: string;
@@ -35,11 +42,13 @@ type Program = {
 
 type IndustryPartnerOnboardingFormProps = {
   email: string;
+  name: string;
   programs: Program[];
 };
 
 export function IndustryPartnerOnboardingForm({
   email,
+  name,
   programs,
 }: IndustryPartnerOnboardingFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -50,7 +59,9 @@ export function IndustryPartnerOnboardingForm({
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<IndustryPartnerProfileFormValues>({
-    resolver: customZodResolver(industryPartnerProfileSchema) as Resolver<IndustryPartnerProfileFormValues>,
+    resolver: customZodResolver(
+      industryPartnerProfileSchema
+    ) as Resolver<IndustryPartnerProfileFormValues>,
     defaultValues: {
       company_name: "",
       position: "",
@@ -125,9 +136,27 @@ export function IndustryPartnerOnboardingForm({
               </h2>
             </div>
 
-            <p className="text-body-sm text-muted-foreground">
-              Your account name comes from your Google account and cannot be edited here.
-            </p>
+            <div className="space-y-2">
+              <Label
+                htmlFor="account-name"
+                className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
+              >
+                Account Name
+              </Label>
+              <div className="relative">
+                <UserCircle
+                  aria-hidden="true"
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+                />
+                <Input
+                  id="account-name"
+                  value={name}
+                  readOnly
+                  aria-readonly="true"
+                  className="bg-surface-muted text-muted-foreground pl-11"
+                />
+              </div>
+            </div>
 
             <div className="flex items-center gap-2 pt-4">
               <Briefcase className="text-primary size-5" />
@@ -145,7 +174,7 @@ export function IndustryPartnerOnboardingForm({
                 Company / Organization Name
               </Label>
               <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
+                <Building2 className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   id="company_name"
                   placeholder="e.g. Acme Corp"
@@ -167,10 +196,13 @@ export function IndustryPartnerOnboardingForm({
                 htmlFor="position"
                 className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
               >
-                Position / Title <span className="text-muted-foreground font-normal normal-case ml-1">(Optional)</span>
+                Position / Title{" "}
+                <span className="text-muted-foreground ml-1 font-normal normal-case">
+                  (Optional)
+                </span>
               </Label>
               <div className="relative">
-                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
+                <UserCircle className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   id="position"
                   placeholder="e.g. Senior Engineer"
@@ -189,7 +221,10 @@ export function IndustryPartnerOnboardingForm({
             {/* Academic Program Affiliation */}
             <div className="space-y-2">
               <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
-                Program Affiliation <span className="text-muted-foreground font-normal normal-case ml-1">(Optional)</span>
+                Program Affiliation{" "}
+                <span className="text-muted-foreground ml-1 font-normal normal-case">
+                  (Optional)
+                </span>
               </Label>
               <Controller
                 name="program_id"
@@ -201,7 +236,7 @@ export function IndustryPartnerOnboardingForm({
                   >
                     <SelectTrigger className={`w-full ${errors.program_id ? "border-danger" : ""}`}>
                       <SelectValue placeholder="Select an affiliated program (if applicable)">
-                        {field.value ? getProgramLabel(field.value) : null}
+                        {field.value ? getProgramLabel(field.value) : "None"}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>

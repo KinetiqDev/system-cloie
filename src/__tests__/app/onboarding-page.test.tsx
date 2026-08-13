@@ -76,20 +76,26 @@ vi.mock("@/app/(public)/onboarding/student-profile-form", () => ({
 }));
 
 vi.mock("@/features/users/components/alumni-onboarding-form", () => ({
-  AlumniOnboardingForm: ({ email }: { email: string }) => (
-    <div data-testid="alumni-form">Alumni form for {email}</div>
+  AlumniOnboardingForm: ({ email, name }: { email: string; name: string }) => (
+    <div data-testid="alumni-form">
+      Alumni form for {email} ({name})
+    </div>
   ),
 }));
 
 vi.mock("@/features/users/components/industry-partner-onboarding-form", () => ({
-  IndustryPartnerOnboardingForm: ({ email }: { email: string }) => (
-    <div data-testid="industry-form">Industry form for {email}</div>
+  IndustryPartnerOnboardingForm: ({ email, name }: { email: string; name: string }) => (
+    <div data-testid="industry-form">
+      Industry form for {email} ({name})
+    </div>
   ),
 }));
 
 vi.mock("@/features/users/components/faculty-onboarding-form", () => ({
-  FacultyOnboardingForm: ({ email }: { email: string }) => (
-    <div data-testid="faculty-form">Faculty form for {email}</div>
+  FacultyOnboardingForm: ({ email, name }: { email: string; name: string }) => (
+    <div data-testid="faculty-form">
+      Faculty form for {email} ({name})
+    </div>
   ),
 }));
 
@@ -162,20 +168,26 @@ describe("OnboardingPage", () => {
     });
 
     render(page);
-    expect(screen.getByText("Student form for student@acd.edu.ph (Jamie Cruz)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Student form for student@acd.edu.ph (Jamie Cruz)")
+    ).toBeInTheDocument();
     expect(resolveAuthSessionFromUserMock).toHaveBeenCalledWith({
       id: "user-1",
       email: "student@acd.edu.ph",
     });
   });
 
-  it("renders alumni onboarding without name fallback props", async () => {
+  it("passes the canonical session name to alumni onboarding", async () => {
     getUserMock.mockResolvedValue({
       data: {
         user: {
           id: "user-1",
           email: "alumni@example.com",
-          user_metadata: { full_name: "Alumni Member", given_name: "Alumni", family_name: "Member" },
+          user_metadata: {
+            full_name: "Alumni Member",
+            given_name: "Alumni",
+            family_name: "Member",
+          },
         },
       },
       error: null,
@@ -186,10 +198,12 @@ describe("OnboardingPage", () => {
     });
 
     render(page);
-    expect(screen.getByTestId("alumni-form")).toHaveTextContent("Alumni form for alumni@example.com");
+    expect(screen.getByTestId("alumni-form")).toHaveTextContent(
+      "Alumni form for alumni@example.com (Jamie Cruz)"
+    );
   });
 
-  it("renders faculty onboarding without name fallback props", async () => {
+  it("passes the canonical session name to faculty onboarding", async () => {
     getUserMock.mockResolvedValue({
       data: {
         user: {
@@ -206,7 +220,18 @@ describe("OnboardingPage", () => {
 
     render(page);
     expect(screen.getByTestId("faculty-form")).toHaveTextContent(
-      "Faculty form for teacher@acd.edu.ph"
+      "Faculty form for teacher@acd.edu.ph (Jamie Cruz)"
+    );
+  });
+
+  it("passes the canonical session name to industry partner onboarding", async () => {
+    const page = await OnboardingPage({
+      searchParams: Promise.resolve({ intent: "industry-partner" }),
+    });
+
+    render(page);
+    expect(screen.getByTestId("industry-form")).toHaveTextContent(
+      "Industry form for student@acd.edu.ph (Jamie Cruz)"
     );
   });
 });
