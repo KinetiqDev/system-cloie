@@ -1850,10 +1850,8 @@ export type Database = {
           auth_user_id: string | null
           created_at: string
           email: string
-          first_name: string | null
           id: string
           is_active: boolean
-          last_name: string | null
           name: string
           updated_at: string
         }
@@ -1861,10 +1859,8 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string
           email: string
-          first_name?: string | null
           id?: string
           is_active?: boolean
-          last_name?: string | null
           name: string
           updated_at: string
         }
@@ -1872,10 +1868,8 @@ export type Database = {
           auth_user_id?: string | null
           created_at?: string
           email?: string
-          first_name?: string | null
           id?: string
           is_active?: boolean
-          last_name?: string | null
           name?: string
           updated_at?: string
         }
