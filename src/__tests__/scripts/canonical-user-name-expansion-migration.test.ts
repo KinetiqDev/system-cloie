@@ -4,11 +4,17 @@ import { describe, expect, it } from "vitest";
 
 const MIGRATION_PATH =
   "supabase/migrations/20260812170000_add_canonical_user_name_expansion.sql";
+const CONTRACT_MIGRATION_PATH =
+  "supabase/migrations/20260813014341_remove_legacy_split_user_name_columns.sql";
 const PRISMA_USER_MODEL_PATH = "prisma/models/identity-access.prisma";
 const GENERATED_TYPES_PATH = "src/types/supabase-database.ts";
 
 function readMigration() {
   return readFileSync(path.join(process.cwd(), MIGRATION_PATH), "utf8");
+}
+
+function readContractMigration() {
+  return readFileSync(path.join(process.cwd(), CONTRACT_MIGRATION_PATH), "utf8");
 }
 
 function readUserModel() {
@@ -119,6 +125,35 @@ describe("canonical user name expansion migration contract", () => {
   });
 });
 
+describe("canonical user name contract cleanup migration", () => {
+  it("removes only the temporary bridge and legacy split columns", () => {
+    expect(existsSync(CONTRACT_MIGRATION_PATH)).toBe(true);
+
+    const migration = readContractMigration();
+
+    expect(migration).toContain("users_name_not_blank");
+    expect(migration).toContain("users_compat_fill_name_from_split_fields");
+    expect(migration).toMatch(/DROP COLUMN "first_name"[\s\S]*DROP COLUMN "last_name"/i);
+    expect(migration).not.toMatch(/DROP TABLE|DROP SCHEMA|DROP POLICY|DROP TYPE/i);
+    expect(migration).not.toMatch(/DROP COLUMN\s+"(?!first_name|last_name)/i);
+    expect(migration).not.toMatch(/ALTER TABLE\s+"(?!users")/i);
+    expect(migration).not.toMatch(/DELETE FROM|TRUNCATE|UPDATE\s+|INSERT INTO/i);
+  });
+
+  it("fails closed unless the required canonical contract is already present", () => {
+    const migration = readContractMigration();
+
+    expect(migration).toContain("users.name must exist and be NOT NULL");
+    expect(migration).toContain(
+      "users.name must retain the users_name_not_blank constraint"
+    );
+    expect(migration).toContain(
+      "users.name contains NULL or whitespace-only values"
+    );
+    expect(migration).toContain("legacy split name columns are already absent");
+  });
+});
+
 describe("canonical user name Prisma application seam", () => {
   it("exposes required name and omits split fields from the User model", () => {
     const userModel = extractUserModelBlock(readUserModel());
@@ -147,22 +182,14 @@ describe("canonical user name generated schema assertions", () => {
     const types = readFileSync(path.join(process.cwd(), GENERATED_TYPES_PATH), "utf8");
     const usersTable = extractUsersTableTypes(types);
 
-    // Typegen reads the linked/deployed schema. After expansion is pushed and
-    // `pnpm supabase:types` runs, Row.name is required. Until then the file may
-    // still reflect the pre-expansion shape; never hand-edit it to fake readiness.
     const hasRequiredName = /Row:\s*\{[\s\S]*?\bname:\s*string\b/.test(usersTable);
     const hasNullableName = /Row:\s*\{[\s\S]*?\bname:\s*string\s*\|\s*null\b/.test(
       usersTable
     );
 
-    if (hasRequiredName) {
-      expect(hasNullableName).toBe(false);
-      return;
-    }
-
-    // Pre-push residual: legacy split fields still present, no name yet.
-    expect(usersTable).toMatch(/\bfirst_name:\s*string\b/);
-    expect(usersTable).toMatch(/\blast_name:\s*string\b/);
-    expect(usersTable).not.toMatch(/\bname:\s*string\b/);
+    expect(hasRequiredName).toBe(true);
+    expect(hasNullableName).toBe(false);
+    expect(usersTable).not.toMatch(/\bfirst_name\s*:/);
+    expect(usersTable).not.toMatch(/\blast_name\s*:/);
   });
 });

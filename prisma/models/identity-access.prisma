@@ -27,10 +27,9 @@ model User {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   auth_user_id String?  @unique @db.Uuid
   email        String   @unique
-  // Canonical opaque account name (ADR 0014). Legacy first_name/last_name remain
-  // database-only compatibility columns during the expansion window and are not
-  // part of the application model; the temporary bridge trigger fills name for
-  // old split-field writers until the later contract migration removes them.
+  // Canonical opaque account name (ADR 0014). The contract migration removes
+  // the legacy split columns and compatibility bridge after the name-only
+  // application rollout has been verified.
   name         String
   is_active    Boolean  @default(true)
   created_at   DateTime @default(now())
