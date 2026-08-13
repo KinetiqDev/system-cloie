@@ -45,6 +45,7 @@ type YearLevelType = YearLevel;
 
 type StudentProfileFormProps = {
   email: string;
+  name: string;
   programs: Program[];
   yearLevels: YearLevelType[];
   hasActiveTerm: boolean;
@@ -52,6 +53,7 @@ type StudentProfileFormProps = {
 
 export function StudentProfileForm({
   email,
+  name,
   programs,
   yearLevels,
   hasActiveTerm,
@@ -180,8 +182,31 @@ export function StudentProfileForm({
             </div>
 
             <p className="text-body-sm text-muted-foreground">
-              Your account name comes from your Google account and cannot be edited here.
+              Your account name comes from your Google account and is not editable during onboarding.
             </p>
+
+            {/* Canonical account name */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="account-name"
+                className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
+              >
+                Account Name
+              </Label>
+              <div className="relative">
+                <UserCircle
+                  aria-hidden="true"
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+                />
+                <Input
+                  id="account-name"
+                  value={name}
+                  readOnly
+                  aria-readonly="true"
+                  className="bg-surface-muted pl-11 text-muted-foreground"
+                />
+              </div>
+            </div>
 
             {/* Institutional Email */}
             <div className="space-y-2">

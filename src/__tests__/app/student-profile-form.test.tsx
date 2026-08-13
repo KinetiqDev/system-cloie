@@ -85,10 +85,11 @@ describe("StudentProfileForm", () => {
     vi.clearAllMocks();
   });
 
-  it("does not render editable name controls and explains Google authority", () => {
+  it("does not render editable name controls and displays the Google-derived name", () => {
     render(
       <StudentProfileForm
         email="student@acd.edu.ph"
+        name="Jamie Cruz"
         programs={[]}
         yearLevels={[]}
         hasActiveTerm={true}
@@ -97,7 +98,10 @@ describe("StudentProfileForm", () => {
 
     expect(screen.queryByLabelText(/first name/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/last name/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/account name comes from your Google account/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Account Name")).toHaveValue("Jamie Cruz");
+    expect(screen.getByLabelText("Account Name")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("Account Name")).toHaveAttribute("aria-readonly", "true");
+    expect(screen.getByLabelText("Account Name")).not.toHaveAttribute("name");
     expect(screen.getByText("student@acd.edu.ph")).toBeInTheDocument();
   });
 
@@ -107,6 +111,7 @@ describe("StudentProfileForm", () => {
     render(
       <StudentProfileForm
         email="student@acd.edu.ph"
+        name="Jamie Cruz"
         programs={[]}
         yearLevels={[]}
         hasActiveTerm={true}
@@ -128,6 +133,7 @@ describe("StudentProfileForm", () => {
     render(
       <StudentProfileForm
         email="student@acd.edu.ph"
+        name="Jamie Cruz"
         programs={[]}
         yearLevels={[]}
         hasActiveTerm={true}

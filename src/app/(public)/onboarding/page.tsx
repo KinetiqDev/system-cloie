@@ -88,6 +88,7 @@ export default async function OnboardingPage({
       <div className="mx-auto w-full max-w-2xl py-8">
         <StudentProfileForm
           email={user.email!}
+          name={session?.name ?? ""}
           programs={programs}
           yearLevels={yearLevels}
           hasActiveTerm={hasActiveTerm}

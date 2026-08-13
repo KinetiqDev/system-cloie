@@ -68,7 +68,11 @@ vi.mock("@/features/auth/services/resolve-post-login-destination", () => ({
 }));
 
 vi.mock("@/app/(public)/onboarding/student-profile-form", () => ({
-  StudentProfileForm: ({ email }: { email: string }) => <div>Student form for {email}</div>,
+  StudentProfileForm: ({ email, name }: { email: string; name: string }) => (
+    <div>
+      Student form for {email} ({name})
+    </div>
+  ),
 }));
 
 vi.mock("@/features/users/components/alumni-onboarding-form", () => ({
@@ -109,6 +113,7 @@ describe("OnboardingPage", () => {
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
+      name: "Jamie Cruz",
       activeRole: null,
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
@@ -157,7 +162,7 @@ describe("OnboardingPage", () => {
     });
 
     render(page);
-    expect(screen.getByText("Student form for student@acd.edu.ph")).toBeInTheDocument();
+    expect(screen.getByText("Student form for student@acd.edu.ph (Jamie Cruz)")).toBeInTheDocument();
     expect(resolveAuthSessionFromUserMock).toHaveBeenCalledWith({
       id: "user-1",
       email: "student@acd.edu.ph",
