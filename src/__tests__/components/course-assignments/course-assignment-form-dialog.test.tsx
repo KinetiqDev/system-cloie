@@ -32,8 +32,7 @@ vi.mock("@/features/course-assignments/components/shared/faculty-search-popover"
       onClick={() =>
         onSelect({
           id: "faculty-1",
-          firstName: "Test",
-          lastName: "Faculty",
+          name: "Test Faculty",
           email: "test@example.com",
           affiliations: facultyMockState.crossProgram ? [] : ["BS Computer Science"],
           primaryAffiliation: facultyMockState.crossProgram ? undefined : "BS Computer Science",

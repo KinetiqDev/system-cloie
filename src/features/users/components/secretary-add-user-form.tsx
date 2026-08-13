@@ -271,8 +271,7 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
   } = useForm<CreateUserBySecretaryInput>({
     resolver: customZodResolver(createUserBySecretarySchema),
     defaultValues: {
-      first_name: "",
-      last_name: "",
+      name: "",
       email: "",
       role: undefined as unknown as SystemRole,
       program_id: undefined,
@@ -360,8 +359,7 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
     }
 
     const formData = new FormData();
-    formData.set("first_name", data.first_name);
-    formData.set("last_name", data.last_name);
+    formData.set("name", data.name);
     formData.set("email", data.email);
     formData.set("role", data.role);
 
@@ -427,24 +425,15 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
             </Alert>
           )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <TextField
-              id="first_name"
-              label="First name"
-              name="first_name"
-              register={register}
-              error={errors.first_name?.message}
-              placeholder="Enter first name"
-            />
-            <TextField
-              id="last_name"
-              label="Last name"
-              name="last_name"
-              register={register}
-              error={errors.last_name?.message}
-              placeholder="Enter last name"
-            />
-          </div>
+          <TextField
+            id="name"
+            label="Name"
+            name="name"
+            register={register}
+            error={errors.name?.message}
+            placeholder="Enter full name"
+            helper="Provisional name used until the user links their Google account."
+          />
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <TextField

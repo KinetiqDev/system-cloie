@@ -40,8 +40,7 @@ const termInstances: TermInstanceItem[] = [
 
 const previewRespondent = {
   email: "alice@school.edu",
-  firstName: "Alice",
-  lastName: "Adams",
+  name: "Alice Adams",
   programCode: "BSCS",
   studentId: "S001",
   userId: "user-1",
@@ -142,7 +141,8 @@ describe("PublishCentralDeploymentForm", () => {
       expect(screen.getByRole("heading", { name: /respondent preview/i })).toBeInTheDocument();
     });
     expect(screen.getByText(/1 respondent\(s\) found/i)).toBeInTheDocument();
-    expect(screen.getByText("Adams, Alice")).toBeInTheDocument();
+    expect(screen.getByText("Alice Adams")).toBeInTheDocument();
+    expect(screen.queryByText("Adams, Alice")).not.toBeInTheDocument();
   });
 
   it("previews with the selected term, year level, and stakeholder", async () => {
@@ -240,8 +240,8 @@ describe("PublishCentralDeploymentForm", () => {
     });
 
     // Exclude the only respondent, then include them again
-    fireEvent.click(screen.getByRole("checkbox", { name: "Include Adams, Alice" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Include Adams, Alice" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Include Alice Adams" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Include Alice Adams" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Confirm and Publish" }));
 

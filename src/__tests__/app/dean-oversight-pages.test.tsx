@@ -470,6 +470,8 @@ describe("Dean oversight pages", () => {
     );
     expect(screen.getByRole("heading", { name: "Class Roster" })).toBeInTheDocument();
     expect(screen.getByLabelText("Loading class roster")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search by complete name")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/first or last name/i)).not.toBeInTheDocument();
     cleanup();
     render(
       <RosterContent

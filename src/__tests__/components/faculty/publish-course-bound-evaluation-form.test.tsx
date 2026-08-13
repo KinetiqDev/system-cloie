@@ -148,8 +148,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
       data: [
         {
           email: "alice@school.edu",
-          firstName: "Alice",
-          lastName: "Adams",
+          name: "Alice Adams",
           majorId: null,
           majorName: null,
           membershipId: "membership-1",
@@ -202,6 +201,17 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     expect(previewAction).toHaveBeenCalledWith({
       assignmentId: "assignment-1",
     });
+
+    // Canonical complete-name rendering for respondents (no last, first formatting).
+    // Visible name is direct `respondent.name`; aria-label carries the Include <name> contract.
+    expect(await screen.findByText("Alice Adams")).toBeInTheDocument();
+    const includeCheckbox = screen.getByRole("checkbox", {
+      name: /Alice Adams/i,
+    });
+    expect(includeCheckbox).toBeInTheDocument();
+    expect(includeCheckbox).toHaveAttribute("aria-label", "Include Alice Adams");
+    expect(screen.queryByText(/Adams,\s*Alice/)).not.toBeInTheDocument();
+    expect(includeCheckbox.getAttribute("aria-label")).not.toMatch(/,/);
 
     // Confirm and publish
     await waitFor(() => {
@@ -289,8 +299,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
       data: [
         {
           email: "alice@school.edu",
-          firstName: "Alice",
-          lastName: "Adams",
+          name: "Alice Adams",
           majorId: null,
           majorName: null,
           membershipId: "membership-1",
@@ -358,8 +367,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
       data: [
         {
           email: "bob@school.edu",
-          firstName: "Bob",
-          lastName: "Brown",
+          name: "Bob Brown",
           majorId: null,
           majorName: null,
           membershipId: "membership-2",

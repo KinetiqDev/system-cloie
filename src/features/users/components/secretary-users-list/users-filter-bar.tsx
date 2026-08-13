@@ -141,18 +141,11 @@ export function UsersFilterBar({
         <SelectTrigger aria-label="Sort users" className="w-full md:w-[160px]">
           <SelectValue>
             Sort:{" "}
-            {sort === "firstName"
-              ? "First name"
-              : sort === "lastName"
-                ? "Last name"
-                : sort === "email"
-                  ? "Email"
-                  : "Status"}
+            {sort === "name" ? "Name" : sort === "email" ? "Email" : "Status"}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="lastName">Sort: Last name</SelectItem>
-          <SelectItem value="firstName">Sort: First name</SelectItem>
+          <SelectItem value="name">Sort: Name</SelectItem>
           <SelectItem value="email">Sort: Email</SelectItem>
           <SelectItem value="isActive">Sort: Status</SelectItem>
         </SelectContent>

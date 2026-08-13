@@ -17,8 +17,7 @@ export default async function ProgramHeadProfilePage() {
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     select: {
-      first_name: true,
-      last_name: true,
+      name: true,
       email: true,
       program_head_assignments: {
         where: { is_active: true },
@@ -32,7 +31,7 @@ export default async function ProgramHeadProfilePage() {
     },
   });
 
-  const fullName = user ? `${user.first_name} ${user.last_name}` : "Program Head";
+  const fullName = user ? user.name : "Program Head";
 
   const assignments = user?.program_head_assignments ?? [];
 

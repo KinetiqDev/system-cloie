@@ -45,8 +45,6 @@ type YearLevelType = YearLevel;
 
 type StudentProfileFormProps = {
   email: string;
-  initialFirstName: string;
-  initialLastName: string;
   programs: Program[];
   yearLevels: YearLevelType[];
   hasActiveTerm: boolean;
@@ -54,8 +52,6 @@ type StudentProfileFormProps = {
 
 export function StudentProfileForm({
   email,
-  initialFirstName,
-  initialLastName,
   programs,
   yearLevels,
   hasActiveTerm,
@@ -76,8 +72,6 @@ export function StudentProfileForm({
   } = useForm<StudentProfileFormValues>({
     resolver: customZodResolver(activeSchema) as Resolver<StudentProfileFormValues>,
     defaultValues: {
-      first_name: initialFirstName,
-      last_name: initialLastName,
       program_id: "",
       major_id: "",
       year_level: "",
@@ -176,54 +170,18 @@ export function StudentProfileForm({
             </Alert>
           )}
 
-          {/* Section: Identity Information */}
+          {/* Section: Account identity (Google-authoritative, display-only) */}
           <div className="space-y-5">
             <div className="flex items-center gap-2">
               <UserCircle className="text-primary size-5" />
               <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">
-                Identity Information
+                Account Identity
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="first_name"
-                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
-                >
-                  First Name
-                </Label>
-                <Input
-                  id="first_name"
-                  {...register("first_name")}
-                  className={errors.first_name ? "border-danger focus-visible:ring-danger" : ""}
-                />
-                {errors.first_name && (
-                  <p className="text-danger text-xs">{errors.first_name.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="last_name"
-                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
-                >
-                  Last Name
-                </Label>
-                <Input
-                  id="last_name"
-                  {...register("last_name")}
-                  className={errors.last_name ? "border-danger focus-visible:ring-danger" : ""}
-                />
-                {errors.last_name && (
-                  <p className="text-danger text-xs">{errors.last_name.message}</p>
-                )}
-              </div>
-            </div>
-
-            {initialFirstName && (
-              <p className="text-caption text-muted-foreground">Retrieved from your Google account</p>
-            )}
+            <p className="text-body-sm text-muted-foreground">
+              Your account name comes from your Google account and cannot be edited here.
+            </p>
 
             {/* Institutional Email */}
             <div className="space-y-2">

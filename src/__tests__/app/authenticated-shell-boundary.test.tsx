@@ -33,11 +33,13 @@ vi.mock("@/features/design-system/services/resolve-appearance-availability", () 
 vi.mock("@/components/layout/app-shell", () => ({
   AppShell: ({
     children,
+    user,
     demoEnabled,
     demoUsers,
     appearanceEnabled,
   }: {
     children: React.ReactNode;
+    user?: { name?: string | null; email?: string | null } | undefined;
     demoEnabled?: boolean;
     demoUsers?: readonly { email: string }[];
     appearanceEnabled?: boolean;
@@ -46,6 +48,8 @@ vi.mock("@/components/layout/app-shell", () => ({
       data-demo-enabled={String(demoEnabled)}
       data-demo-users={demoUsers?.length ?? 0}
       data-appearance-enabled={String(appearanceEnabled)}
+      data-user-name={user?.name ?? ""}
+      data-user-present={user ? "true" : "false"}
     >
       {children}
     </div>
@@ -71,6 +75,7 @@ describe("AuthenticatedAppShell", () => {
   it("passes a true demo capability for a valid dedicated-demo configuration", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       email: "demo-faculty@cloie.test",
+      name: "Demo Faculty",
       roles: [ROLES.FACULTY],
       activeRole: ROLES.FACULTY,
     });
@@ -81,14 +86,43 @@ describe("AuthenticatedAppShell", () => {
 
     render(await AuthenticatedAppShell({ children: <div>Protected sentinel</div> }));
 
-    expect(screen.getByText("Protected sentinel").parentElement).toHaveAttribute(
-      "data-demo-enabled",
-      "true"
-    );
-    expect(screen.getByText("Protected sentinel").parentElement).toHaveAttribute(
-      "data-demo-users",
-      "1"
-    );
+    const shell = screen.getByText("Protected sentinel").parentElement;
+    expect(shell).toHaveAttribute("data-demo-enabled", "true");
+    expect(shell).toHaveAttribute("data-demo-users", "1");
+    expect(shell).toHaveAttribute("data-user-present", "true");
+    expect(shell).toHaveAttribute("data-user-name", "Demo Faculty");
+  });
+
+  it("renders the canonical session name and never derives identity from email", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      email: "juan.dela.cruz@acd.edu.ph",
+      name: "Juan Dela Cruz",
+      roles: [ROLES.STUDENT],
+      activeRole: ROLES.STUDENT,
+    });
+    getDemoAuthConfigMock.mockReturnValue(null);
+
+    render(await AuthenticatedAppShell({ children: <div>Protected sentinel</div> }));
+
+    const shell = screen.getByText("Protected sentinel").parentElement;
+    expect(shell).toHaveAttribute("data-user-name", "Juan Dela Cruz");
+    expect(shell).not.toHaveAttribute("data-user-name", "juan.dela.cruz");
+  });
+
+  it("omits the shell user when the session has no canonical name", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      email: "orphan@acd.edu.ph",
+      name: null,
+      roles: [],
+      activeRole: null,
+    });
+    getDemoAuthConfigMock.mockReturnValue(null);
+
+    render(await AuthenticatedAppShell({ children: <div>Protected sentinel</div> }));
+
+    const shell = screen.getByText("Protected sentinel").parentElement;
+    expect(shell).toHaveAttribute("data-user-present", "false");
+    expect(shell).toHaveAttribute("data-user-name", "");
   });
 
   it("passes the appearance capability to the shell", async () => {

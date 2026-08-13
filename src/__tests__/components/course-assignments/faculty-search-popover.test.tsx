@@ -12,8 +12,7 @@ vi.mock("@/lib/actions/course-assignment-actions", () => ({
 const facultyPool: FacultySearchResult[] = [
   {
     id: "faculty-1",
-    firstName: "Test",
-    lastName: "Faculty",
+    name: "Test Faculty",
     email: "test@example.com",
     affiliations: ["BS Computer Science"],
     primaryAffiliation: "BS Computer Science",
@@ -21,8 +20,7 @@ const facultyPool: FacultySearchResult[] = [
   },
   {
     id: "faculty-2",
-    firstName: "Elena",
-    lastName: "Torres",
+    name: "Elena Torres",
     email: "elena@example.com",
     affiliations: ["BS Education"],
     primaryAffiliation: "BS Education",

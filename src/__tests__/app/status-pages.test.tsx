@@ -101,6 +101,39 @@ describe("StatusPage", () => {
     expect(screen.getByText(/no active academic term configured/i)).toBeInTheDocument();
   });
 
+  it("renders missing-google-name status with actionable safe guidance and no diagnostics", async () => {
+    const page = await StatusPage({
+      params: Promise.resolve({ type: "missing-google-name" }),
+      searchParams: Promise.resolve({}),
+    });
+    render(page);
+
+    expect(screen.getByText("Google Account Name Required")).toBeInTheDocument();
+    expect(
+      screen.getByText(/does not provide a usable display name for CLOIE/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/set a full name/i)).toBeInTheDocument();
+    expect(screen.getByText(/no account was created or linked/i)).toBeInTheDocument();
+    expect(screen.queryByText(/auth_user_id/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/user_metadata/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to role selection/i })).toBeInTheDocument();
+  });
+
+  it("renders identity-conflict status without disclosing internal identifiers", async () => {
+    const page = await StatusPage({
+      params: Promise.resolve({ type: "identity-conflict" }),
+      searchParams: Promise.resolve({}),
+    });
+    render(page);
+
+    expect(screen.getByText("Sign-In Could Not Be Completed")).toBeInTheDocument();
+    expect(screen.getByText(/cannot be connected to the matching CLOIE account/i)).toBeInTheDocument();
+    expect(screen.getByText(/left unchanged/i)).toBeInTheDocument();
+    expect(screen.queryByText(/auth_user_id/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/00000000-0000-0000-0000/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to role selection/i })).toBeInTheDocument();
+  });
+
   it("routes missing or invalid status types to notFound", async () => {
     await expect(
       StatusPage({

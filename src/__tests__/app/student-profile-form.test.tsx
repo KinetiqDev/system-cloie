@@ -85,14 +85,28 @@ describe("StudentProfileForm", () => {
     vi.clearAllMocks();
   });
 
+  it("does not render editable name controls and explains Google authority", () => {
+    render(
+      <StudentProfileForm
+        email="student@acd.edu.ph"
+        programs={[]}
+        yearLevels={[]}
+        hasActiveTerm={true}
+      />
+    );
+
+    expect(screen.queryByLabelText(/first name/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/last name/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/account name comes from your Google account/i)).toBeInTheDocument();
+    expect(screen.getByText("student@acd.edu.ph")).toBeInTheDocument();
+  });
+
   it("does not redirect when submission returns neither success nor error", async () => {
     registerStudentProfileMock.mockResolvedValue({});
 
     render(
       <StudentProfileForm
         email="student@acd.edu.ph"
-        initialFirstName="Jamie"
-        initialLastName="Cruz"
         programs={[]}
         yearLevels={[]}
         hasActiveTerm={true}
@@ -114,8 +128,6 @@ describe("StudentProfileForm", () => {
     render(
       <StudentProfileForm
         email="student@acd.edu.ph"
-        initialFirstName="Jamie"
-        initialLastName="Cruz"
         programs={[]}
         yearLevels={[]}
         hasActiveTerm={true}

@@ -4,14 +4,16 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  ShieldAlert, 
-  FileKey, 
-  Users, 
-  Ban, 
-  XCircle, 
-  CalendarDays, 
-  LogOut, 
-  ArrowLeft 
+  ShieldAlert,
+  FileKey,
+  Users,
+  Ban,
+  XCircle,
+  CalendarDays,
+  LogOut,
+  ArrowLeft,
+  UserRoundX,
+  IdCard,
 } from "lucide-react";
 
 type PageProps = {
@@ -67,6 +69,24 @@ const STATUS_CONFIGS = {
     icon: CalendarDays,
     color: "warning",
     showRetry: false,
+  },
+  "missing-google-name": {
+    title: "Google Account Name Required",
+    description: "Your Google account does not provide a usable display name for CLOIE.",
+    details:
+      "CLOIE needs the name on your Google account before it can create or first-link your institutional account. Open your Google Account profile, set a full name, then return to role selection and sign in again. No account was created or linked by this attempt.",
+    icon: IdCard,
+    color: "warning",
+    showRetry: true,
+  },
+  "identity-conflict": {
+    title: "Sign-In Could Not Be Completed",
+    description: "This Google sign-in cannot be connected to the matching CLOIE account.",
+    details:
+      "The account email is already associated with a different sign-in identity. Your existing CLOIE record was left unchanged. Sign out, return to role selection, and use the Google account originally linked to this email, or contact IT support for help.",
+    icon: UserRoundX,
+    color: "danger",
+    showRetry: true,
   },
 } as const;
 

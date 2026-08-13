@@ -1,8 +1,6 @@
 import { z } from "zod";
 
 export const industryPartnerProfileSchema = z.object({
-  first_name: z.string().min(2, "First name must be at least 2 characters"),
-  last_name: z.string().min(2, "Last name must be at least 2 characters"),
   company_name: z.string().min(2, "Company name must be at least 2 characters"),
   position: z.string().optional().nullable().or(z.literal("")),
   program_id: z.string().uuid().optional().nullable().or(z.literal("")),

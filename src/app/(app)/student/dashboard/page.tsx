@@ -29,7 +29,7 @@ export default async function StudentDashboardPage() {
           include: {
             major: true,
             program: true,
-            user: { select: { first_name: true } },
+            user: { select: { name: true } },
           },
         })
       : Promise.resolve(null),
@@ -60,7 +60,7 @@ export default async function StudentDashboardPage() {
   ].filter(Boolean);
   const contextLabel = contextParts.length > 0 ? contextParts.join(" • ") : "Student portal";
 
-  const displayName = profile?.user.first_name ?? "Student";
+  const displayName = profile?.user.name ?? "Student";
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">

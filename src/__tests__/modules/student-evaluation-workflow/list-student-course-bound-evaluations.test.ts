@@ -330,6 +330,7 @@ describe("listStudentCourseBoundEvaluations", () => {
             term_instance_id: "term-1",
             course: { title: "Capstone 1" },
             program: { name: "BSIT" },
+            faculty: { name: "Elena Torres" },
           },
           deadline_at: new Date("2026-05-20T00:00:00.000Z"),
           instrument: {
@@ -357,6 +358,7 @@ describe("listStudentCourseBoundEvaluations", () => {
             program_id: "program-1",
             term_instance_id: "term-1",
             course: { title: "Networks" },
+            faculty: { name: "Madonna" },
             program: { name: "BSIT" },
           },
           deadline_at: new Date("2026-05-10T00:00:00.000Z"),
@@ -384,6 +386,7 @@ describe("listStudentCourseBoundEvaluations", () => {
           evaluationId: "assignment-1",
           href: "/student/evaluations/assignment-1",
           status: "IN_PROGRESS",
+          facultyName: "Elena Torres",
         }),
       ],
       submitted: [
@@ -393,6 +396,7 @@ describe("listStudentCourseBoundEvaluations", () => {
           evaluationId: "assignment-2",
           href: "/student/history/response-2",
           status: "SUBMITTED",
+          facultyName: "Madonna",
         }),
       ],
     });

@@ -67,7 +67,7 @@ function makeAssignment(overrides: Record<string, unknown>) {
   return {
     course: { code: "EDUC-101", id: "course-1", title: "Foundations of Education" },
     course_id: "course-1",
-    faculty: { first_name: "Maria", id: "faculty-1", last_name: "Santos" },
+    faculty: { id: "faculty-1", name: "Maria Santos" },
     faculty_id: "faculty-1",
     id: "assignment-1",
     is_active: true,
@@ -161,8 +161,11 @@ describe("program head selected Program new CILO evaluation page", () => {
       })
     );
     expect(screen.getByText("New evaluation form: 2 assignments")).toBeInTheDocument();
-    const assignments = (formProps.current as { assignments: Array<{ id: string }> }).assignments;
+    const assignments = (
+      formProps.current as { assignments: Array<{ id: string; facultyName?: string }> }
+    ).assignments;
     expect(assignments.map((a) => a.id)).toEqual(["assignment-1", "assignment-2"]);
+    expect(assignments.map((a) => a.facultyName)).toEqual(["Maria Santos", "Maria Santos"]);
     expect(formProps.current).toMatchObject({
       isOnBehalf: true,
       programId: "program-bsed",

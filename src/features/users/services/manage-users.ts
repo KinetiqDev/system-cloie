@@ -85,7 +85,7 @@ async function listAdminUsers() {
         },
       },
     },
-    orderBy: [{ last_name: "asc" }, { first_name: "asc" }],
+    orderBy: [{ name: "asc" }, { id: "asc" }],
   });
 }
 

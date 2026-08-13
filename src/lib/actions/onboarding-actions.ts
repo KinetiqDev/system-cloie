@@ -13,8 +13,11 @@ import {
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import { upsertEnrollmentForActiveTerm } from "@/features/enrollments/services/manage-student-enrollments";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
 import { redirect } from "next/navigation";
 
+// Validation preserves the active-term and deferred-enrollment contract.
+// fallow-ignore-next-line complexity
 export async function registerStudentProfile(data: StudentProfileInput | DeferredStudentProfileInput) {
   try {
     const supabase = await createClient();
@@ -41,6 +44,7 @@ export async function registerStudentProfile(data: StudentProfileInput | Deferre
 
     // Choose validation schema based on whether there is an active term.
     // If no active term exists, year_level and section are not yet known.
+    // Client-injected identity fields (first_name/last_name/name) are stripped by Zod.
     const schema = activeTermId ? studentProfileSchema : deferredStudentProfileSchema;
     const validatedData = schema.parse(data);
 
@@ -71,37 +75,47 @@ export async function registerStudentProfile(data: StudentProfileInput | Deferre
       }
     }
 
-    let domainUserId = user.id;
+    const domainUser = await resolveAuthenticatedDomainUser({
+      authUserId: user.id,
+      email: user.email,
+    });
 
-    // Execute atomic transaction
+    if (!domainUser) {
+      return {
+        error: "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+      };
+    }
+
+    if (!domainUser.name.trim()) {
+      return {
+        error: "Your account name is not available. Please sign out and sign in with Google again.",
+      };
+    }
+
+    // Preserve account-state gates (profileGate INACTIVE) on direct Server Action calls.
+    if (!domainUser.is_active) {
+      return { error: "Your CLOIE account is currently inactive." };
+    }
+
+    const domainUserId = domainUser.id;
+
+    // Role + academic profile only. Never create a User and never write client identity.
     await prisma.$transaction(async (tx) => {
-      // 1. Find or Create domain User by Supabase auth_user_id
-      const domainUser = await tx.user.upsert({
-        where: { auth_user_id: user.id },
-        update: {
-          first_name: validatedData.first_name,
-          last_name: validatedData.last_name,
-        },
-        create: {
-          auth_user_id: user.id,
-          email: user.email!,
-          first_name: validatedData.first_name,
-          last_name: validatedData.last_name,
-        },
-      });
-      domainUserId = domainUser.id;
-
-      // 2. Assign Global Role (Idempotent)
-      await tx.userRole.upsert({
+      const existingRole = await tx.userRole.findUnique({
         where: { user_id: domainUserId },
-        update: { role: ROLES.STUDENT },
-        create: {
-          user_id: domainUserId,
-          role: ROLES.STUDENT,
-        },
       });
+      if (existingRole && existingRole.role !== ROLES.STUDENT) {
+        throw new Error("ROLE_MISMATCH_NON_STUDENT");
+      }
+      if (!existingRole) {
+        await tx.userRole.create({
+          data: {
+            user_id: domainUserId,
+            role: ROLES.STUDENT,
+          },
+        });
+      }
 
-      // 3. Construct Academic Profile parameters (Idempotent)
       // Phase 9: Profile only holds static cohort fields - enrollment data is in StudentEnrollment
       await tx.studentAcademicProfile.upsert({
         where: { user_id: domainUserId },
@@ -117,8 +131,6 @@ export async function registerStudentProfile(data: StudentProfileInput | Deferre
           student_id_number: validatedData.student_id_number,
         },
       });
-
-      // 4. Create enrollment for active term (outside transaction since it uses its own transaction)
     });
 
     // Create enrollment for active term (separate transaction) if active term exists.
@@ -144,6 +156,9 @@ export async function registerStudentProfile(data: StudentProfileInput | Deferre
     return { success: true };
   } catch (error: unknown) {
     console.error("Failed to register student profile:", error);
+    if (error instanceof Error && error.message.startsWith("ROLE_MISMATCH")) {
+      return { success: false, error: "Your account is already registered with a different role." };
+    }
     return {
       success: false,
       error: "An unexpected error occurred while processing your request.",

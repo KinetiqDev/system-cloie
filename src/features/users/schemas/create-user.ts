@@ -56,8 +56,9 @@ const PROGRAM_REQUIRED_ROLES: SystemRole[] = [
 
 export const createUserBySecretarySchema = z
   .object({
-    first_name: z.string().trim().min(1, "First name is required.").max(100),
-    last_name: z.string().trim().min(1, "Last name is required.").max(100),
+    // Provisional opaque account name (ADR 0014). Replaced by Google-derived
+    // name on first OAuth link; Secretary may correct after linking.
+    name: z.string().trim().min(1, "Name is required.").max(200),
     email: z
       .string()
       .trim()

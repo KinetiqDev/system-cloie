@@ -84,8 +84,8 @@ export type ListEnrollmentsResult = {
 export type StudentRecord = {
   userId: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  /** Opaque canonical account name (ADR 0014). No first/last aliases. */
+  name: string;
   studentIdNumber: string | null;
   enrollmentId: string;
   majorId: string | null;

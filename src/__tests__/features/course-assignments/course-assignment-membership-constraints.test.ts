@@ -24,15 +24,13 @@ describe.skipIf(
     const actor = await prisma.user.create({
       data: {
         email: `roster-actor-${crypto.randomUUID()}@test.invalid`,
-        first_name: "Roster",
-        last_name: "Actor",
+        name: "Roster Actor",
       },
     });
     const student = await prisma.user.create({
       data: {
         email: `roster-student-${crypto.randomUUID()}@test.invalid`,
-        first_name: "Roster",
-        last_name: "Student",
+        name: "Roster Student",
       },
     });
     const assignmentData = {

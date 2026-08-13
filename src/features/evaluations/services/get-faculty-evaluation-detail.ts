@@ -96,7 +96,7 @@ export async function getFacultyEvaluationDetail(
           membership: {
             select: {
               is_active: true,
-              student: { select: { first_name: true, last_name: true } },
+              student: { select: { name: true } },
             },
           },
         },
@@ -202,7 +202,7 @@ export async function getFacultyEvaluationDetail(
       membershipActive: exclusion.membership.is_active,
       reversalCategory: exclusion.reversal_category,
       reversedAt: exclusion.reversed_at,
-      studentName: `${exclusion.membership.student.first_name} ${exclusion.membership.student.last_name}`,
+      studentName: exclusion.membership.student.name,
     })),
     lateInclusionOpen:
       (evaluation.status === "ACTIVE" || evaluation.status === "SCHEDULED") &&

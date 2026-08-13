@@ -33,8 +33,7 @@ describe("listSecretaryUsersSummary", () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       {
         id: "user-2",
-        first_name: "Jane",
-        last_name: "Doe",
+        name: "Jane Doe",
         email: "jane@example.com",
         is_active: true,
         roles: [{ role: SystemRole.STUDENT }],
@@ -51,7 +50,7 @@ describe("listSecretaryUsersSummary", () => {
       createAuthSessionSnapshot({ roles: [ROLES.DEAN] })
     );
 
-    const result = await listSecretaryUsersSummary({ page: 1, sort: "lastName", direction: "asc" });
+    const result = await listSecretaryUsersSummary({ page: 1, sort: "name", direction: "asc" });
     const { prisma } = await import("@/lib/db/prisma");
 
     expect(result).toEqual({ success: false, error: "Secretary access required." });
@@ -91,7 +90,7 @@ describe("listSecretaryUsersSummary", () => {
       expect.objectContaining({
         skip: 30,
         take: 15,
-        orderBy: [{ email: "desc" }, { last_name: "asc" }, { first_name: "asc" }, { id: "asc" }],
+        orderBy: [{ email: "desc" }, { name: "asc" }, { id: "asc" }],
         select: expect.not.objectContaining({ created_at: true }),
       })
     );
@@ -107,7 +106,7 @@ describe("listSecretaryUsersSummary", () => {
 
     const result = await listSecretaryUsersSummary({
       page: 99,
-      sort: "lastName",
+      sort: "name",
       direction: "asc",
     });
 
@@ -123,14 +122,14 @@ describe("listSecretaryUsersSummary", () => {
     const unknownProgram = await listSecretaryUsersSummary({
       page: 1,
       program: "NOT_A_PROGRAM",
-      sort: "lastName",
+      sort: "name",
       direction: "asc",
     });
     const unknownMajor = await listSecretaryUsersSummary({
       page: 1,
       program: "BSCE",
       major: "NOT_A_MAJOR",
-      sort: "lastName",
+      sort: "name",
       direction: "asc",
     });
 
@@ -145,5 +144,61 @@ describe("listSecretaryUsersSummary", () => {
       canonicalQuery: "program=BSCE",
     });
     expect(prisma.user.count).not.toHaveBeenCalled();
+  });
+
+  it("searches complete name and email without first/last aliases", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+
+    const result = await listSecretaryUsersSummary({
+      page: 1,
+      q: "Dela Cruz",
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(result).toMatchObject({ success: true });
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            {
+              OR: [
+                { name: { contains: "Dela Cruz", mode: "insensitive" } },
+                { email: { contains: "Dela Cruz", mode: "insensitive" } },
+              ],
+            },
+          ],
+        },
+        orderBy: [{ name: "asc" }, { id: "asc" }],
+      })
+    );
+    if (result.success) {
+      expect(result.data.users[0]).toMatchObject({ name: "Jane Doe" });
+      expect(result.data.users[0]).not.toHaveProperty("firstName");
+      expect(result.data.users[0]).not.toHaveProperty("lastName");
+    }
+  });
+
+  it("sorts by complete name with a stable id tie-breaker", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+
+    await listSecretaryUsersSummary({
+      page: 1,
+      sort: "name",
+      direction: "desc",
+    });
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ name: "desc" }, { id: "asc" }],
+        select: expect.objectContaining({ name: true }),
+      })
+    );
+    const call = vi.mocked(prisma.user.findMany).mock.calls[0]?.[0] as {
+      select?: Record<string, unknown>;
+      orderBy?: unknown;
+    };
+    expect(call.select).not.toHaveProperty("first_name");
+    expect(call.select).not.toHaveProperty("last_name");
   });
 });

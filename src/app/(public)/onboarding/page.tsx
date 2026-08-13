@@ -49,34 +49,6 @@ export default async function OnboardingPage({
   const intent = resolvedParams?.intent as string | undefined;
   const step = resolvedParams?.step as string | undefined;
 
-  const dbUser = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { auth_user_id: user.id },
-        { email: user.email?.trim().toLowerCase() },
-      ],
-    },
-  });
-
-  const meta = user.user_metadata || {};
-  const nameParts: string[] = meta.full_name ? meta.full_name.trim().split(/\s+/) : [];
-  let firstNameFallback =
-    dbUser?.first_name ||
-    meta.given_name ||
-    (nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : nameParts[0] ?? "");
-  let lastNameFallback =
-    dbUser?.last_name ||
-    meta.family_name ||
-    (nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
-
-  const isPlaceholder = (name: string) => {
-    const lower = name.toLowerCase();
-    return ["alumni", "member", "industry", "partner", "student", "faculty"].some((word) => lower.includes(word));
-  };
-
-  if (isPlaceholder(firstNameFallback)) firstNameFallback = "";
-  if (isPlaceholder(lastNameFallback)) lastNameFallback = "";
-
   const programs = await prisma.program.findMany({
     where: { is_active: true },
     include: { majors: true },
@@ -86,12 +58,7 @@ export default async function OnboardingPage({
   if (intent === "faculty") {
     return (
       <div className="mx-auto w-full max-w-2xl py-8">
-        <FacultyOnboardingForm
-          email={user.email!}
-          initialFirstName={firstNameFallback}
-          initialLastName={lastNameFallback}
-          programs={programs}
-        />
+        <FacultyOnboardingForm email={user.email!} programs={programs} />
       </div>
     );
   }
@@ -99,12 +66,7 @@ export default async function OnboardingPage({
   if (intent === "alumni") {
     return (
       <div className="mx-auto w-full max-w-2xl py-8">
-        <AlumniOnboardingForm
-          email={user.email!}
-          initialFirstName={firstNameFallback}
-          initialLastName={lastNameFallback}
-          programs={programs}
-        />
+        <AlumniOnboardingForm email={user.email!} programs={programs} />
       </div>
     );
   }
@@ -112,12 +74,7 @@ export default async function OnboardingPage({
   if (intent === "industry-partner") {
     return (
       <div className="mx-auto w-full max-w-2xl py-8">
-        <IndustryPartnerOnboardingForm
-          email={user.email!}
-          initialFirstName={firstNameFallback}
-          initialLastName={lastNameFallback}
-          programs={programs}
-        />
+        <IndustryPartnerOnboardingForm email={user.email!} programs={programs} />
       </div>
     );
   }
@@ -131,8 +88,6 @@ export default async function OnboardingPage({
       <div className="mx-auto w-full max-w-2xl py-8">
         <StudentProfileForm
           email={user.email!}
-          initialFirstName={firstNameFallback}
-          initialLastName={lastNameFallback}
           programs={programs}
           yearLevels={yearLevels}
           hasActiveTerm={hasActiveTerm}

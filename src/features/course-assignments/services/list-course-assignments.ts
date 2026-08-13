@@ -75,8 +75,7 @@ export async function listCourseAssignments(
       OR: [
         { course: { code: { contains: filter.q, mode: "insensitive" } } },
         { course: { title: { contains: filter.q, mode: "insensitive" } } },
-        { faculty: { first_name: { contains: filter.q, mode: "insensitive" } } },
-        { faculty: { last_name: { contains: filter.q, mode: "insensitive" } } },
+        { faculty: { name: { contains: filter.q, mode: "insensitive" } } },
         { faculty: { email: { contains: filter.q, mode: "insensitive" } } },
         { program: { code: { contains: filter.q, mode: "insensitive" } } },
         { program: { name: { contains: filter.q, mode: "insensitive" } } },
@@ -91,8 +90,7 @@ export async function listCourseAssignments(
         include: {
           faculty: {
             select: {
-              first_name: true,
-              last_name: true,
+              name: true,
               email: true,
             },
           },
@@ -168,7 +166,7 @@ export async function listCourseAssignments(
         isActive: a.is_active,
         createdAt: a.created_at,
         updatedAt: a.updated_at,
-        facultyName: a.faculty ? `${a.faculty.first_name} ${a.faculty.last_name}` : undefined,
+        facultyName: a.faculty?.name,
         facultyEmail: a.faculty?.email,
         courseCode: a.course?.code,
         courseTitle: a.course?.title,

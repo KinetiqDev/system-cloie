@@ -65,9 +65,8 @@ async function previewStudents(
 
     return studentsResult.data.map((student) => ({
       email: student.email,
-      firstName: student.firstName,
-      lastName: student.lastName,
       majorName: student.majorName,
+      name: student.name,
       programCode: program?.code ?? null,
       stakeholderType: TargetStakeholder.STUDENT,
       studentId: student.studentIdNumber,
@@ -100,17 +99,15 @@ async function previewAlumni(
   const emails = invites.map((i) => i.email);
   const users = await prisma.user.findMany({
     where: { email: { in: emails } },
-    select: { id: true, email: true, first_name: true, last_name: true },
-    orderBy: { last_name: "asc" },
+    select: { id: true, email: true, name: true },
+    orderBy: { name: "asc" },
   });
 
   return users.map((u) => ({
     email: u.email,
-    firstName: u.first_name,
-    lastName: u.last_name,
     majorName: null,
+    name: u.name,
     programCode: null,
-    section: null,
     stakeholderType: TargetStakeholder.ALUMNI,
     studentId: null,
     userId: u.id,
@@ -127,20 +124,18 @@ async function previewIndustryPartners(
     where: { program_id: programId },
     include: {
       user: {
-        select: { id: true, email: true, first_name: true, last_name: true },
+        select: { id: true, email: true, name: true },
       },
       program: { select: { code: true } },
     },
-    orderBy: { user: { last_name: "asc" } },
+    orderBy: { user: { name: "asc" } },
   });
 
   return profiles.map((p) => ({
     email: p.user.email,
-    firstName: p.user.first_name,
-    lastName: p.user.last_name,
     majorName: null,
+    name: p.user.name,
     programCode: p.program?.code ?? null,
-    section: null,
     stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
     studentId: null,
     userId: p.user.id,

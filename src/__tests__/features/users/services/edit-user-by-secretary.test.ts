@@ -43,8 +43,7 @@ function makeToken(payload: string, ttlMs = 60_000): string {
 describe("editUserBySecretary service", () => {
   const validInput = {
     id: USER_ID,
-    first_name: "Jane",
-    last_name: "Smith",
+    name: "Jane Smith",
     faculty: { program_id: PROG_OLD },
   };
 
@@ -136,11 +135,36 @@ describe("editUserBySecretary service", () => {
     const result = await editUserBySecretary(validInput);
 
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.id).toBe(USER_ID);
+    if (result.success) {
+      expect(result.data.id).toBe(USER_ID);
+      expect(result.data.protectedConfirmationRequired).not.toBe(true);
+    }
     expect(mockTx.user.update).toHaveBeenCalledWith({
       where: { id: USER_ID },
-      data: { first_name: "Jane", last_name: "Smith" },
+      data: { name: "Jane Smith" },
     });
+  });
+
+  it("persists a linked-name correction without protected academic confirmation", async () => {
+    const result = await editUserBySecretary({
+      ...validInput,
+      name: "Maria Dela Cruz",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBe(USER_ID);
+      expect(result.data.protectedConfirmationRequired).toBeUndefined();
+      expect(result.data.token).toBeUndefined();
+      expect(result.data.protectedPayload).toBeUndefined();
+    }
+    expect(mockTx.user.update).toHaveBeenCalledWith({
+      where: { id: USER_ID },
+      data: { name: "Maria Dela Cruz" },
+    });
+    // Faculty program unchanged — name correction must not mutate affiliations.
+    expect(mockTx.facultyProgramAffiliation.update).not.toHaveBeenCalled();
+    expect(mockTx.facultyProgramAffiliation.create).not.toHaveBeenCalled();
   });
 
   it("allows updating an inactive account", async () => {
@@ -197,16 +221,10 @@ describe("editUserBySecretary service", () => {
     if (!result.success) expect(result.error).toMatch(/user not found/i);
   });
 
-  it("rejects invalid input (missing first name)", async () => {
-    const result = await editUserBySecretary({ ...validInput, first_name: "" });
+  it("rejects invalid input (missing name)", async () => {
+    const result = await editUserBySecretary({ ...validInput, name: "" });
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.error).toMatch(/first name is required/i);
-  });
-
-  it("rejects invalid input (missing last name)", async () => {
-    const result = await editUserBySecretary({ ...validInput, last_name: "" });
-    expect(result.success).toBe(false);
-    if (!result.success) expect(result.error).toMatch(/last name is required/i);
+    if (!result.success) expect(result.error).toMatch(/name is required/i);
   });
 
   it("rejects a crafted request without details for the target's role", async () => {
@@ -224,8 +242,7 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
     });
 
     expect(result).toEqual({
@@ -247,8 +264,7 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       student: {
         student_id_number: "S123",
         program_id: PROG_NEW,
@@ -268,8 +284,7 @@ describe("editUserBySecretary service", () => {
     // Mock: current primary = PROG_OLD, request = PROG_NEW → change detected → token required
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
     });
 
@@ -288,13 +303,12 @@ describe("editUserBySecretary service", () => {
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
-    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
@@ -326,13 +340,12 @@ describe("editUserBySecretary service", () => {
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
-    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
@@ -350,8 +363,7 @@ describe("editUserBySecretary service", () => {
   it("rejects an invalid or expired confirmation token", async () => {
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: "bad-token",
     });
@@ -363,10 +375,9 @@ describe("editUserBySecretary service", () => {
   it("rejects a confirmation token issued for another target user", async () => {
     const result = await editUserBySecretary({
       id: OTHER_USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
-      confirmationToken: makeToken(`FACULTY:id=${USER_ID}:program=${PROG_NEW}`),
+      confirmationToken: makeToken(`FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`),
     });
 
     expect(result).toEqual({
@@ -380,7 +391,7 @@ describe("editUserBySecretary service", () => {
     const result = await editUserBySecretary({
       ...validInput,
       faculty: { program_id: PROG_NEW },
-      confirmationToken: makeToken(`FACULTY:id=${USER_ID}:program=${PROG_NEW}`, -1),
+      confirmationToken: makeToken(`FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`, -1),
     });
 
     expect(result).toEqual({
@@ -391,12 +402,21 @@ describe("editUserBySecretary service", () => {
   });
 
   it.each([
-    [SystemRole.STUDENT, `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=null:section=null`],
-    [SystemRole.FACULTY, `FACULTY:id=${USER_ID}:program=${PROG_NEW}`],
+    [
+      SystemRole.STUDENT,
+      `STUDENT:id=${USER_ID}:before=program=${PROG_OLD}:major=null:year=null:section=null:after=program=${PROG_NEW}:major=null:year=null:section=null`,
+    ],
+    [SystemRole.FACULTY, `FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`],
     [SystemRole.PROGRAM_HEAD, `PROGRAM_HEAD:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`],
-    [SystemRole.ALUMNI, `ALUMNI:id=${USER_ID}:program=${PROG_NEW}:major=null:graduationYear=2020:verificationStatus=APPROVED`],
-    [SystemRole.INDUSTRY_PARTNER, `INDUSTRY_PARTNER:id=${USER_ID}:company=CLOIE Labs:position=null:program=null:verificationStatus=APPROVED`],
-  ])("binds protected %s confirmation to target and exact proposal", async (role, payload) => {
+    [
+      SystemRole.ALUMNI,
+      `ALUMNI:id=${USER_ID}:before=program=${PROG_OLD}:major=null:graduationYear=2019:verificationStatus=PENDING:after=program=${PROG_NEW}:major=null:graduationYear=2020:verificationStatus=APPROVED`,
+    ],
+    [
+      SystemRole.INDUSTRY_PARTNER,
+      `INDUSTRY_PARTNER:id=${USER_ID}:before=company=Old Company:position=null:program=null:verificationStatus=PENDING:after=company=CLOIE Labs:position=null:program=null:verificationStatus=APPROVED`,
+    ],
+  ])("binds protected %s confirmation to target and exact before/after proposal", async (role, payload) => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: USER_ID,
       is_active: true,
@@ -421,18 +441,23 @@ describe("editUserBySecretary service", () => {
 
     const input =
       role === SystemRole.STUDENT
-        ? { id: USER_ID, first_name: "Jane", last_name: "Smith", student: { student_id_number: "S123", program_id: PROG_NEW } }
+        ? { id: USER_ID, name: "Jane Smith", student: { student_id_number: "S123", program_id: PROG_NEW } }
         : role === SystemRole.FACULTY
-          ? { id: USER_ID, first_name: "Jane", last_name: "Smith", faculty: { program_id: PROG_NEW } }
+          ? { id: USER_ID, name: "Jane Smith", faculty: { program_id: PROG_NEW } }
           : role === SystemRole.PROGRAM_HEAD
-            ? { id: USER_ID, first_name: "Jane", last_name: "Smith", program_head: { program_ids: [PROG_NEW] } }
+            ? { id: USER_ID, name: "Jane Smith", program_head: { program_ids: [PROG_NEW] } }
             : role === SystemRole.ALUMNI
-              ? { id: USER_ID, first_name: "Jane", last_name: "Smith", alumni: { graduation_year: 2020, program_id: PROG_NEW, verification_status: VerificationStatus.APPROVED } }
-              : { id: USER_ID, first_name: "Jane", last_name: "Smith", industry_partner: { company_name: "CLOIE Labs", verification_status: VerificationStatus.APPROVED } };
+              ? { id: USER_ID, name: "Jane Smith", alumni: { graduation_year: 2020, program_id: PROG_NEW, verification_status: VerificationStatus.APPROVED } }
+              : { id: USER_ID, name: "Jane Smith", industry_partner: { company_name: "CLOIE Labs", verification_status: VerificationStatus.APPROVED } };
 
     const first = await editUserBySecretary(input);
     expect(first.success).toBe(true);
-    if (first.success) expect(first.data.protectedPayload).toContain(`id=${USER_ID}`);
+    if (first.success) {
+      expect(first.data.protectedPayload).toBe(payload);
+      expect(first.data.protectedPayload).toContain(`id=${USER_ID}`);
+      expect(first.data.protectedPayload).toContain("before=");
+      expect(first.data.protectedPayload).toContain("after=");
+    }
 
     const alteredPayload = payload.includes("INDUSTRY_PARTNER")
       ? payload.replace("CLOIE Labs", "Altered Labs")
@@ -440,6 +465,94 @@ describe("editUserBySecretary service", () => {
     const altered = await editUserBySecretary({ ...input, confirmationToken: makeToken(alteredPayload) });
     expect(altered.success).toBe(false);
     if (!altered.success) expect(altered.error).toMatch(/invalid or expired confirmation token/i);
+  });
+
+  it("rejects a stale Student confirmation after an intervening protected change", async () => {
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: USER_ID,
+      is_active: true,
+      roles: [{ role: SystemRole.STUDENT }],
+      student_profile: { program_id: PROG_OLD, major_id: null },
+      enrollments: [],
+      faculty_program_affiliations: [],
+      program_head_assignments: [],
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const input = {
+      id: USER_ID,
+      name: "Jane Smith",
+      student: { student_id_number: "S123", program_id: PROG_NEW },
+    };
+    const review = await editUserBySecretary(input);
+    expect(review.success).toBe(true);
+    if (!review.success || !review.data.token) return;
+
+    // Another administrator changes the protected program before confirmation.
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: USER_ID,
+      is_active: true,
+      roles: [{ role: SystemRole.STUDENT }],
+      student_profile: {
+        program_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33",
+        major_id: null,
+      },
+      enrollments: [],
+      faculty_program_affiliations: [],
+      program_head_assignments: [],
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await editUserBySecretary({
+      ...input,
+      confirmationToken: review.data.token,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/invalid or expired confirmation token/i);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stale Faculty confirmation after an intervening primary-program change", async () => {
+    const input = {
+      id: USER_ID,
+      name: "Jane Smith",
+      faculty: { program_id: PROG_NEW },
+    };
+    const review = await editUserBySecretary(input);
+    expect(review.success).toBe(true);
+    if (!review.success || !review.data.token) return;
+
+    // Another administrator changes the primary program before confirmation.
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: USER_ID,
+      is_active: true,
+      roles: [{ role: SystemRole.FACULTY }],
+      student_profile: null,
+      enrollments: [],
+      faculty_program_affiliations: [
+        {
+          id: "aff-2",
+          program_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33",
+          is_primary: true,
+          is_active: true,
+        },
+      ],
+      program_head_assignments: [],
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await editUserBySecretary({
+      ...input,
+      confirmationToken: review.data.token,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/invalid or expired confirmation token/i);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it("completes a legacy Faculty account by creating a primary affiliation when none exists", async () => {
@@ -464,8 +577,7 @@ describe("editUserBySecretary service", () => {
     // legacy account is a protected change since there's no existing primary)
     const firstResult = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
     });
     expect(firstResult.success).toBe(true);
@@ -474,8 +586,7 @@ describe("editUserBySecretary service", () => {
     // Second request: with token → transaction creates the primary affiliation
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: firstResult.data.token,
     });
@@ -503,13 +614,12 @@ describe("editUserBySecretary service", () => {
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
-    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
@@ -538,13 +648,12 @@ describe("editUserBySecretary service", () => {
     });
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
 
-    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
@@ -575,13 +684,12 @@ describe("editUserBySecretary service", () => {
       cb(failingTx)
     );
 
-    const payload = `FACULTY:id=${USER_ID}:program=${PROG_NEW}`;
+    const payload = `FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`;
     const token = makeToken(payload);
 
     const result = await editUserBySecretary({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
     });
@@ -603,8 +711,7 @@ describe("editUserBySecretary service", () => {
   describe("Student profile and enrollment", () => {
     const studentInput = {
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       student: {
         student_id_number: "S123",
         program_id: PROG_NEW,
@@ -646,7 +753,7 @@ describe("editUserBySecretary service", () => {
       const result = await editUserBySecretary({
         ...studentInput,
         confirmationToken: makeToken(
-          `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=SECOND_YEAR:section=AFTERNOON`
+          `STUDENT:id=${USER_ID}:before=program=${PROG_OLD}:major=null:year=FIRST_YEAR:section=MORNING:after=program=${PROG_NEW}:major=null:year=SECOND_YEAR:section=AFTERNOON`
         ),
       });
 
@@ -676,7 +783,7 @@ describe("editUserBySecretary service", () => {
         ...studentInput,
         student: { ...studentInput.student, year_level: undefined, section: undefined },
         confirmationToken: makeToken(
-          `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=null:section=null`
+          `STUDENT:id=${USER_ID}:before=program=${PROG_OLD}:major=null:year=null:section=null:after=program=${PROG_NEW}:major=null:year=null:section=null`
         ),
       });
 
@@ -715,7 +822,7 @@ describe("editUserBySecretary service", () => {
       const result = await editUserBySecretary({
         ...studentInput,
         confirmationToken: makeToken(
-          `STUDENT:id=${USER_ID}:program=${PROG_NEW}:major=null:year=SECOND_YEAR:section=AFTERNOON`
+          `STUDENT:id=${USER_ID}:before=program=${PROG_OLD}:major=null:year=FIRST_YEAR:section=MORNING:after=program=${PROG_NEW}:major=null:year=SECOND_YEAR:section=AFTERNOON`
         ),
       });
 
@@ -732,8 +839,7 @@ describe("editUserBySecretary service", () => {
 
     const programHeadSetInput = (programIds: string[]) => ({
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       program_head: { program_ids: programIds },
     });
 
@@ -1067,8 +1173,7 @@ describe("editUserBySecretary service", () => {
   describe("Alumni profile and verification", () => {
     const alumniInput = {
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       alumni: {
         graduation_year: 2020,
         program_id: PROG_NEW,
@@ -1137,7 +1242,7 @@ describe("editUserBySecretary service", () => {
       });
       mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
       const token = makeToken(
-        `ALUMNI:id=${USER_ID}:program=${PROG_NEW}:major=${PROG_OLD}:graduationYear=2020:verificationStatus=APPROVED`
+        `ALUMNI:id=${USER_ID}:before=program=${PROG_OLD}:major=null:graduationYear=2019:verificationStatus=PENDING:after=program=${PROG_NEW}:major=${PROG_OLD}:graduationYear=2020:verificationStatus=APPROVED`
       );
 
       const result = await editUserBySecretary({
@@ -1154,8 +1259,7 @@ describe("editUserBySecretary service", () => {
   describe("Industry Partner profile and verification", () => {
     const industryInput = {
       id: USER_ID,
-      first_name: "Jane",
-      last_name: "Smith",
+      name: "Jane Smith",
       industry_partner: {
         company_name: "CLOIE Labs",
         position: "Hiring Manager",
@@ -1189,7 +1293,93 @@ describe("editUserBySecretary service", () => {
       const result = await editUserBySecretary(industryInput);
 
       expect(result.success).toBe(true);
-      if (result.success) expect(result.data.protectedConfirmationRequired).toBe(true);
+      if (result.success) {
+        expect(result.data.protectedConfirmationRequired).toBe(true);
+        expect(result.data.confirmationReview?.oldValues).toEqual({
+          company: "Old Company",
+          position: "None",
+          program: "None",
+          verification: VerificationStatus.PENDING,
+        });
+        expect(result.data.confirmationReview?.newValues).toEqual(
+          expect.objectContaining({
+            company: "CLOIE Labs",
+            position: "Hiring Manager",
+            verification: VerificationStatus.APPROVED,
+          })
+        );
+      }
+    });
+
+    it("requires confirmation when company, position, or affiliated program changes without verification change", async () => {
+      setIndustryProfile({
+        company_name: "Old Company",
+        position: null,
+        program_id: null,
+        verification_status: VerificationStatus.APPROVED,
+      });
+
+      const result = await editUserBySecretary({
+        ...industryInput,
+        industry_partner: {
+          company_name: "CLOIE Labs",
+          position: "Hiring Manager",
+          program_id: PROG_NEW,
+          verification_status: VerificationStatus.APPROVED,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.protectedConfirmationRequired).toBe(true);
+        expect(result.data.token).toBeDefined();
+        expect(result.data.protectedPayload).toBe(
+          `INDUSTRY_PARTNER:id=${USER_ID}:before=company=Old Company:position=null:program=null:verificationStatus=APPROVED:after=company=CLOIE Labs:position=Hiring Manager:program=${PROG_NEW}:verificationStatus=APPROVED`
+        );
+        expect(result.data.confirmationReview?.oldValues).toMatchObject({
+          company: "Old Company",
+          position: "None",
+          program: "None",
+          verification: VerificationStatus.APPROVED,
+        });
+        expect(result.data.confirmationReview?.newValues).toMatchObject({
+          company: "CLOIE Labs",
+          position: "Hiring Manager",
+          verification: VerificationStatus.APPROVED,
+        });
+      }
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("allows a base User.name correction alone without Industry Partner protected confirmation", async () => {
+      setIndustryProfile({
+        company_name: "CLOIE Labs",
+        position: "Hiring Manager",
+        program_id: PROG_NEW,
+        verification_status: VerificationStatus.APPROVED,
+      });
+
+      const result = await editUserBySecretary({
+        id: USER_ID,
+        name: "Maria Dela Cruz",
+        industry_partner: {
+          company_name: "CLOIE Labs",
+          position: "Hiring Manager",
+          program_id: PROG_NEW,
+          verification_status: VerificationStatus.APPROVED,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.protectedConfirmationRequired).toBeUndefined();
+        expect(result.data.token).toBeUndefined();
+      }
+      expect(mockTx.user.update).toHaveBeenCalledWith({
+        where: { id: USER_ID },
+        data: { name: "Maria Dela Cruz" },
+      });
+      expect(mockTx.industryPartnerProfile.upsert).toHaveBeenCalled();
     });
 
     it("completes a legacy Industry Partner profile after confirmation", async () => {
@@ -1197,6 +1387,10 @@ describe("editUserBySecretary service", () => {
       const first = await editUserBySecretary(industryInput);
       expect(first.success).toBe(true);
       if (!first.success) return;
+      expect(first.data.protectedConfirmationRequired).toBe(true);
+      expect(first.data.protectedPayload).toBe(
+        `INDUSTRY_PARTNER:id=${USER_ID}:before=company=null:position=null:program=null:verificationStatus=null:after=company=CLOIE Labs:position=Hiring Manager:program=${PROG_NEW}:verificationStatus=APPROVED`
+      );
 
       const confirmed = await editUserBySecretary({
         ...industryInput,
@@ -1239,7 +1433,7 @@ describe("editUserBySecretary service", () => {
           verification_status: VerificationStatus.PENDING,
         },
         confirmationToken: makeToken(
-          `INDUSTRY_PARTNER:id=${USER_ID}:company=CLOIE Labs:position=Hiring Manager:program=${PROG_NEW}:verificationStatus=PENDING`
+          `INDUSTRY_PARTNER:id=${USER_ID}:before=company=Old Company:position=null:program=${PROG_OLD}:verificationStatus=PENDING:after=company=CLOIE Labs:position=Hiring Manager:program=${PROG_NEW}:verificationStatus=PENDING`
         ),
       });
 

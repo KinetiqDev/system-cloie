@@ -25,8 +25,7 @@ export async function createUserBySecretaryAction(formData: FormData): Promise<A
   }
 
   const raw = {
-    first_name: formData.get("first_name"),
-    last_name: formData.get("last_name"),
+    name: formData.get("name"),
     email: formData.get("email"),
     role: formData.get("role"),
     program_id: formData.get("program_id") || undefined,
@@ -66,8 +65,7 @@ export async function updateUserBySecretaryAction(formData: FormData): Promise<A
 
   const raw = {
     id: formData.get("id"),
-    first_name: formData.get("first_name"),
-    last_name: formData.get("last_name"),
+    name: formData.get("name"),
   };
 
   const parsed = updateUserBySecretarySchema.safeParse(raw);

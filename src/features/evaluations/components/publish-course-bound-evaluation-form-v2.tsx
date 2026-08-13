@@ -516,7 +516,7 @@ export function PublishCourseBoundEvaluationFormV2({
                     className="border-border hover:bg-muted flex items-start gap-3 rounded-lg border p-3"
                   >
                     <Checkbox
-                      aria-label={`Include ${respondent.firstName} ${respondent.lastName}`}
+                      aria-label={`Include ${respondent.name}`}
                       checked={!isExcluded}
                       id={`respondent-${respondent.membershipId}`}
                       onCheckedChange={(checked) =>
@@ -530,7 +530,7 @@ export function PublishCourseBoundEvaluationFormV2({
                         htmlFor={`respondent-${respondent.membershipId}`}
                       >
                         <p className="font-medium">
-                          {respondent.firstName} {respondent.lastName}
+                          {respondent.name}
                         </p>
                         <p className="text-muted-foreground text-sm">{respondent.email}</p>
                         <p className="text-muted-foreground text-xs">
@@ -574,7 +574,7 @@ export function PublishCourseBoundEvaluationFormV2({
                           {exclusion?.category === "OTHER" && (
                             <div className="flex flex-col gap-1">
                               <Input
-                                aria-label={`Other explanation for ${respondent.firstName} ${respondent.lastName}`}
+                                aria-label={`Other explanation for ${respondent.name}`}
                                 maxLength={200}
                                 minLength={5}
                                 onChange={(event) =>

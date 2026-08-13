@@ -37,7 +37,7 @@ export default async function NewProgramHeadCiloEvaluationPage({
     },
     include: {
       course: { select: { code: true, id: true, title: true } },
-      faculty: { select: { first_name: true, id: true, last_name: true } },
+      faculty: { select: { id: true, name: true } },
       program: { select: { code: true, id: true } },
       term_instance: { include: { school_year: true } },
     },
@@ -96,7 +96,7 @@ export default async function NewProgramHeadCiloEvaluationPage({
       courseId: assignment.course.id,
       courseTitle: assignment.course.title,
       facultyId: assignment.faculty.id,
-      facultyName: `${assignment.faculty.first_name} ${assignment.faculty.last_name}`.trim(),
+      facultyName: assignment.faculty.name,
       id: assignment.id,
       isActive: assignment.is_active,
       programCode: assignment.program.code,

@@ -37,17 +37,15 @@ export function UserDialogs({ viewUser, onCloseView }: UserDialogsProps) {
             <DialogHeader>
               <DialogTitle>User Details</DialogTitle>
               <DialogDescription>
-                Viewing information for {viewUser.firstName} {viewUser.lastName}.
+                Viewing information for {viewUser.name}.
               </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4 pt-2">
               <div className="flex flex-col gap-1">
                 <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
-                  Full Name
+                  Name
                 </label>
-                <p className="text-sm font-semibold">
-                  {viewUser.firstName} {viewUser.lastName}
-                </p>
+                <p className="text-sm font-semibold">{viewUser.name}</p>
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-label-sm text-muted-foreground tracking-wider uppercase">

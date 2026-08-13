@@ -86,21 +86,62 @@ describe("buildAuthSessionSnapshot", () => {
     });
   });
 
-  it("does not bypass profile gates for dedicated demo sessions", () => {
+  it("never bypasses profile gates for seeded catalog emails", () => {
     const session = buildAuthSessionSnapshot({
       userId: "demo-user",
       email: "demo-faculty@cloie.test",
       roles: [ROLES.FACULTY],
       studentProfileId: null,
       hasFacultyAffiliation: false,
-      isDemoUser: true,
-      isDedicatedDemo: true,
     });
 
     expect(session.profileGate).toEqual({
       status: "FACULTY_ONBOARDING_REQUIRED",
       intent: "faculty",
     });
+  });
+
+  it.each([
+    [
+      "inactive account",
+      {
+        roles: [ROLES.FACULTY] as const,
+        studentProfileId: null,
+        isActive: false,
+        hasFacultyAffiliation: true,
+      },
+      { status: "INACTIVE" as const },
+    ],
+    [
+      "rejected alumni",
+      {
+        roles: [ROLES.ALUMNI] as const,
+        studentProfileId: null,
+        alumniProfileId: "alumni-profile",
+        alumniVerificationStatus: "REJECTED" as const,
+        isActive: true,
+      },
+      { status: "REJECTED_EXTERNAL_ACCOUNT" as const },
+    ],
+    [
+      "deferred student enrollment",
+      {
+        roles: [ROLES.STUDENT] as const,
+        studentProfileId: "student-profile",
+        isActive: true,
+        hasActiveEnrollment: false,
+      },
+      { status: "DEFERRED_ENROLLMENT" as const },
+    ],
+  ])("preserves normal gate for development fixture %s", (_label, input, profileGate) => {
+    const session = buildAuthSessionSnapshot({
+      userId: "fixture-user",
+      email: "demo-student@cloie.test",
+      ...input,
+      roles: [...input.roles],
+    });
+
+    expect(session.profileGate).toEqual(profileGate);
   });
 
   it("regression check: uses only the first role if multiple roles are provided (ignores stack priority resolution)", () => {
@@ -114,5 +155,34 @@ describe("buildAuthSessionSnapshot", () => {
     // It should select STUDENT (roles[0]) as the activeRole, even though FACULTY used to have higher priority in resolution
     expect(session.activeRole).toBe(ROLES.STUDENT);
     expect(session.profileGate).toEqual({ status: "COMPLETE" });
+  });
+
+  it("stores the provided canonical name and never invents one from email", () => {
+    const withName = buildAuthSessionSnapshot({
+      userId: "user-name",
+      email: "juan.dela.cruz@acd.edu.ph",
+      name: "Juan Dela Cruz",
+      roles: [ROLES.STUDENT],
+      studentProfileId: "profile-1",
+    });
+    const withoutName = buildAuthSessionSnapshot({
+      userId: "user-no-name",
+      email: "orphan@acd.edu.ph",
+      roles: [ROLES.STUDENT],
+      studentProfileId: null,
+    });
+    const blankName = buildAuthSessionSnapshot({
+      userId: "user-blank",
+      email: "blank@acd.edu.ph",
+      name: "   ",
+      roles: [ROLES.FACULTY],
+      studentProfileId: null,
+      hasFacultyAffiliation: true,
+    });
+
+    expect(withName.name).toBe("Juan Dela Cruz");
+    expect(withoutName.name).toBeNull();
+    expect(blankName.name).toBeNull();
+    expect(withoutName.name).not.toBe("orphan");
   });
 });

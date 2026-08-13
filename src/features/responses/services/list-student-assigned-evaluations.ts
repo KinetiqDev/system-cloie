@@ -195,8 +195,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
               program: true,
               faculty: {
                 select: {
-                  first_name: true,
-                  last_name: true,
+                  name: true,
                 },
               },
             },
@@ -284,7 +283,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
             deploymentType: "COURSE_BOUND",
             evaluationId: assignment.id,
             evaluationTitle: courseBound.deployment_name ?? courseBound.instrument.template.name,
-            facultyName: ca.faculty ? `${ca.faculty.first_name} ${ca.faculty.last_name}` : null,
+            facultyName: ca.faculty ? ca.faculty.name : null,
             href,
             now,
             programLabel: ca.course.major?.name ?? ca.program.name,

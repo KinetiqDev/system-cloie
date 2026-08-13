@@ -122,8 +122,9 @@ describe("SecretaryAddUserForm base roles", () => {
   it("shows only base identity fields for Secretary", async () => {
     renderForm();
 
-    expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^name$/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/first name/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/last name/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
 
     selectRole("Secretary");
@@ -154,8 +155,7 @@ describe("SecretaryAddUserForm base roles", () => {
     fireEvent.click(screen.getByRole("button", { name: /create user/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/first name is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/last name is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/name is required/i)).toBeInTheDocument();
       expect(screen.getByText(/enter a valid email address/i)).toBeInTheDocument();
     });
   });
@@ -164,8 +164,7 @@ describe("SecretaryAddUserForm base roles", () => {
     renderForm();
     selectRole("College Dean");
 
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Jane" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Doe" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: "dean@example.com" },
     });
@@ -183,8 +182,7 @@ describe("SecretaryAddUserForm base roles", () => {
 
     selectRole("Secretary");
 
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Jane" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Doe" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: "secretary@acd.edu.ph" },
     });
@@ -196,8 +194,9 @@ describe("SecretaryAddUserForm base roles", () => {
     });
 
     const formData = mockCreateAction.mock.calls[0][0] as FormData;
-    expect(formData.get("first_name")).toBe("Jane");
-    expect(formData.get("last_name")).toBe("Doe");
+    expect(formData.get("name")).toBe("Jane Doe");
+    expect(formData.get("first_name")).toBeNull();
+    expect(formData.get("last_name")).toBeNull();
     expect(formData.get("email")).toBe("secretary@acd.edu.ph");
     expect(formData.get("role")).toBe(SystemRole.SECRETARY);
   });
@@ -208,8 +207,7 @@ describe("SecretaryAddUserForm base roles", () => {
 
     selectRole("College Dean");
 
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "John" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Smith" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "John Smith" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: "dean@acdeducation.com" },
     });
@@ -235,8 +233,7 @@ describe("SecretaryAddUserForm base roles", () => {
     renderForm();
 
     selectRole("Secretary");
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Jane" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Doe" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: "secretary@acd.edu.ph" },
     });
@@ -254,8 +251,7 @@ describe("SecretaryAddUserForm base roles", () => {
     renderForm();
 
     selectRole("Secretary");
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Jane" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Doe" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: "secretary@acd.edu.ph" },
     });
@@ -310,8 +306,7 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
   }
 
   function fillIdentity() {
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Jane" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Doe" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: "user@acd.edu.ph" },
     });
@@ -461,8 +456,7 @@ describe("SecretaryAddUserForm Student", () => {
   }
 
   function fillIdentity(email = "student@acd.edu.ph") {
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Carlos" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Santos" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Carlos Santos" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: email },
     });
@@ -688,8 +682,7 @@ describe("SecretaryAddUserForm Alumni", () => {
   }
 
   function fillIdentity(email = "alumni@example.com") {
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Ally" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Santos" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Ally Santos" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: email },
     });
@@ -876,8 +869,7 @@ describe("SecretaryAddUserForm Industry Partner", () => {
   }
 
   function fillIdentity(email = "partner@external-company.com") {
-    fireEvent.change(screen.getByLabelText(/first name/i), { target: { value: "Pat" } });
-    fireEvent.change(screen.getByLabelText(/last name/i), { target: { value: "Partner" } });
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Pat Partner" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
       target: { value: email },
     });

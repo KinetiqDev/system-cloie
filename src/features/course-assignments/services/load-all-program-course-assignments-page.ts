@@ -6,8 +6,8 @@ import { resolveProgramHeadContext } from "@/features/auth/services/resolve-prog
 
 export type FacultyOption = {
   id: string;
-  firstName: string;
-  lastName: string;
+  /** Opaque canonical account name (ADR 0014). No first/last aliases. */
+  name: string;
   email: string;
 };
 
@@ -75,8 +75,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
         faculty: {
           select: {
             id: true,
-            first_name: true,
-            last_name: true,
+            name: true,
             email: true,
           },
         },
@@ -88,10 +87,10 @@ export async function loadAllProgramCourseAssignmentsPageData(
     ...new Map(
       faculty.map(({ faculty: f }) => [
         f.id,
-        { id: f.id, firstName: f.first_name, lastName: f.last_name, email: f.email },
+        { id: f.id, name: f.name, email: f.email },
       ])
     ).values(),
-  ].sort((a, b) => a.lastName.localeCompare(b.lastName));
+  ].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
 
   const termInstances: TermInstanceItem[] = schoolYears.flatMap((sy) =>
     sy.term_instances.map((ti) => ({

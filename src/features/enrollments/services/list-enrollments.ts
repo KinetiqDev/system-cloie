@@ -45,8 +45,7 @@ export async function listEnrollments(
         include: {
           student: {
             select: {
-              first_name: true,
-              last_name: true,
+              name: true,
             },
           },
           term: {
@@ -86,7 +85,7 @@ export async function listEnrollments(
       createdBy: e.created_by,
       createdAt: e.created_at,
       updatedAt: e.updated_at,
-      studentName: e.student ? `${e.student.first_name} ${e.student.last_name}` : undefined,
+      studentName: e.student?.name,
       termLabel: e.term?.school_year?.code,
       programCode: e.program?.code,
       majorName: e.major?.name ?? null,

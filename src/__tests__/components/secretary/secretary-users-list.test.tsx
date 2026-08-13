@@ -22,8 +22,7 @@ describe("SecretaryUsersList", () => {
   const mockUsers = [
     {
       id: "user-1",
-      firstName: "John",
-      lastName: "Doe",
+      name: "John Doe",
       email: "john.doe@example.com",
       isActive: true,
       roles: [SystemRole.STUDENT],
@@ -34,8 +33,7 @@ describe("SecretaryUsersList", () => {
     },
     {
       id: "user-2",
-      firstName: "Jane",
-      lastName: "Smith",
+      name: "Jane Smith",
       email: "jane.smith@example.com",
       isActive: true,
       roles: [SystemRole.FACULTY],
@@ -80,7 +78,7 @@ describe("SecretaryUsersList", () => {
         total={2}
         page={1}
         pageSize={15}
-        query={{ page: 1, sort: "lastName", direction: "asc" }}
+        query={{ page: 1, sort: "name", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
@@ -100,7 +98,7 @@ describe("SecretaryUsersList", () => {
         total={2}
         page={1}
         pageSize={15}
-        query={{ page: 1, sort: "lastName", direction: "asc" }}
+        query={{ page: 1, sort: "name", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
@@ -119,7 +117,7 @@ describe("SecretaryUsersList", () => {
         total={2}
         page={1}
         pageSize={15}
-        query={{ page: 1, sort: "lastName", direction: "asc" }}
+        query={{ page: 1, sort: "name", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
@@ -137,7 +135,7 @@ describe("SecretaryUsersList", () => {
         total={2}
         page={1}
         pageSize={15}
-        query={{ page: 1, sort: "lastName", direction: "asc" }}
+        query={{ page: 1, sort: "name", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}
@@ -157,7 +155,7 @@ describe("SecretaryUsersList", () => {
         total={2}
         page={1}
         pageSize={15}
-        query={{ page: 1, sort: "lastName", direction: "asc" }}
+        query={{ page: 1, sort: "name", direction: "asc" }}
         kpi={mockKPI}
         programs={mockPrograms}
         yearLevels={mockYearLevels}

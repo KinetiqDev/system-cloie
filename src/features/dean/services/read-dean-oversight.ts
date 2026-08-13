@@ -297,10 +297,7 @@ function rosterStudentWhere(
       ? {
           AND: searchTerms.map((term) => ({
             student: {
-              OR: [
-                { first_name: { contains: term, mode: "insensitive" } },
-                { last_name: { contains: term, mode: "insensitive" } },
-              ],
+              name: { contains: term, mode: "insensitive" },
             },
           })),
         }
@@ -569,12 +566,8 @@ export async function getDeanRoster(input: {
   const page = Math.min(input.page, totalPages);
   const students = await prisma.studentEnrollment.findMany({
     where: studentWhere,
-    select: { student: { select: { first_name: true, last_name: true } } },
-    orderBy: [
-      { student: { first_name: "asc" } },
-      { student: { last_name: "asc" } },
-      { student_user_id: "asc" },
-    ],
+    select: { student: { select: { name: true } } },
+    orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
     skip: (page - 1) * ROSTER_PAGE_SIZE,
     take: ROSTER_PAGE_SIZE,
   });
@@ -598,7 +591,7 @@ export async function getDeanRoster(input: {
         section: assignment.section,
       },
       students: students.map(({ student }) => ({
-        displayName: `${student.first_name} ${student.last_name}`,
+        displayName: student.name,
       })),
       page,
       pageSize: ROSTER_PAGE_SIZE,

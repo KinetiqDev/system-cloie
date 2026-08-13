@@ -15,13 +15,12 @@ export default async function DeanProfilePage() {
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     select: {
-      first_name: true,
-      last_name: true,
+      name: true,
       email: true,
     },
   });
 
-  const fullName = user ? `${user.first_name} ${user.last_name}` : "College Dean";
+  const fullName = user ? user.name : "College Dean";
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in max-w-4xl space-y-8 motion-safe:duration-500">

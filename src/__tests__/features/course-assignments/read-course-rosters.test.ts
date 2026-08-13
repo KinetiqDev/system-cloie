@@ -35,7 +35,7 @@ const assignment = {
   is_active: true,
   course: { code: "CS101", title: "Computing", course_scope: CourseScope.PROGRAM_SPECIFIC },
   program: { code: "BSCS", name: "Computer Science" },
-  faculty: { first_name: "Ada", last_name: "Lovelace", email: "ada@example.com" },
+  faculty: { name: "Ada Lovelace", email: "ada@example.com" },
   term_instance: {
     id: "term-1",
     status: "ACTIVE",
@@ -46,15 +46,14 @@ const assignment = {
   course_bound_evaluations: [],
 } as const;
 
-function eligibleStudent(firstName = "Grace") {
+function eligibleStudent(name = "Grace Hopper") {
   return {
     is_active: true,
     roles: [{ role: ROLES.STUDENT }],
     student_profile: { program_id: "program-1", student_id_number: "S00001" },
     enrollments: [{ term_instance_id: "term-1", program_id: "program-1" }],
-    first_name: firstName,
-    last_name: "Hopper",
-    email: `${firstName.toLowerCase()}@example.com`,
+    name,
+    email: `${name.split(" ")[0].toLowerCase()}@example.com`,
   };
 }
 
@@ -119,7 +118,7 @@ describe("read course rosters", () => {
         created_at: new Date(),
         removed_at: null,
         remover: null,
-        student: { ...eligibleStudent("Inactive"), is_active: false },
+        student: { ...eligibleStudent("Inactive Student"), is_active: false },
       },
     ] as never);
 
@@ -197,7 +196,7 @@ describe("read course rosters", () => {
         },
         {
           student: {
-            ...eligibleStudent("Ineligible"),
+            ...eligibleStudent("Ineligible Student"),
             is_active: false,
             enrollments: [{ term_instance_id: "term-1", program_id: "program-1" }],
           },

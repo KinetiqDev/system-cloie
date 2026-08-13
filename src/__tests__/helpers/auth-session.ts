@@ -11,6 +11,7 @@ export function createAuthSessionSnapshot(
   return {
     userId: overrides.userId ?? "user-1",
     email: overrides.email ?? null,
+    name: overrides.name ?? null,
     roles,
     activeRole: roles[0] ?? null,
     studentProfileId: overrides.studentProfileId ?? null,

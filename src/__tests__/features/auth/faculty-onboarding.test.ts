@@ -8,11 +8,15 @@ import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
 
+const { resolveAuthenticatedDomainUserMock } = vi.hoisted(() => ({
+  resolveAuthenticatedDomainUserMock: vi.fn(),
+}));
+
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     $transaction: vi.fn(),
     user: {
-      upsert: vi.fn(),
+      update: vi.fn(),
     },
     userRole: {
       upsert: vi.fn(),
@@ -30,6 +34,10 @@ vi.mock("@/lib/db/prisma", () => ({
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
+}));
+
+vi.mock("@/features/auth/services/resolve-authenticated-domain-user", () => ({
+  resolveAuthenticatedDomainUser: resolveAuthenticatedDomainUserMock,
 }));
 
 describe("resolveProfileGate — Faculty", () => {
@@ -72,8 +80,6 @@ describe("resolvePostLoginDestination — Faculty", () => {
 
 describe("facultyProfileSchema", () => {
   const validData = {
-    first_name: "Jane",
-    last_name: "Smith",
     program_id: "550e8400-e29b-41d4-a716-446655440000",
   };
 
@@ -82,14 +88,20 @@ describe("facultyProfileSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("fails when first name is too short", () => {
-    const result = facultyProfileSchema.safeParse({ ...validData, first_name: "J" });
-    expect(result.success).toBe(false);
-  });
-
-  it("fails when last name is too short", () => {
-    const result = facultyProfileSchema.safeParse({ ...validData, last_name: "S" });
-    expect(result.success).toBe(false);
+  it("strips injected identity fields from successful parse output", () => {
+    const result = facultyProfileSchema.safeParse({
+      ...validData,
+      first_name: "Injected",
+      last_name: "Identity",
+      name: "Injected Identity",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual(validData);
+      expect(result.data).not.toHaveProperty("first_name");
+      expect(result.data).not.toHaveProperty("last_name");
+      expect(result.data).not.toHaveProperty("name");
+    }
   });
 
   it("fails when program_id is not a valid UUID", () => {
@@ -100,6 +112,9 @@ describe("facultyProfileSchema", () => {
 
 describe("createFacultyProfile Server Action", () => {
   const mockGetUser = vi.fn();
+  const validPayload = {
+    program_id: "550e8400-e29b-41d4-a716-446655440000",
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -109,29 +124,27 @@ describe("createFacultyProfile Server Action", () => {
       },
     });
 
-    // Mock transaction implementation
     (prisma.$transaction as any).mockImplementation(async (callback: any) => {
       return callback(prisma);
     });
 
-    // Mock user.upsert implementation
-    (prisma.user.upsert as any).mockResolvedValue({
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
       id: "faculty-123",
       email: "teacher@acd.edu.ph",
+      name: "Jane Smith",
+      auth_user_id: "auth-faculty-123",
+      is_active: true,
+      alumni_profile: null,
+      industry_partner_profile: null,
     });
 
-    // Mock userRole.findUnique implementation
     (prisma.userRole.findUnique as any).mockResolvedValue(null);
   });
 
   it("should fail if user is not authenticated", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: "No user" } });
 
-    const result = await createFacultyProfile({
-      first_name: "Jane",
-      last_name: "Smith",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-    });
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Authentication session invalid or missing.");
@@ -139,16 +152,12 @@ describe("createFacultyProfile Server Action", () => {
 
   it("should fail if the program does not exist", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "faculty-123", email: "teacher@acd.edu.ph" } },
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
       error: null,
     });
     (prisma.program.findUnique as any).mockResolvedValue(null);
 
-    const result = await createFacultyProfile({
-      first_name: "Jane",
-      last_name: "Smith",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-    });
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("The selected program does not exist.");
@@ -156,7 +165,7 @@ describe("createFacultyProfile Server Action", () => {
 
   it("should fail if the program is archived or inactive", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "faculty-123", email: "teacher@acd.edu.ph" } },
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
       error: null,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
@@ -164,11 +173,7 @@ describe("createFacultyProfile Server Action", () => {
       is_active: false,
     });
 
-    const result = await createFacultyProfile({
-      first_name: "Jane",
-      last_name: "Smith",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-    });
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("The selected program is archived or inactive.");
@@ -176,7 +181,7 @@ describe("createFacultyProfile Server Action", () => {
 
   it("should create profile, role, and program affiliation successfully", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "faculty-123", email: "teacher@acd.edu.ph" } },
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
       error: null,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
@@ -184,27 +189,11 @@ describe("createFacultyProfile Server Action", () => {
       is_active: true,
     });
 
-    const result = await createFacultyProfile({
-      first_name: "Jane",
-      last_name: "Smith",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-    });
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(true);
     expect(prisma.$transaction).toHaveBeenCalled();
-    expect(prisma.user.upsert).toHaveBeenCalledWith({
-      where: { auth_user_id: "faculty-123" },
-      update: {
-        first_name: "Jane",
-        last_name: "Smith",
-      },
-      create: {
-        auth_user_id: "faculty-123",
-        email: "teacher@acd.edu.ph",
-        first_name: "Jane",
-        last_name: "Smith",
-      },
-    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
     expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
       where: { user_id: "faculty-123" },
     });
@@ -234,9 +223,30 @@ describe("createFacultyProfile Server Action", () => {
     });
   });
 
+  it("preserves stored name when client identity is injected", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
+      error: null,
+    });
+    (prisma.program.findUnique as any).mockResolvedValue({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      is_active: true,
+    });
+
+    const result = await createFacultyProfile({
+      ...validPayload,
+      first_name: "Hacker",
+      last_name: "Name",
+      name: "Hacker Name",
+    } as any);
+
+    expect(result.success).toBe(true);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
   it("should check if userRole exists before creating and skip creating if it exists", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "faculty-123", email: "teacher@acd.edu.ph" } },
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
       error: null,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
@@ -249,11 +259,7 @@ describe("createFacultyProfile Server Action", () => {
       role: ROLES.FACULTY,
     });
 
-    const result = await createFacultyProfile({
-      first_name: "Jane",
-      last_name: "Smith",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-    });
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(true);
     expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
@@ -264,7 +270,7 @@ describe("createFacultyProfile Server Action", () => {
 
   it("should return client-safe unexpected error message if database transaction fails", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "faculty-123", email: "teacher@acd.edu.ph" } },
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
       error: null,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
@@ -273,11 +279,7 @@ describe("createFacultyProfile Server Action", () => {
     });
     (prisma.$transaction as any).mockRejectedValue(new Error("Database connection error"));
 
-    const result = await createFacultyProfile({
-      first_name: "Jane",
-      last_name: "Smith",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-    });
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("An unexpected error occurred while processing your request.");
@@ -285,7 +287,7 @@ describe("createFacultyProfile Server Action", () => {
 
   it("should fail onboarding if userRole exists and is a different role", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "faculty-123", email: "teacher@acd.edu.ph" } },
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
       error: null,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
@@ -298,14 +300,35 @@ describe("createFacultyProfile Server Action", () => {
       role: ROLES.STUDENT,
     });
 
-    const result = await createFacultyProfile({
-      first_name: "Jane",
-      last_name: "Smith",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-    });
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("Your account is already registered with a different role.");
   });
-});
 
+  it("rejects registration when the resolved domain user is inactive", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
+      error: null,
+    });
+    (prisma.program.findUnique as any).mockResolvedValue({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      is_active: true,
+    });
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
+      id: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      name: "Jane Smith",
+      auth_user_id: "auth-faculty-123",
+      is_active: false,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await createFacultyProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Your CLOIE account is currently inactive.");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});

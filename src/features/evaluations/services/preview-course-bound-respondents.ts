@@ -127,8 +127,7 @@ export async function previewCourseBoundRespondents({
         student: {
           select: {
             email: true,
-            first_name: true,
-            last_name: true,
+            name: true,
             student_profile: {
               select: {
                 major_id: true,
@@ -143,11 +142,10 @@ export async function previewCourseBoundRespondents({
 
     const mappedRespondents: PreviewRespondent[] = memberships.map((membership) => ({
       email: membership.student.email,
-      firstName: membership.student.first_name,
-      lastName: membership.student.last_name,
       majorId: membership.student.student_profile?.major_id ?? null,
       majorName: membership.student.student_profile?.major?.name ?? null,
       membershipId: membership.id,
+      name: membership.student.name,
       programCode: assignment.program.code,
       programId: assignment.program.id,
       programName: assignment.program.name,

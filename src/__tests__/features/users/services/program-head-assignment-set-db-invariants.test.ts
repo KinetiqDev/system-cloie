@@ -32,8 +32,7 @@ describe.skipIf(
       await tx.user.create({
         data: {
           id: TEST_USER_ID,
-          first_name: "Invariant",
-          last_name: "Program Head",
+          name: "Invariant Program Head",
           email: `ph-invariant-${Date.now()}@cloie.test`,
           is_active: true,
           roles: { create: { role: "PROGRAM_HEAD" } },

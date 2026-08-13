@@ -309,8 +309,8 @@ export type ListCourseAssignmentsResult = {
 export type FacultySearchResult = {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  /** Opaque canonical account name (ADR 0014). No first/last aliases. */
+  name: string;
   primaryAffiliation?: string;
   primaryAffiliationCode?: string;
   affiliations: string[];

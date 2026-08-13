@@ -38,8 +38,7 @@ export async function listStudentsForClass(
           select: {
             id: true,
             email: true,
-            first_name: true,
-            last_name: true,
+            name: true,
             student_profile: {
               select: {
                 student_id_number: true,
@@ -54,18 +53,16 @@ export async function listStudentsForClass(
           },
         },
       },
-      orderBy: {
-        student: {
-          last_name: "asc",
-        },
-      },
+      orderBy: [
+        { student: { name: "asc" } },
+        { student_user_id: "asc" },
+      ],
     });
 
     const students: StudentRecord[] = enrollments.map((e) => ({
       userId: e.student_user_id,
       email: e.student.email,
-      firstName: e.student.first_name,
-      lastName: e.student.last_name,
+      name: e.student.name,
       studentIdNumber: e.student.student_profile?.student_id_number ?? null,
       enrollmentId: e.id,
       majorId: e.major_id,

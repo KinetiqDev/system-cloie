@@ -16,8 +16,8 @@ import {
 
 export type SecretaryUserSummaryItem = {
   id: string;
-  firstName: string;
-  lastName: string;
+  /** Opaque canonical account name (ADR 0014). No first/last aliases. */
+  name: string;
   email: string;
   isActive: boolean;
   roles: SystemRole[];
@@ -111,8 +111,7 @@ function resolveSectionLabel(): string {
 
 const pageSelect = {
   id: true,
-  first_name: true,
-  last_name: true,
+  name: true,
   email: true,
   is_active: true,
   roles: { select: { role: true } },
@@ -164,8 +163,7 @@ function buildWhere(query: SecretaryUsersListQuery): Prisma.UserWhereInput {
   if (query.q) {
     conditions.push({
       OR: [
-        { first_name: { contains: query.q, mode: "insensitive" } },
-        { last_name: { contains: query.q, mode: "insensitive" } },
+        { name: { contains: query.q, mode: "insensitive" } },
         { email: { contains: query.q, mode: "insensitive" } },
       ],
     });
@@ -175,18 +173,16 @@ function buildWhere(query: SecretaryUsersListQuery): Prisma.UserWhereInput {
 
 function buildOrderBy(query: SecretaryUsersListQuery): Prisma.UserOrderByWithRelationInput[] {
   const direction = query.direction;
-  const primary: Prisma.UserOrderByWithRelationInput =
-    query.sort === "firstName"
-      ? { first_name: direction }
-      : query.sort === "lastName"
-        ? { last_name: direction }
-        : query.sort === "email"
-          ? { email: direction }
-          : query.sort === "isActive"
-            ? { is_active: direction }
-            : { is_active: direction };
-
-  return [primary, { last_name: "asc" }, { first_name: "asc" }, { id: "asc" }];
+  // Complete-name primary with stable id tie-breaker. Non-name sorts use name
+  // as a secondary deterministic key before id.
+  if (query.sort === "email") {
+    return [{ email: direction }, { name: "asc" }, { id: "asc" }];
+  }
+  if (query.sort === "isActive") {
+    return [{ is_active: direction }, { name: "asc" }, { id: "asc" }];
+  }
+  // Default and explicit complete-name sort (includes canonicalized legacy values).
+  return [{ name: direction }, { id: "asc" }];
 }
 
 // ---------------------------------------------------------------------------
@@ -263,8 +259,7 @@ export async function listSecretaryUsersSummary(
 
     return {
       id: u.id,
-      firstName: u.first_name,
-      lastName: u.last_name,
+      name: u.name,
       email: u.email,
       isActive: u.is_active,
       roles: roleEnums,

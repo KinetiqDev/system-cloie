@@ -15,13 +15,12 @@ export default async function AlumniProfilePage() {
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
     select: {
-      first_name: true,
-      last_name: true,
+      name: true,
       email: true,
     },
   });
 
-  const fullName = user ? `${user.first_name} ${user.last_name}` : "Alumni";
+  const fullName = user ? user.name : "Alumni";
 
   // Try to resolve program context from external invite or any available association
   const invite = await prisma.externalStakeholderInvite.findFirst({

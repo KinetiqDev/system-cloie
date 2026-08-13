@@ -138,7 +138,7 @@ export function SecretaryUsersList({
         direction={query.direction}
         onSortChange={(value) =>
           navigateWithQuery({
-            sort: (value ?? "lastName") as SecretaryUsersListQuery["sort"],
+            sort: (value ?? "name") as SecretaryUsersListQuery["sort"],
             page: 1,
           })
         }

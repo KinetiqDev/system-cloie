@@ -175,7 +175,7 @@ export function EditCourseAssignmentDialog({
                   targetProgramName={assignment.programName}
                   onSelect={(faculty) => {
                     setFacultyId(faculty.id);
-                    setFacultyName(`${faculty.firstName} ${faculty.lastName}`);
+                    setFacultyName(faculty.name);
                   }}
                 />
               </FieldContent>

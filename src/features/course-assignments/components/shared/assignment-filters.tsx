@@ -27,7 +27,7 @@ interface AssignmentFiltersProps {
   onFiltersChange: (filters: AssignmentFiltersState) => void;
   availableCourses: Array<{ id: string; code: string; title: string }>;
   availablePrograms: Array<{ id: string; code: string; name: string }>;
-  availableFaculty: Array<{ id: string; firstName: string; lastName: string; email: string }>;
+  availableFaculty: Array<{ id: string; name: string; email: string }>;
   termInstances: TermInstanceItem[];
   showProgramFilter?: boolean;
 }
@@ -135,7 +135,7 @@ export function AssignmentFilters({
               {filters.facultyId
                 ? (() => {
                     const f = availableFaculty.find((f) => f.id === filters.facultyId);
-                    return f ? `${f.firstName} ${f.lastName}` : null;
+                    return f ? f.name : null;
                   })()
                 : "All Faculty"}
             </SelectValue>
@@ -144,7 +144,7 @@ export function AssignmentFilters({
             <SelectItem value="all">All Faculty</SelectItem>
             {availableFaculty.map((faculty) => (
               <SelectItem key={faculty.id} value={faculty.id}>
-                {faculty.firstName} {faculty.lastName}
+                {faculty.name}
               </SelectItem>
             ))}
           </SelectContent>

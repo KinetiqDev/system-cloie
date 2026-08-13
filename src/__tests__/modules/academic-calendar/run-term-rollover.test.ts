@@ -145,8 +145,7 @@ describe("runTermRollover", () => {
         student: {
           id: "student-1",
           email: "student1@test.com",
-          first_name: "John",
-          last_name: "Doe",
+          name: "John Doe",
         },
       },
     ]);
@@ -213,8 +212,7 @@ describe("runTermRollover", () => {
         student: {
           id: "student-1",
           email: "student1@test.com",
-          first_name: "John",
-          last_name: "Doe",
+          name: "John Doe",
         },
       },
     ]);
@@ -276,8 +274,7 @@ describe("runTermRollover", () => {
         student: {
           id: "student-4",
           email: "senior@test.com",
-          first_name: "Jane",
-          last_name: "Smith",
+          name: "Jane Smith",
         },
       },
     ]);
@@ -339,8 +336,7 @@ describe("runTermRollover", () => {
         student: {
           id: "student-4",
           email: "senior@test.com",
-          first_name: "Jane",
-          last_name: "Smith",
+          name: "Jane Smith",
         },
       },
     ]);
@@ -386,8 +382,7 @@ describe("runTermRollover", () => {
         student: {
           id: "student-1",
           email: "student1@test.com",
-          first_name: "John",
-          last_name: "Doe",
+          name: "John Doe",
         },
       },
     ]);
@@ -435,8 +430,7 @@ describe("runTermRollover", () => {
         student: {
           id: "student-orphan",
           email: "orphan@test.com",
-          first_name: "Orphan",
-          last_name: "Student",
+          name: "Orphan O'Student",
         },
       },
     ]);
@@ -485,8 +479,7 @@ describe("previewTermRollover", () => {
         student: {
           id: "student-1",
           email: "student1@test.com",
-          first_name: "John",
-          last_name: "Doe",
+          name: "John Doe",
         },
       },
       {
@@ -499,8 +492,7 @@ describe("previewTermRollover", () => {
         student: {
           id: "student-4",
           email: "senior@test.com",
-          first_name: "Jane",
-          last_name: "Smith",
+          name: "Jane Smith",
         },
       },
     ]);
@@ -517,7 +509,25 @@ describe("previewTermRollover", () => {
       expect(result.data.wouldProcessCount).toBe(2);
       expect(result.data.wouldCreateCount).toBe(1); // Only 1st year promoted
       expect(result.data.exceptions).toHaveLength(1); // 4th year graduating
+      expect(result.data.exceptions[0]?.studentName).toBe("Jane Smith");
     }
+
+    // Preview query order must match canonical-name execution ordering.
+    expect(studentEnrollmentFindManyMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
+        include: {
+          student: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+        },
+      })
+    );
 
     // Verify no database writes occurred
     expect(studentEnrollmentCreateManyMock).not.toHaveBeenCalled();
@@ -548,8 +558,7 @@ describe("previewTermRollover", () => {
         student: {
           id: "student-1",
           email: "student1@test.com",
-          first_name: "John",
-          last_name: "Doe",
+          name: "John Doe",
         },
       },
       {
@@ -562,8 +571,7 @@ describe("previewTermRollover", () => {
         student: {
           id: "student-4",
           email: "senior@test.com",
-          first_name: "Jane",
-          last_name: "Smith",
+          name: "Jane Smith",
         },
       },
     ]);

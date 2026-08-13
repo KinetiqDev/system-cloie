@@ -7,16 +7,16 @@ import { ROLES } from "@/lib/constants/roles";
 
 describe("Secretary Users list URL", () => {
   it.each([
-    ["defaults missing values", {}, { page: 1, sort: "lastName", direction: "asc" }],
+    ["defaults missing values", {}, { page: 1, sort: "name", direction: "asc" }],
     [
       "uses the first non-empty repeated value",
       { page: ["2", "3"], q: ["  ada ", "grace"] },
-      { page: 2, q: "ada", sort: "lastName", direction: "asc" },
+      { page: 2, q: "ada", sort: "name", direction: "asc" },
     ],
     [
       "drops malformed values independently",
       { page: "0", role: "NOT_A_ROLE", sort: "createdAt", dir: "sideways" },
-      { page: 1, sort: "lastName", direction: "asc" },
+      { page: 1, sort: "name", direction: "asc" },
     ],
     [
       "trims supported filters",
@@ -27,7 +27,7 @@ describe("Secretary Users list URL", () => {
         program: "BSCE",
         major: "Structural",
         q: "Jane",
-        sort: "lastName",
+        sort: "name",
         direction: "asc",
       },
     ],
@@ -47,7 +47,7 @@ describe("Secretary Users list URL", () => {
         direction: "desc",
       })
     ).toBe("page=3&role=STUDENT&program=BSCE&major=Structural&q=Jane&sort=email&dir=desc");
-    expect(serializeSecretaryUsersListQuery({ page: 1, sort: "lastName", direction: "asc" })).toBe(
+    expect(serializeSecretaryUsersListQuery({ page: 1, sort: "name", direction: "asc" })).toBe(
       ""
     );
   });
@@ -55,15 +55,43 @@ describe("Secretary Users list URL", () => {
   it("bounds the maximum page value", () => {
     expect(parseSecretaryUsersListQuery({ page: "10001" })).toEqual({
       page: 1,
-      sort: "lastName",
+      sort: "name",
       direction: "asc",
     });
   });
 
   it("does not accept non-allowlisted sort fields", () => {
     expect(parseSecretaryUsersListQuery({ sort: "programLabel" })).toMatchObject({
-      sort: "lastName",
+      sort: "name",
       direction: "asc",
     });
+  });
+
+  it.each([
+    ["firstName", "desc"],
+    ["lastName", "asc"],
+    ["firstName", "asc"],
+    ["lastName", "desc"],
+  ] as const)("canonicalizes legacy sort=%s to complete name without surname semantics", (legacy, dir) => {
+    expect(parseSecretaryUsersListQuery({ sort: legacy, dir })).toEqual({
+      page: 1,
+      sort: "name",
+      direction: dir,
+    });
+  });
+
+  it("serializes complete-name default without embedding legacy first/last sort keys", () => {
+    expect(
+      serializeSecretaryUsersListQuery({ page: 1, sort: "name", direction: "asc" })
+    ).toBe("");
+    expect(
+      serializeSecretaryUsersListQuery({ page: 2, sort: "name", direction: "desc" })
+    ).toBe("page=2&sort=name&dir=desc");
+    const serialized = serializeSecretaryUsersListQuery({
+      page: 1,
+      sort: "name",
+      direction: "desc",
+    });
+    expect(serialized).not.toMatch(/firstName|lastName/);
   });
 });

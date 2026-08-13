@@ -27,8 +27,10 @@ model User {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   auth_user_id String?  @unique @db.Uuid
   email        String   @unique
-  first_name   String
-  last_name    String
+  // Canonical opaque account name (ADR 0014). The contract migration removes
+  // the legacy split columns and compatibility bridge after the name-only
+  // application rollout has been verified.
+  name         String
   is_active    Boolean  @default(true)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt

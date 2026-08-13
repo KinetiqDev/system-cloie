@@ -35,8 +35,7 @@ describe("search-faculty-pool", () => {
       {
         id: "faculty-1",
         email: "john.doe@test.com",
-        first_name: "John",
-        last_name: "Doe",
+        name: "John Doe",
         faculty_program_affiliations: [
           { program: { id: "prog-1", code: "CS", name: "Computer Science" }, is_primary: true },
         ],
@@ -49,9 +48,20 @@ describe("search-faculty-pool", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.items).toHaveLength(1);
-      expect(result.data.items[0].firstName).toBe("John");
+      expect(result.data.items[0].name).toBe("John Doe");
       expect(result.data.items[0].primaryAffiliation).toBe("Computer Science");
     }
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.arrayContaining([
+            { name: { contains: "john", mode: "insensitive" } },
+            { email: { contains: "john", mode: "insensitive" } },
+          ]),
+        }),
+        orderBy: [{ name: "asc" }, { id: "asc" }],
+      })
+    );
   });
 
   it("should deny access for faculty", async () => {
@@ -73,8 +83,7 @@ describe("search-faculty-pool", () => {
       {
         id: "faculty-2",
         email: "jane.smith@test.com",
-        first_name: "Jane",
-        last_name: "Smith",
+        name: "Jane-Marie Smith",
         faculty_program_affiliations: [
           { program: { id: "prog-1", code: "CS", name: "Computer Science" }, is_primary: true },
           { program: { id: "prog-2", code: "IT", name: "Information Technology" }, is_primary: false },

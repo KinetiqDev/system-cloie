@@ -2,11 +2,8 @@ import { describe, it, expect } from "vitest";
 import { studentProfileSchema } from "@/lib/schemas/student-profile";
 
 const VALID_UUID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
-const VALID_UUID_2 = "b1ffcd00-0d1c-5ff9-ac7e-7cc0ce491b22";
 
 const validInput = {
-  first_name: "Juan",
-  last_name: "Dela Cruz",
   program_id: VALID_UUID,
   major_id: "",
   year_level: "FIRST_YEAR" as const,
@@ -38,53 +35,38 @@ describe("studentProfileSchema", () => {
     });
 
     it("accepts major_id as undefined", () => {
-      const { major_id, ...withoutMajor } = validInput;
+      const withoutMajor = {
+        program_id: validInput.program_id,
+        year_level: validInput.year_level,
+        student_id_number: validInput.student_id_number,
+        section: validInput.section,
+      };
       const result = studentProfileSchema.safeParse(withoutMajor);
       expect(result.success).toBe(true);
     });
   });
 
-  describe("first_name validation", () => {
-    it("rejects empty first_name", () => {
+  describe("identity fields are not part of the contract", () => {
+    it("strips injected first_name, last_name, and name from successful parse output", () => {
       const result = studentProfileSchema.safeParse({
         ...validInput,
-        first_name: "",
+        first_name: "Injected",
+        last_name: "Identity",
+        name: "Injected Identity",
       });
-      expect(result.success).toBe(false);
-    });
 
-    it("rejects single-character first_name", () => {
-      const result = studentProfileSchema.safeParse({
-        ...validInput,
-        first_name: "J",
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it("accepts two-character first_name", () => {
-      const result = studentProfileSchema.safeParse({
-        ...validInput,
-        first_name: "Jo",
-      });
       expect(result.success).toBe(true);
-    });
-  });
-
-  describe("last_name validation", () => {
-    it("rejects empty last_name", () => {
-      const result = studentProfileSchema.safeParse({
-        ...validInput,
-        last_name: "",
-      });
-      expect(result.success).toBe(false);
+      if (result.success) {
+        expect(result.data).not.toHaveProperty("first_name");
+        expect(result.data).not.toHaveProperty("last_name");
+        expect(result.data).not.toHaveProperty("name");
+        expect(result.data).toEqual(validInput);
+      }
     });
 
-    it("rejects single-character last_name", () => {
-      const result = studentProfileSchema.safeParse({
-        ...validInput,
-        last_name: "D",
-      });
-      expect(result.success).toBe(false);
+    it("does not require first_name or last_name", () => {
+      const result = studentProfileSchema.safeParse(validInput);
+      expect(result.success).toBe(true);
     });
   });
 
@@ -116,7 +98,12 @@ describe("studentProfileSchema", () => {
     });
 
     it("rejects missing year_level", () => {
-      const { year_level, ...withoutYearLevel } = validInput;
+      const withoutYearLevel = {
+        program_id: validInput.program_id,
+        major_id: validInput.major_id,
+        student_id_number: validInput.student_id_number,
+        section: validInput.section,
+      };
       const result = studentProfileSchema.safeParse(withoutYearLevel);
       expect(result.success).toBe(false);
     });
@@ -180,7 +167,12 @@ describe("studentProfileSchema", () => {
     });
 
     it("rejects missing section", () => {
-      const { section, ...withoutSection } = validInput;
+      const withoutSection = {
+        program_id: validInput.program_id,
+        major_id: validInput.major_id,
+        year_level: validInput.year_level,
+        student_id_number: validInput.student_id_number,
+      };
       const result = studentProfileSchema.safeParse(withoutSection);
       expect(result.success).toBe(false);
     });
