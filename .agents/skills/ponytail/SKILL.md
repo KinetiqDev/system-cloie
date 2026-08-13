@@ -15,6 +15,7 @@ description: >
   summaries, recipes).
   disable-model-invocation: true
 argument-hint: "[lite|full|ultra]"
+disable-model-invocation: true
 license: MIT
 ---
 
