@@ -1,0 +1,53 @@
+# Project agent cascade for System CLOIE
+# Supports OpenSpec artifact workflow, vertical-slice tickets, GitHub issues
+# Matt Pocock skills (wayfinder, grill, prototype, to-spec, to-tickets, triage)
+
+agents:
+  scout:
+    model: openai-codex/gpt-5-6-luna:high
+    spawn: read-only
+    allowed: ["scout", "librarian"]
+
+  librarian:
+    model: openai-codex/gpt-5-6-luna:medium
+    spawn: read-only
+    allowed: ["scout", "librarian"]
+
+  reviewer:
+    model: openai-codex/gpt-5.6-terra:xhigh
+    spawn: read-only
+    allowed: ["scout", "librarian"]
+
+  security-reviewer:
+    model: openai-codex/gpt-5.6-sol:xhigh
+    spawn: read-only
+
+  designer:
+    model: openai-codex/gpt-5.6-sol:high
+    spawn: read-only
+
+  sonic:
+    model: opencode-go/deepseek-v4-flash:high
+    spawn: mechanical
+
+  advisor:
+    model: grok-4-6:high
+    spawn: advisor
+
+  implementer:
+    model: opencode-go/deepseek-v4-flash:max
+    spawn: task
+    allowed: ["scout", "librarian"]
+    disallowed: ["implementer", "task"]
+
+  task:
+    model: opencode-go/deepseek-v4-flash:max
+    spawn: task
+    allowed: ["scout", "librarian"]
+    disallowed: ["implementer", "task"]
+
+# Boundaries enforced at spawn time
+spawnBoundaries:
+  - implementer: ["scout", "librarian"]
+  - reviewer: ["scout", "librarian"]
+  - low-level: ["scout", "librarian"]  # no recursive implementers
