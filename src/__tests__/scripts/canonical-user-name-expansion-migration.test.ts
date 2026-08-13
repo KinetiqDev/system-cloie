@@ -150,6 +150,9 @@ describe("canonical user name contract cleanup migration", () => {
     expect(migration).toContain(
       "users.name contains NULL or whitespace-only values"
     );
+    expect(migration).toMatch(
+      /SELECT COUNT\(\*\)[\s\S]*column_name IN \('first_name', 'last_name'\)[\s\S]*<> 2/
+    );
     expect(migration).toContain("legacy split name columns are already absent");
   });
 });

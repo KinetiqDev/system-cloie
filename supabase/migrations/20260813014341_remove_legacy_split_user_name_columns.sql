@@ -43,13 +43,13 @@ BEGIN
       'users.name contains NULL or whitespace-only values; refusing legacy name cleanup';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1
+  IF (
+    SELECT COUNT(*)
     FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = 'users'
       AND column_name IN ('first_name', 'last_name')
-  ) THEN
+  ) <> 2 THEN
     RAISE EXCEPTION
       'legacy split name columns are already absent; migration history is inconsistent';
   END IF;

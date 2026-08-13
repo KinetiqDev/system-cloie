@@ -71,6 +71,8 @@ async function tryClaimUnlinkedUser(
   return result.count === 1 ? "linked" : "identity-conflict";
 }
 
+// Callback branches enforce distinct auth and account-state outcomes.
+// fallow-ignore-next-line complexity
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");

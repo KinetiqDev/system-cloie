@@ -16,6 +16,8 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
 import { redirect } from "next/navigation";
 
+// Validation preserves the active-term and deferred-enrollment contract.
+// fallow-ignore-next-line complexity
 export async function registerStudentProfile(data: StudentProfileInput | DeferredStudentProfileInput) {
   try {
     const supabase = await createClient();

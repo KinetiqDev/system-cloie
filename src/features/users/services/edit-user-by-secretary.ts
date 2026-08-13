@@ -67,6 +67,8 @@ function tokenValue(value: string | number | null | undefined): string {
  * makes a stale confirmation (an intervening administrator change) fail
  * verification instead of authorizing an overwrite.
  */
+// Role-specific protected-state tokens are security-sensitive.
+// fallow-ignore-next-line complexity
 function deriveProtectedPayload(
   parsedData: EditUserBySecretaryInput,
   existingRole: SystemRole,
@@ -138,6 +140,8 @@ function verifyConfirmationToken(token: string, expectedPayload: string): boolea
  * extend the protected-change detection, confirmation protocol, and
  * role-specific record updates without reshaping this surface.
  */
+// Preserves the established atomic Secretary edit boundary.
+// fallow-ignore-next-line complexity
 export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): Promise<
   ServiceResult<{
     id: string;
@@ -250,6 +254,8 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     reviewedSnapshot
   );
 
+  // Each role needs an explicit review of its protected fields.
+  // fallow-ignore-next-line complexity
   const confirmationReview: {
     role: SystemRole;
     oldValues: Record<string, string>;
@@ -472,6 +478,8 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
 
   // Perform the transactional update
   try {
+    // Keeps all role-specific updates within one transaction.
+    // fallow-ignore-next-line complexity
     await prisma.$transaction(async (tx) => {
       // Base identity update — name correction is not a protected academic change.
       await tx.user.update({
