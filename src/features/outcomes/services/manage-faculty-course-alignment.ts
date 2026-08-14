@@ -20,7 +20,7 @@ type CourseAlignmentCilo = {
   targetIds: string[];
 };
 
-export type CourseScope = "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC";
+type CourseScope = "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC";
 
 export type FacultyCourseAlignment = {
   course: {
