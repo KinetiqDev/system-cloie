@@ -93,6 +93,7 @@ const MOCK_ASSIGNMENT = {
     id: "course-1",
     major_id: null,
     major: null,
+    program_id: "program-1",
     title: "Capstone 1",
     course_scope: "PROGRAM_SPECIFIC",
   },
@@ -253,8 +254,18 @@ describe("publishCourseBoundEvaluation", () => {
     });
 
     ciloFindManyMock.mockResolvedValue([
-      { description: "Apply capstone planning fundamentals.", id: "cilo-1" },
-      { description: "Produce a proposal-aligned outline defense artifact.", id: "cilo-2" },
+      {
+        description: "Apply capstone planning fundamentals.",
+        id: "cilo-1",
+        cilo_mappings: [{ go: { program_id: "program-1", is_active: true } }],
+        cilo_institutional_outcome_mappings: [],
+      },
+      {
+        description: "Produce a proposal-aligned outline defense artifact.",
+        id: "cilo-2",
+        cilo_mappings: [{ go: { program_id: "program-1", is_active: true } }],
+        cilo_institutional_outcome_mappings: [],
+      },
     ]);
 
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: "program-1" }]);
@@ -605,6 +616,192 @@ describe("publishCourseBoundEvaluation", () => {
     });
   });
 
+  describe("outcome alignment gate", () => {
+    it("rejects publication when an active CILO lacks a valid active target", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY],
+        userId: "faculty-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [],
+        },
+        {
+          description: "Produce a proposal-aligned outline defense artifact.",
+          id: "cilo-2",
+          cilo_mappings: [{ go: { program_id: "program-1", is_active: true } }],
+          cilo_institutional_outcome_mappings: [],
+        },
+      ]);
+
+      await expect(
+        publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "Unaligned Evaluation",
+          templateId: "template-1",
+        })
+      ).resolves.toEqual({
+        error:
+          "Every active CILO must map to at least one active Graduate Outcome from the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+        success: false,
+        alignmentCourseId: "course-1",
+      });
+      expect(getFacultyTemplatePublicationContextMock).toHaveBeenCalled();
+      expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
+    });
+
+    it("preserves template binding validation before the alignment gate", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY],
+        userId: "faculty-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      getFacultyTemplatePublicationContextMock.mockResolvedValue({
+        error: "This course has no saved CILOs.",
+        success: false,
+      });
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [],
+        },
+      ]);
+
+      await expect(
+        publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "No CILO Evaluation",
+          templateId: "template-1",
+        })
+      ).resolves.toEqual({
+        error: "This course has no saved CILOs.",
+        success: false,
+      });
+      expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects publication when a General Education CILO maps only an archived Institutional Outcome", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY],
+        userId: "faculty-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue({
+        ...MOCK_ASSIGNMENT,
+        course: {
+          ...MOCK_ASSIGNMENT.course,
+          course_scope: "GENERAL_EDUCATION",
+          program_id: null,
+        },
+      });
+      getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [
+            { institutional_outcome: { is_active: false } },
+          ],
+        },
+      ]);
+
+      await expect(
+        publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "Archived Target Evaluation",
+          templateId: "template-1",
+        })
+      ).resolves.toEqual({
+        error:
+          "Every active CILO must map to at least one active Institutional Outcome before publishing. Complete the Course alignment to continue.",
+        success: false,
+        alignmentCourseId: "course-1",
+      });
+      expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects publication when a Program-specific CILO maps only a wrong-layer target", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY],
+        userId: "faculty-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [
+            { institutional_outcome: { is_active: true } },
+          ],
+        },
+      ]);
+
+      await expect(
+        publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "Wrong Layer Evaluation",
+          templateId: "template-1",
+        })
+      ).resolves.toMatchObject({ success: false, alignmentCourseId: "course-1" });
+      expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
+    });
+
+    it("blocks on-behalf publication with a course-scoped message and no Faculty repair link", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.DEAN,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY, ROLES.DEAN],
+        userId: "dean-user-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [],
+        },
+        {
+          description: "Produce a proposal-aligned outline defense artifact.",
+          id: "cilo-2",
+          cilo_mappings: [{ go: { program_id: "program-1", is_active: true } }],
+          cilo_institutional_outcome_mappings: [],
+        },
+      ]);
+      instrumentTemplateFindFirstMock.mockResolvedValue(MOCK_BOUND_TEMPLATE);
+
+      await expect(
+        publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "Dean Unaligned Evaluation",
+          templateId: "bound-template-1",
+        })
+      ).resolves.toEqual({
+        error:
+          "Course IT-401 alignment is incomplete: every active CILO must map to at least one active Graduate Outcome from the Course's owning Academic Program before publishing.",
+        success: false,
+      });
+      expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
+    });
+  });
+
   describe("Issue #43: On-behalf deployment", () => {
     it("stores deployed_by as deployer (not faculty_id) for on-behalf deployment by Program Head", async () => {
       const phUserId = "ph-user-1";
@@ -754,8 +951,30 @@ describe("publishCourseBoundEvaluation", () => {
       });
       courseAssignmentFindUniqueMock.mockResolvedValue({
         ...MOCK_ASSIGNMENT,
-        course: { ...MOCK_ASSIGNMENT.course, course_scope: "GENERAL_EDUCATION" },
+        course: {
+          ...MOCK_ASSIGNMENT.course,
+          course_scope: "GENERAL_EDUCATION",
+          program_id: null,
+        },
       });
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [
+            { institutional_outcome: { is_active: true } },
+          ],
+        },
+        {
+          description: "Produce a proposal-aligned outline defense artifact.",
+          id: "cilo-2",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [
+            { institutional_outcome: { is_active: true } },
+          ],
+        },
+      ]);
       instrumentTemplateFindFirstMock.mockResolvedValue({
         ...MOCK_BOUND_TEMPLATE,
         bound_course: {
