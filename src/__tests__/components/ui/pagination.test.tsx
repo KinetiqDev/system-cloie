@@ -68,4 +68,13 @@ describe("Pagination", () => {
     expect(screen.queryByLabelText("Go to page 9")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Go to page 11")).not.toBeInTheDocument();
   });
+
+  it("wraps the page window so narrow viewports do not clip controls", () => {
+    mockMatchMedia(false);
+    render(<Pagination currentPage={10} totalPages={20} onPageChange={() => {}} />);
+    expect(screen.getByRole("navigation", { name: "Pagination" })).toHaveClass(
+      "flex-wrap",
+      "justify-center",
+    );
+  });
 });

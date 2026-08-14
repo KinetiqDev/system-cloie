@@ -1,12 +1,12 @@
 "use client";
 
+import { useCallback, useSyncExternalStore } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useMediaQuery } from "@/hooks/use-media-query";
 
-export type PageItem = number | "ellipsis";
+type PageItem = number | "ellipsis";
 
 export function buildPageItems(
   currentPage: number,
@@ -54,7 +54,7 @@ export function buildPageItems(
   return [...startPages, ...middle, ...endPages];
 }
 
-export interface PaginationProps {
+interface PaginationProps {
   /** 1-based current page. */
   currentPage: number;
   totalPages: number;
@@ -62,9 +62,22 @@ export interface PaginationProps {
   className?: string;
 }
 
+function useMinWidthSm(): boolean {
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    const media = window.matchMedia("(min-width: 640px)");
+    media.addEventListener("change", onStoreChange);
+    return () => media.removeEventListener("change", onStoreChange);
+  }, []);
+
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia("(min-width: 640px)").matches,
+    () => false,
+  );
+}
+
 export function Pagination({ currentPage, totalPages, onPageChange, className }: PaginationProps) {
-  const isDesktop = useMediaQuery("(min-width: 640px)");
-  const siblingCount = isDesktop ? 1 : 0;
+  const isDesktop = useMinWidthSm();
   const boundaryCount = 1;
 
   if (totalPages <= 1) return null;
@@ -72,7 +85,10 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
   const items = buildPageItems(currentPage, totalPages, siblingCount, boundaryCount);
 
   return (
-    <nav aria-label="Pagination" className={cn("flex items-center gap-1", className)}>
+    <nav
+      aria-label="Pagination"
+      className={cn("flex flex-wrap items-center justify-center gap-1", className)}
+    >
       <Button
         variant="outline"
         size="sm"
