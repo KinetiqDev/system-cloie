@@ -29,7 +29,11 @@ export type OutcomeWriteInput =
   | { kind: "CILO"; action: "update"; id: string; description: string }
   | { kind: "CILO"; action: "archive" | "restore"; id: string }
   | { kind: "MAPPING"; action: "create"; programId: string; ciloId: string; goId: string }
-  | { kind: "MAPPING"; action: "remove"; programId: string; id: string };
+  | { kind: "MAPPING"; action: "remove"; programId: string; id: string }
+  | { kind: "ILO"; action: "create"; code: string; description: string }
+  | { kind: "ILO"; action: "update"; id: string; code: string; description: string }
+  | { kind: "ILO"; action: "archive" | "restore"; id: string }
+  | { kind: "ILO"; action: "reorder"; orderedIds: string[] };
 
 type ReviewValue = unknown;
 export type OutcomeWriteReview = {
@@ -76,6 +80,7 @@ async function scopeAllows(
   db: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<boolean> {
   if (role === ROLES.SECRETARY) return true;
+  if (input.kind === "ILO") return false;
   if (input.kind === "GO") {
     if (role !== ROLES.PROGRAM_HEAD) return false;
     if (input.action === "create" || input.action === "reorder") return true;
@@ -248,15 +253,33 @@ async function readState(
       select: { id: true, description: true, course_id: true, is_active: true },
     });
   }
-  if (input.action === "create")
+  if (input.kind === "ILO") {
+    if (input.action === "create")
+      return db.institutionalOutcome.findMany({
+        select: { code: true, description: true, order: true, is_active: true },
+        orderBy: [{ order: "asc" }, { code: "asc" }],
+      });
+    if (input.action === "reorder")
+      return db.institutionalOutcome.findMany({
+        select: { id: true, order: true },
+        orderBy: [{ order: "asc" }, { code: "asc" }],
+      });
+    return db.institutionalOutcome.findUnique({
+      where: { id: input.id },
+      select: { id: true, code: true, description: true, order: true, is_active: true },
+    });
+  }
+  if (input.kind === "MAPPING" && input.action === "create")
     return db.cILOMapping.findUnique({
       where: { cilo_id_go_id: { cilo_id: input.ciloId, go_id: input.goId } },
       select: { id: true, cilo_id: true, go_id: true },
     });
-  return db.cILOMapping.findUnique({
-    where: { id: input.id },
-    select: { id: true, cilo_id: true, go_id: true },
-  });
+  if (input.kind === "MAPPING")
+    return db.cILOMapping.findUnique({
+      where: { id: input.id },
+      select: { id: true, cilo_id: true, go_id: true },
+    });
+  return null;
 }
 
 function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string): ReviewValue {
@@ -305,8 +328,37 @@ function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string
     if (input.action === "update") return { ...record, description: input.description.trim() };
     return record;
   }
-  if (input.action === "create") return { cilo_id: input.ciloId, go_id: input.goId };
-  if (input.action === "remove") return null;
+  if (input.kind === "ILO") {
+    if (input.action === "create") {
+      const existing = before as Array<Record<string, unknown>>;
+      const nextOrder =
+        existing.reduce((highest, outcome) => Math.max(highest, Number(outcome.order)), -1) + 1;
+      return [
+        ...existing,
+        {
+          code: input.code.trim().toUpperCase(),
+          description: input.description.trim(),
+          order: nextOrder,
+          is_active: true,
+        },
+      ];
+    }
+    if (input.action === "reorder") return input.orderedIds.map((id, order) => ({ id, order }));
+    if (!before) return null;
+    const record = before as Record<string, unknown>;
+    if (input.action === "archive" || input.action === "restore")
+      return { ...record, is_active: input.action === "restore" };
+    if (input.action === "update")
+      return {
+        ...record,
+        code: input.code.trim().toUpperCase(),
+        description: input.description.trim(),
+      };
+    return record;
+  }
+  if (input.kind === "MAPPING" && input.action === "create")
+    return { cilo_id: input.ciloId, go_id: input.goId };
+  if (input.kind === "MAPPING" && input.action === "remove") return null;
   return before;
 }
 
@@ -418,6 +470,49 @@ export async function commitOutcomeWrite(
             data: { id: (await tx.gO.update({ where: { id: input.id }, data })).id },
           };
         }
+        if (input.kind === "ILO") {
+          if (input.action === "create") {
+            const nextOrder =
+              (current as Array<{ order: number }>).reduce(
+                (highest, outcome) => Math.max(highest, outcome.order),
+                -1
+              ) + 1;
+            const created = await tx.institutionalOutcome.create({
+              data: {
+                code: input.code.trim().toUpperCase(),
+                description: input.description.trim(),
+                order: nextOrder,
+              },
+              select: { id: true },
+            });
+            return { success: true, data: { id: created.id } };
+          }
+          if (input.action === "reorder") {
+            const outcomes = current as Array<{ id: string; order: number }>;
+            if (
+              new Set(input.orderedIds).size !== input.orderedIds.length ||
+              outcomes.length !== input.orderedIds.length ||
+              outcomes.some((outcome) => !input.orderedIds.includes(outcome.id))
+            )
+              return failure("Institutional Outcomes must be a complete unique order.");
+            await Promise.all(
+              input.orderedIds.map((id, order) =>
+                tx.institutionalOutcome.update({ where: { id }, data: { order } })
+              )
+            );
+            return { success: true, data: {} };
+          }
+          const data =
+            input.action === "update"
+              ? { code: input.code.trim().toUpperCase(), description: input.description.trim() }
+              : { is_active: input.action === "restore" };
+          const updated = await tx.institutionalOutcome.update({
+            where: { id: input.id },
+            data,
+            select: { id: true },
+          });
+          return { success: true, data: { id: updated.id } };
+        }
         if (input.kind === "CILO") {
           if (input.action === "create") {
             const course = await tx.course.findUnique({
@@ -506,7 +601,9 @@ export async function commitOutcomeWrite(
       return failure(
         review.input.kind === "MAPPING"
           ? "CILO-to-GO mapping already exists."
-          : "Graduate Outcome code already exists."
+          : review.input.kind === "ILO"
+            ? "Institutional Outcome code already exists."
+            : "Graduate Outcome code already exists."
       );
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")

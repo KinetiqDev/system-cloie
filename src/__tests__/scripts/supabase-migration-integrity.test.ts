@@ -65,4 +65,35 @@ describe("Supabase migration integrity", () => {
       readFileSync("supabase/migrations/20260510020000_link_entities_to_term_instances.sql", "utf8")
     ).toContain('ALTER TABLE "course_bound_evaluations"');
   });
+
+  it("introduces a catalog-only institutional_outcomes table with server-only writes", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260813192638_introduce_institutional_outcome_catalog.sql",
+      "utf8"
+    );
+
+    expect(migration).toContain("BEGIN;");
+    expect(migration).toContain("COMMIT;");
+    expect(migration).toContain('CREATE TABLE IF NOT EXISTS "institutional_outcomes"');
+    expect(migration).toContain('"id" UUID NOT NULL DEFAULT gen_random_uuid()');
+    expect(migration).toContain('"code" TEXT NOT NULL');
+    expect(migration).toContain('"description" TEXT NOT NULL');
+    expect(migration).toContain('"order" INTEGER NOT NULL DEFAULT 0');
+    expect(migration).toContain('"is_active" BOOLEAN NOT NULL DEFAULT true');
+    expect(migration).toContain('"created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP');
+    expect(migration).toContain('"updated_at" TIMESTAMP(3) NOT NULL');
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX IF NOT EXISTS "institutional_outcomes_code_key"'
+    );
+    expect(migration).toContain('ALTER TABLE "institutional_outcomes" ENABLE ROW LEVEL SECURITY');
+    expect(migration).toContain(
+      'REVOKE ALL ON TABLE "institutional_outcomes" FROM anon, authenticated'
+    );
+    expect(migration).not.toContain("cilo_institutional_outcome_mappings");
+    expect(migration).not.toContain("CILOInstitutionalOutcomeMapping");
+    expect(migration).not.toMatch(/DELETE FROM\s+"cilo_mappings"/i);
+    expect(migration).not.toMatch(/DROP TABLE\s+"gos"/i);
+    expect(migration).not.toMatch(/DROP TABLE\s+"cilo_mappings"/i);
+    expect(migration).not.toContain("academic_period_readiness_snapshots");
+  });
 });

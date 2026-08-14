@@ -32,6 +32,17 @@ model CILO {
 
   @@map("cilos")
 }
+model InstitutionalOutcome {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  description String
+  order       Int      @default(0)
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@map("institutional_outcomes")
+}
 
 model CILOMapping {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

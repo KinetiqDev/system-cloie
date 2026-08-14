@@ -239,3 +239,37 @@ export const ciloDefsNewCourses = [
     createdBy: U.FAC_BSED,
   },
 ] as const;
+
+/** College-wide Institutional Learning Outcomes. Codes stay unique across archive/restore. */
+export const iloDefs = [
+  {
+    code: "ILO1",
+    description:
+      "Apply critical thinking and evidence-based reasoning to complex academic and professional problems.",
+    order: 1,
+  },
+  {
+    code: "ILO2",
+    description:
+      "Communicate ideas clearly and responsibly in written, oral, and multimodal academic contexts.",
+    order: 2,
+  },
+  {
+    code: "ILO3",
+    description:
+      "Act with ethical responsibility, professional integrity, and respect for human dignity.",
+    order: 3,
+  },
+  {
+    code: "ILO4",
+    description:
+      "Collaborate across disciplines and communities to produce inclusive, socially responsible outcomes.",
+    order: 4,
+  },
+  {
+    code: "ILO5",
+    description:
+      "Pursue lifelong learning and adapt knowledge to evolving civic, technological, and professional contexts.",
+    order: 5,
+  },
+] as const;

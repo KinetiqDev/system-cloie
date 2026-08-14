@@ -1089,6 +1089,16 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "route"
   },
   {
+    "path": "src/app/(app)/secretary/learning-outcomes/loading.tsx",
+    "disposition": "already_compliant",
+    "category": "route"
+  },
+  {
+    "path": "src/app/(app)/secretary/learning-outcomes/page.tsx",
+    "disposition": "already_compliant",
+    "category": "route"
+  },
+  {
     "path": "src/app/(app)/secretary/dashboard/loading.tsx",
     "disposition": "task",
     "taskId": 18,
@@ -2190,6 +2200,16 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "path": "src/features/legal/components/mobile-legal-document-nav.tsx",
     "disposition": "task",
     "taskId": 25,
+    "category": "feature_component"
+  },
+  {
+    "path": "src/features/outcomes/components/institutional-outcome-form-dialog.tsx",
+    "disposition": "already_compliant",
+    "category": "feature_component"
+  },
+  {
+    "path": "src/features/outcomes/components/institutional-outcomes-page.tsx",
+    "disposition": "already_compliant",
     "category": "feature_component"
   },
   {

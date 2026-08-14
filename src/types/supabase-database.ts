@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       academic_period_readiness_snapshots: {
@@ -1181,6 +1176,36 @@ export type Database = {
           },
         ]
       }
+      institutional_outcomes: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean
+          order?: number
+          updated_at: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       instrument_template_cilo_question_bindings: {
         Row: {
           cilo_description_snapshot: string
@@ -2082,3 +2107,4 @@ export const Constants = {
     },
   },
 } as const
+

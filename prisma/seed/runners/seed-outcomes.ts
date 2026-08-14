@@ -1,10 +1,11 @@
 import { prisma } from "../../../src/lib/db/prisma";
-import { ciloDefsIT, ciloDefsMKT, ciloDefsNewCourses, goDefs } from "../fixtures/outcomes";
+import { ciloDefsIT, ciloDefsMKT, ciloDefsNewCourses, goDefs, iloDefs } from "../fixtures/outcomes";
 import type { FoundationContext, OutcomeContext } from "../types";
 
-export async function seedOutcomes(
-  { pMap, cMap }: Pick<FoundationContext, "pMap" | "cMap">
-): Promise<OutcomeContext> {
+export async function seedOutcomes({
+  pMap,
+  cMap,
+}: Pick<FoundationContext, "pMap" | "cMap">): Promise<OutcomeContext> {
   console.log("  → Graduate Outcomes...");
   const goMap = new Map<string, { id: string }>();
   for (const g of goDefs) {
@@ -15,6 +16,20 @@ export async function seedOutcomes(
       create: { code: g.code, description: g.desc, program_id: prog.id },
     });
     goMap.set(g.code, go);
+  }
+
+  console.log("  → Institutional Outcomes...");
+  for (const ilo of iloDefs) {
+    await prisma.institutionalOutcome.upsert({
+      where: { code: ilo.code },
+      update: { description: ilo.description, order: ilo.order, is_active: true },
+      create: {
+        code: ilo.code,
+        description: ilo.description,
+        order: ilo.order,
+        is_active: true,
+      },
+    });
   }
 
   // CILOs for courses with evaluations
