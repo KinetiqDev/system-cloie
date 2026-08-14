@@ -15,6 +15,7 @@ const alignment: FacultyCourseAlignment = {
     id: COURSE_ID,
     code: "CS-101",
     title: "Computing",
+    scope: "PROGRAM_SPECIFIC",
     program: { id: "program-1", code: "BSCS", name: "Computer Science" },
   },
   cilos: [{ id: CILO_ID, description: "Apply core concepts", targetIds: [] }],
@@ -234,5 +235,38 @@ describe("FacultyCourseAlignmentEditor", () => {
       "Course alignment changed after review."
     );
     expect(screen.getByRole("button", { name: "Reload alignment" })).toBeEnabled();
+  });
+
+  it("shows only Institutional Outcomes and a shared-impact warning for General Education", () => {
+    const ILO_ID = "66666666-6666-4666-8666-666666666666";
+    render(
+      <FacultyCourseAlignmentEditor
+        alignment={{
+          ...alignment,
+          course: {
+            ...alignment.course,
+            scope: "GENERAL_EDUCATION",
+            program: null,
+          },
+          targets: [{ id: ILO_ID, code: "ILO-1", description: "Think critically" }],
+        }}
+        prepareAction={vi.fn()}
+        commitAction={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "Select the active Institutional Outcomes from the college-wide catalog."
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText(/apply to every active assignment using this shared Course/i))
+      .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Choose Institutional Outcomes" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Choose Graduate Outcomes" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose Institutional Outcomes" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /ILO-1: Think critically/i }));
+    expect(screen.getByText("1 Institutional Outcome mapped")).toBeInTheDocument();
   });
 });

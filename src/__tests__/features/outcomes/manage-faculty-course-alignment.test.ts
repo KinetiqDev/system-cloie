@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   assignment: { findFirst: vi.fn() },
   course: { findFirst: vi.fn() },
   go: { count: vi.fn(), findMany: vi.fn() },
+  ilo: { count: vi.fn(), findMany: vi.fn() },
   transaction: vi.fn(),
 }));
 
@@ -17,6 +18,7 @@ vi.mock("@/lib/db/prisma", () => ({
     courseAssignment: mocks.assignment,
     course: mocks.course,
     gO: mocks.go,
+    institutionalOutcome: mocks.ilo,
     $transaction: mocks.transaction,
   },
 }));
@@ -33,6 +35,7 @@ function course(overrides: Record<string, unknown> = {}) {
     id: COURSE_ID,
     code: "CS-101",
     title: "Computing",
+    course_scope: "PROGRAM_SPECIFIC",
     program_id: PROGRAM_ID,
     program: { id: PROGRAM_ID, code: "BSCS", name: "Computer Science", is_active: true },
     cilos: [
@@ -43,6 +46,39 @@ function course(overrides: Record<string, unknown> = {}) {
           {
             go_id: GO_ID,
             go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true },
+          },
+        ],
+        cilo_institutional_outcome_mappings: [],
+      },
+    ],
+    ...overrides,
+  };
+}
+
+const ILO_ID = "66666666-6666-4666-8666-666666666666";
+
+function generalEducationCourse(overrides: Record<string, unknown> = {}) {
+  return {
+    id: COURSE_ID,
+    code: "GESTECH",
+    title: "Science, Technology and Society",
+    course_scope: "GENERAL_EDUCATION",
+    program_id: null,
+    program: null,
+    cilos: [
+      {
+        id: CILO_ID,
+        description: "Analyze science and technology interactions",
+        cilo_mappings: [],
+        cilo_institutional_outcome_mappings: [
+          {
+            institutional_outcome_id: ILO_ID,
+            institutional_outcome: {
+              id: ILO_ID,
+              code: "ILO-1",
+              description: "Think critically",
+              is_active: true,
+            },
           },
         ],
       },
@@ -61,6 +97,8 @@ describe("Faculty Course alignment service", () => {
       { id: GO_ID, code: "GO-1", description: "Think critically" },
     ]);
     mocks.go.count.mockResolvedValue(1);
+    mocks.ilo.findMany.mockResolvedValue([]);
+    mocks.ilo.count.mockResolvedValue(0);
   });
 
   it("returns only the active owning-Program catalog and readiness", async () => {
@@ -237,6 +275,120 @@ describe("Faculty Course alignment service", () => {
     await expect(commitCourseAlignmentWrite(reviewResult.data, false)).resolves.toEqual({
       success: false,
       error: "Explicit confirmation is required.",
+    });
+  });
+
+  it("serves General Education Courses the shared Institutional Outcome catalog only", async () => {
+    const { readFacultyCourseAlignment } =
+      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
+    mocks.ilo.findMany.mockResolvedValue([
+      { id: ILO_ID, code: "ILO-1", description: "Think critically" },
+    ]);
+
+    await expect(readFacultyCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+      success: true,
+      data: {
+        course: { id: COURSE_ID, scope: "GENERAL_EDUCATION", program: null },
+        targets: [{ id: ILO_ID, code: "ILO-1" }],
+        cilos: [{ id: CILO_ID, targetIds: [ILO_ID] }],
+        readiness: "ready",
+      },
+    });
+    expect(mocks.ilo.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { is_active: true } })
+    );
+    expect(mocks.go.findMany).not.toHaveBeenCalled();
+  });
+
+  it("never mixes Graduate Outcomes into a General Education alignment read", async () => {
+    const { readFacultyCourseAlignment } =
+      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    mocks.course.findFirst.mockResolvedValue(
+      generalEducationCourse({
+        cilos: [
+          {
+            id: CILO_ID,
+            description: "Analyze science and technology interactions",
+            cilo_mappings: [{ go_id: GO_ID, go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true } }],
+            cilo_institutional_outcome_mappings: [],
+          },
+        ],
+      })
+    );
+    mocks.ilo.findMany.mockResolvedValue([
+      { id: ILO_ID, code: "ILO-1", description: "Think critically" },
+    ]);
+
+    await expect(readFacultyCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+      success: true,
+      data: {
+        cilos: [{ id: CILO_ID, targetIds: [] }],
+        targets: [{ id: ILO_ID }],
+        readiness: "incomplete-mapping",
+      },
+    });
+  });
+
+  it("rejects a forged General Education mapping to a Graduate Outcome", async () => {
+    const { prepareCourseAlignmentWrite } =
+      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
+    const freshness = JSON.stringify([{ ciloId: CILO_ID, targetIds: [ILO_ID] }]);
+
+    await expect(
+      prepareCourseAlignmentWrite({
+        courseId: COURSE_ID,
+        desired: [{ ciloId: CILO_ID, targetIds: [GO_ID] }],
+        freshnessToken: freshness,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: "Institutional Outcome availability changed. Reload and review the latest mappings.",
+    });
+    expect(mocks.ilo.count).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: { in: [GO_ID] }, is_active: true } })
+    );
+  });
+
+  it("prepares and commits a General Education ILO diff with actor provenance", async () => {
+    const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
+      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
+    const freshness = JSON.stringify([{ ciloId: CILO_ID, targetIds: [ILO_ID] }]);
+    const reviewResult = await prepareCourseAlignmentWrite({
+      courseId: COURSE_ID,
+      desired: [{ ciloId: CILO_ID, targetIds: [] }],
+      freshnessToken: freshness,
+    });
+    expect(reviewResult).toMatchObject({
+      success: true,
+      data: {
+        before: [{ ciloId: CILO_ID, targetIds: [ILO_ID] }],
+        after: [{ ciloId: CILO_ID, targetIds: [] }],
+        additions: [],
+        removals: [{ ciloId: CILO_ID, targetId: ILO_ID }],
+      },
+    });
+    if (!reviewResult.success) throw new Error(reviewResult.error);
+    const deleteMany = vi.fn();
+    mocks.transaction.mockImplementation(async (callback: (tx: unknown) => unknown) =>
+      callback({
+        courseAssignment: mocks.assignment,
+        course: { findFirst: vi.fn().mockResolvedValue(generalEducationCourse()) },
+        gO: mocks.go,
+        institutionalOutcome: mocks.ilo,
+        cILOInstitutionalOutcomeMapping: { deleteMany, createMany: vi.fn() },
+      })
+    );
+    await expect(commitCourseAlignmentWrite(reviewResult.data, true)).resolves.toEqual({
+      success: true,
+      data: { changed: 1 },
+    });
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        OR: [{ cilo_id: CILO_ID, institutional_outcome_id: ILO_ID }],
+      },
     });
   });
 });

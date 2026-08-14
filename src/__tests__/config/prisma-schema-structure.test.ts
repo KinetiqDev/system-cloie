@@ -45,6 +45,7 @@ const expectedModels = [
   "AcademicTermInstance",
   "AlumniProfile",
   "CILO",
+  "CILOInstitutionalOutcomeMapping",
   "CILOMapping",
   "CentralDeployment",
   "Course",
@@ -105,7 +106,7 @@ describe("Prisma schema structure", () => {
     );
   });
 
-  it("keeps InstitutionalOutcome as a catalog-only college-wide model", () => {
+  it("keeps the Institutional Outcome catalog model", () => {
     const source = readFileSync(join(prismaModelsDir, "outcomes.prisma"), "utf8");
     const match = source.match(/model InstitutionalOutcome \{[\s\S]*?\n\}/);
 
@@ -120,7 +121,43 @@ describe("Prisma schema structure", () => {
     expect(model).toContain("created_at");
     expect(model).toContain("updated_at");
     expect(model).toContain('@@map("institutional_outcomes")');
-    expect(model).not.toContain("CILOInstitutionalOutcomeMapping");
-    expect(source).not.toContain("model CILOInstitutionalOutcomeMapping");
+  });
+
+  it("keeps the Program-specific mapping relation with actor provenance", () => {
+    const source = readFileSync(join(prismaModelsDir, "outcomes.prisma"), "utf8");
+    const match = source.match(/model CILOMapping \{[\s\S]*?\n\}/);
+
+    expect(match).not.toBeNull();
+    const model = match![0];
+
+    expect(model).toContain("created_by");
+    expect(model).toContain("updated_by");
+    expect(model).toContain('@relation("CILOMappingCreator", fields: [created_by]');
+    expect(model).toContain('@relation("CILOMappingUpdater", fields: [updated_by]');
+    expect(model).toContain("@@unique([cilo_id, go_id])");
+    expect(model).toContain('@@map("cilo_mappings")');
+  });
+
+  it("keeps the typed General Education mapping relation with provenance", () => {
+    const source = readFileSync(join(prismaModelsDir, "outcomes.prisma"), "utf8");
+    const match = source.match(/model CILOInstitutionalOutcomeMapping \{[\s\S]*?\n\}/);
+
+    expect(match).not.toBeNull();
+    const model = match![0];
+
+    expect(model).toContain("cilo_id");
+    expect(model).toContain("institutional_outcome_id");
+    expect(model).toContain("created_by");
+    expect(model).toContain("updated_by");
+    expect(model).toContain("created_at");
+    expect(model).toContain("updated_at");
+    expect(model).toContain("@relation(fields: [cilo_id], references: [id], onDelete: Cascade)");
+    expect(model).toContain(
+      "@relation(fields: [institutional_outcome_id], references: [id], onDelete: Restrict)"
+    );
+    expect(model).toContain("@@unique([cilo_id, institutional_outcome_id])");
+    expect(model).toContain("@@index([cilo_id])");
+    expect(model).toContain("@@index([institutional_outcome_id])");
+    expect(model).toContain('@@map("cilo_institutional_outcome_mappings")');
   });
 });

@@ -131,4 +131,36 @@ describe("FacultyCilosCourseList", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save CILOs.");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  it("links General Education courses to the alignment workspace", () => {
+    render(
+      <FacultyCilosCourseList
+        courses={[
+          {
+            id: "course-ge",
+            code: "GESTECH",
+            title: "Science, Technology and Society",
+            description: null,
+            courseScope: "GENERAL_EDUCATION",
+            courseScopeLabel: "General Education",
+            programId: null,
+            programCode: null,
+            programName: null,
+            majorId: null,
+            majorName: null,
+            ciloCount: 3,
+          },
+        ]}
+        termInstances={[]}
+        selectedTermId={undefined}
+        loadCilosAction={loadCilosAction}
+        saveCilosAction={saveCilosAction}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Align" })).toHaveAttribute(
+      "href",
+      "/faculty/cilos/course-ge/alignment"
+    );
+  });
 });
