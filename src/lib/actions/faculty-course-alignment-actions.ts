@@ -16,6 +16,7 @@ const desiredAlignmentSchema = z.object({
       targetIds: z.array(z.string().uuid("Invalid Graduate Outcome ID.")),
     })
   ),
+  freshnessToken: z.string().min(1, "Alignment is stale. Reload and review the latest mappings."),
 });
 
 const pairSchema = z.object({
