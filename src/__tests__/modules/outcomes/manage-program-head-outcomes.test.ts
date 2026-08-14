@@ -79,6 +79,7 @@ describe("manage-program-head-outcomes", () => {
   let updateGO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").updateGO;
   let deleteGO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").deleteGO;
   let reorderGOs: typeof import("@/features/outcomes/services/manage-program-head-outcomes").reorderGOs;
+  let restoreGO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").restoreGO;
   let listCILOMappingsForProgram: typeof import("@/features/outcomes/services/manage-program-head-outcomes").listCILOMappingsForProgram;
 
   beforeEach(async () => {
@@ -140,6 +141,7 @@ describe("manage-program-head-outcomes", () => {
     updateGO = mod.updateGO;
     deleteGO = mod.deleteGO;
     reorderGOs = mod.reorderGOs;
+    restoreGO = mod.restoreGO;
     listCILOMappingsForProgram = mod.listCILOMappingsForProgram;
   });
 
@@ -213,7 +215,7 @@ describe("manage-program-head-outcomes", () => {
     );
   });
 
-  it("includes assigned General Education courses but only selected-Program mappings", async () => {
+  it("includes assigned General Education courses with Institutional Outcome mappings", async () => {
     const selectedProgramId = "program-2";
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: selectedProgramId }]);
     courseFindManyMock.mockResolvedValue([
@@ -221,12 +223,22 @@ describe("manage-program-head-outcomes", () => {
         id: "course-ge",
         code: "GE101",
         title: "General Education",
+        course_scope: "GENERAL_EDUCATION",
         cilos: [
           {
             id: "cilo-ge",
             description: "Communicate effectively",
-            cilo_mappings: [
-              { id: "mapping-1", go: { id: "go-bsed", code: "GO-1", description: "BSED outcome" } },
+            cilo_mappings: [],
+            cilo_institutional_outcome_mappings: [
+              {
+                id: "ilo-mapping-1",
+                institutional_outcome: {
+                  id: "ilo-1",
+                  code: "ILO-1",
+                  description: "Communicate clearly",
+                  is_active: true,
+                },
+              },
             ],
           },
         ],
@@ -242,18 +254,22 @@ describe("manage-program-head-outcomes", () => {
           courseId: "course-ge",
           courseCode: "GE101",
           courseTitle: "General Education",
+          courseScope: "GENERAL_EDUCATION",
           cilos: [
             {
               id: "cilo-ge",
               description: "Communicate effectively",
-              mappedGOs: [
+              mappedTargets: [
                 {
-                  mappingId: "mapping-1",
-                  id: "go-bsed",
-                  code: "GO-1",
-                  description: "BSED outcome",
+                  mappingId: "ilo-mapping-1",
+                  id: "ilo-1",
+                  code: "ILO-1",
+                  description: "Communicate clearly",
+                  kind: "ILO",
+                  is_active: true,
                 },
               ],
+              readiness: "ready",
             },
           ],
         },
@@ -277,6 +293,92 @@ describe("manage-program-head-outcomes", () => {
         }),
       })
     );
+  });
+
+  it("reports Program-specific GO mappings and readiness gaps per CILO", async () => {
+    const selectedProgramId = "program-1";
+    programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: selectedProgramId }]);
+    courseFindManyMock.mockResolvedValue([
+      {
+        id: "course-ps",
+        code: "CS101",
+        title: "Introduction to Computing",
+        course_scope: "PROGRAM_SPECIFIC",
+        cilos: [
+          {
+            id: "cilo-aligned",
+            description: "Design a solution",
+            cilo_mappings: [
+              {
+                id: "mapping-1",
+                go: { id: "go-1", code: "GO-1", description: "Design", is_active: true },
+              },
+            ],
+            cilo_institutional_outcome_mappings: [],
+          },
+          {
+            id: "cilo-archived",
+            description: "Retired outcome",
+            cilo_mappings: [
+              {
+                id: "mapping-2",
+                go: { id: "go-2", code: "GO-2", description: "Legacy", is_active: false },
+              },
+            ],
+            cilo_institutional_outcome_mappings: [],
+          },
+          {
+            id: "cilo-gap",
+            description: "No target yet",
+            cilo_mappings: [],
+            cilo_institutional_outcome_mappings: [],
+          },
+        ],
+      },
+    ]);
+
+    const result = await listCILOMappingsForProgram(selectedProgramId);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(courseFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          is_active: true,
+          OR: expect.arrayContaining([
+            expect.objectContaining({
+              program_id: selectedProgramId,
+              course_assignments: {
+                some: {
+                  program_id: selectedProgramId,
+                  is_active: true,
+                  term_instance: { status: "ACTIVE" },
+                },
+              },
+            }),
+          ]),
+        }),
+      })
+    );
+    expect(result.data[0]).toMatchObject({
+      courseScope: "PROGRAM_SPECIFIC",
+      cilos: [
+        { id: "cilo-aligned", readiness: "ready" },
+        { id: "cilo-archived", readiness: "incomplete-mapping" },
+        { id: "cilo-gap", readiness: "incomplete-mapping" },
+      ],
+    });
+    expect(result.data[0].cilos[1].mappedTargets).toEqual([
+      {
+        id: "go-2",
+        mappingId: "mapping-2",
+        code: "GO-2",
+        description: "Legacy",
+        kind: "GO",
+        is_active: false,
+      },
+    ]);
+    expect(result.data[0].cilos[2].mappedTargets).toEqual([]);
   });
 
   // ─── createGO ────────────────────────────────────────────────────────
@@ -443,6 +545,46 @@ describe("manage-program-head-outcomes", () => {
 
     expect(result).toEqual({ success: true, data: undefined });
     expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: false } });
+  });
+
+  // ─── restoreGO ───────────────────────────────────────────────────────
+
+  it("PH restores an archived GO within the assigned program", async () => {
+    goFindUniqueMock.mockResolvedValue({
+      id: GO_ID,
+      program_id: PROGRAM_ID,
+      code: "GO-1",
+      description: "Original",
+      order: 0,
+      is_active: false,
+    });
+    goUpdateMock.mockResolvedValue({ id: GO_ID });
+
+    const result = await restoreGO(PROGRAM_ID, GO_ID);
+
+    expect(result).toEqual({ success: true, data: undefined });
+    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: true } });
+  });
+
+  it("PH cannot restore a GO outside the assigned program", async () => {
+    goFindUniqueMock.mockResolvedValue({ id: GO_ID, program_id: "other-program" });
+
+    const result = await restoreGO(PROGRAM_ID, GO_ID);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You do not have permission to restore this Graduate Outcome.",
+    });
+    expect(goUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("restoreGO fails safely when the GO does not exist", async () => {
+    goFindUniqueMock.mockResolvedValue(null);
+
+    const result = await restoreGO(PROGRAM_ID, GO_ID);
+
+    expect(result).toEqual({ success: false, error: "Graduate Outcome not found." });
+    expect(goUpdateMock).not.toHaveBeenCalled();
   });
 
   // ─── reorderGOs ──────────────────────────────────────────────────────

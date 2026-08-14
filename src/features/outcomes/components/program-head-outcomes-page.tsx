@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Edit, GripVertical, ListChecks, Plus, Trash2 } from "lucide-react";
+import { Edit, GripVertical, ListChecks, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -34,7 +34,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { deleteGOAction, reorderGOsAction } from "@/lib/actions/program-head-outcome-actions";
+import { deleteGOAction, reorderGOsAction, restoreGOAction } from "@/lib/actions/program-head-outcome-actions";
 import { GOFormDialog } from "./go-form-dialog";
 import type { ProgramGOItem } from "../services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
@@ -48,10 +48,12 @@ function SortableGORow({
   go,
   onEdit,
   onDelete,
+  onRestore,
 }: {
   go: ProgramGOItem;
   onEdit: (go: ProgramGOItem) => void;
   onDelete: (go: ProgramGOItem) => void;
+  onRestore: (go: ProgramGOItem) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: go.id,
@@ -87,6 +89,11 @@ function SortableGORow({
           <Badge variant="default" className="shrink-0 font-semibold">
             {go.code}
           </Badge>
+          {!go.is_active && (
+            <Badge variant="outline" className="text-muted-foreground shrink-0">
+              Archived
+            </Badge>
+          )}
           {go._count.cilo_mappings > 0 ? (
             <Badge variant="success" className="shrink-0">
               {go._count.cilo_mappings} {go._count.cilo_mappings === 1 ? "CILO" : "CILOs"} mapped
@@ -112,16 +119,29 @@ function SortableGORow({
         >
           <Edit className="h-4 w-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-destructive min-h-11 min-w-11"
-          aria-label={`Archive ${go.code}`}
-          title="Delete"
-          onClick={() => onDelete(go)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {go.is_active ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive min-h-11 min-w-11"
+            aria-label={`Archive ${go.code}`}
+            title="Delete"
+            onClick={() => onDelete(go)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="min-h-11 min-w-11"
+            aria-label={`Restore ${go.code}`}
+            title="Restore"
+            onClick={() => onRestore(go)}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -138,6 +158,8 @@ export function ProgramHeadOutcomesPage({
   const [editingGO, setEditingGO] = useState<ProgramGOItem | null>(null);
   const [deletingGO, setDeletingGO] = useState<ProgramGOItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [restoringGO, setRestoringGO] = useState<ProgramGOItem | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
   const [reorderError, setReorderError] = useState<string | null>(null);
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reorderGenerationRef = useRef(0);
@@ -210,6 +232,21 @@ export function ProgramHeadOutcomesPage({
       }
 
       setDeletingGO(null);
+      router.refresh();
+    });
+  }
+
+  function handleRestore(go: ProgramGOItem) {
+    setRestoreError(null);
+    startTransition(async () => {
+      const result = await restoreGOAction(program.id, go.id);
+
+      if (!result.success) {
+        setRestoreError(result.error);
+        return;
+      }
+
+      setRestoringGO(null);
       router.refresh();
     });
   }
@@ -306,6 +343,10 @@ export function ProgramHeadOutcomesPage({
                     setDeleteError(null);
                     setDeletingGO(g);
                   }}
+                  onRestore={(g) => {
+                    setRestoreError(null);
+                    setRestoringGO(g);
+                  }}
                 />
               ))}
             </div>
@@ -373,6 +414,45 @@ export function ProgramHeadOutcomesPage({
               onClick={() => deletingGO && handleDelete(deletingGO)}
             >
               {isPending ? "Archiving..." : "Archive"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Restore Confirmation Dialog */}
+      <AlertDialog
+        open={!!restoringGO}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRestoringGO(null);
+            setRestoreError(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore Graduate Outcome</AlertDialogTitle>
+            <AlertDialogDescription>
+              Restore <strong className="text-text-primary">{restoringGO?.code}</strong> to the
+              active catalog? It becomes available for Course alignment again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {restoreError && (
+            <Alert variant="destructive">
+              <AlertDescription>{restoreError}</AlertDescription>
+            </Alert>
+          )}
+          <AlertDialogFooter className="flex justify-end gap-2 pt-2">
+            <AlertDialogCancel
+              onClick={() => {
+                setRestoringGO(null);
+                setRestoreError(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <Button loading={isPending} onClick={() => restoringGO && handleRestore(restoringGO)}>
+              {isPending ? "Restoring..." : "Restore"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

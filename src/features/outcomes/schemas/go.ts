@@ -35,16 +35,5 @@ export const reorderGOsSchema = z.object({
   orderedIds: z.array(z.string().uuid("Invalid GO ID.")),
 });
 
-export const createMappingSchema = z.object({
-  programId: z.string().uuid("Invalid Program ID."),
-  ciloId: z.string().uuid("Invalid CILO ID."),
-  goId: z.string().uuid("Invalid GO ID."),
-});
-
-export const removeMappingSchema = z.object({
-  programId: z.string().uuid("Invalid Program ID."),
-  id: z.string().uuid("Invalid mapping ID."),
-});
-
 export type CreateGOInput = z.infer<typeof createGOSchema>;
 export type UpdateGOInput = z.infer<typeof updateGOSchema>;
