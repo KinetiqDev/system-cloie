@@ -268,12 +268,12 @@ describe("Dean oversight pages", () => {
     expect((await screen.findAllByText("Active contexts")).length).toBeGreaterThan(0);
     expect(await screen.findByText("Incomplete mappings")).toBeInTheDocument();
     expect(
-      await screen.findByText("Contexts with CILOs that have no active Graduate Outcome mapping.")
+      await screen.findByText("Contexts with active CILOs that have no valid active target for their Course scope.")
     ).toBeInTheDocument();
     expect(
       screen.queryByText(/do not reach every active Graduate Outcome/i)
     ).not.toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: /Incomplete CILO-to-GO mappings/ })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: /Incomplete typed mappings/ })).toHaveAttribute(
       "href",
       `/dean/college-oversight/learning-outcomes?period=${PERIOD_ID}&risk=incomplete-mappings`
     );

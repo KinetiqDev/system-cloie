@@ -20,8 +20,8 @@ const risks = [
   },
   {
     key: "incomplete-mappings",
-    label: "Incomplete CILO-to-GO mappings",
-    description: "Contexts with CILOs that have no active Graduate Outcome mapping.",
+    label: "Incomplete typed mappings",
+    description: "Contexts with active CILOs that have no valid active target for their Course scope.",
     dataKey: "incompleteMappings" as const,
   },
   {
@@ -116,7 +116,7 @@ export function DeanDashboardContent({ result }: { result: DeanReadState<DeanDas
           <KpiCard
             label="Incomplete mappings"
             value={kpis.incompleteMappingContexts}
-            detail="CILO-to-GO gap"
+            detail="Missing active target"
             icon={Gauge}
           />
         </div>
