@@ -350,7 +350,7 @@ describe("manage-outcome-writes", () => {
     expect(mocks.iloMapping.create).not.toHaveBeenCalled();
   });
 
-  it("rejects a Program-specific mapping whose GO is outside the selected Program", async () => {
+  it("denies Program Head Program-specific mapping writes without reading scope state", async () => {
     const PROGRAM_HEAD = {
       userId: "program-head",
       activeRole: ROLES.PROGRAM_HEAD,
@@ -358,17 +358,7 @@ describe("manage-outcome-writes", () => {
       profileGate: COMPLETE_PROFILE_GATE,
     };
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
-    mocks.cilo.findUnique.mockResolvedValue({
-      is_active: true,
-      course_id: "course-bsed",
-      course: {
-        is_active: true,
-        course_scope: "PROGRAM_SPECIFIC",
-        program_id: "program-1",
-        course_assignments: [],
-      },
-    });
-    mocks.go.findUnique.mockResolvedValue({ is_active: true, program_id: "program-2" });
+    mocks.go.findUnique.mockResolvedValue({ is_active: true, program_id: "program-1" });
     mocks.mapping.findUnique.mockResolvedValue(null);
 
     const { prepareOutcomeWrite } =
@@ -379,16 +369,17 @@ describe("manage-outcome-writes", () => {
         action: "create",
         programId: "program-1",
         ciloId: "cilo-1",
-        goId: "go-beed",
+        goId: "go-1",
       })
     ).resolves.toEqual({
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
+    expect(mocks.cilo.findUnique).not.toHaveBeenCalled();
     expect(mocks.mapping.create).not.toHaveBeenCalled();
   });
 
-  it("rejects a mapping commit after the selected assignment is revoked", async () => {
+  it("denies Program Head Program-specific mapping removals without reading scope state", async () => {
     const PROGRAM_HEAD = {
       userId: "program-head",
       activeRole: ROLES.PROGRAM_HEAD,
@@ -396,59 +387,6 @@ describe("manage-outcome-writes", () => {
       profileGate: COMPLETE_PROFILE_GATE,
     };
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
-    mocks.cilo.findUnique.mockResolvedValue({
-      is_active: true,
-      course_id: "course-1",
-      course: {
-        is_active: true,
-        course_scope: "PROGRAM_SPECIFIC",
-        program_id: "program-1",
-        course_assignments: [{ id: "assignment-1" }],
-      },
-    });
-    mocks.go.findUnique.mockResolvedValue({ is_active: true, program_id: "program-1" });
-    mocks.mapping.findUnique.mockResolvedValue(null);
-    const { prepareOutcomeWrite, commitOutcomeWrite } =
-      await import("@/features/outcomes/services/manage-outcome-writes");
-    const review = await prepareOutcomeWrite({
-      kind: "MAPPING",
-      action: "create",
-      programId: "program-1",
-      ciloId: "cilo-1",
-      goId: "go-1",
-    });
-    if (!review.success) throw new Error(review.error);
-    mocks.revalidateAssignment.mockResolvedValue(null);
-
-    await expect(commitOutcomeWrite(review.data, true)).resolves.toEqual({
-      success: false,
-      error: "You do not have permission to modify this outcome.",
-    });
-    expect(mocks.mapping.create).not.toHaveBeenCalled();
-  });
-
-  it("rejects removing a Program-specific mapping whose CILO belongs to another Program", async () => {
-    const PROGRAM_HEAD = {
-      userId: "program-head",
-      activeRole: ROLES.PROGRAM_HEAD,
-      roles: [ROLES.PROGRAM_HEAD],
-      profileGate: COMPLETE_PROFILE_GATE,
-    };
-    mocks.session.mockResolvedValue(PROGRAM_HEAD);
-    mocks.mapping.findUnique.mockResolvedValue({
-      id: "mapping-1",
-      cilo_id: "cilo-beed",
-      go_id: "go-bsed",
-      cilo: {
-        course_id: "course-beed",
-        course: {
-          course_scope: "PROGRAM_SPECIFIC",
-          program_id: "program-2",
-          course_assignments: [],
-        },
-      },
-      go: { program_id: "program-1" },
-    });
 
     const { prepareOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
@@ -463,7 +401,114 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
+    expect(mocks.mapping.findUnique).not.toHaveBeenCalled();
     expect(mocks.mapping.delete).not.toHaveBeenCalled();
+  });
+
+  it("supports Secretary Program-specific mapping correction with actor provenance", async () => {
+    mocks.cilo.findUnique.mockResolvedValue({
+      is_active: true,
+      course: { is_active: true, course_scope: "PROGRAM_SPECIFIC", program_id: "program-1" },
+    });
+    mocks.go.findUnique.mockResolvedValue({ id: "go-1", is_active: true, program_id: "program-1" });
+    mocks.mapping.findUnique.mockResolvedValue(null);
+    mocks.mapping.create.mockResolvedValue({ id: "mapping-1" });
+    const { prepareOutcomeWrite, commitOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    const review = await prepareOutcomeWrite({
+      kind: "MAPPING",
+      action: "create",
+      programId: "program-1",
+      ciloId: "cilo-1",
+      goId: "go-1",
+    });
+    expect(review.success).toBe(true);
+    expect(
+      await commitOutcomeWrite(review.success ? review.data : fail("review"), true)
+    ).toEqual({
+      success: true,
+      data: { id: "mapping-1" },
+    });
+    expect(mocks.mapping.create).toHaveBeenCalledWith({
+      data: {
+        cilo_id: "cilo-1",
+        go_id: "go-1",
+        created_by: "secretary",
+        updated_by: "secretary",
+      },
+    });
+  });
+
+  it("supports Secretary Program-specific mapping removal college-wide", async () => {
+    mocks.mapping.findUnique.mockResolvedValue({
+      id: "mapping-1",
+      cilo_id: "cilo-1",
+      go_id: "go-1",
+    });
+    const { prepareOutcomeWrite, commitOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    const review = await prepareOutcomeWrite({
+      kind: "MAPPING",
+      action: "remove",
+      programId: "program-1",
+      id: "mapping-1",
+    });
+    expect(review.success).toBe(true);
+    expect(
+      await commitOutcomeWrite(review.success ? review.data : fail("review"), true)
+    ).toEqual({ success: true, data: {} });
+    expect(mocks.mapping.delete).toHaveBeenCalledWith({ where: { id: "mapping-1" } });
+  });
+
+  it("authorizes Faculty Program-specific mapping writes for assigned Courses", async () => {
+    mocks.session.mockResolvedValue(FACULTY);
+    mocks.cilo.findUnique.mockResolvedValue({
+      is_active: true,
+      course_id: "course-1",
+      course: { is_active: true, course_scope: "PROGRAM_SPECIFIC", program_id: "program-1" },
+    });
+    mocks.go.findUnique.mockResolvedValue({ is_active: true, program_id: "program-1" });
+    mocks.mapping.findUnique.mockResolvedValue(null);
+    mocks.assignment.findFirst.mockResolvedValue({ id: "assignment-1" });
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+
+    await expect(
+      prepareOutcomeWrite({
+        kind: "MAPPING",
+        action: "create",
+        programId: "program-1",
+        ciloId: "cilo-1",
+        goId: "go-1",
+      })
+    ).resolves.toMatchObject({ success: true });
+  });
+
+  it("denies unassigned Faculty Program-specific mapping writes", async () => {
+    mocks.session.mockResolvedValue(FACULTY);
+    mocks.cilo.findUnique.mockResolvedValue({
+      is_active: true,
+      course_id: "course-1",
+      course: { is_active: true, course_scope: "PROGRAM_SPECIFIC", program_id: "program-1" },
+    });
+    mocks.mapping.findUnique.mockResolvedValue(null);
+    mocks.assignment.findFirst.mockResolvedValue(null);
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+
+    await expect(
+      prepareOutcomeWrite({
+        kind: "MAPPING",
+        action: "create",
+        programId: "program-1",
+        ciloId: "cilo-1",
+        goId: "go-1",
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: "You do not have permission to modify this outcome.",
+    });
+    expect(mocks.mapping.create).not.toHaveBeenCalled();
   });
 
   it("rejects forged review payload before opening a transaction", async () => {
