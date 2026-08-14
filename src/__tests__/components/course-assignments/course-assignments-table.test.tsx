@@ -18,6 +18,21 @@ vi.mock("@/lib/actions/course-assignment-actions", () => ({
   deleteCourseAssignmentAction: vi.fn(),
   preflightCourseAssignmentDeletionAction: vi.fn(),
 }));
+function mockMatchMedia(matches: boolean) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(() => false),
+    }))
+  );
+}
 
 function createAssignment(overrides: Partial<CourseAssignmentItem> = {}): CourseAssignmentItem {
   return {
@@ -52,6 +67,7 @@ describe("CourseAssignmentsTable", () => {
   }) as EventListener;
 
   beforeEach(() => {
+    mockMatchMedia(true);
     toastMessages = [];
     vi.mocked(preflightCourseAssignmentDeletionAction).mockResolvedValue({
       success: true,
@@ -72,6 +88,7 @@ describe("CourseAssignmentsTable", () => {
   afterEach(() => {
     window.removeEventListener("cloie-toast", toastListener);
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   function renderTable(props: Partial<ComponentProps<typeof CourseAssignmentsTable>> = {}) {

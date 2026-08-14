@@ -9,14 +9,31 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/secretary/users",
   useRouter: () => ({ replace: replaceMock }),
 }));
+function mockMatchMedia(matches: boolean = true) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(() => false),
+    }))
+  );
+}
 
 describe("SecretaryUsersList", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    mockMatchMedia(true);
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   const mockUsers = [

@@ -15,7 +15,7 @@ import { serializeSecretaryUsersListQuery } from "../../schemas/secretary-users-
 import { UsersKPI } from "./users-kpi";
 import { UsersFilterBar } from "./users-filter-bar";
 import { UsersDataTable } from "./users-data-table";
-import { UsersPagination } from "./users-pagination";
+import { Pagination } from "@/components/ui/pagination";
 import { UserDialogs, useToggleUserActive } from "./user-dialogs";
 import { EditUserDialog } from "./edit-user-dialog";
 
@@ -159,10 +159,11 @@ export function SecretaryUsersList({
         isPending={isMutating}
       />
 
-      <UsersPagination
+      <Pagination
         currentPage={page}
         totalPages={totalPages}
         onPageChange={(nextPage) => navigateWithQuery({ page: nextPage })}
+        className="justify-center pt-4"
       />
 
       {isNavigating && (
@@ -192,5 +193,4 @@ export function SecretaryUsersList({
 export * from "./users-kpi";
 export * from "./users-filter-bar";
 export * from "./users-data-table";
-export * from "./users-pagination";
 export * from "./user-dialogs";

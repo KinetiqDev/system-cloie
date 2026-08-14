@@ -35,6 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Pagination } from "@/components/ui/pagination";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -470,22 +471,6 @@ function PublishedDeploymentsTable({
     setCurrentPage(1);
   }
 
-  function buildPageNumbers(): (number | "ellipsis")[] {
-    const pages: (number | "ellipsis")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (safePage > 3) pages.push("ellipsis");
-      const start = Math.max(2, safePage - 1);
-      const end = Math.min(totalPages - 1, safePage + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (safePage < totalPages - 2) pages.push("ellipsis");
-      pages.push(totalPages);
-    }
-    return pages;
-  }
-
   function toggleRow(id: string) {
     setExpandedRows((prev) => {
       const next = new Set(prev);
@@ -579,40 +564,12 @@ function PublishedDeploymentsTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1 pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          >
-            ←
-          </Button>
-          {buildPageNumbers().map((page, idx) =>
-            page === "ellipsis" ? (
-              <span key={`ellipsis-${idx}`} className="text-muted-foreground px-2 text-sm">
-                …
-              </span>
-            ) : (
-              <Button
-                key={page}
-                variant={page === safePage ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </Button>
-            )
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          >
-            →
-          </Button>
-        </div>
+        <Pagination
+          currentPage={safePage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          className="justify-center pt-4"
+        />
       )}
 
       {/* Result count */}

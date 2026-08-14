@@ -1685,6 +1685,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/pagination.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+  },
+  {
     path: "src/components/ui/skeleton.tsx",
     disposition: "task",
     taskId: 5,
@@ -2375,12 +2380,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/users/components/secretary-users-list/users-kpi.tsx",
-    disposition: "task",
-    taskId: 12,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/users/components/secretary-users-list/users-pagination.tsx",
     disposition: "task",
     taskId: 12,
     category: "feature_component",
