@@ -13,7 +13,7 @@ const desiredAlignmentSchema = z.object({
   desired: z.array(
     z.object({
       ciloId: z.string().uuid("Invalid CILO ID."),
-      targetIds: z.array(z.string().uuid("Invalid Graduate Outcome ID.")),
+      targetIds: z.array(z.string().uuid("Invalid outcome target ID.")),
     })
   ),
   freshnessToken: z.string().min(1, "Alignment is stale. Reload and review the latest mappings."),

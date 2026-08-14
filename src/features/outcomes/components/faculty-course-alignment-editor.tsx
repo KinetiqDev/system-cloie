@@ -144,6 +144,10 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
   const [openCilo, setOpenCilo] = useState<string | null>(null);
   const [search, setSearch] = useState<Record<string, string>>({});
   const { activeTargetIds, targetById } = indexAlignmentTargets(alignment);
+  const targetNoun =
+    alignment.course.scope === "GENERAL_EDUCATION"
+      ? "Institutional Outcome"
+      : "Graduate Outcome";
 
   return (
     <div className="flex flex-col gap-4">
@@ -165,7 +169,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
               <CardDescription>{cilo.description}</CardDescription>
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-muted-foreground text-sm" aria-live="polite">
-                  {selectedTargetIds.length} Graduate Outcome
+                  {selectedTargetIds.length} {targetNoun}
                   {selectedTargetIds.length === 1 ? "" : "s"} mapped
                 </p>
                 <Badge variant={activeSelectedCount > 0 ? "default" : "outline"}>
@@ -187,14 +191,14 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
                 disabled={alignment.targets.length === 0 || disabled}
               >
                 <span>
-                  {openCilo === cilo.id ? "Hide Graduate Outcomes" : "Choose Graduate Outcomes"}
+                  {openCilo === cilo.id ? `Hide ${targetNoun}s` : `Choose ${targetNoun}s`}
                 </span>
                 <ChevronDown data-icon="inline-end" />
               </Button>
               {openCilo === cilo.id && (
                 <div id={`cilo-targets-${cilo.id}`} className="mt-3 flex flex-col gap-2">
                   <label htmlFor={`go-search-${cilo.id}`} className="text-sm font-medium">
-                    Search Graduate Outcomes
+                    Search {targetNoun}s
                   </label>
                   <Input
                     id={`go-search-${cilo.id}`}
@@ -211,7 +215,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
                   <div
                     className="flex max-h-72 flex-col gap-1 overflow-y-auto"
                     role="group"
-                    aria-label={`Graduate Outcomes for CILO ${index + 1}`}
+                    aria-label={`${targetNoun}s for CILO ${index + 1}`}
                   >
                     {targets.map((target) => {
                       const selected = selectedTargetIds.includes(target.id);
@@ -240,7 +244,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
                     })}
                     {targets.length === 0 && (
                       <p className="text-muted-foreground p-3 text-sm">
-                        No Graduate Outcomes match this search.
+                        No {targetNoun}s match this search.
                       </p>
                     )}
                   </div>
@@ -249,7 +253,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
               {selectedTargetIds.length > 0 && (
                 <div
                   className="mt-3 flex flex-wrap gap-2"
-                  aria-label={`Mapped Graduate Outcomes for CILO ${index + 1}`}
+                  aria-label={`Mapped ${targetNoun}s for CILO ${index + 1}`}
                 >
                   {selectedTargetIds.map((targetId) => {
                     const unavailable = !activeTargetIds.has(targetId);
@@ -316,8 +320,17 @@ function AlignmentContent({ alignment, draft, disabled, onToggleTarget }: Alignm
       {alignment.targets.length === 0 && (
         <Alert>
           <AlertDescription>
-            {alignment.course.program.code} has no active Graduate Outcomes. CILOs remain visible,
-            but selection is unavailable until the Program Head creates an active Graduate Outcome.
+            {alignment.course.scope === "GENERAL_EDUCATION"
+              ? "No active Institutional Outcomes exist yet. CILOs remain visible, but selection is unavailable until the Secretary creates an active Institutional Outcome."
+              : `${alignment.course.program?.code} has no active Graduate Outcomes. CILOs remain visible, but selection is unavailable until the Program Head creates an active Graduate Outcome.`}
+          </AlertDescription>
+        </Alert>
+      )}
+      {alignment.course.scope === "GENERAL_EDUCATION" && (
+        <Alert>
+          <AlertDescription>
+            This is a General Education Course. Mapping changes apply to every active assignment
+            using this shared Course, not just one section.
           </AlertDescription>
         </Alert>
       )}
@@ -366,8 +379,9 @@ function AlignmentDialogs({
           <AlertDialogHeader>
             <AlertDialogTitle>Review Course alignment changes</AlertDialogTitle>
             <AlertDialogDescription>
-              These changes apply to every active teaching assignment for this Program-specific
-              Course. Confirm the complete before and after mapping.
+              {alignment.course.scope === "GENERAL_EDUCATION"
+                ? "These changes apply to every active teaching assignment using this shared General Education Course. Confirm the complete before and after mapping."
+                : "These changes apply to every active teaching assignment for this Program-specific Course. Confirm the complete before and after mapping."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex max-h-64 flex-col gap-3 overflow-y-auto text-sm">
@@ -548,7 +562,9 @@ export function FacultyCourseAlignmentEditor({ alignment, prepareAction, commitA
             {alignment.course.code}: {alignment.course.title}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Select the active Graduate Outcomes owned by {alignment.course.program.code}.
+            {alignment.course.scope === "GENERAL_EDUCATION"
+              ? "Select the active Institutional Outcomes from the college-wide catalog."
+              : `Select the active Graduate Outcomes owned by ${alignment.course.program?.code}.`}
           </p>
         </div>
         <Badge variant={readiness === "ready" ? "default" : "outline"}>
