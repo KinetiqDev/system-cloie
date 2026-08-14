@@ -60,6 +60,10 @@ model User {
   removed_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipRemover")
   course_bound_evaluation_exclusions    CourseBoundEvaluationExclusion[] @relation("CourseBoundEvaluationExclusionActor")
   exclusion_reversals                   CourseBoundEvaluationExclusion[] @relation("CourseBoundEvaluationExclusionReverser")
+  created_cilo_institutional_outcome_mappings   CILOInstitutionalOutcomeMapping[] @relation("CILOInstitutionalOutcomeMappingCreator")
+  updated_cilo_institutional_outcome_mappings   CILOInstitutionalOutcomeMapping[] @relation("CILOInstitutionalOutcomeMappingUpdater")
+  created_cilo_mappings                         CILOMapping[]                     @relation("CILOMappingCreator")
+  updated_cilo_mappings                         CILOMapping[]                     @relation("CILOMappingUpdater")
 
   @@map("users")
 }

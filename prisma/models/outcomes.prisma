@@ -24,11 +24,12 @@ model CILO {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  course                     Course                                  @relation(fields: [course_id], references: [id], onDelete: Cascade)
-  author                     User                                    @relation(fields: [created_by], references: [id], onDelete: Restrict)
-  cilo_mappings              CILOMapping[]
-  question_bindings          CourseBoundCiloQuestionBinding[]
-  template_question_bindings InstrumentTemplateCiloQuestionBinding[]
+  course                                 Course                                  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  author                                 User                                    @relation(fields: [created_by], references: [id], onDelete: Restrict)
+  cilo_mappings                          CILOMapping[]
+  cilo_institutional_outcome_mappings    CILOInstitutionalOutcomeMapping[]
+  question_bindings                      CourseBoundCiloQuestionBinding[]
+  template_question_bindings             InstrumentTemplateCiloQuestionBinding[]
 
   @@map("cilos")
 }
@@ -41,18 +42,46 @@ model InstitutionalOutcome {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
+  cilo_mappings CILOInstitutionalOutcomeMapping[]
+
   @@map("institutional_outcomes")
 }
 
-model CILOMapping {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cilo_id    String   @db.Uuid
-  go_id      String   @db.Uuid
-  created_at DateTime @default(now())
+model CILOInstitutionalOutcomeMapping {
+  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cilo_id                  String               @db.Uuid
+  institutional_outcome_id String               @db.Uuid
+  created_by               String               @db.Uuid
+  updated_by               String               @db.Uuid
+  created_at               DateTime             @default(now())
+  updated_at               DateTime             @updatedAt
 
-  cilo CILO @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
-  go   GO   @relation(fields: [go_id], references: [id], onDelete: Cascade)
+  cilo                  CILO                  @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
+  institutional_outcome InstitutionalOutcome  @relation(fields: [institutional_outcome_id], references: [id], onDelete: Restrict)
+  creator               User                  @relation("CILOInstitutionalOutcomeMappingCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  updater               User                  @relation("CILOInstitutionalOutcomeMappingUpdater", fields: [updated_by], references: [id], onDelete: Restrict)
+
+  @@unique([cilo_id, institutional_outcome_id])
+  @@index([cilo_id])
+  @@index([institutional_outcome_id])
+  @@map("cilo_institutional_outcome_mappings")
+}
+
+model CILOMapping {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cilo_id    String    @db.Uuid
+  go_id      String    @db.Uuid
+  created_by String?   @db.Uuid
+  updated_by String?   @db.Uuid
+  created_at DateTime  @default(now())
+
+  cilo     CILO   @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
+  go       GO     @relation(fields: [go_id], references: [id], onDelete: Cascade)
+  creator  User?  @relation("CILOMappingCreator", fields: [created_by], references: [id], onDelete: SetNull)
+  updater  User?  @relation("CILOMappingUpdater", fields: [updated_by], references: [id], onDelete: SetNull)
 
   @@unique([cilo_id, go_id])
+  @@index([created_by])
+  @@index([updated_by])
   @@map("cilo_mappings")
 }
