@@ -117,6 +117,7 @@ describe("InstitutionalOutcomesPage", () => {
       "22222222-2222-4222-8222-222222222222",
       "11111111-1111-4111-8111-111111111111",
     ]);
+    expect(refreshMock).toHaveBeenCalled();
   });
 
   it("restores the persisted order when a prepared reorder is canceled", async () => {
@@ -141,6 +142,7 @@ describe("InstitutionalOutcomesPage", () => {
     fireEvent.click(cancel);
 
     await waitFor(() => expect(container.querySelector("article")).toHaveTextContent("ILO-1"));
+    expect(refreshMock).toHaveBeenCalled();
   });
 
   it("restores the persisted order when reorder confirmation is rejected", async () => {
@@ -162,5 +164,21 @@ describe("InstitutionalOutcomesPage", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Outcome changed after review.");
     expect(container.querySelector("article")).toHaveTextContent("ILO-1");
+    expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it("reconciles the displayed catalog with refreshed server order", async () => {
+    const secondOutcome = outcome({
+      id: "22222222-2222-4222-8222-222222222222",
+      code: "ILO-2",
+      order: 1,
+    });
+    const { container, rerender } = render(
+      <InstitutionalOutcomesPage outcomes={[outcome(), secondOutcome]} />
+    );
+
+    rerender(<InstitutionalOutcomesPage outcomes={[secondOutcome, outcome()]} />);
+
+    await waitFor(() => expect(container.querySelector("article")).toHaveTextContent("ILO-2"));
   });
 });

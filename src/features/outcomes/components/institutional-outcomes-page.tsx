@@ -41,7 +41,11 @@ export function InstitutionalOutcomesPage({
   outcomes: initialOutcomes,
 }: InstitutionalOutcomesPageProps) {
   const router = useRouter();
-  const [outcomes, setOutcomes] = useState(initialOutcomes);
+  // Optimistic reorder overlay only; any other path derives from the server-provided prop.
+  const [reorderedOutcomes, setReorderedOutcomes] = useState<InstitutionalOutcomeItem[] | null>(
+    null
+  );
+  const outcomes = reorderedOutcomes ?? initialOutcomes;
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<InstitutionalOutcomeItem | null>(null);
   const [archiving, setArchiving] = useState<InstitutionalOutcomeItem | null>(null);
@@ -53,6 +57,7 @@ export function InstitutionalOutcomesPage({
   function finish(message: string) {
     setError(null);
     setReview(null);
+    setReorderedOutcomes(null);
     showToast(message);
     router.refresh();
   }
@@ -94,12 +99,17 @@ export function InstitutionalOutcomesPage({
     });
   }
 
+  function revertReorder() {
+    setReorderedOutcomes(null);
+    router.refresh();
+  }
+
   function move(index: number, direction: -1 | 1) {
     const nextIndex = index + direction;
     if (nextIndex < 0 || nextIndex >= outcomes.length) return;
     const reordered = [...outcomes];
     [reordered[index], reordered[nextIndex]] = [reordered[nextIndex], reordered[index]];
-    setOutcomes(reordered);
+    setReorderedOutcomes(reordered);
     setError(null);
     setOperation("reorder");
     startTransition(async () => {
@@ -109,13 +119,13 @@ export function InstitutionalOutcomesPage({
         );
         if (!result.success) {
           setError(result.error);
-          setOutcomes(initialOutcomes);
+          revertReorder();
           return;
         }
         setReview(result.review);
       } catch {
         setError("The order review could not be prepared. Try again.");
-        setOutcomes(initialOutcomes);
+        revertReorder();
       } finally {
         setOperation(null);
       }
@@ -129,7 +139,7 @@ export function InstitutionalOutcomesPage({
         const result = await commitInstitutionalOutcomeAction(review, true);
         if (!result.success) {
           setError(result.error);
-          if (review.input.action === "reorder") setOutcomes(initialOutcomes);
+          if (review.input.action === "reorder") revertReorder();
           setReview(null);
           return;
         }
@@ -143,7 +153,7 @@ export function InstitutionalOutcomesPage({
         );
       } catch {
         setError("The Institutional Outcome could not be saved. Try again.");
-        if (review.input.action === "reorder") setOutcomes(initialOutcomes);
+        if (review.input.action === "reorder") revertReorder();
         setReview(null);
       }
     });
@@ -151,7 +161,7 @@ export function InstitutionalOutcomesPage({
 
   function dismissReview() {
     if (isPending || !review) return;
-    if (review.input.action === "reorder") setOutcomes(initialOutcomes);
+    if (review.input.action === "reorder") revertReorder();
     setReview(null);
     setArchiving(null);
   }
