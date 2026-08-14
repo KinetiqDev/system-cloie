@@ -5,8 +5,6 @@ import Link from "next/link";
 import { CourseScope } from "@prisma/client";
 import {
   BookOpen,
-  ChevronLeft,
-  ChevronRight,
   GraduationCap,
   Layers,
   MoreVertical,
@@ -35,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -179,22 +178,6 @@ export function ManagementCoursesList({
     });
   };
 
-  // ---- Pagination helpers --------------------------------------------------
-  function buildPageNumbers(): (number | "ellipsis")[] {
-    const pages: (number | "ellipsis")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (safePage > 3) pages.push("ellipsis");
-      const start = Math.max(2, safePage - 1);
-      const end = Math.min(totalPages - 1, safePage + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (safePage < totalPages - 2) pages.push("ellipsis");
-      pages.push(totalPages);
-    }
-    return pages;
-  }
 
   // ---- Render --------------------------------------------------------------
   return (
@@ -426,46 +409,12 @@ export function ManagementCoursesList({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="Go to previous page"
-            disabled={safePage <= 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-
-          {buildPageNumbers().map((page, idx) =>
-            page === "ellipsis" ? (
-              <span key={`ellipsis-${idx}`} className="text-muted-foreground px-2 text-sm">
-                …
-              </span>
-            ) : (
-              <Button
-                key={page}
-                variant={page === safePage ? "default" : "outline"}
-                size="sm"
-                aria-label={`Go to page ${page}`}
-                aria-current={page === safePage ? "page" : undefined}
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </Button>
-            )
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="Go to next page"
-            disabled={safePage >= totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
+        <Pagination
+          currentPage={safePage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          className="justify-center"
+        />
       )}
 
       {/* Result count */}

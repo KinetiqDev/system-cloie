@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
-import { AlertCircle, Archive, ChevronLeft, ChevronRight, Edit, Plus, Search } from "lucide-react";
+import { AlertCircle, Archive, Edit, Plus, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Pagination } from "@/components/ui/pagination";
 import { Textarea } from "@/components/ui/textarea";
 import { YEAR_LEVEL_OPTIONS } from "@/lib/constants/year-levels";
 import { SEMESTER_OPTIONS, TERM_OPTIONS } from "@/lib/constants/academic";
@@ -679,24 +680,7 @@ export function ProgramHeadCoursesCatalog({
                 {(safePage - 1) * PAGE_SIZE + 1}–
                 {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="Go to previous page"
-                disabled={safePage <= 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="Go to next page"
-                disabled={safePage >= totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
+              <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
           )}
         </div>

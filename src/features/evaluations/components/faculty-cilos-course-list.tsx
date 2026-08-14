@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Pagination } from "@/components/ui/pagination";
 
 import type { FacultyCourseWithCiloCount } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
@@ -466,22 +467,7 @@ export function FacultyCilosCourseList({
             {(safePage - 1) * PAGE_SIZE + 1}–
             {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage <= 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-          >
-            ←
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={safePage >= totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-          >
-            →
-          </Button>
+          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
         </div>
       )}
 

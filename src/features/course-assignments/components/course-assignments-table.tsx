@@ -35,8 +35,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  ChevronLeft,
-  ChevronRight,
   MoreHorizontal,
   Trash2,
   Power,
@@ -45,6 +43,7 @@ import {
   FileX2,
   Plus,
 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
 import { showToast } from "@/components/ui/toast";
 import {
   deactivateCourseAssignmentAction,
@@ -520,34 +519,16 @@ export function CourseAssignmentsTable({
       )}
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-muted-foreground text-sm">
             Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total}{" "}
             results
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label="Previous page"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page === 0}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm">
-              Page {page + 1} of {totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label="Next page"
-              onClick={() => onPageChange(page + 1)}
-              disabled={page >= totalPages - 1}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <Pagination
+            currentPage={page + 1}
+            totalPages={totalPages}
+            onPageChange={(nextPage) => onPageChange(nextPage - 1)}
+          />
         </div>
       )}
     </div>
