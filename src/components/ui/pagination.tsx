@@ -78,6 +78,7 @@ function useMinWidthSm(): boolean {
 
 export function Pagination({ currentPage, totalPages, onPageChange, className }: PaginationProps) {
   const isDesktop = useMinWidthSm();
+  const siblingCount = isDesktop ? 1 : 0;
   const boundaryCount = 1;
 
   if (totalPages <= 1) return null;
