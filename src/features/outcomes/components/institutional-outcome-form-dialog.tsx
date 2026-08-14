@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition, useState } from "react";
+import { useForm, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,16 @@ import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/fie
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/components/ui/toast";
+import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
   commitInstitutionalOutcomeAction,
   prepareCreateInstitutionalOutcomeAction,
   prepareUpdateInstitutionalOutcomeAction,
 } from "@/lib/actions/institutional-outcome-actions";
+import {
+  institutionalOutcomeDraftSchema,
+  type InstitutionalOutcomeDraft,
+} from "../schemas/institutional-outcome";
 import type { OutcomeWriteReview } from "../services/manage-outcome-writes";
 import type { InstitutionalOutcomeItem } from "../services/manage-institutional-outcomes";
 
@@ -37,7 +43,13 @@ type InstitutionalOutcomeFormDialogProps =
       onOpenChange: (open: boolean) => void;
     };
 
-type Draft = { code: string; description: string };
+type OutcomeDraftState = {
+  register: UseFormRegister<InstitutionalOutcomeDraft>;
+  errors: FieldErrors<InstitutionalOutcomeDraft>;
+  isPending: boolean;
+  disabled: boolean;
+  prepare: (event: React.FormEvent<HTMLFormElement>) => void;
+};
 
 export function InstitutionalOutcomeFormDialog({
   mode,
@@ -45,38 +57,15 @@ export function InstitutionalOutcomeFormDialog({
   open,
   onOpenChange,
 }: InstitutionalOutcomeFormDialogProps) {
-  const [code, setCode] = useState(outcome?.code ?? "");
-  const [description, setDescription] = useState(outcome?.description ?? "");
   const [review, setReview] = useState<OutcomeWriteReview | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [fieldError, setFieldError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const copy = dialogCopy(mode, Boolean(review));
 
-  function prepare(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const draft: Draft = { code: code.trim(), description: description.trim() };
-    if (!draft.code || !draft.description) {
-      setFieldError("Code and statement are required.");
-      return;
-    }
-    setFieldError(null);
+  function showPreparedReview(nextReview: OutcomeWriteReview) {
     setError(null);
-    startTransition(async () => {
-      try {
-        const result =
-          mode === "create"
-            ? await prepareCreateInstitutionalOutcomeAction(draft)
-            : await prepareUpdateInstitutionalOutcomeAction({ id: outcome.id, ...draft });
-        if (!result.success) {
-          setError(result.error);
-          return;
-        }
-        setReview(result.review);
-      } catch {
-        setError("The Institutional Outcome review could not be prepared. Try again.");
-      }
-    });
+    setReview(nextReview);
   }
 
   function commit() {
@@ -106,76 +95,25 @@ export function InstitutionalOutcomeFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>
-            {review
-              ? "Review Institutional Outcome"
-              : mode === "create"
-                ? "Add Institutional Outcome"
-                : "Edit Institutional Outcome"}
-          </DialogTitle>
-          <DialogDescription>
-            {review
-              ? "Compare the exact current and proposed catalog state before confirming."
-              : mode === "create"
-                ? "Add a college-wide outcome common to every Academic Program."
-                : "Update the code or statement without changing this outcome’s identity."}
-          </DialogDescription>
+          <DialogTitle>{copy.title}</DialogTitle>
+          <DialogDescription>{copy.description}</DialogDescription>
         </DialogHeader>
         {error && (
           <Alert variant="destructive" role="alert">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {review ? (
-          <ReviewPanel review={review} />
-        ) : (
-          <form className="flex flex-col gap-4" onSubmit={prepare}>
-            <Field data-invalid={fieldError ? true : undefined}>
-              <FieldLabel htmlFor={`institutional-outcome-code-${mode}`}>Code</FieldLabel>
-              <FieldContent>
-                <Input
-                  id={`institutional-outcome-code-${mode}`}
-                  value={code}
-                  onChange={(event) => setCode(event.target.value)}
-                  placeholder="e.g. ILO-1"
-                  autoComplete="off"
-                  aria-invalid={fieldError ? true : undefined}
-                  disabled={isPending}
-                />
-              </FieldContent>
-            </Field>
-            <Field data-invalid={fieldError ? true : undefined}>
-              <FieldLabel htmlFor={`institutional-outcome-description-${mode}`}>
-                Statement
-              </FieldLabel>
-              <FieldContent>
-                <Textarea
-                  id={`institutional-outcome-description-${mode}`}
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Describe what graduates should demonstrate..."
-                  rows={5}
-                  aria-invalid={fieldError ? true : undefined}
-                  disabled={isPending}
-                />
-                <FieldError errors={fieldError ? [{ message: fieldError }] : []} />
-              </FieldContent>
-            </Field>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isPending}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" loading={isPending}>
-                {isPending ? "Preparing..." : "Review Changes"}
-              </Button>
-            </div>
-          </form>
-        )}
+        <div hidden={Boolean(review)}>
+          <OutcomeDraftForm
+            mode={mode}
+            outcome={outcome}
+            isPending={isPending}
+            onOpenChange={onOpenChange}
+            onPrepared={showPreparedReview}
+            onError={setError}
+          />
+        </div>
+        {review && <ReviewPanel review={review} />}
         {review && (
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setReview(null)} disabled={isPending}>
@@ -191,6 +129,163 @@ export function InstitutionalOutcomeFormDialog({
   );
 }
 
+function dialogCopy(mode: InstitutionalOutcomeFormDialogProps["mode"], reviewing: boolean) {
+  if (reviewing)
+    return {
+      title: "Review Institutional Outcome",
+      description: "Compare the exact current and proposed catalog state before confirming.",
+    };
+  if (mode === "create")
+    return {
+      title: "Add Institutional Outcome",
+      description: "Add a college-wide outcome common to every Academic Program.",
+    };
+  return {
+    title: "Edit Institutional Outcome",
+    description: "Update the code or statement without changing this outcome’s identity.",
+  };
+}
+
+type OutcomeDraftFormProps = {
+  mode: InstitutionalOutcomeFormDialogProps["mode"];
+  outcome: InstitutionalOutcomeItem | undefined;
+  isPending: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPrepared: (review: OutcomeWriteReview) => void;
+  onError: (error: string | null) => void;
+};
+
+function OutcomeDraftForm({
+  mode,
+  outcome,
+  isPending: parentIsPending,
+  onOpenChange,
+  onPrepared,
+  onError,
+}: OutcomeDraftFormProps) {
+  const draft = useOutcomeDraft({ mode, outcome, parentIsPending, onPrepared, onError });
+  return (
+    <form className="flex flex-col gap-4" onSubmit={draft.prepare}>
+      <OutcomeDraftFields mode={mode} draft={draft} />
+      <div className="flex justify-end gap-2 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          disabled={draft.disabled}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" loading={draft.isPending}>
+          {draft.isPending ? "Preparing..." : "Review Changes"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function useOutcomeDraft({
+  mode,
+  outcome,
+  parentIsPending,
+  onPrepared,
+  onError,
+}: Omit<OutcomeDraftFormProps, "onOpenChange" | "isPending"> & {
+  parentIsPending: boolean;
+}): OutcomeDraftState {
+  const [isPending, startTransition] = useTransition();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm<InstitutionalOutcomeDraft>({
+    resolver: customZodResolver(institutionalOutcomeDraftSchema),
+    defaultValues: { code: outcome?.code ?? "", description: outcome?.description ?? "" },
+  });
+
+  function prepare(draft: InstitutionalOutcomeDraft) {
+    onError(null);
+    startTransition(async () => {
+      try {
+        const result = await prepareOutcomeDraft(mode, outcome, draft);
+        if (result.success) onPrepared(result.review);
+        else {
+          setError("root", { message: result.error });
+          onError(result.error);
+        }
+      } catch {
+        const error = "The Institutional Outcome review could not be prepared. Try again.";
+        setError("root", { message: error });
+        onError(error);
+      }
+    });
+  }
+
+  return {
+    register,
+    errors,
+    isPending,
+    disabled: parentIsPending || isPending,
+    prepare: handleSubmit(prepare),
+  };
+}
+
+async function prepareOutcomeDraft(
+  mode: InstitutionalOutcomeFormDialogProps["mode"],
+  outcome: InstitutionalOutcomeItem | undefined,
+  draft: InstitutionalOutcomeDraft
+) {
+  if (mode === "create") return prepareCreateInstitutionalOutcomeAction(draft);
+  return prepareUpdateInstitutionalOutcomeAction({ id: outcome!.id, ...draft });
+}
+
+function OutcomeDraftFields({
+  mode,
+  draft,
+}: {
+  mode: InstitutionalOutcomeFormDialogProps["mode"];
+  draft: OutcomeDraftState;
+}) {
+  const codeError = draft.errors.code;
+  const descriptionError = draft.errors.description;
+  const codeErrorId = `institutional-outcome-code-${mode}-error`;
+  const descriptionErrorId = `institutional-outcome-description-${mode}-error`;
+  return (
+    <>
+      <Field data-invalid={codeError ? true : undefined}>
+        <FieldLabel htmlFor={`institutional-outcome-code-${mode}`}>Code</FieldLabel>
+        <FieldContent>
+          <Input
+            id={`institutional-outcome-code-${mode}`}
+            placeholder="e.g. ILO-1"
+            autoComplete="off"
+            aria-invalid={codeError ? true : undefined}
+            aria-describedby={codeError ? codeErrorId : undefined}
+            disabled={draft.disabled}
+            {...draft.register("code")}
+          />
+          <FieldError id={codeErrorId} errors={[codeError]} />
+        </FieldContent>
+      </Field>
+      <Field data-invalid={descriptionError ? true : undefined}>
+        <FieldLabel htmlFor={`institutional-outcome-description-${mode}`}>Statement</FieldLabel>
+        <FieldContent>
+          <Textarea
+            id={`institutional-outcome-description-${mode}`}
+            placeholder="Describe what graduates should demonstrate..."
+            rows={5}
+            aria-invalid={descriptionError ? true : undefined}
+            aria-describedby={descriptionError ? descriptionErrorId : undefined}
+            disabled={draft.disabled}
+            {...draft.register("description")}
+          />
+          <FieldError id={descriptionErrorId} errors={[descriptionError]} />
+        </FieldContent>
+      </Field>
+    </>
+  );
+}
 function ReviewPanel({ review }: { review: OutcomeWriteReview }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">

@@ -14,6 +14,9 @@ const institutionalOutcomeFields = {
     .max(1000, "Statement must be 1000 characters or fewer."),
 };
 
+export const institutionalOutcomeDraftSchema = z.object(institutionalOutcomeFields);
+export type InstitutionalOutcomeDraft = z.infer<typeof institutionalOutcomeDraftSchema>;
+
 export const institutionalOutcomeIdSchema = z.string().uuid("Invalid Institutional Outcome ID.");
 export const reorderInstitutionalOutcomesSchema = z.object({
   orderedIds: z.array(z.string().uuid("Invalid Institutional Outcome ID.")).min(1),

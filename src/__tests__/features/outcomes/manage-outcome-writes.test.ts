@@ -32,9 +32,25 @@ vi.mock("@/lib/db/prisma", () => ({
   },
 }));
 
-const SECRETARY = { userId: "secretary", activeRole: ROLES.SECRETARY, roles: [ROLES.SECRETARY] };
-const DEAN = { userId: "dean", activeRole: ROLES.DEAN, roles: [ROLES.DEAN] };
-const FACULTY = { userId: "faculty", activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY] };
+const COMPLETE_PROFILE_GATE = { status: "COMPLETE" as const };
+const SECRETARY = {
+  userId: "secretary",
+  activeRole: ROLES.SECRETARY,
+  roles: [ROLES.SECRETARY],
+  profileGate: COMPLETE_PROFILE_GATE,
+};
+const DEAN = {
+  userId: "dean",
+  activeRole: ROLES.DEAN,
+  roles: [ROLES.DEAN],
+  profileGate: COMPLETE_PROFILE_GATE,
+};
+const FACULTY = {
+  userId: "faculty",
+  activeRole: ROLES.FACULTY,
+  roles: [ROLES.FACULTY],
+  profileGate: COMPLETE_PROFILE_GATE,
+};
 
 describe("manage-outcome-writes", () => {
   beforeEach(() => {
@@ -184,6 +200,7 @@ describe("manage-outcome-writes", () => {
       userId: "program-head",
       activeRole: ROLES.PROGRAM_HEAD,
       roles: [ROLES.PROGRAM_HEAD],
+      profileGate: COMPLETE_PROFILE_GATE,
     };
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
     mocks.cilo.findUnique.mockResolvedValue({
@@ -266,6 +283,7 @@ describe("manage-outcome-writes", () => {
       userId: "program-head",
       activeRole: ROLES.PROGRAM_HEAD,
       roles: [ROLES.PROGRAM_HEAD],
+      profileGate: COMPLETE_PROFILE_GATE,
     };
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
     mocks.cilo.findUnique.mockResolvedValue({
@@ -303,6 +321,7 @@ describe("manage-outcome-writes", () => {
       userId: "program-head",
       activeRole: ROLES.PROGRAM_HEAD,
       roles: [ROLES.PROGRAM_HEAD],
+      profileGate: COMPLETE_PROFILE_GATE,
     };
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
     mocks.cilo.findUnique.mockResolvedValue({
@@ -341,6 +360,7 @@ describe("manage-outcome-writes", () => {
       userId: "program-head",
       activeRole: ROLES.PROGRAM_HEAD,
       roles: [ROLES.PROGRAM_HEAD],
+      profileGate: COMPLETE_PROFILE_GATE,
     };
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
     mocks.mapping.findUnique.mockResolvedValue({
@@ -457,6 +477,7 @@ describe("manage-outcome-writes", () => {
       userId: "program-head",
       activeRole: ROLES.PROGRAM_HEAD,
       roles: [ROLES.PROGRAM_HEAD],
+      profileGate: COMPLETE_PROFILE_GATE,
     };
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
     mocks.revalidateAssignment.mockResolvedValueOnce(null);

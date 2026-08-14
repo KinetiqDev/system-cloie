@@ -129,6 +129,7 @@ export function InstitutionalOutcomesPage({
         const result = await commitInstitutionalOutcomeAction(review, true);
         if (!result.success) {
           setError(result.error);
+          if (review.input.action === "reorder") setOutcomes(initialOutcomes);
           setReview(null);
           return;
         }
@@ -142,9 +143,17 @@ export function InstitutionalOutcomesPage({
         );
       } catch {
         setError("The Institutional Outcome could not be saved. Try again.");
+        if (review.input.action === "reorder") setOutcomes(initialOutcomes);
         setReview(null);
       }
     });
+  }
+
+  function dismissReview() {
+    if (isPending || !review) return;
+    if (review.input.action === "reorder") setOutcomes(initialOutcomes);
+    setReview(null);
+    setArchiving(null);
   }
 
   const busy = isPending || operation !== null;
@@ -221,11 +230,9 @@ export function InstitutionalOutcomesPage({
           ))}
         </section>
       )}
-      <InstitutionalOutcomeFormDialog
-        mode="create"
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-      />
+      {createOpen && (
+        <InstitutionalOutcomeFormDialog mode="create" open onOpenChange={setCreateOpen} />
+      )}
       {editing && (
         <InstitutionalOutcomeFormDialog
           mode="edit"
@@ -267,10 +274,7 @@ export function InstitutionalOutcomesPage({
         <AlertDialog
           open
           onOpenChange={(open) => {
-            if (!open && !isPending) {
-              setReview(null);
-              setArchiving(null);
-            }
+            if (!open) dismissReview();
           }}
         >
           <AlertDialogContent className="sm:max-w-lg">
@@ -283,7 +287,9 @@ export function InstitutionalOutcomesPage({
             </AlertDialogHeader>
             <ReviewChange review={review} />
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+              <Button variant="outline" disabled={isPending} onClick={dismissReview}>
+                Cancel
+              </Button>
               <Button loading={isPending} onClick={confirmReview}>
                 Confirm Changes
               </Button>
@@ -317,7 +323,11 @@ function OutcomeRow({
   return (
     <article className="bg-card border-border rounded-xl border p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start gap-3">
-        <div className="flex shrink-0 flex-col gap-1" aria-label={`Reorder ${outcome.code}`}>
+        <div
+          className="flex shrink-0 flex-col gap-1"
+          role="group"
+          aria-label={`Reorder ${outcome.code}`}
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -404,35 +414,78 @@ function ReviewChange({ review }: { review: OutcomeWriteReview }) {
 }
 
 function ReviewColumn({ label, value }: { label: string; value: unknown }) {
-  const record = value && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
   return (
     <section className="bg-muted border-border rounded-lg border p-4" aria-label={label}>
       <h3 className="font-medium">{label}</h3>
-      {Array.isArray(value) ? (
-        <ol className="mt-3 flex flex-col gap-2 text-sm">
-          {value.map((item, index) => {
-            const row = item as Record<string, unknown>;
-            return (
-              <li key={`${String(row.id ?? row.code ?? index)}:${index}`} className="border-border rounded-md border p-2">
-                <span className="font-medium">{String(row.code ?? row.id ?? `Item ${index + 1}`)}</span>
-                {"description" in row && <p className="text-muted-foreground mt-1">{String(row.description)}</p>}
-                {"order" in row && <p className="text-muted-foreground mt-1">Display order: {String(row.order)}</p>}
-                {"is_active" in row && <p className="text-muted-foreground mt-1">State: {row.is_active ? "Active" : "Archived"}</p>}
-              </li>
-            );
-          })}
-        </ol>
-      ) : record ? (
-        <dl className="mt-3 flex flex-col gap-2 text-sm">
-          {"code" in record && <div><dt className="text-muted-foreground">Code</dt><dd>{String(record.code)}</dd></div>}
-          {"description" in record && <div><dt className="text-muted-foreground">Statement</dt><dd>{String(record.description)}</dd></div>}
-          {"order" in record && <div><dt className="text-muted-foreground">Display order</dt><dd>{String(record.order)}</dd></div>}
-          {"is_active" in record && <div><dt className="text-muted-foreground">State</dt><dd>{record.is_active ? "Active" : "Archived"}</dd></div>}
-        </dl>
-      ) : (
-        <p className="text-muted-foreground mt-3 text-sm">No existing record.</p>
-      )}
+      <ReviewValue value={value} />
     </section>
+  );
+}
+
+function ReviewValue({ value }: { value: unknown }) {
+  if (Array.isArray(value)) return <ReviewList value={value} />;
+  if (value && typeof value === "object") return <ReviewRecord value={value} />;
+  return <p className="text-muted-foreground mt-3 text-sm">No existing record.</p>;
+}
+
+function ReviewList({ value }: { value: unknown[] }) {
+  return (
+    <ol className="mt-3 flex flex-col gap-2 text-sm">
+      {value.map((item, index) => (
+        <ReviewListItem key={reviewItemKey(item, index)} item={item} index={index} />
+      ))}
+    </ol>
+  );
+}
+
+function reviewItemKey(item: unknown, index: number): string {
+  const record = item as Record<string, unknown>;
+  return `${String(record.id ?? record.code ?? index)}:${index}`;
+}
+
+function ReviewListItem({ item, index }: { item: unknown; index: number }) {
+  const row = item as Record<string, unknown>;
+  return (
+    <li className="border-border rounded-md border p-2">
+      <span className="font-medium">{String(row.code ?? row.id ?? `Item ${index + 1}`)}</span>
+      {"description" in row && (
+        <p className="text-muted-foreground mt-1">{String(row.description)}</p>
+      )}
+      {"order" in row && (
+        <p className="text-muted-foreground mt-1">Display order: {String(row.order)}</p>
+      )}
+      {"is_active" in row && (
+        <p className="text-muted-foreground mt-1">State: {row.is_active ? "Active" : "Archived"}</p>
+      )}
+    </li>
+  );
+}
+
+const REVIEW_RECORD_FIELDS = [
+  ["code", "Code"],
+  ["description", "Statement"],
+  ["order", "Display order"],
+  ["is_active", "State"],
+] as const;
+
+function ReviewRecord({ value }: { value: object }) {
+  const record = value as Record<string, unknown>;
+  const fields = REVIEW_RECORD_FIELDS.filter(([key]) => key in record);
+  return (
+    <dl className="mt-3 flex flex-col gap-2 text-sm">
+      {fields.map(([key, label]) => (
+        <ReviewRecordField key={key} label={label} value={record[key]} />
+      ))}
+    </dl>
+  );
+}
+
+function ReviewRecordField({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd>{label === "State" ? (value ? "Active" : "Archived") : String(value)}</dd>
+    </div>
   );
 }
 

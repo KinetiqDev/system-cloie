@@ -68,4 +68,47 @@ describe("InstitutionalOutcomeFormDialog", () => {
     expect(within(after).getByText(newOutcome.code)).toBeInTheDocument();
     expect(within(after).getByText(newOutcome.description)).toBeInTheDocument();
   });
+
+  it("keeps the entered draft when returning from a prepared review", async () => {
+    prepareCreateMock.mockResolvedValue({
+      success: true,
+      review: {
+        input: { kind: "ILO", action: "create", ...newOutcome },
+        before: [existingOutcome],
+        after: [existingOutcome, newOutcome],
+        freshnessToken: "fresh-catalog",
+        signature: "signature",
+      },
+    });
+    render(<InstitutionalOutcomeFormDialog mode="create" open onOpenChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("Code"), { target: { value: newOutcome.code } });
+    fireEvent.change(screen.getByLabelText("Statement"), {
+      target: { value: newOutcome.description },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Review Changes" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Back" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Add Institutional Outcome" })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Code")).toHaveValue(newOutcome.code);
+    expect(screen.getByLabelText("Statement")).toHaveValue(newOutcome.description);
+  });
+
+  it("reports code length validation beside the invalid field before preparing a review", async () => {
+    render(<InstitutionalOutcomeFormDialog mode="create" open onOpenChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText("Code"), { target: { value: "I".repeat(21) } });
+    fireEvent.change(screen.getByLabelText("Statement"), {
+      target: { value: newOutcome.description },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Review Changes" }));
+
+    expect(
+      await screen.findByText("Institutional Outcome code must be 20 characters or fewer.")
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Code")).toHaveAttribute("aria-invalid", "true");
+    expect(prepareCreateMock).not.toHaveBeenCalled();
+  });
 });

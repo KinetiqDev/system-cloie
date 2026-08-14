@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { InstitutionalOutcomesPage } from "@/features/outcomes/components/institutional-outcomes-page";
 import {
   commitInstitutionalOutcomeAction,
@@ -43,9 +43,17 @@ function review(action: "archive" | "restore" | "reorder") {
   return {
     input:
       action === "reorder"
-        ? { kind: "ILO" as const, action, orderedIds: ["22222222-2222-4222-8222-222222222222", "11111111-1111-4111-8111-111111111111"] }
+        ? {
+            kind: "ILO" as const,
+            action,
+            orderedIds: [
+              "22222222-2222-4222-8222-222222222222",
+              "11111111-1111-4111-8111-111111111111",
+            ],
+          }
         : { kind: "ILO" as const, action, id: "11111111-1111-4111-8111-111111111111" },
-    before: action === "reorder" ? [{ id: "11111111-1111-4111-8111-111111111111", order: 0 }] : outcome(),
+    before:
+      action === "reorder" ? [{ id: "11111111-1111-4111-8111-111111111111", order: 0 }] : outcome(),
     after: action === "archive" ? { ...outcome(), is_active: false } : outcome(),
     freshnessToken: "fresh",
     signature: "aa",
@@ -68,7 +76,9 @@ describe("InstitutionalOutcomesPage", () => {
     prepareRestoreMock.mockResolvedValue({ success: true, review: review("restore") });
     render(<InstitutionalOutcomesPage outcomes={[outcome({ is_active: false })]} />);
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
-    expect(await screen.findByRole("heading", { name: "Confirm Institutional Outcome Change" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Confirm Institutional Outcome Change" })
+    ).toBeInTheDocument();
     const confirm = screen.getByRole("button", { name: "Confirm Changes" });
     await waitFor(() => expect(confirm).not.toBeDisabled());
     fireEvent.click(confirm);
@@ -81,14 +91,25 @@ describe("InstitutionalOutcomesPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Archive ILO-1" }));
     fireEvent.click(screen.getByRole("button", { name: "Review Changes" }));
-    expect(await screen.findByText("Confirm this exact before-and-after change. The save is atomic and rejects stale reviews.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Confirm this exact before-and-after change. The save is atomic and rejects stale reviews."
+      )
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Before")).toHaveTextContent("Active");
     expect(screen.getByLabelText("After")).toHaveTextContent("Archived");
   });
 
   it("prepares a complete reorder review and rolls back failed preparation", async () => {
     prepareReorderMock.mockResolvedValue({ success: false, error: "Order review failed." });
-    render(<InstitutionalOutcomesPage outcomes={[outcome(), outcome({ id: "22222222-2222-4222-8222-222222222222", code: "ILO-2", order: 1 })]} />);
+    render(
+      <InstitutionalOutcomesPage
+        outcomes={[
+          outcome(),
+          outcome({ id: "22222222-2222-4222-8222-222222222222", code: "ILO-2", order: 1 }),
+        ]}
+      />
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Move ILO-1 down" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Order review failed.");
@@ -96,5 +117,50 @@ describe("InstitutionalOutcomesPage", () => {
       "22222222-2222-4222-8222-222222222222",
       "11111111-1111-4111-8111-111111111111",
     ]);
+  });
+
+  it("restores the persisted order when a prepared reorder is canceled", async () => {
+    prepareReorderMock.mockResolvedValue({ success: true, review: review("reorder") });
+    const secondOutcome = outcome({
+      id: "22222222-2222-4222-8222-222222222222",
+      code: "ILO-2",
+      order: 1,
+    });
+    const { container } = render(
+      <InstitutionalOutcomesPage outcomes={[outcome(), secondOutcome]} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Move ILO-1 down" }));
+    expect(
+      await screen.findByRole("heading", { name: "Confirm Institutional Outcome Change" })
+    ).toBeInTheDocument();
+
+    const reviewDialog = screen.getByRole("alertdialog");
+    const cancel = within(reviewDialog).getByRole("button", { name: "Cancel" });
+    await waitFor(() => expect(cancel).not.toBeDisabled());
+    fireEvent.click(cancel);
+
+    await waitFor(() => expect(container.querySelector("article")).toHaveTextContent("ILO-1"));
+  });
+
+  it("restores the persisted order when reorder confirmation is rejected", async () => {
+    prepareReorderMock.mockResolvedValue({ success: true, review: review("reorder") });
+    commitMock.mockResolvedValue({ success: false, error: "Outcome changed after review." });
+    const secondOutcome = outcome({
+      id: "22222222-2222-4222-8222-222222222222",
+      code: "ILO-2",
+      order: 1,
+    });
+    const { container } = render(
+      <InstitutionalOutcomesPage outcomes={[outcome(), secondOutcome]} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Move ILO-1 down" }));
+    const confirm = await screen.findByRole("button", { name: "Confirm Changes" });
+    await waitFor(() => expect(confirm).not.toBeDisabled());
+    fireEvent.click(confirm);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Outcome changed after review.");
+    expect(container.querySelector("article")).toHaveTextContent("ILO-1");
   });
 });

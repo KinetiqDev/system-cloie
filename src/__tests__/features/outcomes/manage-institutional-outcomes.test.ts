@@ -27,8 +27,19 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   revalidateProgramHeadAssignment: vi.fn(),
 }));
 
-const SECRETARY = { userId: "secretary-1", activeRole: ROLES.SECRETARY, roles: [ROLES.SECRETARY] };
-const DEAN = { userId: "dean-1", activeRole: ROLES.DEAN, roles: [ROLES.DEAN] };
+const COMPLETE_PROFILE_GATE = { status: "COMPLETE" as const };
+const SECRETARY = {
+  userId: "secretary-1",
+  activeRole: ROLES.SECRETARY,
+  roles: [ROLES.SECRETARY],
+  profileGate: COMPLETE_PROFILE_GATE,
+};
+const DEAN = {
+  userId: "dean-1",
+  activeRole: ROLES.DEAN,
+  roles: [ROLES.DEAN],
+  profileGate: COMPLETE_PROFILE_GATE,
+};
 const OUTCOME_ID = "11111111-1111-4111-8111-111111111111";
 
 const activeOutcome = {
@@ -37,6 +48,7 @@ const activeOutcome = {
   description: "Reason with evidence.",
   order: 0,
   is_active: true,
+  updated_at: new Date("2026-08-14T00:00:00Z"),
 };
 
 describe("Institutional Outcome protected writes", () => {
@@ -79,8 +91,12 @@ describe("Institutional Outcome protected writes", () => {
 
   it.each([
     DEAN,
-    { userId: "program-head-1", activeRole: ROLES.PROGRAM_HEAD },
-    { userId: "faculty-1", activeRole: ROLES.FACULTY },
+    {
+      userId: "program-head-1",
+      activeRole: ROLES.PROGRAM_HEAD,
+      profileGate: COMPLETE_PROFILE_GATE,
+    },
+    { userId: "faculty-1", activeRole: ROLES.FACULTY, profileGate: COMPLETE_PROFILE_GATE },
   ])("rejects $activeRole before reading mutation state", async (session) => {
     mocks.session.mockResolvedValue(session);
     const { prepareOutcomeWrite } =
@@ -100,6 +116,27 @@ describe("Institutional Outcome protected writes", () => {
     expect(mocks.institutionalOutcome.findMany).not.toHaveBeenCalled();
   });
 
+  it("rejects an inactive Secretary before reading mutation state", async () => {
+    mocks.session.mockResolvedValue({
+      ...SECRETARY,
+      profileGate: { status: "INACTIVE" as const },
+    });
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+
+    await expect(
+      prepareOutcomeWrite({
+        kind: "ILO",
+        action: "archive",
+        id: OUTCOME_ID,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: "You do not have permission to modify this outcome.",
+    });
+    expect(mocks.institutionalOutcome.findUnique).not.toHaveBeenCalled();
+  });
+
   it("rejects a stale reviewed update without writing", async () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
@@ -113,6 +150,30 @@ describe("Institutional Outcome protected writes", () => {
     mocks.institutionalOutcome.findUnique.mockResolvedValue({
       ...activeOutcome,
       description: "Changed by another Secretary.",
+    });
+
+    await expect(
+      commitOutcomeWrite(review.success ? review.data : fail("review"), true)
+    ).resolves.toEqual({
+      success: false,
+      error: "Outcome changed after review. Prepare a new review.",
+    });
+    expect(mocks.institutionalOutcome.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a reviewed update when the outcome version changes without a visible field change", async () => {
+    const { prepareOutcomeWrite, commitOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    const review = await prepareOutcomeWrite({
+      kind: "ILO",
+      action: "update",
+      id: OUTCOME_ID,
+      code: "ILO-2",
+      description: "Reason with better evidence.",
+    });
+    mocks.institutionalOutcome.findUnique.mockResolvedValue({
+      ...activeOutcome,
+      updated_at: new Date("2026-08-14T00:01:00Z"),
     });
 
     await expect(
@@ -183,22 +244,54 @@ describe("Institutional Outcome protected writes", () => {
     );
   });
 
-  it("reorders every catalog row atomically and rejects incomplete orders", async () => {
+  it("reviews complete named catalog rows and rejects incomplete or stale reorders", async () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
-    mocks.institutionalOutcome.findMany.mockResolvedValue([
-      { ...activeOutcome, order: 0 },
-      { ...activeOutcome, id: "22222222-2222-4222-8222-222222222222", code: "ILO-2", order: 1 },
-    ]);
+    const secondOutcome = {
+      ...activeOutcome,
+      id: "22222222-2222-4222-8222-222222222222",
+      code: "ILO-2",
+      order: 1,
+    };
+    mocks.institutionalOutcome.findMany.mockResolvedValue([activeOutcome, secondOutcome]);
     const review = await prepareOutcomeWrite({
       kind: "ILO",
       action: "reorder",
-      orderedIds: ["22222222-2222-4222-8222-222222222222", OUTCOME_ID],
+      orderedIds: [secondOutcome.id, OUTCOME_ID],
+    });
+
+    expect(review).toMatchObject({
+      success: true,
+      data: {
+        before: [activeOutcome, secondOutcome],
+        after: [
+          { ...secondOutcome, order: 0 },
+          { ...activeOutcome, order: 1 },
+        ],
+      },
     });
     await expect(
+      prepareOutcomeWrite({
+        kind: "ILO",
+        action: "reorder",
+        orderedIds: [OUTCOME_ID],
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: "Institutional Outcome order must contain each catalog outcome exactly once.",
+    });
+
+    mocks.institutionalOutcome.findMany.mockResolvedValue([
+      activeOutcome,
+      { ...secondOutcome, description: "Changed by another Secretary." },
+    ]);
+    await expect(
       commitOutcomeWrite(review.success ? review.data : fail("reorder review"), true)
-    ).resolves.toEqual({ success: true, data: {} });
-    expect(mocks.institutionalOutcome.update).toHaveBeenCalledTimes(2);
+    ).resolves.toEqual({
+      success: false,
+      error: "Outcome changed after review. Prepare a new review.",
+    });
+    expect(mocks.institutionalOutcome.update).not.toHaveBeenCalled();
   });
 });
 
