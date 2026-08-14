@@ -14,9 +14,6 @@ vi.mock("@/lib/actions/program-head-outcome-actions", () => ({
   updateGOAction: vi.fn(),
   deleteGOAction: vi.fn(),
   reorderGOsAction: vi.fn(),
-  prepareMappingAction: vi.fn(),
-  prepareRemoveMappingAction: vi.fn(),
-  commitMappingAction: vi.fn(),
 }));
 
 const createGOActionMock = vi.mocked(createGOAction);

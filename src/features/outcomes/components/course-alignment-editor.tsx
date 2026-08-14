@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronDown, RotateCcw, Save } from "lucide-react";
+import { Check, ChevronDown, ListChecks, RotateCcw, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
@@ -21,8 +22,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import type {
   CourseAlignmentReview,
-  FacultyCourseAlignment,
-} from "@/features/outcomes/services/manage-faculty-course-alignment";
+  CourseAlignment,
+} from "@/features/outcomes/services/manage-course-alignment";
 
 declare global {
   interface Window {
@@ -33,7 +34,9 @@ declare global {
 }
 
 type Props = {
-  alignment: FacultyCourseAlignment;
+  alignment: CourseAlignment;
+  eyebrow?: string;
+  emptyStateAction?: { href: string; label: string };
   prepareAction: (
     input: unknown
   ) => Promise<
@@ -54,7 +57,7 @@ function isHistoryGuardEntry(marker: string): boolean {
   );
 }
 
-function indexAlignmentTargets(alignment: FacultyCourseAlignment) {
+function indexAlignmentTargets(alignment: CourseAlignment) {
   return {
     activeTargetIds: new Set(alignment.targets.map((target) => target.id)),
     targetById: new Map(
@@ -135,7 +138,7 @@ function useDirtyAlignmentNavigationGuard(isDirty: boolean) {
 }
 
 type CiloMappingRowsProps = {
-  alignment: FacultyCourseAlignment;
+  alignment: CourseAlignment;
   draft: Record<string, string[]>;
   disabled: boolean;
   onToggleTarget: (ciloId: string, targetId: string) => void;
@@ -168,7 +171,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
               <CardTitle className="text-title-md">CILO {index + 1}</CardTitle>
               <CardDescription>{cilo.description}</CardDescription>
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-muted-foreground text-sm" aria-live="polite">
+                <p className="text-muted-foreground text-body-sm" aria-live="polite">
                   {selectedTargetIds.length} {targetNoun}
                   {selectedTargetIds.length === 1 ? "" : "s"} mapped
                 </p>
@@ -197,7 +200,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
               </Button>
               {openCilo === cilo.id && (
                 <div id={`cilo-targets-${cilo.id}`} className="mt-3 flex flex-col gap-2">
-                  <label htmlFor={`go-search-${cilo.id}`} className="text-sm font-medium">
+                  <label htmlFor={`go-search-${cilo.id}`} className="text-label-sm">
                     Search {targetNoun}s
                   </label>
                   <Input
@@ -232,7 +235,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
                           />
                           <span className="flex flex-col gap-0.5">
                             <span className="font-medium">{target.code}</span>
-                            <span className="text-muted-foreground text-sm">
+                            <span className="text-muted-foreground text-body-sm">
                               {target.description}
                             </span>
                           </span>
@@ -243,7 +246,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
                       );
                     })}
                     {targets.length === 0 && (
-                      <p className="text-muted-foreground p-3 text-sm">
+                      <p className="text-muted-foreground p-3 text-body-sm">
                         No {targetNoun}s match this search.
                       </p>
                     )}
@@ -290,28 +293,36 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
 }
 
 type AlignmentContentProps = {
-  alignment: FacultyCourseAlignment;
+  alignment: CourseAlignment;
   draft: Record<string, string[]>;
   disabled: boolean;
+  emptyStateAction: { href: string; label: string };
   onToggleTarget: (ciloId: string, targetId: string) => void;
 };
 
-function AlignmentContent({ alignment, draft, disabled, onToggleTarget }: AlignmentContentProps) {
+function AlignmentContent({
+  alignment,
+  draft,
+  disabled,
+  emptyStateAction,
+  onToggleTarget,
+}: AlignmentContentProps) {
   if (alignment.cilos.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>No active CILOs</CardTitle>
-          <CardDescription>
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <ListChecks className="h-6 w-6" />
+          </EmptyMedia>
+          <EmptyTitle>No active CILOs</EmptyTitle>
+          <EmptyDescription>
             Add a Course Intended Learning Outcome before aligning this Course.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" render={<Link href="/faculty/cilos" />}>
-            Manage CILOs
-          </Button>
-        </CardContent>
-      </Card>
+          </EmptyDescription>
+        </EmptyHeader>
+        <Button variant="outline" render={<Link href={emptyStateAction.href} />}>
+          {emptyStateAction.label}
+        </Button>
+      </Empty>
     );
   }
 
@@ -345,7 +356,7 @@ function AlignmentContent({ alignment, draft, disabled, onToggleTarget }: Alignm
 }
 
 type AlignmentDialogsProps = {
-  alignment: FacultyCourseAlignment;
+  alignment: CourseAlignment;
   review: CourseAlignmentReview | null;
   discardConfirmation: boolean;
   pending: boolean;
@@ -384,7 +395,7 @@ function AlignmentDialogs({
                 : "These changes apply to every active teaching assignment for this Program-specific Course. Confirm the complete before and after mapping."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex max-h-64 flex-col gap-3 overflow-y-auto text-sm">
+          <div className="flex max-h-64 flex-col gap-3 overflow-y-auto text-body-sm">
             {review?.before.map((before) => {
               const after = review.after.find((item) => item.ciloId === before.ciloId);
               const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === before.ciloId);
@@ -430,7 +441,13 @@ function AlignmentDialogs({
 }
 
 // fallow-ignore-next-line complexity
-export function FacultyCourseAlignmentEditor({ alignment, prepareAction, commitAction }: Props) {
+export function CourseAlignmentEditor({
+  alignment,
+  eyebrow = "Faculty Course alignment",
+  emptyStateAction = { href: "/faculty/cilos", label: "Manage CILOs" },
+  prepareAction,
+  commitAction,
+}: Props) {
   const initialTargetIds = Object.fromEntries(
     alignment.cilos.map((cilo) => [cilo.id, cilo.targetIds])
   ) as Record<string, string[]>;
@@ -557,11 +574,11 @@ export function FacultyCourseAlignmentEditor({ alignment, prepareAction, commitA
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-muted-foreground text-sm">Faculty Course alignment</p>
+          <p className="text-muted-foreground text-body-sm">{eyebrow}</p>
           <h1 className="text-heading-lg">
             {alignment.course.code}: {alignment.course.title}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-muted-foreground mt-1 text-body-sm">
             {alignment.course.scope === "GENERAL_EDUCATION"
               ? "Select the active Institutional Outcomes from the college-wide catalog."
               : `Select the active Graduate Outcomes owned by ${alignment.course.program?.code}.`}
@@ -601,6 +618,7 @@ export function FacultyCourseAlignmentEditor({ alignment, prepareAction, commitA
         alignment={alignment}
         draft={draft}
         disabled={editingLocked}
+        emptyStateAction={emptyStateAction}
         onToggleTarget={toggleTarget}
       />
 

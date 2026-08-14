@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import type { CourseScope } from "@prisma/client";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type { CreateGOInput, UpdateGOInput } from "../schemas/go";
 
@@ -107,7 +108,12 @@ export async function updateGO(input: UpdateGOInput): Promise<ServiceResult<{ id
 
 // ─── Delete GO ───────────────────────────────────────────────────────────────
 
-export async function deleteGO(programId: string, id: string): Promise<ServiceResult> {
+async function transitionGOArchiveState(
+  programId: string,
+  id: string,
+  action: "archive" | "restore",
+  permissionVerb: "delete" | "restore"
+): Promise<ServiceResult> {
   const contextResult = await resolveProgramHeadContext(programId);
   if (!contextResult.success) return contextResult;
 
@@ -123,13 +129,23 @@ export async function deleteGO(programId: string, id: string): Promise<ServiceRe
   if (programId !== existingGO.program_id) {
     return {
       success: false,
-      error: "You do not have permission to delete this Graduate Outcome.",
+      error: `You do not have permission to ${permissionVerb} this Graduate Outcome.`,
     };
   }
 
-  const result = await writeProgramHeadOutcome({ kind: "GO", action: "archive", programId, id });
+  const result = await writeProgramHeadOutcome({ kind: "GO", action, programId, id });
   if (!result.success) return result;
   return { success: true, data: undefined };
+}
+
+export async function deleteGO(programId: string, id: string): Promise<ServiceResult> {
+  return transitionGOArchiveState(programId, id, "archive", "delete");
+}
+
+// ─── Restore GO ──────────────────────────────────────────────────────────────
+
+export async function restoreGO(programId: string, id: string): Promise<ServiceResult> {
+  return transitionGOArchiveState(programId, id, "restore", "restore");
 }
 
 // ─── Reorder GOs ─────────────────────────────────────────────────────────────
@@ -150,20 +166,25 @@ export async function reorderGOs(programId: string, orderedIds: string[]): Promi
 
 // ─── List CILO Mappings for Program ──────────────────────────────────────────
 
-export type CILOMappingItem = {
+type ProgramMappedTarget = {
   id: string;
+  mappingId: string;
+  code: string;
   description: string;
-  go: { id: string; code: string; description: string };
+  kind: "GO" | "ILO";
+  is_active: boolean;
 };
 
 export type CourseCILOMappings = {
   courseId: string;
   courseCode: string;
   courseTitle: string;
+  courseScope: CourseScope;
   cilos: Array<{
     id: string;
     description: string;
-    mappedGOs: Array<{ id: string; mappingId: string; code: string; description: string }>;
+    mappedTargets: ProgramMappedTarget[];
+    readiness: "ready" | "incomplete-mapping";
   }>;
 };
 
@@ -178,9 +199,19 @@ export async function listCILOMappingsForProgram(
   // Find all courses within this program that have CILOs
   const courses = await prisma.course.findMany({
     where: {
+      is_active: true,
       cilos: { some: { is_active: true } },
       OR: [
-        { program_id: selectedProgramId },
+        {
+          program_id: selectedProgramId,
+          course_assignments: {
+            some: {
+              program_id: selectedProgramId,
+              is_active: true,
+              term_instance: { status: "ACTIVE" },
+            },
+          },
+        },
         {
           course_scope: "GENERAL_EDUCATION",
           course_assignments: {
@@ -197,6 +228,7 @@ export async function listCILOMappingsForProgram(
       id: true,
       code: true,
       title: true,
+      course_scope: true,
       cilos: {
         where: { is_active: true },
         select: {
@@ -211,6 +243,20 @@ export async function listCILOMappingsForProgram(
                   id: true,
                   code: true,
                   description: true,
+                  is_active: true,
+                },
+              },
+            },
+          },
+          cilo_institutional_outcome_mappings: {
+            select: {
+              id: true,
+              institutional_outcome: {
+                select: {
+                  id: true,
+                  code: true,
+                  description: true,
+                  is_active: true,
                 },
               },
             },
@@ -222,21 +268,44 @@ export async function listCILOMappingsForProgram(
     orderBy: { code: "asc" },
   });
 
-  const result: CourseCILOMappings[] = courses.map((course) => ({
-    courseId: course.id,
-    courseCode: course.code,
-    courseTitle: course.title,
-    cilos: course.cilos.map((cilo) => ({
-      id: cilo.id,
-      description: cilo.description,
-      mappedGOs: cilo.cilo_mappings.map((mapping) => ({
-        id: mapping.go.id,
-        mappingId: mapping.id,
-        code: mapping.go.code,
-        description: mapping.go.description,
-      })),
-    })),
-  }));
+  const result: CourseCILOMappings[] = courses.map((course) => {
+    const courseScope =
+      course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROGRAM_SPECIFIC";
+    return {
+      courseId: course.id,
+      courseCode: course.code,
+      courseTitle: course.title,
+      courseScope,
+      cilos: course.cilos.map((cilo) => {
+        const mappedTargets: ProgramMappedTarget[] =
+          courseScope === "GENERAL_EDUCATION"
+            ? cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
+                id: mapping.institutional_outcome.id,
+                mappingId: mapping.id,
+                code: mapping.institutional_outcome.code,
+                description: mapping.institutional_outcome.description,
+                kind: "ILO",
+                is_active: mapping.institutional_outcome.is_active,
+              }))
+            : cilo.cilo_mappings.map((mapping) => ({
+                id: mapping.go.id,
+                mappingId: mapping.id,
+                code: mapping.go.code,
+                description: mapping.go.description,
+                kind: "GO",
+                is_active: mapping.go.is_active,
+              }));
+        return {
+          id: cilo.id,
+          description: cilo.description,
+          mappedTargets,
+          readiness: mappedTargets.some((target) => target.is_active)
+            ? "ready"
+            : "incomplete-mapping",
+        };
+      }),
+    };
+  });
 
   return { success: true, data: result };
 }

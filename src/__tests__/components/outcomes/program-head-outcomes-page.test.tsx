@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
 import { ProgramHeadOutcomesPage } from "@/features/outcomes/components/program-head-outcomes-page";
-import { deleteGOAction, reorderGOsAction } from "@/lib/actions/program-head-outcome-actions";
+import { deleteGOAction, reorderGOsAction, restoreGOAction } from "@/lib/actions/program-head-outcome-actions";
 import type { ProgramGOItem } from "@/features/outcomes/services/manage-program-head-outcomes";
 
 const routerRefreshMock = vi.hoisted(() => vi.fn());
@@ -37,13 +37,12 @@ vi.mock("@/lib/actions/program-head-outcome-actions", () => ({
   updateGOAction: vi.fn(),
   deleteGOAction: vi.fn(),
   reorderGOsAction: vi.fn(),
-  prepareMappingAction: vi.fn(),
-  prepareRemoveMappingAction: vi.fn(),
-  commitMappingAction: vi.fn(),
+  restoreGOAction: vi.fn(),
 }));
 
 const deleteGOActionMock = vi.mocked(deleteGOAction);
 const reorderGOsActionMock = vi.mocked(reorderGOsAction);
+const restoreGOActionMock = vi.mocked(restoreGOAction);
 
 function makeGO(overrides: Partial<ProgramGOItem> = {}): ProgramGOItem {
   return {
@@ -129,6 +128,54 @@ describe("ProgramHeadOutcomesPage", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "You do not have permission to delete this Graduate Outcome."
+    );
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
+  it("offers Restore instead of Archive for archived GOs", () => {
+    render(
+      <ProgramHeadOutcomesPage
+        gos={[makeGO({ is_active: false })]}
+        program={program}
+      />
+    );
+
+    expect(screen.getByText("Archived")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Restore GO-1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive GO-1" })).not.toBeInTheDocument();
+  });
+
+  it("restores an archived GO only through the confirmation dialog", async () => {
+    restoreGOActionMock.mockResolvedValue({ success: true });
+    render(
+      <ProgramHeadOutcomesPage gos={[makeGO({ is_active: false })]} program={program} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Restore GO-1" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Restore Graduate Outcome" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+
+    await waitFor(() => expect(restoreGOActionMock).toHaveBeenCalledWith("program-1", "go-1"));
+  });
+
+  it("keeps the dialog open and shows the error when restoring fails", async () => {
+    restoreGOActionMock.mockResolvedValue({
+      success: false,
+      error: "You do not have permission to restore this Graduate Outcome.",
+    });
+    render(
+      <ProgramHeadOutcomesPage gos={[makeGO({ is_active: false })]} program={program} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Restore GO-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "You do not have permission to restore this Graduate Outcome."
     );
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });

@@ -6,7 +6,7 @@ import {
   commitCourseAlignmentWrite,
   prepareCourseAlignmentWrite,
   type CourseAlignmentReview,
-} from "@/features/outcomes/services/manage-faculty-course-alignment";
+} from "@/features/outcomes/services/manage-course-alignment";
 
 const desiredAlignmentSchema = z.object({
   courseId: z.string().uuid("Invalid Course ID."),
@@ -74,5 +74,7 @@ export async function commitCourseAlignmentAction(
 
   revalidatePath(`/faculty/cilos/${parsed.data.courseId}/alignment`);
   revalidatePath("/faculty/cilos");
+  revalidatePath(`/secretary/learning-outcomes/alignment/${parsed.data.courseId}`);
+  revalidatePath("/secretary/learning-outcomes");
   return { success: true, changed: result.data.changed };
 }

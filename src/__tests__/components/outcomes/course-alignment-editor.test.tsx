@@ -1,16 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { FacultyCourseAlignmentEditor } from "@/features/outcomes/components/faculty-course-alignment-editor";
+import { CourseAlignmentEditor } from "@/features/outcomes/components/course-alignment-editor";
 import type {
   CourseAlignmentReview,
-  FacultyCourseAlignment,
-} from "@/features/outcomes/services/manage-faculty-course-alignment";
+  CourseAlignment,
+} from "@/features/outcomes/services/manage-course-alignment";
 
 const COURSE_ID = "11111111-1111-4111-8111-111111111111";
 const CILO_ID = "22222222-2222-4222-8222-222222222222";
 const GO_ID = "33333333-3333-4333-8333-333333333333";
 
-const alignment: FacultyCourseAlignment = {
+const alignment: CourseAlignment = {
   course: {
     id: COURSE_ID,
     code: "CS-101",
@@ -36,13 +36,13 @@ const review: CourseAlignmentReview = {
 };
 
 type EditorActions = Pick<
-  Parameters<typeof FacultyCourseAlignmentEditor>[0],
+  Parameters<typeof CourseAlignmentEditor>[0],
   "prepareAction" | "commitAction"
 >;
 
 function renderEditor({ prepareAction, commitAction }: EditorActions) {
   render(
-    <FacultyCourseAlignmentEditor
+    <CourseAlignmentEditor
       alignment={alignment}
       prepareAction={prepareAction}
       commitAction={commitAction}
@@ -55,7 +55,7 @@ function stageTarget() {
   fireEvent.click(screen.getByRole("checkbox", { name: /GO-1: Think critically/i }));
 }
 
-describe("FacultyCourseAlignmentEditor", () => {
+describe("CourseAlignmentEditor", () => {
   it("searches, stages selection, reviews an exact diff, and commits", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review });
     const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 1 });
@@ -122,7 +122,7 @@ describe("FacultyCourseAlignmentEditor", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
     const { unmount } = render(
-      <FacultyCourseAlignmentEditor
+      <CourseAlignmentEditor
         alignment={alignment}
         prepareAction={vi.fn()}
         commitAction={vi.fn()}
@@ -165,7 +165,7 @@ describe("FacultyCourseAlignmentEditor", () => {
 
   it("stages removal of an unavailable saved mapping", () => {
     render(
-      <FacultyCourseAlignmentEditor
+      <CourseAlignmentEditor
         alignment={{
           ...alignment,
           cilos: [{ ...alignment.cilos[0], targetIds: [GO_ID] }],
@@ -240,7 +240,7 @@ describe("FacultyCourseAlignmentEditor", () => {
   it("shows only Institutional Outcomes and a shared-impact warning for General Education", () => {
     const ILO_ID = "66666666-6666-4666-8666-666666666666";
     render(
-      <FacultyCourseAlignmentEditor
+      <CourseAlignmentEditor
         alignment={{
           ...alignment,
           course: {

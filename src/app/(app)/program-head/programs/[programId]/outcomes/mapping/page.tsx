@@ -1,18 +1,16 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ListChecks } from "lucide-react";
 import { notFound } from "next/navigation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  listCILOMappingsForProgram,
-  listProgramGOs,
-} from "@/features/outcomes/services/manage-program-head-outcomes";
-import { ProgramHeadMappingControls } from "@/features/outcomes/components/program-head-mapping-controls";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { listCILOMappingsForProgram } from "@/features/outcomes/services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomesPath } from "@/lib/constants/program-head-routes";
 
 export const metadata = {
-  title: "CILO-GO Mappings | Program Head | CLOIE",
+  title: "CILO Mapping Review | Program Head | CLOIE",
 };
 
 export default async function SelectedProgramOutcomeMappingPage({
@@ -21,13 +19,9 @@ export default async function SelectedProgramOutcomeMappingPage({
   params: Promise<{ programId: string }>;
 }) {
   const { programId } = await params;
-  const [result, outcomesResult] = await Promise.all([
-    listCILOMappingsForProgram(programId),
-    listProgramGOs(programId),
-  ]);
+  const result = await listCILOMappingsForProgram(programId);
 
-  if (!result.success || !outcomesResult.success) notFound();
-  const activeGOs = outcomesResult.data.gos.filter((go) => go.is_active);
+  if (!result.success) notFound();
 
   return (
     <div>
@@ -41,33 +35,49 @@ export default async function SelectedProgramOutcomeMappingPage({
           Back to Graduate Outcomes
         </Button>
         <h1 className="font-heading text-text-primary mb-2 text-4xl font-bold tracking-tight lg:text-5xl">
-          CILO-GO Mapping Review
+          CILO Mapping Review
         </h1>
         <p className="text-body-md text-text-muted">
-          Review and manage how Course Intended Learning Outcomes map to Graduate Outcomes across
-          this program&apos;s courses.
+          Review how Course Intended Learning Outcomes map to outcomes across this
+          program&apos;s courses. Faculty manage alignment through Course alignment and the
+          Secretary corrects mappings college-wide.
         </p>
       </div>
 
       {result.data.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-body-md text-text-secondary">
-              No CILO mappings found. CILOs and their GO mappings are created by faculty when
-              publishing evaluations.
-            </p>
-          </CardContent>
-        </Card>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ListChecks className="h-6 w-6" />
+            </EmptyMedia>
+            <EmptyTitle>No CILO mappings found</EmptyTitle>
+            <EmptyDescription>
+              Faculty align CILOs through Course alignment in Manage CILOs. Mapped CILOs appear
+              here for readiness review.
+            </EmptyDescription>
+          </EmptyHeader>
+          <Button
+            render={<Link href={buildProgramHeadOutcomesPath(programId)} />}
+            variant="outline"
+          >
+            Review Graduate Outcomes
+          </Button>
+        </Empty>
       ) : (
         <div className="space-y-6">
           {result.data.map((course) => (
             <Card key={course.courseId}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                  <Badge variant="default" className="text-sm font-semibold">
+                  <Badge variant="default" className="text-label-sm">
                     {course.courseCode}
                   </Badge>
                   <span>{course.courseTitle}</span>
+                  {course.courseScope === "GENERAL_EDUCATION" && (
+                    <Badge variant="secondary" className="text-label-sm">
+                      Shared General Education
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>
                   {course.cilos.length} {course.cilos.length === 1 ? "CILO" : "CILOs"} defined
@@ -84,14 +94,37 @@ export default async function SelectedProgramOutcomeMappingPage({
                           </span>
                           <p className="text-body-md text-text-primary mt-1">{cilo.description}</p>
                         </div>
+                        <Badge
+                          variant={cilo.readiness === "ready" ? "default" : "outline"}
+                          className="text-label-sm"
+                        >
+                          {cilo.readiness === "ready" ? "Aligned" : "Needs mapping"}
+                        </Badge>
                       </div>
-                      <ProgramHeadMappingControls
-                        programId={programId}
-                        ciloId={cilo.id}
-                        ciloIndex={index}
-                        mappedGOs={cilo.mappedGOs}
-                        activeGOs={activeGOs}
-                      />
+                      {cilo.mappedTargets.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {cilo.mappedTargets.map((target) => (
+                            <Badge
+                              key={target.mappingId}
+                              variant="secondary"
+                              className="text-label-sm max-w-40 truncate"
+                              title={target.description}
+                            >
+                              {target.code}
+                              {!target.is_active && " (archived)"}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <Alert>
+                          <AlertDescription>
+                            No mapped outcome.{" "}
+                            {course.courseScope === "GENERAL_EDUCATION"
+                              ? "Faculty or the Secretary can align this CILO to Institutional Outcomes."
+                              : "Faculty or the Secretary can align this CILO to Graduate Outcomes."}
+                          </AlertDescription>
+                        </Alert>
+                      )}
                     </div>
                   ))}
                 </div>

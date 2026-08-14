@@ -44,9 +44,7 @@ type MappingScopeContext = {
   course: {
     course_scope: "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC";
     program_id: string | null;
-    course_assignments: Array<{ id: string }>;
   };
-  goProgramId: string | null;
 };
 type IloWriteInput = Extract<OutcomeWriteInput, { kind: "ILO" }>;
 type CiloWriteInput = Extract<OutcomeWriteInput, { kind: "CILO" }>;
@@ -143,19 +141,11 @@ async function readMappingScope(
           select: {
             course_scope: true,
             program_id: true,
-            course_assignments: {
-              where: {
-                program_id: input.programId,
-                is_active: true,
-                term_instance: { status: "ACTIVE" },
-              },
-              select: { id: true },
-            },
           },
         },
       },
     });
-    return cilo ? { courseId: cilo.course_id, course: cilo.course, goProgramId: null } : null;
+    return cilo ? { courseId: cilo.course_id, course: cilo.course } : null;
   }
 
   const mapping = await db.cILOMapping.findUnique({
@@ -168,26 +158,16 @@ async function readMappingScope(
             select: {
               course_scope: true,
               program_id: true,
-              course_assignments: {
-                where: {
-                  program_id: input.programId,
-                  is_active: true,
-                  term_instance: { status: "ACTIVE" },
-                },
-                select: { id: true },
-              },
             },
           },
         },
       },
-      go: { select: { program_id: true } },
     },
   });
   return mapping
     ? {
         courseId: mapping.cilo.course_id,
         course: mapping.cilo.course,
-        goProgramId: mapping.go.program_id,
       }
     : null;
 }
@@ -209,53 +189,16 @@ async function facultyHasActiveCourseAssignment(
   );
 }
 
-function programHeadHasCourseScope(
-  input: MappingWriteInput,
-  mapping: MappingScopeContext
-): boolean {
-  if (input.action === "remove" && mapping.goProgramId !== input.programId) return false;
-  if (mapping.course.course_scope === "GENERAL_EDUCATION")
-    return mapping.course.course_assignments.length > 0;
-  return mapping.course.program_id === input.programId;
-}
-
-async function mappingGoId(
-  input: MappingWriteInput,
-  db: Prisma.TransactionClient | typeof prisma
-): Promise<string | undefined> {
-  if (input.action === "create") return input.goId;
-  return (await db.cILOMapping.findUnique({ where: { id: input.id }, select: { go_id: true } }))
-    ?.go_id;
-}
-
-async function programHeadHasMappedGo(
-  input: MappingWriteInput,
-  db: Prisma.TransactionClient | typeof prisma
-): Promise<boolean> {
-  const goId = await mappingGoId(input, db);
-  if (!goId) return false;
-  const go = await db.gO.findUnique({ where: { id: goId }, select: { program_id: true } });
-  return go?.program_id === input.programId;
-}
-
-async function programHeadHasMappingScope(
-  input: MappingWriteInput,
-  mapping: MappingScopeContext,
-  db: Prisma.TransactionClient | typeof prisma
-): Promise<boolean> {
-  return programHeadHasCourseScope(input, mapping) && (await programHeadHasMappedGo(input, db));
-}
 async function scopeAllowsMapping(
   input: MappingWriteInput,
   userId: string,
   role: WriterRole,
   db: Prisma.TransactionClient | typeof prisma
 ): Promise<boolean> {
+  if (role !== ROLES.FACULTY) return false;
   const mapping = await readMappingScope(input, db);
   if (!mapping) return false;
-  if (role === ROLES.FACULTY) return facultyHasActiveCourseAssignment(userId, mapping.courseId, db);
-  if (role === ROLES.PROGRAM_HEAD) return programHeadHasMappingScope(input, mapping, db);
-  return false;
+  return facultyHasActiveCourseAssignment(userId, mapping.courseId, db);
 }
 
 async function readIloMappingScope(
@@ -568,7 +511,7 @@ export async function prepareOutcomeWrite(
     (role !== ROLES.SECRETARY && role !== ROLES.PROGRAM_HEAD && role !== ROLES.FACULTY)
   )
     return failure("You do not have permission to modify this outcome.");
-  if (role === ROLES.PROGRAM_HEAD && "programId" in input) {
+  if (role === ROLES.PROGRAM_HEAD && input.kind === "GO") {
     const contextResult = await resolveProgramHeadContext(input.programId);
     if (!contextResult.success || !(await scopeAllows(input, session.userId, role)))
       return failure("You do not have permission to modify this outcome.");
@@ -775,37 +718,14 @@ function programSpecificMappingIsValid(records: ActiveMappingCreateRecords): boo
   );
 }
 
-async function programHeadCanCreateMapping(
-  tx: Prisma.TransactionClient,
-  input: Extract<MappingWriteInput, { action: "create" }>,
-  records: ActiveMappingCreateRecords
-): Promise<boolean> {
-  if (records.go.program_id !== input.programId) return false;
-  if (records.cilo.course.course_scope !== "GENERAL_EDUCATION") return true;
-  return Boolean(
-    await tx.courseAssignment.findFirst({
-      where: {
-        course_id: records.cilo.course_id,
-        program_id: input.programId,
-        is_active: true,
-        term_instance: { status: "ACTIVE" },
-      },
-      select: { id: true },
-    })
-  );
-}
-
 async function mappingCreateError(
   tx: Prisma.TransactionClient,
-  input: Extract<MappingWriteInput, { action: "create" }>,
-  role: WriterRole
+  input: Extract<MappingWriteInput, { action: "create" }>
 ): Promise<string | null> {
   const records = await readActiveMappingCreateRecords(tx, input);
   if (!records) return "Active CILO, Course, and Graduate Outcome are required.";
   if (records.cilo.course.course_scope === "GENERAL_EDUCATION")
     return "General Education CILOs map only to Institutional Outcomes";
-  if (role === ROLES.PROGRAM_HEAD && !(await programHeadCanCreateMapping(tx, input, records)))
-    return "You do not have permission to modify this outcome.";
   if (!programSpecificMappingIsValid(records))
     return "Graduate Outcome must belong to the Course Academic Program";
   return null;
@@ -814,14 +734,13 @@ async function mappingCreateError(
 async function writeMapping(
   tx: Prisma.TransactionClient,
   input: MappingWriteInput,
-  role: WriterRole,
   userId: string
 ): Promise<ServiceResult<{ id?: string }>> {
   if (input.action === "remove") {
     await tx.cILOMapping.delete({ where: { id: input.id } });
     return { success: true, data: {} };
   }
-  const error = await mappingCreateError(tx, input, role);
+  const error = await mappingCreateError(tx, input);
   if (error) return failure(error);
   return {
     success: true,
@@ -886,7 +805,7 @@ async function programHeadAssignmentIsCurrent(
   userId: string,
   role: WriterRole
 ): Promise<boolean> {
-  if (role !== ROLES.PROGRAM_HEAD || !("programId" in input)) return true;
+  if (role !== ROLES.PROGRAM_HEAD || input.kind !== "GO") return true;
   return Boolean(
     await revalidateProgramHeadAssignment(tx, {
       userId,
@@ -910,8 +829,7 @@ function writeReviewedOutcome(
   tx: Prisma.TransactionClient,
   input: OutcomeWriteInput,
   current: ReviewValue,
-  userId: string,
-  role: WriterRole
+  userId: string
 ): Promise<ServiceResult<{ id?: string }>> {
   switch (input.kind) {
     case "GO":
@@ -921,7 +839,7 @@ function writeReviewedOutcome(
     case "CILO":
       return writeCilo(tx, input, userId);
     case "MAPPING":
-      return writeMapping(tx, input, role, userId);
+      return writeMapping(tx, input, userId);
     case "ILO_MAPPING":
       return writeIloMapping(tx, input, userId);
   }
@@ -942,7 +860,7 @@ async function commitReviewedOutcome(
     return failure("Outcome changed after review. Prepare a new review.");
   if (!reviewMatchesCurrentState(review, current, userId))
     return failure("Outcome review does not match requested write.");
-  return writeReviewedOutcome(tx, review.input, current, userId, role);
+  return writeReviewedOutcome(tx, review.input, current, userId);
 }
 
 export async function commitOutcomeWrite(

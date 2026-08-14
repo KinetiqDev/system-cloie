@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
+import type { CourseScope } from "@prisma/client";
 import { z } from "zod";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -7,6 +8,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import type { ServiceResult } from "@/lib/utils/service-result";
+import { ciloHasValidActiveTarget } from "./classify-course-alignment";
 
 type CourseAlignmentTarget = {
   id: string;
@@ -20,9 +22,7 @@ type CourseAlignmentCilo = {
   targetIds: string[];
 };
 
-type CourseScope = "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC";
-
-export type FacultyCourseAlignment = {
+export type CourseAlignment = {
   course: {
     id: string;
     code: string;
@@ -138,6 +138,17 @@ async function hasFacultyCourseAccess(
   );
 }
 
+async function roleAllowsAlignmentAccess(
+  db: Prisma.TransactionClient | typeof prisma,
+  role: string | null | undefined,
+  userId: string,
+  courseId: string
+): Promise<boolean> {
+  if (role === ROLES.SECRETARY) return true;
+  if (role !== ROLES.FACULTY) return false;
+  return hasFacultyCourseAccess(db, userId, courseId);
+}
+
 async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId: string) {
   return db.course.findFirst({
     where: {
@@ -239,16 +250,16 @@ function unavailableTargetsFor(course: AlignmentCourse, validTargetIds: Set<stri
     );
 }
 
-export async function readFacultyCourseAlignment(
+export async function readCourseAlignment(
   courseId: string
-): Promise<ServiceResult<FacultyCourseAlignment>> {
+): Promise<ServiceResult<CourseAlignment>> {
   if (!courseIdSchema.safeParse(courseId).success) {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
   const session = await resolveAuthSession();
   if (
-    session?.activeRole !== ROLES.FACULTY ||
-    !(await hasFacultyCourseAccess(prisma, session.userId, courseId))
+    !session ||
+    !(await roleAllowsAlignmentAccess(prisma, session.activeRole, session.userId, courseId))
   ) {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
@@ -311,8 +322,8 @@ export async function prepareCourseAlignmentWrite(input: {
   }
   const session = await resolveAuthSession();
   if (
-    session?.activeRole !== ROLES.FACULTY ||
-    !(await hasFacultyCourseAccess(prisma, session.userId, input.courseId))
+    !session ||
+    !(await roleAllowsAlignmentAccess(prisma, session.activeRole, session.userId, input.courseId))
   ) {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
@@ -388,14 +399,25 @@ export async function commitCourseAlignmentWrite(
 ): Promise<ServiceResult<{ changed: number }>> {
   if (!confirmed) return { success: false, error: "Explicit confirmation is required." };
   const session = await resolveAuthSession();
-  if (session?.activeRole !== ROLES.FACULTY || !reviewIsValid(review, session.userId)) {
+  if (
+    !session ||
+    !reviewIsValid(review, session.userId) ||
+    (session.activeRole !== ROLES.FACULTY && session.activeRole !== ROLES.SECRETARY)
+  ) {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
   try {
     return await prisma.$transaction(
       // fallow-ignore-next-line complexity
       async (tx) => {
-        if (!(await hasFacultyCourseAccess(tx, session.userId, review.courseId))) {
+        if (
+          !(await roleAllowsAlignmentAccess(
+            tx,
+            session.activeRole,
+            session.userId,
+            review.courseId
+          ))
+        ) {
           return { success: false, error: SAFE_ACCESS_ERROR };
         }
         const course = await readCourse(tx, review.courseId);
@@ -485,4 +507,85 @@ export async function commitCourseAlignmentWrite(
     }
     throw error;
   }
+}
+
+export type CourseAlignmentSummary = {
+  courseId: string;
+  code: string;
+  title: string;
+  scope: CourseScope;
+  program: { id: string; code: string; name: string } | null;
+  ciloCount: number;
+  alignedCiloCount: number;
+  readiness: "ready" | "incomplete-mapping";
+};
+
+export async function listCourseAlignmentSummaries(): Promise<
+  ServiceResult<CourseAlignmentSummary[]>
+> {
+  const session = await resolveAuthSession();
+  if (session?.activeRole !== ROLES.SECRETARY) {
+    return { success: false, error: SAFE_ACCESS_ERROR };
+  }
+
+  const courses = await prisma.course.findMany({
+    where: {
+      is_active: true,
+      cilos: { some: { is_active: true } },
+      OR: [
+        {
+          course_scope: "PROGRAM_SPECIFIC",
+          program_id: { not: null },
+          program: { is_active: true },
+        },
+        { course_scope: "GENERAL_EDUCATION" },
+      ],
+    },
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      course_scope: true,
+      program_id: true,
+      program: { select: { id: true, code: true, name: true } },
+      cilos: {
+        where: { is_active: true },
+        select: {
+          id: true,
+          cilo_mappings: {
+            select: { go: { select: { id: true, is_active: true, program_id: true } } },
+          },
+          cilo_institutional_outcome_mappings: {
+            select: { institutional_outcome: { select: { id: true, is_active: true } } },
+          },
+        },
+      },
+    },
+    orderBy: { code: "asc" },
+  });
+
+  const data = courses.map((course) => {
+    const scope: CourseScope =
+      course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROGRAM_SPECIFIC";
+    const alignedCiloCount = course.cilos.filter((cilo) =>
+      ciloHasValidActiveTarget(cilo, scope, course.program_id)
+    ).length;
+    return {
+      courseId: course.id,
+      code: course.code,
+      title: course.title,
+      scope,
+      program: course.program
+        ? { id: course.program.id, code: course.program.code, name: course.program.name }
+        : null,
+      ciloCount: course.cilos.length,
+      alignedCiloCount,
+      readiness:
+        alignedCiloCount === course.cilos.length
+          ? ("ready" as const)
+          : ("incomplete-mapping" as const),
+    };
+  });
+
+  return { success: true, data };
 }
