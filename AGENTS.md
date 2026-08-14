@@ -240,7 +240,7 @@ find .agents/skills -mindepth 2 -maxdepth 2 -name SKILL.md -printf '%h\n' | sed 
 | --- | --- |
 | Planning and tracking | `ask-matt`, `setup-matt-pocock-skills`, `to-spec`, `to-tickets`, `triage`, `wayfinder` |
 | Architecture and domain | `codebase-design`, `domain-modeling`, `improve-codebase-architecture`, `zoom-out` |
-| Implementation and review | `code-review`, `diagnosing-bugs`, `implement`, `ponytail`, `tdd` |
+| Implementation and review | `code-review`, `diagnosing-bugs`, `implement`, `ponytail`, `ship-slice`, `tdd` |
 | Next.js rendering and caching | `next-best-practices`, `next-cache-components-adoption`, `next-cache-components-optimizer`, `next-dev-loop`, `next-partial-prefetching-adoption` |
 | Browser, performance, and accessibility | `a11y-debugging`, `agent-browser`, `chrome-devtools`, `debug-optimize-lcp`, `memory-leak-debugging`, `troubleshooting` |
 | UI and prototyping | `design-taste-frontend`, `emil-design-eng`, `matt-prototype`, `prototype`, `shadcn`, `ui-ux-pro-max`, `web-artifacts-builder` |
