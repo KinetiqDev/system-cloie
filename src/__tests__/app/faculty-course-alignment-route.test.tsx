@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import FacultyCourseAlignmentPage from "../../app/(app)/faculty/cilos/[courseId]/alignment/page";
+import CourseAlignmentPage from "../../app/(app)/faculty/cilos/[courseId]/alignment/page";
 
 const NOT_FOUND_ERROR = "NEXT_NOT_FOUND";
 const { notFoundMock, readAlignmentMock, redirectMock, sessionMock } = vi.hoisted(() => ({
@@ -17,8 +17,8 @@ vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMo
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: sessionMock,
 }));
-vi.mock("@/features/outcomes/services/manage-faculty-course-alignment", () => ({
-  readFacultyCourseAlignment: readAlignmentMock,
+vi.mock("@/features/outcomes/services/manage-course-alignment", () => ({
+  readCourseAlignment: readAlignmentMock,
 }));
 
 describe("Faculty Course alignment route", () => {
@@ -26,7 +26,7 @@ describe("Faculty Course alignment route", () => {
     sessionMock.mockResolvedValue(null);
 
     await expect(
-      FacultyCourseAlignmentPage({
+      CourseAlignmentPage({
         params: Promise.resolve({ courseId: "11111111-1111-4111-8111-111111111111" }),
       })
     ).rejects.toThrow("NEXT_REDIRECT:/portal/respondents");
@@ -41,7 +41,7 @@ describe("Faculty Course alignment route", () => {
     });
 
     await expect(
-      FacultyCourseAlignmentPage({
+      CourseAlignmentPage({
         params: Promise.resolve({ courseId: "not-a-course-id" }),
       })
     ).rejects.toThrow(NOT_FOUND_ERROR);
@@ -66,7 +66,7 @@ describe("Faculty Course alignment route", () => {
     };
     readAlignmentMock.mockResolvedValue({ success: true, data: alignment });
 
-    const page = await FacultyCourseAlignmentPage({
+    const page = await CourseAlignmentPage({
       params: Promise.resolve({ courseId: alignment.course.id }),
     });
 

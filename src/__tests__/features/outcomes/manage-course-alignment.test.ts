@@ -4,7 +4,7 @@ import { ROLES } from "@/lib/constants/roles";
 const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   assignment: { findFirst: vi.fn() },
-  course: { findFirst: vi.fn() },
+  course: { findFirst: vi.fn(), findMany: vi.fn() },
   go: { count: vi.fn(), findMany: vi.fn() },
   ilo: { count: vi.fn(), findMany: vi.fn() },
   transaction: vi.fn(),
@@ -87,7 +87,7 @@ function generalEducationCourse(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("Faculty Course alignment service", () => {
+describe("Course alignment service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.session.mockResolvedValue(FACULTY);
@@ -102,9 +102,9 @@ describe("Faculty Course alignment service", () => {
   });
 
   it("returns only the active owning-Program catalog and readiness", async () => {
-    const { readFacultyCourseAlignment } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
-    await expect(readFacultyCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
       success: true,
       data: {
         course: { id: COURSE_ID, program: { id: PROGRAM_ID } },
@@ -119,8 +119,8 @@ describe("Faculty Course alignment service", () => {
   });
 
   it("keeps inactive existing mappings visible but excludes them from live readiness", async () => {
-    const { readFacultyCourseAlignment } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(
       course({
         cilos: [
@@ -144,7 +144,7 @@ describe("Faculty Course alignment service", () => {
     );
     mocks.go.findMany.mockResolvedValue([]);
 
-    await expect(readFacultyCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
       success: true,
       data: {
         cilos: [{ id: CILO_ID, targetIds: [GO_ID] }],
@@ -156,26 +156,26 @@ describe("Faculty Course alignment service", () => {
   });
 
   it("conceals unauthorized and non-Program-specific Course URLs", async () => {
-    const { readFacultyCourseAlignment } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
     mocks.assignment.findFirst.mockResolvedValue(null);
-    await expect(readFacultyCourseAlignment(COURSE_ID)).resolves.toEqual({
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toEqual({
       success: false,
       error: "Course alignment is unavailable.",
     });
     mocks.assignment.findFirst.mockResolvedValue({ id: "assignment-1" });
     mocks.course.findFirst.mockResolvedValue(null);
-    await expect(readFacultyCourseAlignment(COURSE_ID)).resolves.toEqual({
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toEqual({
       success: false,
       error: "Course alignment is unavailable.",
     });
   });
 
   it("conceals malformed Course IDs before querying assignments", async () => {
-    const { readFacultyCourseAlignment } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
 
-    await expect(readFacultyCourseAlignment("not-a-course-id")).resolves.toEqual({
+    await expect(readCourseAlignment("not-a-course-id")).resolves.toEqual({
       success: false,
       error: "Course alignment is unavailable.",
     });
@@ -184,7 +184,7 @@ describe("Faculty Course alignment service", () => {
 
   it("rejects a malformed Course ID before preparing an alignment draft", async () => {
     const { prepareCourseAlignmentWrite } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+      await import("@/features/outcomes/services/manage-course-alignment");
 
     await expect(
       prepareCourseAlignmentWrite({
@@ -201,7 +201,7 @@ describe("Faculty Course alignment service", () => {
 
   it("rejects a draft prepared from an outdated alignment snapshot", async () => {
     const { prepareCourseAlignmentWrite } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+      await import("@/features/outcomes/services/manage-course-alignment");
 
     await expect(
       prepareCourseAlignmentWrite({
@@ -218,7 +218,7 @@ describe("Faculty Course alignment service", () => {
 
   it("prepares an exact multi-CILO diff and rejects a forged cross-Program target", async () => {
     const { prepareCourseAlignmentWrite } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+      await import("@/features/outcomes/services/manage-course-alignment");
     const review = await prepareCourseAlignmentWrite({
       courseId: COURSE_ID,
       desired: [{ ciloId: CILO_ID, targetIds: [] }],
@@ -249,7 +249,7 @@ describe("Faculty Course alignment service", () => {
 
   it("commits the complete diff in one transaction and requires fresh state", async () => {
     const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+      await import("@/features/outcomes/services/manage-course-alignment");
     const reviewResult = await prepareCourseAlignmentWrite({
       courseId: COURSE_ID,
       desired: [{ ciloId: CILO_ID, targetIds: [] }],
@@ -279,14 +279,14 @@ describe("Faculty Course alignment service", () => {
   });
 
   it("serves General Education Courses the shared Institutional Outcome catalog only", async () => {
-    const { readFacultyCourseAlignment } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
     mocks.ilo.findMany.mockResolvedValue([
       { id: ILO_ID, code: "ILO-1", description: "Think critically" },
     ]);
 
-    await expect(readFacultyCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
       success: true,
       data: {
         course: { id: COURSE_ID, scope: "GENERAL_EDUCATION", program: null },
@@ -302,8 +302,8 @@ describe("Faculty Course alignment service", () => {
   });
 
   it("never mixes Graduate Outcomes into a General Education alignment read", async () => {
-    const { readFacultyCourseAlignment } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(
       generalEducationCourse({
         cilos: [
@@ -320,7 +320,7 @@ describe("Faculty Course alignment service", () => {
       { id: ILO_ID, code: "ILO-1", description: "Think critically" },
     ]);
 
-    await expect(readFacultyCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
       success: true,
       data: {
         cilos: [{ id: CILO_ID, targetIds: [] }],
@@ -332,7 +332,7 @@ describe("Faculty Course alignment service", () => {
 
   it("rejects a forged General Education mapping to a Graduate Outcome", async () => {
     const { prepareCourseAlignmentWrite } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+      await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
     const freshness = JSON.stringify([{ ciloId: CILO_ID, targetIds: [ILO_ID] }]);
 
@@ -353,7 +353,7 @@ describe("Faculty Course alignment service", () => {
 
   it("prepares and commits a General Education ILO diff with actor provenance", async () => {
     const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
-      await import("@/features/outcomes/services/manage-faculty-course-alignment");
+      await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
     const freshness = JSON.stringify([{ ciloId: CILO_ID, targetIds: [ILO_ID] }]);
     const reviewResult = await prepareCourseAlignmentWrite({
@@ -390,5 +390,176 @@ describe("Faculty Course alignment service", () => {
         OR: [{ cilo_id: CILO_ID, institutional_outcome_id: ILO_ID }],
       },
     });
+  });
+
+  it("serves Secretary college-wide reads without consulting assignments", async () => {
+    const SECRETARY = { userId: "secretary-1", activeRole: ROLES.SECRETARY, roles: [ROLES.SECRETARY] };
+    mocks.session.mockResolvedValue(SECRETARY);
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+      success: true,
+      data: {
+        course: { id: COURSE_ID, program: { id: PROGRAM_ID } },
+        cilos: [{ id: CILO_ID, targetIds: [GO_ID] }],
+        readiness: "ready",
+      },
+    });
+    expect(mocks.assignment.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("denies Program Head and Dean alignment reads without reading state", async () => {
+    const PROGRAM_HEAD = {
+      userId: "program-head-1",
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+    };
+    mocks.session.mockResolvedValue(PROGRAM_HEAD);
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toEqual({
+      success: false,
+      error: "Course alignment is unavailable.",
+    });
+    expect(mocks.assignment.findFirst).not.toHaveBeenCalled();
+    expect(mocks.course.findFirst).not.toHaveBeenCalled();
+
+    mocks.session.mockResolvedValue({ userId: "dean-1", activeRole: ROLES.DEAN, roles: [ROLES.DEAN] });
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toEqual({
+      success: false,
+      error: "Course alignment is unavailable.",
+    });
+    expect(mocks.course.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("prepares and commits a Secretary correction with actor provenance", async () => {
+    const SECRETARY = { userId: "secretary-1", activeRole: ROLES.SECRETARY, roles: [ROLES.SECRETARY] };
+    mocks.session.mockResolvedValue(SECRETARY);
+    const NEW_GO_ID = "77777777-7777-4777-8777-777777777777";
+    const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+    const reviewResult = await prepareCourseAlignmentWrite({
+      courseId: COURSE_ID,
+      desired: [
+        { ciloId: CILO_ID, targetIds: [GO_ID, NEW_GO_ID] },
+      ],
+      freshnessToken: FRESHNESS_TOKEN,
+    });
+    expect(reviewResult).toMatchObject({
+      success: true,
+      data: {
+        additions: [{ ciloId: CILO_ID, targetId: NEW_GO_ID }],
+        removals: [],
+      },
+    });
+    if (!reviewResult.success) throw new Error(reviewResult.error);
+    const createMany = vi.fn();
+    mocks.transaction.mockImplementation(async (callback: (tx: unknown) => unknown) =>
+      callback({
+        courseAssignment: mocks.assignment,
+        course: { findFirst: vi.fn().mockResolvedValue(course()) },
+        gO: mocks.go,
+        cILOMapping: { deleteMany: vi.fn(), createMany },
+      })
+    );
+    await expect(commitCourseAlignmentWrite(reviewResult.data, true)).resolves.toEqual({
+      success: true,
+      data: { changed: 1 },
+    });
+    expect(createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          cilo_id: CILO_ID,
+          go_id: NEW_GO_ID,
+          created_by: "secretary-1",
+          updated_by: "secretary-1",
+        },
+      ],
+    });
+  });
+
+  it("lists Secretary college-wide alignment summaries by readiness", async () => {
+    const SECRETARY = { userId: "secretary-1", activeRole: ROLES.SECRETARY, roles: [ROLES.SECRETARY] };
+    mocks.session.mockResolvedValue(SECRETARY);
+    mocks.course.findMany.mockResolvedValue([
+      {
+        id: "course-ge",
+        code: "GESTECH",
+        title: "Science, Technology and Society",
+        course_scope: "GENERAL_EDUCATION",
+        program: null,
+        cilos: [
+          {
+            id: "cilo-ge",
+            cilo_mappings: [],
+            cilo_institutional_outcome_mappings: [
+              { institutional_outcome: { id: ILO_ID, is_active: true } },
+            ],
+          },
+        ],
+      },
+      {
+        id: "course-ps",
+        code: "CS101",
+        title: "Computing",
+        course_scope: "PROGRAM_SPECIFIC",
+        program_id: PROGRAM_ID,
+        program: { id: PROGRAM_ID, code: "BSCS", name: "Computer Science" },
+        cilos: [
+          {
+            id: "cilo-ok",
+            cilo_mappings: [{ go: { id: GO_ID, is_active: true, program_id: PROGRAM_ID } }],
+            cilo_institutional_outcome_mappings: [],
+          },
+          {
+            id: "cilo-gap",
+            cilo_mappings: [],
+            cilo_institutional_outcome_mappings: [],
+          },
+        ],
+      },
+    ]);
+    const { listCourseAlignmentSummaries } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+
+    await expect(listCourseAlignmentSummaries()).resolves.toEqual({
+      success: true,
+      data: [
+        {
+          courseId: "course-ge",
+          code: "GESTECH",
+          title: "Science, Technology and Society",
+          scope: "GENERAL_EDUCATION",
+          program: null,
+          ciloCount: 1,
+          alignedCiloCount: 1,
+          readiness: "ready",
+        },
+        {
+          courseId: "course-ps",
+          code: "CS101",
+          title: "Computing",
+          scope: "PROGRAM_SPECIFIC",
+          program: { id: PROGRAM_ID, code: "BSCS", name: "Computer Science" },
+          ciloCount: 2,
+          alignedCiloCount: 1,
+          readiness: "incomplete-mapping",
+        },
+      ],
+    });
+  });
+
+  it("denies non-Secretary alignment summaries without reading courses", async () => {
+    mocks.session.mockResolvedValue({ userId: "dean-1", activeRole: ROLES.DEAN, roles: [ROLES.DEAN] });
+    const { listCourseAlignmentSummaries } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+
+    await expect(listCourseAlignmentSummaries()).resolves.toEqual({
+      success: false,
+      error: "Course alignment is unavailable.",
+    });
+    expect(mocks.course.findMany).not.toHaveBeenCalled();
   });
 });

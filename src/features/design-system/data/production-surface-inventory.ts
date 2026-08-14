@@ -1100,6 +1100,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/secretary/learning-outcomes/alignment/[courseId]/loading.tsx",
+    disposition: "task",
+    taskId: 17,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/secretary/learning-outcomes/alignment/[courseId]/page.tsx",
+    disposition: "task",
+    taskId: 17,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/secretary/learning-outcomes/loading.tsx",
     disposition: "already_compliant",
     category: "route",
@@ -2224,19 +2236,19 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/outcomes/components/faculty-course-alignment-editor.tsx",
+    path: "src/features/outcomes/components/course-alignment-administration-list.tsx",
+    disposition: "task",
+    taskId: 17,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/outcomes/components/course-alignment-editor.tsx",
     disposition: "task",
     taskId: 17,
     category: "feature_component",
   },
   {
     path: "src/features/outcomes/components/go-form-dialog.tsx",
-    disposition: "task",
-    taskId: 17,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/outcomes/components/program-head-mapping-controls.tsx",
     disposition: "task",
     taskId: 17,
     category: "feature_component",
