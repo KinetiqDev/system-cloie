@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { courseDefinitions } from "../../../prisma/seed/fixtures/academic-structure";
-import { ciloDefsNewCourses } from "../../../prisma/seed/fixtures/outcomes";
+import {
+  ciloDefsGeneralEducation,
+  ciloDefsNewCourses,
+  iloDefs,
+} from "../../../prisma/seed/fixtures/outcomes";
 
 /**
  * Pins CILO descriptions for courses whose codes were remapped to new catalog
@@ -48,6 +52,23 @@ describe("remapped course CILO fixture", () => {
     const catalogCodes = new Set(courseDefinitions.map((c) => c.code));
     for (const c of ciloDefsNewCourses) {
       expect(catalogCodes.has(c.courseCode), `${c.courseCode}`).toBe(true);
+    }
+  });
+
+  it("seeds General Education CILOs on a General Education Course", () => {
+    const catalogByCode = new Map(courseDefinitions.map((c) => [c.code, c]));
+
+    expect(ciloDefsGeneralEducation.length).toBeGreaterThan(0);
+    for (const c of ciloDefsGeneralEducation) {
+      expect(catalogByCode.get(c.courseCode)?.scope, c.courseCode).toBe("GENERAL_EDUCATION");
+      expect(c.order).toBeGreaterThan(0);
+    }
+  });
+
+  it("maps General Education seed CILOs only to existing shared Institutional Outcomes", () => {
+    const iloCodes = new Set<string>(iloDefs.map((ilo) => ilo.code));
+    for (const cilo of ciloDefsGeneralEducation) {
+      expect(iloCodes.has(`ILO${Math.min(cilo.order, 5)}`)).toBe(true);
     }
   });
 });

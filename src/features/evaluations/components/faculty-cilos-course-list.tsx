@@ -448,11 +448,9 @@ export function FacultyCilosCourseList({
                   <Eye className="mr-1 size-4" />
                   View
                 </Button>
-                {course.courseScope === "PROGRAM_SPECIFIC" && (
-                  <Button variant="outline" size="sm" render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}>
-                    Align
-                  </Button>
-                )}
+                <Button variant="outline" size="sm" render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}>
+                  Align
+                </Button>
               </div>
             </TableCell>
               </TableRow>

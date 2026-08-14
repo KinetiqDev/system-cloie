@@ -147,6 +147,28 @@ export const ciloDefsMKT = [
   },
 ] as const;
 
+export const ciloDefsGeneralEducation = [
+  // GESTECH — Science, Technology and Society
+  {
+    courseCode: "GESTECH",
+    desc: "Analyze the interactions between science, technology, and society across historical and contemporary contexts.",
+    order: 1,
+    createdBy: U.FAC_BSIT,
+  },
+  {
+    courseCode: "GESTECH",
+    desc: "Evaluate the ethical and social implications of technological developments.",
+    order: 2,
+    createdBy: U.FAC_BSIT,
+  },
+  {
+    courseCode: "GESTECH",
+    desc: "Propose responsible applications of science and technology for community well-being.",
+    order: 3,
+    createdBy: U.FAC_BSIT,
+  },
+] as const;
+
 export const ciloDefsNewCourses = [
   // IT201 — Data Structures
   {

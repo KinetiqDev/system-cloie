@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   go: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
   cilo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
   mapping: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
+  institutionalOutcome: { findUnique: vi.fn() },
+  iloMapping: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
   assignment: { findFirst: vi.fn() },
   ph: { findFirst: vi.fn() },
   selectedContext: vi.fn(),
@@ -26,6 +28,8 @@ vi.mock("@/lib/db/prisma", () => ({
     gO: mocks.go,
     cILO: mocks.cilo,
     cILOMapping: mocks.mapping,
+    institutionalOutcome: mocks.institutionalOutcome,
+    cILOInstitutionalOutcomeMapping: mocks.iloMapping,
     courseAssignment: mocks.assignment,
     programHeadAssignment: mocks.ph,
     $transaction: mocks.transaction,
@@ -75,6 +79,8 @@ describe("manage-outcome-writes", () => {
         gO: mocks.go,
         cILO: mocks.cilo,
         cILOMapping: mocks.mapping,
+        institutionalOutcome: mocks.institutionalOutcome,
+        cILOInstitutionalOutcomeMapping: mocks.iloMapping,
         courseAssignment: mocks.assignment,
         programHeadAssignment: mocks.ph,
       })
@@ -175,7 +181,7 @@ describe("manage-outcome-writes", () => {
   it("translates duplicate mapping race", async () => {
     mocks.cilo.findUnique.mockResolvedValue({
       is_active: true,
-      course: { is_active: true, course_scope: "GENERAL_EDUCATION", program_id: null },
+      course: { is_active: true, course_scope: "PROGRAM_SPECIFIC", program_id: "program-1" },
     });
     mocks.mapping.findUnique.mockResolvedValue(null);
     mocks.mapping.create.mockRejectedValue(createPrismaUniqueConstraintError());
@@ -195,7 +201,125 @@ describe("manage-outcome-writes", () => {
     });
   });
 
-  it("requires an active selected-Program assignment for General Education mapping writes", async () => {
+  it("rejects General Education CILO-to-GO writes for every role after the cutover", async () => {
+    mocks.cilo.findUnique.mockResolvedValue({
+      is_active: true,
+      course: { course_scope: "GENERAL_EDUCATION", program_id: null },
+    });
+    mocks.go.findUnique.mockResolvedValue({ id: "go-1", is_active: true, program_id: "program-1" });
+    mocks.mapping.findUnique.mockResolvedValue(null);
+
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    await expect(
+      prepareOutcomeWrite({
+        kind: "MAPPING",
+        action: "create",
+        programId: "program-1",
+        ciloId: "cilo-ge",
+        goId: "go-1",
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: "General Education CILOs map only to Institutional Outcomes",
+    });
+    expect(mocks.mapping.create).not.toHaveBeenCalled();
+  });
+
+  it("supports Secretary CILO-to-Institutional Outcome writes with actor provenance", async () => {
+    mocks.cilo.findUnique.mockResolvedValue({
+      is_active: true,
+      course: { is_active: true, course_scope: "GENERAL_EDUCATION" },
+    });
+    mocks.institutionalOutcome.findUnique.mockResolvedValue({ id: "ilo-1", is_active: true });
+    mocks.iloMapping.findUnique.mockResolvedValue(null);
+    mocks.iloMapping.create.mockResolvedValue({ id: "ilo-mapping-1" });
+    const { prepareOutcomeWrite, commitOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    const review = await prepareOutcomeWrite({
+      kind: "ILO_MAPPING",
+      action: "create",
+      ciloId: "cilo-ge",
+      iloId: "ilo-1",
+    });
+    expect(review.success).toBe(true);
+    expect(
+      await commitOutcomeWrite(review.success ? review.data : fail("review"), true)
+    ).toEqual({
+      success: true,
+      data: { id: "ilo-mapping-1" },
+    });
+    expect(mocks.iloMapping.create).toHaveBeenCalledWith({
+      data: {
+        cilo_id: "cilo-ge",
+        institutional_outcome_id: "ilo-1",
+        created_by: "secretary",
+        updated_by: "secretary",
+      },
+    });
+  });
+
+  it("rejects Program-specific CILO-to-Institutional Outcome writes", async () => {
+    mocks.cilo.findUnique.mockResolvedValue({
+      is_active: true,
+      course: { course_scope: "PROGRAM_SPECIFIC" },
+    });
+    mocks.institutionalOutcome.findUnique.mockResolvedValue({ id: "ilo-1", is_active: true });
+    mocks.iloMapping.findUnique.mockResolvedValue(null);
+
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    await expect(
+      prepareOutcomeWrite({
+        kind: "ILO_MAPPING",
+        action: "create",
+        ciloId: "cilo-1",
+        iloId: "ilo-1",
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: "Institutional Outcomes map only General Education CILOs",
+    });
+    expect(mocks.iloMapping.create).not.toHaveBeenCalled();
+  });
+
+  it("authorizes Faculty Institutional Outcome writes only for assigned General Education Courses", async () => {
+    mocks.session.mockResolvedValue(FACULTY);
+    mocks.cilo.findUnique.mockResolvedValue({
+      is_active: true,
+      course_id: "course-ge",
+      course: { is_active: true, course_scope: "GENERAL_EDUCATION" },
+    });
+    mocks.institutionalOutcome.findUnique.mockResolvedValue({ id: "ilo-1", is_active: true });
+    mocks.iloMapping.findUnique.mockResolvedValue(null);
+    mocks.assignment.findFirst.mockResolvedValue(null);
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+
+    await expect(
+      prepareOutcomeWrite({
+        kind: "ILO_MAPPING",
+        action: "create",
+        ciloId: "cilo-ge",
+        iloId: "ilo-1",
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: "You do not have permission to modify this outcome.",
+    });
+
+    mocks.assignment.findFirst.mockResolvedValue({ id: "assignment-1" });
+    await expect(
+      prepareOutcomeWrite({
+        kind: "ILO_MAPPING",
+        action: "create",
+        ciloId: "cilo-ge",
+        iloId: "ilo-1",
+      })
+    ).resolves.toMatchObject({ success: true });
+  });
+
+  it("denies Program Head Institutional Outcome mapping writes", async () => {
     const PROGRAM_HEAD = {
       userId: "program-head",
       activeRole: ROLES.PROGRAM_HEAD,
@@ -205,77 +329,25 @@ describe("manage-outcome-writes", () => {
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
     mocks.cilo.findUnique.mockResolvedValue({
       is_active: true,
-      course_id: "course-ge",
-      course: {
-        is_active: true,
-        course_scope: "GENERAL_EDUCATION",
-        program_id: null,
-        course_assignments: [],
-      },
+      course: { is_active: true, course_scope: "GENERAL_EDUCATION" },
     });
-    mocks.go.findUnique.mockResolvedValue({ is_active: true, program_id: "program-1" });
-    mocks.mapping.findUnique.mockResolvedValue(null);
-    mocks.ph.findFirst.mockResolvedValue(null);
+    mocks.institutionalOutcome.findUnique.mockResolvedValue({ id: "ilo-1", is_active: true });
+    mocks.iloMapping.findUnique.mockResolvedValue(null);
 
-    const { prepareOutcomeWrite, commitOutcomeWrite } =
+    const { prepareOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
-    const review = await prepareOutcomeWrite({
-      kind: "MAPPING",
-      action: "create",
-      programId: "program-1",
-      ciloId: "cilo-ge",
-      goId: "go-1",
-    });
-
-    expect(review).toEqual({
+    await expect(
+      prepareOutcomeWrite({
+        kind: "ILO_MAPPING",
+        action: "create",
+        ciloId: "cilo-ge",
+        iloId: "ilo-1",
+      })
+    ).resolves.toEqual({
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
-    expect(mocks.mapping.create).not.toHaveBeenCalled();
-    mocks.ph.findFirst.mockResolvedValue({ id: "assignment-1" });
-    mocks.cilo.findUnique.mockResolvedValue({
-      is_active: true,
-      course_id: "course-ge",
-      course: {
-        is_active: true,
-        course_scope: "GENERAL_EDUCATION",
-        program_id: null,
-        course_assignments: [{ id: "assignment-1" }],
-      },
-    });
-    mocks.revalidateAssignment.mockResolvedValue({
-      id: "program-1",
-      code: "BSED",
-      name: "Secondary Education",
-    });
-    mocks.mapping.findUnique.mockResolvedValue(null);
-    mocks.transaction.mockImplementation(async (callback) =>
-      callback({
-        gO: mocks.go,
-        cILO: mocks.cilo,
-        cILOMapping: mocks.mapping,
-        courseAssignment: mocks.assignment,
-        programHeadAssignment: mocks.ph,
-        course: { findUnique: vi.fn() },
-      })
-    );
-    mocks.assignment.findFirst.mockResolvedValue({ id: "assignment-1" });
-    mocks.mapping.create.mockResolvedValue({ id: "mapping-1" });
-    const allowedReview = await prepareOutcomeWrite({
-      kind: "MAPPING",
-      action: "create",
-      programId: "program-1",
-      ciloId: "cilo-ge",
-      goId: "go-1",
-    });
-
-    expect(allowedReview.success).toBe(true);
-    expect(
-      await commitOutcomeWrite(allowedReview.success ? allowedReview.data : fail("review"), true)
-    ).toEqual({
-      success: true,
-      data: { id: "mapping-1" },
-    });
+    expect(mocks.iloMapping.create).not.toHaveBeenCalled();
   });
 
   it("rejects a Program-specific mapping whose GO is outside the selected Program", async () => {
@@ -326,11 +398,11 @@ describe("manage-outcome-writes", () => {
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
     mocks.cilo.findUnique.mockResolvedValue({
       is_active: true,
-      course_id: "course-ge",
+      course_id: "course-1",
       course: {
         is_active: true,
-        course_scope: "GENERAL_EDUCATION",
-        program_id: null,
+        course_scope: "PROGRAM_SPECIFIC",
+        program_id: "program-1",
         course_assignments: [{ id: "assignment-1" }],
       },
     });
@@ -342,7 +414,7 @@ describe("manage-outcome-writes", () => {
       kind: "MAPPING",
       action: "create",
       programId: "program-1",
-      ciloId: "cilo-ge",
+      ciloId: "cilo-1",
       goId: "go-1",
     });
     if (!review.success) throw new Error(review.error);

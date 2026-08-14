@@ -30,6 +30,8 @@ export type OutcomeWriteInput =
   | { kind: "CILO"; action: "archive" | "restore"; id: string }
   | { kind: "MAPPING"; action: "create"; programId: string; ciloId: string; goId: string }
   | { kind: "MAPPING"; action: "remove"; programId: string; id: string }
+  | { kind: "ILO_MAPPING"; action: "create"; ciloId: string; iloId: string }
+  | { kind: "ILO_MAPPING"; action: "remove"; id: string }
   | { kind: "ILO"; action: "create"; code: string; description: string }
   | { kind: "ILO"; action: "update"; id: string; code: string; description: string }
   | { kind: "ILO"; action: "archive" | "restore"; id: string }
@@ -49,6 +51,7 @@ type MappingScopeContext = {
 type IloWriteInput = Extract<OutcomeWriteInput, { kind: "ILO" }>;
 type CiloWriteInput = Extract<OutcomeWriteInput, { kind: "CILO" }>;
 type MappingWriteInput = Extract<OutcomeWriteInput, { kind: "MAPPING" }>;
+type IloMappingWriteInput = Extract<OutcomeWriteInput, { kind: "ILO_MAPPING" }>;
 
 type ReviewValue = unknown;
 export type OutcomeWriteReview = {
@@ -255,6 +258,36 @@ async function scopeAllowsMapping(
   return false;
 }
 
+async function readIloMappingScope(
+  input: IloMappingWriteInput,
+  db: Prisma.TransactionClient | typeof prisma
+): Promise<{ courseId: string; courseScope: "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC" } | null> {
+  const ciloId =
+    input.action === "create"
+      ? input.ciloId
+      : await db.cILOInstitutionalOutcomeMapping
+          .findUnique({ where: { id: input.id }, select: { cilo_id: true } })
+          .then((mapping) => mapping?.cilo_id);
+  if (!ciloId) return null;
+  const cilo = await db.cILO.findUnique({
+    where: { id: ciloId },
+    select: { course_id: true, course: { select: { course_scope: true } } },
+  });
+  return cilo ? { courseId: cilo.course_id, courseScope: cilo.course.course_scope } : null;
+}
+
+async function scopeAllowsIloMapping(
+  input: IloMappingWriteInput,
+  userId: string,
+  role: WriterRole,
+  db: Prisma.TransactionClient | typeof prisma
+): Promise<boolean> {
+  if (role !== ROLES.FACULTY) return false;
+  const scope = await readIloMappingScope(input, db);
+  if (!scope || scope.courseScope !== "GENERAL_EDUCATION") return false;
+  return facultyHasActiveCourseAssignment(userId, scope.courseId, db);
+}
+
 async function scopeAllows(
   input: OutcomeWriteInput,
   userId: string,
@@ -270,6 +303,8 @@ async function scopeAllows(
       return scopeAllowsCilo(input, userId, role, db);
     case "MAPPING":
       return scopeAllowsMapping(input, userId, role, db);
+    case "ILO_MAPPING":
+      return scopeAllowsIloMapping(input, userId, role, db);
   }
 }
 
@@ -367,6 +402,26 @@ async function readMappingState(
   });
 }
 
+async function readIloMappingState(
+  input: IloMappingWriteInput,
+  db: Prisma.TransactionClient | typeof prisma
+): Promise<ReviewValue> {
+  if (input.action === "create")
+    return db.cILOInstitutionalOutcomeMapping.findUnique({
+      where: {
+        cilo_id_institutional_outcome_id: {
+          cilo_id: input.ciloId,
+          institutional_outcome_id: input.iloId,
+        },
+      },
+      select: { id: true, cilo_id: true, institutional_outcome_id: true },
+    });
+  return db.cILOInstitutionalOutcomeMapping.findUnique({
+    where: { id: input.id },
+    select: { id: true, cilo_id: true, institutional_outcome_id: true },
+  });
+}
+
 async function readState(
   input: OutcomeWriteInput,
   db: Prisma.TransactionClient | typeof prisma = prisma
@@ -380,6 +435,8 @@ async function readState(
       return readIloState(input, db);
     case "MAPPING":
       return readMappingState(input, db);
+    case "ILO_MAPPING":
+      return readIloMappingState(input, db);
   }
 }
 
@@ -478,6 +535,13 @@ function nextMappingState(input: MappingWriteInput, before: ReviewValue): Review
   return before;
 }
 
+function nextIloMappingState(input: IloMappingWriteInput, before: ReviewValue): ReviewValue {
+  if (input.action === "create")
+    return { cilo_id: input.ciloId, institutional_outcome_id: input.iloId };
+  if (input.action === "remove") return null;
+  return before;
+}
+
 function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string): ReviewValue {
   switch (input.kind) {
     case "GO":
@@ -488,6 +552,8 @@ function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string
       return nextIloState(input, before);
     case "MAPPING":
       return nextMappingState(input, before);
+    case "ILO_MAPPING":
+      return nextIloMappingState(input, before);
   }
 }
 
@@ -517,6 +583,14 @@ export async function prepareOutcomeWrite(
     );
     if (!validation.success) return validation as ServiceResult<never>;
     if (before) return failure("CILO-to-GO mapping already exists.");
+  }
+  if (input.kind === "ILO_MAPPING" && input.action === "create") {
+    const validation = await import("./manage-cilo-mappings").then(
+      ({ validateCiloInstitutionalOutcomeMapping }) =>
+        validateCiloInstitutionalOutcomeMapping(input.ciloId, input.iloId)
+    );
+    if (!validation.success) return validation as ServiceResult<never>;
+    if (before) return failure("CILO-to-Institutional Outcome mapping already exists.");
   }
   const after = nextState(input, before, session.userId);
   if (input.kind === "ILO" && input.action === "reorder" && !after)
@@ -728,6 +802,8 @@ async function mappingCreateError(
 ): Promise<string | null> {
   const records = await readActiveMappingCreateRecords(tx, input);
   if (!records) return "Active CILO, Course, and Graduate Outcome are required.";
+  if (records.cilo.course.course_scope === "GENERAL_EDUCATION")
+    return "General Education CILOs map only to Institutional Outcomes";
   if (role === ROLES.PROGRAM_HEAD && !(await programHeadCanCreateMapping(tx, input, records)))
     return "You do not have permission to modify this outcome.";
   if (!programSpecificMappingIsValid(records))
@@ -738,7 +814,8 @@ async function mappingCreateError(
 async function writeMapping(
   tx: Prisma.TransactionClient,
   input: MappingWriteInput,
-  role: WriterRole
+  role: WriterRole,
+  userId: string
 ): Promise<ServiceResult<{ id?: string }>> {
   if (input.action === "remove") {
     await tx.cILOMapping.delete({ where: { id: input.id } });
@@ -749,7 +826,56 @@ async function writeMapping(
   return {
     success: true,
     data: {
-      id: (await tx.cILOMapping.create({ data: { cilo_id: input.ciloId, go_id: input.goId } })).id,
+      id: (
+        await tx.cILOMapping.create({
+          data: {
+            cilo_id: input.ciloId,
+            go_id: input.goId,
+            created_by: userId,
+            updated_by: userId,
+          },
+        })
+      ).id,
+    },
+  };
+}
+
+async function writeIloMapping(
+  tx: Prisma.TransactionClient,
+  input: IloMappingWriteInput,
+  userId: string
+): Promise<ServiceResult<{ id?: string }>> {
+  if (input.action === "remove") {
+    await tx.cILOInstitutionalOutcomeMapping.delete({ where: { id: input.id } });
+    return { success: true, data: {} };
+  }
+  const [cilo, institutionalOutcome] = await Promise.all([
+    tx.cILO.findUnique({
+      where: { id: input.ciloId },
+      select: { is_active: true, course: { select: { is_active: true, course_scope: true } } },
+    }),
+    tx.institutionalOutcome.findUnique({
+      where: { id: input.iloId },
+      select: { is_active: true },
+    }),
+  ]);
+  if (!cilo?.is_active || !cilo.course.is_active || !institutionalOutcome?.is_active)
+    return failure("Active CILO, Course, and Institutional Outcome are required.");
+  if (cilo.course.course_scope !== "GENERAL_EDUCATION")
+    return failure("Institutional Outcomes map only General Education CILOs");
+  return {
+    success: true,
+    data: {
+      id: (
+        await tx.cILOInstitutionalOutcomeMapping.create({
+          data: {
+            cilo_id: input.ciloId,
+            institutional_outcome_id: input.iloId,
+            created_by: userId,
+            updated_by: userId,
+          },
+        })
+      ).id,
     },
   };
 }
@@ -795,7 +921,9 @@ function writeReviewedOutcome(
     case "CILO":
       return writeCilo(tx, input, userId);
     case "MAPPING":
-      return writeMapping(tx, input, role);
+      return writeMapping(tx, input, role, userId);
+    case "ILO_MAPPING":
+      return writeIloMapping(tx, input, userId);
   }
 }
 
@@ -841,9 +969,11 @@ export async function commitOutcomeWrite(
       return failure(
         review.input.kind === "MAPPING"
           ? "CILO-to-GO mapping already exists."
-          : review.input.kind === "ILO"
-            ? "Institutional Outcome code already exists."
-            : "Graduate Outcome code already exists."
+          : review.input.kind === "ILO_MAPPING"
+            ? "CILO-to-Institutional Outcome mapping already exists."
+            : review.input.kind === "ILO"
+              ? "Institutional Outcome code already exists."
+              : "Graduate Outcome code already exists."
       );
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")

@@ -20,12 +20,15 @@ type CourseAlignmentCilo = {
   targetIds: string[];
 };
 
+type CourseScope = "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC";
+
 export type FacultyCourseAlignment = {
   course: {
     id: string;
     code: string;
     title: string;
-    program: { id: string; code: string; name: string };
+    scope: CourseScope;
+    program: { id: string; code: string; name: string } | null;
   };
   cilos: CourseAlignmentCilo[];
   targets: CourseAlignmentTarget[];
@@ -50,13 +53,35 @@ const courseIdSchema = z.string().uuid();
 
 const SAFE_ACCESS_ERROR = "Course alignment is unavailable.";
 
-function stableSnapshot(
-  rows: Array<{ id: string; cilo_mappings: Array<{ go_id: string }> }>
-): AlignmentSnapshot {
+type AlignmentCiloRow = {
+  id: string;
+  description: string;
+  cilo_mappings: Array<{
+    go_id: string;
+    go: { id: string; code: string; description: string; is_active: boolean };
+  }>;
+  cilo_institutional_outcome_mappings: Array<{
+    institutional_outcome_id: string;
+    institutional_outcome: {
+      id: string;
+      code: string;
+      description: string;
+      is_active: boolean;
+    };
+  }>;
+};
+
+function targetIdsForScope(cilo: AlignmentCiloRow, scope: CourseScope): string[] {
+  return scope === "GENERAL_EDUCATION"
+    ? cilo.cilo_institutional_outcome_mappings.map((mapping) => mapping.institutional_outcome_id)
+    : cilo.cilo_mappings.map((mapping) => mapping.go_id);
+}
+
+function stableSnapshot(rows: AlignmentCiloRow[], scope: CourseScope): AlignmentSnapshot {
   return rows
     .map((cilo) => ({
       ciloId: cilo.id,
-      targetIds: cilo.cilo_mappings.map((mapping) => mapping.go_id).sort(),
+      targetIds: [...targetIdsForScope(cilo, scope)].sort(),
     }))
     .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
 }
@@ -118,14 +143,17 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
     where: {
       id: courseId,
       is_active: true,
-      course_scope: "PROGRAM_SPECIFIC",
-      program_id: { not: null },
+      OR: [
+        { course_scope: "PROGRAM_SPECIFIC", program_id: { not: null } },
+        { course_scope: "GENERAL_EDUCATION" },
+      ],
     },
     select: {
       id: true,
       code: true,
       title: true,
       program_id: true,
+      course_scope: true,
       program: { select: { id: true, code: true, name: true, is_active: true } },
       cilos: {
         where: { is_active: true },
@@ -138,11 +166,77 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
               go: { select: { id: true, code: true, description: true, is_active: true } },
             },
           },
+          cilo_institutional_outcome_mappings: {
+            select: {
+              institutional_outcome_id: true,
+              institutional_outcome: {
+                select: { id: true, code: true, description: true, is_active: true },
+              },
+            },
+          },
         },
         orderBy: { created_at: "asc" },
       },
     },
   });
+}
+
+type AlignmentCourse = NonNullable<Awaited<ReturnType<typeof readCourse>>>;
+
+function courseScopeOf(course: AlignmentCourse): CourseScope {
+  return course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROGRAM_SPECIFIC";
+}
+
+function courseIsUnavailable(course: AlignmentCourse): boolean {
+  if (courseScopeOf(course) === "GENERAL_EDUCATION") return false;
+  return !course.program_id || !course.program?.is_active;
+}
+
+async function readValidTargets(db: Prisma.TransactionClient | typeof prisma, course: AlignmentCourse) {
+  return courseScopeOf(course) === "GENERAL_EDUCATION"
+    ? db.institutionalOutcome.findMany({
+        where: { is_active: true },
+        select: { id: true, code: true, description: true },
+        orderBy: [{ order: "asc" }, { code: "asc" }],
+      })
+    : db.gO.findMany({
+        where: { program_id: course.program_id!, is_active: true },
+        select: { id: true, code: true, description: true },
+        orderBy: [{ order: "asc" }, { code: "asc" }],
+      });
+}
+
+async function countValidAddedTargets(
+  db: Prisma.TransactionClient | typeof prisma,
+  course: AlignmentCourse,
+  targetIds: string[]
+): Promise<number> {
+  if (targetIds.length === 0) return 0;
+  return courseScopeOf(course) === "GENERAL_EDUCATION"
+    ? db.institutionalOutcome.count({
+        where: { id: { in: targetIds }, is_active: true },
+      })
+    : db.gO.count({
+        where: { id: { in: targetIds }, program_id: course.program_id!, is_active: true },
+      });
+}
+
+function unavailableTargetsFor(course: AlignmentCourse, validTargetIds: Set<string>) {
+  const scope = courseScopeOf(course);
+  const mappedTargets = course.cilos.flatMap((cilo) =>
+    scope === "GENERAL_EDUCATION"
+      ? cilo.cilo_institutional_outcome_mappings.map((mapping) => mapping.institutional_outcome)
+      : cilo.cilo_mappings.map((mapping) => mapping.go)
+  );
+  return mappedTargets
+    .filter((target) => !validTargetIds.has(target.id))
+    .map(
+      (target) =>
+        [
+          target.id,
+          { id: target.id, code: target.code, description: target.description },
+        ] as const
+    );
 }
 
 export async function readFacultyCourseAlignment(
@@ -160,34 +254,23 @@ export async function readFacultyCourseAlignment(
   }
 
   const course = await readCourse(prisma, courseId);
-  if (!course?.program?.is_active || !course.program_id) {
+  if (!course || courseIsUnavailable(course)) {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
+  const scope = courseScopeOf(course);
 
-  const targets = await prisma.gO.findMany({
-    where: { program_id: course.program_id, is_active: true },
-    select: { id: true, code: true, description: true },
-    orderBy: [{ order: "asc" }, { code: "asc" }],
-  });
+  const targets = await readValidTargets(prisma, course);
   const validTargetIds = new Set(targets.map((target) => target.id));
-  const unavailableTargetById = new Map(
-    course.cilos
-      .flatMap((cilo) => cilo.cilo_mappings)
-      .filter((mapping) => !validTargetIds.has(mapping.go_id))
-      .map((mapping) => [
-        mapping.go_id,
-        { id: mapping.go.id, code: mapping.go.code, description: mapping.go.description },
-      ])
-  );
+  const unavailableTargets = unavailableTargetsFor(course, validTargetIds);
   const cilos = course.cilos.map((cilo) => ({
     id: cilo.id,
     description: cilo.description,
-    targetIds: cilo.cilo_mappings.map((mapping) => mapping.go_id),
+    targetIds: targetIdsForScope(cilo, scope),
   }));
   const hasActiveTarget = new Map(
     course.cilos.map((cilo) => [
       cilo.id,
-      cilo.cilo_mappings.some((mapping) => validTargetIds.has(mapping.go_id)),
+      targetIdsForScope(cilo, scope).some((targetId) => validTargetIds.has(targetId)),
     ])
   );
   return {
@@ -197,11 +280,14 @@ export async function readFacultyCourseAlignment(
         id: course.id,
         code: course.code,
         title: course.title,
-        program: course.program,
+        scope,
+        program: course.program
+          ? { id: course.program.id, code: course.program.code, name: course.program.name }
+          : null,
       },
       cilos,
       targets,
-      unavailableTargets: [...unavailableTargetById.values()].sort((left, right) =>
+      unavailableTargets: [...new Map(unavailableTargets).values()].sort((left, right) =>
         left.code.localeCompare(right.code)
       ),
       readiness:
@@ -210,7 +296,7 @@ export async function readFacultyCourseAlignment(
           : cilos.every((cilo) => hasActiveTarget.get(cilo.id))
             ? "ready"
             : "incomplete-mapping",
-      freshnessToken: token(stableSnapshot(course.cilos)),
+      freshnessToken: token(stableSnapshot(course.cilos, scope)),
     },
   };
 }
@@ -232,11 +318,12 @@ export async function prepareCourseAlignmentWrite(input: {
   }
 
   const course = await readCourse(prisma, input.courseId);
-  if (!course?.program_id || !course.program?.is_active) {
+  if (!course || courseIsUnavailable(course)) {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
+  const scope = courseScopeOf(course);
 
-  const before = stableSnapshot(course.cilos);
+  const before = stableSnapshot(course.cilos, scope);
   if (input.freshnessToken !== token(before)) {
     return {
       success: false,
@@ -257,16 +344,14 @@ export async function prepareCourseAlignmentWrite(input: {
     .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
   const beforePairs = mappingPairs(before);
   const addedTargetIds = newlyMappedTargetIds(before, after);
-  const validTargetCount =
-    addedTargetIds.length === 0
-      ? 0
-      : await prisma.gO.count({
-          where: { id: { in: addedTargetIds }, program_id: course.program_id, is_active: true },
-        });
+  const validTargetCount = await countValidAddedTargets(prisma, course, addedTargetIds);
   if (validTargetCount !== addedTargetIds.length) {
     return {
       success: false,
-      error: "Graduate Outcome availability changed. Reload and review the latest mappings.",
+      error:
+        scope === "GENERAL_EDUCATION"
+          ? "Institutional Outcome availability changed. Reload and review the latest mappings."
+          : "Graduate Outcome availability changed. Reload and review the latest mappings.",
     };
   }
   const afterPairs = mappingPairs(after);
@@ -314,10 +399,11 @@ export async function commitCourseAlignmentWrite(
           return { success: false, error: SAFE_ACCESS_ERROR };
         }
         const course = await readCourse(tx, review.courseId);
-        if (!course?.program_id || !course.program?.is_active) {
+        if (!course || courseIsUnavailable(course)) {
           return { success: false, error: SAFE_ACCESS_ERROR };
         }
-        const current = stableSnapshot(course.cilos);
+        const scope = courseScopeOf(course);
+        const current = stableSnapshot(course.cilos, scope);
         if (token(current) !== review.freshnessToken) {
           return {
             success: false,
@@ -326,37 +412,59 @@ export async function commitCourseAlignmentWrite(
         }
 
         const addedTargetIds = newlyMappedTargetIds(review.before, review.after);
-        const validTargetCount =
-          addedTargetIds.length === 0
-            ? 0
-            : await tx.gO.count({
-                where: {
-                  id: { in: addedTargetIds },
-                  program_id: course.program_id,
-                  is_active: true,
-                },
-              });
+        const validTargetCount = await countValidAddedTargets(tx, course, addedTargetIds);
         if (validTargetCount !== addedTargetIds.length) {
           return {
             success: false,
-            error: "Graduate Outcome availability changed. Reload and review the latest catalog.",
+            error:
+              scope === "GENERAL_EDUCATION"
+                ? "Institutional Outcome availability changed. Reload and review the latest catalog."
+                : "Graduate Outcome availability changed. Reload and review the latest catalog.",
           };
         }
 
-        if (review.removals.length > 0) {
-          await tx.cILOMapping.deleteMany({
-            where: {
-              OR: review.removals.map((item) => ({ cilo_id: item.ciloId, go_id: item.targetId })),
-            },
-          });
-        }
-        if (review.additions.length > 0) {
-          await tx.cILOMapping.createMany({
-            data: review.additions.map((item) => ({
-              cilo_id: item.ciloId,
-              go_id: item.targetId,
-            })),
-          });
+        if (scope === "GENERAL_EDUCATION") {
+          if (review.removals.length > 0) {
+            await tx.cILOInstitutionalOutcomeMapping.deleteMany({
+              where: {
+                OR: review.removals.map((item) => ({
+                  cilo_id: item.ciloId,
+                  institutional_outcome_id: item.targetId,
+                })),
+              },
+            });
+          }
+          if (review.additions.length > 0) {
+            await tx.cILOInstitutionalOutcomeMapping.createMany({
+              data: review.additions.map((item) => ({
+                cilo_id: item.ciloId,
+                institutional_outcome_id: item.targetId,
+                created_by: session.userId,
+                updated_by: session.userId,
+              })),
+            });
+          }
+        } else {
+          if (review.removals.length > 0) {
+            await tx.cILOMapping.deleteMany({
+              where: {
+                OR: review.removals.map((item) => ({
+                  cilo_id: item.ciloId,
+                  go_id: item.targetId,
+                })),
+              },
+            });
+          }
+          if (review.additions.length > 0) {
+            await tx.cILOMapping.createMany({
+              data: review.additions.map((item) => ({
+                cilo_id: item.ciloId,
+                go_id: item.targetId,
+                created_by: session.userId,
+                updated_by: session.userId,
+              })),
+            });
+          }
         }
         return {
           success: true,
