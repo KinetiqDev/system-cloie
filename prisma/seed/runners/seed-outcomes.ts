@@ -1,5 +1,13 @@
 import { prisma } from "../../../src/lib/db/prisma";
-import { ciloDefsIT, ciloDefsMKT, ciloDefsNewCourses, goDefs, iloDefs } from "../fixtures/outcomes";
+import { U } from "../constants/ids";
+import {
+  ciloDefsGeneralEducation,
+  ciloDefsIT,
+  ciloDefsMKT,
+  ciloDefsNewCourses,
+  goDefs,
+  iloDefs,
+} from "../fixtures/outcomes";
 import type { FoundationContext, OutcomeContext } from "../types";
 
 export async function seedOutcomes({
@@ -19,8 +27,9 @@ export async function seedOutcomes({
   }
 
   console.log("  → Institutional Outcomes...");
+  const iloMap = new Map<string, { id: string }>();
   for (const ilo of iloDefs) {
-    await prisma.institutionalOutcome.upsert({
+    const outcome = await prisma.institutionalOutcome.upsert({
       where: { code: ilo.code },
       update: { description: ilo.description, order: ilo.order, is_active: true },
       create: {
@@ -30,12 +39,18 @@ export async function seedOutcomes({
         is_active: true,
       },
     });
+    iloMap.set(ilo.code, outcome);
   }
 
   // CILOs for courses with evaluations
   console.log("  → CILOs...");
   const ciloMap = new Map<string, { id: string; description: string; order: number }[]>();
-  for (const cd of [...ciloDefsIT, ...ciloDefsMKT, ...ciloDefsNewCourses]) {
+  for (const cd of [
+    ...ciloDefsIT,
+    ...ciloDefsMKT,
+    ...ciloDefsNewCourses,
+    ...ciloDefsGeneralEducation,
+  ]) {
     const course = cMap.get(cd.courseCode)!;
     const existingCilo = await prisma.cILO.findFirst({
       where: { course_id: course.id, description: cd.desc },
@@ -80,5 +95,29 @@ export async function seedOutcomes({
     }
   }
 
-  return { goMap, ciloMap };
+  // General Education CILOs → shared Institutional Outcomes (course level, once)
+  console.log("  → General Education CILO → Institutional Outcome Mappings...");
+  const geCreatorByDescription = new Map<string, string>(
+    ciloDefsGeneralEducation.map((cd) => [cd.desc, cd.createdBy])
+  );
+  const geCilos = ciloMap.get("GESTECH") ?? [];
+  for (const cilo of geCilos) {
+    const ilo = iloMap.get(`ILO${Math.min(cilo.order, 5)}`)!;
+    const existing = await prisma.cILOInstitutionalOutcomeMapping.findFirst({
+      where: { cilo_id: cilo.id, institutional_outcome_id: ilo.id },
+    });
+    if (!existing) {
+      const actor = geCreatorByDescription.get(cilo.description) ?? U.FAC_BSIT;
+      await prisma.cILOInstitutionalOutcomeMapping.create({
+        data: {
+          cilo_id: cilo.id,
+          institutional_outcome_id: ilo.id,
+          created_by: actor,
+          updated_by: actor,
+        },
+      });
+    }
+  }
+
+  return { goMap, iloMap, ciloMap };
 }
