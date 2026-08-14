@@ -189,13 +189,14 @@ and must target a disposable test database. The dedicated demo deployment and pr
 ## Static Analysis
 
 Fallow/static-analysis findings are investigation leads, not automatic refactoring instructions.
-Before deleting or restructuring something reported as unused, duplicated, or complex:
+Before deleting something Fallow reports as unused, trace the finding and inspect its consumers.
+Before refactoring for complexity or duplication, identify the module's interface, seams, tests,
+and preserved domain invariants. Check protected categories: Next.js entry points and route
+handlers, Server Actions, generated types, the shadcn public inventory, dynamic consumers, and
+domain context. Fallow findings are evidence, not instructions.
 
-- trace consumers,
-- inspect domain context,
-- inspect relevant tests,
-- account for Next.js dynamic entry points and Server Actions.
-Never apply unattended bulk fixes.
+Never run `pnpm exec fallow fix --yes` or apply unattended bulk fixes. Start every fix with a
+dry-run (`pnpm exec fallow fix --dry-run`) or the `fix_preview` MCP tool, then review the diff.
 See the project Fallow runbook and ADR for detailed policy.
 
 ---

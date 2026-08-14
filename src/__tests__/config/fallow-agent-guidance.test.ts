@@ -53,8 +53,9 @@ function flagsForSubcommand(command: string): string[] {
 
 function documentedCommands(): Array<{ command: string; flags: string[] }> {
   const entries: Array<{ command: string; flags: string[] }> = [];
-  for (const span of GUIDANCE_TEXT.matchAll(/`([^`]+)`/g)) {
-    const match = span[1].trim().match(/^(?:pnpm exec fallow|fallow) ([a-z][a-z0-9-]*)(.*)$/);
+  for (const match of GUIDANCE_TEXT.matchAll(
+    /pnpm exec fallow ([a-z][a-z0-9-]*)([^`\n]*)/g,
+  )) {
     if (!match) continue;
     entries.push({
       command: match[1],
