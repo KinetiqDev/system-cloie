@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createActionMock, updateActionMock, toggleActionMock } = vi.hoisted(() => ({
@@ -33,12 +34,12 @@ describe("Program Head Courses catalog", () => {
       <ProgramHeadCoursesCatalog
         program={{ id: programId, code: "BSED", name: "Secondary Education" }}
         courses={[]}
-        summary={{ total: 0, programWide: 0, majorSpecific: 0, generalEducation: 0, archived: 0 }}
+        summary={{ total: 0, programWide: 0, majorSpecific: 0, archived: 0 }}
         majors={[]}
       />
     );
-
     fireEvent.click(screen.getByRole("button", { name: "Add Course" }));
+    await waitFor(() => expect(screen.getByText("Add New Course")).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("Course Code"), { target: { value: "BSED-101" } });
     fireEvent.change(screen.getByLabelText("Course Title"), { target: { value: "Foundations" } });
     fireEvent.click(screen.getByRole("button", { name: "Create Course" }));
@@ -59,7 +60,7 @@ describe("Program Head Courses catalog", () => {
       <ProgramHeadCoursesCatalog
         program={{ id: "11111111-1111-4111-8111-111111111111", code: "BSED", name: "Secondary Education" }}
         courses={[]}
-        summary={{ total: 0, programWide: 0, majorSpecific: 0, generalEducation: 0, archived: 0 }}
+        summary={{ total: 0, programWide: 0, majorSpecific: 0, archived: 0 }}
         majors={[
           {
             id: "22222222-2222-4222-8222-222222222222",
@@ -69,8 +70,8 @@ describe("Program Head Courses catalog", () => {
         ]}
       />
     );
-
     fireEvent.click(screen.getByRole("button", { name: "Add Course" }));
+    await waitFor(() => expect(screen.getByText("Add New Course")).toBeInTheDocument());
     fireEvent.click(screen.getByLabelText("Course Scope"));
     const majorSpecific = await screen.findByRole("option", { name: "Major-Specific" });
     fireEvent.focus(majorSpecific);
@@ -82,5 +83,51 @@ describe("Program Head Courses catalog", () => {
 
     expect(await screen.findByText("Select a major for a major-specific course.")).toBeInTheDocument();
     expect(createActionMock).not.toHaveBeenCalled();
+  });
+
+  it("renders status filter and schedule columns without scope tabs", async () => {
+    const { ProgramHeadCoursesCatalog } = await import(
+      "@/features/academic-structure/components/program-head-courses-catalog"
+    );
+    const programId = "11111111-1111-4111-8111-111111111111";
+    const mockCourse = {
+      id: "course-1",
+      code: "IT-101",
+      title: "Introduction to Computing",
+      description: null,
+      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      program_id: programId,
+      major_id: null,
+      default_year_level: YearLevel.FIRST_YEAR,
+      default_semester: AcademicSemester.FIRST,
+      default_term: AcademicTerm.FIRST_TERM,
+      is_active: true,
+      created_at: new Date(),
+      updated_at: new Date(),
+      program: { id: programId, code: "BSIT", name: "Information Technology" },
+      major: null,
+      _count: { cilos: 0, course_bound_evaluations: 0 },
+    };
+
+    render(
+      <ProgramHeadCoursesCatalog
+        program={{ id: programId, code: "BSIT", name: "Information Technology" }}
+        courses={[mockCourse]}
+        summary={{ total: 1, programWide: 1, majorSpecific: 0, archived: 0 }}
+        majors={[]}
+      />
+    );
+
+    expect(screen.getByText("All Statuses")).toBeInTheDocument();
+    expect(screen.getByText("Year Level")).toBeInTheDocument();
+    expect(screen.getByText("Semester")).toBeInTheDocument();
+    expect(screen.getByText("Term")).toBeInTheDocument();
+    expect(screen.getByText("1st Year")).toBeInTheDocument();
+    expect(screen.getByText("1st Semester")).toBeInTheDocument();
+    expect(screen.getByText("1st Term")).toBeInTheDocument();
+
+    expect(screen.queryByText("Type")).toBeNull();
+    expect(screen.queryByText("Gen Ed")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Program-Wide" })).toBeNull();
   });
 });

@@ -53,22 +53,11 @@ describe("resolve-program-head-courses", () => {
       success: true,
       data: { userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", authorizedPrograms: [BEED, BSED], selectedProgram: BSED },
     });
-    courseFindManyMock
-      .mockResolvedValueOnce([course()])
-      .mockResolvedValueOnce([
-        course({
-          id: "66666666-6666-4666-8666-666666666666",
-          code: "GE-101",
-          course_scope: CourseScope.GENERAL_EDUCATION,
-          program_id: null,
-          program: null,
-          course_assignments: [{ _count: { course_bound_evaluations: 1 } }],
-        }),
-      ]);
+    courseFindManyMock.mockResolvedValueOnce([course()]);
     majorFindManyMock.mockResolvedValue([{ id: "77777777-7777-4777-8777-777777777777", name: "English", program_id: BSED_ID }]);
   });
 
-  it("lists only selected-Program Courses and applicable General Education Courses", async () => {
+  it("lists only selected-Program Courses", async () => {
     const { listProgramHeadCourses } = await import("@/features/academic-structure/services/resolve-program-head-courses");
 
     const result = await listProgramHeadCourses(BSED_ID);
@@ -78,24 +67,18 @@ describe("resolve-program-head-courses", () => {
       data: {
         program: BSED,
         majors: [{ program_id: BSED_ID }],
+        summary: { total: 1, programWide: 1, majorSpecific: 0, archived: 0 },
       },
     });
-    expect(result.success && result.data.courses.map((item) => item.course_scope)).toEqual([
-      CourseScope.PROGRAM_SPECIFIC,
-      CourseScope.GENERAL_EDUCATION,
-    ]);
-    expect(result.success && result.data.courses[1]?.isReadOnly).toBe(true);
+    expect(result.success && result.data.courses).toHaveLength(1);
+    expect(result.success && result.data.courses[0]?.course_scope).toBe(CourseScope.PROGRAM_SPECIFIC);
+    expect(result.success && "isReadOnly" in (result.data.courses[0] ?? {})).toBe(false);
+    expect(courseFindManyMock).toHaveBeenCalledTimes(1);
     expect(courseFindManyMock.mock.calls[0]?.[0]).toMatchObject({
       where: { program_id: BSED_ID, course_scope: CourseScope.PROGRAM_SPECIFIC },
     });
     expect(courseFindManyMock.mock.calls[0]?.[0].include.course_assignments).toMatchObject({
       where: { program_id: BSED_ID },
-    });
-    expect(courseFindManyMock.mock.calls[1]?.[0]).toMatchObject({
-      where: {
-        course_scope: CourseScope.GENERAL_EDUCATION,
-        course_assignments: { some: { program_id: BSED_ID, is_active: true } },
-      },
     });
   });
 
