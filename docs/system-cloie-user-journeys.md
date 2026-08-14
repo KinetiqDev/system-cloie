@@ -264,7 +264,7 @@ For Course assignments, the Program Head can:
 
 1. The Program Head opens `/program-head/outcomes`.
 2. The Program Head creates, edits, reorders, archives, and restores Graduate Outcomes for the assigned program.
-3. The Program Head opens `/program-head/outcomes/mapping` to inspect typed alignment — CILO-to-Institutional Outcome for General Education Courses, CILO-to-Graduate Outcome for Program-specific Courses — within authorized program scope.
+3. The Program Head opens the selected Program's mapping review (`/program-head/programs/<programId>/outcomes/mapping`) to inspect typed alignment — CILO-to-Institutional Outcome for General Education Courses, CILO-to-Graduate Outcome for Program-specific Courses — within authorized program scope. Legacy `/program-head/outcomes/mapping` bookmarks redirect safely to the Program dashboard.
 4. Mapping review is read-only: the Program Head inspects valid mappings and readiness gaps but cannot create or remove mapping rows. Faculty maintains Course-level alignment in the Course alignment workspace; the Secretary has college-wide correction authority.
 5. Readiness reports missing CILOs and incomplete typed mappings rather than blocking incremental authoring.
 

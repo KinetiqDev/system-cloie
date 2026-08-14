@@ -10,7 +10,7 @@ Amended 2026-08-15 for Issue #377: supersedes the #372 amendment's deferred clai
 
 ## Context
 
-CLOIE recognizes three outcome layers: college-wide Institutional Learning Outcomes (ILOs), program-level Graduate Outcomes (GOs), and course-level CILOs. The college's revised policy uses two typed alignment paths: General Education CILOs map once at Course level to the shared Institutional Outcome catalog (applying to every assignment using that Course), and Program-specific CILOs map to Graduate Outcomes owned by their Course's owning Academic Program. The former General Education CILO-to-GO semantics were removed by the approved cutover.
+System CLOIE recognizes three outcome layers: college-wide Institutional Learning Outcomes (ILOs), program-level Graduate Outcomes (GOs), and course-level CILOs. The college's revised policy uses two typed alignment paths: General Education CILOs map once at Course level to the shared Institutional Outcome catalog (applying to every assignment using that Course), and Program-specific CILOs map to Graduate Outcomes owned by their Course's owning Academic Program. The former General Education CILO-to-GO semantics were removed by the approved cutover.
 
 Operational responsibility shifted in the same revision: Faculty is the primary mapper in the Course context, the Secretary owns the catalog and holds college-wide correction authority, Program Heads retain GO ownership but review mappings read-only, and the Dean has college-wide read-only oversight. The Wayfinder map "Dean dashboard information architecture" (Issue #103) accepted the role-owned-route rule that this model extends.
 
