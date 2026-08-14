@@ -193,4 +193,24 @@ describe("Supabase migration integrity", () => {
     expect(migration).not.toContain("CREATE TRIGGER");
     expect(migration).not.toContain("DROP TRIGGER");
   });
+
+  it("versions readiness snapshots without weakening their immutability", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20260814130000_version_readiness_snapshots.sql",
+      "utf8"
+    );
+
+    expect(migration).toContain("BEGIN;");
+    expect(migration).toContain("COMMIT;");
+    // Existing rows keep the legacy version through the column default.
+    expect(migration).toContain(
+      'ALTER TABLE "academic_period_readiness_snapshots"'
+    );
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS "schema_version" INTEGER NOT NULL DEFAULT 1/);
+    // The immutable UPDATE/DELETE trigger stays in force.
+    expect(migration).not.toMatch(/DROP TRIGGER/i);
+    expect(migration).not.toMatch(/CREATE TRIGGER/i);
+    expect(migration).not.toMatch(/UPDATE "academic_period_readiness_snapshots"/);
+    expect(migration).not.toMatch(/DELETE FROM "academic_period_readiness_snapshots"/);
+  });
 });

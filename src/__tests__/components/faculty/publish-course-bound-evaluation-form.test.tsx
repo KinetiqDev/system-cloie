@@ -472,4 +472,127 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     // Class Assignment picker should still be visible
     expect(screen.getAllByText(/class assignment/i).length).toBeGreaterThan(0);
   });
+
+  it("shows the Course alignment repair link on a blocked publish", async () => {
+    const previewAction = vi.fn().mockResolvedValue({
+      success: true,
+      data: [
+        {
+          email: "alice@school.edu",
+          name: "Alice Adams",
+          majorId: null,
+          majorName: null,
+          membershipId: "membership-1",
+          programCode: "BSCS",
+          programId: "program-1",
+          programName: "BS Computer Science",
+          section: "MORNING",
+          studentId: "S001",
+          userId: "user-1",
+          yearLevel: YearLevel.FIRST_YEAR,
+        },
+      ],
+    });
+    const publishAction = vi.fn().mockResolvedValue({
+      success: false,
+      error:
+        "Every active CILO must map to at least one active Graduate Outcome from the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+      alignmentCourseId: "course-1",
+    });
+
+    render(
+      <PublishCourseBoundEvaluationFormV2
+        assignments={assignments}
+        publicationContext={publicationContext}
+        previewAction={previewAction}
+        publishAction={publishAction}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/deployed evaluation name/i), {
+      target: { value: "CS101 Blocked Evaluation" },
+    });
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "assignment-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /preview respondents/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /publish evaluation/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /publish evaluation/i }));
+
+    const repairLink = await screen.findByRole("link", { name: "Open Course alignment" });
+    expect(repairLink).toHaveAttribute("href", "/faculty/cilos/course-1/alignment");
+  });
+
+  it("clears a stale Course alignment repair link when the assignment changes", async () => {
+    const previewAction = vi.fn().mockResolvedValue({
+      success: true,
+      data: [
+        {
+          email: "alice@school.edu",
+          name: "Alice Adams",
+          majorId: null,
+          majorName: null,
+          membershipId: "membership-1",
+          programCode: "BSCS",
+          programId: "program-1",
+          programName: "BS Computer Science",
+          section: "MORNING",
+          studentId: "S001",
+          userId: "user-1",
+          yearLevel: YearLevel.FIRST_YEAR,
+        },
+      ],
+    });
+    const publishAction = vi.fn().mockResolvedValue({
+      success: false,
+      error: "Complete the Course alignment to continue.",
+      alignmentCourseId: "course-1",
+    });
+
+    render(
+      <PublishCourseBoundEvaluationFormV2
+        assignments={[
+          assignments[0],
+          {
+            ...assignments[0],
+            id: "assignment-2",
+            courseCode: "CS102",
+            courseTitle: "Data Structures",
+          },
+        ]}
+        publicationContext={publicationContext}
+        previewAction={previewAction}
+        publishAction={publishAction}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/deployed evaluation name/i), {
+      target: { value: "CS101 Blocked Evaluation" },
+    });
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "assignment-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /preview respondents/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /publish evaluation/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /publish evaluation/i }));
+
+    await screen.findByRole("link", { name: "Open Course alignment" });
+
+    // Returning to configuration clears the stale repair state.
+    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
+    expect(screen.queryByRole("link", { name: "Open Course alignment" })).not.toBeInTheDocument();
+
+    // Selecting another assignment also keeps the repair state clear.
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "assignment-2" },
+    });
+    expect(screen.queryByRole("link", { name: "Open Course alignment" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Complete the Course alignment/i)).not.toBeInTheDocument();
+  });
 });

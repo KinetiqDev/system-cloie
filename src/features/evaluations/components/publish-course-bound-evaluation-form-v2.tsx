@@ -77,6 +77,34 @@ interface PublishCourseBoundEvaluationFormV2Props {
   programId?: string;
 }
 
+function PublicationErrorAlert({
+  error,
+  alignmentCourseId,
+}: {
+  error: string | null;
+  alignmentCourseId: string | null;
+}) {
+  if (!error) return null;
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>
+        {error}
+        {alignmentCourseId && (
+          <>
+            {" "}
+            <Link
+              href={`/faculty/cilos/${alignmentCourseId}/alignment`}
+              className="underline underline-offset-2 hover:text-text-primary"
+            >
+              Open Course alignment
+            </Link>
+          </>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 /**
  * Phase 6: Simplified publish form using course assignment picker.
  * Removes manual AY/semester/term inputs in favor of assignment selection.
@@ -115,6 +143,7 @@ export function PublishCourseBoundEvaluationFormV2({
 
   // Status
   const [error, setError] = useState<string | null>(null);
+  const [alignmentCourseId, setAlignmentCourseId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const router = useRouter();
@@ -197,6 +226,7 @@ export function PublishCourseBoundEvaluationFormV2({
   const handlePreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setAlignmentCourseId(null);
 
     if (!validateConfiguration()) return;
 
@@ -229,6 +259,7 @@ export function PublishCourseBoundEvaluationFormV2({
 
   const handlePublishFinal = async () => {
     setError(null);
+    setAlignmentCourseId(null);
     setIsSubmitting(true);
 
     const excluded = previewRespondents
@@ -286,6 +317,7 @@ export function PublishCourseBoundEvaluationFormV2({
       const result = await publishAction(payload);
 
       if (!result.success) {
+        setAlignmentCourseId(result.alignmentCourseId ?? null);
         setError(result.error);
         showToast(result.error, "error");
         return;
@@ -306,6 +338,8 @@ export function PublishCourseBoundEvaluationFormV2({
     setStep("configure");
     setExcludedMembershipIds([]);
     setExclusionDrafts({});
+    setError(null);
+    setAlignmentCourseId(null);
   };
 
   return (
@@ -428,7 +462,11 @@ export function PublishCourseBoundEvaluationFormV2({
             <AssignmentPicker
               assignments={assignments}
               value={selectedAssignmentId}
-              onChange={setSelectedAssignmentId}
+              onChange={(value) => {
+                setError(null);
+                setAlignmentCourseId(null);
+                setSelectedAssignmentId(value);
+              }}
               label="Class Assignment"
               placeholder="Select a class..."
             />
@@ -479,11 +517,7 @@ export function PublishCourseBoundEvaluationFormV2({
               </div>
             </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <PublicationErrorAlert error={error} alignmentCourseId={alignmentCourseId} />
 
             <Button
               type="submit"
@@ -599,11 +633,7 @@ export function PublishCourseBoundEvaluationFormV2({
               })}
             </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <PublicationErrorAlert error={error} alignmentCourseId={alignmentCourseId} />
 
             <div className="flex gap-3">
               <Button type="button" variant="outline" onClick={handleBack} disabled={isSubmitting}>

@@ -22,12 +22,23 @@ import { type ServiceResult } from "@/lib/utils/service-result";
 import { type TemplateStructure } from "@/features/instruments/types";
 import { canDeployCourseBoundEvaluation } from "../policies";
 import { isNeutralOtherExplanation } from "../exclusion-text";
+import {
+  classifyCourseAlignment,
+  type CourseAlignmentState,
+} from "@/features/outcomes/services/classify-course-alignment";
 import type {
   PublishCourseBoundEvaluationInput,
   PublishCourseBoundEvaluationResult,
 } from "../types";
 
-class PublicationValidationError extends Error {}
+class PublicationValidationError extends Error {
+  constructor(
+    message: string,
+    readonly alignmentCourseId?: string
+  ) {
+    super(message);
+  }
+}
 
 type PublicationContextDb = Prisma.TransactionClient | typeof prisma;
 
@@ -41,6 +52,32 @@ function buildPublicationStatus(activationAt: Date | null | undefined): "ACTIVE"
   }
 
   return DeploymentStatus.ACTIVE;
+}
+
+/**
+ * New-publication alignment gate: every active CILO of the locked Course must
+ * reach at least one valid active target of the Course scope's typed layer.
+ * Archived targets and wrong-layer relations never satisfy the gate.
+ */
+async function classifyPublicationAlignment(
+  db: PublicationContextDb,
+  courseId: string,
+  courseScope: CourseScope,
+  owningProgramId: string | null
+): Promise<CourseAlignmentState> {
+  const cilos = await db.cILO.findMany({
+    where: { course_id: courseId, is_active: true },
+    select: {
+      id: true,
+      cilo_mappings: {
+        select: { go: { select: { program_id: true, is_active: true } } },
+      },
+      cilo_institutional_outcome_mappings: {
+        select: { institutional_outcome: { select: { is_active: true } } },
+      },
+    },
+  });
+  return classifyCourseAlignment(cilos, courseScope, owningProgramId);
 }
 
 /**
@@ -373,6 +410,32 @@ export async function publishCourseBoundEvaluation({
               throw new PublicationValidationError("The selected template is not for this course.");
             }
 
+            // New-publication alignment gate: reject before deployment creation
+            // when any active CILO lacks a valid active target for the locked
+            // Course scope. Runs after the existing template-context validation
+            // so no-CILO and binding errors keep their established semantics.
+            // Faculty publishers receive a direct repair path.
+            const courseScope = lockedAssignment.course.course_scope as CourseScope;
+            const publicationAlignment = await classifyPublicationAlignment(
+              tx,
+              lockedAssignment.course_id,
+              courseScope,
+              lockedAssignment.course.program_id ?? null
+            );
+            if (publicationAlignment !== "ready") {
+              const targetLabel =
+                courseScope === CourseScope.GENERAL_EDUCATION
+                  ? "Institutional Outcome"
+                  : "Graduate Outcome from the Course's owning Academic Program";
+              const isFacultyPublisher = authSession.activeRole === ROLES.FACULTY;
+              throw new PublicationValidationError(
+                isFacultyPublisher
+                  ? `Every active CILO must map to at least one active ${targetLabel} before publishing. Complete the Course alignment to continue.`
+                  : `Course ${lockedAssignment.course.code} alignment is incomplete: every active CILO must map to at least one active ${targetLabel} before publishing.`,
+                isFacultyPublisher ? lockedAssignment.course_id : undefined
+              );
+            }
+
             const latestVersion = await tx.instrumentVersion.findFirst({
               where: {
                 is_active: true,
@@ -550,7 +613,11 @@ export async function publishCourseBoundEvaluation({
     throw new Error("Publication transaction retry limit exceeded.");
   } catch (error) {
     if (error instanceof PublicationValidationError) {
-      return { error: error.message, success: false };
+      return {
+        error: error.message,
+        success: false,
+        ...(error.alignmentCourseId ? { alignmentCourseId: error.alignmentCourseId } : {}),
+      };
     }
 
     if (isUniqueConstraintError(error)) {

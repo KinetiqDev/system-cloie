@@ -103,7 +103,13 @@ export type PublishCourseBoundEvaluationResult =
         targetCount: number;
       };
     }
-  | { success: false; error: string; referenceId?: string };
+  | {
+      success: false;
+      error: string;
+      referenceId?: string;
+      /** Present when the publisher is Faculty and the Course alignment repair route applies. */
+      alignmentCourseId?: string;
+    };
 
 // ============================================================================
 // Preview Respondents (Step 2 of publish flow)
