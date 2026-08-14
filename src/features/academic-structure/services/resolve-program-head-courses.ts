@@ -20,14 +20,12 @@ export type ProgramHeadCourseItem = {
   program: { id: string; code: string; name: string } | null;
   major: { id: string; name: string } | null;
   _count: { cilos: number; course_bound_evaluations: number };
-  isReadOnly: boolean;
 };
 
 export type ProgramHeadCourseSummary = {
   total: number;
   programWide: number;
   majorSpecific: number;
-  generalEducation: number;
   archived: number;
 };
 
@@ -82,65 +80,25 @@ export async function listProgramHeadCourses(
     orderBy: [{ code: "asc" }],
   });
 
-  // Fetch GE courses (read-only for PH)
-  const geCourses = await prisma.course.findMany({
-    where: {
-      course_scope: CourseScope.GENERAL_EDUCATION,
-      course_assignments: {
-        some: { program_id: selectedProgram.id, is_active: true },
-      },
-    },
-    include: {
-      major: { select: { id: true, name: true } },
-      program: { select: { id: true, code: true, name: true } },
-      course_assignments: {
-        where: { program_id: selectedProgram.id },
-        select: {
-          _count: {
-            select: {
-              course_bound_evaluations: true,
-            },
-          },
-        },
-      },
-      _count: { select: { cilos: { where: { is_active: true } } } },
-    },
-    orderBy: [{ code: "asc" }],
-  });
-
   const majors = await prisma.major.findMany({
     where: { program_id: selectedProgram.id, is_active: true },
     select: { id: true, name: true, program_id: true },
     orderBy: { name: "asc" },
   });
 
-  const courses: ProgramHeadCourseItem[] = [
-    ...programCourses.map((c) => ({
-      ...c,
-      _count: {
-        cilos: c._count.cilos,
-        course_bound_evaluations: countCourseEvaluations(c),
-      },
-      isReadOnly: false,
-    })),
-    ...geCourses.map((c) => ({
-      ...c,
-      _count: {
-        cilos: c._count.cilos,
-        course_bound_evaluations: countCourseEvaluations(c),
-      },
-      isReadOnly: true,
-    })),
-  ];
+  const courses: ProgramHeadCourseItem[] = programCourses.map((c) => ({
+    ...c,
+    _count: {
+      cilos: c._count.cilos,
+      course_bound_evaluations: countCourseEvaluations(c),
+    },
+  }));
 
   const activeProgramCourses = programCourses.filter((c) => c.is_active);
   const summary: ProgramHeadCourseSummary = {
-    total:
-      programCourses.filter((c) => c.is_active).length +
-      geCourses.filter((c) => c.is_active).length,
+    total: activeProgramCourses.length,
     programWide: activeProgramCourses.filter((c) => !c.major_id).length,
     majorSpecific: activeProgramCourses.filter((c) => c.major_id !== null).length,
-    generalEducation: geCourses.filter((c) => c.is_active).length,
     archived: programCourses.filter((c) => !c.is_active).length,
   };
 

@@ -15,8 +15,3 @@ export function getCourseScopeBadgeClass(scope: CourseScope): string {
   return scope === CourseScope.GENERAL_EDUCATION ? GENERAL_EDUCATION_CHIP : PROGRAM_WIDE_CHIP;
 }
 
-/** Categorical chip for a Program Head course type (GE / program-wide / major-specific). */
-export function getCourseTypeBadgeClass(scope: CourseScope, majorId: string | null): string {
-  if (scope === CourseScope.GENERAL_EDUCATION) return GENERAL_EDUCATION_CHIP;
-  return majorId ? MAJOR_SPECIFIC_CHIP : PROGRAM_WIDE_CHIP;
-}
