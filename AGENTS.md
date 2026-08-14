@@ -110,9 +110,7 @@ Use `pnpm dev` for the Turbopack development server.
 - Canonical design tokens live in `src/styles/tokens.css` and `src/app/globals.css`.
 - Add shadcn components with:
 
-```bash
-npx shadcn@latest add <component>
-```
+    npx shadcn@latest add <component>
 
 - Do not install `@radix-ui/*` packages.
 - Prefer existing `src/components/ui/` primitives before creating custom equivalents.
@@ -121,9 +119,7 @@ npx shadcn@latest add <component>
 
 Use:
 
-```ts
-customZodResolver
-```
+    customZodResolver
 
 ## from `src/lib/forms/zod-resolver.ts`.
 
@@ -133,16 +129,12 @@ Do not replace it with `@hookform/resolvers/zod`; the project has a Turbopack + 
 
 Request/session handling enters through:
 
-```text
-src/proxy.ts
-```
+    src/proxy.ts
 
 not `middleware.ts`.
 Supabase session refresh is implemented in:
 
-```text
-src/lib/supabase/middleware.ts
-```
+    src/lib/supabase/middleware.ts
 
 Authorization must remain server-enforced. Never trust client state alone for role, program, course, or academic-context authorization.
 
@@ -162,12 +154,10 @@ For schema changes:
 
 Typical commands:
 
-```bash
-pnpm supabase:migration:diff -- [[ORCA_RICH_MD:a83fbdd940e3068bcfe0bfea465f31b5:inline-html:%3Cchange_name%3E]]
-pnpm supabase:push:dry-run
-pnpm supabase:push
-pnpm supabase:types
-```
+    pnpm supabase:migration:diff -- [[ORCA_RICH_MD:a83fbdd940e3068bcfe0bfea465f31b5:inline-html:%3Cchange_name%3E]]
+    pnpm supabase:push:dry-run
+    pnpm supabase:push
+    pnpm supabase:types
 
 Do not hand-edit `src/types/supabase-database.ts`.
 Some Postgres constraints cannot be represented exactly by Prisma. Preserve existing SQL-backed constraints rather than replacing them with incorrect Prisma uniqueness declarations.
@@ -180,24 +170,19 @@ For Supabase, Postgres, RLS, migrations, indexes, or database-security work, loa
 Never run database integration tests or destructive commands against the shared hosted Supabase database.
 Database invariant tests require explicit opt-in:
 
-```bash
-RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db
-```
+    RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db
 
 and must target a disposable test database. The dedicated demo deployment and primary production environment are separate security boundaries. Never enable demo authentication or destructive demo-reset behavior against primary production. Follow the dedicated demo runbook and verification commands when working on demo deployment behavior.
 
 ## Static Analysis
 
-Fallow/static-analysis findings are investigation leads, not automatic refactoring instructions.
-Before deleting something Fallow reports as unused, trace the finding and inspect its consumers.
-Before refactoring for complexity or duplication, identify the module's interface, seams, tests,
-and preserved domain invariants. Check protected categories: Next.js entry points and route
-handlers, Server Actions, generated types, the shadcn public inventory, dynamic consumers, and
-domain context. Fallow findings are evidence, not instructions.
+Fallow/static-analysis findings are investigation leads, not automatic refactoring instructions. The policy is `docs/adr/0011-fallow-code-intelligence-policy.md`; the runbook is `docs/agents/fallow.md`.
 
-Never run `pnpm exec fallow fix --yes` or apply unattended bulk fixes. Start every fix with a
-dry-run (`pnpm exec fallow fix --dry-run`) or the `fix_preview` MCP tool, then review the diff.
-See the project Fallow runbook and ADR for detailed policy.
+- **Trace before deleting** — before deleting an export, file, dependency, or class member that Fallow reports unused, trace the finding and verify its consumers and domain context first.
+- **Trace before refactoring** — before refactoring for complexity or duplication, identify the module's interface, its seams, the tests that pin its behavior, and the domain invariants it carries.
+- **Protected categories** — treat as intentionally reachable: Next.js entry points and route handlers, Server Actions, generated types (`src/types/supabase-database.ts`), the shadcn/ui public inventory (`src/components/ui/**`), dynamic consumers, and domain context (`CONTEXT.md` glossaries and invariants).
+- **No unattended mutation** — never run `pnpm exec fallow fix --yes` or apply `fix_apply` results unattended; fixes start from dry-run evidence (`pnpm exec fallow fix --dry-run` / `fix_preview`).
+- **Gate** — the CI audit gate fails only on new findings in changed files; address those with traced, focused changes.
 
 ---
 
@@ -206,12 +191,10 @@ See the project Fallow runbook and ADR for detailed policy.
 Use the narrowest relevant verification first, then broaden as appropriate.
 Common commands:
 
-```bash
-pnpm vitest run <test-path>
-pnpm test
-pnpm lint
-pnpm build
-```
+    pnpm vitest run <test-path>
+    pnpm test
+    pnpm lint
+    pnpm build
 
 For UI changes, also verify the affected workflow in a running application when practical, including both **desktop and mobile** behavior. 
 
@@ -221,20 +204,14 @@ Do not consider a change complete while failures caused by the change remain unr
 
 Issues and implementation tracking belong to:
 
-```text
-KinetiqDev/system-cloie
-```
+    KinetiqDev/system-cloie
 
 Follow Conventional Commits:
 
-```text
-<type>(<optional scope>): <description>
-```
+    <type>(<optional scope>): <description>
 
 Common types:
 
-```text
-feat fix refactor perf style test docs build ops chore
-```
+    feat fix refactor perf style test docs build ops chore
 
 Keep commits focused on the bounded change. Do not include temporary agent artifacts, transcripts, or tool-generated working files unless explicitly requested.
