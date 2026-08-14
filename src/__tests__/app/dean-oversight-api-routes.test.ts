@@ -76,6 +76,8 @@ describe("Dean oversight JSON routes", () => {
       data: {
         period: { id: PERIOD_ID, label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" },
         risk: null,
+        schemaVersion: 2,
+        institutionalOutcomes: [],
         programs: [],
       },
     });
@@ -168,11 +170,14 @@ describe("Dean oversight JSON routes", () => {
     const outcomes = await getLearningOutcomes(request(`/api/dean/learning-outcomes?period=${PERIOD_ID}`));
     const enrollments = await getEnrollments(request(`/api/dean/enrollments?period=${PERIOD_ID}`));
 
+    expect(outcomes.headers.get("Cache-Control")).toBe("private, no-store");
     expect(await json(outcomes)).toEqual({
       state: "ready",
       data: {
         period: { id: PERIOD_ID, label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" },
         risk: null,
+        schemaVersion: 2,
+        institutionalOutcomes: [],
         programs: [],
       },
     });
@@ -220,6 +225,29 @@ describe("Dean oversight JSON routes", () => {
 
     expect(response.status).toBe(400);
     expect(await json(response)).toEqual({ error: "period is required." });
+  });
+
+  it("denies non-Dean learning-outcomes reads without calling the read model", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.SECRETARY });
+    const secretary = await getLearningOutcomes(
+      request(`/api/dean/learning-outcomes?period=${PERIOD_ID}`)
+    );
+    expect(secretary.status).toBe(403);
+    expect(secretary.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(getLearningOutcomesMock).not.toHaveBeenCalled();
+
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY });
+    const faculty = await getLearningOutcomes(
+      request(`/api/dean/learning-outcomes?period=${PERIOD_ID}`)
+    );
+    expect(faculty.status).toBe(403);
+
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD });
+    const programHead = await getLearningOutcomes(
+      request(`/api/dean/learning-outcomes?period=${PERIOD_ID}`)
+    );
+    expect(programHead.status).toBe(403);
+    expect(await json(programHead)).toEqual({ error: "College Dean access required." });
   });
 
   it("validates roster query trimming, length, page, and fixed page size", async () => {

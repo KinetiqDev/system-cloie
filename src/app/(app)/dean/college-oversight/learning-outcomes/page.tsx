@@ -73,8 +73,8 @@ export default async function DeanLearningOutcomesPage({
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Learning Outcomes</h1>
         <p className="text-body-md text-text-secondary max-w-2xl">
-          Read-only college oversight of Graduate Outcomes and Course Intended Learning Outcome
-          mapping gaps.
+          Read-only college oversight of Institutional Outcomes, Graduate Outcomes, and typed
+          Course Intended Learning Outcome mapping gaps.
         </p>
       </div>
       <PeriodControls periods={periods} selectedPeriodId={selectedPeriodId} risk={risk} />
@@ -139,17 +139,33 @@ export function LearningOutcomesContent({
   const programs = selectedProgram
     ? result.data.programs.filter((program) => program.id === selectedProgram)
     : result.data.programs;
-  return programs.length === 0 ? (
-    <Card>
-      <CardContent className="text-text-secondary py-6 text-sm">
-        No Academic Programs match this period and risk filter.
-      </CardContent>
-    </Card>
-  ) : (
-    <div className="flex flex-col gap-3">
-      {programs.map((program) => (
-        <ProgramDetail key={program.id} program={program} open={selectedProgram === program.id} />
-      ))}
+  return (
+    <div className="flex flex-col gap-6">
+      {result.data.schemaVersion >= 2 ? (
+        <section aria-labelledby="institutional-outcomes" className="flex flex-col gap-2">
+          <h2 id="institutional-outcomes" className="text-heading-md">
+            Institutional Outcomes
+          </h2>
+          {result.data.institutionalOutcomes.length === 0 ? (
+            <p className="text-text-secondary text-sm">No Institutional Outcomes recorded.</p>
+          ) : (
+            <CatalogList outcomes={result.data.institutionalOutcomes} />
+          )}
+        </section>
+      ) : null}
+      {programs.length === 0 ? (
+        <Card>
+          <CardContent className="text-text-secondary py-6 text-sm">
+            No Academic Programs match this period and risk filter.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {programs.map((program) => (
+            <ProgramDetail key={program.id} program={program} open={selectedProgram === program.id} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -198,6 +214,10 @@ function ProgramDetail({
   program: DeanLearningOutcomesData["programs"][number];
   open: boolean;
 }) {
+  const institutionalGaps = program.mappingGaps.filter(
+    (gap) => gap.targetType === "INSTITUTIONAL_OUTCOME"
+  );
+  const graduateGaps = program.mappingGaps.filter((gap) => gap.targetType !== "INSTITUTIONAL_OUTCOME");
   const notReady = program.missingCiloContexts + program.incompleteMappingContexts;
   const coverage =
     program.activeContexts === 0
@@ -208,9 +228,9 @@ function ProgramDetail({
       <summary className="focus-visible:ring-ring flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 p-4 outline-none marker:hidden focus-visible:ring-3">
         <span className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-medium">{program.name}</span>
-          <span className="text-text-secondary text-xs">
-            {program.graduateOutcomeCount} Graduate Outcomes · {program.mappingGaps.length} mapping
-            gaps
+          <span className="text-text-secondary text-xs tabular-nums">
+            {program.graduateOutcomeCount} Graduate Outcomes · {institutionalGaps.length}{" "}
+            Institutional Outcome gaps · {graduateGaps.length} Graduate Outcome gaps
           </span>
           <span className="text-text-secondary text-xs">
             {program.activeContexts} active · {program.readyContexts} ready ·{" "}
@@ -238,15 +258,37 @@ function ProgramDetail({
         <p className="text-text-secondary mt-4 text-sm">
           {coverage}% coverage from {program.readyContexts} of {program.activeContexts} contexts.
         </p>
-        <ProgramContent program={program} />
+        <ProgramContent
+          program={program}
+          institutionalGaps={institutionalGaps}
+          graduateGaps={graduateGaps}
+        />
       </div>
     </details>
   );
 }
 
-function ProgramContent({ program }: { program: DeanLearningOutcomesData["programs"][number] }) {
+function ProgramContent({
+  program,
+  institutionalGaps,
+  graduateGaps,
+}: {
+  program: DeanLearningOutcomesData["programs"][number];
+  institutionalGaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
+  graduateGaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
+}) {
   return (
     <div className="mt-6 flex flex-col gap-6">
+      <div>
+        <h3 className="text-sm font-semibold">Institutional Outcome mapping gaps</h3>
+        {institutionalGaps.length === 0 ? (
+          <p className="text-text-secondary mt-2 text-sm">
+            No General Education Institutional Outcome gaps.
+          </p>
+        ) : (
+          <GapList gaps={institutionalGaps} />
+        )}
+      </div>
       <div>
         <h3 className="text-sm font-semibold">Graduate Outcomes</h3>
         {program.graduateOutcomes.length === 0 ? (
@@ -254,58 +296,90 @@ function ProgramContent({ program }: { program: DeanLearningOutcomesData["progra
             No Graduate Outcomes recorded for this Program.
           </p>
         ) : (
-          <ul className="mt-2 flex flex-col divide-y rounded-lg border">
-            {program.graduateOutcomes.map((outcome) => (
-              <li
-                key={outcome.id}
-                className="flex flex-col gap-1 px-3 py-3 text-sm sm:flex-row sm:items-baseline sm:gap-3"
-              >
-                <span className="font-medium">{outcome.code}</span>
-                <span className="text-text-secondary">{outcome.statement}</span>
-                {outcome.isArchived && <Badge variant="outline">Archived</Badge>}
-              </li>
-            ))}
-          </ul>
+          <CatalogList className="mt-2" outcomes={program.graduateOutcomes} />
         )}
       </div>
       <div>
-        <h3 className="text-sm font-semibold">Affected Course and CILO mapping gaps</h3>
-        {program.mappingGaps.length === 0 ? (
-          <p className="text-text-secondary mt-2 text-sm">No affected mapping gaps.</p>
+        <h3 className="text-sm font-semibold">Graduate Outcome mapping gaps</h3>
+        {graduateGaps.length === 0 ? (
+          <p className="text-text-secondary mt-2 text-sm">
+            No Program-specific Graduate Outcome gaps.
+          </p>
         ) : (
-          <ul className="mt-2 flex flex-col gap-2">
-            {program.mappingGaps.map((gap, index) => (
-              <li
-                key={`${gap.courseId}-${gap.ciloId ?? "missing"}-${index}`}
-                className="rounded-lg border p-3 text-sm"
-              >
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                  <span className="font-medium">{gap.courseCode}</span>
-                  <span className="text-text-secondary">{gap.courseName}</span>
-                  <span className="text-text-secondary text-xs">
-                    {gap.yearLevel} · {gap.section}
-                  </span>
-                </div>
-                {gap.reason === "missing-cilos" ? (
-                  <p className="text-text-secondary mt-2">
-                    Missing CILOs. No Course Intended Learning Outcomes recorded.
-                  </p>
-                ) : (
-                  <p className="text-text-secondary mt-2">
-                    Incomplete mapping: {gap.ciloStatement}
-                    {gap.ciloIsArchived && (
-                      <Badge className="ml-2" variant="outline">
-                        Archived
-                      </Badge>
-                    )}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
+          <GapList gaps={graduateGaps} />
         )}
       </div>
     </div>
+  );
+}
+
+function CatalogList({
+  outcomes,
+  className,
+}: {
+  outcomes: DeanLearningOutcomesData["institutionalOutcomes"];
+  className?: string;
+}) {
+  return (
+    <ul className={["flex flex-col divide-y rounded-lg border", className].filter(Boolean).join(" ")}>
+      {outcomes.map((outcome) => (
+        <li
+          key={outcome.id}
+          className="flex flex-col gap-1 px-3 py-3 text-sm sm:flex-row sm:items-baseline sm:gap-3"
+        >
+          <span className="font-medium">{outcome.code}</span>
+          <span className="text-text-secondary">{outcome.statement}</span>
+          {outcome.isArchived ? <Badge variant="outline">Archived</Badge> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function GapList({
+  gaps,
+}: {
+  gaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
+}) {
+  return (
+    <ul className="mt-2 flex flex-col gap-2">
+      {gaps.map((gap, index) => (
+        <li
+          key={`${gap.courseId}-${gap.ciloId ?? "missing"}-${index}`}
+          className="rounded-lg border p-3 text-sm"
+        >
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="font-medium">{gap.courseCode}</span>
+            <span className="text-text-secondary">{gap.courseName}</span>
+            <Badge variant="outline">
+              {gap.courseScope === "GENERAL_EDUCATION" ? "General Education" : "Program-specific"}
+            </Badge>
+            <span className="text-text-secondary text-xs">
+              {gap.yearLevel} · {gap.section}
+            </span>
+          </div>
+          {gap.reason === "missing-cilos" ? (
+            <p className="text-text-secondary mt-2">
+              Missing CILOs. No Course Intended Learning Outcomes recorded.
+            </p>
+          ) : (
+            <p className="text-text-secondary mt-2">
+              {gap.targetType === "INSTITUTIONAL_OUTCOME"
+                ? "Incomplete Institutional Outcome mapping:"
+                : gap.targetType === "GRADUATE_OUTCOME"
+                  ? "Incomplete Graduate Outcome mapping:"
+                  : "Incomplete mapping:"}{" "}
+              {gap.ciloStatement}
+              {gap.ciloIsArchived ? (
+                <Badge className="ml-2" variant="outline">
+                  Archived
+                </Badge>
+              ) : null}
+            </p>
+          )}
+        </li>
+      ))}
+    </ul>
   );
 }
 

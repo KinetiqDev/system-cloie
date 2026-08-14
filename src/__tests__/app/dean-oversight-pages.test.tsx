@@ -59,6 +59,23 @@ const period = {
 const outcomeData = {
   period,
   risk: null,
+  schemaVersion: 2,
+  institutionalOutcomes: [
+    {
+      id: "ilo-1",
+      code: "ILO1",
+      statement: "Serve the community",
+      isArchived: false,
+      displayOrder: 0,
+    },
+    {
+      id: "ilo-2",
+      code: "ILO2",
+      statement: "Retired shared outcome",
+      isArchived: true,
+      displayOrder: 1,
+    },
+  ],
   programs: [
     {
       id: PROGRAM_ID,
@@ -74,9 +91,26 @@ const outcomeData = {
       ],
       mappingGaps: [
         {
+          courseId: "course-ge",
+          courseCode: "GE101",
+          courseName: "Ethics",
+          courseScope: "GENERAL_EDUCATION" as const,
+          targetType: "INSTITUTIONAL_OUTCOME" as const,
+          yearLevel: "FIRST_YEAR",
+          section: "AFTERNOON",
+          ciloId: "cilo-ge",
+          ciloStatement: "Examine civic duty",
+          ciloIsArchived: false,
+          reason: "incomplete-mapping" as const,
+          missingGraduateOutcomeIds: [],
+          missingInstitutionalOutcomeIds: ["ilo-1"],
+        },
+        {
           courseId: "course-1",
           courseCode: "CS101",
           courseName: "Foundations",
+          courseScope: "PROGRAM_SPECIFIC" as const,
+          targetType: "GRADUATE_OUTCOME" as const,
           yearLevel: "FIRST_YEAR",
           section: "MORNING",
           ciloId: "cilo-1",
@@ -84,6 +118,7 @@ const outcomeData = {
           ciloIsArchived: false,
           reason: "incomplete-mapping" as const,
           missingGraduateOutcomeIds: ["go-2"],
+          missingInstitutionalOutcomeIds: [],
         },
       ],
     },
@@ -271,7 +306,7 @@ describe("Dean oversight pages", () => {
     expect(screen.queryByText("Active contexts")).not.toBeInTheDocument();
   });
 
-  it("renders selected period, risk state, GO-first detail, mapping reason, and archived label", async () => {
+  it("renders Institutional Outcome catalog before typed mapping gaps", async () => {
     listDeanEligiblePeriodsMock.mockResolvedValue([period]);
     getDeanLearningOutcomesMock.mockResolvedValue({
       state: "ready",
@@ -297,20 +332,22 @@ describe("Dean oversight pages", () => {
       />
     );
 
-    expect(await screen.findByRole("heading", { name: "Graduate Outcomes" })).toBeInTheDocument();
-    expect(await screen.findByText("GO1")).toBeInTheDocument();
-    expect(await screen.findByText("GO2")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Institutional Outcomes" })).toBeInTheDocument();
+    expect(await screen.findByText("ILO1")).toBeInTheDocument();
     expect(
-      (await screen.findByText("GO1")).compareDocumentPosition(await screen.findByText("GO2")) &
+      (await screen.findByText("ILO1")).compareDocumentPosition(await screen.findByText("GO1")) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
-    expect(await screen.findByText("Archived")).toBeInTheDocument();
-    expect(await screen.findByText(/Incomplete mapping:/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Graduate Outcomes" })).toBeInTheDocument();
+    expect(await screen.findByText(/Incomplete Institutional Outcome mapping:/)).toBeInTheDocument();
+    expect(await screen.findByText(/Incomplete Graduate Outcome mapping:/)).toBeInTheDocument();
+    expect(screen.queryByText("missing Program GOs")).not.toBeInTheDocument();
+    expect(await screen.findAllByText("Archived")).toHaveLength(2);
     expect(
       await screen.findByText(/3 active · 2 ready · 0 missing CILOs · 1 incomplete mappings/)
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /edit|add|create|archive/i })
+      screen.queryByRole("button", { name: /edit|add|create|archive|restore|reorder/i })
     ).not.toBeInTheDocument();
     expect(getDeanLearningOutcomesMock).toHaveBeenCalledWith(PERIOD_ID, "incomplete-mappings");
   });

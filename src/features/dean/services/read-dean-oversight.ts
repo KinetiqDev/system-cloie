@@ -1,4 +1,4 @@
-import type { AcademicPeriodStatus, Prisma, StudentSection, YearLevel } from "@prisma/client";
+import type { AcademicPeriodStatus, CourseScope, Prisma, StudentSection, YearLevel } from "@prisma/client";
 import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
@@ -11,6 +11,7 @@ import {
   type PeriodReadiness,
   type ReadinessContext,
 } from "@/features/academic-calendar/services/read-period-readiness";
+import type { CourseAlignmentTargetLayer } from "@/features/outcomes/services/classify-course-alignment";
 
 export class DeanReadModelNotFoundError extends Error {}
 export class DeanReadModelBadRequestError extends Error {}
@@ -76,9 +77,35 @@ export type DeanDashboardData = {
   }>;
 };
 
+type DeanOutcomeCatalogEntry = {
+  id: string;
+  code: string;
+  statement: string;
+  isArchived: boolean;
+  displayOrder: number;
+};
+
+type DeanMappingGap = {
+  courseId: string;
+  courseCode: string;
+  courseName: string;
+  courseScope: CourseScope;
+  targetType: CourseAlignmentTargetLayer | null;
+  yearLevel: string;
+  section: string;
+  ciloId: string | null;
+  ciloStatement: string | null;
+  ciloIsArchived: boolean | null;
+  reason: "missing-cilos" | "incomplete-mapping";
+  missingGraduateOutcomeIds: string[];
+  missingInstitutionalOutcomeIds: string[];
+};
+
 export type DeanLearningOutcomesData = {
   period: DeanPeriodSummary;
+  schemaVersion: number;
   risk: "missing-cilos" | "incomplete-mappings" | "not-ready" | null;
+  institutionalOutcomes: DeanOutcomeCatalogEntry[];
   programs: Array<{
     id: string;
     name: string;
@@ -87,25 +114,8 @@ export type DeanLearningOutcomesData = {
     readyContexts: number;
     missingCiloContexts: number;
     incompleteMappingContexts: number;
-    graduateOutcomes: Array<{
-      id: string;
-      code: string;
-      statement: string;
-      isArchived: boolean;
-      displayOrder: number;
-    }>;
-    mappingGaps: Array<{
-      courseId: string;
-      courseCode: string;
-      courseName: string;
-      yearLevel: string;
-      section: string;
-      ciloId: string | null;
-      ciloStatement: string | null;
-      ciloIsArchived: boolean | null;
-      reason: "missing-cilos" | "incomplete-mapping";
-      missingGraduateOutcomeIds: string[];
-    }>;
+    graduateOutcomes: DeanOutcomeCatalogEntry[];
+    mappingGaps: DeanMappingGap[];
   }>;
 };
 
@@ -219,6 +229,120 @@ function contextMatchesRisk(
   if (risk === "incomplete-mappings") return context.state === "incomplete-mapping";
   if (risk === "not-ready") return context.state !== "ready";
   return true;
+}
+function visibleCatalog(
+  targets: Array<{
+    id: string;
+    code: string;
+    description: string;
+    isArchived: boolean;
+    order: number;
+  }>,
+  periodStatus: AcademicPeriodStatus
+): DeanOutcomeCatalogEntry[] {
+  return targets
+    .filter((target) => periodStatus === "COMPLETED" || !target.isArchived)
+    .map((target) => ({
+      id: target.id,
+      code: target.code,
+      statement: target.description,
+      isArchived: target.isArchived,
+      displayOrder: target.order,
+    }))
+    .sort((a, b) => a.displayOrder - b.displayOrder || a.code.localeCompare(b.code));
+}
+
+async function institutionalOutcomeCatalog(
+  periodStatus: AcademicPeriodStatus,
+  schemaVersion: number,
+  contexts: ReadinessContext[]
+): Promise<DeanOutcomeCatalogEntry[]> {
+  if (schemaVersion < 2) return [];
+  if (periodStatus === "ACTIVE") {
+    const rows = await prisma.institutionalOutcome.findMany({
+      select: { id: true, code: true, description: true, is_active: true, order: true },
+      orderBy: [{ order: "asc" }, { code: "asc" }],
+    });
+    return visibleCatalog(
+      rows.map((row) => ({
+        id: row.id,
+        code: row.code,
+        description: row.description,
+        isArchived: !row.is_active,
+        order: row.order,
+      })),
+      periodStatus
+    );
+  }
+  const seen = new Map<string, DeanOutcomeCatalogEntry>();
+  for (const context of contexts) {
+    for (const outcome of context.institutionalOutcomes ?? []) {
+      if (!seen.has(outcome.id)) {
+        seen.set(outcome.id, {
+          id: outcome.id,
+          code: outcome.code,
+          statement: outcome.description,
+          isArchived: outcome.isArchived,
+          displayOrder: outcome.order,
+        });
+      }
+    }
+  }
+  return [...seen.values()].sort(
+    (a, b) => a.displayOrder - b.displayOrder || a.code.localeCompare(b.code)
+  );
+}
+
+function gapTargetType(
+  context: ReadinessContext,
+  schemaVersion: number
+): CourseAlignmentTargetLayer | null {
+  if (schemaVersion < 2) return null;
+  if (context.targetType === "INSTITUTIONAL_OUTCOME" || context.targetType === "GRADUATE_OUTCOME") {
+    return context.targetType;
+  }
+  return context.courseScope === "GENERAL_EDUCATION"
+    ? "INSTITUTIONAL_OUTCOME"
+    : "GRADUATE_OUTCOME";
+}
+
+function gapCourseScope(context: ReadinessContext, assignment: AssignmentRow): CourseScope {
+  if (context.courseScope === "GENERAL_EDUCATION" || context.courseScope === "PROGRAM_SPECIFIC") {
+    return context.courseScope;
+  }
+  return assignment.course.course_scope === "GENERAL_EDUCATION"
+    ? "GENERAL_EDUCATION"
+    : "PROGRAM_SPECIFIC";
+}
+
+function incompleteCilos(context: ReadinessContext, schemaVersion: number) {
+  return context.cilos.filter((cilo) => {
+    if (cilo.isArchived) return false;
+    if (schemaVersion >= 2 && Array.isArray(cilo.mappedTargets)) {
+      return !cilo.mappedTargets.some((target) => !target.isArchived);
+    }
+    return (cilo.missingGraduateOutcomeIds?.length ?? 0) > 0;
+  });
+}
+
+function mappingGapBase(
+  assignment: AssignmentRow,
+  context: ReadinessContext,
+  periodStatus: AcademicPeriodStatus,
+  schemaVersion: number
+): Omit<
+  DeanMappingGap,
+  "ciloId" | "ciloStatement" | "ciloIsArchived" | "reason" | "missingGraduateOutcomeIds" | "missingInstitutionalOutcomeIds"
+> {
+  return {
+    courseId: assignment.course_id,
+    courseCode: assignment.course.code,
+    courseName: archivedLabel(assignment.course.title, !assignment.course.is_active, periodStatus),
+    courseScope: gapCourseScope(context, assignment),
+    targetType: gapTargetType(context, schemaVersion),
+    yearLevel: assignment.year_level,
+    section: assignment.section,
+  };
 }
 
 async function assignmentRows(periodId: string, includeArchived: boolean) {
@@ -383,8 +507,12 @@ export async function getDeanLearningOutcomes(
   }
   if (!period) return { state: "no-eligible-period" };
   const readiness = await readPeriodReadiness(period.id);
+  const schemaVersion = readiness.schemaVersion ?? 1;
   const includeArchived = period.status === "COMPLETED";
-  const assignments = await assignmentRows(period.id, includeArchived);
+  const [assignments, institutionalOutcomes] = await Promise.all([
+    assignmentRows(period.id, includeArchived),
+    institutionalOutcomeCatalog(period.status, schemaVersion, readiness.contexts),
+  ]);
   const contextsByKey = new Map(
     readiness.contexts.map((context) => [`${context.courseId}:${context.programId}`, context])
   );
@@ -397,60 +525,38 @@ export async function getDeanLearningOutcomes(
     const program = programs.get(assignment.program_id) ?? {
       id: assignment.program.id,
       name: archivedLabel(assignment.program.name, !assignment.program.is_active, period.status),
-      graduateOutcomeCount: context.graduateOutcomes.filter(
-        (go) => period.status === "COMPLETED" || !go.isArchived
-      ).length,
+      graduateOutcomeCount: 0,
       activeContexts: total.activeContexts,
       readyContexts: total.readyContexts,
       missingCiloContexts: total.missingCiloContexts,
       incompleteMappingContexts: total.incompleteMappingContexts,
-      graduateOutcomes: context.graduateOutcomes
-        .filter((go) => period.status === "COMPLETED" || !go.isArchived)
-        .map((go) => ({
-          id: go.id,
-          code: go.code,
-          statement: go.description,
-          isArchived: go.isArchived,
-          displayOrder: go.order,
-        })),
+      graduateOutcomes: [],
       mappingGaps: [],
     };
+    if (program.graduateOutcomes.length === 0 && (context.graduateOutcomes?.length ?? 0) > 0) {
+      program.graduateOutcomes = visibleCatalog(context.graduateOutcomes, period.status);
+      program.graduateOutcomeCount = program.graduateOutcomes.length;
+    }
     if (context.state === "missing-cilos") {
       program.mappingGaps.push({
-        courseId: assignment.course_id,
-        courseCode: assignment.course.code,
-        courseName: archivedLabel(
-          assignment.course.title,
-          !assignment.course.is_active,
-          period.status
-        ),
-        yearLevel: assignment.year_level,
-        section: assignment.section,
+        ...mappingGapBase(assignment, context, period.status, schemaVersion),
         ciloId: null,
         ciloStatement: null,
         ciloIsArchived: null,
         reason: "missing-cilos",
         missingGraduateOutcomeIds: [],
+        missingInstitutionalOutcomeIds: [],
       });
     } else if (context.state === "incomplete-mapping") {
-      for (const cilo of context.cilos.filter(
-        (item) => item.missingGraduateOutcomeIds.length > 0
-      )) {
+      for (const cilo of incompleteCilos(context, schemaVersion)) {
         program.mappingGaps.push({
-          courseId: assignment.course_id,
-          courseCode: assignment.course.code,
-          courseName: archivedLabel(
-            assignment.course.title,
-            !assignment.course.is_active,
-            period.status
-          ),
-          yearLevel: assignment.year_level,
-          section: assignment.section,
+          ...mappingGapBase(assignment, context, period.status, schemaVersion),
           ciloId: cilo.id,
           ciloStatement: cilo.description,
           ciloIsArchived: cilo.isArchived,
           reason: "incomplete-mapping",
-          missingGraduateOutcomeIds: cilo.missingGraduateOutcomeIds,
+          missingGraduateOutcomeIds: cilo.missingGraduateOutcomeIds ?? [],
+          missingInstitutionalOutcomeIds: cilo.missingInstitutionalOutcomeIds ?? [],
         });
       }
     }
@@ -461,7 +567,9 @@ export async function getDeanLearningOutcomes(
     state: "ready",
     data: {
       period: periodSummary(period),
+      schemaVersion,
       risk,
+      institutionalOutcomes,
       programs: [...programs.values()]
         .sort(
           (a, b) =>
