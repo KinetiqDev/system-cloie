@@ -1,4 +1,4 @@
-import { EvaluationTemplateType, Prisma } from "@prisma/client";
+import { CourseScope, EvaluationTemplateType, Prisma } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -119,7 +119,24 @@ async function resolveFacultyCourseContext(input: {
   boundMajorId?: string | null;
   boundProgramId?: string | null;
 }) {
-  if (!input.boundCourseId || !input.boundProgramId) {
+  if (!input.boundCourseId) {
+    return null;
+  }
+
+  const course = await prisma.course.findUnique({
+    where: { id: input.boundCourseId },
+    select: { course_scope: true },
+  });
+  if (!course) {
+    return null;
+  }
+
+  const isGeneralEducation = course.course_scope === CourseScope.GENERAL_EDUCATION;
+
+  // General Education Courses have no owning Program; their contexts match on
+  // Course alone so faculty can publish shared-Course evaluations. Program-specific
+  // Courses must match the bound Program and major exactly.
+  if (!isGeneralEducation && !input.boundProgramId) {
     return null;
   }
 
@@ -128,11 +145,12 @@ async function resolveFacultyCourseContext(input: {
     return null;
   }
   return (
-    contexts.data.find(
-      (context) =>
-        context.courseId === input.boundCourseId &&
-        context.programId === input.boundProgramId &&
-        context.majorId === (input.boundMajorId ?? null)
+    contexts.data.find((context) =>
+      isGeneralEducation
+        ? context.courseId === input.boundCourseId
+        : context.courseId === input.boundCourseId &&
+          context.programId === input.boundProgramId &&
+          context.majorId === (input.boundMajorId ?? null)
     ) ?? null
   );
 }
@@ -408,6 +426,60 @@ export async function duplicateFacultyTemplate(
   return { success: true, data: { id: result.id } };
 }
 
+type BoundCourseTemplate = {
+  bound_course_id: string | null;
+  bound_course: { course_scope: string } | null;
+  bound_program_id: string | null;
+  bound_major_id: string | null;
+};
+
+type CourseContextOverride = {
+  courseType: string;
+  majorName: string | null;
+  programCode: string;
+  programName: string;
+  scopeLabel: string;
+};
+
+type FacultyCourseContextLike = CourseContextOverride & {
+  courseId: string;
+  majorId: string | null;
+  programId: string;
+};
+
+async function resolvePublicationCourseContext(
+  template: BoundCourseTemplate,
+  courseContext?: CourseContextOverride | null
+): Promise<{ error: string } | { data: CourseContextOverride }> {
+  if (!template.bound_course_id || !template.bound_course) {
+    return { error: "Select a course before publishing this template." };
+  }
+
+  // General Education Courses have no owning Program; their contexts match on
+  // Course alone. Program-specific Courses must resolve through the bound
+  // Program and major.
+  if (
+    template.bound_course.course_scope !== CourseScope.GENERAL_EDUCATION &&
+    !template.bound_program_id
+  ) {
+    return { error: "Select a course before publishing this template." };
+  }
+
+  const resolved =
+    courseContext ??
+    (await resolveFacultyCourseContext({
+      boundCourseId: template.bound_course_id,
+      boundMajorId: template.bound_major_id,
+      boundProgramId: template.bound_program_id,
+    }));
+
+  if (!resolved) {
+    return { error: "The saved course context is no longer available." };
+  }
+
+  return { data: resolved };
+}
+
 export async function getFacultyTemplatePublicationContext(
   templateId: string,
   options: {
@@ -447,21 +519,14 @@ export async function getFacultyTemplatePublicationContext(
     return { success: false, error: "Faculty-owned template not found." };
   }
 
-  if (!template.bound_course_id || !template.bound_program_id || !template.bound_course) {
+  const courseResolution = await resolvePublicationCourseContext(template, options.courseContext);
+  if ("error" in courseResolution) {
+    return { success: false, error: courseResolution.error };
+  }
+  if (!template.bound_course_id || !template.bound_course) {
     return { success: false, error: "Select a course before publishing this template." };
   }
-
-  const courseContext =
-    options.courseContext ??
-    (await resolveFacultyCourseContext({
-      boundCourseId: template.bound_course_id,
-      boundMajorId: template.bound_major_id,
-      boundProgramId: template.bound_program_id,
-    }));
-
-  if (!courseContext) {
-    return { success: false, error: "The saved course context is no longer available." };
-  }
+  const courseContext = courseResolution.data;
 
   const cilos = await db.cILO.findMany({
     where: { course_id: template.bound_course_id, is_active: true },
@@ -523,7 +588,7 @@ export async function getFacultyTemplatePublicationContext(
         title: template.bound_course.title,
       },
       majorId: template.bound_major_id,
-      programId: template.bound_program_id,
+      programId: template.bound_program_id ?? "",
       template: {
         id: template.id,
         name: template.name,
