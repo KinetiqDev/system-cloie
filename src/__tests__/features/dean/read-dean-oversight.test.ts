@@ -655,6 +655,43 @@ describe("Dean oversight read model", () => {
     ]);
   });
 
+  it("does not list archived CILOs as current mapping gaps", async () => {
+    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period("COMPLETED"));
+    prismaMock.courseAssignment.findMany.mockResolvedValue([generalEducationAssignment()]);
+    const readiness = mixedReadiness("COMPLETED");
+    readiness.contexts = [
+      {
+        ...readiness.contexts[0],
+        state: "incomplete-mapping",
+        cilos: [
+          {
+            id: "cilo-archived",
+            description: "Retired CILO",
+            isArchived: true,
+            mappedTargets: [],
+            missingGraduateOutcomeIds: [],
+            missingInstitutionalOutcomeIds: ["ilo-1"],
+          },
+          {
+            id: "cilo-ge",
+            description: "Examine civic duty",
+            isArchived: false,
+            mappedTargets: [],
+            missingGraduateOutcomeIds: [],
+            missingInstitutionalOutcomeIds: ["ilo-1"],
+          },
+        ],
+      },
+    ];
+    readinessMock.mockResolvedValue(readiness);
+
+    const result = await getDeanLearningOutcomes(PERIOD_ID);
+
+    expect(result.state).toBe("ready");
+    if (result.state !== "ready") throw new Error("expected ready state");
+    expect(result.data.programs[0]?.mappingGaps.map((gap) => gap.ciloId)).toEqual(["cilo-ge"]);
+  });
+
   it("returns an explicit no-eligible-period state instead of zero coverage", async () => {
     prismaMock.academicTermInstance.findFirst.mockResolvedValue(null);
 

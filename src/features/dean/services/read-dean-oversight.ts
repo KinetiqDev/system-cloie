@@ -317,6 +317,7 @@ function gapCourseScope(context: ReadinessContext, assignment: AssignmentRow): C
 
 function incompleteCilos(context: ReadinessContext, schemaVersion: number) {
   return context.cilos.filter((cilo) => {
+    if (cilo.isArchived) return false;
     if (schemaVersion >= 2 && Array.isArray(cilo.mappedTargets)) {
       return !cilo.mappedTargets.some((target) => !target.isArchived);
     }
