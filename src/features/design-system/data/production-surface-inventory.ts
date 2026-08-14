@@ -473,6 +473,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "category": "route"
   },
   {
+    "path": "src/app/(app)/faculty/cilos/[courseId]/alignment/loading.tsx",
+    "disposition": "task",
+    "taskId": 17,
+    "category": "route"
+  },
+  {
+    "path": "src/app/(app)/faculty/cilos/[courseId]/alignment/page.tsx",
+    "disposition": "task",
+    "taskId": 17,
+    "category": "route"
+  },
+  {
     "path": "src/app/(app)/faculty/cilos/loading.tsx",
     "disposition": "task",
     "taskId": 17,
@@ -2190,6 +2202,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     "path": "src/features/legal/components/mobile-legal-document-nav.tsx",
     "disposition": "task",
     "taskId": 25,
+    "category": "feature_component"
+  },
+  {
+    "path": "src/features/outcomes/components/faculty-course-alignment-editor.tsx",
+    "disposition": "task",
+    "taskId": 17,
     "category": "feature_component"
   },
   {

@@ -63,15 +63,16 @@ describe("role onboarding account identity", () => {
   it.each([
     [
       "alumni",
-      <AlumniOnboardingForm email="alumni@example.com" name={accountName} programs={[]} />,
+      <AlumniOnboardingForm key="alumni" email="alumni@example.com" name={accountName} programs={[]} />,
     ],
     [
       "faculty",
-      <FacultyOnboardingForm email="faculty@acd.edu.ph" name={accountName} programs={[]} />,
+      <FacultyOnboardingForm key="faculty" email="faculty@acd.edu.ph" name={accountName} programs={[]} />,
     ],
     [
       "industry partner",
       <IndustryPartnerOnboardingForm
+        key="industry-partner"
         email="partner@example.com"
         name={accountName}
         programs={[]}
