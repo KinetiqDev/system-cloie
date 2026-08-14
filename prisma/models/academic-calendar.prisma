@@ -76,6 +76,7 @@ model AcademicPeriodReadinessSnapshot {
   period_id      String   @unique @db.Uuid
   contexts       Json
   program_totals Json
+  schema_version Int      @default(1)
   created_at     DateTime @default(now())
 
   period AcademicTermInstance @relation(fields: [period_id], references: [id], onDelete: Restrict)

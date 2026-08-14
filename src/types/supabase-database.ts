@@ -21,6 +21,7 @@ export type Database = {
           id: string
           period_id: string
           program_totals: Json
+          schema_version: number
         }
         Insert: {
           contexts: Json
@@ -28,6 +29,7 @@ export type Database = {
           id?: string
           period_id: string
           program_totals: Json
+          schema_version?: number
         }
         Update: {
           contexts?: Json
@@ -35,6 +37,7 @@ export type Database = {
           id?: string
           period_id?: string
           program_totals?: Json
+          schema_version?: number
         }
         Relationships: [
           {
