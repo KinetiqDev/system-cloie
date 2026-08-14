@@ -66,10 +66,10 @@ export function ToastProvider() {
       params.get("toastType") === "error"
         ? "error"
         : params.get("toastType") === "warning"
-        ? "warning"
-        : params.get("toastType") === "info"
-        ? "information"
-        : "success";
+          ? "warning"
+          : params.get("toastType") === "info"
+            ? "information"
+            : "success";
     window.dispatchEvent(
       new CustomEvent(TOAST_EVENT, {
         detail: { kind, message: toast },
@@ -88,16 +88,21 @@ export function ToastProvider() {
   }
 
   return (
-    <div className="fixed right-4 bottom-4 z-[100] flex w-[min(420px,calc(100vw-2rem))] flex-col gap-2">
+    <div
+      className="fixed right-4 bottom-4 z-[100] flex w-[min(420px,calc(100vw-2rem))] flex-col gap-2"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {toasts.map((toast) => {
         const Icon =
           toast.kind === "success"
             ? CheckCircle2
             : toast.kind === "warning"
-            ? AlertTriangle
-            : toast.kind === "information"
-            ? Info
-            : XCircle;
+              ? AlertTriangle
+              : toast.kind === "information"
+                ? Info
+                : XCircle;
         return (
           <div
             key={toast.id}
@@ -106,10 +111,10 @@ export function ToastProvider() {
               toast.kind === "success"
                 ? "border-success/40 text-success"
                 : toast.kind === "warning"
-                ? "border-warning/40 text-warning"
-                : toast.kind === "information"
-                ? "border-info/40 text-info"
-                : "border-danger/40 text-danger"
+                  ? "border-warning/40 text-warning"
+                  : toast.kind === "information"
+                    ? "border-info/40 text-info"
+                    : "border-danger/40 text-danger"
             )}
           >
             <Icon className="mt-0.5 size-4 shrink-0" />

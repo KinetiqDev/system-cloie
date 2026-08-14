@@ -3,13 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const prismaDir = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "prisma"
-);
+const prismaDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "prisma");
 const prismaModelsDir = join(prismaDir, "models");
 const prismaEntrypoint = join(prismaDir, "schema.prisma");
 
@@ -67,6 +61,7 @@ const expectedModels = [
   "FacultyProgramAffiliation",
   "GO",
   "IndustryPartnerProfile",
+  "InstitutionalOutcome",
   "InstrumentTemplate",
   "InstrumentTemplateCiloQuestionBinding",
   "InstrumentVersion",
@@ -102,15 +97,30 @@ describe("Prisma schema structure", () => {
     });
 
     expect(files).toEqual(expectedFiles);
-    expect(
-      definitions
-        .filter((definition) => definition.startsWith("enum:"))
-        .sort()
-    ).toEqual(expectedEnums.map((name) => `enum:${name}`).sort());
-    expect(
-      definitions
-        .filter((definition) => definition.startsWith("model:"))
-        .sort()
-    ).toEqual(expectedModels.map((name) => `model:${name}`).sort());
+    expect(definitions.filter((definition) => definition.startsWith("enum:")).sort()).toEqual(
+      expectedEnums.map((name) => `enum:${name}`).sort()
+    );
+    expect(definitions.filter((definition) => definition.startsWith("model:")).sort()).toEqual(
+      expectedModels.map((name) => `model:${name}`).sort()
+    );
+  });
+
+  it("keeps InstitutionalOutcome as a catalog-only college-wide model", () => {
+    const source = readFileSync(join(prismaModelsDir, "outcomes.prisma"), "utf8");
+    const match = source.match(/model InstitutionalOutcome \{[\s\S]*?\n\}/);
+
+    expect(match).not.toBeNull();
+    const model = match![0];
+
+    expect(model).toContain("code");
+    expect(model).toContain("@unique");
+    expect(model).toContain("description");
+    expect(model).toContain("order");
+    expect(model).toContain("is_active");
+    expect(model).toContain("created_at");
+    expect(model).toContain("updated_at");
+    expect(model).toContain('@@map("institutional_outcomes")');
+    expect(model).not.toContain("CILOInstitutionalOutcomeMapping");
+    expect(source).not.toContain("model CILOInstitutionalOutcomeMapping");
   });
 });

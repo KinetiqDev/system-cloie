@@ -4,7 +4,9 @@ import { ToastProvider, showToast } from "@/components/ui/toast";
 
 const pathname = "/app/planner";
 let searchParams: URLSearchParams;
-let replaceState: ReturnType<typeof vi.fn<(data: unknown, unused: string, url?: string | URL | null) => void>>;
+let replaceState: ReturnType<
+  typeof vi.fn<(data: unknown, unused: string, url?: string | URL | null) => void>
+>;
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
@@ -34,7 +36,12 @@ describe("ToastProvider", () => {
     render(<ToastProvider />);
 
     act(() => showToast("Saved successfully"));
-    expect(toastElement("Saved successfully")).toHaveClass("bg-surface", "border-success/40", "text-success");
+    expect(toastElement("Saved successfully")).toHaveClass(
+      "bg-surface",
+      "border-success/40",
+      "text-success"
+    );
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
 
     act(() => vi.advanceTimersByTime(4500));
     expect(screen.queryByText("Saved successfully")).not.toBeInTheDocument();
