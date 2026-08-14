@@ -34,10 +34,13 @@ Before implementation, design, planning, or investigation, orient through:
 3. `**src/features/<domain>/CONTEXT.md**` — domain terminology, rules, and invariants.
 4. `**docs/adr/**` — architectural decisions.
 
-Relevant OpenSpec artifacts, GitHub issues, implementation, and tests.
-When sources conflict, surface the conflict. Do not silently choose or invent behavior.
-`openspec/config.yaml` rules are binding.
----
+- Relevant OpenSpec artifacts, GitHub issues, implementation, and tests.
+- **When sources conflict, surface the conflict. Do not silently choose or invent behavior.**
+- `openspec/config.yaml` rules are binding.
+- cloie-prd.md and cloie-srs.mdare deprecated. They are outdated.
+
+
+
 ## Core Engineering Principles
 
 - Make the **smallest complete change** that satisfies the requirement.
