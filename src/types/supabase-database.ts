@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       academic_period_readiness_snapshots: {
@@ -220,24 +225,89 @@ export type Database = {
           },
         ]
       }
-      cilo_mappings: {
+      cilo_institutional_outcome_mappings: {
         Row: {
           cilo_id: string
           created_at: string
-          go_id: string
+          created_by: string
           id: string
+          institutional_outcome_id: string
+          updated_at: string
+          updated_by: string
         }
         Insert: {
           cilo_id: string
           created_at?: string
-          go_id: string
+          created_by: string
           id?: string
+          institutional_outcome_id: string
+          updated_at: string
+          updated_by: string
         }
         Update: {
           cilo_id?: string
           created_at?: string
+          created_by?: string
+          id?: string
+          institutional_outcome_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cilo_institutional_outcome_mappings_cilo_id_fkey"
+            columns: ["cilo_id"]
+            isOneToOne: false
+            referencedRelation: "cilos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cilo_institutional_outcome_mappings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cilo_institutional_outcome_mappings_institutional_outcome_id_fk"
+            columns: ["institutional_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "institutional_outcomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cilo_institutional_outcome_mappings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cilo_mappings: {
+        Row: {
+          cilo_id: string
+          created_at: string
+          created_by: string | null
+          go_id: string
+          id: string
+          updated_by: string | null
+        }
+        Insert: {
+          cilo_id: string
+          created_at?: string
+          created_by?: string | null
+          go_id: string
+          id?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cilo_id?: string
+          created_at?: string
+          created_by?: string | null
           go_id?: string
           id?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -248,10 +318,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cilo_mappings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cilo_mappings_go_id_fkey"
             columns: ["go_id"]
             isOneToOne: false
             referencedRelation: "gos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cilo_mappings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2107,4 +2191,3 @@ export const Constants = {
     },
   },
 } as const
-
