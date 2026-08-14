@@ -7,6 +7,7 @@
 - [Course Catalog and Assignments](./src/features/course-assignments/CONTEXT.md) - defines courses, class sections, teaching assignments, and evaluation scopes.
 - [Academic Structure](./src/features/academic-structure/CONTEXT.md) - defines academic programs and majors offered by the college.
 - [Curriculum](./src/features/curriculum/CONTEXT.md) - documents how Courses are placed (year level, semester, term) within an academic Program across revisions of the program's curriculum.
+- [Outcomes](./src/features/outcomes/CONTEXT.md) - defines the college-wide Institutional Learning Outcome catalog, Program-owned Graduate Outcomes, Course-level CILOs, typed alignment relations, readiness semantics, and role responsibilities.
 - [Design System](./src/features/design-system/CONTEXT.md) - defines root semantic tokens, unified appearance preferences (Light, Dark, System), protected visual showcase, and production-surface inventory.
 
 ## Relationships
@@ -18,4 +19,7 @@
 - **Course Catalog and Assignments -> Academic Calendar**: Course assignments are scoped to the active academic period.
 - **Academic Structure -> Course Catalog and Assignments**: Program-specific courses and course assignments reference the academic program that owns or scopes them.
 - **Curriculum -> Course Catalog and Assignments**: CurriculumCourse placements inform CourseAssignment creation.
+- **Academic Structure -> Outcomes**: Graduate Outcomes are owned by and scoped to Academic Programs.
+- **Course Catalog and Assignments -> Outcomes**: Course scope (General Education vs Program-specific) determines the typed alignment relation and valid target catalog for a Course's CILOs; active Course Assignments scope Faculty mapping authority and readiness contexts.
+- **Academic Calendar -> Outcomes**: Outcome readiness and completed-period readiness snapshots are scoped to academic periods.
 - **Design System -> All Contexts**: Design System provides shared semantic tokens, appearance resolution, and production component primitives consumed across all feature visual surfaces.

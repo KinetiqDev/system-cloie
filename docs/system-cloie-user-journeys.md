@@ -200,7 +200,7 @@ These are Dean-owned routes under `/dean/academic-structure/*`, not Secretary ro
 
 1. The Dean opens `/dean/dashboard`.
 2. CLOIE defaults the dashboard to the active academic period.
-3. The Dean sees count-only readiness KPIs for active Course-Program contexts, ready contexts, contexts missing CILOs, and contexts with incomplete CILO-to-GO mappings.
+3. The Dean sees count-only readiness KPIs for active Course-Program contexts, ready contexts, contexts missing CILOs, and contexts with incomplete outcome mappings.
 4. Risk cards link to the same-period Learning Outcomes view with the selected risk filter.
 5. A program readiness matrix lets the Dean compare programs and open the relevant Learning Outcomes scope.
 
@@ -211,11 +211,11 @@ The dashboard is not a response-analytics dashboard. Evaluation scores, raw resp
 1. The Dean opens `/dean/college-oversight/learning-outcomes`.
 2. The Dean selects an eligible active or completed academic period through URL-backed state.
 3. CLOIE shows program totals and readiness coverage.
-4. The Dean expands a program to see Graduate Outcomes first, followed by affected Course/CILO mapping gaps.
+4. The Dean expands a program to see Institutional Outcome coverage and General Education gaps before Program-specific Graduate Outcome coverage and gaps.
 5. Archived outcomes needed for historical context are labelled `Archived`.
 6. The Dean uses risk filters for missing CILOs, incomplete mappings, or not-ready contexts.
 
-This surface is read-only. Program Heads own Graduate Outcome authoring, Faculty own Course-level CILO authoring, and the Secretary has college-wide administrative write authority. The Dean does not edit outcomes or mappings.
+This surface is read-only. Faculty own Course-level CILO authoring and are the primary mappers, Program Heads own Graduate Outcome authoring and review mappings read-only, and the Secretary has college-wide administrative write authority over the catalog and both mapping relations. The Dean does not edit outcomes or mappings.
 
 ### 3.5 Enrollments oversight
 
@@ -264,11 +264,11 @@ For Course assignments, the Program Head can:
 
 1. The Program Head opens `/program-head/outcomes`.
 2. The Program Head creates, edits, reorders, archives, and restores Graduate Outcomes for the assigned program.
-3. The Program Head opens `/program-head/outcomes/mapping` to inspect CILO-to-GO alignment.
-4. The Program Head maintains mappings within authorized program scope, while Faculty maintains Course-level CILOs and mapping context they are authorized to change.
-5. Readiness reports missing CILOs and incomplete mappings rather than blocking incremental authoring.
+3. The Program Head opens `/program-head/outcomes/mapping` to inspect typed alignment — CILO-to-Institutional Outcome for General Education Courses, CILO-to-Graduate Outcome for Program-specific Courses — within authorized program scope.
+4. Mapping review is read-only: the Program Head inspects valid mappings and readiness gaps but cannot create or remove mapping rows. Faculty maintains Course-level alignment in the Course alignment workspace; the Secretary has college-wide correction authority.
+5. Readiness reports missing CILOs and incomplete typed mappings rather than blocking incremental authoring.
 
-Every active CILO should have at least one valid active GO mapping for a ready context. General Education CILOs are evaluated per served program, so one shared CILO can require relevant mappings for each program with an active General Education assignment.
+Every active CILO needs at least one valid active target of its Course scope's typed layer for a ready context. General Education CILOs map once at Course level to the shared Institutional Outcome catalog; that shared mapping applies to every Program with an active General Education assignment for the Course.
 
 ### 4.4 Program-owned evaluation template journey
 
@@ -356,8 +356,8 @@ Roster operations are locked when the assignment is inactive, its period is comp
 2. The Faculty Member selects an authorized Course context.
 3. The Faculty Member creates, edits, archives, or restores Course-level CILOs.
 4. CILOs remain attached to the Course across assignment periods; they are not owned by a particular assignment or copied as a new Faculty-owned outcome each term.
-5. The Faculty Member uses the available mapping workflow to connect CILOs to valid Graduate Outcomes where authorized.
-6. Readiness reflects missing active CILOs and incomplete mappings for the relevant program context.
+5. The Faculty Member opens the Course alignment workspace to connect CILOs to valid active targets: Institutional Outcomes for General Education Courses (shared at Course level, with a shared-impact warning), owning-Program Graduate Outcomes for Program-specific Courses.
+6. Readiness reflects missing active CILOs and incomplete typed mappings for the Course scope; new Course-bound evaluation publication is blocked until every active CILO has a valid active target.
 
 ### 5.4 Faculty template and Course-bound deployment journey
 
@@ -597,7 +597,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 | Faculty CSV roster import                             | Implemented in service/UI, verification partial          | Strict email-only contract; issues #130/#141/#143                                |
 | Graduate Outcome authoring                            | Implemented for Program Head; Secretary authority exists | Secretary UI/protected-write coverage is partial                                 |
 | Faculty Course-level CILO authoring                   | Implemented                                              | `/faculty/cilos` and evaluation services                                         |
-| CILO-to-GO mapping and readiness                      | Implemented with ongoing hardening                       | ADR `0005`; shared GE mapping edge cases tracked                                 |
+| Typed outcome mapping (CILO→ILO for General Education, CILO→GO for Program-specific) and readiness | Implemented                                              | ADR `0005`; Course alignment workspace, typed readiness, publication gate       |
 | Program-owned template creation and faculty access    | Implemented                                              | `manage-program-head-templates.ts`                                               |
 | Faculty-derived Course-bound templates                | Implemented                                              | `manage-faculty-templates.ts`                                                    |
 | Course-bound publication, exclusions, late inclusion  | Implemented                                              | `publish-course-bound-evaluation.ts`; roster-lock rules                          |
