@@ -901,6 +901,9 @@ describe("course roster pages", () => {
     );
 
     expect(screen.getByText("Suggested match")).toBeInTheDocument();
+    // Suggested rows need review even when the disposition is ready.
+    expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready: 0" })).toBeInTheDocument();
     // Already-active rows stay informational: exactly two rows offer Skip.
     expect(screen.getAllByRole("button", { name: "Skip" })).toHaveLength(2);
 

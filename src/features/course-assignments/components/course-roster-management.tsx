@@ -173,19 +173,9 @@ function rowGroup(
   skippedIndexes: ReadonlySet<number>
 ): PreviewFilter {
   if (skippedIndexes.has(row.sourceIndex)) return "skipped";
-  switch (row.disposition) {
-    case "ALREADY_ACTIVE":
-      return "already-active";
-    case "READY_CREATE":
-    case "WILL_RESTORE":
-      return "ready";
-    case "INELIGIBLE":
-    case "OTHER_SECTION_CONFLICT":
-      return "resolve";
-    case null:
-      break;
-  }
+  if (row.disposition === "ALREADY_ACTIVE") return "already-active";
   if (row.resolution.status === "SUGGESTED_MATCH") return "review";
+  if (row.disposition === "READY_CREATE" || row.disposition === "WILL_RESTORE") return "ready";
   return "resolve";
 }
 
@@ -531,7 +521,11 @@ function PreviewResultsBlock({
                   <Badge variant="secondary">Skipped</Badge>
                 ) : (
                   <>
-                    {resolutionBadge(row.resolution)}
+                    {selectedCandidateByIndex[row.sourceIndex] ? (
+                      <Badge variant="success">Selected</Badge>
+                    ) : (
+                      resolutionBadge(row.resolution)
+                    )}
                     {dispositionBadge(row.disposition)}
                   </>
                 )}
