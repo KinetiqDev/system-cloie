@@ -83,14 +83,14 @@ export const confirmRosterResolutionSchema = z
     rows: z
       .array(
         z.object({
-          sourceIndex: z.number().int().nonnegative().max(COURSE_ROSTER_MAX_ROWS - 1),
+          sourceIndex: z.number().int().nonnegative().max(COURSE_ROSTER_MAX_ROWS + 1),
           studentUserId: z.string().uuid(),
         })
       )
       .min(1)
       .max(COURSE_ROSTER_MAX_ROWS),
     skippedIndexes: z
-      .array(z.number().int().nonnegative().max(COURSE_ROSTER_MAX_ROWS - 1))
+      .array(z.number().int().nonnegative().max(COURSE_ROSTER_MAX_ROWS + 1))
       .max(COURSE_ROSTER_MAX_ROWS),
     suggestedAcknowledged: z.boolean(),
   })

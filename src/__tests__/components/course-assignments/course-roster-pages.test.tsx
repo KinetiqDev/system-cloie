@@ -706,6 +706,10 @@ describe("course roster pages", () => {
         },
       },
     });
+    vi.spyOn(rosterActions, "confirmRosterResolutionAction").mockResolvedValue({
+      success: true,
+      data: { rows: [{ sourceIndex: 2, outcome: "CREATED", error: null }] },
+    });
     render(<RosterManagementDialog assignmentId="assignment-1" />);
     fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
     expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
@@ -727,7 +731,10 @@ describe("course roster pages", () => {
     expect(screen.getByRole("button", { name: "Skip" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
-    expect(screen.getByText(/The preview session is ready\./)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument()
+    );
+    expect(screen.getByText("Added to roster")).toBeInTheDocument();
     expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
   });
 
@@ -769,6 +776,15 @@ describe("course roster pages", () => {
         summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
       },
     });
+    vi.spyOn(rosterActions, "confirmRosterResolutionAction").mockResolvedValue({
+      success: true,
+      data: {
+        rows: [
+          { sourceIndex: 2, outcome: "CREATED", error: null },
+          { sourceIndex: 3, outcome: "UNPROCESSED", error: "This row was not processed." },
+        ],
+      },
+    });
     render(<RosterManagementDialog assignmentId="assignment-1" />);
     fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -789,12 +805,18 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[1]);
     expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
-    expect(screen.getByText(/The preview session is ready\./)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument()
+    );
+    expect(screen.getByText("Added to roster")).toBeInTheDocument();
+    expect(screen.getAllByText("Not processed").length).toBeGreaterThan(0);
 
-    // Closing a dirty preview asks before discarding the session state.
+    // Confirmed results are final: Done closes without a discard prompt.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Done" })).toBeEnabled()
+    );
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("Discard preview?");
-    fireEvent.click(screen.getByRole("button", { name: "Discard preview" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole("button", { name: /manage roster/i }))
@@ -1684,5 +1706,283 @@ describe("buildReviewGuards", () => {
       5: undefined,
       6: candidate("student-3"),
     });
+  });
+});
+
+describe("course roster confirmation results", () => {
+  it("shows grouped confirmation results and an opaque support reference", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: "FIRST_YEAR",
+                section: "MORNING",
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+          {
+            sourceIndex: 3,
+            submittedName: "Juan Dela Cruz",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-2"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-2",
+                name: "Juan Dela Cruz",
+                email: "juan.delacruz@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: "FIRST_YEAR",
+                section: "MORNING",
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+          {
+            sourceIndex: 4,
+            submittedName: "Active Student",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-3"] },
+            disposition: "ALREADY_ACTIVE",
+            candidates: [
+              {
+                userId: "student-3",
+                name: "Active Student",
+                email: "active.student@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: "FIRST_YEAR",
+                section: "MORNING",
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: { readyToCreate: 2, willRestore: 0, alreadyActive: 1, needsReview: 0, ineligible: 0 },
+      },
+    });
+    vi.spyOn(rosterActions, "confirmRosterResolutionAction").mockResolvedValue({
+      success: true,
+      data: {
+        rows: [
+          { sourceIndex: 2, outcome: "CREATED", error: null },
+          { sourceIndex: 3, outcome: "OTHER_SECTION_CONFLICT", error: "Student is already active in another section for this Course and Academic Period." },
+        ],
+        referenceId: "ref-abc-123",
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nMaria Santos\nJuan Dela Cruz\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+    );
+    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    await waitFor(() =>
+      expect(screen.getAllByText(/Confirmation complete|Confirmation stopped/).length).toBeGreaterThan(0)
+    );
+    expect(screen.getByText("Added to roster")).toBeInTheDocument();
+    expect(screen.getByText("Other section conflict")).toBeInTheDocument();
+    expect(screen.getByText(/Support reference: ref-abc-123/)).toBeInTheDocument();
+    expect(screen.getByText("Added", { selector: "dt" })).toBeInTheDocument();
+    expect(screen.getByText("Not added", { selector: "dt" })).toBeInTheDocument();
+    // Already-active rows stay informational: they carry no confirmation outcome.
+    expect(screen.getAllByText("Already active").length).toBeGreaterThan(0);
+    expect(screen.getByText("Active Student")).toBeInTheDocument();
+    expect(screen.getByText("Already active", { selector: "dt" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Already active", { selector: "dt" }).parentElement
+    ).toHaveTextContent("1");
+    // Confirmed results are final: Back is not offered after confirmation.
+    expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
+  });
+
+  it("exports failed rows as row,name,status,error without candidate emails", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: "FIRST_YEAR",
+                section: "MORNING",
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+      },
+    });
+    vi.spyOn(rosterActions, "confirmRosterResolutionAction").mockResolvedValue({
+      success: true,
+      data: {
+        rows: [
+          { sourceIndex: 2, outcome: "UNEXPECTED_FAILURE", error: "The roster request could not be completed." },
+        ],
+        referenceId: "ref-uuid-1",
+      },
+    });
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:export");
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+    );
+    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /download failed rows/i })).toBeEnabled()
+    );
+    // UNEXPECTED_FAILURE is an attempted row: it groups under Not added,
+    // not Not processed.
+    expect(screen.getByText("Unexpected failure")).toBeInTheDocument();
+    expect(screen.getByText("Not added", { selector: "dt" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /download failed rows/i }));
+    const csvBlob = createObjectURL.mock.calls[0]?.[0] as Blob;
+    const csvText = await csvBlob.text();
+    expect(csvText).toContain("row,name,status,error");
+    expect(csvText).toContain("Maria Santos");
+    expect(csvText).toContain("UNEXPECTED_FAILURE");
+    expect(csvText).not.toContain("maria.santos@acd.edu.ph");
+    expect(csvText).not.toContain("ref-uuid-1");
+  });
+
+  it("requires the confirm action to be the manual-add mutation with the selected account id", async () => {
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /add one student/i }));
+    vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        candidates: [
+          {
+            userId: "student-9",
+            name: "Maria Santos",
+            email: "maria.santos@acd.edu.ph",
+            programId: "program-1",
+            programCode: "BSED",
+            programName: "Education",
+            yearLevel: null,
+            section: null,
+            majorName: null,
+            selectable: true,
+            reason: null,
+          },
+        ],
+      },
+    });
+    const addSpy = vi.spyOn(rosterActions, "addRosterMembershipAction");
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Maria" } });
+    fireEvent.click(await screen.findByRole("button", { name: /maria santos/i }));
+    fireEvent.submit(screen.getByRole("button", { name: /add student/i }).closest("form")!);
+    await waitFor(() =>
+      expect(addSpy).toHaveBeenCalledWith({
+        assignmentId: "assignment-1",
+        studentUserId: "student-9",
+      })
+    );
+  });
+
+  it("shows informational already-active results when nothing needs writing", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Active Student",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "ALREADY_ACTIVE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Active Student",
+                email: "active.student@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: "FIRST_YEAR",
+                section: "MORNING",
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 1, needsReview: 0, ineligible: 0 },
+      },
+    });
+    const confirmSpy = vi.spyOn(rosterActions, "confirmRosterResolutionAction");
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nActive Student\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+    );
+    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument()
+    );
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getAllByText("Already active").length).toBeGreaterThan(0);
+    expect(screen.getByText("Active Student")).toBeInTheDocument();
   });
 });
