@@ -19,7 +19,7 @@ Google OAuth is the only primary Production authentication mechanism. There are 
 
 Secretary-created accounts must be **complete for their selected CLOIE account role at creation time**, using the existing role-specific tables and exact normalized email matching for Google OAuth. The feature does not introduce new profile schema, password handling, or email delivery.
 
-The identity-name authority defined here is partially superseded by [ADR 0014: Google-Authoritative Account Names](0014-google-authoritative-account-names.md). This ADR remains authoritative for role completeness, atomic creation, enrollment, program, verification, and account-state rules. Only the source and overwrite behavior of the base account name changes.
+The identity-name authority defined here is partially superseded by [ADR 0014: Google-Authoritative Account Names](0014-google-authoritative-account-names.md). The Student ID requirement is superseded by [ADR 0015: Name-Based Course Roster Resolution and Student ID Removal](0015-name-based-course-roster-resolution-and-student-id-removal.md). This ADR remains authoritative for role completeness, atomic creation, enrollment, program, verification, and account-state rules.
 
 ### Role completeness rules
 
@@ -29,7 +29,7 @@ The identity-name authority defined here is partially superseded by [ADR 0014: G
 | College Dean | Provisional account name, ACD institutional email | `User` + `UserRole` |
 | Program Head | Provisional account name, ACD institutional email, exactly one managed program | `User` + `UserRole` + `ProgramHeadAssignment` (active) |
 | Faculty | Provisional account name, ACD institutional email, one primary program affiliation | `User` + `UserRole` + `FacultyProgramAffiliation` (active, primary) |
-| Student | Provisional account name, ACD institutional email, program, student ID number, year level, section, and major when the program has active majors | `User` + `UserRole` + `StudentAcademicProfile`; plus `StudentEnrollment` in the active term when one exists |
+| Student | Provisional account name, ACD institutional email, program, year level, section, and major when the program has active majors | `User` + `UserRole` + `StudentAcademicProfile`; plus `StudentEnrollment` in the active term when one exists |
 | Alumni | Provisional account name, any valid email, program, graduation year, and major when the program has active majors | `User` + `UserRole` + `AlumniProfile` (approved) |
 | Industry Partner | Provisional account name, any valid email, company/organization name, optional position, optional affiliated program | `User` + `UserRole` + `IndustryPartnerProfile` (approved) |
 

@@ -173,7 +173,7 @@ A Secretary-provided academic enrollment record for a Student account in the act
 _Avoid_: Self-declared enrollment, optional profile note
 
 **Student academic profile**:
-The static academic identity for a Student account, including student ID number, academic program, and applicable major when the selected program has majors in the catalog.
+The stable academic affiliation for a Student account, including academic program and an applicable major when the selected program has active majors. System CLOIE does not collect or treat a Student-entered institutional ID as authoritative identity.
 _Avoid_: Current enrollment, year level record, section record
 
 **Deferred enrollment**:

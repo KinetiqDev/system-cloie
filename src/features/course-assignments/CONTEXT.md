@@ -33,8 +33,12 @@ A Student's active or inactive inclusion in one Course-assignment roster. A Stud
 _Avoid_: Term enrollment, duplicate class assignment
 
 **Course roster import**:
-A partial-success bulk operation that creates or restores Course-assignment memberships from Student email addresses. Its input is a UTF-8 CSV with exactly one unquoted `email` header and at most 500 email rows. Invalid file structure aborts the import before any roster write; row-content errors use safe per-row results. Its fixed template is generated in the browser. It trims and case-normalizes email addresses, processes the first occurrence, and reports each later duplicate row as an error. It batch-reads eligibility data and sequentially commits each eligible membership in a short transaction. It reports the safe, row-specific result for every submitted email without exposing internal system failures and can export only failed email rows with their safe error messages. Per-row import results are session-only; durable membership audit fields record roster changes.
+A preview-first partial-success operation that reconciles at most 100 official Student-name rows against assignment-scoped eligible accounts before creating or restoring Course-assignment memberships. Every source row remains independent, names are lookup inputs rather than identity, unresolved rows require explicit resolution or skip, and confirmed writes use `User.id` with current server revalidation.
 _Avoid_: Atomic roster replacement, database error report
+
+**Roster name resolution**:
+The authorized discovery and human-reconciliation step that compares one uploaded name with a bounded Course-assignment candidate population. Exact, suggested, ambiguous, and no-match states describe discovery evidence only; confirmed `User.id` identifies the Student.
+_Avoid_: Name identity, automatic fuzzy match, normalized Student name
 
 **Roster failure**:
 An expected roster validation, eligibility, permission, or lifecycle outcome is reported with a specific safe message. An unexpected failure is reported with a generic safe message and support reference ID; its diagnostic detail stays in server-side structured logs. During an import it stops remaining processing while preserving completed memberships.
@@ -53,7 +57,7 @@ The shared, server-authorized, paginated, and searchable view of Students in one
 _Avoid_: Separate administrator roster page, all-program student list
 
 **Faculty roster management**:
-Faculty management of Course-assignment memberships for an active Course assignment they own. It permits adding existing Students by email, bulk importing emails, and soft-removing memberships after confirmation that states its roster-only and future-evaluation effect; it does not permit changing Student profiles or term placement.
+Faculty management of Course-assignment memberships for an active Course assignment they own. It permits scoped Student search, preview-first name-roster reconciliation, and soft removal after confirmation that states its roster-only and future-evaluation effect; it does not permit changing Student profiles or term placement.
 _Avoid_: Student administration, term enrollment administration
 
 **Course roster manager**:
@@ -77,7 +81,7 @@ A Student whose active Course-assignment membership no longer has an eligible ac
 _Avoid_: Automatically removed Student, eligible evaluation recipient
 
 **Roster eligibility reason**:
-The exact safe business reason a roster manager sees when an email cannot be added to a Course-assignment roster or a Student cannot receive a Course-bound evaluation: unknown account, non-Student account, account inactive, profile incomplete, no active term placement, or program mismatch. It never includes internal identifiers, private account metadata, or technical failure detail.
+The exact safe business reason a roster manager sees when a selected account cannot join a Course-assignment roster or a Student cannot receive a Course-bound evaluation: unknown or out-of-scope account, non-Student account, account inactive, profile incomplete, no active term placement, program mismatch, or membership conflict. It never includes internal identifiers, private account metadata, or technical failure detail.
 _Avoid_: Raw account state, server error explanation
 
 **Secretary course assignment operations**:

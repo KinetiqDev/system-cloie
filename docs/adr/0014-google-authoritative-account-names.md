@@ -74,7 +74,7 @@ This decision does not change:
 - Exact normalized email matching for the initial link.
 - The one active CLOIE account role invariant.
 - Secretary-created account role completeness and atomicity.
-- Student profile, enrollment, roster eligibility, evaluation targeting, or external verification rules.
+- Student profile, enrollment, roster eligibility, evaluation targeting, or external verification rules, except where ADR 0015 later removes Student ID and permits temporary authorized name comparison for Course roster resolution.
 - Server-side authorization or account-state handling.
 
 If an email match belongs to a User already linked to a different `auth_user_id`, the callback must fail closed. It must not replace the existing Auth link or change the stored name.
@@ -100,6 +100,8 @@ If an email match belongs to a User already linked to a different `auth_user_id`
 ## Supersession
 
 This ADR supersedes only the identity-name source and OAuth overwrite portions of [ADR 0001: Complete Secretary-Created Accounts](0001-complete-secretary-created-accounts.md). ADR 0001 remains authoritative for complete-at-creation role requirements, atomic writes, email-domain rules, enrollment behavior, conditional majors, and external verification.
+
+[ADR 0015: Name-Based Course Roster Resolution and Student ID Removal](0015-name-based-course-roster-resolution-and-student-id-removal.md) later permits temporary normalization of this opaque name solely for authorized Course roster candidate discovery. It does not weaken the canonical-name ownership or persistence rules in this ADR.
 
 ## Related
 

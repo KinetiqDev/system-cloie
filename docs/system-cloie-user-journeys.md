@@ -77,7 +77,7 @@ Secretary-created account requirements:
 | Secretary or Dean | First name, last name, ACD email                                                                                                                     |
 | Program Head      | First name, last name, ACD email, exactly one managed program                                                                                        |
 | Faculty           | First name, last name, ACD email, one primary Faculty Program affiliation                                                                            |
-| Student           | First name, last name, ACD email, Student ID number, program, year level, section, and major when the selected program has active majors             |
+| Student           | Provisional account name, ACD email, program, year level, section, and major when the selected program has active majors                              |
 | Alumni            | First name, last name, valid email, program, graduation year, and major when the selected program has active majors; verification starts as approved |
 | Industry Partner  | First name, last name, valid email, company or organization, optional position, optional affiliated program; verification starts as approved         |
 
@@ -392,7 +392,7 @@ The Student role includes regular and graduating Students. Graduating status cha
 3. A self-service Student claim collects Student academic profile information and self-declared active-term placement when a term exists.
 4. A Secretary-created Student already has the static profile and, when possible, a Secretary-recorded active-term enrollment.
 5. If no active term exists, CLOIE places the Student in deferred enrollment and shows a dashboard-only warning until an active placement is available.
-6. The Student profile includes Student ID number, academic program, applicable major, and current term placement fields such as year level and section.
+6. The Student profile includes academic program, applicable major, and current term placement fields such as year level and section. System CLOIE does not collect a Student-entered institutional ID.
 
 ### 6.2 Receiving assigned evaluations
 
