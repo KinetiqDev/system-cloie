@@ -75,6 +75,7 @@ import {
   parseCourseRosterCsv,
 } from "../services/course-roster-csv";
 import { WizardStepper } from "./shared/wizard-stepper";
+import { ScopedRosterStudentSearch } from "./scoped-roster-student-search";
 
 function MutationMessage({ message }: { message: string | null }) {
   if (!message) return null;
@@ -675,7 +676,8 @@ function AddRosterMember({
       <div>
         <h2 className="text-title-md">Add Student to roster</h2>
         <p className="text-body-sm text-muted-foreground">
-          Enter existing Student account email. Eligibility is checked against this assignment.
+          Search assignment-scoped Students or enter an existing Student account email. Eligibility is
+          checked against this assignment.
         </p>
       </div>
       <form className="flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={submit}>
@@ -699,6 +701,11 @@ function AddRosterMember({
           {isPending ? "Adding..." : "Add Student"}
         </Button>
       </form>
+      <ScopedRosterStudentSearch
+        assignmentId={assignmentId}
+        programId={programId}
+        onSelect={(candidate) => setEmail(candidate.email)}
+      />
       <MutationMessage message={message} />
     </div>
   );
