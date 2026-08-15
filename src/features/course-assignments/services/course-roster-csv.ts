@@ -25,63 +25,65 @@ function decodeCsv(input: string | Uint8Array) {
   }
 }
 
-function parseRecords(input: string): Array<{ cells: string[]; sourceIndex: number }> | null {
-  const records: Array<{ cells: string[]; sourceIndex: number }> = [];
-  let cells: string[] = [];
-  let cell = "";
-  let quoted = false;
-  let quoteClosed = false;
-  let atCellStart = true;
-  let sourceIndex = 1;
-  let line = 1;
+type CsvCell = { value: string; nextIndex: number; lineBreaks: number };
 
-  function finishRecord() {
-    cells.push(cell);
-    records.push({ cells, sourceIndex });
-    cells = [];
-    cell = "";
-    atCellStart = true;
-    quoteClosed = false;
-    sourceIndex = line + 1;
-  }
+function parsePlainCsvCell(input: string, startIndex: number): CsvCell | null {
+  const endIndex = input.slice(startIndex).search(/[\n,]/u);
+  const nextIndex = endIndex === -1 ? input.length : startIndex + endIndex;
+  const value = input.slice(startIndex, nextIndex);
+  return value.includes('"') ? null : { value, nextIndex, lineBreaks: 0 };
+}
 
-  for (let index = 0; index < input.length; index += 1) {
-    const character = input[index];
-    if (quoted) {
-      if (character === '"') {
-        if (input[index + 1] === '"') {
-          cell += '"';
-          index += 1;
-        } else {
-          quoted = false;
-          quoteClosed = true;
-        }
-      } else {
-        if (character === "\n") line += 1;
-        cell += character;
-      }
+function parseQuotedCsvCell(input: string, startIndex: number): CsvCell | null {
+  let value = "";
+  let lineBreaks = 0;
+  for (let index = startIndex + 1; index < input.length; index += 1) {
+    if (input[index] !== '"') {
+      if (input[index] === "\n") lineBreaks += 1;
+      value += input[index];
       continue;
     }
-
-    if (character === '"') {
-      if (!atCellStart) return null;
-      quoted = true;
-    } else if (character === ",") {
-      cells.push(cell);
-      cell = "";
-      atCellStart = true;
-    } else if (character === "\n") {
-      finishRecord();
-      line += 1;
-    } else {
-      if (quoteClosed) return null;
-      cell += character;
-      atCellStart = false;
+    if (input[index + 1] === '"') {
+      value += '"';
+      index += 1;
+      continue;
     }
+    const nextIndex = index + 1;
+    if (nextIndex < input.length && ![",", "\n"].includes(input[nextIndex])) return null;
+    return { value, nextIndex, lineBreaks };
   }
+  return null;
+}
 
-  if (quoted) return null;
-  if (cell !== "" || cells.length > 0) finishRecord();
+function parseCsvCell(input: string, startIndex: number): CsvCell | null {
+  return input[startIndex] === '"'
+    ? parseQuotedCsvCell(input, startIndex)
+    : parsePlainCsvCell(input, startIndex);
+}
+
+function parseRecords(input: string): Array<{ cells: string[]; sourceIndex: number }> | null {
+  const records: Array<{ cells: string[]; sourceIndex: number }> = [];
+  let index = 0;
+  let line = 1;
+
+  while (index < input.length) {
+    const sourceIndex = line;
+    const cells: string[] = [];
+    while (true) {
+      const cell = parseCsvCell(input, index);
+      if (!cell) return null;
+      cells.push(cell.value);
+      index = cell.nextIndex;
+      line += cell.lineBreaks;
+      if (input[index] !== ",") break;
+      index += 1;
+    }
+    records.push({ cells, sourceIndex });
+    if (index === input.length) break;
+    if (input[index] !== "\n") return null;
+    index += 1;
+    line += 1;
+  }
   return records;
 }
 
