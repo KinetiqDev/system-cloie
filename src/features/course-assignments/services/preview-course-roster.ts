@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { ROLES } from "@/lib/constants/roles";
-import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { prisma } from "@/lib/db/prisma";
 
 import type { PreviewCourseRosterInput } from "../schemas/course-assignment";
 import type {
@@ -13,25 +12,10 @@ import type {
   CourseRosterPreviewRow,
   RosterServiceResult,
 } from "../types";
-import {
-  projectRosterEligibility,
-  resolveAuthorizedCourseAssignmentRoster,
-  rosterStudentProfileSelect,
-  type RosterEligibilityStudent,
-} from "./course-assignment-roster";
 import { matchRosterName, type RosterNameCandidate } from "./course-roster-name-match";
+import { loadScopedRosterCandidates } from "./course-roster-candidate-scope";
 
 const SAFE_FAILURE_ERROR = "The roster preview could not be completed.";
-
-type BatchStudent = {
-  id: string;
-  name: string;
-  email: string;
-  roles: Array<{ role: RosterEligibilityStudent["roles"][number]["role"] }>;
-  is_active: boolean;
-  student_profile: RosterEligibilityStudent["student_profile"];
-  enrollments: RosterEligibilityStudent["enrollments"];
-};
 
 function previewFailure(
   operation: string,
@@ -78,39 +62,12 @@ export async function previewCourseRoster(
     }
     actorId = session.userId;
 
-    const authorization = await resolveAuthorizedCourseAssignmentRoster(input.assignmentId, {
-      manage: true,
-      programId: input.programId,
-    });
-    if (!authorization.success) {
-      return authorization;
-    }
-    const assignment = authorization.data;
-
-    const students = await prisma.user.findMany({
-      where: {
-        roles: { some: { role: ROLES.STUDENT } },
-        is_active: true,
-        student_profile: { isNot: null },
-        enrollments: {
-          some: { term_instance_id: assignment.termInstanceId, is_active: true },
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: { select: { role: true } },
-        is_active: true,
-        student_profile: { select: rosterStudentProfileSelect },
-        enrollments: {
-          where: { term_instance_id: assignment.termInstanceId, is_active: true },
-          select: { program_id: true },
-        },
-      },
-    });
-
-    const studentIds = students.map((student) => student.id);
+    const scoped = await loadScopedRosterCandidates(input.assignmentId, input.programId);
+    if (!scoped.success) return scoped;
+    const { assignment, candidates } = scoped.data;
+    const selectable = candidates.filter((candidate) => candidate.selectable);
+    const diagnostics = candidates.filter((candidate) => !candidate.selectable);
+    const studentIds = candidates.map((candidate) => candidate.userId);
     const [memberships, conflicts] = await Promise.all([
       prisma.courseAssignmentMembership.findMany({
         where: { course_assignment_id: assignment.assignmentId, student_user_id: { in: studentIds } },
@@ -128,32 +85,17 @@ export async function previewCourseRoster(
         select: { student_user_id: true },
       }),
     ]);
-
     const membershipByStudentId = new Map(
       memberships.map((membership) => [membership.student_user_id, membership])
     );
     const conflictingStudentIds = new Set(conflicts.map((conflict) => conflict.student_user_id));
 
-    const selectable: BatchStudent[] = [];
-    const diagnostics: BatchStudent[] = [];
-    for (const student of students) {
-      const projection = projectRosterEligibility(
-        { courseScope: assignment.courseScope, programId: assignment.programId },
-        student
-      );
-      if (projection.eligible) {
-        selectable.push(student);
-      } else {
-        diagnostics.push(student);
-      }
-    }
-
     const selectableCandidates: RosterNameCandidate[] = selectable.map((student) => ({
-      id: student.id,
+      id: student.userId,
       name: student.name,
     }));
     const diagnosticCandidates: RosterNameCandidate[] = diagnostics.map((student) => ({
-      id: student.id,
+      id: student.userId,
       name: student.name,
     }));
 
@@ -225,36 +167,25 @@ export async function previewCourseRoster(
     return { success: true, data: { assignmentId: assignment.assignmentId, rows, summary } };
 
     function toPreviewCandidate(studentId: string): CourseRosterPreviewCandidate {
-      const student = selectable.find((candidate) => candidate.id === studentId) ??
-        diagnostics.find((candidate) => candidate.id === studentId);
+      const student = candidates.find((candidate) => candidate.userId === studentId);
       if (!student) {
         return { userId: studentId, name: "", email: "", programId: "", selectable: false, reason: null };
       }
-      const projection = projectRosterEligibility(
-        { courseScope: assignment.courseScope, programId: assignment.programId },
-        student
-      );
       return {
-        userId: student.id,
+        userId: student.userId,
         name: student.name,
         email: student.email,
-        programId: student.student_profile?.program_id ?? "",
-        selectable: projection.eligible,
-        reason: projection.eligible ? null : projection.reason,
+        programId: student.programId,
+        selectable: student.selectable,
+        reason: student.reason,
       };
     }
 
     function dispositionFor(studentId: string): CourseRosterPreviewDisposition {
       const membership = membershipByStudentId.get(studentId);
-      if (membership?.is_active) {
-        return "ALREADY_ACTIVE";
-      }
-      if (membership && !membership.is_active && membership.removed_at) {
-        return "WILL_RESTORE";
-      }
-      if (conflictingStudentIds.has(studentId)) {
-        return "OTHER_SECTION_CONFLICT";
-      }
+      if (membership?.is_active) return "ALREADY_ACTIVE";
+      if (membership && !membership.is_active && membership.removed_at) return "WILL_RESTORE";
+      if (conflictingStudentIds.has(studentId)) return "OTHER_SECTION_CONFLICT";
       return "READY_CREATE";
     }
 

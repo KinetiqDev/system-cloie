@@ -105,6 +105,12 @@ export const previewCourseRosterSchema = z.object({
     .max(COURSE_ROSTER_MAX_ROWS),
 });
 
+export const searchScopedRosterStudentsSchema = z.object({
+  assignmentId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
+  query: z.string().max(200),
+});
+
 /**
  * TypeScript types derived from schemas.
  */
@@ -119,6 +125,7 @@ export type RestoreRosterMembershipInput = z.infer<typeof restoreRosterMembershi
 export type RemoveRosterMembershipInput = z.infer<typeof removeRosterMembershipSchema>;
 export type ImportCourseRosterTextInput = z.infer<typeof importCourseRosterTextSchema>;
 export type PreviewCourseRosterInput = z.infer<typeof previewCourseRosterSchema>;
+export type SearchScopedRosterStudentsInput = z.infer<typeof searchScopedRosterStudentsSchema>;
 // Public preview contract; consumers are the scoped candidate search
 // (#395) and the reconciliation workspace (#396).
 // fallow-ignore-next-line unused-type

@@ -5,6 +5,7 @@ const serviceMocks = vi.hoisted(() => ({
   addRosterMembership: vi.fn(),
   importCourseRoster: vi.fn(),
   previewCourseRoster: vi.fn(),
+  searchScopedRosterStudents: vi.fn(),
   removeRosterMembership: vi.fn(),
   restoreRosterMembership: vi.fn(),
 }));
@@ -23,6 +24,9 @@ vi.mock("@/features/course-assignments/services/import-course-roster", () => ({
 }));
 vi.mock("@/features/course-assignments/services/preview-course-roster", () => ({
   previewCourseRoster: serviceMocks.previewCourseRoster,
+}));
+vi.mock("@/features/course-assignments/services/search-scoped-roster-students", () => ({
+  searchScopedRosterStudents: serviceMocks.searchScopedRosterStudents,
 }));
 
 import {
@@ -170,5 +174,39 @@ describe("previewCourseRosterAction", () => {
       error: "Enter a valid roster preview request.",
     });
     expect(serviceMocks.previewCourseRoster).not.toHaveBeenCalled();
+  });
+});
+
+describe("searchScopedRosterStudentsAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("validates input and delegates to the assignment-scoped search service", async () => {
+    const searchResult = {
+      success: true,
+      data: { assignmentId, candidates: [] },
+    };
+    serviceMocks.searchScopedRosterStudents.mockResolvedValue(searchResult);
+    const { searchScopedRosterStudentsAction } = await import(
+      "@/lib/actions/course-roster-actions"
+    );
+
+    await expect(
+      searchScopedRosterStudentsAction({ assignmentId, query: "Andy" })
+    ).resolves.toEqual(searchResult);
+    expect(serviceMocks.searchScopedRosterStudents).toHaveBeenCalledWith(assignmentId, "Andy", undefined);
+  });
+
+  it("rejects malformed search requests without invoking its service", async () => {
+    const { searchScopedRosterStudentsAction } = await import(
+      "@/lib/actions/course-roster-actions"
+    );
+
+    await expect(searchScopedRosterStudentsAction({ assignmentId: "invalid" })).resolves.toEqual({
+      success: false,
+      error: "Enter a valid Student search.",
+    });
+    expect(serviceMocks.searchScopedRosterStudents).not.toHaveBeenCalled();
   });
 });
