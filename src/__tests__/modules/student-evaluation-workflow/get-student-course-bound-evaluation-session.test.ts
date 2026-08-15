@@ -359,4 +359,63 @@ describe("getStudentCourseBoundEvaluationSession", () => {
       })
     );
   });
+
+  it("keeps a finalized response available without rematching Course membership", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    findFirstMock.mockResolvedValue({
+      course_bound_id: "course-bound-1",
+      id: "assignment-1",
+      course_bound: {
+        activation_at: new Date("2026-04-01T00:00:00.000Z"),
+        course_assignment: {
+          course_scope: "PROGRAM_SPECIFIC",
+          id: "course-assignment-1",
+          program_id: "program-1",
+          term_instance_id: "term-1",
+          course: { title: "Capstone 1" },
+          program: { name: "BSIT" },
+        },
+        deadline_at: new Date("2026-05-20T00:00:00.000Z"),
+        instrument: {
+          structure_snapshot: [
+            {
+              description: "Rate the items.",
+              items: [
+                { key: "q1", kind: "quantitative", prompt: "Question 1", scale: [1, 2, 3, 4, 5] },
+              ],
+              key: "section-a",
+              title: "Section A",
+            },
+          ],
+          template: { name: "Post-Term CILO Evaluation Tool" },
+        },
+        status: "ACTIVE",
+      },
+      response: {
+        id: "response-1",
+        qual_items: [],
+        quant_items: [{ item_key: "q1", rating_value: 4, section_key: "section-a" }],
+        status: "SUBMITTED",
+        submitted_at: new Date("2026-05-11T00:00:00.000Z"),
+      },
+    });
+
+    const result = await getStudentCourseBoundEvaluationSession("assignment-1");
+    expect(result).toEqual(
+      expect.objectContaining({
+        assignmentId: "assignment-1",
+        courseTitle: "Capstone 1",
+        evaluationTitle: "Post-Term CILO Evaluation Tool",
+        session: expect.objectContaining({
+          responseId: "response-1",
+          submittedAt: new Date("2026-05-11T00:00:00.000Z"),
+        }),
+      })
+    );
+    expect(result).not.toHaveProperty("studentId");
+    expect(result).not.toHaveProperty("studentIdNumber");
+    expect(result).not.toHaveProperty("student_id_number");
+    expect(JSON.stringify(result)).not.toMatch(/studentIdNumber|student_id_number|Student ID/i);
+    expect(membershipFindUniqueMock).not.toHaveBeenCalled();
+  });
 });

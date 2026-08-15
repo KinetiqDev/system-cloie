@@ -42,6 +42,7 @@ const previewRespondent = {
   email: "alice@school.edu",
   name: "Alice Adams",
   programCode: "BSCS",
+  studentId: "2024-0001",
   userId: "user-1",
   yearLevel: YearLevel.FIRST_YEAR as YearLevel | null,
 };
@@ -142,6 +143,8 @@ describe("PublishCentralDeploymentForm", () => {
     expect(screen.getByText(/1 respondent\(s\) found/i)).toBeInTheDocument();
     expect(screen.getByText("Alice Adams")).toBeInTheDocument();
     expect(screen.queryByText("Adams, Alice")).not.toBeInTheDocument();
+    expect(screen.queryByText("2024-0001")).not.toBeInTheDocument();
+    expect(screen.queryByText(/student id/i)).not.toBeInTheDocument();
   });
 
   it("previews with the selected term, year level, and stakeholder", async () => {

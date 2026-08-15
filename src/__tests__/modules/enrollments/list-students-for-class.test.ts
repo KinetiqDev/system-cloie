@@ -72,8 +72,38 @@ describe("list-students-for-class", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].name).toBe("John Doe");
+      expect(result.data[0]).toEqual({
+        userId: "student-1",
+        email: "student1@test.com",
+        name: "John Doe",
+        enrollmentId: "enrollment-1",
+        majorId: "major-1",
+        majorName: "Computer Science",
+      });
+      expect(result.data[0]).not.toHaveProperty("studentId");
+      expect(result.data[0]).not.toHaveProperty("studentIdNumber");
+      expect(result.data[0]).not.toHaveProperty("student_id_number");
     }
+    expect(JSON.stringify(result)).not.toMatch(/studentIdNumber|student_id_number|Student ID/i);
+    expect(prisma.studentEnrollment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: {
+          student: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+          major: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
+    );
   });
 
   it("should filter by section when provided", async () => {

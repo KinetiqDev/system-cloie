@@ -10,6 +10,7 @@ const {
   findManyUserMock,
   findManyIndustryPartnerMock,
   listStudentsForClassMock,
+  membershipFindManyMock,
   resolveAuthSessionMock,
   resolveProgramHeadContextMock,
 } = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ const {
   findManyUserMock: vi.fn(),
   findManyIndustryPartnerMock: vi.fn(),
   listStudentsForClassMock: vi.fn(),
+  membershipFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
 }));
@@ -39,6 +41,9 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     industryPartnerProfile: {
       findMany: findManyIndustryPartnerMock,
+    },
+    courseAssignmentMembership: {
+      findMany: membershipFindManyMock,
     },
   },
 }));
@@ -172,8 +177,14 @@ describe("previewCentralDeploymentRespondents", () => {
         });
         expect(result.data[0]).not.toHaveProperty("firstName");
         expect(result.data[0]).not.toHaveProperty("lastName");
+        expect(result.data[0]).not.toHaveProperty("studentId");
+        expect(result.data[0]).not.toHaveProperty("studentIdNumber");
+        expect(result.data[0]).not.toHaveProperty("student_id_number");
+        expect(result.data[0]).not.toHaveProperty("membershipId");
       }
 
+      expect(JSON.stringify(result)).not.toMatch(/studentIdNumber|student_id_number|Student ID/i);
+      expect(membershipFindManyMock).not.toHaveBeenCalled();
       expect(listStudentsForClassMock).toHaveBeenCalledWith({
         termInstanceId: "term-1",
         programId: "program-1",
