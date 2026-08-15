@@ -468,6 +468,12 @@ describe("course roster pages", () => {
     expect(screen.queryByRole("button", { name: /remove/i })).not.toBeInTheDocument();
   });
 
+  it("describes the currently available name parsing step", () => {
+    render(<CourseRosterDetailPage data={detail} />);
+
+    expect(screen.getByText(/Review parsed rows before continuing roster reconciliation/i)).toBeInTheDocument();
+  });
+
   it.each([
     "INACTIVE_ASSIGNMENT",
     "INACTIVE_ACADEMIC_PERIOD",

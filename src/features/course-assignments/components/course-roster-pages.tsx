@@ -654,7 +654,7 @@ export function CourseRosterDetailPage({
             <CardTitle>Manage roster</CardTitle>
             <CardDescription>
               Add one Student, or upload up to {COURSE_ROSTER_MAX_ROWS} official names from a CSV.
-              Review resolved rows before confirming roster changes.
+              Review parsed rows before continuing roster reconciliation.
             </CardDescription>
             <CardAction className="col-start-1 row-start-auto mt-2 w-full justify-self-stretch sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
               <RosterManagementDialog
