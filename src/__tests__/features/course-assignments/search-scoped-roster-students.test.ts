@@ -87,4 +87,17 @@ describe("searchScopedRosterStudents", () => {
       error: "Course assignment not found.",
     });
   });
+
+  it("returns an opaque support reference when candidate loading fails unexpectedly", async () => {
+    loadScopedRosterCandidatesMock.mockRejectedValue(new Error("database unavailable"));
+    const { searchScopedRosterStudents } = await import(
+      "@/features/course-assignments/services/search-scoped-roster-students"
+    );
+
+    await expect(searchScopedRosterStudents("assignment-1", "John")).resolves.toMatchObject({
+      success: false,
+      error: "The roster search could not be completed.",
+      referenceId: expect.any(String),
+    });
+  });
 });

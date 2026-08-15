@@ -40,21 +40,27 @@ export function ScopedRosterStudentSearch({
     requestVersionRef.current = requestVersion;
     const timeout = setTimeout(() => {
       startTransition(async () => {
-        const result = await searchScopedRosterStudentsAction({
-          assignmentId,
-          programId,
-          query: normalizedQuery,
-        });
-        if (requestVersion !== requestVersionRef.current) return;
-        if (!result.success) {
+        try {
+          const result = await searchScopedRosterStudentsAction({
+            assignmentId,
+            programId,
+            query: normalizedQuery,
+          });
+          if (requestVersion !== requestVersionRef.current) return;
+          if (!result.success) {
+            setCandidates([]);
+            setMessage(result.error);
+            return;
+          }
+          setCandidates(result.data.candidates);
+          setMessage(
+            result.data.candidates.length === 0 ? "No scoped Students match this search." : null
+          );
+        } catch {
+          if (requestVersion !== requestVersionRef.current) return;
           setCandidates([]);
-          setMessage(result.error);
-          return;
+          setMessage("The roster search could not be completed.");
         }
-        setCandidates(result.data.candidates);
-        setMessage(
-          result.data.candidates.length === 0 ? "No scoped Students match this search." : null
-        );
       });
     }, SEARCH_DELAY_MS);
 
@@ -76,16 +82,17 @@ export function ScopedRosterStudentSearch({
         value={query}
         onChange={(event) => {
           const nextQuery = event.target.value;
+          const normalizedNextQuery = nextQuery.normalize("NFKC").trim().replace(/\s+/gu, " ");
           requestVersionRef.current += 1;
           setQuery(nextQuery);
-          if ([...nextQuery.normalize("NFKC").trim().replace(/\s+/gu, " ")].length < MIN_ROSTER_SEARCH_CHARACTERS) {
-            setCandidates([]);
-            setMessage(
-              nextQuery.length > 0
+          setCandidates([]);
+          setMessage(
+            [...normalizedNextQuery].length < MIN_ROSTER_SEARCH_CHARACTERS
+              ? nextQuery.length > 0
                 ? `Enter at least ${MIN_ROSTER_SEARCH_CHARACTERS} characters to search Students.`
                 : null
-            );
-          }
+              : null
+          );
         }}
         placeholder="Enter at least 2 characters"
         aria-describedby="scoped-roster-student-search-status"
