@@ -7,7 +7,6 @@ const validInput = {
   program_id: VALID_UUID,
   major_id: "",
   year_level: "FIRST_YEAR" as const,
-  student_id_number: "21-12345",
   section: "MORNING" as const,
 };
 
@@ -38,7 +37,6 @@ describe("studentProfileSchema", () => {
       const withoutMajor = {
         program_id: validInput.program_id,
         year_level: validInput.year_level,
-        student_id_number: validInput.student_id_number,
         section: validInput.section,
       };
       const result = studentProfileSchema.safeParse(withoutMajor);
@@ -101,36 +99,9 @@ describe("studentProfileSchema", () => {
       const withoutYearLevel = {
         program_id: validInput.program_id,
         major_id: validInput.major_id,
-        student_id_number: validInput.student_id_number,
         section: validInput.section,
       };
       const result = studentProfileSchema.safeParse(withoutYearLevel);
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe("student_id_number validation", () => {
-    it("rejects student_id_number shorter than 5 characters", () => {
-      const result = studentProfileSchema.safeParse({
-        ...validInput,
-        student_id_number: "1234",
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it("accepts student_id_number of exactly 5 characters", () => {
-      const result = studentProfileSchema.safeParse({
-        ...validInput,
-        student_id_number: "12345",
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it("rejects empty student_id_number", () => {
-      const result = studentProfileSchema.safeParse({
-        ...validInput,
-        student_id_number: "",
-      });
       expect(result.success).toBe(false);
     });
   });
@@ -171,7 +142,6 @@ describe("studentProfileSchema", () => {
         program_id: validInput.program_id,
         major_id: validInput.major_id,
         year_level: validInput.year_level,
-        student_id_number: validInput.student_id_number,
       };
       const result = studentProfileSchema.safeParse(withoutSection);
       expect(result.success).toBe(false);

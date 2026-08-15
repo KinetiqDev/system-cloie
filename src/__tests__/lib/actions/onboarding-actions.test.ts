@@ -90,7 +90,6 @@ vi.mock("@/lib/db/prisma", () => ({
 const validAcademicPayload = {
   program_id: "550e8400-e29b-41d4-a716-446655440000",
   major_id: "660e8400-e29b-41d4-a716-446655441111",
-  student_id_number: "2026-0001",
   year_level: "FIRST_YEAR" as const,
   section: "MORNING" as const,
 };
@@ -304,13 +303,11 @@ describe("registerStudentProfile Server Action", () => {
       update: {
         program_id: "550e8400-e29b-41d4-a716-446655440000",
         major_id: "660e8400-e29b-41d4-a716-446655441111",
-        student_id_number: "2026-0001",
       },
       create: {
         user_id: "student-123",
         program_id: "550e8400-e29b-41d4-a716-446655440000",
         major_id: "660e8400-e29b-41d4-a716-446655441111",
-        student_id_number: "2026-0001",
       },
     });
     expect(upsertEnrollmentForActiveTermMock).toHaveBeenCalledWith({
@@ -393,7 +390,6 @@ describe("registerStudentProfile Server Action", () => {
     const result = await registerStudentProfile({
       program_id: "550e8400-e29b-41d4-a716-446655440000",
       major_id: "",
-      student_id_number: "2026-0001",
       year_level: "",
       section: "",
     });

@@ -5,7 +5,6 @@ export const studentProfileSchema = z.object({
   program_id: z.string().uuid("Please select a valid Program"),
   major_id: z.string().uuid().optional().nullable().or(z.literal("")),
   year_level: z.nativeEnum(YearLevel, { error: "Please select a valid Year Level" }),
-  student_id_number: z.string().min(5, "Student ID must be at least 5 characters"),
   section: z.nativeEnum(StudentSection, {
     error: "Please select a section",
   }),
@@ -19,7 +18,6 @@ export const studentProfileSchema = z.object({
 export const deferredStudentProfileSchema = z.object({
   program_id: z.string().uuid("Please select a valid Program"),
   major_id: z.string().uuid().optional().nullable().or(z.literal("")),
-  student_id_number: z.string().min(5, "Student ID must be at least 5 characters"),
   year_level: z.nativeEnum(YearLevel).optional().nullable().or(z.literal("")),
   section: z.nativeEnum(StudentSection).optional().nullable().or(z.literal("")),
 });

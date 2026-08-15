@@ -105,6 +105,40 @@ describe("StudentProfileForm", () => {
     expect(screen.getByText("student@acd.edu.ph")).toBeInTheDocument();
   });
 
+  it("omits the Student ID field in active-term onboarding", () => {
+    render(
+      <StudentProfileForm
+        email="student@acd.edu.ph"
+        name="Jamie Cruz"
+        programs={[]}
+        yearLevels={[]}
+        hasActiveTerm={true}
+      />
+    );
+
+    expect(screen.queryByLabelText(/school id/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/1000571225/)).not.toBeInTheDocument();
+    expect(screen.getByText("Year Level")).toBeInTheDocument();
+    expect(screen.getByText("Section")).toBeInTheDocument();
+  });
+
+  it("omits the Student ID field in deferred onboarding and defers year and section", () => {
+    render(
+      <StudentProfileForm
+        email="student@acd.edu.ph"
+        name="Jamie Cruz"
+        programs={[]}
+        yearLevels={[]}
+        hasActiveTerm={false}
+      />
+    );
+
+    expect(screen.queryByLabelText(/school id/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/1000571225/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Year Level")).not.toBeInTheDocument();
+    expect(screen.queryByText("Section")).not.toBeInTheDocument();
+  });
+
   it("does not redirect when submission returns neither success nor error", async () => {
     registerStudentProfileMock.mockResolvedValue({});
 

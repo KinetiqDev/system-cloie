@@ -87,19 +87,11 @@ export default async function StudentProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-4 text-sm font-semibold">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                  Student ID
-                </label>
-                <p>{profile?.student_id_number ?? "Not set"}</p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                  Year Level
-                </label>
-                <p>{getYearLevelDisplay(enrollment?.year_level)}</p>
-              </div>
+            <div className="space-y-1">
+              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
+                Year Level
+              </label>
+              <p>{getYearLevelDisplay(enrollment?.year_level)}</p>
             </div>
 
             <div className="space-y-1">
