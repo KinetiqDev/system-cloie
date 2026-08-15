@@ -30,14 +30,14 @@ export const allUsers = [
 ] as const;
 
 export const studentDefinitions = [
-  { uid: U.STU_BSIT, program: "BSIT", major: null, yearLevel: YearLevel.FOURTH_YEAR, studentNumber: "2026-0001", section: "MORNING" as const },
-  { uid: U.GRAD_BSIT, program: "BSIT", major: null, yearLevel: YearLevel.FOURTH_YEAR, studentNumber: "2026-0002", section: "AFTERNOON" as const },
-  { uid: U.STU_BSED, program: "BSED", major: "BSED:English", yearLevel: YearLevel.THIRD_YEAR, studentNumber: "2026-0003", section: "MORNING" as const },
-  { uid: U.STU_BSBA, program: "BSBA", major: "BSBA:Marketing Management", yearLevel: YearLevel.FOURTH_YEAR, studentNumber: "2026-0004", section: "MORNING" as const },
-  { uid: U.STU_BSBA_G, program: "BSBA", major: "BSBA:Financial Management", yearLevel: YearLevel.FOURTH_YEAR, studentNumber: "2026-0005", section: "AFTERNOON" as const },
-  { uid: U.STU_BEED, program: "BEED", major: null, yearLevel: YearLevel.SECOND_YEAR, studentNumber: "2026-0006", section: "MORNING" as const },
-  { uid: U.STU_BSHM, program: "BSHM", major: null, yearLevel: YearLevel.FOURTH_YEAR, studentNumber: "2026-0007", section: "EVENING" as const },
-  { uid: U.STU_BSHM_G, program: "BSHM", major: null, yearLevel: YearLevel.FOURTH_YEAR, studentNumber: "2026-0008", section: "AFTERNOON" as const },
+  { uid: U.STU_BSIT, program: "BSIT", major: null, yearLevel: YearLevel.FOURTH_YEAR, section: "MORNING" as const },
+  { uid: U.GRAD_BSIT, program: "BSIT", major: null, yearLevel: YearLevel.FOURTH_YEAR, section: "AFTERNOON" as const },
+  { uid: U.STU_BSED, program: "BSED", major: "BSED:English", yearLevel: YearLevel.THIRD_YEAR, section: "MORNING" as const },
+  { uid: U.STU_BSBA, program: "BSBA", major: "BSBA:Marketing Management", yearLevel: YearLevel.FOURTH_YEAR, section: "MORNING" as const },
+  { uid: U.STU_BSBA_G, program: "BSBA", major: "BSBA:Financial Management", yearLevel: YearLevel.FOURTH_YEAR, section: "AFTERNOON" as const },
+  { uid: U.STU_BEED, program: "BEED", major: null, yearLevel: YearLevel.SECOND_YEAR, section: "MORNING" as const },
+  { uid: U.STU_BSHM, program: "BSHM", major: null, yearLevel: YearLevel.FOURTH_YEAR, section: "EVENING" as const },
+  { uid: U.STU_BSHM_G, program: "BSHM", major: null, yearLevel: YearLevel.FOURTH_YEAR, section: "AFTERNOON" as const },
 ] as const;
 
 export const facultyAffiliations = [
