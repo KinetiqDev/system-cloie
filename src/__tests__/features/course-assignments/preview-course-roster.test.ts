@@ -164,6 +164,39 @@ describe("previewCourseRoster service", () => {
     }
   });
 
+  it("maps full placement context onto preview candidates", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      {
+        ...student("student-1", "Andy Egut", "program-1"),
+        enrollments: [
+          {
+            program_id: "program-1",
+            year_level: "SECOND_YEAR",
+            section: "AFTERNOON",
+            program: { code: "BSIT", name: "Bachelor of Science in Information Technology" },
+            major: { name: "Software Engineering" },
+          },
+        ],
+      },
+    ] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [{ sourceIndex: 0, submittedName: "Andy Egut", status: "VALID" }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]?.candidates[0]).toMatchObject({
+        programCode: "BSIT",
+        programName: "Bachelor of Science in Information Technology",
+        yearLevel: "SECOND_YEAR",
+        section: "AFTERNOON",
+        majorName: "Software Engineering",
+      });
+    }
+  });
+
   it("keeps a Program-mismatched Student non-selectable and shows it as a diagnostic", async () => {
 
     vi.mocked(prisma.user.findMany).mockResolvedValue([

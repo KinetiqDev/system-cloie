@@ -17,6 +17,11 @@ function candidate(
     name,
     email: `${userId}@ac.edu`,
     programId: "program-1",
+    programCode: null,
+    programName: null,
+    yearLevel: null,
+    section: null,
+    majorName: null,
     selectable,
     reason: selectable ? null : "PROGRAM_MISMATCH",
   };

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 
 import type {
   AuthorizedRosterAssignment,
+  RosterEligibilityReason,
   RosterServiceResult,
   ScopedRosterCandidate,
 } from "../types";
@@ -17,6 +18,44 @@ type ScopedRosterCandidates = {
   assignment: AuthorizedRosterAssignment;
   candidates: ScopedRosterCandidate[];
 };
+
+type CandidatePlacement = {
+  program_id: string;
+  year_level: string | null;
+  section: string | null;
+  program: { code: string; name: string } | null;
+  major: { name: string } | null;
+} | undefined;
+
+function toScopedCandidate(
+  student: {
+    id: string;
+    name: string;
+    email: string;
+    student_profile: { program_id: string | null } | null;
+  },
+  eligibility: { eligible: boolean; reason: RosterEligibilityReason | null },
+  placement: CandidatePlacement
+): ScopedRosterCandidate {
+  const context = placement
+    ? {
+        programCode: placement.program ? placement.program.code : null,
+        programName: placement.program ? placement.program.name : null,
+        yearLevel: placement.year_level,
+        section: placement.section,
+        majorName: placement.major ? placement.major.name : null,
+      }
+    : { programCode: null, programName: null, yearLevel: null, section: null, majorName: null };
+  return {
+    userId: student.id,
+    name: student.name,
+    email: student.email,
+    programId: student.student_profile?.program_id ?? "",
+    ...context,
+    selectable: eligibility.eligible,
+    reason: eligibility.reason,
+  };
+}
 
 /**
  * Loads the single server-authorized candidate population shared by roster
@@ -49,10 +88,21 @@ export async function loadScopedRosterCandidates(
       email: true,
       roles: { select: { role: true } },
       is_active: true,
-      student_profile: { select: rosterStudentProfileSelect },
+      student_profile: {
+        select: {
+          ...rosterStudentProfileSelect,
+          major: { select: { name: true, is_active: true, program_id: true } },
+        },
+      },
       enrollments: {
         where: { term_instance_id: assignment.termInstanceId, is_active: true },
-        select: { program_id: true },
+        select: {
+          program_id: true,
+          year_level: true,
+          section: true,
+          program: { select: { code: true, name: true } },
+          major: { select: { name: true } },
+        },
       },
     },
   });
@@ -66,14 +116,8 @@ export async function loadScopedRosterCandidates(
           { courseScope: assignment.courseScope, programId: assignment.programId },
           student as RosterEligibilityStudent
         );
-        return {
-          userId: student.id,
-          name: student.name,
-          email: student.email,
-          programId: student.student_profile?.program_id ?? "",
-          selectable: eligibility.eligible,
-          reason: eligibility.reason,
-        };
+        const placement = student.enrollments[0];
+        return toScopedCandidate(student, eligibility, placement);
       }),
     },
   };

@@ -409,6 +409,11 @@ describe("course roster pages", () => {
             name: "Maria Santos",
             email: "maria.santos@acd.edu.ph",
             programId: "program-1",
+            programCode: "BSCS",
+            programName: "BS Computer Science",
+            yearLevel: null,
+            section: null,
+            majorName: null,
             selectable: true,
             reason: null,
           },
@@ -509,22 +514,42 @@ describe("course roster pages", () => {
     expect(screen.queryByRole("button", { name: /manage roster/i })).not.toBeInTheDocument();
   });
 
-  it("provides accessible CSV import, template download, row results, and failed export", async () => {
-    vi.spyOn(rosterActions, "importCourseRosterAction").mockResolvedValue({
+  it("provides accessible CSV import, template download, and the review phase", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
       success: true,
       data: {
-        total: 2,
-        parsed: 1,
-        invalid: 1,
+        assignmentId: "assignment-1",
         rows: [
-          { sourceIndex: 2, name: "Maria Santos", status: "PARSED", error: "" },
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: "FIRST_YEAR",
+                section: "MORNING",
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
           {
             sourceIndex: 3,
-            name: "Invalid name",
-            status: "INVALID_NAME",
-            error: "Name must contain 1 to 200 characters.",
+            submittedName: "Invalid name",
+            resolution: { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] },
+            disposition: null,
+            candidates: [],
           },
         ],
+        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
       },
     });
     const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
@@ -546,18 +571,25 @@ describe("course roster pages", () => {
       type: "text/csv",
     });
     fireEvent.change(input, { target: { files: [file] } });
-    fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
 
-    expect(await screen.findByRole("heading", { name: "Import results" })).toBeInTheDocument();
-    expect(screen.getByText(/1 ready for review, 1 invalid/i)).toBeInTheDocument();
-    expect(screen.getByText("Name must contain 1 to 200 characters.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /download failed rows/i })).toBeInTheDocument();
-    expect(screen.getByRole("table").parentElement).toHaveClass("overflow-x-auto");
-    expect(rosterActions.importCourseRosterAction).toHaveBeenCalledWith(expect.any(FormData));
-    const [formData] = vi.mocked(rosterActions.importCourseRosterAction).mock.calls[0] as [
-      FormData,
-    ];
-    expect(formData.get("programId")).toBe("program-1");
+    expect(
+      await screen.findByRole("group", { name: "Wizard progress" })
+    ).toHaveTextContent("Review and resolve");
+    expect(screen.getAllByText(/maria santos/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("Exact match")).toBeInTheDocument();
+    expect(screen.getByText("No match")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
+    expect(screen.getAllByText("Invalid name").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Resolve: 1" })).toBeInTheDocument();
+    expect(rosterActions.previewCourseRosterAction).toHaveBeenCalledWith({
+      assignmentId: "assignment-1",
+      programId: "program-1",
+      rows: [
+        { sourceIndex: 2, submittedName: "Maria Santos", status: "VALID" },
+        { sourceIndex: 3, submittedName: "Invalid name", status: "VALID" },
+      ],
+    });
   });
 
   it("keeps invalid CSV feedback in the member-input phase", () => {
@@ -571,7 +603,7 @@ describe("course roster pages", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("Choose a CSV file.");
     expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent("Add members");
-    expect(screen.queryByRole("heading", { name: "Import results" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Maria Santos")).not.toBeInTheDocument();
   });
 
   it("keeps parser and action failures adjacent to CSV input", async () => {
@@ -582,26 +614,26 @@ describe("course roster pages", () => {
     fireEvent.change(input, {
       target: { files: [new File(["name\n"], "roster.csv", { type: "text/csv" })] },
     });
-    fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(/CSV must contain one name column/i)
     );
     expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent("Add members");
 
-    vi.spyOn(rosterActions, "importCourseRosterAction").mockResolvedValue({
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
       success: false,
-      error: "The roster import could not be completed.",
+      error: "The roster preview could not be completed.",
     });
     fireEvent.change(input, {
       target: {
         files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(/The roster import could not be completed/i)
+      expect(screen.getByRole("alert")).toHaveTextContent(/The roster preview could not be completed/i)
     );
     expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent("Add members");
   });
@@ -628,14 +660,105 @@ describe("course roster pages", () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
-  it("resets session state after results are closed and reopened", async () => {
-    vi.spyOn(rosterActions, "importCourseRosterAction").mockResolvedValue({
+  it("renders the review and results steps inside the mobile Drawer", async () => {
+    mockMatchMedia(false);
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
       success: true,
       data: {
-        total: 1,
-        parsed: 1,
-        invalid: 0,
-        rows: [{ sourceIndex: 2, name: "Maria Santos", status: "PARSED", error: "" }],
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: {
+          readyToCreate: 1,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 0,
+          ineligible: 0,
+        },
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+    );
+
+    expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
+    expect(screen.getByText("Exact match")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Skip" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    expect(screen.getByText(/The preview session is ready\./)).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
+  });
+
+  it("resets session state after results are closed and reopened", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: "FIRST_YEAR",
+                section: "MORNING",
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+          {
+            sourceIndex: 3,
+            submittedName: "Invalid name",
+            resolution: { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] },
+            disposition: null,
+            candidates: [],
+          },
+        ],
+        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
       },
     });
     render(<RosterManagementDialog assignmentId="assignment-1" />);
@@ -646,8 +769,15 @@ describe("course roster pages", () => {
         files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
-    expect(await screen.findByRole("heading", { name: "Import results" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+    );
+    expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+      "Review and resolve"
+    );
+    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    expect(screen.getByText(/The preview session is ready\./)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -657,24 +787,169 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
 
     expect(screen.getByLabelText("Roster CSV file")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Import results" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Maria Santos")).not.toBeInTheDocument();
     expect(screen.queryByText("roster.csv")).not.toBeInTheDocument();
   });
 
-  it("blocks closing while an import is pending", async () => {
-    let finishImport: () => void = () => undefined;
-    const pendingImport = new Promise<void>((resolve) => {
-      finishImport = resolve;
+  it("supports skip, unskip, change, and suggested-match search in the review phase", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: {
+              status: "SUGGESTED_MATCH",
+              reason: "MIDDLE_TOKEN",
+              candidateIds: ["student-1"],
+            },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+          {
+            sourceIndex: 3,
+            submittedName: "Unknown Student",
+            resolution: { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] },
+            disposition: null,
+            candidates: [],
+          },
+          {
+            sourceIndex: 4,
+            submittedName: "Active Student",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-3"] },
+            disposition: "ALREADY_ACTIVE",
+            candidates: [
+              {
+                userId: "student-3",
+                name: "Active Student",
+                email: "active.student@acd.edu.ph",
+                programId: "program-1",
+                programCode: null,
+                programName: null,
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: {
+          readyToCreate: 0,
+          willRestore: 0,
+          alreadyActive: 1,
+          needsReview: 1,
+          ineligible: 0,
+        },
+      },
     });
-    vi.spyOn(rosterActions, "importCourseRosterAction").mockImplementation(async () => {
-      await pendingImport;
+    vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        candidates: [
+          {
+            userId: "student-2",
+            name: "Maria Ann Santos",
+            email: "maria.ann.santos@acd.edu.ph",
+            programId: "program-1",
+            programCode: "BSED",
+            programName: "Education",
+            yearLevel: null,
+            section: null,
+            majorName: null,
+            selectable: true,
+            reason: null,
+          },
+        ],
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File(
+            ["name\nMaria Santos\nUnknown Student\nActive Student\n"],
+            "roster.csv",
+            { type: "text/csv" }
+          ),
+        ],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+    );
+
+    expect(screen.getByText("Suggested match")).toBeInTheDocument();
+    // Suggested rows need review even when the disposition is ready.
+    expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready: 0" })).toBeInTheDocument();
+    // Already-active rows stay informational: exactly two rows offer Skip.
+    expect(screen.getAllByRole("button", { name: "Skip" })).toHaveLength(2);
+
+    // A suggested row can open scoped search to change the prepared account.
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    const searchbox = screen.getByRole("searchbox");
+    fireEvent.change(searchbox, { target: { value: "Maria Ann" } });
+    fireEvent.click(await screen.findByRole("button", { name: /maria ann santos/i }));
+    expect(screen.getByText("Maria Ann Santos")).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    // A manually resolved row leaves Review and joins the Ready group, and the
+    // prepared disposition no longer applies to the chosen account.
+    expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review: 0" })).toBeInTheDocument();
+    expect(screen.queryByText("Ready to add")).not.toBeInTheDocument();
+
+    // Clearing the selection returns the row to its prepared suggestion.
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    expect(screen.queryByText("Maria Ann Santos")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready: 0" })).toBeInTheDocument();
+
+    // Skip and unskip a no-match row without blocking the rest of the preview.
+    const noMatchSkip = screen.getAllByRole("button", { name: "Skip" })[1];
+    fireEvent.click(noMatchSkip);
+    expect(screen.getByRole("button", { name: "Unskip" })).toBeInTheDocument();
+    expect(screen.getByText("Skipped", { selector: '[data-slot="badge"]' })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Skipped: 1" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Unskip" }));
+    expect(screen.getByRole("button", { name: "Skipped: 0" })).toBeInTheDocument();
+  });
+
+  it("blocks closing while a preview is pending", async () => {
+    let finishPreview: () => void = () => undefined;
+    const pendingPreview = new Promise<void>((resolve) => {
+      finishPreview = resolve;
+    });
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockImplementation(async () => {
+      await pendingPreview;
       return {
         success: true,
         data: {
-          total: 1,
-          parsed: 1,
-          invalid: 0,
-          rows: [{ sourceIndex: 2, name: "Maria Santos", status: "PARSED", error: "" }],
+          assignmentId: "assignment-1",
+          rows: [],
+          summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
         },
       };
     });
@@ -686,7 +961,7 @@ describe("course roster pages", () => {
         files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
       },
     });
-    fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Upload a CSV roster file" })).toHaveAttribute(
@@ -696,9 +971,11 @@ describe("course roster pages", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
-    finishImport();
+    finishPreview();
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "Import results" })).toBeInTheDocument()
+      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+        "Review and resolve"
+      )
     );
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());

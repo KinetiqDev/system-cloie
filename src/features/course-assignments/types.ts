@@ -227,6 +227,16 @@ export type CourseRosterPreviewDisposition =
   | "INELIGIBLE"
   | "OTHER_SECTION_CONFLICT";
 
+// Academic context shared by the preview and search candidate surfaces.
+// fallow-ignore-next-line unused-type
+export type RosterCandidateContext = {
+  programCode: string | null;
+  programName: string | null;
+  yearLevel: string | null;
+  section: string | null;
+  majorName: string | null;
+};
+
 export type CourseRosterPreviewCandidate = {
   userId: string;
   name: string;
@@ -234,7 +244,7 @@ export type CourseRosterPreviewCandidate = {
   programId: string;
   selectable: boolean;
   reason: string | null;
-};
+} & RosterCandidateContext;
 
 export type ScopedRosterCandidate = {
   userId: string;
@@ -243,7 +253,7 @@ export type ScopedRosterCandidate = {
   programId: string;
   selectable: boolean;
   reason: RosterEligibilityReason | null;
-};
+} & RosterCandidateContext;
 
 
 export type CourseRosterPreviewRow = {
@@ -303,14 +313,10 @@ export type CourseRosterConfirmation = {
   referenceId?: string;
 };
 
-export type CourseRosterImportRowStatus =
-  | "PARSED"
-  | "INVALID_NAME";
-
 export type CourseRosterImportRow = {
   sourceIndex: number;
   name: string;
-  status: CourseRosterImportRowStatus;
+  status: "PARSED" | "INVALID_NAME";
   error: string;
 };
 

@@ -658,6 +658,7 @@ export function CourseRosterDetailPage({
             </CardDescription>
             <CardAction className="col-start-1 row-start-auto mt-2 w-full justify-self-stretch sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
               <RosterManagementDialog
+                assignment={assignment}
                 assignmentId={assignment.assignmentId}
                 programId={programId}
               />
