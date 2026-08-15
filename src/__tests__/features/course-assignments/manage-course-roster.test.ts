@@ -393,6 +393,23 @@ describe("confirmRosterResolution", () => {
     expect(prismaMock.courseAssignmentMembership.create).toHaveBeenCalledTimes(1);
   });
 
+  it("continues after an account loses its Student role", async () => {
+    prismaMock.user.findUnique
+      .mockResolvedValueOnce({ ...student, roles: [{ role: ROLES.FACULTY }] } as never)
+      .mockResolvedValueOnce({ ...student, id: "student-2" } as never);
+
+    await expect(confirmRosterResolution(confirmation)).resolves.toEqual({
+      success: true,
+      data: {
+        rows: [
+          { sourceIndex: 0, outcome: "OUT_OF_SCOPE", error: "Account is not a Student account." },
+          { sourceIndex: 1, outcome: "CREATED", error: null },
+        ],
+      },
+    });
+    expect(prismaMock.courseAssignmentMembership.create).toHaveBeenCalledTimes(1);
+  });
+
   it("reports an out-of-scope row and commits later valid identities", async () => {
     scopedCandidatesMock.mockResolvedValue({
       success: true,

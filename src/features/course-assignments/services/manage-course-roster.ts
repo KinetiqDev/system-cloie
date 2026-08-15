@@ -204,6 +204,7 @@ function confirmationOutcome(
 
   const outcomeByError: Record<string, CourseRosterConfirmationOutcome> = {
     [eligibilityMessages.UNKNOWN_ACCOUNT]: "OUT_OF_SCOPE",
+    [eligibilityMessages.NON_STUDENT_ACCOUNT]: "OUT_OF_SCOPE",
     [eligibilityMessages.ACCOUNT_INACTIVE]: "ACCOUNT_INACTIVE",
     [eligibilityMessages.PROFILE_INCOMPLETE]: "PROFILE_INCOMPLETE",
     [eligibilityMessages.NO_ACTIVE_TERM_PLACEMENT]: "NO_ACTIVE_TERM_PLACEMENT",
@@ -218,6 +219,52 @@ function confirmationOutcome(
     outcome: outcomeByError[result.error] ?? "UNEXPECTED_FAILURE",
     error: outcomeByError[result.error] ? result.error : SAFE_FAILURE_ERROR,
   };
+}
+
+async function processConfirmationRows(
+  input: ConfirmRosterResolutionInput,
+  selectableUserIds: Set<string>,
+  actorId: string | undefined
+): Promise<RosterServiceResult<CourseRosterConfirmation>> {
+  const rows: CourseRosterConfirmation["rows"] = [];
+
+  for (let index = 0; index < input.rows.length; index += 1) {
+    const row = input.rows[index]!;
+    if (!selectableUserIds.has(row.studentUserId)) {
+      rows.push({
+        sourceIndex: row.sourceIndex,
+        outcome: "OUT_OF_SCOPE",
+        error: "Selected account is no longer eligible for this Course roster.",
+      });
+      continue;
+    }
+    const result = await addRosterMembership(input.assignmentId, row.studentUserId, input.programId);
+    const outcome = confirmationOutcome(result);
+    if (rows.length === 0 && outcome.outcome === "READ_ONLY") {
+      return { success: false, error: outcome.error! };
+    }
+    rows.push({ sourceIndex: row.sourceIndex, outcome: outcome.outcome, error: outcome.error });
+    if (outcome.outcome !== "UNEXPECTED_FAILURE") continue;
+
+    const referenceId = outcome.referenceId ?? randomUUID();
+    console.error("Course roster confirmation stopped unexpectedly", {
+      operation: "confirm_roster_resolution",
+      actorId: actorId ?? null,
+      assignmentId: input.assignmentId,
+      sourceIndex: row.sourceIndex,
+      referenceId,
+    });
+    for (const laterRow of input.rows.slice(index + 1)) {
+      rows.push({
+        sourceIndex: laterRow.sourceIndex,
+        outcome: "UNPROCESSED",
+        error: "This row was not processed because confirmation stopped unexpectedly.",
+      });
+    }
+    return { success: true, data: { rows, referenceId } };
+  }
+
+  return { success: true, data: { rows } };
 }
 
 /**
@@ -239,45 +286,7 @@ export async function confirmRosterResolution(
     const selectableUserIds = new Set(
       scoped.data.candidates.filter((candidate) => candidate.selectable).map((candidate) => candidate.userId)
     );
-    const rows: CourseRosterConfirmation["rows"] = [];
-
-    for (let index = 0; index < input.rows.length; index += 1) {
-      const row = input.rows[index]!;
-      if (!selectableUserIds.has(row.studentUserId)) {
-        rows.push({
-          sourceIndex: row.sourceIndex,
-          outcome: "OUT_OF_SCOPE",
-          error: "Selected account is no longer eligible for this Course roster.",
-        });
-        continue;
-      }
-      const result = await addRosterMembership(input.assignmentId, row.studentUserId, input.programId);
-      const outcome = confirmationOutcome(result);
-      if (rows.length === 0 && outcome.outcome === "READ_ONLY") {
-        return { success: false, error: outcome.error! };
-      }
-      rows.push({ sourceIndex: row.sourceIndex, outcome: outcome.outcome, error: outcome.error });
-      if (outcome.outcome === "UNEXPECTED_FAILURE") {
-        const referenceId = outcome.referenceId ?? randomUUID();
-        console.error("Course roster confirmation stopped unexpectedly", {
-          operation: "confirm_roster_resolution",
-          actorId: actorId ?? null,
-          assignmentId: input.assignmentId,
-          sourceIndex: row.sourceIndex,
-          referenceId,
-        });
-        for (const laterRow of input.rows.slice(index + 1)) {
-          rows.push({
-            sourceIndex: laterRow.sourceIndex,
-            outcome: "UNPROCESSED",
-            error: "This row was not processed because confirmation stopped unexpectedly.",
-          });
-        }
-        return { success: true, data: { rows, referenceId } };
-      }
-    }
-
-    return { success: true, data: { rows } };
+    return processConfirmationRows(input, selectableUserIds, actorId);
   } catch (error) {
     const failure = unexpectedRosterFailure(
       "confirm_roster_resolution",

@@ -292,7 +292,7 @@ export type CourseRosterConfirmationOutcome =
   | "UNEXPECTED_FAILURE"
   | "UNPROCESSED";
 
-export type CourseRosterConfirmationRow = {
+type CourseRosterConfirmationRow = {
   sourceIndex: number;
   outcome: CourseRosterConfirmationOutcome;
   error: string | null;
