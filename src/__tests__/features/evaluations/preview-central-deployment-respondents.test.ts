@@ -145,7 +145,6 @@ describe("previewCentralDeploymentRespondents", () => {
             userId: "student-1",
             email: "student1@school.edu",
             name: "John Doe",
-            studentIdNumber: "S2025-001",
             majorId: null,
             majorName: null,
           },
@@ -168,7 +167,6 @@ describe("previewCentralDeploymentRespondents", () => {
           name: "John Doe",
           programCode: "BSCS",
           stakeholderType: TargetStakeholder.STUDENT,
-          studentId: "S2025-001",
           userId: "student-1",
           yearLevel: YearLevel.FIRST_YEAR,
         });
@@ -230,7 +228,6 @@ describe("previewCentralDeploymentRespondents", () => {
           name: "Jane Smith",
           programCode: null,
           stakeholderType: TargetStakeholder.ALUMNI,
-          studentId: null,
           userId: "user-alumni-1",
           yearLevel: null,
         });
@@ -286,7 +283,6 @@ describe("previewCentralDeploymentRespondents", () => {
           name: "Bob Builder",
           programCode: "BSCS",
           stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
-          studentId: null,
           userId: "user-ip-1",
           yearLevel: null,
         });

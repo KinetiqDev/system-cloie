@@ -94,7 +94,12 @@ describe("listStudentAssignedEvaluations", () => {
           enrollments: [{ program_id: "program-1", term_instance_id: "term-1" }],
           is_active: true,
           roles: [{ role: "STUDENT" }],
-          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
         },
       },
       {
@@ -104,7 +109,12 @@ describe("listStudentAssignedEvaluations", () => {
           enrollments: [{ program_id: "program-2", term_instance_id: "term-1" }],
           is_active: true,
           roles: [{ role: "STUDENT" }],
-          student_profile: { program_id: "program-2", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-2",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
         },
       },
     ]);

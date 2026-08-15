@@ -5,17 +5,13 @@ import {
   listStudentCourseBoundEvaluations,
 } from "@/features/responses/services/list-student-course-bound-evaluations";
 
-const {
-  findManyMock,
-  membershipFindManyMock,
-  membershipFindUniqueMock,
-  resolveAuthSessionMock,
-} = vi.hoisted(() => ({
-  findManyMock: vi.fn(),
-  membershipFindManyMock: vi.fn(),
-  membershipFindUniqueMock: vi.fn(),
-  resolveAuthSessionMock: vi.fn(),
-}));
+const { findManyMock, membershipFindManyMock, membershipFindUniqueMock, resolveAuthSessionMock } =
+  vi.hoisted(() => ({
+    findManyMock: vi.fn(),
+    membershipFindManyMock: vi.fn(),
+    membershipFindUniqueMock: vi.fn(),
+    resolveAuthSessionMock: vi.fn(),
+  }));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -200,7 +196,12 @@ describe("listStudentCourseBoundEvaluations", () => {
         enrollments: [{ program_id: "program-1" }],
         is_active: true,
         roles: [{ role: "STUDENT" }],
-        student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        student_profile: {
+          program_id: "program-1",
+          major_id: null,
+          program: { is_active: true, majors: [] },
+          major: null,
+        },
       },
     });
     membershipFindManyMock.mockResolvedValue([
@@ -208,12 +209,15 @@ describe("listStudentCourseBoundEvaluations", () => {
         course_assignment_id: "course-assignment-active",
         is_active: true,
         student: {
-          enrollments: [
-            { program_id: "program-1", term_instance_id: "term-1" },
-          ],
+          enrollments: [{ program_id: "program-1", term_instance_id: "term-1" }],
           is_active: true,
           roles: [{ role: "STUDENT" }],
-          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
         },
       },
     ]);
@@ -471,12 +475,15 @@ describe("listStudentCourseBoundEvaluations", () => {
         course_assignment_id: "course-assignment-term-1",
         is_active: true,
         student: {
-          enrollments: [
-            { program_id: "program-1", term_instance_id: "term-2" },
-          ],
+          enrollments: [{ program_id: "program-1", term_instance_id: "term-2" }],
           is_active: true,
           roles: [{ role: "STUDENT" }],
-          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
         },
       },
       {
@@ -486,7 +493,12 @@ describe("listStudentCourseBoundEvaluations", () => {
           enrollments: [{ program_id: "program-3", term_instance_id: "term-2" }],
           is_active: true,
           roles: [{ role: "STUDENT" }],
-          student_profile: { program_id: "program-3", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-3",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
         },
       },
       {
@@ -496,7 +508,12 @@ describe("listStudentCourseBoundEvaluations", () => {
           enrollments: [{ program_id: "program-1", term_instance_id: "term-1" }],
           is_active: true,
           roles: [{ role: "STUDENT" }],
-          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
         },
       },
     ]);

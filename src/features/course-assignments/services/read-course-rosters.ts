@@ -11,6 +11,7 @@ import { prisma } from "@/lib/db/prisma";
 import {
   projectRosterEligibility,
   resolveAuthorizedCourseAssignmentRoster,
+  rosterStudentProfileSelect,
   type RosterEligibilityStudent,
 } from "./course-assignment-roster";
 import type {
@@ -56,9 +57,14 @@ type MembershipStudentRead = {
   roles: Array<{ role: SystemRole }>;
   student_profile: {
     program_id: string;
-    major: { name: string } | null;
-    program: { code: string; name: string };
-    student_id_number: string | null;
+    major_id: string | null;
+    major: { name: string; is_active: boolean; program_id: string } | null;
+    program: {
+      code: string;
+      name: string;
+      is_active: boolean;
+      majors: Array<{ id: string }>;
+    };
   } | null;
   enrollments: Array<{
     term_instance_id: string;
@@ -84,19 +90,14 @@ function projectMembershipEligibility(
   student: {
     is_active: boolean;
     roles: Array<{ role: SystemRole }>;
-    student_profile: { program_id: string; student_id_number: string | null } | null;
+    student_profile: RosterEligibilityStudent["student_profile"];
     enrollments: Array<{ term_instance_id?: string; program_id: string }>;
   }
 ): ReturnType<typeof projectRosterEligibility> {
   const studentForEligibility: RosterEligibilityStudent = {
     is_active: student.is_active,
     roles: student.roles,
-    student_profile: student.student_profile
-      ? {
-          program_id: student.student_profile.program_id,
-          student_id_number: student.student_profile.student_id_number,
-        }
-      : null,
+    student_profile: student.student_profile,
     enrollments: student.enrollments
       .filter((enrollment) => enrollment.term_instance_id === assignment.term_instance.id)
       .map((enrollment) => ({ program_id: enrollment.program_id })),
@@ -292,10 +293,16 @@ async function loadMembershipRows(assignmentIds: string[], termInstanceIds: stri
           roles: { select: { role: true } },
           student_profile: {
             select: {
-              program_id: true,
-              major: { select: { name: true } },
-              program: { select: { code: true, name: true } },
-              student_id_number: true,
+              ...rosterStudentProfileSelect,
+              major: { select: { name: true, is_active: true, program_id: true } },
+              program: {
+                select: {
+                  code: true,
+                  name: true,
+                  is_active: true,
+                  majors: { where: { is_active: true }, select: { id: true }, take: 1 },
+                },
+              },
             },
           },
           enrollments: {
@@ -518,10 +525,16 @@ export async function getCourseRosterDetail(
               roles: { select: { role: true } },
               student_profile: {
                 select: {
-                  program_id: true,
-                  major: { select: { name: true } },
-                  program: { select: { code: true, name: true } },
-                  student_id_number: true,
+                  ...rosterStudentProfileSelect,
+                  major: { select: { name: true, is_active: true, program_id: true } },
+                  program: {
+                    select: {
+                      code: true,
+                      name: true,
+                      is_active: true,
+                      majors: { where: { is_active: true }, select: { id: true }, take: 1 },
+                    },
+                  },
                 },
               },
               enrollments: {
@@ -555,7 +568,7 @@ export async function getCourseRosterDetail(
             select: {
               is_active: true,
               roles: { select: { role: true } },
-              student_profile: { select: { program_id: true, student_id_number: true } },
+              student_profile: { select: rosterStudentProfileSelect },
               enrollments: {
                 where: { term_instance_id: assignment.term_instance.id, is_active: true },
                 select: { term_instance_id: true, program_id: true },

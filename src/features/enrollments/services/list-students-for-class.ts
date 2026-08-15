@@ -39,11 +39,6 @@ export async function listStudentsForClass(
             id: true,
             email: true,
             name: true,
-            student_profile: {
-              select: {
-                student_id_number: true,
-              },
-            },
           },
         },
         major: {
@@ -63,7 +58,6 @@ export async function listStudentsForClass(
       userId: e.student_user_id,
       email: e.student.email,
       name: e.student.name,
-      studentIdNumber: e.student.student_profile?.student_id_number ?? null,
       enrollmentId: e.id,
       majorId: e.major_id,
       majorName: e.major?.name ?? null,

@@ -69,7 +69,6 @@ async function previewStudents(
       name: student.name,
       programCode: program?.code ?? null,
       stakeholderType: TargetStakeholder.STUDENT,
-      studentId: student.studentIdNumber,
       userId: student.userId,
       yearLevel: input.yearLevel ?? null,
     }));
@@ -109,7 +108,6 @@ async function previewAlumni(
     name: u.name,
     programCode: null,
     stakeholderType: TargetStakeholder.ALUMNI,
-    studentId: null,
     userId: u.id,
     yearLevel: null,
   }));
@@ -137,7 +135,6 @@ async function previewIndustryPartners(
     name: p.user.name,
     programCode: p.program?.code ?? null,
     stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
-    studentId: null,
     userId: p.user.id,
     yearLevel: null,
   }));

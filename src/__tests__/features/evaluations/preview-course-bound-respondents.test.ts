@@ -181,7 +181,7 @@ describe("previewCourseBoundRespondents", () => {
         student: {
           email: "student1@school.edu",
           name: "John Doe",
-          student_profile: { major_id: null, major: null, student_id_number: "S2025-001" },
+          student_profile: { major_id: null, major: null },
         },
       },
       {
@@ -190,7 +190,7 @@ describe("previewCourseBoundRespondents", () => {
         student: {
           email: "student2@school.edu",
           name: "Mary Anne O'Connor",
-          student_profile: { major_id: null, major: null, student_id_number: "S2025-002" },
+          student_profile: { major_id: null, major: null },
         },
       },
       {
@@ -199,7 +199,7 @@ describe("previewCourseBoundRespondents", () => {
         student: {
           email: "student3@school.edu",
           name: "Prince",
-          student_profile: { major_id: null, major: null, student_id_number: "S2025-003" },
+          student_profile: { major_id: null, major: null },
         },
       },
     ]);
@@ -223,7 +223,6 @@ describe("previewCourseBoundRespondents", () => {
         programId: "program-1",
         programName: "BS Computer Science",
         section: StudentSection.MORNING,
-        studentId: "S2025-001",
         userId: "student-1",
         yearLevel: YearLevel.FIRST_YEAR,
       });

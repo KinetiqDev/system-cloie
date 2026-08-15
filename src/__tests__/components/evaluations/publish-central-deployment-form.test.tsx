@@ -42,7 +42,6 @@ const previewRespondent = {
   email: "alice@school.edu",
   name: "Alice Adams",
   programCode: "BSCS",
-  studentId: "S001",
   userId: "user-1",
   yearLevel: YearLevel.FIRST_YEAR as YearLevel | null,
 };

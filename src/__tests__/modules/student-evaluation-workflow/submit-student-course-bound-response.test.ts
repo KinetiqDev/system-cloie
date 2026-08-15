@@ -123,7 +123,12 @@ describe("submitStudentCourseBoundResponse", () => {
         enrollments: [{ program_id: "program-1" }],
         is_active: true,
         roles: [{ role: "STUDENT" }],
-        student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        student_profile: {
+          program_id: "program-1",
+          major_id: null,
+          program: { is_active: true, majors: [] },
+          major: null,
+        },
       },
     });
     vi.useRealTimers();
@@ -252,7 +257,12 @@ describe("submitStudentCourseBoundResponse", () => {
         enrollments: [],
         is_active: true,
         roles: [{ role: "STUDENT" }],
-        student_profile: { program_id: "program-1", student_id_number: "S0001" },
+        student_profile: {
+          program_id: "program-1",
+          major_id: null,
+          program: { is_active: true, majors: [] },
+          major: null,
+        },
       },
     });
     findAssignmentMock.mockResolvedValue({

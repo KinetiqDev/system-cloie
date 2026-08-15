@@ -126,7 +126,6 @@ export type PreviewRespondent = {
   programId: string;
   programName: string;
   section: StudentSection | null;
-  studentId: string | null;
   userId: string;
   yearLevel: YearLevel;
 };
@@ -267,7 +266,6 @@ export type PreviewCentralDeploymentRespondent = {
   name: string;
   programCode: string | null;
   stakeholderType: TargetStakeholder;
-  studentId: string | null;
   userId: string;
   yearLevel: YearLevel | null;
 };

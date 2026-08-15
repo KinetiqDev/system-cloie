@@ -116,7 +116,12 @@ describe("course-assignment-roster service", () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       is_active: true,
       roles: [{ role: ROLES.STUDENT }],
-      student_profile: { program_id: "program-2", student_id_number: "S0001" },
+      student_profile: {
+        program_id: "program-2",
+        major_id: null,
+        program: { is_active: true, majors: [] },
+        major: null,
+      },
       enrollments: [{ program_id: "program-2" }],
     } as never);
 
@@ -126,7 +131,7 @@ describe("course-assignment-roster service", () => {
     });
   });
 
-  it("treats a profile without a valid Student ID as incomplete", async () => {
+  it("treats an inactive Program affiliation as incomplete", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
       createAuthSessionSnapshot({ roles: [ROLES.SECRETARY] })
     );
@@ -149,7 +154,12 @@ describe("course-assignment-roster service", () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       is_active: true,
       roles: [{ role: ROLES.STUDENT }],
-      student_profile: { program_id: "program-1", student_id_number: "1234" },
+      student_profile: {
+        program_id: "program-1",
+        major_id: null,
+        program: { is_active: false, majors: [] },
+        major: null,
+      },
       enrollments: [{ program_id: "program-1" }],
     } as never);
 
@@ -157,6 +167,101 @@ describe("course-assignment-roster service", () => {
       success: true,
       data: { eligible: false, reason: "PROFILE_INCOMPLETE" },
     });
+  });
+
+  it("does not treat a profile without a former Student ID as incomplete", () => {
+    expect(
+      projectRosterEligibility(
+        { courseScope: CourseScope.PROGRAM_SPECIFIC, programId: "program-1" },
+        {
+          enrollments: [{ program_id: "program-1" }],
+          is_active: true,
+          roles: [{ role: ROLES.STUDENT }],
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
+        }
+      )
+    ).toEqual({ eligible: true, reason: null });
+  });
+
+  it("requires an active Program-owned Major when the Program has active Majors", () => {
+    const assignment = { courseScope: CourseScope.PROGRAM_SPECIFIC, programId: "program-1" };
+    const base = {
+      enrollments: [{ program_id: "program-1" }],
+      is_active: true,
+      roles: [{ role: ROLES.STUDENT }],
+    };
+
+    expect(
+      projectRosterEligibility(assignment, {
+        ...base,
+        student_profile: {
+          program_id: "program-1",
+          major_id: null,
+          program: { is_active: true, majors: [{ id: "major-1" }] },
+          major: null,
+        },
+      })
+    ).toEqual({ eligible: false, reason: "PROFILE_INCOMPLETE" });
+
+    expect(
+      projectRosterEligibility(assignment, {
+        ...base,
+        student_profile: {
+          program_id: "program-1",
+          major_id: "major-1",
+          program: { is_active: true, majors: [{ id: "major-1" }] },
+          major: { is_active: false, program_id: "program-1" },
+        },
+      })
+    ).toEqual({ eligible: false, reason: "PROFILE_INCOMPLETE" });
+
+    expect(
+      projectRosterEligibility(assignment, {
+        ...base,
+        student_profile: {
+          program_id: "program-1",
+          major_id: "major-2",
+          program: { is_active: true, majors: [{ id: "major-1" }] },
+          major: { is_active: true, program_id: "program-2" },
+        },
+      })
+    ).toEqual({ eligible: false, reason: "PROFILE_INCOMPLETE" });
+
+    expect(
+      projectRosterEligibility(assignment, {
+        ...base,
+        student_profile: {
+          program_id: "program-1",
+          major_id: "major-1",
+          program: { is_active: true, majors: [{ id: "major-1" }] },
+          major: { is_active: true, program_id: "program-1" },
+        },
+      })
+    ).toEqual({ eligible: true, reason: null });
+  });
+
+  it("keeps missing active assignment-period placement a separate reason", () => {
+    expect(
+      projectRosterEligibility(
+        { courseScope: CourseScope.PROGRAM_SPECIFIC, programId: "program-1" },
+        {
+          enrollments: [],
+          is_active: true,
+          roles: [{ role: ROLES.STUDENT }],
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
+        }
+      )
+    ).toEqual({ eligible: false, reason: "NO_ACTIVE_TERM_PLACEMENT" });
   });
 
   it("excludes inactive roster members from Course-bound participation", () => {
@@ -173,7 +278,12 @@ describe("course-assignment-roster service", () => {
           enrollments: [{ program_id: "program-1" }],
           is_active: true,
           roles: [{ role: ROLES.STUDENT }],
-          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
         },
       })
     ).toEqual({ eligible: false, reason: null });
@@ -187,7 +297,12 @@ describe("course-assignment-roster service", () => {
           enrollments: [{ program_id: "program-1" }],
           is_active: true,
           roles: [{ role: ROLES.STUDENT }],
-          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
         }
       )
     ).toEqual({ eligible: true, reason: null });
@@ -226,7 +341,12 @@ describe("course-assignment-roster service", () => {
         student: {
           is_active: true,
           roles: [{ role: ROLES.STUDENT }],
-          student_profile: { program_id: "program-1", student_id_number: "S0001" },
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
           enrollments: [{ program_id: "program-1", term_instance_id: "term-1" }],
         },
       },
