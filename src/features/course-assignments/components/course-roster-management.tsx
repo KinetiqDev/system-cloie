@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
 import {
   Dialog,
   DialogContent,
@@ -167,6 +170,138 @@ function dispositionBadge(disposition: CourseRosterPreviewDisposition | null) {
       return null;
   }
 }
+function rowIsSuggested(row: CourseRosterPreviewRow) {
+  return row.resolution.status === "SUGGESTED_MATCH";
+}
+
+function rowIsPrepared(row: CourseRosterPreviewRow) {
+  return (
+    (row.resolution.status === "EXACT_MATCH" || rowIsSuggested(row)) &&
+    (row.disposition === "READY_CREATE" || row.disposition === "WILL_RESTORE")
+  );
+}
+
+function preparedCandidate(
+  row: CourseRosterPreviewRow
+): CourseRosterPreviewCandidate | undefined {
+  if (!rowIsPrepared(row)) return undefined;
+  const candidateId = row.resolution.candidateIds[0];
+  return row.candidates.find((candidate) => candidate.userId === candidateId);
+}
+
+function hasSuggestedRow(preview: CourseRosterPreview | null, sourceIndex: number) {
+  return (
+    preview?.rows.some((row) => row.sourceIndex === sourceIndex && rowIsSuggested(row)) ??
+    false
+  );
+}
+
+type ReviewGuardState = {
+  suggestedCount: number;
+  reviewBlockers: string[];
+};
+
+// The identities a confirmation would submit: manual selections plus
+// prepared exact matches and (once acknowledged) suggested matches.
+export function effectiveCandidateByIndexFor({
+  preview,
+  skippedIndexes,
+  selectedCandidateByIndex,
+  suggestionsAcknowledged,
+}: {
+  preview: CourseRosterPreview | null;
+  skippedIndexes: ReadonlySet<number>;
+  selectedCandidateByIndex: Record<number, CourseRosterPreviewCandidate>;
+  suggestionsAcknowledged: boolean;
+}): Record<number, CourseRosterPreviewCandidate> {
+  const effectiveCandidateByIndex: Record<number, CourseRosterPreviewCandidate> = {};
+  for (const row of preview?.rows ?? []) {
+    if (skippedIndexes.has(row.sourceIndex)) continue;
+    const manual = selectedCandidateByIndex[row.sourceIndex];
+    if (manual) {
+      effectiveCandidateByIndex[row.sourceIndex] = manual;
+      continue;
+    }
+    if (
+      row.resolution.status === "EXACT_MATCH" ||
+      (suggestionsAcknowledged && rowIsSuggested(row))
+    ) {
+      const prepared = preparedCandidate(row);
+      if (prepared) effectiveCandidateByIndex[row.sourceIndex] = prepared;
+    }
+  }
+  return effectiveCandidateByIndex;
+}
+
+// Review completion guards: every non-skipped row is resolved, no account is
+// selected for two rows, and acknowledged suggestions match the current set.
+export function buildReviewGuards({
+  preview,
+  skippedIndexes,
+  selectedCandidateByIndex,
+  suggestionsAcknowledged,
+}: {
+  preview: CourseRosterPreview | null;
+  skippedIndexes: ReadonlySet<number>;
+  selectedCandidateByIndex: Record<number, CourseRosterPreviewCandidate>;
+  suggestionsAcknowledged: boolean;
+}): ReviewGuardState {
+  const suggestedCount =
+    preview?.rows.filter(
+      (row) =>
+        rowIsSuggested(row) &&
+        rowIsPrepared(row) &&
+        !skippedIndexes.has(row.sourceIndex) &&
+        !(row.sourceIndex in selectedCandidateByIndex)
+    ).length ?? 0;
+
+  const effectiveCandidateByIndex = effectiveCandidateByIndexFor({
+    preview,
+    skippedIndexes,
+    selectedCandidateByIndex,
+    suggestionsAcknowledged,
+  });
+
+  const selectedIdsByUser = new Map<string, number[]>();
+  for (const [sourceIndex, candidate] of Object.entries(effectiveCandidateByIndex)) {
+    const indexes = selectedIdsByUser.get(candidate.userId) ?? [];
+    indexes.push(Number(sourceIndex));
+    selectedIdsByUser.set(candidate.userId, indexes);
+  }
+  const duplicateGroups = [...selectedIdsByUser.values()].filter(
+    (indexes) => indexes.length > 1
+  );
+
+  const unresolvedRows =
+    preview?.rows.filter(
+      (row) =>
+        !skippedIndexes.has(row.sourceIndex) &&
+        row.disposition !== "ALREADY_ACTIVE" &&
+        !(row.sourceIndex in selectedCandidateByIndex) &&
+        !rowIsPrepared(row)
+    ) ?? [];
+
+  const reviewBlockers: string[] = [];
+  if (duplicateGroups.length > 0) {
+    reviewBlockers.push(
+      `The same Student is selected for rows ${duplicateGroups
+        .map((indexes) => indexes.join(" and "))
+        .join("; ")}. Change or skip one before continuing.`
+    );
+  }
+  if (unresolvedRows.length > 0) {
+    reviewBlockers.push(
+      `Resolve or skip ${unresolvedRows.length} row${unresolvedRows.length === 1 ? "" : "s"} before continuing.`
+    );
+  }
+  if (suggestedCount > 0 && !suggestionsAcknowledged) {
+    reviewBlockers.push(
+      `Acknowledge ${suggestedCount} suggested ${suggestedCount === 1 ? "match" : "matches"} before continuing.`
+    );
+  }
+
+  return { suggestedCount, reviewBlockers };
+}
 
 function rowGroup(
   row: CourseRosterPreviewRow,
@@ -176,7 +311,7 @@ function rowGroup(
   if (skippedIndexes.has(row.sourceIndex)) return "skipped";
   if (row.disposition === "ALREADY_ACTIVE") return "already-active";
   if (selectedCandidateByIndex && row.sourceIndex in selectedCandidateByIndex) return "ready";
-  if (row.resolution.status === "SUGGESTED_MATCH") return "review";
+  if (rowIsSuggested(row)) return "review";
   if (row.disposition === "READY_CREATE" || row.disposition === "WILL_RESTORE") return "ready";
   return "resolve";
 }
@@ -434,10 +569,13 @@ function ReviewPreviewBlock({
   selectedCandidateByIndex,
   skippedIndexes,
   filter,
+  suggestedCount,
+  suggestionsAcknowledged,
   onFilterChange,
   onSelect,
   onClearSelection,
   onToggleSkip,
+  onAcknowledgeSuggestions,
 }: {
   preview: CourseRosterPreview;
   assignment: CourseRosterAssignmentSummary | undefined;
@@ -445,10 +583,13 @@ function ReviewPreviewBlock({
   selectedCandidateByIndex: Record<number, CourseRosterPreviewCandidate>;
   skippedIndexes: ReadonlySet<number>;
   filter: PreviewFilter;
+  suggestedCount: number;
+  suggestionsAcknowledged: boolean;
   onFilterChange: (filter: PreviewFilter) => void;
   onSelect: (sourceIndex: number, candidate: CourseRosterPreviewCandidate) => void;
   onClearSelection: (sourceIndex: number) => void;
   onToggleSkip: (sourceIndex: number) => void;
+  onAcknowledgeSuggestions: (acknowledged: boolean) => void;
 }) {
   const skipped = skippedIndexes;
   const counts = countGroups(preview.rows, skipped, selectedCandidateByIndex);
@@ -474,6 +615,20 @@ function ReviewPreviewBlock({
           </Button>
         ))}
       </div>
+
+      {suggestedCount > 0 && (
+        <div className="flex items-start gap-2 rounded-lg border p-3">
+          <Checkbox
+            id="acknowledge-suggested"
+            checked={suggestionsAcknowledged}
+            onCheckedChange={(checked) => onAcknowledgeSuggestions(checked === true)}
+          />
+          <Label htmlFor="acknowledge-suggested" className="cursor-pointer text-body-sm leading-6">
+            I acknowledge {suggestedCount} suggested {suggestedCount === 1 ? "match" : "matches"} —
+            review each suggested account before confirming.
+          </Label>
+        </div>
+      )}
 
       <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {visibleRows.length === 0 ? (
@@ -577,6 +732,7 @@ function ManagementFooter({
   onBack,
   onClose,
   onPrimary,
+  primaryDisabled,
   primaryLabel,
 }: {
   closeDisabled: boolean;
@@ -585,6 +741,7 @@ function ManagementFooter({
   onBack: () => void;
   onClose: () => void;
   onPrimary: () => void;
+  primaryDisabled: boolean;
   primaryLabel: string;
 }) {
   return (
@@ -600,7 +757,7 @@ function ManagementFooter({
         </Button>
       </div>
       {phase !== "add" && (
-        <Button type="button" onClick={onPrimary} disabled={isPending}>
+        <Button type="button" onClick={onPrimary} disabled={primaryDisabled}>
           {primaryLabel}
         </Button>
       )}
@@ -634,7 +791,11 @@ function ManagementBody({
   phase,
   preview,
   filter,
+  suggestedCount,
+  suggestionsAcknowledged,
   onFilterChange,
+  onAcknowledgeSuggestions,
+  reviewBlockers,
   programId,
   selectedCandidateByIndex,
   skippedIndexes,
@@ -657,7 +818,11 @@ function ManagementBody({
   phase: RosterManagementPhase;
   preview: CourseRosterPreview | null;
   filter: PreviewFilter;
+  suggestedCount: number;
+  suggestionsAcknowledged: boolean;
   onFilterChange: (filter: PreviewFilter) => void;
+  onAcknowledgeSuggestions: (acknowledged: boolean) => void;
+  reviewBlockers: string[];
   programId?: string;
   selectedCandidateByIndex: Record<number, CourseRosterPreviewCandidate>;
   skippedIndexes: ReadonlySet<number>;
@@ -704,18 +869,35 @@ function ManagementBody({
       )}
 
       {phase === "review" && preview && (
-        <ReviewPreviewBlock
-          preview={preview}
-          assignment={assignment}
-          programId={programId}
-          selectedCandidateByIndex={selectedCandidateByIndex}
-          skippedIndexes={skippedIndexes}
-          filter={filter}
-          onFilterChange={onFilterChange}
-          onSelect={onSelect}
-          onClearSelection={onClearSelection}
-          onToggleSkip={onToggleSkip}
-        />
+        <>
+          {reviewBlockers.length > 0 && (
+            <Alert variant="warning" aria-live="polite">
+              <AlertTitle>Review not complete</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc pl-5">
+                  {reviewBlockers.map((blocker) => (
+                    <li key={blocker}>{blocker}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
+          <ReviewPreviewBlock
+            preview={preview}
+            assignment={assignment}
+            programId={programId}
+            selectedCandidateByIndex={selectedCandidateByIndex}
+            skippedIndexes={skippedIndexes}
+            filter={filter}
+            suggestedCount={suggestedCount}
+            suggestionsAcknowledged={suggestionsAcknowledged}
+            onFilterChange={onFilterChange}
+            onSelect={onSelect}
+            onClearSelection={onClearSelection}
+            onToggleSkip={onToggleSkip}
+            onAcknowledgeSuggestions={onAcknowledgeSuggestions}
+          />
+        </>
       )}
 
       {phase === "results" && preview && (
@@ -752,9 +934,19 @@ export function RosterManagementDialog({
   >({});
   const [skippedIndexes, setSkippedIndexes] = useState<Set<number>>(new Set());
   const [filter, setFilter] = useState<PreviewFilter>("all");
+  const [suggestionsAcknowledged, setSuggestionsAcknowledged] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const pendingRef = useRef(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const { suggestedCount, reviewBlockers } = buildReviewGuards({
+    preview,
+    skippedIndexes,
+    selectedCandidateByIndex,
+    suggestionsAcknowledged,
+  });
+
 
 
   function resetWorkspace() {
@@ -766,12 +958,23 @@ export function RosterManagementDialog({
     setSelectedCandidateByIndex({});
     setSkippedIndexes(new Set());
     setFilter("all");
+    setSuggestionsAcknowledged(false);
+    setDiscardOpen(false);
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
       resetWorkspace();
       setOpen(true);
+      return;
+    }
+    requestClose();
+  }
+
+  function requestClose() {
+    if (pendingRef.current) return;
+    if (preview) {
+      setDiscardOpen(true);
       return;
     }
     closeWorkspace();
@@ -809,6 +1012,7 @@ export function RosterManagementDialog({
         setSelectedCandidateByIndex({});
         setSkippedIndexes(new Set());
         setFilter("all");
+        setSuggestionsAcknowledged(false);
         setPhase("review");
       } finally {
         pendingRef.current = false;
@@ -817,6 +1021,7 @@ export function RosterManagementDialog({
   }
 
   function toggleSkip(sourceIndex: number) {
+    if (hasSuggestedRow(preview, sourceIndex)) setSuggestionsAcknowledged(false);
     setSkippedIndexes((current) => {
       const next = new Set(current);
       if (next.has(sourceIndex)) {
@@ -829,6 +1034,7 @@ export function RosterManagementDialog({
   }
 
   function clearSelection(sourceIndex: number) {
+    if (hasSuggestedRow(preview, sourceIndex)) setSuggestionsAcknowledged(false);
     setSelectedCandidateByIndex((current) => {
       const next = { ...current };
       delete next[sourceIndex];
@@ -837,6 +1043,7 @@ export function RosterManagementDialog({
   }
 
   function selectCandidate(sourceIndex: number, candidate: CourseRosterPreviewCandidate) {
+    if (hasSuggestedRow(preview, sourceIndex)) setSuggestionsAcknowledged(false);
     setSelectedCandidateByIndex((current) => ({ ...current, [sourceIndex]: candidate }));
   }
 
@@ -846,6 +1053,7 @@ export function RosterManagementDialog({
       : phase === "review"
         ? "Review complete"
         : "Done";
+  const primaryDisabled = isPending || (phase === "review" && reviewBlockers.length > 0);
 
   const body = (
     <div className="flex min-h-0 flex-1">
@@ -866,7 +1074,11 @@ export function RosterManagementDialog({
         phase={phase}
         preview={preview}
         filter={filter}
+        suggestedCount={suggestedCount}
+        suggestionsAcknowledged={suggestionsAcknowledged}
         onFilterChange={setFilter}
+        onAcknowledgeSuggestions={setSuggestionsAcknowledged}
+        reviewBlockers={reviewBlockers}
         programId={programId}
         selectedCandidateByIndex={selectedCandidateByIndex}
         skippedIndexes={skippedIndexes}
@@ -898,16 +1110,17 @@ export function RosterManagementDialog({
                 isPending={isPending}
                 phase={phase}
                 onBack={() => setPhase(phase === "results" ? "review" : "add")}
-                onClose={closeWorkspace}
+                onClose={requestClose}
                 onPrimary={() => {
                   if (phase === "add") {
                     preparePreview();
                   } else if (phase === "review") {
                     setPhase("results");
                   } else {
-                    closeWorkspace();
+                    requestClose();
                   }
                 }}
+                primaryDisabled={primaryDisabled}
                 primaryLabel={primaryLabel}
               />
             </DialogFooter>
@@ -932,22 +1145,52 @@ export function RosterManagementDialog({
                 isPending={isPending}
                 phase={phase}
                 onBack={() => setPhase(phase === "results" ? "review" : "add")}
-                onClose={closeWorkspace}
+                onClose={requestClose}
                 onPrimary={() => {
                   if (phase === "add") {
                     preparePreview();
                   } else if (phase === "review") {
                     setPhase("results");
                   } else {
-                    closeWorkspace();
+                    requestClose();
                   }
                 }}
+                primaryDisabled={primaryDisabled}
                 primaryLabel={primaryLabel}
               />
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
       )}
+
+      <AlertDialog
+        open={discardOpen}
+        onOpenChange={(next) => {
+          if (!next) setDiscardOpen(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard preview?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This preview has not been confirmed. Closing the workspace discards uploaded names,
+              matches, and choices. Refreshing the page also discards unfinished work.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDiscardOpen(false)}>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                setDiscardOpen(false);
+                closeWorkspace();
+              }}
+            >
+              Discard preview
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
