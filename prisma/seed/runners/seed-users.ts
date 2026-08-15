@@ -32,15 +32,14 @@ export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" |
     pid: pMap.get(student.program)!.id,
     mid: student.major ? (mMap.get(student.major)?.id ?? null) : null,
     ylid: student.yearLevel,
-    sn: student.studentNumber,
     sec: student.section,
   }));
   console.log("  → Student profiles...");
   for (const s of students) {
     await prisma.studentAcademicProfile.upsert({
       where: { user_id: s.uid },
-      update: { program_id: s.pid, major_id: s.mid, student_id_number: s.sn },
-      create: { user_id: s.uid, program_id: s.pid, major_id: s.mid, student_id_number: s.sn },
+      update: { program_id: s.pid, major_id: s.mid },
+      create: { user_id: s.uid, program_id: s.pid, major_id: s.mid },
     });
     await prisma.studentEnrollment.upsert({
       where: { student_user_id_term_instance_id: { student_user_id: s.uid, term_instance_id: termInstanceId } },

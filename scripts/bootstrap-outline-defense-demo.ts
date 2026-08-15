@@ -181,11 +181,9 @@ async function main() {
     where: { user_id: student.id },
     update: {
       program_id: program.id,
-      student_id_number: "OUTLINE-DEMO-001",
     },
     create: {
       program_id: program.id,
-      student_id_number: "OUTLINE-DEMO-001",
       user_id: student.id,
     },
   });
