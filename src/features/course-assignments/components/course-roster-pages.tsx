@@ -653,8 +653,8 @@ export function CourseRosterDetailPage({
           <CardHeader className="has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
             <CardTitle>Manage roster</CardTitle>
             <CardDescription>
-              Add one Student, or import up to {COURSE_ROSTER_MAX_ROWS} Students from a CSV. Review
-              per-row results before closing.
+              Add one Student, or upload up to {COURSE_ROSTER_MAX_ROWS} official names from a CSV.
+              Review resolved rows before confirming roster changes.
             </CardDescription>
             <CardAction className="col-start-1 row-start-auto mt-2 w-full justify-self-stretch sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
               <RosterManagementDialog

@@ -490,17 +490,15 @@ describe("course roster pages", () => {
       success: true,
       data: {
         total: 2,
-        created: 1,
-        restored: 0,
-        failed: 1,
-        unprocessed: 0,
+        parsed: 1,
+        invalid: 1,
         rows: [
-          { sourceIndex: 2, email: "ok@example.com", status: "CREATED", error: "Created." },
+          { sourceIndex: 2, name: "Maria Santos", status: "PARSED", error: "" },
           {
             sourceIndex: 3,
-            email: "bad@example.com",
-            status: "UNKNOWN_ACCOUNT",
-            error: "No matching account was found.",
+            name: "Invalid name",
+            status: "INVALID_NAME",
+            error: "Name must contain 1 to 200 characters.",
           },
         ],
       },
@@ -525,15 +523,15 @@ describe("course roster pages", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:test");
 
     const input = screen.getByLabelText("Roster CSV file");
-    const file = new File(["email\nok@example.com\nbad@example.com\n"], "roster.csv", {
+    const file = new File(["name\nMaria Santos\nInvalid name\n"], "roster.csv", {
       type: "text/csv",
     });
     fireEvent.change(input, { target: { files: [file] } });
     fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
 
     expect(await screen.findByRole("heading", { name: "Import results" })).toBeInTheDocument();
-    expect(screen.getByText(/1 created, 0 restored, 1 failed, 0 unprocessed/i)).toBeInTheDocument();
-    expect(screen.getByText("No matching account was found.")).toBeInTheDocument();
+    expect(screen.getByText(/1 ready for review, 1 invalid/i)).toBeInTheDocument();
+    expect(screen.getByText("Name must contain 1 to 200 characters.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /download failed rows/i })).toBeInTheDocument();
     expect(screen.getByRole("table").parentElement).toHaveClass("overflow-x-auto");
     expect(rosterActions.importCourseRosterAction).toHaveBeenCalledWith(expect.any(FormData));
@@ -563,31 +561,28 @@ describe("course roster pages", () => {
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, {
-      target: { files: [new File(["email\n"], "roster.csv", { type: "text/csv" })] },
+      target: { files: [new File(["name\n"], "roster.csv", { type: "text/csv" })] },
     });
     fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(/CSV must contain one email column/i)
+      expect(screen.getByRole("alert")).toHaveTextContent(/CSV must contain one name column/i)
     );
     expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent("Add members");
 
     vi.spyOn(rosterActions, "importCourseRosterAction").mockResolvedValue({
       success: false,
       error: "The roster import could not be completed.",
-      referenceId: "support-123",
     });
     fireEvent.change(input, {
       target: {
-        files: [new File(["email\nok@example.com\n"], "roster.csv", { type: "text/csv" })],
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        /The roster import could not be completed.*Support reference: support-123/i
-      )
+      expect(screen.getByRole("alert")).toHaveTextContent(/The roster import could not be completed/i)
     );
     expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent("Add members");
   });
@@ -620,11 +615,9 @@ describe("course roster pages", () => {
       success: true,
       data: {
         total: 1,
-        created: 1,
-        restored: 0,
-        failed: 0,
-        unprocessed: 0,
-        rows: [{ sourceIndex: 2, email: "ok@example.com", status: "CREATED", error: "Created." }],
+        parsed: 1,
+        invalid: 0,
+        rows: [{ sourceIndex: 2, name: "Maria Santos", status: "PARSED", error: "" }],
       },
     });
     render(<RosterManagementDialog assignmentId="assignment-1" />);
@@ -632,7 +625,7 @@ describe("course roster pages", () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, {
       target: {
-        files: [new File(["email\nok@example.com\n"], "roster.csv", { type: "text/csv" })],
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /import roster/i }));
@@ -661,11 +654,9 @@ describe("course roster pages", () => {
         success: true,
         data: {
           total: 1,
-          created: 1,
-          restored: 0,
-          failed: 0,
-          unprocessed: 0,
-          rows: [{ sourceIndex: 2, email: "ok@example.com", status: "CREATED", error: "Created." }],
+          parsed: 1,
+          invalid: 0,
+          rows: [{ sourceIndex: 2, name: "Maria Santos", status: "PARSED", error: "" }],
         },
       };
     });
@@ -674,7 +665,7 @@ describe("course roster pages", () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, {
       target: {
-        files: [new File(["email\nok@example.com\n"], "roster.csv", { type: "text/csv" })],
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /import roster/i }));

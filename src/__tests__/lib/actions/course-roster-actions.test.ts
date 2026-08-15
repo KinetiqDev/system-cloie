@@ -87,16 +87,16 @@ describe("course roster actions", () => {
     expect(serviceMocks.importCourseRoster).not.toHaveBeenCalled();
   });
 
-  it("passes valid text import to service and revalidates after success", async () => {
+  it("passes valid name CSV text to the no-write preview seam", async () => {
     serviceMocks.importCourseRoster.mockResolvedValue({
       success: true,
-      data: { total: 1, created: 1, restored: 0, failed: 0, unprocessed: 0, rows: [] },
+      data: { total: 1, parsed: 1, invalid: 0, rows: [] },
     });
 
-    await importCourseRosterAction({ assignmentId, csvText: "email\na@example.com" });
+    await importCourseRosterAction({ assignmentId, csvText: "name\nMaria Santos" });
 
-    expect(serviceMocks.importCourseRoster).toHaveBeenCalledWith(assignmentId, "email\na@example.com");
-    expect(revalidatePathMock).toHaveBeenCalledWith(`/course-rosters/${assignmentId}`);
+    expect(serviceMocks.importCourseRoster).toHaveBeenCalledWith(assignmentId, "name\nMaria Santos");
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
   it("passes selected Program scope and revalidates exact selected routes", async () => {

@@ -89,11 +89,10 @@ function MutationMessage({ message }: { message: string | null }) {
 function resultMessage(result: {
   success: boolean;
   error?: string;
-  referenceId?: string;
   data?: { message: string };
 }) {
   if (result.success) return result.data?.message ?? "Roster updated.";
-  return `${result.error ?? "The roster request could not be completed."}${result.referenceId ? ` Support reference: ${result.referenceId}.` : ""}`;
+  return result.error ?? "The roster request could not be completed.";
 }
 
 function downloadCsv(filename: string, content: string) {
@@ -121,10 +120,7 @@ async function runCsvImport(
 
     const result = await importCourseRosterAction(formData);
     if (result.success) return { ok: true, data: result.data };
-    return {
-      ok: false,
-      message: `${result.error}${result.referenceId ? ` Support reference: ${result.referenceId}.` : ""}`,
-    };
+    return { ok: false, message: result.error };
   } catch {
     return { ok: false, message: "The roster request could not be completed." };
   }
@@ -134,21 +130,8 @@ const statusBadgeVariant: Record<
   CourseRosterImportRowStatus,
   "success" | "information" | "destructive" | "warning"
 > = {
-  CREATED: "success",
-  RESTORED: "success",
-  DUPLICATE_EMAIL: "information",
-  ALREADY_ACTIVE: "information",
-  MALFORMED_EMAIL: "destructive",
-  UNKNOWN_ACCOUNT: "destructive",
-  NON_STUDENT_ACCOUNT: "destructive",
-  ACCOUNT_INACTIVE: "destructive",
-  PROFILE_INCOMPLETE: "destructive",
-  NO_ACTIVE_TERM_PLACEMENT: "destructive",
-  PROGRAM_MISMATCH: "destructive",
-  OTHER_SECTION_CONFLICT: "destructive",
-  READ_ONLY: "destructive",
-  UNEXPECTED_FAILURE: "destructive",
-  UNPROCESSED: "warning",
+  PARSED: "information",
+  INVALID_NAME: "destructive",
 };
 
 function statusLabel(status: CourseRosterImportRowStatus) {
@@ -159,7 +142,7 @@ function statusLabel(status: CourseRosterImportRowStatus) {
 }
 
 function ImportResultsBlock({ result }: { result: CourseRosterImportSummary }) {
-  const failedRows = result.rows.filter((row) => !["CREATED", "RESTORED"].includes(row.status));
+  const failedRows = result.rows.filter((row) => row.status === "INVALID_NAME");
 
   return (
     <section
@@ -172,33 +155,24 @@ function ImportResultsBlock({ result }: { result: CourseRosterImportSummary }) {
           Import results
         </h3>
         <p className="text-body-sm text-muted-foreground">
-          {result.total} total: {result.created} created, {result.restored} restored,{" "}
-          {result.failed} failed, {result.unprocessed} unprocessed.
+          {result.total} total: {result.parsed} ready for review, {result.invalid} invalid.
         </p>
       </div>
-      {result.referenceId && (
-        <Alert variant="destructive">
-          <AlertTitle>Import stopped</AlertTitle>
-          <AlertDescription>
-            Unexpected failure. Support reference: {result.referenceId}.
-          </AlertDescription>
-        </Alert>
-      )}
       <div className="overflow-x-auto rounded-lg border">
         <Table className="min-w-[42rem]">
           <caption className="sr-only">Course roster import row results</caption>
           <TableHeader>
             <TableRow>
               <TableHead>Row</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>Name</TableHead>
               <TableHead>Result</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {result.rows.map((row) => (
-              <TableRow key={`${row.sourceIndex}-${row.email}`}>
+              <TableRow key={`${row.sourceIndex}-${row.name}`}>
                 <TableCell className="tabular-nums">{row.sourceIndex}</TableCell>
-                <TableCell>{row.email}</TableCell>
+                <TableCell>{row.name}</TableCell>
                 <TableCell className="max-w-xl whitespace-normal">
                   <span className="flex flex-wrap items-center gap-2">
                     <Badge variant={statusBadgeVariant[row.status]}>
@@ -283,7 +257,7 @@ function CsvImportMethod({
       <div className="flex flex-col gap-1">
         <h2 className="text-title-md">Import Students from CSV</h2>
         <p className="text-body-sm text-muted-foreground">
-          Eligibility is checked on import for every email.
+          Upload official Student names to prepare a roster preview. No roster membership changes yet.
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
@@ -318,7 +292,7 @@ function CsvImportMethod({
         <Upload aria-hidden="true" />
         <p className="text-label-md font-medium">Drop CSV here or click to browse</p>
         <p className="text-caption text-muted-foreground">
-          One unquoted <code>email</code> column, up to {COURSE_ROSTER_MAX_ROWS} data rows.
+          One <code>name</code> or <code>Student Name</code> column, up to {COURSE_ROSTER_MAX_ROWS} rows.
         </p>
       </div>
       <input
@@ -620,8 +594,8 @@ export function RosterManagementDialog({
               <DialogHeader className="shrink-0">
                 <DialogTitle>Manage roster</DialogTitle>
                 <DialogDescription>
-                  Add one Student by email or import up to {COURSE_ROSTER_MAX_ROWS} emails from a
-                  CSV.
+                  Upload up to {COURSE_ROSTER_MAX_ROWS} official Student names from a CSV to prepare
+                  a roster preview.
                 </DialogDescription>
               </DialogHeader>
               {body}
@@ -650,7 +624,8 @@ export function RosterManagementDialog({
             <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
               <DrawerTitle>Manage roster</DrawerTitle>
               <DrawerDescription>
-                Add one Student by email or import up to {COURSE_ROSTER_MAX_ROWS} emails from a CSV.
+                Upload up to {COURSE_ROSTER_MAX_ROWS} official Student names from a CSV to prepare a
+                roster preview.
               </DrawerDescription>
             </DrawerHeader>
             {body}
