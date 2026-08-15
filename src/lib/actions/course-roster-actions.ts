@@ -110,14 +110,7 @@ export async function importCourseRosterAction(input: unknown) {
     if (!(await validateProgramHeadActionScope(programId ?? undefined))) {
       return { success: false as const, error: "Course assignment not found." };
     }
-    const result = programId
-      ? await importCourseRoster(
-          assignmentId,
-          new Uint8Array(await file.arrayBuffer()),
-          programId
-        )
-      : await importCourseRoster(assignmentId, new Uint8Array(await file.arrayBuffer()));
-    if (result.success) revalidateRosterRoutes(assignmentId, programId ?? undefined);
+    const result = await importCourseRoster(assignmentId, new Uint8Array(await file.arrayBuffer()));
     return result;
   }
 
@@ -132,10 +125,7 @@ export async function importCourseRosterAction(input: unknown) {
     if (!(await validateProgramHeadActionScope(parsed.programId))) {
       return { success: false as const, error: "Course assignment not found." };
     }
-    const result = parsed.programId
-      ? await importCourseRoster(parsed.assignmentId, parsed.csvText, parsed.programId)
-      : await importCourseRoster(parsed.assignmentId, parsed.csvText);
-    if (result.success) revalidateRosterRoutes(parsed.assignmentId, parsed.programId);
+    const result = await importCourseRoster(parsed.assignmentId, parsed.csvText);
     return result;
   }
 
