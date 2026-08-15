@@ -1,8 +1,24 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function SecretaryDashboardPage() {
+const quickLinks = [
+  { href: "/secretary/users", label: "Users, roles, and invites" },
+  { href: "/secretary/programs", label: "Programs and majors" },
+  { href: "/secretary/courses", label: "Course catalog" },
+  { href: "/secretary/instruments", label: "Baseline instruments" },
+] as const;
+
+type SecretaryDashboardCounts = {
+  userCount: number;
+  programCount: number;
+  courseCount: number;
+  templateCount: number;
+};
+
+async function getSecretaryDashboardCounts(): Promise<SecretaryDashboardCounts> {
   const [userCount, programCount, courseCount, templateCount] = await Promise.all([
     prisma.user.count(),
     prisma.program.count({ where: { is_active: true } }),
@@ -10,12 +26,13 @@ export default async function SecretaryDashboardPage() {
     prisma.instrumentTemplate.count({ where: { is_active: true } }),
   ]);
 
-  const quickLinks = [
-    { href: "/secretary/users", label: "Users, roles, and invites" },
-    { href: "/secretary/programs", label: "Programs and majors" },
-    { href: "/secretary/courses", label: "Course catalog" },
-    { href: "/secretary/instruments", label: "Baseline instruments" },
-  ];
+  return { userCount, programCount, courseCount, templateCount };
+}
+
+export default function SecretaryDashboardPage() {
+  // Start the read before rendering so the static shell and the counts overlap.
+  const countsPromise = getSecretaryDashboardCounts();
+  void countsPromise.catch(() => undefined);
 
   return (
     <div className="space-y-6">
@@ -27,23 +44,9 @@ export default async function SecretaryDashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        {[
-          { label: "Users", value: userCount },
-          { label: "Programs", value: programCount },
-          { label: "Courses", value: courseCount },
-          { label: "Templates", value: templateCount },
-        ].map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="pb-2">
-              <CardDescription>{stat.label}</CardDescription>
-              <CardTitle className="font-heading text-heading-xl text-foreground tabular-nums">
-                {stat.value}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
+      <Suspense fallback={<SecretaryStatsFallback />}>
+        <SecretaryStats countsPromise={countsPromise} />
+      </Suspense>
 
       <Card>
         <CardHeader>
@@ -66,5 +69,52 @@ export default async function SecretaryDashboardPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+async function SecretaryStats({
+  countsPromise,
+}: {
+  countsPromise: Promise<SecretaryDashboardCounts>;
+}) {
+  const counts = await countsPromise;
+
+  return (
+    <SecretaryStatsGrid>
+      {[
+        { label: "Users", value: counts.userCount },
+        { label: "Programs", value: counts.programCount },
+        { label: "Courses", value: counts.courseCount },
+        { label: "Templates", value: counts.templateCount },
+      ].map((stat) => (
+        <Card key={stat.label}>
+          <CardHeader className="pb-2">
+            <CardDescription>{stat.label}</CardDescription>
+            <CardTitle className="font-heading text-heading-xl text-foreground tabular-nums">
+              {stat.value}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      ))}
+    </SecretaryStatsGrid>
+  );
+}
+
+function SecretaryStatsGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">{children}</div>;
+}
+
+function SecretaryStatsFallback() {
+  return (
+    <SecretaryStatsGrid>
+      {["users", "programs", "courses", "templates"].map((stat) => (
+        <Card key={stat}>
+          <CardHeader className="flex flex-col gap-3 pb-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-9 w-16" />
+          </CardHeader>
+        </Card>
+      ))}
+    </SecretaryStatsGrid>
   );
 }

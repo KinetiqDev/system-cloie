@@ -11,19 +11,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { listStudentAssignedEvaluations } from "@/features/responses/services/list-student-assigned-evaluations";
 
-export default async function StudentHistoryPage() {
-  const { submitted } = await listStudentAssignedEvaluations();
+type StudentEvaluations = Awaited<ReturnType<typeof listStudentAssignedEvaluations>>;
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return "N/A";
-    return date.toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
+const formatDate = (date: Date | null) => {
+  if (!date) return "N/A";
+  return date.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+export default function StudentHistoryPage() {
+  // Start the read before rendering so the static heading paints immediately.
+  const evaluationsPromise = listStudentAssignedEvaluations();
+  void evaluationsPromise.catch(() => undefined);
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in space-y-6 motion-safe:duration-500">
@@ -34,6 +40,22 @@ export default async function StudentHistoryPage() {
         </p>
       </div>
 
+      <Suspense fallback={<SubmissionHistoryFallback />}>
+        <SubmissionHistory evaluationsPromise={evaluationsPromise} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function SubmissionHistory({
+  evaluationsPromise,
+}: {
+  evaluationsPromise: Promise<StudentEvaluations>;
+}) {
+  const { submitted } = await evaluationsPromise;
+
+  return (
+    <>
       <div className="border-border bg-surface hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader className="bg-surface-muted/50">
@@ -150,6 +172,51 @@ export default async function StudentHistoryPage() {
           <p className="text-text-muted font-medium">No submissions recorded yet.</p>
         </div>
       )}
-    </div>
+    </>
+  );
+}
+
+function SubmissionHistoryFallback() {
+  return (
+    <>
+      <div className="border-border bg-surface hidden overflow-hidden rounded-xl border md:block">
+        <div className="bg-surface-muted/50 grid grid-cols-4 gap-6 p-4">
+          {[1, 2, 3, 4].map((column) => (
+            <Skeleton key={column} className="h-4 w-24" />
+          ))}
+        </div>
+        {[1, 2, 3].map((row) => (
+          <div key={row} className="border-border grid grid-cols-4 items-center gap-6 border-t p-4">
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-48 max-w-full" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+            <Skeleton className="h-8 w-8 justify-self-end" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 md:hidden">
+        {[1, 2, 3].map((card) => (
+          <Card key={card} className="border-border shadow-sm">
+            <CardContent className="space-y-4 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-col gap-2">
+                  <Skeleton className="h-4 w-40 max-w-full" />
+                  <Skeleton className="h-3 w-28" />
+                </div>
+                <Skeleton className="h-6 w-20 shrink-0 rounded-full" />
+              </div>
+              <div className="border-border/50 border-y py-3">
+                <Skeleton className="h-8 w-24" />
+              </div>
+              <Skeleton className="h-11 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </>
   );
 }

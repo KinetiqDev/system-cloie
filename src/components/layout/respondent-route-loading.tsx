@@ -11,6 +11,42 @@ const loadingLabels: Record<RespondentLoadingVariant, string> = {
   profile: "Loading your profile",
 };
 
+/**
+ * Body of the evaluations route (filters + list), without the static intro
+ * section. Exported so a page that already streams its own intro can reuse the
+ * exact same skeleton for an in-page Suspense boundary.
+ */
+export function EvaluationBrowserSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-24 rounded-full" />
+          <Skeleton className="h-9 w-28 rounded-full" />
+          <Skeleton className="h-9 w-24 rounded-full" />
+        </div>
+        <div className="relative w-full md:w-64">
+          <Skeleton className="h-11 w-full" />
+        </div>
+      </div>
+      <div className="grid gap-4">
+        {[1, 2, 3].map((item) => (
+          <Card key={item} className="border-border">
+            <CardContent className="flex items-center gap-4 p-4">
+              <Skeleton className="h-12 w-12 rounded-lg" />
+              <div className="flex flex-1 flex-col gap-2">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+              <Skeleton className="h-8 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EvaluationListSkeleton() {
   return (
     <div className="flex flex-col gap-8">
@@ -20,33 +56,7 @@ function EvaluationListSkeleton() {
         <Skeleton className="mt-2 h-5 w-2/3 max-w-xl" />
       </section>
 
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex gap-2">
-            <Skeleton className="h-9 w-24 rounded-full" />
-            <Skeleton className="h-9 w-28 rounded-full" />
-            <Skeleton className="h-9 w-24 rounded-full" />
-          </div>
-          <div className="flex gap-4">
-            <Skeleton className="h-10 w-full md:w-64" />
-            <Skeleton className="h-10 w-20" />
-          </div>
-        </div>
-        <div className="grid gap-4">
-          {[1, 2, 3].map((item) => (
-            <Card key={item} className="border-border">
-              <CardContent className="flex items-center gap-4 p-4">
-                <Skeleton className="h-12 w-12 rounded-lg" />
-                <div className="flex flex-1 flex-col gap-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-                <Skeleton className="h-8 w-24" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      <EvaluationBrowserSkeleton />
     </div>
   );
 }

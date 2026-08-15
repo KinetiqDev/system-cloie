@@ -52,6 +52,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
   const rootLayout = readProjectFile("src/app/layout.tsx");
   const manifest = readProjectFile("src/app/manifest.ts");
   const publicLayout = readProjectFile("src/app/(public)/layout.tsx");
+  const publicRouteLoading = readProjectFile("src/components/layout/public-route-loading.tsx");
   const appLayout = readProjectFile("src/app/(app)/layout.tsx");
 
   describe("tokens.css - Light & Dark Semantic Variable Definitions", () => {
@@ -216,7 +217,18 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(publicLayout).not.toContain("bg-[#f8fafc]");
       expect(publicLayout).not.toContain("text-[#64748b]");
       expect(publicLayout).toContain("bg-background");
-      expect(publicLayout).toContain("text-muted-foreground");
+      expect(publicLayout).toContain("text-foreground");
+    });
+
+    it("public shell suspense fallback is a semantic shared skeleton, not a raw text string", () => {
+      // The layout delegates its fallback to the shared skeleton component so the
+      // public shell streams a real skeleton instead of an unstyled "Loading..." string.
+      expect(publicLayout).toContain("PublicRouteLoading");
+      expect(publicLayout).not.toContain("Loading...");
+
+      expect(publicRouteLoading).not.toMatch(/#[0-9a-fA-F]{6}/);
+      expect(publicRouteLoading).not.toContain("bg-white");
+      expect(publicRouteLoading).toContain('role="status"');
     });
 
     it("authenticated app layout remains untouched and preserves dynamic loading boundary", () => {

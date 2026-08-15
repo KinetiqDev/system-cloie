@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Suspense } from "react";
+import { PublicRouteLoading } from "@/components/layout/public-route-loading";
 import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
 import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
 
@@ -11,15 +12,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <div className="absolute top-4 right-4 z-40 sm:top-6 sm:right-6">
         <AppearanceMenuTrigger enabled={appearanceEnabled} />
       </div>
-      <Suspense
-        fallback={
-          <div className="flex h-full w-full animate-pulse items-center justify-center text-sm text-muted-foreground">
-            Loading...
-          </div>
-        }
-      >
-        {children}
-      </Suspense>
+      <Suspense fallback={<PublicRouteLoading variant="status" />}>{children}</Suspense>
     </div>
   );
 }

@@ -11,7 +11,8 @@ export type OperationalLoadingVariant =
   | "responseReview"
   | "schoolYearDetail"
   | "outcomeMapping"
-  | "rollover";
+  | "rollover"
+  | "profile";
 
 const loadingLabels: Record<OperationalLoadingVariant, string> = {
   dashboard: "Loading dashboard",
@@ -24,6 +25,7 @@ const loadingLabels: Record<OperationalLoadingVariant, string> = {
   schoolYearDetail: "Loading school year details",
   outcomeMapping: "Loading CILO-GO mappings",
   rollover: "Loading rollover workspace",
+  profile: "Loading profile",
 };
 
 function PageHeader() {
@@ -299,6 +301,35 @@ function RolloverSkeleton() {
   );
 }
 
+function ProfileSkeleton() {
+  return (
+    <div className="flex max-w-4xl flex-col gap-8">
+      <PageHeader />
+      <div className="grid gap-6 md:grid-cols-2">
+        {[1, 2].map((card) => (
+          <Card key={card}>
+            <CardHeader className="flex flex-row items-center gap-4">
+              <Skeleton className="size-9 rounded-lg" />
+              <div className="flex flex-1 flex-col gap-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {[1, 2, 3].map((row) => (
+                <div key={row} className="flex flex-col gap-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-56 max-w-full" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function OperationalRouteLoading({ variant }: { variant: OperationalLoadingVariant }) {
   return (
     <div className="min-w-0" role="status" aria-busy="true" aria-label={loadingLabels[variant]}>
@@ -314,6 +345,7 @@ export function OperationalRouteLoading({ variant }: { variant: OperationalLoadi
       {variant === "schoolYearDetail" && <SchoolYearDetailSkeleton />}
       {variant === "outcomeMapping" && <OutcomeMappingSkeleton />}
       {variant === "rollover" && <RolloverSkeleton />}
+      {variant === "profile" && <ProfileSkeleton />}
     </div>
   );
 }
