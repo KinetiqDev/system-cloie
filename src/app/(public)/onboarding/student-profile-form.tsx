@@ -67,7 +67,6 @@ export function StudentProfileForm({
 
   const {
     control,
-    register,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
@@ -77,7 +76,6 @@ export function StudentProfileForm({
       program_id: "",
       major_id: "",
       year_level: "",
-      student_id_number: "",
       section: "",
     },
   });
@@ -304,86 +302,37 @@ export function StudentProfileForm({
               )}
             </div>
 
-            {/* Student ID only shows when deferred; when active-term it's alongside Year Level */}
-            {hasActiveTerm ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="student_id_number"
-                    className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
-                  >
-                    School ID Number
-                  </Label>
-                  <Input
-                    id="student_id_number"
-                    placeholder="e.g., 1000571225"
-                    {...register("student_id_number")}
-                    className={
-                      errors.student_id_number ? "border-danger focus-visible:ring-danger" : ""
-                    }
-                  />
-                  {errors.student_id_number && (
-                    <p className="text-danger flex items-center gap-1 text-xs">
-                      <AlertCircle className="size-3" />
-                      Required field
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
-                    Year Level
-                  </Label>
-                  <Controller
-                    name="year_level"
-                    control={control}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger
-                          className={`w-full ${errors.year_level ? "border-danger" : ""}`}
-                        >
-                          <SelectValue placeholder="Select year">
-                            {field.value ? getYearLevelLabel(field.value as YearLevel) : null}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {yearLevels.map((yl) => (
-                            <SelectItem key={yl} value={yl}>
-                              {getYearLevelLabel(yl)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.year_level && (
-                    <p className="text-danger flex items-center gap-1 text-xs">
-                      <AlertCircle className="size-3" />
-                      {errors.year_level.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
+            {hasActiveTerm && (
               <div className="space-y-2">
-                <Label
-                  htmlFor="student_id_number"
-                  className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
-                >
-                  School ID Number
+                <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
+                  Year Level
                 </Label>
-                <Input
-                  id="student_id_number"
-                  placeholder="e.g., 1000571225"
-                  {...register("student_id_number")}
-                  className={
-                    errors.student_id_number ? "border-danger focus-visible:ring-danger" : ""
-                  }
+                <Controller
+                  name="year_level"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger
+                        className={`w-full ${errors.year_level ? "border-danger" : ""}`}
+                      >
+                        <SelectValue placeholder="Select year">
+                          {field.value ? getYearLevelLabel(field.value as YearLevel) : null}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yearLevels.map((yl) => (
+                          <SelectItem key={yl} value={yl}>
+                            {getYearLevelLabel(yl)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
-                {errors.student_id_number && (
+                {errors.year_level && (
                   <p className="text-danger flex items-center gap-1 text-xs">
                     <AlertCircle className="size-3" />
-                    Required field
+                    {errors.year_level.message}
                   </p>
                 )}
               </div>

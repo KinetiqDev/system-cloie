@@ -66,7 +66,6 @@ describe("resolvePostLoginDestination — DEFERRED_ENROLLMENT routes to /student
 describe("deferredStudentProfileSchema", () => {
   const base = {
     program_id: "550e8400-e29b-41d4-a716-446655440000",
-    student_id_number: "1000571225",
   };
 
   it("parses successfully when year_level and section are omitted", () => {
@@ -98,11 +97,6 @@ describe("deferredStudentProfileSchema", () => {
     }
   });
 
-  it("fails when student_id_number is too short", () => {
-    const result = deferredStudentProfileSchema.safeParse({ ...base, student_id_number: "123" });
-    expect(result.success).toBe(false);
-  });
-
   it("fails when program_id is not a UUID", () => {
     const result = deferredStudentProfileSchema.safeParse({ ...base, program_id: "not-a-uuid" });
     expect(result.success).toBe(false);
@@ -115,7 +109,6 @@ describe("deferredStudentProfileSchema", () => {
 describe("studentProfileSchema — year_level and section required", () => {
   const base = {
     program_id: "550e8400-e29b-41d4-a716-446655440000",
-    student_id_number: "1000571225",
     year_level: "FIRST_YEAR",
     section: "MORNING",
   };
@@ -128,7 +121,6 @@ describe("studentProfileSchema — year_level and section required", () => {
   it("fails when year_level is missing", () => {
     const rest = {
       program_id: base.program_id,
-      student_id_number: base.student_id_number,
       section: base.section,
     };
     const result = studentProfileSchema.safeParse(rest);
@@ -138,7 +130,6 @@ describe("studentProfileSchema — year_level and section required", () => {
   it("fails when section is missing", () => {
     const rest = {
       program_id: base.program_id,
-      student_id_number: base.student_id_number,
       year_level: base.year_level,
     };
     const result = studentProfileSchema.safeParse(rest);

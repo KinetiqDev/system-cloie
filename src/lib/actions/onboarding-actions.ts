@@ -122,13 +122,11 @@ export async function registerStudentProfile(data: StudentProfileInput | Deferre
         update: {
           program_id: validatedData.program_id,
           major_id: validatedData.major_id || null,
-          student_id_number: validatedData.student_id_number,
         },
         create: {
           user_id: domainUserId,
           program_id: validatedData.program_id,
           major_id: validatedData.major_id || null,
-          student_id_number: validatedData.student_id_number,
         },
       });
     });
