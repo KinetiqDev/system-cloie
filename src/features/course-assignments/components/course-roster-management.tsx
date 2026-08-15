@@ -311,6 +311,27 @@ function RowSearchPanel({
   return <RowCandidateSearch assignmentId={assignmentId} programId={programId} onSelect={onSelect} />;
 }
 
+function RowStatusBadges({
+  skipped,
+  selected,
+  resolution,
+  disposition,
+}: {
+  skipped: boolean;
+  selected: boolean;
+  resolution: CourseRosterPreviewResolution;
+  disposition: CourseRosterPreviewDisposition | null;
+}) {
+  if (skipped) return <Badge variant="secondary">Skipped</Badge>;
+  if (selected) return <Badge variant="success">Selected</Badge>;
+  return (
+    <>
+      {resolutionBadge(resolution)}
+      {dispositionBadge(disposition)}
+    </>
+  );
+}
+
 function RowCandidateDisplay({
   candidate,
   candidates,
@@ -362,16 +383,12 @@ function ReviewRowCard({
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-label-md text-muted-foreground">#{row.sourceIndex}</span>
         <p className="min-w-0 flex-1 truncate text-body-sm font-medium">{row.submittedName}</p>
-        {selectedCandidate ? (
-          <Badge variant="success">Selected</Badge>
-        ) : (
-          resolutionBadge(row.resolution)
-        )}
-        {skipped ? (
-          <Badge variant="secondary">Skipped</Badge>
-        ) : (
-          !selectedCandidate && dispositionBadge(row.disposition)
-        )}
+        <RowStatusBadges
+          skipped={skipped}
+          selected={selectedCandidate !== undefined}
+          resolution={row.resolution}
+          disposition={row.disposition}
+        />
       </div>
 
       <RowCandidateDisplay candidate={selectedCandidate} candidates={row.candidates} />
