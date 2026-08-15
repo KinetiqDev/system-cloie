@@ -16,6 +16,7 @@ type ScopedRosterStudentSearchProps = {
   programId?: string;
   onSelect?: (candidate: ScopedRosterCandidate) => void;
   selectedUserId?: string | null;
+  inputAriaLabel?: string;
 };
 
 export function ScopedRosterStudentSearch({
@@ -23,6 +24,7 @@ export function ScopedRosterStudentSearch({
   programId,
   onSelect,
   selectedUserId,
+  inputAriaLabel = "Search scoped Students",
 }: ScopedRosterStudentSearchProps) {
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<ScopedRosterCandidate[]>([]);
@@ -95,6 +97,7 @@ export function ScopedRosterStudentSearch({
           );
         }}
         placeholder="Enter at least 2 characters"
+        aria-label={inputAriaLabel}
         aria-describedby="scoped-roster-student-search-status"
       />
       <div id="scoped-roster-student-search-status" aria-live="polite" className="text-body-sm">
