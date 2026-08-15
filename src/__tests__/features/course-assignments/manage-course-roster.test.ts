@@ -6,6 +6,7 @@ import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import {
   addRosterMembership,
+  confirmRosterResolution,
   preflightRosterConfirmation,
   removeRosterMembership,
   restoreRosterMembership,
@@ -51,6 +52,7 @@ const prismaMock = vi.hoisted(() => ({
   user: { findUnique: vi.fn() },
 }));
 const programHeadContextMock = vi.hoisted(() => vi.fn());
+const scopedCandidatesMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/features/auth/services/resolve-auth-session");
 vi.mock("@/lib/db/prisma", () => ({ prisma: prismaMock }));
@@ -61,6 +63,9 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
     code: "BSED",
     name: "Education",
   })),
+}));
+vi.mock("@/features/course-assignments/services/course-roster-candidate-scope", () => ({
+  loadScopedRosterCandidates: scopedCandidatesMock,
 }));
 
 describe("manage course roster service", () => {
@@ -74,6 +79,17 @@ describe("manage course roster service", () => {
     prismaMock.$queryRaw.mockResolvedValue([]);
     prismaMock.program.findUnique.mockResolvedValue({ id: "program-1", code: "BSED", name: "Education" });
     prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue(null);
+    scopedCandidatesMock.mockResolvedValue({
+      success: true,
+      data: {
+        assignment: { assignmentId: "assignment-1" },
+        candidates: [
+          { userId: "student-1", selectable: true },
+          { userId: "student-2", selectable: true },
+          { userId: "student-3", selectable: true },
+        ],
+      },
+    });
   });
 
   it("creates eligible Student membership with server-owned scope and audit actor", async () => {
@@ -309,6 +325,194 @@ describe("manage course roster service", () => {
       addRosterMembership("assignment-1", "student-1", "program-1")
     ).resolves.toEqual({ success: false, error: "Course assignment not found." });
     expect(prismaMock.courseAssignmentMembership.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("confirmRosterResolution", () => {
+  const confirmation = {
+    assignmentId: "assignment-1",
+    rows: [
+      { sourceIndex: 0, studentUserId: "student-1" },
+      { sourceIndex: 1, studentUserId: "student-2" },
+    ],
+    skippedIndexes: [],
+    suggestedAcknowledged: true,
+  };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "manager-1", roles: [ROLES.SECRETARY] })
+    );
+    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.courseAssignment.findUnique.mockResolvedValue(assignment as never);
+    prismaMock.$queryRaw.mockResolvedValue([]);
+    prismaMock.program.findUnique.mockResolvedValue({ id: "program-1", code: "BSED", name: "Education" });
+    prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue(null);
+    prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue(null);
+    scopedCandidatesMock.mockResolvedValue({
+      success: true,
+      data: {
+        assignment: { assignmentId: "assignment-1" },
+        candidates: [
+          { userId: "student-1", selectable: true },
+          { userId: "student-2", selectable: true },
+          { userId: "student-3", selectable: true },
+        ],
+      },
+    });
+  });
+
+  it("continues after an expected other-section conflict", async () => {
+    prismaMock.user.findUnique.mockImplementation(async ({ where }) => ({
+      ...student,
+      id: where.id,
+    }) as never);
+    prismaMock.courseAssignmentMembership.findFirst
+      .mockResolvedValueOnce({ id: "other-membership" } as never)
+      .mockResolvedValueOnce(null);
+
+    await expect(confirmRosterResolution(confirmation)).resolves.toEqual({
+      success: true,
+      data: {
+        rows: [
+          {
+            sourceIndex: 0,
+            outcome: "OTHER_SECTION_CONFLICT",
+            error: "Student is already active in another section for this Course and Academic Period.",
+          },
+          {
+            sourceIndex: 1,
+            outcome: "CREATED",
+            error: null,
+          },
+        ],
+        referenceId: undefined,
+      },
+    });
+    expect(prismaMock.courseAssignmentMembership.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports an out-of-scope row and commits later valid identities", async () => {
+    scopedCandidatesMock.mockResolvedValue({
+      success: true,
+      data: {
+        assignment: { assignmentId: "assignment-1" },
+        candidates: [{ userId: "student-2", selectable: true }],
+      },
+    });
+    prismaMock.user.findUnique.mockImplementation(async ({ where }) => ({
+      ...student,
+      id: where.id,
+    }) as never);
+
+    await expect(confirmRosterResolution(confirmation)).resolves.toEqual({
+      success: true,
+      data: {
+        rows: [
+          {
+            sourceIndex: 0,
+            outcome: "OUT_OF_SCOPE",
+            error: "Selected account is no longer eligible for this Course roster.",
+          },
+          { sourceIndex: 1, outcome: "CREATED", error: null },
+        ],
+      },
+    });
+    expect(prismaMock.courseAssignmentMembership.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a read-only roster before loading candidates or writing rows", async () => {
+    prismaMock.courseAssignment.findUnique.mockResolvedValue({
+      ...assignment,
+      is_active: false,
+    } as never);
+
+    await expect(confirmRosterResolution(confirmation)).resolves.toEqual({
+      success: false,
+      error: "This Course assignment is inactive. The roster is read-only.",
+    });
+    expect(scopedCandidatesMock).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns a request-level read-only result if the roster locks after preflight", async () => {
+    prismaMock.courseAssignment.findUnique
+      .mockResolvedValueOnce(assignment as never)
+      .mockResolvedValueOnce({ ...assignment, is_active: false } as never);
+
+    await expect(confirmRosterResolution(confirmation)).resolves.toEqual({
+      success: false,
+      error: "This Course assignment is inactive. The roster is read-only.",
+    });
+    expect(prismaMock.courseAssignmentMembership.create).not.toHaveBeenCalled();
+  });
+
+  it("preserves prior commits and marks later rows unprocessed after an unexpected failure", async () => {
+    prismaMock.user.findUnique.mockImplementation(async ({ where }) => ({
+      ...student,
+      id: where.id,
+    }) as never);
+    prismaMock.courseAssignmentMembership.create
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("database unavailable"));
+    scopedCandidatesMock.mockResolvedValue({
+      success: true,
+      data: {
+        assignment: { assignmentId: "assignment-1" },
+        candidates: [
+          { userId: "student-1", selectable: true },
+          { userId: "student-2", selectable: true },
+          { userId: "student-3", selectable: true },
+        ],
+      },
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const result = await confirmRosterResolution({
+      ...confirmation,
+      rows: [...confirmation.rows, { sourceIndex: 2, studentUserId: "student-3" }],
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        rows: [
+          { sourceIndex: 0, outcome: "CREATED", error: null },
+          { sourceIndex: 1, outcome: "UNEXPECTED_FAILURE" },
+          { sourceIndex: 2, outcome: "UNPROCESSED" },
+        ],
+        referenceId: expect.any(String),
+      },
+    });
+    expect(prismaMock.courseAssignmentMembership.create).toHaveBeenCalledTimes(2);
+    consoleError.mockRestore();
+  });
+
+  it("stops unknown safe mutation failures rather than treating them as a conflict", async () => {
+    prismaMock.user.findUnique.mockImplementation(async ({ where }) => ({
+      ...student,
+      id: where.id,
+    }) as never);
+    prismaMock.courseAssignmentMembership.create.mockRejectedValueOnce(new Error("database unavailable"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const result = await confirmRosterResolution({
+      ...confirmation,
+      rows: [...confirmation.rows, { sourceIndex: 2, studentUserId: "student-3" }],
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        rows: [
+          { sourceIndex: 0, outcome: "UNEXPECTED_FAILURE", error: "The roster request could not be completed." },
+          { sourceIndex: 1, outcome: "UNPROCESSED" },
+          { sourceIndex: 2, outcome: "UNPROCESSED" },
+        ],
+      },
+    });
+    consoleError.mockRestore();
   });
 });
 

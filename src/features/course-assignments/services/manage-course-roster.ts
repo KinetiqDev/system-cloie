@@ -14,7 +14,14 @@ import {
 } from "./course-assignment-roster";
 import { revalidateProgramHeadAssignment } from "@/features/auth/services/resolve-program-head-context";
 import { canManageCourseRoster } from "../policies";
-import type { CourseRosterMutation, RosterServiceResult } from "../types";
+import type { ConfirmRosterResolutionInput } from "../schemas/course-assignment";
+import { loadScopedRosterCandidates } from "./course-roster-candidate-scope";
+import type {
+  CourseRosterConfirmation,
+  CourseRosterConfirmationOutcome,
+  CourseRosterMutation,
+  RosterServiceResult,
+} from "../types";
 
 const NOT_FOUND_ERROR = "Course assignment not found.";
 const SAFE_FAILURE_ERROR = "The roster request could not be completed.";
@@ -173,6 +180,113 @@ export async function preflightRosterConfirmation(
   const authorization = await authorizeForWrite(assignmentId, programId);
   if (!authorization.success) return authorization;
   return { success: true, data: { assignmentId: authorization.data.assignmentId } };
+}
+
+function confirmationOutcome(
+  result: RosterServiceResult<CourseRosterMutation>
+): { outcome: CourseRosterConfirmationOutcome; error: string | null; referenceId?: string } {
+  if (result.success) {
+    const outcome =
+      result.data.outcome === "CREATED"
+        ? "CREATED"
+        : result.data.outcome === "RESTORED"
+          ? "RESTORED"
+          : "UNEXPECTED_FAILURE";
+    return { outcome, error: outcome === "UNEXPECTED_FAILURE" ? SAFE_FAILURE_ERROR : null };
+  }
+  if (result.referenceId) {
+    return {
+      outcome: "UNEXPECTED_FAILURE",
+      error: SAFE_FAILURE_ERROR,
+      referenceId: result.referenceId,
+    };
+  }
+
+  const outcomeByError: Record<string, CourseRosterConfirmationOutcome> = {
+    [eligibilityMessages.UNKNOWN_ACCOUNT]: "OUT_OF_SCOPE",
+    [eligibilityMessages.ACCOUNT_INACTIVE]: "ACCOUNT_INACTIVE",
+    [eligibilityMessages.PROFILE_INCOMPLETE]: "PROFILE_INCOMPLETE",
+    [eligibilityMessages.NO_ACTIVE_TERM_PLACEMENT]: "NO_ACTIVE_TERM_PLACEMENT",
+    [eligibilityMessages.PROGRAM_MISMATCH]: "PROGRAM_MISMATCH",
+    ["Student is already an active member of this Course roster."]: "ALREADY_ACTIVE",
+    [activeSectionError().error]: "OTHER_SECTION_CONFLICT",
+    [mutabilityMessages.INACTIVE_ASSIGNMENT]: "READ_ONLY",
+    [mutabilityMessages.INACTIVE_ACADEMIC_PERIOD]: "READ_ONLY",
+    [mutabilityMessages.PUBLISHED_EVALUATION_LOCK]: "READ_ONLY",
+  };
+  return {
+    outcome: outcomeByError[result.error] ?? "UNEXPECTED_FAILURE",
+    error: outcomeByError[result.error] ? result.error : SAFE_FAILURE_ERROR,
+  };
+}
+
+/**
+ * Commits confirmed identities in request order. Each row owns a short,
+ * lock-protected membership transaction; a known business result therefore
+ * cannot undo an earlier row or block a later one.
+ */
+export async function confirmRosterResolution(
+  input: ConfirmRosterResolutionInput
+): Promise<RosterServiceResult<CourseRosterConfirmation>> {
+  const preflight = await preflightRosterConfirmation(input.assignmentId, input.programId);
+  if (!preflight.success) return preflight;
+
+  let actorId: string | undefined;
+  try {
+    actorId = (await resolveAuthSession())?.userId;
+    const scoped = await loadScopedRosterCandidates(input.assignmentId, input.programId);
+    if (!scoped.success) return scoped;
+    const selectableUserIds = new Set(
+      scoped.data.candidates.filter((candidate) => candidate.selectable).map((candidate) => candidate.userId)
+    );
+    const rows: CourseRosterConfirmation["rows"] = [];
+
+    for (let index = 0; index < input.rows.length; index += 1) {
+      const row = input.rows[index]!;
+      if (!selectableUserIds.has(row.studentUserId)) {
+        rows.push({
+          sourceIndex: row.sourceIndex,
+          outcome: "OUT_OF_SCOPE",
+          error: "Selected account is no longer eligible for this Course roster.",
+        });
+        continue;
+      }
+      const result = await addRosterMembership(input.assignmentId, row.studentUserId, input.programId);
+      const outcome = confirmationOutcome(result);
+      if (rows.length === 0 && outcome.outcome === "READ_ONLY") {
+        return { success: false, error: outcome.error! };
+      }
+      rows.push({ sourceIndex: row.sourceIndex, outcome: outcome.outcome, error: outcome.error });
+      if (outcome.outcome === "UNEXPECTED_FAILURE") {
+        const referenceId = outcome.referenceId ?? randomUUID();
+        console.error("Course roster confirmation stopped unexpectedly", {
+          operation: "confirm_roster_resolution",
+          actorId: actorId ?? null,
+          assignmentId: input.assignmentId,
+          sourceIndex: row.sourceIndex,
+          referenceId,
+        });
+        for (const laterRow of input.rows.slice(index + 1)) {
+          rows.push({
+            sourceIndex: laterRow.sourceIndex,
+            outcome: "UNPROCESSED",
+            error: "This row was not processed because confirmation stopped unexpectedly.",
+          });
+        }
+        return { success: true, data: { rows, referenceId } };
+      }
+    }
+
+    return { success: true, data: { rows } };
+  } catch (error) {
+    const failure = unexpectedRosterFailure(
+      "confirm_roster_resolution",
+      actorId,
+      input.assignmentId,
+      error
+    );
+    return failure;
+  }
 }
 
 async function lockAssignment(tx: Prisma.TransactionClient, assignmentId: string) {

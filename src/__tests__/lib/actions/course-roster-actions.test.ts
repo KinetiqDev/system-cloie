@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const serviceMocks = vi.hoisted(() => ({
   addRosterMembership: vi.fn(),
+  confirmRosterResolution: vi.fn(),
   importCourseRoster: vi.fn(),
   previewCourseRoster: vi.fn(),
   searchScopedRosterStudents: vi.fn(),
@@ -31,6 +32,7 @@ vi.mock("@/features/course-assignments/services/search-scoped-roster-students", 
 
 import {
   addRosterMembershipAction,
+  confirmRosterResolutionAction,
   removeRosterMembershipAction,
   restoreRosterMembershipAction,
   importCourseRosterAction,
@@ -127,6 +129,36 @@ describe("course roster actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith(
       `/program-head/programs/${programId}/course-rosters/${assignmentId}`
     );
+  });
+
+  it("commits a valid confirmation request and revalidates roster routes", async () => {
+    serviceMocks.confirmRosterResolution.mockResolvedValue({
+      success: true,
+      data: { rows: [{ sourceIndex: 0, outcome: "CREATED", error: null }] },
+    });
+
+    await confirmRosterResolutionAction({
+      assignmentId,
+      rows: [{ sourceIndex: 0, studentUserId }],
+      skippedIndexes: [],
+      suggestedAcknowledged: true,
+    });
+
+    expect(serviceMocks.confirmRosterResolution).toHaveBeenCalledWith({
+      assignmentId,
+      rows: [{ sourceIndex: 0, studentUserId }],
+      skippedIndexes: [],
+      suggestedAcknowledged: true,
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith(`/course-rosters/${assignmentId}`);
+  });
+
+  it("rejects malformed confirmation input before any write", async () => {
+    await expect(
+      confirmRosterResolutionAction({ assignmentId, rows: [], skippedIndexes: [] })
+    ).resolves.toEqual({ success: false, error: "Enter a valid roster confirmation." });
+
+    expect(serviceMocks.confirmRosterResolution).not.toHaveBeenCalled();
   });
 });
 

@@ -11,6 +11,7 @@ import {
 
 import {
   addRosterMembershipSchema,
+  confirmRosterResolutionSchema,
   importCourseRosterTextSchema,
   previewCourseRosterSchema,
   removeRosterMembershipSchema,
@@ -19,6 +20,7 @@ import {
 } from "@/features/course-assignments/schemas/course-assignment";
 import {
   addRosterMembership,
+  confirmRosterResolution,
   removeRosterMembership,
   restoreRosterMembership,
 } from "@/features/course-assignments/services/manage-course-roster";
@@ -59,6 +61,19 @@ export async function addRosterMembershipAction(input: unknown) {
         parsed.data.programId
       )
     : await addRosterMembership(parsed.data.assignmentId, parsed.data.studentUserId);
+  if (result.success) revalidateRosterRoutes(parsed.data.assignmentId, parsed.data.programId);
+  return result;
+}
+
+export async function confirmRosterResolutionAction(input: unknown) {
+  const parsed = confirmRosterResolutionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, error: "Enter a valid roster confirmation." };
+  }
+  if (!(await validateProgramHeadActionScope(parsed.data.programId))) {
+    return { success: false as const, error: "Course assignment not found." };
+  }
+  const result = await confirmRosterResolution(parsed.data);
   if (result.success) revalidateRosterRoutes(parsed.data.assignmentId, parsed.data.programId);
   return result;
 }

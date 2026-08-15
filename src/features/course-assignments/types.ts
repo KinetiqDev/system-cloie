@@ -278,6 +278,31 @@ export type CourseRosterMutation = {
   message: string;
 };
 
+export type CourseRosterConfirmationOutcome =
+  | "CREATED"
+  | "RESTORED"
+  | "ALREADY_ACTIVE"
+  | "ACCOUNT_INACTIVE"
+  | "PROFILE_INCOMPLETE"
+  | "NO_ACTIVE_TERM_PLACEMENT"
+  | "PROGRAM_MISMATCH"
+  | "OUT_OF_SCOPE"
+  | "OTHER_SECTION_CONFLICT"
+  | "READ_ONLY"
+  | "UNEXPECTED_FAILURE"
+  | "UNPROCESSED";
+
+export type CourseRosterConfirmationRow = {
+  sourceIndex: number;
+  outcome: CourseRosterConfirmationOutcome;
+  error: string | null;
+};
+
+export type CourseRosterConfirmation = {
+  rows: CourseRosterConfirmationRow[];
+  referenceId?: string;
+};
+
 export type CourseRosterImportRowStatus =
   | "PARSED"
   | "INVALID_NAME";
