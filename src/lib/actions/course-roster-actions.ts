@@ -12,6 +12,7 @@ import {
 import {
   addRosterMembershipSchema,
   importCourseRosterTextSchema,
+  previewCourseRosterSchema,
   removeRosterMembershipSchema,
   restoreRosterMembershipSchema,
 } from "@/features/course-assignments/schemas/course-assignment";
@@ -21,6 +22,7 @@ import {
   restoreRosterMembership,
 } from "@/features/course-assignments/services/manage-course-roster";
 import { importCourseRoster } from "@/features/course-assignments/services/import-course-roster";
+import { previewCourseRoster } from "@/features/course-assignments/services/preview-course-roster";
 
 function revalidateRosterRoutes(assignmentId: string, programId?: string) {
   revalidatePath(`/course-rosters/${assignmentId}`);
@@ -130,6 +132,18 @@ export async function importCourseRosterAction(input: unknown) {
   }
 
   return { success: false as const, error: "Choose a valid CSV file." };
+}
+
+export async function previewCourseRosterAction(input: unknown) {
+  const parsed = previewCourseRosterSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, error: "Enter a valid roster preview request." };
+  }
+  if (!(await validateProgramHeadActionScope(parsed.data.programId))) {
+    return { success: false as const, error: "Course assignment not found." };
+  }
+  // Preview performs zero membership writes; no route revalidation is needed.
+  return previewCourseRoster(parsed.data);
 }
 
 function isFileLike(value: FormDataEntryValue | null): value is File {

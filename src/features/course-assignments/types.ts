@@ -209,6 +209,58 @@ export type RosterMutabilityReason =
   | "INACTIVE_ACADEMIC_PERIOD"
   | "PUBLISHED_EVALUATION_LOCK";
 
+export type CourseRosterPreviewResolution =
+  | { status: "EXACT_MATCH"; reason: "EXACT"; candidateIds: string[] }
+  | {
+      status: "SUGGESTED_MATCH";
+      reason: "MIDDLE_TOKEN" | "INITIAL" | "SEPARATOR_PUNCTUATION" | "SUFFIX" | "DIACRITIC";
+      candidateIds: string[];
+    }
+  | { status: "AMBIGUOUS"; reason: "EQUAL_TIER"; candidateIds: string[] }
+  | { status: "NO_MATCH"; reason: "NO_EVIDENCE"; candidateIds: [] }
+  | { status: "INVALID_NAME"; reason: "INVALID"; candidateIds: [] };
+
+export type CourseRosterPreviewDisposition =
+  | "READY_CREATE"
+  | "WILL_RESTORE"
+  | "ALREADY_ACTIVE"
+  | "INELIGIBLE"
+  | "OTHER_SECTION_CONFLICT";
+
+export type CourseRosterPreviewCandidate = {
+  userId: string;
+  name: string;
+  email: string;
+  programId: string;
+  selectable: boolean;
+  reason: string | null;
+};
+
+export type CourseRosterPreviewRow = {
+  sourceIndex: number;
+  submittedName: string;
+  resolution: CourseRosterPreviewResolution;
+  disposition: CourseRosterPreviewDisposition | null;
+  candidates: CourseRosterPreviewCandidate[];
+};
+
+// Public preview contract; consumers are the scoped candidate search
+// (#395) and the reconciliation workspace (#396).
+// fallow-ignore-next-line unused-type
+export type CourseRosterPreviewSummary = {
+  readyToCreate: number;
+  willRestore: number;
+  alreadyActive: number;
+  needsReview: number;
+  ineligible: number;
+};
+
+export type CourseRosterPreview = {
+  assignmentId: string;
+  rows: CourseRosterPreviewRow[];
+  summary: CourseRosterPreviewSummary;
+};
+
 export type CourseRosterMutationOutcome = "CREATED" | "RESTORED" | "REMOVED";
 
 export type CourseRosterMutation = {
