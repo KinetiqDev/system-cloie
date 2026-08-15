@@ -210,14 +210,15 @@ export type RosterMutabilityReason =
   | "PUBLISHED_EVALUATION_LOCK";
 
 export type CourseRosterPreviewResolution =
-  | { status: "EXACT_MATCH"; reason: "EXACT" | "EQUAL_TIER"; candidateIds: string[] }
+  | { status: "EXACT_MATCH"; reason: "EXACT"; candidateIds: string[] }
   | {
       status: "SUGGESTED_MATCH";
       reason: "MIDDLE_TOKEN" | "INITIAL" | "SEPARATOR_PUNCTUATION" | "SUFFIX" | "DIACRITIC";
       candidateIds: string[];
     }
   | { status: "AMBIGUOUS"; reason: "EQUAL_TIER"; candidateIds: string[] }
-  | { status: "NO_MATCH" | "INVALID_NAME"; reason: "NO_EVIDENCE" | "INVALID"; candidateIds: [] };
+  | { status: "NO_MATCH"; reason: "NO_EVIDENCE"; candidateIds: [] }
+  | { status: "INVALID_NAME"; reason: "INVALID"; candidateIds: [] };
 
 export type CourseRosterPreviewDisposition =
   | "READY_CREATE"
@@ -233,6 +234,15 @@ export type CourseRosterPreviewCandidate = {
   programId: string;
   selectable: boolean;
   reason: string | null;
+};
+
+export type ScopedRosterCandidate = {
+  userId: string;
+  name: string;
+  email: string;
+  programId: string;
+  selectable: boolean;
+  reason: RosterEligibilityReason | null;
 };
 
 export type CourseRosterPreviewRow = {

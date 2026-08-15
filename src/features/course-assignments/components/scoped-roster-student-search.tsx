@@ -6,10 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { searchScopedRosterStudentsAction } from "@/lib/actions/course-roster-actions";
-import { MIN_ROSTER_SEARCH_CHARACTERS } from "../services/search-scoped-roster-students";
-import type { ScopedRosterCandidate } from "../services/course-roster-candidate-scope";
+import type { ScopedRosterCandidate } from "../types";
 
 const SEARCH_DELAY_MS = 300;
+const MIN_ROSTER_SEARCH_CHARACTERS = 2;
 
 type ScopedRosterStudentSearchProps = {
   assignmentId: string;

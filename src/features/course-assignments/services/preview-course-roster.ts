@@ -184,8 +184,8 @@ export async function previewCourseRoster(
     function dispositionFor(studentId: string): CourseRosterPreviewDisposition {
       const membership = membershipByStudentId.get(studentId);
       if (membership?.is_active) return "ALREADY_ACTIVE";
-      if (membership && !membership.is_active && membership.removed_at) return "WILL_RESTORE";
       if (conflictingStudentIds.has(studentId)) return "OTHER_SECTION_CONFLICT";
+      if (membership && !membership.is_active && membership.removed_at) return "WILL_RESTORE";
       return "READY_CREATE";
     }
 

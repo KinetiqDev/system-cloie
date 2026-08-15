@@ -318,6 +318,31 @@ describe("previewCourseRoster service", () => {
     }
   });
 
+  it("reports another-section conflict ahead of restoring a removed membership", async () => {
+    const { previewCourseRoster } = await import(
+      "@/features/course-assignments/services/preview-course-roster"
+    );
+    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      student("student-1", "Andy Egut", "program-1"),
+    ] as never);
+    vi.mocked(prisma.courseAssignmentMembership.findMany)
+      .mockResolvedValueOnce([
+        { student_user_id: "student-1", is_active: false, removed_at: new Date("2026-07-01") },
+      ] as never)
+      .mockResolvedValueOnce([{ student_user_id: "student-1" }] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [{ sourceIndex: 0, submittedName: "Andy Egut", status: "VALID" }],
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: { rows: [{ disposition: "OTHER_SECTION_CONFLICT" }] },
+    });
+  });
+
   it("carries INVALID_NAME rows without matching or candidates", async () => {
     const { previewCourseRoster } = await import(
       "@/features/course-assignments/services/preview-course-roster"

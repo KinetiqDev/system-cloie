@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ScopedRosterCandidate } from "@/features/course-assignments/services/course-roster-candidate-scope";
+import type { ScopedRosterCandidate } from "@/features/course-assignments/types";
 
 const loadScopedRosterCandidatesMock = vi.hoisted(() => vi.fn());
 vi.mock("@/features/course-assignments/services/course-roster-candidate-scope", () => ({

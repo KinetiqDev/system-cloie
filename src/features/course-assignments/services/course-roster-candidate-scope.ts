@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db/prisma";
 
 import type {
   AuthorizedRosterAssignment,
-  RosterEligibilityReason,
   RosterServiceResult,
+  ScopedRosterCandidate,
 } from "../types";
 import {
   projectRosterEligibility,
@@ -13,14 +13,7 @@ import {
   type RosterEligibilityStudent,
 } from "./course-assignment-roster";
 
-export type ScopedRosterCandidate = {
-  userId: string;
-  name: string;
-  email: string;
-  programId: string;
-  selectable: boolean;
-  reason: RosterEligibilityReason | null;
-};
+export type { ScopedRosterCandidate } from "../types";
 
 export type ScopedRosterCandidates = {
   assignment: AuthorizedRosterAssignment;
