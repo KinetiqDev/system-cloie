@@ -245,6 +245,7 @@ export type ScopedRosterCandidate = {
   reason: RosterEligibilityReason | null;
 };
 
+
 export type CourseRosterPreviewRow = {
   sourceIndex: number;
   submittedName: string;

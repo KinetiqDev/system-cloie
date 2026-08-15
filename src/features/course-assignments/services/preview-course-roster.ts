@@ -16,7 +16,6 @@ import { matchRosterName, type RosterNameCandidate } from "./course-roster-name-
 import { loadScopedRosterCandidates } from "./course-roster-candidate-scope";
 
 const SAFE_FAILURE_ERROR = "The roster preview could not be completed.";
-
 function previewFailure(
   operation: string,
   actorId: string | undefined,
@@ -85,6 +84,7 @@ export async function previewCourseRoster(
         select: { student_user_id: true },
       }),
     ]);
+
     const membershipByStudentId = new Map(
       memberships.map((membership) => [membership.student_user_id, membership])
     );
@@ -98,7 +98,6 @@ export async function previewCourseRoster(
       id: student.userId,
       name: student.name,
     }));
-
     const rows: CourseRosterPreviewRow[] = input.rows.map((row) => {
       if (row.status === "INVALID_NAME") {
         return {
@@ -134,6 +133,7 @@ export async function previewCourseRoster(
       const candidateId = match.matchedIds[0];
       const disposition: CourseRosterPreviewDisposition | null =
         match.status === "AMBIGUOUS" ? null : dispositionFor(candidateId);
+
 
       return {
         sourceIndex: row.sourceIndex,

@@ -3,6 +3,8 @@ import { CourseScope } from "@prisma/client";
 
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import { prisma } from "@/lib/db/prisma";
+import { previewCourseRoster } from "@/features/course-assignments/services/preview-course-roster";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import * as rosterModule from "@/features/course-assignments/services/course-assignment-roster";
 
@@ -67,16 +69,13 @@ describe("previewCourseRoster service", () => {
       success: true,
       data: ASSIGNMENT,
     });
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.courseAssignmentMembership.findMany).mockResolvedValue([] as never);
   });
 
   it("authorizes once and loads candidates in one batched Student read plus membership reads", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
 
     await previewCourseRoster({
       assignmentId: "assignment-1",
@@ -93,10 +92,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("scopes the batch to the assignment period and never to year level or section", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
 
     await previewCourseRoster({
       assignmentId: "assignment-1",
@@ -116,10 +112,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("classifies an exact match as READY_CREATE for a new membership", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
     ] as never);
@@ -152,10 +145,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("treats an irregular Student with matching Program as selectable", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       {
         ...student("student-1", "Andy Egut", "program-1"),
@@ -175,10 +165,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("keeps a Program-mismatched Student non-selectable and shows it as a diagnostic", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-2", "Andy Egut", "program-2"),
     ] as never);
@@ -205,10 +192,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("accepts any active placement for a General Education assignment", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(rosterModule.resolveAuthorizedCourseAssignmentRoster).mockResolvedValue({
       success: true,
       data: { ...ASSIGNMENT, courseScope: CourseScope.GENERAL_EDUCATION },
@@ -229,10 +213,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("suggests a unique middle-token variant with its closed reason", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Maria Therese Reyes", "program-1"),
     ] as never);
@@ -254,10 +235,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("keeps equal-tier same-name candidates ambiguous", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
       student("student-2", "Andy Egut", "program-1"),
@@ -280,10 +258,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("reports ALREADY_ACTIVE, WILL_RESTORE, and OTHER_SECTION_CONFLICT dispositions", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "One Student", "program-1"),
       student("student-2", "Two Student", "program-1"),
@@ -318,13 +293,10 @@ describe("previewCourseRoster service", () => {
     }
   });
 
-  it("reports another-section conflict ahead of restoring a removed membership", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
+  it("reports OTHER_SECTION_CONFLICT ahead of a restorable membership", async () => {
     const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
     vi.mocked(prisma.user.findMany).mockResolvedValue([
-      student("student-1", "Andy Egut", "program-1"),
+      student("student-1", "Moved Student", "program-1"),
     ] as never);
     vi.mocked(prisma.courseAssignmentMembership.findMany)
       .mockResolvedValueOnce([
@@ -334,20 +306,18 @@ describe("previewCourseRoster service", () => {
 
     const result = await previewCourseRoster({
       assignmentId: "assignment-1",
-      rows: [{ sourceIndex: 0, submittedName: "Andy Egut", status: "VALID" }],
+      rows: [{ sourceIndex: 0, submittedName: "Moved Student", status: "VALID" }],
     });
 
-    expect(result).toMatchObject({
-      success: true,
-      data: { rows: [{ disposition: "OTHER_SECTION_CONFLICT" }] },
-    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // Confirmation rejects a restore while an active same-Course/period
+      // other-section membership exists, so the preview must not promise one.
+      expect(result.data.rows[0]?.disposition).toBe("OTHER_SECTION_CONFLICT");
+    }
   });
 
   it("carries INVALID_NAME rows without matching or candidates", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
     ] as never);
@@ -370,10 +340,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("performs zero membership writes during preview", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
-    const { prisma } = vi.mocked(await import("@/lib/db/prisma"));
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
     ] as never);
@@ -389,9 +356,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("does not disclose an assignment outside the selected Program", async () => {
-    const { previewCourseRoster } = await import(
-      "@/features/course-assignments/services/preview-course-roster"
-    );
+
     vi.mocked(rosterModule.resolveAuthorizedCourseAssignmentRoster).mockResolvedValue({
       success: false,
       error: "Course assignment not found.",
