@@ -1,5 +1,3 @@
-"use client";
-
 import { Users, GraduationCap, UsersRound, Briefcase, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SecretaryUsersKPI } from "../../services/list-secretary-users-summary";

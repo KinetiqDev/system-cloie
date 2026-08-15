@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { EvaluationListBrowser } from "@/features/users/components/evaluation-list-browser";
 import { listStudentAssignedEvaluations } from "@/features/responses/services/list-student-assigned-evaluations";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { EvaluationBrowserSkeleton } from "@/components/layout/respondent-route-loading";
+
+type StudentEvaluations = Awaited<ReturnType<typeof listStudentAssignedEvaluations>>;
 
 export default async function StudentEvaluationsPage() {
   const session = await resolveAuthSession();
@@ -9,9 +13,9 @@ export default async function StudentEvaluationsPage() {
     redirect("/student/dashboard");
   }
 
-  const { active, submitted } = await listStudentAssignedEvaluations();
-  const pending = active.filter((item) => item.status !== "IN_PROGRESS");
-  const inProgress = active.filter((item) => item.status === "IN_PROGRESS");
+  // Start the read before rendering so the static intro paints while the list resolves.
+  const evaluationsPromise = listStudentAssignedEvaluations();
+  void evaluationsPromise.catch(() => undefined);
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in space-y-8 motion-safe:duration-500">
@@ -25,7 +29,21 @@ export default async function StudentEvaluationsPage() {
         </p>
       </section>
 
-      <EvaluationListBrowser pending={pending} inProgress={inProgress} submitted={submitted} />
+      <Suspense fallback={<EvaluationBrowserSkeleton />}>
+        <StudentEvaluationsBrowser evaluationsPromise={evaluationsPromise} />
+      </Suspense>
     </div>
   );
+}
+
+export async function StudentEvaluationsBrowser({
+  evaluationsPromise,
+}: {
+  evaluationsPromise: Promise<StudentEvaluations>;
+}) {
+  const { active, submitted } = await evaluationsPromise;
+  const pending = active.filter((item) => item.status !== "IN_PROGRESS");
+  const inProgress = active.filter((item) => item.status === "IN_PROGRESS");
+
+  return <EvaluationListBrowser pending={pending} inProgress={inProgress} submitted={submitted} />;
 }

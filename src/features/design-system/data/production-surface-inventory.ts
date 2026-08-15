@@ -124,6 +124,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/course-rosters/[assignmentId]/loading.tsx",
+    disposition: "task",
+    taskId: 16,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/course-rosters/[assignmentId]/page.tsx",
     disposition: "task",
     taskId: 16,
@@ -134,6 +140,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "redirect",
     category: "route",
     notes: "Redirects authenticated user to role-specific dashboard",
+  },
+  {
+    path: "src/app/(app)/dean/academic-structure/course-assignments/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
   },
   {
     path: "src/app/(app)/dean/academic-structure/course-assignments/page.tsx",
@@ -190,6 +202,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/dean/academic-structure/courses/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/dean/academic-structure/courses/page.tsx",
     disposition: "task",
     taskId: 14,
@@ -215,6 +233,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/app/(app)/dean/academic-structure/instruments/new/page.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/dean/academic-structure/instruments/loading.tsx",
     disposition: "task",
     taskId: 14,
     category: "route",
@@ -250,7 +274,19 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/dean/academic-structure/programs/new/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/dean/academic-structure/programs/new/page.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/dean/academic-structure/programs/loading.tsx",
     disposition: "task",
     taskId: 14,
     category: "route",
@@ -286,7 +322,19 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/dean/college-oversight/enrollments/loading.tsx",
+    disposition: "task",
+    taskId: 16,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/dean/college-oversight/enrollments/page.tsx",
+    disposition: "task",
+    taskId: 16,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/dean/college-oversight/enrollments/roster/loading.tsx",
     disposition: "task",
     taskId: 16,
     category: "route",
@@ -295,6 +343,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/app/(app)/dean/college-oversight/enrollments/roster/page.tsx",
     disposition: "task",
     taskId: 16,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/dean/college-oversight/learning-outcomes/loading.tsx",
+    disposition: "task",
+    taskId: 19,
     category: "route",
   },
   {
@@ -392,6 +446,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "redirect",
     category: "route",
     notes: "Dean landing redirect to dashboard or college oversight",
+  },
+  {
+    path: "src/app/(app)/dean/profile/loading.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "route",
   },
   {
     path: "src/app/(app)/dean/profile/page.tsx",
@@ -548,6 +608,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 11,
     category: "layout",
+  },
+  {
+    path: "src/app/(app)/faculty/profile/loading.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "route",
   },
   {
     path: "src/app/(app)/faculty/profile/page.tsx",
@@ -796,10 +862,21 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/program-head/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
     path: "src/app/(app)/program-head/page.tsx",
     disposition: "redirect",
     category: "route",
     notes: "Program Head landing redirect to dashboard or active program context",
+  },
+  {
+    path: "src/app/(app)/program-head/profile/loading.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "route",
   },
   {
     path: "src/app/(app)/program-head/profile/page.tsx",
@@ -821,6 +898,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/app/(app)/program-head/programs/[programId]/analytics/page.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/cilo-evaluations/new/loading.tsx",
     disposition: "task",
     taskId: 14,
     category: "route",
@@ -880,6 +963,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/program-head/programs/[programId]/course-rosters/[assignmentId]/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/program-head/programs/[programId]/course-rosters/[assignmentId]/page.tsx",
     disposition: "task",
     taskId: 14,
@@ -895,6 +984,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/app/(app)/program-head/programs/[programId]/courses/page.tsx",
     disposition: "task",
     taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/curricula/loading.tsx",
+    disposition: "already_compliant",
     category: "route",
   },
   {
@@ -963,7 +1057,19 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/program-head/programs/[programId]/tools/[id]/edit/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/program-head/programs/[programId]/tools/[id]/edit/page.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/tools/new/loading.tsx",
     disposition: "task",
     taskId: 14,
     category: "route",
@@ -975,7 +1081,19 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/program-head/programs/[programId]/tools/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/program-head/programs/[programId]/tools/page.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/tools/publish/loading.tsx",
     disposition: "task",
     taskId: 14,
     category: "route",
@@ -1095,6 +1213,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/secretary/curricula/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
     path: "src/app/(app)/secretary/curricula/page.tsx",
     disposition: "already_compliant",
     category: "route",
@@ -1158,6 +1281,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/secretary/instruments/new/loading.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/secretary/instruments/new/page.tsx",
     disposition: "task",
     taskId: 20,
@@ -1189,6 +1318,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/app/(app)/secretary/programs/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/secretary/programs/new/loading.tsx",
     disposition: "task",
     taskId: 14,
     category: "route",
@@ -1387,7 +1522,19 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "Public shell layout",
   },
   {
+    path: "src/app/(public)/login/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
     path: "src/app/(public)/login/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/onboarding/loading.tsx",
     disposition: "task",
     taskId: 23,
     category: "route",
@@ -1411,13 +1558,31 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(public)/portal/respondents/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
     path: "src/app/(public)/portal/respondents/page.tsx",
     disposition: "task",
     taskId: 23,
     category: "route",
   },
   {
+    path: "src/app/(public)/portal/staff/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
     path: "src/app/(public)/portal/staff/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/status/[type]/loading.tsx",
     disposition: "task",
     taskId: 23,
     category: "route",
@@ -1536,6 +1701,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/components/layout/respondent-route-error.tsx",
+    disposition: "task",
+    taskId: 25,
+    category: "layout",
+  },
+  {
+    path: "src/components/layout/public-route-loading.tsx",
     disposition: "task",
     taskId: 25,
     category: "layout",

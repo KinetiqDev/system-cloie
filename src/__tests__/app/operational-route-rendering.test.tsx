@@ -46,6 +46,29 @@ import DeanEditProgramLoading from "@/app/(app)/dean/academic-structure/programs
 import DeanDashboardLoading from "@/app/(app)/dean/dashboard/loading";
 import DeanAcademicStructureLoading from "@/app/(app)/dean/academic-structure/loading";
 import DeanCollegeOversightLoading from "@/app/(app)/dean/college-oversight/loading";
+import DeanAcademicCoursesLoading from "@/app/(app)/dean/academic-structure/courses/loading";
+import DeanAcademicProgramsLoading from "@/app/(app)/dean/academic-structure/programs/loading";
+import DeanAcademicProgramNewLoading from "@/app/(app)/dean/academic-structure/programs/new/loading";
+import DeanAcademicInstrumentsLoading from "@/app/(app)/dean/academic-structure/instruments/loading";
+import DeanAcademicCourseAssignmentsLoading from "@/app/(app)/dean/academic-structure/course-assignments/loading";
+import DeanEnrollmentsLoading from "@/app/(app)/dean/college-oversight/enrollments/loading";
+import DeanEnrollmentRosterLoading from "@/app/(app)/dean/college-oversight/enrollments/roster/loading";
+import DeanLearningOutcomesLoading from "@/app/(app)/dean/college-oversight/learning-outcomes/loading";
+import DeanProfileLoading from "@/app/(app)/dean/profile/loading";
+import FacultyProfileLoading from "@/app/(app)/faculty/profile/loading";
+import ProgramHeadEntryLoading from "@/app/(app)/program-head/loading";
+import ProgramHeadProfileLoading from "@/app/(app)/program-head/profile/loading";
+import SelectedProgramCurriculaLoading from "@/app/(app)/program-head/programs/[programId]/curricula/loading";
+import SelectedProgramToolsLoading from "@/app/(app)/program-head/programs/[programId]/tools/loading";
+import SelectedProgramToolsNewLoading from "@/app/(app)/program-head/programs/[programId]/tools/new/loading";
+import SelectedProgramToolEditLoading from "@/app/(app)/program-head/programs/[programId]/tools/[id]/edit/loading";
+import SelectedProgramToolsPublishLoading from "@/app/(app)/program-head/programs/[programId]/tools/publish/loading";
+import SelectedProgramCiloEvaluationNewLoading from "@/app/(app)/program-head/programs/[programId]/cilo-evaluations/new/loading";
+import SelectedProgramCourseRosterLoading from "@/app/(app)/program-head/programs/[programId]/course-rosters/[assignmentId]/loading";
+import CourseRosterDetailLoading from "@/app/(app)/course-rosters/[assignmentId]/loading";
+import SecretaryCurriculaLoading from "@/app/(app)/secretary/curricula/loading";
+import SecretaryInstrumentNewLoading from "@/app/(app)/secretary/instruments/new/loading";
+import SecretaryProgramNewLoading from "@/app/(app)/secretary/programs/new/loading";
 import SecretaryError from "@/app/(app)/secretary/error";
 import FacultyError from "@/app/(app)/faculty/error";
 import ProgramHeadError from "@/app/(app)/program-head/error";
@@ -97,6 +120,29 @@ const loadingRoutes = [
   [DeanDashboardLoading, "Loading dashboard"],
   [DeanAcademicStructureLoading, "Loading records"],
   [DeanCollegeOversightLoading, "Loading records"],
+  [DeanAcademicCoursesLoading, "Loading records"],
+  [DeanAcademicProgramsLoading, "Loading records"],
+  [DeanAcademicProgramNewLoading, "Loading form"],
+  [DeanAcademicInstrumentsLoading, "Loading records"],
+  [DeanAcademicCourseAssignmentsLoading, "Loading records"],
+  [DeanEnrollmentsLoading, "Loading records"],
+  [DeanEnrollmentRosterLoading, "Loading records"],
+  [DeanLearningOutcomesLoading, "Loading records"],
+  [DeanProfileLoading, "Loading profile"],
+  [FacultyProfileLoading, "Loading profile"],
+  [ProgramHeadEntryLoading, "Loading records"],
+  [ProgramHeadProfileLoading, "Loading profile"],
+  [SelectedProgramCurriculaLoading, "Loading records"],
+  [SelectedProgramToolsLoading, "Loading records"],
+  [SelectedProgramToolsNewLoading, "Loading form"],
+  [SelectedProgramToolEditLoading, "Loading form"],
+  [SelectedProgramToolsPublishLoading, "Loading form"],
+  [SelectedProgramCiloEvaluationNewLoading, "Loading form"],
+  [SelectedProgramCourseRosterLoading, "Loading records"],
+  [CourseRosterDetailLoading, "Loading records"],
+  [SecretaryCurriculaLoading, "Loading records"],
+  [SecretaryInstrumentNewLoading, "Loading form"],
+  [SecretaryProgramNewLoading, "Loading form"],
 ] as const;
 
 const errorBoundaries = [
