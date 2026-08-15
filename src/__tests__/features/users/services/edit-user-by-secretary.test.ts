@@ -266,7 +266,6 @@ describe("editUserBySecretary service", () => {
       id: USER_ID,
       name: "Jane Smith",
       student: {
-        student_id_number: "S123",
         program_id: PROG_NEW,
       },
     });
@@ -441,7 +440,7 @@ describe("editUserBySecretary service", () => {
 
     const input =
       role === SystemRole.STUDENT
-        ? { id: USER_ID, name: "Jane Smith", student: { student_id_number: "S123", program_id: PROG_NEW } }
+        ? { id: USER_ID, name: "Jane Smith", student: { program_id: PROG_NEW } }
         : role === SystemRole.FACULTY
           ? { id: USER_ID, name: "Jane Smith", faculty: { program_id: PROG_NEW } }
           : role === SystemRole.PROGRAM_HEAD
@@ -483,7 +482,7 @@ describe("editUserBySecretary service", () => {
     const input = {
       id: USER_ID,
       name: "Jane Smith",
-      student: { student_id_number: "S123", program_id: PROG_NEW },
+      student: { program_id: PROG_NEW },
     };
     const review = await editUserBySecretary(input);
     expect(review.success).toBe(true);
@@ -713,7 +712,6 @@ describe("editUserBySecretary service", () => {
       id: USER_ID,
       name: "Jane Smith",
       student: {
-        student_id_number: "S123",
         program_id: PROG_NEW,
         major_id: null,
         year_level: "SECOND_YEAR" as const,

@@ -306,13 +306,11 @@ export async function upsertStudentAcademicContext(
     update: {
       program_id: input.program_id,
       major_id: input.major_id ?? null,
-      student_id_number: input.student_id_number ?? null,
     },
     create: {
       user_id: input.user_id,
       program_id: input.program_id,
       major_id: input.major_id ?? null,
-      student_id_number: input.student_id_number ?? null,
     },
   });
 

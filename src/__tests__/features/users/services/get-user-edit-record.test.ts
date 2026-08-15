@@ -73,7 +73,6 @@ describe("getUserEditRecordBySecretary", () => {
         program: { code: "BSIT", name: "Info Tech" },
         major_id: "maj-1",
         major: { name: "Web Dev" },
-        student_id_number: "2024-001",
       },
     });
 
@@ -88,7 +87,6 @@ describe("getUserEditRecordBySecretary", () => {
         programName: "Info Tech",
         majorId: "maj-1",
         majorName: "Web Dev",
-        studentIdNumber: "2024-001",
         programIsActive: null,
         majorIsActive: null,
       });
@@ -107,7 +105,6 @@ describe("getUserEditRecordBySecretary", () => {
         program: { code: "BSIT", name: "Info Tech" },
         major_id: "maj-1",
         major: { name: "Web Dev" },
-        student_id_number: "2024-001",
       },
       enrollments: [
         {

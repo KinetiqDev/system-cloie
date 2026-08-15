@@ -81,7 +81,6 @@ export async function createUserBySecretary(
     role,
     program_id,
     major_id,
-    student_id_number,
     year_level,
     section,
     graduation_year,
@@ -111,10 +110,10 @@ export async function createUserBySecretary(
   // 3. Validate Student-specific academic context and conditional major requirement
   let activeMajorId: string | null = null;
   if (role === SystemRole.STUDENT) {
-    if (!student_id_number || !year_level || !section) {
+    if (!year_level || !section) {
       return {
         success: false,
-        error: "Student ID number, year level, and section are required.",
+        error: "Year level and section are required.",
       };
     }
 
@@ -219,7 +218,6 @@ export async function createUserBySecretary(
               user_id: newUser.id,
               program_id: program_id!,
               major_id: activeMajorId,
-              student_id_number: student_id_number!,
             },
           });
 

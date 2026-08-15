@@ -147,7 +147,6 @@ function EditUserDialogBody({
   const [name, setName] = useState("");
 
   // Student fields
-  const [studentIdNumber, setStudentIdNumber] = useState("");
   const [programId, setProgramId] = useState("");
   const [majorId, setMajorId] = useState<string | null>(null);
   const [yearLevel, setYearLevel] = useState<YearLevel | null>(null);
@@ -212,7 +211,6 @@ function EditUserDialogBody({
       setName(result.data.name);
 
       if (result.data.role === SystemRole.STUDENT) {
-        setStudentIdNumber(result.data.student?.studentIdNumber ?? "");
         setProgramId(result.data.student?.programId ?? "");
         setMajorId(result.data.student?.majorId ?? null);
         setYearLevel((result.data.activeEnrollment?.yearLevel as YearLevel) ?? null);
@@ -264,10 +262,6 @@ function EditUserDialogBody({
     formData.set("name", trimmedName);
 
     if (loadState.status === "ready" && loadState.record.role === SystemRole.STUDENT) {
-      if (!studentIdNumber.trim()) {
-        setSubmitError("Student ID number is required.");
-        return;
-      }
       if (!programId) {
         setSubmitError("Program is required.");
         return;
@@ -285,7 +279,6 @@ function EditUserDialogBody({
         return;
       }
 
-      formData.set("student.student_id_number", studentIdNumber.trim());
       formData.set("student.program_id", programId);
       if (majorId) formData.set("student.major_id", majorId);
       if (canEditPlacement && yearLevel) formData.set("student.year_level", yearLevel);
@@ -516,19 +509,6 @@ function EditUserDialogBody({
           {loadState.record.role === SystemRole.STUDENT && (
             <>
               <div className="space-y-2 border-t pt-4">
-                <Label htmlFor="edit-user-student-id">Student ID Number</Label>
-                <Input
-                  id="edit-user-student-id"
-                  name="student.student_id_number"
-                  value={studentIdNumber}
-                  onChange={(event) => setStudentIdNumber(event.target.value)}
-                  required
-                  disabled={isSubmitting}
-                  autoComplete="off"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="edit-user-program">Program</Label>
                 <Select
                   value={programId}

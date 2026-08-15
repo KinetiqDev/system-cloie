@@ -236,14 +236,12 @@ describe("create-user-by-secretary schema", () => {
       role: SystemRole.STUDENT,
       program_id: programId,
       major_id: majorId,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.email).toBe("student@acd.edu.ph");
-      expect(result.data.student_id_number).toBe("2024-0001");
       expect(result.data.year_level).toBe(YearLevel.FIRST_YEAR);
       expect(result.data.section).toBe(StudentSection.MORNING);
     }
@@ -255,7 +253,6 @@ describe("create-user-by-secretary schema", () => {
       email: "student@gmail.com",
       role: SystemRole.STUDENT,
       program_id: programId,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
@@ -272,7 +269,6 @@ describe("create-user-by-secretary schema", () => {
       name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
@@ -284,19 +280,20 @@ describe("create-user-by-secretary schema", () => {
     }
   });
 
-  it("rejects Student input without a student ID number", () => {
+  it("accepts Student input without a student ID number", () => {
     const result = createUserBySecretarySchema.safeParse({
       name: "Carlos Santos",
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
+      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const issues = result.error.issues.filter((issue) => issue.path.includes("student_id_number"));
-      expect(issues.length).toBeGreaterThan(0);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // The schema must neither require nor surface the former field.
+      expect(result.data).not.toHaveProperty("student_id_number");
     }
   });
 
@@ -306,7 +303,6 @@ describe("create-user-by-secretary schema", () => {
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
-      student_id_number: "2024-0001",
       section: StudentSection.MORNING,
     });
     expect(result.success).toBe(false);
@@ -322,7 +318,6 @@ describe("create-user-by-secretary schema", () => {
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
     });
     expect(result.success).toBe(false);
@@ -442,7 +437,6 @@ describe("create-user-by-secretary schema", () => {
       email: "sam.student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
@@ -474,7 +468,6 @@ describe("createUserBySecretary service", () => {
     role: SystemRole.SECRETARY,
     program_id: undefined,
     major_id: undefined,
-    student_id_number: undefined,
     year_level: undefined,
     section: undefined,
   } as const;
@@ -587,7 +580,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.PROGRAM_HEAD,
       program_id: "program-ph",
       major_id: undefined,
-      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
     } as const;
@@ -630,7 +622,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.FACULTY,
       program_id: "program-faculty",
       major_id: undefined,
-      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
     } as const;
@@ -735,7 +726,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.STUDENT,
       program_id: programId,
       major_id: majorId,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     } as const;
@@ -767,7 +757,6 @@ describe("createUserBySecretary service", () => {
         user_id: "user-student",
         program_id: programId,
         major_id: majorId,
-        student_id_number: "2024-0001",
       },
     });
     expect(prisma.studentEnrollment.create).toHaveBeenCalledWith({
@@ -790,7 +779,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.STUDENT,
       program_id: programId,
       major_id: undefined,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     } as const;
@@ -814,7 +802,6 @@ describe("createUserBySecretary service", () => {
         user_id: "user-student",
         program_id: programId,
         major_id: null,
-        student_id_number: "2024-0001",
       },
     });
     expect(prisma.studentEnrollment.create).not.toHaveBeenCalled();
@@ -826,7 +813,6 @@ describe("createUserBySecretary service", () => {
       email: "student@gmail.com",
       role: SystemRole.STUDENT,
       program_id: programId,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
@@ -843,7 +829,6 @@ describe("createUserBySecretary service", () => {
       ...validSecretaryInput,
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
@@ -863,7 +848,6 @@ describe("createUserBySecretary service", () => {
       email: "student@acd.edu.ph",
       role: SystemRole.STUDENT,
       program_id: programId,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
@@ -888,7 +872,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.STUDENT,
       program_id: programId,
       major_id: undefined,
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
@@ -912,7 +895,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.STUDENT,
       program_id: programId,
       major_id: "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a00",
-      student_id_number: "2024-0001",
       year_level: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
     });
@@ -931,7 +913,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.ALUMNI,
       program_id: programId,
       major_id: undefined,
-      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
       graduation_year: 2022,
@@ -974,7 +955,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.ALUMNI,
       program_id: programId,
       major_id: majorId,
-      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
       graduation_year: 2022,
@@ -1011,7 +991,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.ALUMNI,
       program_id: programId,
       major_id: undefined,
-      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
       graduation_year: 2023,
@@ -1131,7 +1110,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.INDUSTRY_PARTNER,
       program_id: programId,
       major_id: undefined,
-      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
       graduation_year: undefined,
@@ -1172,7 +1150,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.INDUSTRY_PARTNER,
       program_id: undefined,
       major_id: undefined,
-      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
       graduation_year: undefined,
@@ -1198,7 +1175,6 @@ describe("createUserBySecretary service", () => {
       role: SystemRole.INDUSTRY_PARTNER,
       program_id: undefined,
       major_id: undefined,
-      student_id_number: undefined,
       year_level: undefined,
       section: undefined,
       graduation_year: undefined,

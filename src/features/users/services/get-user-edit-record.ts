@@ -26,7 +26,6 @@ export type SecretaryUserEditRecord = {
     majorName: string | null;
     programIsActive: boolean | null;
     majorIsActive: boolean | null;
-    studentIdNumber: string | null;
   } | null;
   // Active-term enrollment record is intentionally not projected here; #81
   // owns the active enrollment projection and placement fields.
@@ -164,7 +163,6 @@ export async function getUserEditRecordBySecretary(
             majorId: user.student_profile.major_id,
             majorName: user.student_profile.major?.name ?? null,
             majorIsActive: user.student_profile.major?.is_active ?? null,
-            studentIdNumber: user.student_profile.student_id_number,
           }
         : null,
       activeEnrollment: activeEnrollment
