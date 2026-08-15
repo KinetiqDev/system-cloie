@@ -48,17 +48,17 @@ async function validateProgramHeadActionScope(programId: string | undefined) {
 export async function addRosterMembershipAction(input: unknown) {
   const parsed = addRosterMembershipSchema.safeParse(input);
   if (!parsed.success)
-    return { success: false as const, error: "Enter a valid Student email address." };
+    return { success: false as const, error: "Enter a valid Student account." };
   if (!(await validateProgramHeadActionScope(parsed.data.programId))) {
     return { success: false as const, error: "Course assignment not found." };
   }
   const result = parsed.data.programId
     ? await addRosterMembership(
         parsed.data.assignmentId,
-        parsed.data.studentEmail,
+        parsed.data.studentUserId,
         parsed.data.programId
       )
-    : await addRosterMembership(parsed.data.assignmentId, parsed.data.studentEmail);
+    : await addRosterMembership(parsed.data.assignmentId, parsed.data.studentUserId);
   if (result.success) revalidateRosterRoutes(parsed.data.assignmentId, parsed.data.programId);
   return result;
 }

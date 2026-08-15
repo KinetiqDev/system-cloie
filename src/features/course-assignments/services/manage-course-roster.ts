@@ -61,7 +61,6 @@ const assignmentSelect = {
 
 const studentSelect = (termInstanceId: string) => ({
   id: true,
-  email: true,
   is_active: true,
   roles: { select: { role: true } },
   student_profile: { select: rosterStudentProfileSelect },
@@ -155,6 +154,25 @@ async function authorizeForWrite(assignmentId: string, programId?: string) {
     };
   }
   return authorization;
+}
+
+/**
+ * Confirmation-request preflight: reauthorizes the assignment (including
+ * three-layer Program Head selected-Program scope) and rejects read-only
+ * rosters before any row write. Request-structure validation (duplicate
+ * identities, source-index/skip consistency, acknowledgement flag) is
+ * schema-level; per-row candidate-scope revalidation happens inside the
+ * write path.
+ */
+export async function preflightRosterConfirmation(
+  assignmentId: string,
+  programId?: string
+): Promise<RosterServiceResult<{ assignmentId: string }>> {
+  const session = await resolveAuthSession();
+  if (!session) return { success: false, error: "Authentication required." };
+  const authorization = await authorizeForWrite(assignmentId, programId);
+  if (!authorization.success) return authorization;
+  return { success: true, data: { assignmentId: authorization.data.assignmentId } };
 }
 
 async function lockAssignment(tx: Prisma.TransactionClient, assignmentId: string) {
@@ -254,11 +272,10 @@ async function uniqueMembershipError(
 
 export async function addRosterMembership(
   assignmentId: string,
-  studentEmail: string,
+  studentUserId: string,
   programId?: string
 ): Promise<RosterServiceResult<CourseRosterMutation>> {
   let actorId: string | undefined;
-  let studentUserId: string | undefined;
   try {
     const session = await resolveAuthSession();
     if (!session) return { success: false, error: "Authentication required." };
@@ -266,7 +283,6 @@ export async function addRosterMembership(
     const authorization = await authorizeForWrite(assignmentId, programId);
     if (!authorization.success) return authorization;
 
-    const email = studentEmail.trim().toLowerCase();
     return await prisma.$transaction(async (tx) => {
       const assignment = await lockAssignment(tx, assignmentId);
       if (!assignment) return { success: false, error: NOT_FOUND_ERROR };
@@ -278,11 +294,10 @@ export async function addRosterMembership(
       if (lifecycleFailure) return lifecycleFailure;
 
       const student = await tx.user.findUnique({
-        where: { email },
+        where: { id: studentUserId },
         select: studentSelect(assignment.term_instance_id),
       });
       if (!student) return { success: false, error: eligibilityMessages.UNKNOWN_ACCOUNT };
-      studentUserId = student.id;
 
       const existing = await tx.courseAssignmentMembership.findUnique({
         where: {

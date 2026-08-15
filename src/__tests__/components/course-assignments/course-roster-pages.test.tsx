@@ -399,6 +399,22 @@ describe("course roster pages", () => {
       success: true,
       data: { outcome: "CREATED", message: "Student added to Course roster." },
     });
+    vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        candidates: [
+          {
+            userId: "student-1",
+            name: "Maria Santos",
+            email: "maria.santos@acd.edu.ph",
+            programId: "program-1",
+            selectable: true,
+            reason: null,
+          },
+        ],
+      },
+    });
     render(
       <CourseRosterDetailPage
         data={detail}
@@ -414,14 +430,16 @@ describe("course roster pages", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
     fireEvent.click(screen.getByRole("tab", { name: /add one student/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Student email" }), {
-      target: { value: "student@example.com" },
-    });
-    fireEvent.submit(screen.getByRole("textbox", { name: "Student email" }).closest("form")!);
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Maria" } });
+    expect(await screen.findByRole("button", { name: /maria santos/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /maria santos/i }));
+    fireEvent.submit(screen.getByRole("button", { name: /add student/i }).closest("form")!);
     await waitFor(() =>
-      expect(rosterActions.addRosterMembershipAction).toHaveBeenCalledWith(
-        expect.objectContaining({ programId: "program-1" })
-      )
+      expect(rosterActions.addRosterMembershipAction).toHaveBeenCalledWith({
+        assignmentId: "assignment-1",
+        programId: "program-1",
+        studentUserId: "student-1",
+      })
     );
   });
 
@@ -518,11 +536,6 @@ describe("course roster pages", () => {
     render(<CourseRosterDetailPage data={detail} programId="program-1" />);
     fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByRole("tablist", { name: "Roster management methods" })).toHaveAttribute(
-      "data-variant",
-      "pill"
-    );
-    expect(screen.getByRole("tab", { name: /import from csv/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /download template/i }));
     expect(createObjectURL).toHaveBeenCalled();
     expect(click).toHaveBeenCalled();
@@ -593,14 +606,13 @@ describe("course roster pages", () => {
     expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent("Add members");
   });
 
-  it("uses a Drawer on mobile while keeping equivalent methods", () => {
+  it("uses a Drawer on mobile while keeping the CSV import method", () => {
     mockMatchMedia(false);
     render(<RosterManagementDialog assignmentId="assignment-1" />);
     fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
 
     expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /import from csv/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /add one student/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Roster CSV file")).toBeInTheDocument();
   });
 
   it("restores focus to the trigger after closing the mobile Drawer", async () => {
@@ -644,7 +656,7 @@ describe("course roster pages", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
 
-    expect(screen.getByRole("tab", { name: /import from csv/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Roster CSV file")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Import results" })).not.toBeInTheDocument();
     expect(screen.queryByText("roster.csv")).not.toBeInTheDocument();
   });

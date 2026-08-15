@@ -43,7 +43,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import {
   Table,
@@ -646,6 +645,7 @@ export function RosterManagementDialog({
   );
 }
 
+
 function AddRosterMember({
   assignmentId,
   programId,
@@ -653,7 +653,7 @@ function AddRosterMember({
   assignmentId: string;
   programId?: string;
 }) {
-  const [email, setEmail] = useState("");
+  const [studentUserId, setStudentUserId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -664,10 +664,10 @@ function AddRosterMember({
       const result = await addRosterMembershipAction({
         assignmentId,
         programId,
-        studentEmail: email,
+        studentUserId,
       });
       setMessage(resultMessage(result));
-      if (result.success) setEmail("");
+      if (result.success) setStudentUserId("");
     });
   }
 
@@ -676,36 +676,26 @@ function AddRosterMember({
       <div>
         <h2 className="text-title-md">Add Student to roster</h2>
         <p className="text-body-sm text-muted-foreground">
-          Search assignment-scoped Students or enter an existing Student account email. Eligibility is
-          checked against this assignment.
+          Search assignment-scoped Students by canonical name. Eligibility is checked against this
+          assignment.
         </p>
       </div>
       <form className="flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={submit}>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <label htmlFor="roster-student-email" className="text-label-md">
-            Student email
+          <label htmlFor="roster-student-search" className="text-label-md">
+            Scoped Student search
           </label>
-          <Input
-            id="roster-student-email"
-            name="studentEmail"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            disabled={isPending}
+          <ScopedRosterStudentSearch
+            assignmentId={assignmentId}
+            programId={programId}
+            onSelect={(candidate) => setStudentUserId(candidate.userId)}
           />
         </div>
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending || studentUserId === ""}>
           <UserPlus data-icon="inline-start" />
           {isPending ? "Adding..." : "Add Student"}
         </Button>
       </form>
-      <ScopedRosterStudentSearch
-        assignmentId={assignmentId}
-        programId={programId}
-        onSelect={(candidate) => setEmail(candidate.email)}
-      />
       <MutationMessage message={message} />
     </div>
   );

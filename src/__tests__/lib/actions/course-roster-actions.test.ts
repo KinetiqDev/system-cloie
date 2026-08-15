@@ -39,6 +39,7 @@ import {
 const assignmentId = "11111111-1111-4111-8111-111111111111";
 const membershipId = "22222222-2222-4222-8222-222222222222";
 const programId = "33333333-3333-4333-8333-333333333333";
+const studentUserId = "44444444-4444-4444-8444-444444444444";
 
 describe("course roster actions", () => {
   beforeEach(() => {
@@ -51,20 +52,17 @@ describe("course roster actions", () => {
       data: { outcome: "CREATED", message: "Student added to Course roster." },
     });
 
-    await addRosterMembershipAction({ assignmentId, studentEmail: " STUDENT@EXAMPLE.COM " });
+    await addRosterMembershipAction({ assignmentId, studentUserId });
 
-    expect(serviceMocks.addRosterMembership).toHaveBeenCalledWith(
-      assignmentId,
-      "student@example.com"
-    );
+    expect(serviceMocks.addRosterMembership).toHaveBeenCalledWith(assignmentId, studentUserId);
     expect(revalidatePathMock).toHaveBeenCalledWith(`/course-rosters/${assignmentId}`);
     expect(revalidatePathMock).toHaveBeenCalledWith("/faculty/course-rosters");
   });
 
   it("does not write or revalidate invalid input", async () => {
-    const result = await addRosterMembershipAction({ assignmentId: "bad", studentEmail: "bad" });
+    const result = await addRosterMembershipAction({ assignmentId: "bad", studentUserId: "bad" });
 
-    expect(result).toEqual({ success: false, error: "Enter a valid Student email address." });
+    expect(result).toEqual({ success: false, error: "Enter a valid Student account." });
     expect(serviceMocks.addRosterMembership).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
@@ -115,12 +113,12 @@ describe("course roster actions", () => {
     await addRosterMembershipAction({
       assignmentId,
       programId,
-      studentEmail: "student@example.com",
+      studentUserId,
     });
 
     expect(serviceMocks.addRosterMembership).toHaveBeenCalledWith(
       assignmentId,
-      "student@example.com",
+      studentUserId,
       programId
     );
     expect(revalidatePathMock).toHaveBeenCalledWith(
