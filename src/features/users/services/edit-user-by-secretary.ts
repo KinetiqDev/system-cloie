@@ -520,12 +520,10 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
           where: { user_id: id },
           create: {
             user_id: id,
-            student_id_number: student.student_id_number,
             program_id: student.program_id,
             major_id: student.major_id ?? null,
           },
           update: {
-            student_id_number: student.student_id_number,
             program_id: student.program_id,
             major_id: student.major_id ?? null,
           },

@@ -23,7 +23,6 @@ export type BaseIdentityEditInput = z.infer<typeof baseIdentityEditSchema>;
  * Handled via superRefine in the combined schema to enforce conditional logic.
  */
 export const studentEditSchema = z.object({
-  student_id_number: z.string().trim().min(1, "Student ID number is required."),
   program_id: z.string().uuid("Program is required."),
   major_id: z.string().uuid("Major is required.").nullable().optional(),
   year_level: z.nativeEnum(YearLevel, { message: "Year level is required." }).nullable().optional(),

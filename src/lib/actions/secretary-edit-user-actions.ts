@@ -74,7 +74,6 @@ export async function editUserBySecretaryAction(formData: FormData): Promise<
 
   if (formData.get("student.program_id")) {
     raw.student = {
-      student_id_number: formData.get("student.student_id_number"),
       program_id: formData.get("student.program_id"),
       major_id: formData.get("student.major_id") || undefined,
       year_level: formData.get("student.year_level") || undefined,

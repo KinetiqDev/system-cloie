@@ -276,7 +276,6 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
       role: undefined as unknown as SystemRole,
       program_id: undefined,
       major_id: undefined,
-      student_id_number: "",
       year_level: undefined,
       section: undefined,
       graduation_year: undefined,
@@ -334,7 +333,6 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
     const resetValues: Partial<CreateUserBySecretaryInput> = {
       program_id: undefined,
       major_id: undefined,
-      student_id_number: "",
       year_level: undefined,
       section: undefined,
       graduation_year: undefined,
@@ -372,9 +370,6 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
     }
 
     if (studentMode) {
-      if (data.student_id_number) {
-        formData.set("student_id_number", data.student_id_number);
-      }
       if (data.year_level) {
         formData.set("year_level", data.year_level);
       }
@@ -501,15 +496,6 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
 
                 {studentMode && (
                   <>
-                    <TextField
-                      id="student_id_number"
-                      label="Student ID number"
-                      name="student_id_number"
-                      register={register}
-                      error={errors.student_id_number?.message}
-                      placeholder="e.g. 2024-0001"
-                    />
-
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <SelectField
                         id="year_level"

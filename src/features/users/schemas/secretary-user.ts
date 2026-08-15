@@ -37,7 +37,6 @@ export const updateStudentAcademicContextSchema = z.object({
   user_id: z.string().uuid(),
   program_id: z.string().uuid(),
   major_id: optionalUuidField,
-  student_id_number: optionalTextField,
 });
 
 export const createFacultyAffiliationSchema = z.object({

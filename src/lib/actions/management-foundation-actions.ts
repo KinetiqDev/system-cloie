@@ -287,7 +287,6 @@ export async function updateStudentAcademicContextAction(
     program_id: formData.get("program_id"),
     major_id: formData.get("major_id"),
     year_level: formData.get("year_level"),
-    student_id_number: formData.get("student_id_number"),
     academic_year: formData.get("academic_year"),
     section: formData.get("section"),
   });

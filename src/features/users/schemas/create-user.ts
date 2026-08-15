@@ -67,7 +67,6 @@ export const createUserBySecretarySchema = z
     role: z.nativeEnum(SystemRole),
     program_id: optionalUuidField,
     major_id: optionalUuidField,
-    student_id_number: optionalTextField,
     year_level: optionalEnumField(YearLevel),
     section: optionalEnumField(StudentSection),
     graduation_year: optionalNumberField,
@@ -96,18 +95,6 @@ export const createUserBySecretarySchema = z
     {
       message: "Select an affiliated program.",
       path: ["program_id"],
-    }
-  )
-  .refine(
-    (data) => {
-      if (data.role !== SystemRole.STUDENT) {
-        return true;
-      }
-      return !!data.student_id_number;
-    },
-    {
-      message: "Student ID number is required.",
-      path: ["student_id_number"],
     }
   )
   .refine(

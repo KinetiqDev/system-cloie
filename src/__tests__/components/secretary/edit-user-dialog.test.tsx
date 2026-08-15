@@ -347,7 +347,6 @@ describe("EditUserDialog", () => {
         isActive: true,
         role: SystemRole.STUDENT,
         student: {
-          studentIdNumber: "1000818031",
           programId: "prog-old",
           programCode: "BSIT",
           programName: "Information Technology",
@@ -484,7 +483,6 @@ describe("EditUserDialog", () => {
         isActive: true,
         role: SystemRole.STUDENT,
         student: {
-          studentIdNumber: "S123",
           programId: "prog-old",
           programCode: "BSIT",
           programName: "Information Technology",

@@ -470,7 +470,6 @@ describe("SecretaryAddUserForm Student", () => {
     await waitFor(() => {
       expect(screen.getByText(/academic program/i)).toBeInTheDocument();
     });
-    expect(screen.getByLabelText(/student id number/i)).toBeInTheDocument();
     expect(screen.getByText(/^Year Level$/i)).toBeInTheDocument();
     expect(screen.getByText(/^Section$/i)).toBeInTheDocument();
   });
@@ -507,7 +506,6 @@ describe("SecretaryAddUserForm Student", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/select an affiliated program/i)).toBeInTheDocument();
-      expect(screen.getByText(/student id number is required/i)).toBeInTheDocument();
       expect(screen.getByText(/year level is required/i)).toBeInTheDocument();
       expect(screen.getByText(/section is required/i)).toBeInTheDocument();
     });
@@ -520,9 +518,6 @@ describe("SecretaryAddUserForm Student", () => {
     selectRole("Student");
     fillIdentity();
     selectProgram("BSIT");
-    fireEvent.change(screen.getByLabelText(/student id number/i), {
-      target: { value: "2024-0001" },
-    });
     selectYearLevel("1st Year");
     selectSection("Morning");
 
@@ -546,9 +541,6 @@ describe("SecretaryAddUserForm Student", () => {
     // Switch to a program with no majors
     selectProgram("BSBA");
 
-    fireEvent.change(screen.getByLabelText(/student id number/i), {
-      target: { value: "2024-0001" },
-    });
     selectYearLevel("1st Year");
     selectSection("Morning");
 
@@ -571,9 +563,6 @@ describe("SecretaryAddUserForm Student", () => {
     selectRole("Student");
     fillIdentity();
     selectProgram("BSBA");
-    fireEvent.change(screen.getByLabelText(/student id number/i), {
-      target: { value: "2024-0001" },
-    });
     selectYearLevel("1st Year");
     selectSection("Morning");
 
@@ -587,7 +576,6 @@ describe("SecretaryAddUserForm Student", () => {
     expect(formData.get("role")).toBe(SystemRole.STUDENT);
     expect(formData.get("email")).toBe("student@acd.edu.ph");
     expect(formData.get("program_id")).toBe("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22");
-    expect(formData.get("student_id_number")).toBe("2024-0001");
     expect(formData.get("year_level")).toBe(YearLevel.FIRST_YEAR);
     expect(formData.get("section")).toBe(StudentSection.MORNING);
     expect(formData.get("major_id")).toBeNull();
@@ -601,9 +589,6 @@ describe("SecretaryAddUserForm Student", () => {
     fillIdentity();
     selectProgram("BSIT");
     selectMajor("Web Development");
-    fireEvent.change(screen.getByLabelText(/student id number/i), {
-      target: { value: "2024-0002" },
-    });
     selectYearLevel("2nd Year");
     selectSection("Afternoon");
 
@@ -617,7 +602,6 @@ describe("SecretaryAddUserForm Student", () => {
     expect(formData.get("role")).toBe(SystemRole.STUDENT);
     expect(formData.get("program_id")).toBe("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
     expect(formData.get("major_id")).toBe("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a10");
-    expect(formData.get("student_id_number")).toBe("2024-0002");
     expect(formData.get("year_level")).toBe(YearLevel.SECOND_YEAR);
     expect(formData.get("section")).toBe(StudentSection.AFTERNOON);
   });
@@ -630,9 +614,6 @@ describe("SecretaryAddUserForm Student", () => {
     fillIdentity();
     selectProgram("BSIT");
     selectMajor("Web Development");
-    fireEvent.change(screen.getByLabelText(/student id number/i), {
-      target: { value: "2024-0001" },
-    });
     selectYearLevel("1st Year");
     selectSection("Morning");
 
@@ -649,7 +630,6 @@ describe("SecretaryAddUserForm Student", () => {
     expect(formData.get("role")).toBe(SystemRole.SECRETARY);
     expect(formData.get("program_id")).toBeNull();
     expect(formData.get("major_id")).toBeNull();
-    expect(formData.get("student_id_number")).toBeNull();
     expect(formData.get("year_level")).toBeNull();
     expect(formData.get("section")).toBeNull();
     expect(formData.getAll("program_ids")).toHaveLength(0);
