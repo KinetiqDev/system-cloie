@@ -108,8 +108,9 @@ export function ScopedRosterStudentSearch({
               <button
                 type="button"
                 onClick={() => onSelect?.(candidate)}
+                disabled={!candidate.selectable}
                 aria-pressed={selectedUserId === candidate.userId}
-                className="hover:bg-accent focus-visible:ring-ring flex min-h-11 w-full flex-col items-start gap-1 px-3 py-2 text-left focus-visible:ring-3 focus-visible:outline-none"
+                className="hover:bg-accent focus-visible:ring-ring flex min-h-11 w-full flex-col items-start gap-1 px-3 py-2 text-left focus-visible:ring-3 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <span className="font-medium">{candidate.name}</span>
                 <span className="text-muted-foreground text-sm">{candidate.email}</span>
