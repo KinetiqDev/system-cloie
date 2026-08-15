@@ -236,6 +236,16 @@ export type CourseRosterPreviewCandidate = {
   reason: string | null;
 };
 
+export type ScopedRosterCandidate = {
+  userId: string;
+  name: string;
+  email: string;
+  programId: string;
+  selectable: boolean;
+  reason: RosterEligibilityReason | null;
+};
+
+
 export type CourseRosterPreviewRow = {
   sourceIndex: number;
   submittedName: string;

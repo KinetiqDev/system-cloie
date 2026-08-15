@@ -69,11 +69,13 @@ describe("previewCourseRoster service", () => {
       success: true,
       data: ASSIGNMENT,
     });
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.courseAssignmentMembership.findMany).mockResolvedValue([] as never);
   });
 
   it("authorizes once and loads candidates in one batched Student read plus membership reads", async () => {
+
 
     await previewCourseRoster({
       assignmentId: "assignment-1",
@@ -90,6 +92,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("scopes the batch to the assignment period and never to year level or section", async () => {
+
 
     await previewCourseRoster({
       assignmentId: "assignment-1",
@@ -109,6 +112,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("classifies an exact match as READY_CREATE for a new membership", async () => {
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
     ] as never);
@@ -141,6 +145,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("treats an irregular Student with matching Program as selectable", async () => {
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       {
         ...student("student-1", "Andy Egut", "program-1"),
@@ -160,6 +165,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("keeps a Program-mismatched Student non-selectable and shows it as a diagnostic", async () => {
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-2", "Andy Egut", "program-2"),
     ] as never);
@@ -186,6 +192,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("accepts any active placement for a General Education assignment", async () => {
+
     vi.mocked(rosterModule.resolveAuthorizedCourseAssignmentRoster).mockResolvedValue({
       success: true,
       data: { ...ASSIGNMENT, courseScope: CourseScope.GENERAL_EDUCATION },
@@ -206,6 +213,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("suggests a unique middle-token variant with its closed reason", async () => {
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Maria Therese Reyes", "program-1"),
     ] as never);
@@ -227,6 +235,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("keeps equal-tier same-name candidates ambiguous", async () => {
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
       student("student-2", "Andy Egut", "program-1"),
@@ -249,6 +258,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("reports ALREADY_ACTIVE, WILL_RESTORE, and OTHER_SECTION_CONFLICT dispositions", async () => {
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "One Student", "program-1"),
       student("student-2", "Two Student", "program-1"),
@@ -330,6 +340,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("performs zero membership writes during preview", async () => {
+
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
     ] as never);
@@ -345,6 +356,7 @@ describe("previewCourseRoster service", () => {
   });
 
   it("does not disclose an assignment outside the selected Program", async () => {
+
     vi.mocked(rosterModule.resolveAuthorizedCourseAssignmentRoster).mockResolvedValue({
       success: false,
       error: "Course assignment not found.",

@@ -15,6 +15,7 @@ import {
   previewCourseRosterSchema,
   removeRosterMembershipSchema,
   restoreRosterMembershipSchema,
+  searchScopedRosterStudentsSchema,
 } from "@/features/course-assignments/schemas/course-assignment";
 import {
   addRosterMembership,
@@ -23,6 +24,8 @@ import {
 } from "@/features/course-assignments/services/manage-course-roster";
 import { importCourseRoster } from "@/features/course-assignments/services/import-course-roster";
 import { previewCourseRoster } from "@/features/course-assignments/services/preview-course-roster";
+import { searchScopedRosterStudents } from "@/features/course-assignments/services/search-scoped-roster-students";
+
 
 function revalidateRosterRoutes(assignmentId: string, programId?: string) {
   revalidatePath(`/course-rosters/${assignmentId}`);
@@ -145,6 +148,22 @@ export async function previewCourseRosterAction(input: unknown) {
   // Preview performs zero membership writes; no route revalidation is needed.
   return previewCourseRoster(parsed.data);
 }
+
+export async function searchScopedRosterStudentsAction(input: unknown) {
+  const parsed = searchScopedRosterStudentsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, error: "Enter a valid Student search." };
+  }
+  if (!(await validateProgramHeadActionScope(parsed.data.programId))) {
+    return { success: false as const, error: "Course assignment not found." };
+  }
+  return searchScopedRosterStudents(
+    parsed.data.assignmentId,
+    parsed.data.query,
+    parsed.data.programId
+  );
+}
+
 
 function isFileLike(value: FormDataEntryValue | null): value is File {
   return value !== null && typeof value !== "string" && typeof value.arrayBuffer === "function";
