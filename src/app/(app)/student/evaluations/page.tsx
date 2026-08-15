@@ -36,7 +36,7 @@ export default async function StudentEvaluationsPage() {
   );
 }
 
-export async function StudentEvaluationsBrowser({
+async function StudentEvaluationsBrowser({
   evaluationsPromise,
 }: {
   evaluationsPromise: Promise<StudentEvaluations>;

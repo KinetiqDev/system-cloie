@@ -19,15 +19,14 @@ const loadingLabels: Record<RespondentLoadingVariant, string> = {
 export function EvaluationBrowserSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div className="flex gap-2">
           <Skeleton className="h-9 w-24 rounded-full" />
           <Skeleton className="h-9 w-28 rounded-full" />
           <Skeleton className="h-9 w-24 rounded-full" />
         </div>
-        <div className="flex gap-4">
-          <Skeleton className="h-10 w-full md:w-64" />
-          <Skeleton className="h-10 w-20" />
+        <div className="relative w-full md:w-64">
+          <Skeleton className="h-11 w-full" />
         </div>
       </div>
       <div className="grid gap-4">

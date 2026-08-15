@@ -47,7 +47,7 @@ export default function StudentHistoryPage() {
   );
 }
 
-export async function SubmissionHistory({
+async function SubmissionHistory({
   evaluationsPromise,
 }: {
   evaluationsPromise: Promise<StudentEvaluations>;
@@ -176,7 +176,7 @@ export async function SubmissionHistory({
   );
 }
 
-export function SubmissionHistoryFallback() {
+function SubmissionHistoryFallback() {
   return (
     <>
       <div className="border-border bg-surface hidden overflow-hidden rounded-xl border md:block">

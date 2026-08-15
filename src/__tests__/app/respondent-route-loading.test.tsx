@@ -16,6 +16,7 @@ import IndustryPartnerEvaluationLoading from "@/app/(app)/industry-partner/evalu
 import IndustryPartnerHistoryLoading from "@/app/(app)/industry-partner/history/loading";
 import IndustryPartnerProfileLoading from "@/app/(app)/industry-partner/profile/loading";
 import IndustryPartnerSubmittedLoading from "@/app/(app)/industry-partner/evaluations/[id]/submitted/loading";
+import { EvaluationBrowserSkeleton } from "@/components/layout/respondent-route-loading";
 
 const loadingRoutes = [
   [StudentEvaluationsLoading, "Loading your evaluations"],
@@ -44,5 +45,17 @@ describe("respondent route loading boundaries", () => {
     expect(status).toHaveAttribute("aria-busy", "true");
     expect(status.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
     expect(status).not.toHaveTextContent(/@|student|alumni|partner|202\d|term|section/i);
+  });
+  it("matches the responsive evaluation browser controls", () => {
+    const { container } = render(<EvaluationBrowserSkeleton />);
+    const controls = container.firstElementChild?.firstElementChild;
+
+    expect(controls).toHaveClass("flex-col", "md:flex-row");
+    expect(controls?.firstElementChild?.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
+    expect(controls?.lastElementChild).toHaveClass("w-full", "md:w-64");
+    expect(controls?.lastElementChild?.querySelector('[data-slot="skeleton"]')).toHaveClass(
+      "h-11",
+      "w-full"
+    );
   });
 });

@@ -72,7 +72,7 @@ export default function SecretaryDashboardPage() {
   );
 }
 
-export async function SecretaryStats({
+async function SecretaryStats({
   countsPromise,
 }: {
   countsPromise: Promise<SecretaryDashboardCounts>;
@@ -104,7 +104,7 @@ function SecretaryStatsGrid({ children }: { children: React.ReactNode }) {
   return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">{children}</div>;
 }
 
-export function SecretaryStatsFallback() {
+function SecretaryStatsFallback() {
   return (
     <SecretaryStatsGrid>
       {["users", "programs", "courses", "templates"].map((stat) => (

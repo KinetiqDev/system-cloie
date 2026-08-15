@@ -14,10 +14,25 @@ import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { prisma } from "@/lib/db/prisma";
 
 type StudentEvaluations = Awaited<ReturnType<typeof listStudentAssignedEvaluations>>;
+type StudentEvaluation = StudentEvaluations["active"][number];
 
 type StudentIdentity = {
   displayName: string;
   contextLabel: string;
+};
+type StudentProfileIdentityRecord = {
+  program: { code: string };
+  major: { name: string } | null;
+  user: { name: string };
+};
+
+type StudentEnrollmentIdentityRecord = {
+  year_level: Parameters<typeof getYearLevelDisplay>[0];
+  term: {
+    school_year: { code: string };
+    semester: Parameters<typeof formatTermInstanceLabel>[1];
+    term: Parameters<typeof formatTermInstanceLabel>[2];
+  };
 };
 
 async function readStudentIdentity(userId: string): Promise<StudentIdentity> {
@@ -39,25 +54,45 @@ async function readStudentIdentity(userId: string): Promise<StudentIdentity> {
     }),
   ]);
 
-  const termLabel = enrollment
+  return formatStudentIdentity(profile, enrollment);
+}
+
+function formatStudentIdentity(
+  profile: StudentProfileIdentityRecord | null,
+  enrollment: StudentEnrollmentIdentityRecord | null
+): StudentIdentity {
+  return {
+    displayName: profile?.user.name ?? "Student",
+    contextLabel: formatStudentContextLabel(profile, enrollment),
+  };
+}
+
+function formatStudentContextLabel(
+  profile: StudentProfileIdentityRecord | null,
+  enrollment: StudentEnrollmentIdentityRecord | null
+): string {
+  const contextParts = [
+    profile?.program.code,
+    profile?.major?.name,
+    formatStudentYearLevel(enrollment),
+    formatStudentTermLabel(enrollment),
+  ].filter(Boolean);
+
+  return contextParts.join(" • ") || "Student portal";
+}
+
+function formatStudentYearLevel(enrollment: StudentEnrollmentIdentityRecord | null): string | null {
+  return enrollment ? getYearLevelDisplay(enrollment.year_level) : null;
+}
+
+function formatStudentTermLabel(enrollment: StudentEnrollmentIdentityRecord | null): string | null {
+  return enrollment
     ? formatTermInstanceLabel(
         enrollment.term.school_year.code,
         enrollment.term.semester,
         enrollment.term.term
       )
     : null;
-
-  const contextParts = [
-    profile?.program.code ?? null,
-    profile?.major?.name ?? null,
-    enrollment ? getYearLevelDisplay(enrollment.year_level) : null,
-    termLabel,
-  ].filter(Boolean);
-
-  return {
-    displayName: profile?.user.name ?? "Student",
-    contextLabel: contextParts.length > 0 ? contextParts.join(" • ") : "Student portal",
-  };
 }
 
 export default async function StudentDashboardPage() {
@@ -95,17 +130,13 @@ export default async function StudentDashboardPage() {
   );
 }
 
-export async function StudentHero({
-  identityPromise,
-}: {
-  identityPromise: Promise<StudentIdentity>;
-}) {
+async function StudentHero({ identityPromise }: { identityPromise: Promise<StudentIdentity> }) {
   const { displayName, contextLabel } = await identityPromise;
 
   return <HeroCard name={displayName} contextLabel={contextLabel} />;
 }
 
-export async function StudentEvaluationsSections({
+async function StudentEvaluationsSections({
   evaluationsPromise,
   isDeferredEnrollment,
 }: {
@@ -116,97 +147,152 @@ export async function StudentEvaluationsSections({
   const inProgressCount = active.filter((item) => item.status === "IN_PROGRESS").length;
   const resumeItem = active.find((item) => item.status === "IN_PROGRESS") ?? null;
   const pending = active
-    .filter((item) => item.status === "NOT_STARTED" || item.status === "DUE_SOON")
+    .filter((item) => ["NOT_STARTED", "DUE_SOON"].includes(item.status))
     .slice(0, 3);
 
   return (
+    <StudentEvaluationsContent
+      pending={pending}
+      pendingCount={active.length}
+      inProgressCount={inProgressCount}
+      completedCount={submitted.length}
+      resumeItem={resumeItem}
+      isDeferredEnrollment={isDeferredEnrollment}
+    />
+  );
+}
+
+function StudentEvaluationsContent({
+  pending,
+  pendingCount,
+  inProgressCount,
+  completedCount,
+  resumeItem,
+  isDeferredEnrollment,
+}: {
+  pending: StudentEvaluation[];
+  pendingCount: number;
+  inProgressCount: number;
+  completedCount: number;
+  resumeItem: StudentEvaluation | null;
+  isDeferredEnrollment: boolean;
+}) {
+  return (
     <>
-      <StatCards
-        pending={active.length}
-        inProgress={inProgressCount}
-        completed={submitted.length}
-      />
-
-      {resumeItem && (
-        <section className="mt-8 space-y-4">
-          <div>
-            <h3 className="font-heading text-title-lg font-extrabold">Continue</h3>
-            <p className="text-text-muted text-body-sm font-medium">Pick up where you left off.</p>
-          </div>
-
-          <Card className="border-border overflow-hidden shadow-sm">
-            <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-2">
-                <p className="text-link text-label-sm font-semibold tracking-wider uppercase">
-                  {resumeItem.status === "IN_PROGRESS" ? "In Progress" : "Pending"}
-                </p>
-                <div>
-                  <h4 className="text-title-lg font-bold">
-                    {resumeItem.courseTitle ?? resumeItem.evaluationTitle}
-                  </h4>
-                  <p className="text-text-secondary text-body-sm">
-                    {resumeItem.courseTitle
-                      ? `${resumeItem.evaluationTitle} • ${resumeItem.programLabel}`
-                      : resumeItem.programLabel}
-                  </p>
-                </div>
-                {resumeItem.status === "IN_PROGRESS" && (
-                  <p className="text-text-secondary text-body-sm font-medium">
-                    {resumeItem.progress}% complete
-                  </p>
-                )}
-              </div>
-
-              {resumeItem.href && (
-                <Button render={<Link href={resumeItem.href} />} className="min-h-11 font-semibold">
-                  {resumeItem.status === "IN_PROGRESS" ? "Resume" : "Start Evaluation"}
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      <section className="mt-8">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <h3 className="font-heading text-title-lg font-extrabold">Pending Evaluations</h3>
-            <p className="text-text-muted text-body-sm font-medium">
-              Prioritize forms that are active and closing soon.
-            </p>
-          </div>
-          {!isDeferredEnrollment && (
-            <Link
-              href="/student/evaluations"
-              className="text-link text-label-sm font-bold hover:underline"
-            >
-              View All
-            </Link>
-          )}
-        </div>
-
-        <div className="grid gap-4">
-          {pending.map((evalItem) => (
-            <EvaluationListCard key={evalItem.assignmentId} {...evalItem} />
-          ))}
-          {pending.length === 0 && (
-            <div className="border-border bg-surface rounded-xl border-2 border-dashed p-12 text-center">
-              <div className="bg-primary-soft mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-                <ClipboardList className="text-selected-fg size-6" />
-              </div>
-              <h4 className="text-title-sm text-text-primary mb-2 font-semibold">
-                {isDeferredEnrollment ? "Evaluations unavailable" : "No pending evaluations"}
-              </h4>
-              <p className="text-body-sm text-text-secondary mx-auto max-w-sm">
-                {isDeferredEnrollment
-                  ? "Evaluation assignments will appear here once your enrollment is activated for an academic term."
-                  : "You don't have any active evaluations at the moment. Check back later or view your history."}
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
+      <StatCards pending={pendingCount} inProgress={inProgressCount} completed={completedCount} />
+      {resumeItem && <ResumeEvaluationCard evaluation={resumeItem} />}
+      <PendingEvaluations pending={pending} isDeferredEnrollment={isDeferredEnrollment} />
     </>
+  );
+}
+
+function ResumeEvaluationCard({ evaluation }: { evaluation: StudentEvaluation }) {
+  const isInProgress = evaluation.status === "IN_PROGRESS";
+
+  return (
+    <section className="mt-8 space-y-4">
+      <div>
+        <h3 className="font-heading text-title-lg font-extrabold">Continue</h3>
+        <p className="text-text-muted text-body-sm font-medium">Pick up where you left off.</p>
+      </div>
+
+      <Card className="border-border overflow-hidden shadow-sm">
+        <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <p className="text-link text-label-sm font-semibold tracking-wider uppercase">
+              {getResumeStatusLabel(isInProgress)}
+            </p>
+            <div>
+              <h4 className="text-title-lg font-bold">
+                {evaluation.courseTitle ?? evaluation.evaluationTitle}
+              </h4>
+              <p className="text-text-secondary text-body-sm">{getResumeSubtitle(evaluation)}</p>
+            </div>
+            {isInProgress && <ResumeProgress progress={evaluation.progress} />}
+          </div>
+
+          {evaluation.href && (
+            <Button render={<Link href={evaluation.href} />} className="min-h-11 font-semibold">
+              {getResumeActionLabel(isInProgress)}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+function getResumeStatusLabel(isInProgress: boolean) {
+  return isInProgress ? "In Progress" : "Pending";
+}
+
+function getResumeSubtitle(evaluation: StudentEvaluation) {
+  return evaluation.courseTitle
+    ? `${evaluation.evaluationTitle} • ${evaluation.programLabel}`
+    : evaluation.programLabel;
+}
+
+function getResumeActionLabel(isInProgress: boolean) {
+  return isInProgress ? "Resume" : "Start Evaluation";
+}
+
+function ResumeProgress({ progress }: { progress: number }) {
+  return <p className="text-text-secondary text-body-sm font-medium">{progress}% complete</p>;
+}
+
+function PendingEvaluations({
+  pending,
+  isDeferredEnrollment,
+}: {
+  pending: StudentEvaluation[];
+  isDeferredEnrollment: boolean;
+}) {
+  return (
+    <section className="mt-8">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h3 className="font-heading text-title-lg font-extrabold">Pending Evaluations</h3>
+          <p className="text-text-muted text-body-sm font-medium">
+            Prioritize forms that are active and closing soon.
+          </p>
+        </div>
+        {!isDeferredEnrollment && (
+          <Link
+            href="/student/evaluations"
+            className="text-link text-label-sm font-bold hover:underline"
+          >
+            View All
+          </Link>
+        )}
+      </div>
+
+      <div className="grid gap-4">
+        {pending.map((evalItem) => (
+          <EvaluationListCard key={evalItem.assignmentId} {...evalItem} />
+        ))}
+        {pending.length === 0 && (
+          <PendingEvaluationsEmpty isDeferredEnrollment={isDeferredEnrollment} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PendingEvaluationsEmpty({ isDeferredEnrollment }: { isDeferredEnrollment: boolean }) {
+  return (
+    <div className="border-border bg-surface rounded-xl border-2 border-dashed p-12 text-center">
+      <div className="bg-primary-soft mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+        <ClipboardList className="text-selected-fg size-6" />
+      </div>
+      <h4 className="text-title-sm text-text-primary mb-2 font-semibold">
+        {isDeferredEnrollment ? "Evaluations unavailable" : "No pending evaluations"}
+      </h4>
+      <p className="text-body-sm text-text-secondary mx-auto max-w-sm">
+        {isDeferredEnrollment
+          ? "Evaluation assignments will appear here once your enrollment is activated for an academic term."
+          : "You don't have any active evaluations at the moment. Check back later or view your history."}
+      </p>
+    </div>
   );
 }
 
@@ -228,7 +314,7 @@ function DeferredEnrollmentBanner() {
   );
 }
 
-export function HeroCardFallback() {
+function HeroCardFallback() {
   return (
     <section className="bg-surface border-border mb-8 rounded-2xl border p-6 lg:p-8">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
@@ -242,7 +328,7 @@ export function HeroCardFallback() {
   );
 }
 
-export function StudentEvaluationsFallback() {
+function StudentEvaluationsFallback() {
   return (
     <>
       <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

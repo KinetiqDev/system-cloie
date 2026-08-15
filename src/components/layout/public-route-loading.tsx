@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export type PublicLoadingVariant = "portal" | "form" | "status";
+type PublicLoadingVariant = "portal" | "form" | "status";
 
 const loadingLabels: Record<PublicLoadingVariant, string> = {
   portal: "Loading portal",
@@ -9,7 +9,12 @@ const loadingLabels: Record<PublicLoadingVariant, string> = {
   status: "Loading page",
 };
 
-function PortalSkeleton() {
+function PortalSkeleton({ cardCount }: { cardCount: 3 | 4 }) {
+  const gridClassName =
+    cardCount === 3
+      ? "mx-auto grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+      : "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-16 px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4">
@@ -20,8 +25,8 @@ function PortalSkeleton() {
           <Skeleton className="h-9 w-full sm:w-64" />
         </div>
       </div>
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3].map((card) => (
+      <div className={gridClassName}>
+        {Array.from({ length: cardCount }, (_, index) => index + 1).map((card) => (
           <Card key={card} className="h-full">
             <CardHeader className="flex flex-col gap-3">
               <Skeleton className="size-11 rounded-xl" />
@@ -80,7 +85,13 @@ function StatusSkeleton() {
   );
 }
 
-export function PublicRouteLoading({ variant }: { variant: PublicLoadingVariant }) {
+export function PublicRouteLoading({
+  variant,
+  portalCardCount = 3,
+}: {
+  variant: PublicLoadingVariant;
+  portalCardCount?: 3 | 4;
+}) {
   return (
     <div
       className="w-full min-w-0"
@@ -88,7 +99,7 @@ export function PublicRouteLoading({ variant }: { variant: PublicLoadingVariant 
       aria-busy="true"
       aria-label={loadingLabels[variant]}
     >
-      {variant === "portal" && <PortalSkeleton />}
+      {variant === "portal" && <PortalSkeleton cardCount={portalCardCount} />}
       {variant === "form" && <FormSkeleton />}
       {variant === "status" && <StatusSkeleton />}
     </div>
