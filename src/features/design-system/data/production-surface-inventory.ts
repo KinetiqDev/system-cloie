@@ -2006,6 +2006,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/course-assignments/components/scoped-roster-student-search.tsx",
+    disposition: "task",
+    taskId: 15,
+    category: "feature_component",
+  },
+  {
     path: "src/features/course-assignments/components/course-roster-retry.tsx",
     disposition: "already_compliant",
     category: "feature_component",
