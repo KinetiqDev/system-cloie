@@ -87,7 +87,7 @@ function parseRecords(input: string): Array<{ cells: string[]; sourceIndex: numb
   return records;
 }
 
-function normalizeRosterName(name: string) {
+export function normalizeRosterName(name: string) {
   return name.normalize("NFKC").trim().replace(/\s+/gu, " ");
 }
 
