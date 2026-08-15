@@ -914,11 +914,16 @@ describe("course roster pages", () => {
     fireEvent.click(await screen.findByRole("button", { name: /maria ann santos/i }));
     expect(screen.getByText("Maria Ann Santos")).toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    // A manually resolved row leaves Review and joins the Ready group.
+    expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review: 0" })).toBeInTheDocument();
 
     // Clearing the selection returns the row to its prepared suggestion.
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
     expect(screen.queryByText("Maria Ann Santos")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready: 0" })).toBeInTheDocument();
 
     // Skip and unskip a no-match row without blocking the rest of the preview.
     const noMatchSkip = screen.getAllByRole("button", { name: "Skip" })[1];

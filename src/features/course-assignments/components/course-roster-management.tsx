@@ -170,10 +170,12 @@ function dispositionBadge(disposition: CourseRosterPreviewDisposition | null) {
 
 function rowGroup(
   row: CourseRosterPreviewRow,
-  skippedIndexes: ReadonlySet<number>
+  skippedIndexes: ReadonlySet<number>,
+  selectedCandidateByIndex?: Record<number, CourseRosterPreviewCandidate>
 ): PreviewFilter {
   if (skippedIndexes.has(row.sourceIndex)) return "skipped";
   if (row.disposition === "ALREADY_ACTIVE") return "already-active";
+  if (selectedCandidateByIndex && row.sourceIndex in selectedCandidateByIndex) return "ready";
   if (row.resolution.status === "SUGGESTED_MATCH") return "review";
   if (row.disposition === "READY_CREATE" || row.disposition === "WILL_RESTORE") return "ready";
   return "resolve";
@@ -182,19 +184,25 @@ function rowGroup(
 function countRows(
   rows: CourseRosterPreviewRow[],
   skippedIndexes: ReadonlySet<number>,
+  selectedCandidateByIndex: Record<number, CourseRosterPreviewCandidate> | undefined,
   group: PreviewFilter
 ) {
-  return rows.filter((row) => rowGroup(row, skippedIndexes) === group).length;
+  return rows.filter((row) => rowGroup(row, skippedIndexes, selectedCandidateByIndex) === group)
+    .length;
 }
 
-function countGroups(rows: CourseRosterPreviewRow[], skippedIndexes: ReadonlySet<number>) {
+function countGroups(
+  rows: CourseRosterPreviewRow[],
+  skippedIndexes: ReadonlySet<number>,
+  selectedCandidateByIndex?: Record<number, CourseRosterPreviewCandidate>
+) {
   return {
     all: rows.length,
-    ready: countRows(rows, skippedIndexes, "ready"),
-    review: countRows(rows, skippedIndexes, "review"),
-    resolve: countRows(rows, skippedIndexes, "resolve"),
+    ready: countRows(rows, skippedIndexes, selectedCandidateByIndex, "ready"),
+    review: countRows(rows, skippedIndexes, selectedCandidateByIndex, "review"),
+    resolve: countRows(rows, skippedIndexes, selectedCandidateByIndex, "resolve"),
     skipped: skippedIndexes.size,
-    "already-active": countRows(rows, skippedIndexes, "already-active"),
+    "already-active": countRows(rows, skippedIndexes, selectedCandidateByIndex, "already-active"),
   };
 }
 
@@ -422,10 +430,9 @@ function ReviewPreviewBlock({
   onToggleSkip: (sourceIndex: number) => void;
 }) {
   const skipped = skippedIndexes;
-  const counts = countGroups(preview.rows, skipped);
-
+  const counts = countGroups(preview.rows, skipped, selectedCandidateByIndex);
   const visibleRows = preview.rows.filter(
-    (row) => filter === "all" || rowGroup(row, skipped) === filter
+    (row) => filter === "all" || rowGroup(row, skipped, selectedCandidateByIndex) === filter
   );
 
   return (
@@ -485,7 +492,7 @@ function PreviewResultsBlock({
   onBackToReview: () => void;
 }) {
   const skipped = skippedIndexes;
-  const counts = countGroups(preview.rows, skipped);
+  const counts = countGroups(preview.rows, skipped, selectedCandidateByIndex);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
