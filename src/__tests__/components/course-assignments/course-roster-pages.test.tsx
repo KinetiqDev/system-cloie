@@ -6,11 +6,19 @@ import {
   CourseRosterDetailPage,
   CourseRosterDiscoveryPage,
 } from "@/features/course-assignments/components/course-roster-pages";
-import { RosterManagementDialog } from "@/features/course-assignments/components/course-roster-management";
+import {
+  buildReviewGuards,
+  effectiveCandidateByIndexFor,
+  RosterManagementDialog,
+} from "@/features/course-assignments/components/course-roster-management";
 import * as rosterActions from "@/lib/actions/course-roster-actions";
 import type {
   CourseRosterDetail,
   CourseRosterDiscoveryResult,
+  CourseRosterPreview,
+  CourseRosterPreviewCandidate,
+  CourseRosterPreviewDisposition,
+  CourseRosterPreviewRow,
 } from "@/features/course-assignments/types";
 
 const { replaceMock, refreshMock } = vi.hoisted(() => ({
@@ -771,15 +779,22 @@ describe("course roster pages", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+        "Review and resolve"
+      )
     );
-    expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
-      "Review and resolve"
-    );
+    // The unresolved no-match row must be explicitly skipped before review completion.
+    expect(screen.getByRole("button", { name: /review complete/i })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/Resolve or skip 1 row before continuing/i);
+    fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[1]);
+    expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
     expect(screen.getByText(/The preview session is ready\./)).toBeInTheDocument();
 
+    // Closing a dirty preview asks before discarding the session state.
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Discard preview?");
+    fireEvent.click(screen.getByRole("button", { name: "Discard preview" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole("button", { name: /manage roster/i }))
@@ -897,8 +912,14 @@ describe("course roster pages", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+        "Review and resolve"
+      )
     );
+    // Suggested matches and unresolved rows gate review completion.
+    expect(screen.getByRole("button", { name: /review complete/i })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/Acknowledge 1 suggested match/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/Resolve or skip 1 row before continuing/i);
 
     expect(screen.getByText("Suggested match")).toBeInTheDocument();
     // Suggested rows need review even when the disposition is ready.
@@ -935,6 +956,13 @@ describe("course roster pages", () => {
     expect(screen.getByRole("button", { name: "Skipped: 1" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Unskip" }));
     expect(screen.getByRole("button", { name: "Skipped: 0" })).toBeInTheDocument();
+    // Acknowledgement plus an explicit skip satisfy the review guards.
+    const ack = screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ });
+    fireEvent.click(ack);
+    expect(ack).toBeChecked();
+    expect(screen.getByRole("button", { name: /review complete/i })).toBeDisabled();
+    fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[1]);
+    expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled();
   });
 
   it("blocks closing while a preview is pending", async () => {
@@ -977,10 +1005,684 @@ describe("course roster pages", () => {
         "Review and resolve"
       )
     );
+    // A dirty preview asks before discarding on Escape.
     fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Discard preview?");
+    // Escape again keeps editing; the workspace stays open.
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+      "Review and resolve"
+    );
+    // Confirming discard closes the workspace and restores trigger focus.
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Discard preview" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole("button", { name: /manage roster/i }))
     );
+  });
+
+  it("requires count-aware acknowledgement of suggested matches and resets on change", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: {
+              status: "SUGGESTED_MATCH",
+              reason: "MIDDLE_TOKEN",
+              candidateIds: ["student-1"],
+            },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
+      },
+    });
+    vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        candidates: [
+          {
+            userId: "student-2",
+            name: "Maria Ann Santos",
+            email: "maria.ann.santos@acd.edu.ph",
+            programId: "program-1",
+            programCode: "BSED",
+            programName: "Education",
+            yearLevel: null,
+            section: null,
+            majorName: null,
+            selectable: true,
+            reason: null,
+          },
+        ],
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() => expect(screen.getByText("Suggested match")).toBeInTheDocument());
+
+    const reviewComplete = screen.getByRole("button", { name: /review complete/i });
+    const ack = screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ });
+    expect(reviewComplete).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/Acknowledge 1 suggested match before continuing/i);
+
+    // A count-aware checkbox acknowledges the current suggestion set.
+    fireEvent.click(ack);
+    expect(ack).toBeChecked();
+    expect(reviewComplete).toBeEnabled();
+
+    // Changing the suggested account clears the acknowledgement.
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    const searchbox = screen.getByRole("searchbox");
+    fireEvent.change(searchbox, { target: { value: "Maria Ann" } });
+    fireEvent.click(await screen.findByRole("button", { name: /maria ann santos/i }));
+    expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
+
+    // Returning the row to its suggestion shows the acknowledgement reset.
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ })).not.toBeChecked();
+    expect(reviewComplete).toBeDisabled();
+  });
+
+  it("blocks review completion while a row is unresolved", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+          {
+            sourceIndex: 3,
+            submittedName: "Invalid name",
+            resolution: { status: "INVALID_NAME", reason: "INVALID", candidateIds: [] },
+            disposition: null,
+            candidates: [],
+          },
+        ],
+        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+        "Review and resolve"
+      )
+    );
+
+    const reviewComplete = screen.getByRole("button", { name: /review complete/i });
+    expect(reviewComplete).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/Resolve or skip 1 row before continuing/i);
+
+    // An explicit skip resolves the invalid row.
+    fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[1]);
+    expect(screen.getByRole("button", { name: "Skipped: 1" })).toBeInTheDocument();
+    expect(reviewComplete).toBeEnabled();
+  });
+
+  it("blocks review completion when one account is selected for two rows", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "John Paul Santos",
+            resolution: { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] },
+            disposition: null,
+            candidates: [],
+          },
+          {
+            sourceIndex: 3,
+            submittedName: "John Paul Santos",
+            resolution: { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] },
+            disposition: null,
+            candidates: [],
+          },
+        ],
+        summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 2, ineligible: 0 },
+      },
+    });
+    vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        candidates: [
+          {
+            userId: "student-1",
+            name: "John Paul Santos",
+            email: "john.paul.santos@acd.edu.ph",
+            programId: "program-1",
+            programCode: "BSCS",
+            programName: "Computer Science",
+            yearLevel: "SECOND_YEAR",
+            section: "MORNING",
+            majorName: null,
+            selectable: true,
+            reason: null,
+          },
+          {
+            userId: "student-2",
+            name: "John Paul Santos",
+            email: "jp.santos@acd.edu.ph",
+            programId: "program-1",
+            programCode: "BSCS",
+            programName: "Computer Science",
+            yearLevel: "SECOND_YEAR",
+            section: "AFTERNOON",
+            majorName: null,
+            selectable: true,
+            reason: null,
+          },
+        ],
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nJohn Paul Santos\nJohn Paul Santos\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+        "Review and resolve"
+      )
+    );
+
+    // Resolve both identical-name rows to the same account.
+    const searchButtons = screen.getAllByRole("button", { name: "Search candidate" });
+    fireEvent.click(searchButtons[0]);
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "John" } });
+    fireEvent.click(await screen.findByRole("button", { name: /john.paul.santos@acd.edu.ph/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Search candidate" })[0]);
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "John" } });
+    fireEvent.click(await screen.findByRole("button", { name: /john.paul.santos@acd.edu.ph/i }));
+
+    const reviewComplete = screen.getByRole("button", { name: /review complete/i });
+    expect(reviewComplete).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /The same Student is selected for rows 2 and 3/
+    );
+
+    // Remapping one row to a different account satisfies the duplicate guard.
+    fireEvent.click(screen.getAllByRole("button", { name: "Change" })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Search candidate" }));
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "John" } });
+    fireEvent.click(await screen.findByRole("button", { name: /jp.santos@acd.edu.ph/i }));
+    expect(reviewComplete).toBeEnabled();
+  });
+
+  it("blocks review completion when exact matches repeat one account and unblocks on skip", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+          {
+            sourceIndex: 3,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: { readyToCreate: 2, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nMaria Santos\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+        "Review and resolve"
+      )
+    );
+
+    // Two identical exact names prepare the same account; the duplicate blocks review.
+    const reviewComplete = screen.getByRole("button", { name: /review complete/i });
+    expect(reviewComplete).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /The same Student is selected for rows 2 and 3/
+    );
+
+    // Skipping one repeated row removes its prepared identity and unblocks.
+    fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[0]);
+    expect(screen.getByRole("button", { name: "Skipped: 1" })).toBeInTheDocument();
+    expect(reviewComplete).toBeEnabled();
+  });
+
+  it("confirms before discarding a dirty preview and keeps editing", async () => {
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+        "Review and resolve"
+      )
+    );
+
+    // Canceling a dirty preview asks first; Keep editing stays in the workspace.
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Discard preview?");
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
+
+    // Confirming the discard closes the workspace and restores trigger focus.
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard preview" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: /manage roster/i }))
+    );
+  });
+
+  it("confirms discard inside the mobile Drawer", async () => {
+    mockMatchMedia(false);
+    vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        rows: [
+          {
+            sourceIndex: 2,
+            submittedName: "Maria Santos",
+            resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: ["student-1"] },
+            disposition: "READY_CREATE",
+            candidates: [
+              {
+                userId: "student-1",
+                name: "Maria Santos",
+                email: "maria.santos@acd.edu.ph",
+                programId: "program-1",
+                programCode: "BSED",
+                programName: "Education",
+                yearLevel: null,
+                section: null,
+                majorName: null,
+                selectable: true,
+                reason: null,
+              },
+            ],
+          },
+        ],
+        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+      },
+    });
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {
+        files: [new File(["name\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+        "Review and resolve"
+      )
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Discard preview?");
+    fireEvent.click(screen.getByRole("button", { name: "Discard preview" }));
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="drawer-popup"]')).not.toBeInTheDocument()
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: /manage roster/i }))
+    );
+  });
+});
+
+describe("buildReviewGuards", () => {
+  const candidate = (userId: string): CourseRosterPreviewCandidate => ({
+    userId,
+    name: "Maria Santos",
+    email: `${userId}@acd.edu.ph`,
+    programId: "program-1",
+    programCode: "BSED",
+    programName: "Education",
+    yearLevel: null,
+    section: null,
+    majorName: null,
+    selectable: true,
+    reason: null,
+  });
+
+  const exactRow = (sourceIndex: number, userId: string): CourseRosterPreviewRow => ({
+    sourceIndex,
+    submittedName: "Maria Santos",
+    resolution: { status: "EXACT_MATCH", reason: "EXACT", candidateIds: [userId] },
+    disposition: "READY_CREATE",
+    candidates: [candidate(userId)],
+  });
+
+  const suggestedRow = (
+    sourceIndex: number,
+    userId: string,
+    disposition: CourseRosterPreviewDisposition = "READY_CREATE"
+  ): CourseRosterPreviewRow => ({
+    sourceIndex,
+    submittedName: "Maria Santos",
+    resolution: { status: "SUGGESTED_MATCH", reason: "MIDDLE_TOKEN", candidateIds: [userId] },
+    disposition,
+    candidates: [candidate(userId)],
+  });
+
+  const noMatchRow = (sourceIndex: number): CourseRosterPreviewRow => ({
+    sourceIndex,
+    submittedName: "Unknown Student",
+    resolution: { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] },
+    disposition: null,
+    candidates: [],
+  });
+
+  it("treats prepared exact matches as selected identities", () => {
+    const preview: CourseRosterPreview = {
+      assignmentId: "assignment-1",
+      rows: [exactRow(2, "student-1"), exactRow(3, "student-1")],
+      summary: { readyToCreate: 2, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+    };
+    const guards = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set(),
+      selectedCandidateByIndex: {},
+      suggestionsAcknowledged: false,
+    });
+    expect(guards.reviewBlockers).toEqual([
+      "The same Student is selected for rows 2 and 3. Change or skip one before continuing.",
+    ]);
+
+    const skipped = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set([3]),
+      selectedCandidateByIndex: {},
+      suggestionsAcknowledged: false,
+    });
+    expect(skipped.reviewBlockers).toEqual([]);
+  });
+
+  it("counts manual selections toward duplicates and excludes skipped rows", () => {
+    const preview: CourseRosterPreview = {
+      assignmentId: "assignment-1",
+      rows: [noMatchRow(2), noMatchRow(3)],
+      summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 2, ineligible: 0 },
+    };
+    const guards = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set(),
+      selectedCandidateByIndex: { 2: candidate("student-1"), 3: candidate("student-1") },
+      suggestionsAcknowledged: false,
+    });
+    expect(guards.reviewBlockers).toEqual([
+      "The same Student is selected for rows 2 and 3. Change or skip one before continuing.",
+    ]);
+
+    const skipped = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set([3]),
+      selectedCandidateByIndex: { 2: candidate("student-1"), 3: candidate("student-1") },
+      suggestionsAcknowledged: false,
+    });
+    expect(skipped.reviewBlockers).toEqual([]);
+  });
+
+  it("counts acknowledged suggestions as selected identities", () => {
+    const preview: CourseRosterPreview = {
+      assignmentId: "assignment-1",
+      rows: [suggestedRow(2, "student-1"), noMatchRow(3)],
+      summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 2, ineligible: 0 },
+    };
+    const beforeAck = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set(),
+      selectedCandidateByIndex: { 3: candidate("student-1") },
+      suggestionsAcknowledged: false,
+    });
+    expect(beforeAck.reviewBlockers).not.toEqual(
+      expect.arrayContaining([expect.stringContaining("The same Student")])
+    );
+
+    const afterAck = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set(),
+      selectedCandidateByIndex: { 3: candidate("student-1") },
+      suggestionsAcknowledged: true,
+    });
+    expect(afterAck.reviewBlockers).toEqual([
+      "The same Student is selected for rows 2 and 3. Change or skip one before continuing.",
+    ]);
+  });
+
+  it("requires acknowledgement only for suggested rows awaiting a decision", () => {
+    const preview: CourseRosterPreview = {
+      assignmentId: "assignment-1",
+      rows: [suggestedRow(2, "student-1"), noMatchRow(3)],
+      summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 2, ineligible: 0 },
+    };
+    const guards = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set(),
+      selectedCandidateByIndex: {},
+      suggestionsAcknowledged: false,
+    });
+    expect(guards.suggestedCount).toBe(1);
+    expect(guards.reviewBlockers).toEqual([
+      "Resolve or skip 1 row before continuing.",
+      "Acknowledge 1 suggested match before continuing.",
+    ]);
+  });
+
+  it("treats ineligible suggestions and no-match rows as unresolved until skipped", () => {
+    const preview: CourseRosterPreview = {
+      assignmentId: "assignment-1",
+      rows: [suggestedRow(2, "student-1", "INELIGIBLE"), noMatchRow(3)],
+      summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 1 },
+    };
+    const guards = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set(),
+      selectedCandidateByIndex: {},
+      suggestionsAcknowledged: false,
+    });
+    expect(guards.reviewBlockers).toEqual([
+      "Resolve or skip 2 rows before continuing.",
+    ]);
+
+    const skipped = buildReviewGuards({
+      preview,
+      skippedIndexes: new Set([2, 3]),
+      selectedCandidateByIndex: {},
+      suggestionsAcknowledged: false,
+    });
+    expect(skipped.reviewBlockers).toEqual([]);
+  });
+
+  it("builds the effective identity set a confirmation would submit", () => {
+    const preview: CourseRosterPreview = {
+      assignmentId: "assignment-1",
+      rows: [
+        exactRow(2, "student-1"),
+        suggestedRow(3, "student-2"),
+        noMatchRow(4),
+        noMatchRow(5),
+        exactRow(6, "student-3"),
+      ],
+      summary: { readyToCreate: 2, willRestore: 0, alreadyActive: 0, needsReview: 3, ineligible: 0 },
+    };
+
+    // Manual selection wins over prepared exact; skipped rows are excluded;
+    // suggestions count only after acknowledgement.
+    expect(
+      effectiveCandidateByIndexFor({
+        preview,
+        skippedIndexes: new Set([6]),
+        selectedCandidateByIndex: { 2: candidate("student-9"), 4: candidate("student-1") },
+        suggestionsAcknowledged: false,
+      })
+    ).toEqual({
+      2: candidate("student-9"),
+      3: undefined,
+      4: candidate("student-1"),
+      5: undefined,
+    });
+
+    expect(
+      effectiveCandidateByIndexFor({
+        preview,
+        skippedIndexes: new Set(),
+        selectedCandidateByIndex: { 4: candidate("student-1") },
+        suggestionsAcknowledged: true,
+      })
+    ).toEqual({
+      2: candidate("student-1"),
+      3: candidate("student-2"),
+      4: candidate("student-1"),
+      5: undefined,
+      6: candidate("student-3"),
+    });
   });
 });
