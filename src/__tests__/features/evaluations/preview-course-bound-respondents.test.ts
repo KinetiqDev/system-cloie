@@ -6,12 +6,14 @@ import { ROLES } from "@/lib/constants/roles";
 const {
   findUniqueAssignmentMock,
   membershipFindManyMock,
+  enrollmentFindManyMock,
   resolveAuthSessionMock,
   programHeadAssignmentFindManyMock,
   resolveProgramHeadContextMock,
 } = vi.hoisted(() => ({
   findUniqueAssignmentMock: vi.fn(),
   membershipFindManyMock: vi.fn(),
+  enrollmentFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
@@ -25,6 +27,9 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     courseAssignmentMembership: {
       findMany: membershipFindManyMock,
+    },
+    studentEnrollment: {
+      findMany: enrollmentFindManyMock,
     },
     programHeadAssignment: {
       findMany: programHeadAssignmentFindManyMock,
@@ -228,13 +233,34 @@ describe("previewCourseBoundRespondents", () => {
       });
       expect(result.data[0]).not.toHaveProperty("firstName");
       expect(result.data[0]).not.toHaveProperty("lastName");
+      expect(result.data[0]).not.toHaveProperty("studentId");
+      expect(result.data[0]).not.toHaveProperty("studentIdNumber");
+      expect(result.data[0]).not.toHaveProperty("student_id_number");
+      expect(result.data[0]).not.toHaveProperty("matchStatus");
     }
 
-    expect(membershipFindManyMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { course_assignment_id: "assignment-1", is_active: true },
-      })
-    );
+    expect(JSON.stringify(result)).not.toMatch(/studentIdNumber|student_id_number|Student ID/i);
+    expect(enrollmentFindManyMock).not.toHaveBeenCalled();
+    expect(membershipFindManyMock).toHaveBeenCalledWith({
+      where: { course_assignment_id: "assignment-1", is_active: true },
+      orderBy: { created_at: "asc" },
+      select: {
+        id: true,
+        student_user_id: true,
+        student: {
+          select: {
+            email: true,
+            name: true,
+            student_profile: {
+              select: {
+                major_id: true,
+                major: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
   });
 
   it("rejects a selected Program that does not own the Course assignment", async () => {
@@ -269,6 +295,48 @@ describe("previewCourseBoundRespondents", () => {
     });
 
     expect(membershipFindManyMock).not.toHaveBeenCalled();
+  });
+
+  it("does not rematch names or treat term placement as Course membership", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-1",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+      profileGate: { status: "COMPLETE" },
+    });
+    findUniqueAssignmentMock.mockResolvedValue(MOCK_ASSIGNMENT);
+    membershipFindManyMock.mockResolvedValue([
+      {
+        id: "membership-1",
+        student_user_id: "student-1",
+        student: {
+          email: "student1@school.edu",
+          name: "John Doe",
+          student_profile: { major_id: null, major: null },
+        },
+      },
+    ]);
+    const result = await previewCourseBoundRespondents({ assignmentId: "assignment-1" });
+
+    expect(result).toEqual({
+      success: true,
+      data: [
+        {
+          email: "student1@school.edu",
+          majorId: null,
+          majorName: null,
+          membershipId: "membership-1",
+          name: "John Doe",
+          programCode: "BSCS",
+          programId: "program-1",
+          programName: "BS Computer Science",
+          section: StudentSection.MORNING,
+          userId: "student-1",
+          yearLevel: YearLevel.FIRST_YEAR,
+        },
+      ],
+    });
+    expect(enrollmentFindManyMock).not.toHaveBeenCalled();
   });
 
   it("returns a support reference for unexpected preview failures", async () => {

@@ -156,6 +156,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
           programId: "program-1",
           programName: "BS Computer Science",
           section: "MORNING",
+          studentId: "2024-0001",
           userId: "user-1",
           yearLevel: YearLevel.FIRST_YEAR,
         },
@@ -211,6 +212,8 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     expect(includeCheckbox).toHaveAttribute("aria-label", "Include Alice Adams");
     expect(screen.queryByText(/Adams,\s*Alice/)).not.toBeInTheDocument();
     expect(includeCheckbox.getAttribute("aria-label")).not.toMatch(/,/);
+    expect(screen.queryByText("2024-0001")).not.toBeInTheDocument();
+    expect(screen.queryByText(/student id/i)).not.toBeInTheDocument();
 
     // Confirm and publish
     await waitFor(() => {

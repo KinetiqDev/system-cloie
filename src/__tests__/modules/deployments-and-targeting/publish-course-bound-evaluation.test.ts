@@ -20,6 +20,7 @@ const {
   ciloFindManyMock,
   resolveAuthSessionMock,
   resolveProgramHeadContextMock,
+  studentEnrollmentFindManyMock,
   targetCreateManyMock,
   transactionMock,
 } = vi.hoisted(() => ({
@@ -38,6 +39,7 @@ const {
   ciloFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
+  studentEnrollmentFindManyMock: vi.fn(),
   targetCreateManyMock: vi.fn(),
   transactionMock: vi.fn(),
 }));
@@ -50,6 +52,7 @@ vi.mock("@/lib/db/prisma", () => ({
       findFirst: courseAssignmentFindUniqueMock,
     },
     courseAssignmentMembership: { findMany: courseAssignmentMembershipFindManyMock },
+    studentEnrollment: { findMany: studentEnrollmentFindManyMock },
     instrumentVersion: {
       findFirst: instrumentVersionFindFirstMock,
     },
@@ -203,6 +206,7 @@ describe("publishCourseBoundEvaluation", () => {
         courseBoundEvaluationExclusion: { createMany: exclusionCreateManyMock },
         courseAssignment: { findUnique: courseAssignmentFindUniqueMock },
         courseAssignmentMembership: { findMany: courseAssignmentMembershipFindManyMock },
+        studentEnrollment: { findMany: studentEnrollmentFindManyMock },
         instrumentTemplate: { findFirst: instrumentTemplateFindFirstMock },
         instrumentVersion: { findFirst: instrumentVersionFindFirstMock },
         programHeadAssignment: { findMany: programHeadAssignmentFindManyMock },
@@ -422,6 +426,44 @@ describe("publishCourseBoundEvaluation", () => {
         { course_bound_id: "evaluation-1", respondent_id: "student-2" },
       ],
     });
+    expect(studentEnrollmentFindManyMock).not.toHaveBeenCalled();
+    expect(JSON.stringify(assignmentCreateManyMock.mock.calls)).not.toMatch(
+      /studentIdNumber|student_id_number|Student ID/i
+    );
+  });
+
+  it("does not rematch names or infer Course membership from term placement", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    courseAssignmentFindUniqueMock.mockResolvedValue({
+      ...MOCK_ASSIGNMENT,
+      curriculumCourse: null,
+    });
+    getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
+    instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
+    courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
+
+    await expect(
+      publishCourseBoundEvaluation({
+        assignmentId: "assignment-1",
+        activationAt: null,
+        deadlineAt: new Date("2026-05-30T00:00:00.000Z"),
+        deploymentName: "Capstone CILO Evaluation",
+        templateId: "template-1",
+      })
+    ).resolves.toMatchObject({ success: true });
+
+    expect(assignmentCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        { course_bound_id: "evaluation-1", respondent_id: "student-1" },
+        { course_bound_id: "evaluation-1", respondent_id: "student-2" },
+      ],
+    });
+    expect(studentEnrollmentFindManyMock).not.toHaveBeenCalled();
   });
 
   it("captures curriculum version and course in the snapshot when the assignment is linked", async () => {
