@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { YearLevel, StudentSection } from "@prisma/client";
+import { COURSE_ROSTER_MAX_ROWS } from "../services/course-roster-csv";
 
 /**
  * Schema for creating a course assignment.
@@ -89,6 +90,21 @@ export const importCourseRosterTextSchema = z.object({
   csvText: z.string(),
 });
 
+export const previewCourseRosterSchema = z.object({
+  assignmentId: z.string().uuid(),
+  programId: z.string().uuid().optional(),
+  rows: z
+    .array(
+      z.object({
+        sourceIndex: z.number().int().nonnegative(),
+        submittedName: z.string().max(200),
+        status: z.enum(["VALID", "INVALID_NAME"]),
+      })
+    )
+    .min(1)
+    .max(COURSE_ROSTER_MAX_ROWS),
+});
+
 /**
  * TypeScript types derived from schemas.
  */
@@ -102,3 +118,8 @@ export type AddRosterMembershipInput = z.infer<typeof addRosterMembershipSchema>
 export type RestoreRosterMembershipInput = z.infer<typeof restoreRosterMembershipSchema>;
 export type RemoveRosterMembershipInput = z.infer<typeof removeRosterMembershipSchema>;
 export type ImportCourseRosterTextInput = z.infer<typeof importCourseRosterTextSchema>;
+export type PreviewCourseRosterInput = z.infer<typeof previewCourseRosterSchema>;
+// Public preview contract; consumers are the scoped candidate search
+// (#395) and the reconciliation workspace (#396).
+// fallow-ignore-next-line unused-type
+export type PreviewCourseRosterRowInput = PreviewCourseRosterInput["rows"][number];

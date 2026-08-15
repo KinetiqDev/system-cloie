@@ -4,6 +4,7 @@ const revalidatePathMock = vi.hoisted(() => vi.fn());
 const serviceMocks = vi.hoisted(() => ({
   addRosterMembership: vi.fn(),
   importCourseRoster: vi.fn(),
+  previewCourseRoster: vi.fn(),
   removeRosterMembership: vi.fn(),
   restoreRosterMembership: vi.fn(),
 }));
@@ -19,6 +20,9 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 vi.mock("@/features/course-assignments/services/manage-course-roster", () => serviceMocks);
 vi.mock("@/features/course-assignments/services/import-course-roster", () => ({
   importCourseRoster: serviceMocks.importCourseRoster,
+}));
+vi.mock("@/features/course-assignments/services/preview-course-roster", () => ({
+  previewCourseRoster: serviceMocks.previewCourseRoster,
 }));
 
 import {
@@ -121,5 +125,50 @@ describe("course roster actions", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith(
       `/program-head/programs/${programId}/course-rosters/${assignmentId}`
     );
+  });
+});
+
+describe("previewCourseRosterAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("validates input and forwards the parsed request to the preview service", async () => {
+    const previewResult = {
+      success: true,
+      data: {
+        assignmentId,
+        rows: [],
+        summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
+      },
+    };
+    serviceMocks.previewCourseRoster.mockResolvedValue(previewResult);
+
+    const { previewCourseRosterAction } = await import("@/lib/actions/course-roster-actions");
+    const result = await previewCourseRosterAction({
+      assignmentId,
+      rows: [{ sourceIndex: 0, submittedName: "Andy Egut", status: "VALID" }],
+    });
+
+    expect(result).toEqual(previewResult);
+    expect(serviceMocks.previewCourseRoster).toHaveBeenCalledWith({
+      assignmentId,
+      rows: [{ sourceIndex: 0, submittedName: "Andy Egut", status: "VALID" }],
+    });
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid rows without calling the preview service", async () => {
+    const { previewCourseRosterAction } = await import("@/lib/actions/course-roster-actions");
+    const result = await previewCourseRosterAction({
+      assignmentId,
+      rows: [{ sourceIndex: -1, submittedName: "", status: "UNKNOWN" }],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Enter a valid roster preview request.",
+    });
+    expect(serviceMocks.previewCourseRoster).not.toHaveBeenCalled();
   });
 });
