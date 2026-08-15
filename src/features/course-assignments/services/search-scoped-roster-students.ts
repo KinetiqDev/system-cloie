@@ -1,11 +1,11 @@
 import { normalizeRosterName } from "./course-roster-csv";
-import { loadScopedRosterCandidates, type ScopedRosterCandidate } from "./course-roster-candidate-scope";
-import type { RosterServiceResult } from "../types";
+import { loadScopedRosterCandidates } from "./course-roster-candidate-scope";
+import type { RosterServiceResult, ScopedRosterCandidate } from "../types";
 
-export const MIN_ROSTER_SEARCH_CHARACTERS = 2;
-export const MAX_ROSTER_SEARCH_RESULTS = 10;
+const MIN_ROSTER_SEARCH_CHARACTERS = 2;
+const MAX_ROSTER_SEARCH_RESULTS = 10;
 
-export type ScopedRosterStudentSearch = {
+type ScopedRosterStudentSearch = {
   assignmentId: string;
   candidates: ScopedRosterCandidate[];
 };

@@ -13,9 +13,7 @@ import {
   type RosterEligibilityStudent,
 } from "./course-assignment-roster";
 
-export type { ScopedRosterCandidate } from "../types";
-
-export type ScopedRosterCandidates = {
+type ScopedRosterCandidates = {
   assignment: AuthorizedRosterAssignment;
   candidates: ScopedRosterCandidate[];
 };
