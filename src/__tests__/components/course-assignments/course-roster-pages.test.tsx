@@ -914,9 +914,11 @@ describe("course roster pages", () => {
     fireEvent.click(await screen.findByRole("button", { name: /maria ann santos/i }));
     expect(screen.getByText("Maria Ann Santos")).toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
-    // A manually resolved row leaves Review and joins the Ready group.
+    // A manually resolved row leaves Review and joins the Ready group, and the
+    // prepared disposition no longer applies to the chosen account.
     expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review: 0" })).toBeInTheDocument();
+    expect(screen.queryByText("Ready to add")).not.toBeInTheDocument();
 
     // Clearing the selection returns the row to its prepared suggestion.
     fireEvent.click(screen.getByRole("button", { name: "Change" }));

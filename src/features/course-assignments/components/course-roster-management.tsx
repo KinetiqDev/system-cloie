@@ -367,7 +367,11 @@ function ReviewRowCard({
         ) : (
           resolutionBadge(row.resolution)
         )}
-        {skipped ? <Badge variant="secondary">Skipped</Badge> : dispositionBadge(row.disposition)}
+        {skipped ? (
+          <Badge variant="secondary">Skipped</Badge>
+        ) : (
+          !selectedCandidate && dispositionBadge(row.disposition)
+        )}
       </div>
 
       <RowCandidateDisplay candidate={selectedCandidate} candidates={row.candidates} />
@@ -526,13 +530,11 @@ function PreviewResultsBlock({
                 </p>
                 {skipped.has(row.sourceIndex) ? (
                   <Badge variant="secondary">Skipped</Badge>
+                ) : selectedCandidateByIndex[row.sourceIndex] ? (
+                  <Badge variant="success">Selected</Badge>
                 ) : (
                   <>
-                    {selectedCandidateByIndex[row.sourceIndex] ? (
-                      <Badge variant="success">Selected</Badge>
-                    ) : (
-                      resolutionBadge(row.resolution)
-                    )}
+                    {resolutionBadge(row.resolution)}
                     {dispositionBadge(row.disposition)}
                   </>
                 )}
