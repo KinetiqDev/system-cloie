@@ -169,13 +169,30 @@ export async function previewCourseRoster(
     function toPreviewCandidate(studentId: string): CourseRosterPreviewCandidate {
       const student = candidates.find((candidate) => candidate.userId === studentId);
       if (!student) {
-        return { userId: studentId, name: "", email: "", programId: "", selectable: false, reason: null };
+        return {
+          userId: studentId,
+          name: "",
+          email: "",
+          programId: "",
+          programCode: null,
+          programName: null,
+          yearLevel: null,
+          section: null,
+          majorName: null,
+          selectable: false,
+          reason: null,
+        };
       }
       return {
         userId: student.userId,
         name: student.name,
         email: student.email,
         programId: student.programId,
+        programCode: student.programCode,
+        programName: student.programName,
+        yearLevel: student.yearLevel,
+        section: student.section,
+        majorName: student.majorName,
         selectable: student.selectable,
         reason: student.reason,
       };
