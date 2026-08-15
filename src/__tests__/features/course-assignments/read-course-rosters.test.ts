@@ -50,7 +50,12 @@ function eligibleStudent(name = "Grace Hopper") {
   return {
     is_active: true,
     roles: [{ role: ROLES.STUDENT }],
-    student_profile: { program_id: "program-1", student_id_number: "S00001" },
+    student_profile: {
+      program_id: "program-1",
+      major_id: null,
+      program: { is_active: true, majors: [] },
+      major: null,
+    },
     enrollments: [{ term_instance_id: "term-1", program_id: "program-1" }],
     name,
     email: `${name.split(" ")[0].toLowerCase()}@example.com`,
@@ -172,9 +177,14 @@ describe("read course rosters", () => {
             ...eligibleStudent(),
             student_profile: {
               program_id: "program-1",
-              student_id_number: "S00001",
-              major: { name: "Software" },
-              program: { code: "BSCS", name: "Computer Science" },
+              major_id: null,
+              major: { name: "Software", is_active: true, program_id: "program-1" },
+              program: {
+                code: "BSCS",
+                name: "Computer Science",
+                is_active: true,
+                majors: [],
+              },
             },
             enrollments: [
               {

@@ -9,6 +9,7 @@ import { ROLES } from "@/lib/constants/roles";
 import {
   projectRosterEligibility,
   resolveAuthorizedCourseAssignmentRoster,
+  rosterStudentProfileSelect,
   type RosterEligibilityStudent,
 } from "./course-assignment-roster";
 import { revalidateProgramHeadAssignment } from "@/features/auth/services/resolve-program-head-context";
@@ -63,7 +64,7 @@ const studentSelect = (termInstanceId: string) => ({
   email: true,
   is_active: true,
   roles: { select: { role: true } },
-  student_profile: { select: { program_id: true, student_id_number: true } },
+  student_profile: { select: rosterStudentProfileSelect },
   enrollments: {
     where: { term_instance_id: termInstanceId, is_active: true },
     select: { program_id: true },
@@ -89,7 +90,7 @@ function safeMutabilityFailure(assignment: WriteAssignment): RosterServiceResult
 function studentForEligibility(student: {
   is_active: boolean;
   roles: Array<{ role: SystemRole }>;
-  student_profile: { program_id: string; student_id_number: string | null } | null;
+  student_profile: RosterEligibilityStudent["student_profile"];
   enrollments: Array<{ program_id: string }>;
 }): RosterEligibilityStudent {
   return {

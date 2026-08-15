@@ -507,7 +507,6 @@ export function PublishCentralDeploymentForm({
                         <th className="px-3 py-2">Program</th>
                         <th className="px-3 py-2">Year Level</th>
                         <th className="px-3 py-2">Section</th>
-                        <th className="px-3 py-2">Student ID</th>
                       </>
                     )}
                     {targetStakeholder === "INDUSTRY_PARTNER" && (
@@ -540,7 +539,6 @@ export function PublishCentralDeploymentForm({
                           <>
                             <td className="px-3 py-2">{respondent.programCode ?? "—"}</td>
                             <td className="px-3 py-2">{respondent.yearLevel ? getYearLevelDisplay(respondent.yearLevel as YearLevel) : "—"}</td>
-                            <td className="px-3 py-2">{respondent.studentId ?? "—"}</td>
                           </>
                         )}
                         {targetStakeholder === "INDUSTRY_PARTNER" && (

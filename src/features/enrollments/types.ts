@@ -86,7 +86,6 @@ export type StudentRecord = {
   email: string;
   /** Opaque canonical account name (ADR 0014). No first/last aliases. */
   name: string;
-  studentIdNumber: string | null;
   enrollmentId: string;
   majorId: string | null;
   majorName: string | null;

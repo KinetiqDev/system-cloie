@@ -131,7 +131,6 @@ export async function previewCourseBoundRespondents({
             student_profile: {
               select: {
                 major_id: true,
-                student_id_number: true,
                 major: { select: { name: true } },
               },
             },
@@ -150,7 +149,6 @@ export async function previewCourseBoundRespondents({
       programId: assignment.program.id,
       programName: assignment.program.name,
       section: assignment.section,
-      studentId: membership.student.student_profile?.student_id_number ?? null,
       userId: membership.student_user_id,
       yearLevel: assignment.year_level,
     }));

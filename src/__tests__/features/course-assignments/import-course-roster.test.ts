@@ -38,7 +38,12 @@ const student = (email: string, id: string) => ({
   email,
   is_active: true,
   roles: [{ role: ROLES.STUDENT }],
-  student_profile: { program_id: "program-1", student_id_number: "S00001" },
+  student_profile: {
+    program_id: "program-1",
+    major_id: null,
+    program: { is_active: true, majors: [] },
+    major: null,
+  },
   enrollments: [{ program_id: "program-1" }],
 });
 

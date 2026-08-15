@@ -33,9 +33,32 @@ type AssignmentForRoster = Prisma.CourseAssignmentGetPayload<{
 export type RosterEligibilityStudent = {
   is_active: boolean;
   roles: Array<{ role: SystemRole }>;
-  student_profile: { program_id: string; student_id_number: string | null } | null;
+  student_profile: {
+    program_id: string;
+    major_id: string | null;
+    program: { is_active: boolean; majors: Array<{ id: string }> } | null;
+    major: { is_active: boolean; program_id: string } | null;
+  } | null;
   enrollments: Array<{ program_id: string }>;
 };
+
+/**
+ * Selection for the profile-affiliation evidence required by
+ * `projectRosterEligibility`: the Program's active state, whether it has
+ * active Majors (bounded to one row), and the profile Major's active state
+ * and owning Program.
+ */
+export const rosterStudentProfileSelect = {
+  program_id: true,
+  major_id: true,
+  program: {
+    select: {
+      is_active: true,
+      majors: { where: { is_active: true }, select: { id: true }, take: 1 },
+    },
+  },
+  major: { select: { is_active: true, program_id: true } },
+} satisfies Prisma.User$student_profileArgs["select"];
 
 export type CourseBoundEvaluationEligibilityAssignment = Pick<
   AuthorizedRosterAssignment,
@@ -64,9 +87,15 @@ export function projectRosterEligibility(
     return { eligible: false, reason: "NON_STUDENT_ACCOUNT" };
   }
   if (!student.is_active) return { eligible: false, reason: "ACCOUNT_INACTIVE" };
+  const profile = student.student_profile;
   if (
-    !student.student_profile ||
-    (student.student_profile.student_id_number?.trim().length ?? 0) < 5
+    !profile ||
+    !profile.program ||
+    !profile.program.is_active ||
+    (profile.program.majors.length > 0 &&
+      (!profile.major ||
+        !profile.major.is_active ||
+        profile.major.program_id !== profile.program_id))
   ) {
     return { eligible: false, reason: "PROFILE_INCOMPLETE" };
   }
@@ -75,7 +104,7 @@ export function projectRosterEligibility(
   }
   if (
     assignment.courseScope === CourseScope.PROGRAM_SPECIFIC &&
-    (student.student_profile.program_id !== assignment.programId ||
+    (profile.program_id !== assignment.programId ||
       student.enrollments[0]?.program_id !== assignment.programId)
   ) {
     return { eligible: false, reason: "PROGRAM_MISMATCH" };
@@ -120,7 +149,7 @@ export async function resolveCourseBoundEvaluationEligibility(
         select: {
           is_active: true,
           roles: { select: { role: true } },
-          student_profile: { select: { program_id: true, student_id_number: true } },
+          student_profile: { select: rosterStudentProfileSelect },
           enrollments: {
             where: { term_instance_id: assignment.termInstanceId, is_active: true },
             select: { program_id: true },
@@ -156,7 +185,7 @@ export async function resolveCourseBoundEvaluationEligibilities(
         select: {
           is_active: true,
           roles: { select: { role: true } },
-          student_profile: { select: { program_id: true, student_id_number: true } },
+          student_profile: { select: rosterStudentProfileSelect },
           enrollments: {
             where: { is_active: true },
             select: { program_id: true, term_instance_id: true },
@@ -230,7 +259,7 @@ export async function countEligibleCourseBoundEvaluationAssignments(
         select: {
           is_active: true,
           roles: { select: { role: true } },
-          student_profile: { select: { program_id: true, student_id_number: true } },
+          student_profile: { select: rosterStudentProfileSelect },
           enrollments: {
             where: { is_active: true },
             select: { program_id: true, term_instance_id: true },
@@ -483,7 +512,7 @@ export async function resolveCurrentRosterEligibility(
       select: {
         is_active: true,
         roles: { select: { role: true } },
-        student_profile: { select: { program_id: true, student_id_number: true } },
+        student_profile: { select: rosterStudentProfileSelect },
         enrollments: {
           where: { term_instance_id: assignment.termInstanceId, is_active: true },
           select: { program_id: true },

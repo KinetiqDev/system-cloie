@@ -7,6 +7,7 @@ import { ROLES } from "@/lib/constants/roles";
 import {
   projectRosterEligibility,
   resolveAuthorizedCourseAssignmentRoster,
+  rosterStudentProfileSelect,
   type RosterEligibilityStudent,
 } from "./course-assignment-roster";
 import { addRosterMembership } from "./manage-course-roster";
@@ -116,7 +117,7 @@ async function readBatch(
       email: true,
       is_active: true,
       roles: { select: { role: true } },
-      student_profile: { select: { program_id: true, student_id_number: true } },
+      student_profile: { select: rosterStudentProfileSelect },
       enrollments: {
         where: { term_instance_id: termInstanceId, is_active: true },
         select: { program_id: true },

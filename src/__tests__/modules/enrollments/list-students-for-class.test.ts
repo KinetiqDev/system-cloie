@@ -55,9 +55,6 @@ describe("list-students-for-class", () => {
           id: "student-1",
           email: "student1@test.com",
           name: "John Doe",
-          student_profile: {
-            student_id_number: "S001",
-          },
         },
         major: {
           id: "major-1",
@@ -114,9 +111,6 @@ describe("list-students-for-class", () => {
           id: "student-2",
           email: "mary@test.com",
           name: "Mary Anne O'Connor",
-          student_profile: {
-            student_id_number: "S002",
-          },
         },
         major: null,
       },
@@ -128,9 +122,6 @@ describe("list-students-for-class", () => {
           id: "student-3",
           email: "prince@test.com",
           name: "Prince",
-          student_profile: {
-            student_id_number: null,
-          },
         },
         major: null,
       },
