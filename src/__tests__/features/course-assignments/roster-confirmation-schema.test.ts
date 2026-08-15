@@ -86,10 +86,23 @@ describe("confirmRosterResolutionSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts the full 100-row CSV line-number boundary", () => {
+    const rows = Array.from({ length: 100 }, (_, index) => ({
+      sourceIndex: index + 2,
+      studentUserId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    }));
+    const result = confirmRosterResolutionSchema.safeParse({
+      ...valid,
+      rows,
+      skippedIndexes: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects source indexes beyond the row bound", () => {
     const result = confirmRosterResolutionSchema.safeParse({
       ...valid,
-      rows: [{ sourceIndex: 100, studentUserId: userIdA }],
+      rows: [{ sourceIndex: 102, studentUserId: userIdA }],
     });
     expect(result.success).toBe(false);
   });

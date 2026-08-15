@@ -52,6 +52,7 @@ import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
   addRosterMembershipAction,
+  confirmRosterResolutionAction,
   previewCourseRosterAction,
   removeRosterMembershipAction,
   restoreRosterMembershipAction,
@@ -64,11 +65,14 @@ import type {
   CourseRosterPreviewDisposition,
   CourseRosterPreviewResolution,
   CourseRosterPreviewRow,
+  CourseRosterConfirmation,
+  CourseRosterConfirmationOutcome,
 } from "../types";
 import {
   COURSE_ROSTER_MAX_ROWS,
   COURSE_ROSTER_TEMPLATE,
   parseCourseRosterCsv,
+  exportFailedCourseRosterRows,
 } from "../services/course-roster-csv";
 import { WizardStepper } from "./shared/wizard-stepper";
 import { ScopedRosterStudentSearch } from "./scoped-roster-student-search";
@@ -656,31 +660,127 @@ function ReviewPreviewBlock({
   );
 }
 
-function PreviewResultsBlock({
+const OUTCOME_LABELS: Record<CourseRosterConfirmationOutcome, string> = {
+  CREATED: "Added to roster",
+  RESTORED: "Restored to roster",
+  ALREADY_ACTIVE: "Already active",
+  ACCOUNT_INACTIVE: "Account inactive",
+  PROFILE_INCOMPLETE: "Profile incomplete",
+  NO_ACTIVE_TERM_PLACEMENT: "No active term placement",
+  PROGRAM_MISMATCH: "Program mismatch",
+  OUT_OF_SCOPE: "Out of scope",
+  OTHER_SECTION_CONFLICT: "Other section conflict",
+  READ_ONLY: "Roster read-only",
+  UNEXPECTED_FAILURE: "Unexpected failure",
+  UNPROCESSED: "Not processed",
+};
+function outcomeLabel(outcome: CourseRosterConfirmationOutcome) {
+  return OUTCOME_LABELS[outcome];
+}
+
+function outcomeBadge(outcome: CourseRosterConfirmationOutcome) {
+  switch (outcome) {
+    case "CREATED":
+    case "RESTORED":
+      return <Badge variant="success">{outcomeLabel(outcome)}</Badge>;
+    case "ALREADY_ACTIVE":
+    case "UNPROCESSED":
+      return <Badge variant="secondary">{outcomeLabel(outcome)}</Badge>;
+    case "UNEXPECTED_FAILURE":
+      return <Badge variant="destructive">{outcomeLabel(outcome)}</Badge>;
+    default:
+      return <Badge variant="warning">{outcomeLabel(outcome)}</Badge>;
+  }
+}
+
+function outcomeGroup(outcome: CourseRosterConfirmationOutcome) {
+  if (outcome === "CREATED") return "created";
+  if (outcome === "RESTORED") return "restored";
+  if (outcome === "ALREADY_ACTIVE") return "already-active";
+  if (outcome === "UNPROCESSED") return "unprocessed";
+  return "blocked";
+}
+
+type ResultsGroupKey = "created" | "restored" | "already-active" | "blocked" | "skipped" | "unprocessed";
+
+const RESULTS_GROUPS: Array<{ key: ResultsGroupKey; label: string }> = [
+  { key: "created", label: "Added" },
+  { key: "restored", label: "Restored" },
+  { key: "already-active", label: "Already active" },
+  { key: "blocked", label: "Not added" },
+  { key: "skipped", label: "Skipped" },
+  { key: "unprocessed", label: "Not processed" },
+];
+
+function ConfirmationResultsBlock({
   preview,
-  selectedCandidateByIndex,
+  confirmation,
   skippedIndexes,
-  onBackToReview,
 }: {
   preview: CourseRosterPreview;
-  selectedCandidateByIndex: Record<number, CourseRosterPreviewCandidate>;
+  confirmation: CourseRosterConfirmation;
   skippedIndexes: ReadonlySet<number>;
-  onBackToReview: () => void;
 }) {
   const skipped = skippedIndexes;
-  const counts = countGroups(preview.rows, skipped, selectedCandidateByIndex);
+  const outcomeByIndex = new Map(
+    confirmation.rows.map((row) => [row.sourceIndex, row])
+  );
+  const counts: Record<ResultsGroupKey, number> = {
+    created: 0,
+    restored: 0,
+    "already-active": 0,
+    blocked: 0,
+    skipped: skipped.size,
+    unprocessed: 0,
+  };
+  for (const row of confirmation.rows) {
+    counts[outcomeGroup(row.outcome)] += 1;
+  }
+  // Already-active preview rows are informational and never submitted, so
+  // they carry no confirmation outcome; count them from the preview.
+  for (const row of preview.rows) {
+    if (row.disposition === "ALREADY_ACTIVE" && !outcomeByIndex.has(row.sourceIndex)) {
+      counts["already-active"] += 1;
+    }
+  }
+
+  const failedRows = confirmation.rows
+    .filter((row) => row.outcome !== "CREATED" && row.outcome !== "RESTORED")
+    .map((row) => {
+      const previewRow = preview.rows.find((item) => item.sourceIndex === row.sourceIndex);
+      return {
+        sourceIndex: row.sourceIndex,
+        name: previewRow?.submittedName ?? "",
+        status: row.outcome,
+        error: row.error ?? "",
+      };
+    });
+
+  function downloadFailedRows() {
+    downloadCsv("course-roster-failed-rows.csv", exportFailedCourseRosterRows(failedRows));
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <Alert variant="information">
-        <AlertTitle>Review complete</AlertTitle>
-        <AlertDescription>
-          The preview session is ready. Rows are grouped below; nothing has been written yet.
-        </AlertDescription>
-      </Alert>
+      {confirmation.referenceId ? (
+        <Alert variant="warning" aria-live="polite">
+          <AlertTitle>Confirmation stopped</AlertTitle>
+          <AlertDescription>
+            Confirmation stopped before every row was processed. Completed rows are kept; later rows
+            were not processed. Support reference: {confirmation.referenceId}
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert variant="information">
+          <AlertTitle>Confirmation complete</AlertTitle>
+          <AlertDescription>
+            Rows below show what was added, restored, or left unchanged for this Course roster.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {PREVIEW_FILTERS.filter((item) => item.key !== "all").map((item) => (
+        {RESULTS_GROUPS.map((item) => (
           <div key={item.key} className="rounded-lg border p-3">
             <dt className="text-label-sm text-muted-foreground">{item.label}</dt>
             <dd className="text-title-lg">{counts[item.key]}</dd>
@@ -690,7 +790,7 @@ function PreviewResultsBlock({
 
       <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {preview.rows.map((row) => {
-          const selectedCandidate = selectedCandidateByIndex[row.sourceIndex] ?? row.candidates[0];
+          const result = outcomeByIndex.get(row.sourceIndex);
           return (
             <li key={row.sourceIndex} className="rounded-lg border p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -702,25 +802,28 @@ function PreviewResultsBlock({
                 </p>
                 {skipped.has(row.sourceIndex) ? (
                   <Badge variant="secondary">Skipped</Badge>
-                ) : selectedCandidateByIndex[row.sourceIndex] ? (
-                  <Badge variant="success">Selected</Badge>
+                ) : result ? (
+                  outcomeBadge(result.outcome)
+                ) : row.disposition === "ALREADY_ACTIVE" ? (
+                  <Badge variant="secondary">Already active</Badge>
                 ) : (
-                  <>
-                    {resolutionBadge(row.resolution)}
-                    {dispositionBadge(row.disposition)}
-                  </>
+                  <Badge variant="secondary">Not processed</Badge>
                 )}
               </div>
-              {selectedCandidate && <CandidateContext candidate={selectedCandidate} />}
+              {result?.error && (
+                <p className="mt-1 text-body-sm text-muted-foreground">{result.error}</p>
+              )}
             </li>
           );
         })}
       </ul>
 
-      <Button type="button" variant="outline" onClick={onBackToReview}>
-        <RotateCcw data-icon="inline-start" />
-        Back to review
-      </Button>
+      {failedRows.length > 0 && (
+        <Button type="button" variant="outline" onClick={downloadFailedRows}>
+          <FileSpreadsheet data-icon="inline-start" />
+          Download failed rows
+        </Button>
+      )}
     </div>
   );
 }
@@ -734,6 +837,7 @@ function ManagementFooter({
   onPrimary,
   primaryDisabled,
   primaryLabel,
+  showBack,
 }: {
   closeDisabled: boolean;
   isPending: boolean;
@@ -743,11 +847,12 @@ function ManagementFooter({
   onPrimary: () => void;
   primaryDisabled: boolean;
   primaryLabel: string;
+  showBack: boolean;
 }) {
   return (
     <div className="flex shrink-0 items-center justify-between gap-2">
       <div className="flex items-center gap-2">
-        {phase !== "add" && (
+        {showBack && (
           <Button type="button" variant="ghost" onClick={onBack} disabled={isPending}>
             Back
           </Button>
@@ -799,7 +904,7 @@ function ManagementBody({
   programId,
   selectedCandidateByIndex,
   skippedIndexes,
-  onBackToReview,
+  confirmation,
 }: {
   assignment: CourseRosterAssignmentSummary | undefined;
   assignmentId: string;
@@ -814,7 +919,6 @@ function ManagementBody({
   onToggleSkip: (sourceIndex: number) => void;
   onClearSelection: (sourceIndex: number) => void;
   onSelect: (sourceIndex: number, candidate: CourseRosterPreviewCandidate) => void;
-  onBackToReview: () => void;
   phase: RosterManagementPhase;
   preview: CourseRosterPreview | null;
   filter: PreviewFilter;
@@ -826,6 +930,7 @@ function ManagementBody({
   programId?: string;
   selectedCandidateByIndex: Record<number, CourseRosterPreviewCandidate>;
   skippedIndexes: ReadonlySet<number>;
+  confirmation: CourseRosterConfirmation | null;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-0.5 py-1">
@@ -882,6 +987,12 @@ function ManagementBody({
               </AlertDescription>
             </Alert>
           )}
+          {importMessage && (
+            <Alert variant="warning" aria-live="polite">
+              <AlertTitle>Roster confirmation</AlertTitle>
+              <AlertDescription>{importMessage}</AlertDescription>
+            </Alert>
+          )}
           <ReviewPreviewBlock
             preview={preview}
             assignment={assignment}
@@ -900,12 +1011,11 @@ function ManagementBody({
         </>
       )}
 
-      {phase === "results" && preview && (
-        <PreviewResultsBlock
+      {phase === "results" && preview && confirmation && (
+        <ConfirmationResultsBlock
           preview={preview}
-          selectedCandidateByIndex={selectedCandidateByIndex}
+          confirmation={confirmation}
           skippedIndexes={skippedIndexes}
-          onBackToReview={onBackToReview}
         />
       )}
     </div>
@@ -936,6 +1046,7 @@ export function RosterManagementDialog({
   const [filter, setFilter] = useState<PreviewFilter>("all");
   const [suggestionsAcknowledged, setSuggestionsAcknowledged] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState<CourseRosterConfirmation | null>(null);
   const [isPending, startTransition] = useTransition();
   const pendingRef = useRef(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -960,6 +1071,7 @@ export function RosterManagementDialog({
     setFilter("all");
     setSuggestionsAcknowledged(false);
     setDiscardOpen(false);
+    setConfirmation(null);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -973,7 +1085,9 @@ export function RosterManagementDialog({
 
   function requestClose() {
     if (pendingRef.current) return;
-    if (preview) {
+    // A confirmed preview is final: results stay visible until the workspace
+    // closes. Only an unfinished (dirty) preview asks before discarding.
+    if (preview && !confirmation) {
       setDiscardOpen(true);
       return;
     }
@@ -1047,6 +1161,55 @@ export function RosterManagementDialog({
     setSelectedCandidateByIndex((current) => ({ ...current, [sourceIndex]: candidate }));
   }
 
+  function runConfirmation() {
+    if (pendingRef.current || !preview) return;
+    const effectiveCandidateByIndex = effectiveCandidateByIndexFor({
+      preview,
+      skippedIndexes,
+      selectedCandidateByIndex,
+      suggestionsAcknowledged,
+    });
+    const rows = Object.entries(effectiveCandidateByIndex)
+      .filter((entry): entry is [string, CourseRosterPreviewCandidate] => Boolean(entry[1]))
+      .map(([sourceIndex, candidate]) => ({
+        sourceIndex: Number(sourceIndex),
+        studentUserId: candidate.userId,
+      }));
+    if (rows.length === 0) {
+      // Every row is already active or explicitly skipped: nothing to write,
+      // but the manager still sees the final Results step.
+      setConfirmation({ rows: [] });
+      setPhase("results");
+      return;
+    }
+    setImportMessage(null);
+    pendingRef.current = true;
+    startTransition(async () => {
+      try {
+        const result = await confirmRosterResolutionAction({
+          assignmentId,
+          programId,
+          rows,
+          skippedIndexes: [...skippedIndexes],
+          suggestedAcknowledged: suggestionsAcknowledged,
+        });
+        if (!result.success) {
+          const reference = "referenceId" in result ? result.referenceId : undefined;
+          setImportMessage(
+            reference
+              ? `${result.error ?? "The roster confirmation could not be completed."} Support reference: ${reference}`
+              : (result.error ?? "The roster confirmation could not be completed.")
+          );
+          return;
+        }
+        setConfirmation(result.data);
+        setPhase("results");
+      } finally {
+        pendingRef.current = false;
+      }
+    });
+  }
+
   const primaryLabel =
     phase === "add"
       ? "Prepare preview"
@@ -1082,7 +1245,7 @@ export function RosterManagementDialog({
         programId={programId}
         selectedCandidateByIndex={selectedCandidateByIndex}
         skippedIndexes={skippedIndexes}
-        onBackToReview={() => setPhase("review")}
+        confirmation={confirmation}
       />
     </div>
   );
@@ -1115,13 +1278,14 @@ export function RosterManagementDialog({
                   if (phase === "add") {
                     preparePreview();
                   } else if (phase === "review") {
-                    setPhase("results");
+                    runConfirmation();
                   } else {
                     requestClose();
                   }
                 }}
                 primaryDisabled={primaryDisabled}
                 primaryLabel={primaryLabel}
+                showBack={phase !== "results"}
               />
             </DialogFooter>
           </DialogContent>
@@ -1150,13 +1314,14 @@ export function RosterManagementDialog({
                   if (phase === "add") {
                     preparePreview();
                   } else if (phase === "review") {
-                    setPhase("results");
+                    runConfirmation();
                   } else {
                     requestClose();
                   }
                 }}
                 primaryDisabled={primaryDisabled}
                 primaryLabel={primaryLabel}
+                showBack={phase !== "results"}
               />
             </DrawerFooter>
           </DrawerContent>
