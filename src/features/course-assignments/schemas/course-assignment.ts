@@ -73,8 +73,60 @@ export const bulkCreateCourseAssignmentsSchema = z.object({
 export const addRosterMembershipSchema = z.object({
   assignmentId: z.string().uuid(),
   programId: z.string().uuid().optional(),
-  studentEmail: z.string().trim().toLowerCase().email().max(254),
+  studentUserId: z.string().uuid(),
 });
+
+export const confirmRosterResolutionSchema = z
+  .object({
+    assignmentId: z.string().uuid(),
+    programId: z.string().uuid().optional(),
+    rows: z
+      .array(
+        z.object({
+          sourceIndex: z.number().int().nonnegative().max(COURSE_ROSTER_MAX_ROWS - 1),
+          studentUserId: z.string().uuid(),
+        })
+      )
+      .min(1)
+      .max(COURSE_ROSTER_MAX_ROWS),
+    skippedIndexes: z
+      .array(z.number().int().nonnegative().max(COURSE_ROSTER_MAX_ROWS - 1))
+      .max(COURSE_ROSTER_MAX_ROWS),
+    suggestedAcknowledged: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    const sourceIndexes = data.rows.map((row) => row.sourceIndex);
+    if (new Set(sourceIndexes).size !== sourceIndexes.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Each source row may be confirmed only once.",
+        path: ["rows"],
+      });
+    }
+    const skipped = new Set(data.skippedIndexes);
+    if (skipped.size !== data.skippedIndexes.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Skipped source indexes must be unique.",
+        path: ["skippedIndexes"],
+      });
+    }
+    if (sourceIndexes.some((index) => skipped.has(index))) {
+      ctx.addIssue({
+        code: "custom",
+        message: "A source row cannot be both confirmed and skipped.",
+        path: ["skippedIndexes"],
+      });
+    }
+    const userIds = data.rows.map((row) => row.studentUserId);
+    if (new Set(userIds).size !== userIds.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "One account cannot be confirmed more than once in a request.",
+        path: ["rows"],
+      });
+    }
+  });
 
 export const restoreRosterMembershipSchema = z.object({
   assignmentId: z.string().uuid(),
@@ -122,6 +174,10 @@ export type ActivateCourseAssignmentInput = z.infer<typeof activateCourseAssignm
 export type DeleteCourseAssignmentInput = z.infer<typeof deleteCourseAssignmentSchema>;
 export type BulkCreateCourseAssignmentsInput = z.infer<typeof bulkCreateCourseAssignmentsSchema>;
 export type AddRosterMembershipInput = z.infer<typeof addRosterMembershipSchema>;
+// Confirmation preflight contract; the bulk confirmation write flow (#400)
+// is the first consumer.
+// fallow-ignore-next-line unused-type
+export type ConfirmRosterResolutionInput = z.infer<typeof confirmRosterResolutionSchema>;
 export type RestoreRosterMembershipInput = z.infer<typeof restoreRosterMembershipSchema>;
 export type RemoveRosterMembershipInput = z.infer<typeof removeRosterMembershipSchema>;
 export type ImportCourseRosterTextInput = z.infer<typeof importCourseRosterTextSchema>;

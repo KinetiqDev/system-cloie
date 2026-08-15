@@ -6,6 +6,7 @@ import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import {
   addRosterMembership,
+  preflightRosterConfirmation,
   removeRosterMembership,
   restoreRosterMembership,
 } from "@/features/course-assignments/services/manage-course-roster";
@@ -24,7 +25,6 @@ const assignment = {
 
 const student = {
   id: "student-1",
-  email: "student@example.com",
   is_active: true,
   roles: [{ role: ROLES.STUDENT }],
   student_profile: {
@@ -80,13 +80,13 @@ describe("manage course roster service", () => {
     prismaMock.user.findUnique.mockResolvedValue(student as never);
     prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue(null);
 
-    await expect(addRosterMembership("assignment-1", " STUDENT@EXAMPLE.COM ")).resolves.toEqual({
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toEqual({
       success: true,
       data: { outcome: "CREATED", message: "Student added to Course roster." },
     });
 
     expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { email: "student@example.com" } })
+      expect.objectContaining({ where: { id: "student-1" } })
     );
     expect(prismaMock.courseAssignmentMembership.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -105,7 +105,7 @@ describe("manage course roster service", () => {
     prismaMock.user.findUnique.mockResolvedValue(student as never);
     prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue(null);
 
-    await addRosterMembership("assignment-1", "student@example.com");
+    await addRosterMembership("assignment-1", "student-1");
 
     expect(prismaMock.$queryRaw).toHaveBeenCalled();
   });
@@ -116,7 +116,7 @@ describe("manage course roster service", () => {
       id: "membership-1",
       is_active: true,
     } as never);
-    const facultyResult = await addRosterMembership("assignment-1", "student@example.com");
+    const facultyResult = await addRosterMembership("assignment-1", "student-1");
     expect(facultyResult).toMatchObject({
       success: false,
       error: expect.stringContaining("active member of this"),
@@ -126,7 +126,7 @@ describe("manage course roster service", () => {
     prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue({
       id: "other-membership",
     } as never);
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toMatchObject(
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject(
       {
         success: false,
         error: expect.stringContaining("another section"),
@@ -187,7 +187,7 @@ describe("manage course roster service", () => {
     prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue(null);
     prismaMock.courseAssignmentMembership.create.mockRejectedValue({ code: "P2002" });
 
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toMatchObject(
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject(
       {
         success: false,
         error: expect.stringContaining("another section"),
@@ -202,7 +202,7 @@ describe("manage course roster service", () => {
     } as never);
     prismaMock.user.findUnique.mockResolvedValue(student as never);
 
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toEqual({
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toEqual({
       success: false,
       error: "This Course assignment is inactive. The roster is read-only.",
     });
@@ -216,7 +216,7 @@ describe("manage course roster service", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
       createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
     );
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toMatchObject(
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject(
       {
         success: true,
       }
@@ -225,7 +225,7 @@ describe("manage course roster service", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
       createAuthSessionSnapshot({ userId: "faculty-2", roles: [ROLES.FACULTY] })
     );
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toEqual({
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toEqual({
       success: false,
       error: "Course assignment not found.",
     });
@@ -245,7 +245,7 @@ describe("manage course roster service", () => {
         selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
       },
     });
-    await expect(addRosterMembership("assignment-1", "student@example.com", "program-1")).resolves.toMatchObject(
+    await expect(addRosterMembership("assignment-1", "student-1", "program-1")).resolves.toMatchObject(
       {
         success: true,
       }
@@ -256,7 +256,7 @@ describe("manage course roster service", () => {
       course: { course_scope: CourseScope.GENERAL_EDUCATION },
     } as never);
     await expect(
-      addRosterMembership("assignment-1", "student@example.com", "program-1")
+      addRosterMembership("assignment-1", "student-1", "program-1")
     ).resolves.toEqual({
       success: false,
       error: "Program Heads cannot manage General Education assignments.",
@@ -268,7 +268,7 @@ describe("manage course roster service", () => {
       ...assignment,
       term_instance: { status: "COMPLETED" },
     } as never);
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toEqual({
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toEqual({
       success: false,
       error: "This Academic Period is no longer active. The roster is read-only.",
     });
@@ -277,7 +277,7 @@ describe("manage course roster service", () => {
       ...assignment,
       course_bound_evaluations: [{ published_at: new Date() }],
     } as never);
-    await expect(addRosterMembership("assignment-1", "student@example.com")).resolves.toEqual({
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toEqual({
       success: false,
       error:
         "A Course-bound evaluation has been published for this assignment. The roster is locked.",
@@ -306,8 +306,63 @@ describe("manage course roster service", () => {
     prismaMock.courseAssignment.findUnique.mockResolvedValue(assignment as never);
 
     await expect(
-      addRosterMembership("assignment-1", "student@example.com", "program-1")
+      addRosterMembership("assignment-1", "student-1", "program-1")
     ).resolves.toEqual({ success: false, error: "Course assignment not found." });
     expect(prismaMock.courseAssignmentMembership.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("preflightRosterConfirmation", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "manager-1", roles: [ROLES.SECRETARY] })
+    );
+    prismaMock.courseAssignment.findUnique.mockResolvedValue(assignment as never);
+    prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
+    prismaMock.$queryRaw.mockResolvedValue([]);
+    prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue(null);
+  });
+
+  it("reauthorizes a mutable assignment for confirmation", async () => {
+    await expect(preflightRosterConfirmation("assignment-1")).resolves.toEqual({
+      success: true,
+      data: { assignmentId: "assignment-1" },
+    });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a read-only roster before any write", async () => {
+    prismaMock.courseAssignment.findUnique.mockResolvedValue({
+      ...assignment,
+      course_bound_evaluations: [{ published_at: new Date("2026-08-01T00:00:00Z") }],
+    } as never);
+
+    const result = await preflightRosterConfirmation("assignment-1");
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/locked/i);
+    }
+  });
+
+  it("does not disclose an assignment the actor cannot manage", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "other-faculty", roles: [ROLES.FACULTY] })
+    );
+
+    await expect(preflightRosterConfirmation("assignment-1")).resolves.toEqual({
+      success: false,
+      error: "Course assignment not found.",
+    });
+  });
+
+  it("reports an unknown Student account id safely", async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null as never);
+
+    await expect(addRosterMembership("assignment-1", "unknown-student")).resolves.toEqual({
+      success: false,
+      error: "No matching account was found.",
+    });
   });
 });
