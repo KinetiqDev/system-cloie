@@ -126,6 +126,16 @@ describe("course roster name matching", () => {
     });
   });
 
+  it("does not treat a core-token period as suffix-only evidence", () => {
+    expect(
+      matchRosterName("Juan Dela. Cruz Jr.", [candidate("juan", "Juan Dela Cruz")])
+    ).toEqual({
+      status: "NO_MATCH",
+      reason: "NO_EVIDENCE",
+      matchedIds: [],
+    });
+  });
+
   it("suggests a unique diacritic-only variant", () => {
     expect(
       matchRosterName("José Santos", [candidate("jose", "Jose Santos")])
