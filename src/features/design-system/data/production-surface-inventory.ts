@@ -2087,6 +2087,24 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/analytics/components/program-head-analytics-shell.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server component using semantic tokens, no client boundary needed",
+  },
+  {
+    path: "src/features/analytics/components/program-head-overview-kpis.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server component using semantic tokens and shadcn Card primitives",
+  },
+  {
+    path: "src/features/analytics/components/program-head-analytics-filters.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server-rendered URL filter controls using semantic tokens",
+  },
+  {
     path: "src/features/auth/components/authenticated-app-shell.tsx",
     disposition: "task",
     taskId: 18,
