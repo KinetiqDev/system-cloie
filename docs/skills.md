@@ -30,7 +30,7 @@ All agent skills available to this repo, grouped by source. Descriptions are pul
 - **improve-codebase-architecture** — Scan for deepening opportunities, present a visual HTML report, then grill through whichever you pick.
 - **prototype** — Build a throwaway prototype to sanity-check a state model, logic, or UI direction.
 - **grill-me** — A relentless interview to sharpen a plan or design.
-- **grilling** — Grill the user relentlessly about a plan or design to stress-test it before building.
+- **grilling** — Grill the user relentlessly about implementation and spec gaps in a plan or design to stress-test it before building.
 - **grill-with-docs** — A relentless interview that also creates docs (ADRs and glossary entries) as decisions are resolved.
 
 ### UI/UX
