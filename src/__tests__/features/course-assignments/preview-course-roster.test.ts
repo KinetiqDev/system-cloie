@@ -433,6 +433,40 @@ describe("previewCourseRoster service", () => {
     }
   });
 
+  it("requires resolution when a unique suggested existing member competes with ambiguous eligible matches", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      student("student-2", "Maria Therese Ann Reyes", "program-1"),
+      student("student-3", "Maria Therese Gonzales Reyes", "program-1"),
+    ] as never);
+    vi.mocked(prisma.courseAssignmentMembership.findMany)
+      .mockResolvedValueOnce([
+        {
+          student_user_id: "student-1",
+          is_active: true,
+          removed_at: null,
+          student: student("student-1", "Maria Therese Santos Reyes", "program-1"),
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [{ sourceIndex: 0, submittedName: "Maria Therese Reyes", status: "VALID" }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]?.resolution).toMatchObject({
+        status: "AMBIGUOUS",
+        reason: "EQUAL_TIER",
+      });
+      expect(result.data.rows[0]?.resolution.candidateIds).toEqual(
+        expect.arrayContaining(["student-1", "student-2", "student-3"])
+      );
+      expect(result.data.rows[0]?.disposition).toBeNull();
+    }
+  });
+
   it("keeps an existing member and a same-name eligible Student ambiguous", async () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
