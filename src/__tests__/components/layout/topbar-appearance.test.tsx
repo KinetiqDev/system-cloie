@@ -8,7 +8,6 @@ import { AppearanceProvider } from "@/features/design-system/components/appearan
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
-  usePathname: () => "/",
 }));
 
 vi.mock("next/image", () => ({

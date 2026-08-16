@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { ProgramHeadContextHeader } from "@/features/auth/components/program-head-context-header";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 
 export default async function SelectedProgramLayout({
@@ -16,5 +17,10 @@ export default async function SelectedProgramLayout({
     notFound();
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <ProgramHeadContextHeader program={result.data.selectedProgram} />
+      {children}
+    </>
+  );
 }

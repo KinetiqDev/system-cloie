@@ -93,31 +93,30 @@ export function InstitutionalOutcomeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(90dvh,42rem)] flex-col overflow-hidden sm:max-w-2xl">
+      <DialogContent className="flex max-h-[min(90dvh,42rem)] flex-col sm:max-w-lg">
         <DialogHeader className="shrink-0">
           <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription>{copy.description}</DialogDescription>
         </DialogHeader>
         {error && (
-          <Alert variant="destructive" role="alert" className="shrink-0">
+          <Alert variant="destructive" role="alert">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <div hidden={Boolean(review)} className="min-h-0 flex-1 overflow-y-auto pr-1">
-          <OutcomeDraftForm
-            mode={mode}
-            outcome={outcome}
-            isPending={isPending}
-            onOpenChange={onOpenChange}
-            onPrepared={showPreparedReview}
-            onError={setError}
-          />
-        </div>
-        {review && (
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {review ? (
             <ReviewPanel review={review} />
-          </div>
-        )}
+          ) : (
+            <OutcomeDraftForm
+              mode={mode}
+              outcome={outcome}
+              isPending={isPending}
+              onOpenChange={onOpenChange}
+              onPrepared={showPreparedReview}
+              onError={setError}
+            />
+          )}
+        </div>
         {review && (
           <div className="flex shrink-0 justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setReview(null)} disabled={isPending}>
@@ -309,11 +308,8 @@ function ReviewState({ label, value }: { label: string; value: unknown }) {
       : [];
 
   return (
-    <section
-      className="bg-muted/50 border-border flex flex-col gap-2 rounded-lg border p-3 sm:p-4"
-      aria-label={label}
-    >
-      <h3 className="font-semibold text-foreground text-sm">{label}</h3>
+    <section className="bg-muted border-border rounded-lg border p-4" aria-label={label}>
+      <h3 className="font-medium">{label}</h3>
       {records.length > 0 ? (
         <ul className="mt-3 flex flex-col gap-3 text-sm">
           {records.map((record, index) => (

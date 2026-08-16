@@ -287,7 +287,7 @@ export function InstitutionalOutcomesPage({
             if (!open) dismissReview();
           }}
         >
-          <AlertDialogContent className="flex max-h-[min(90dvh,42rem)] flex-col overflow-hidden sm:max-w-2xl">
+          <AlertDialogContent className="flex max-h-[min(90dvh,42rem)] flex-col sm:max-w-lg">
             <AlertDialogHeader className="shrink-0">
               <AlertDialogTitle>Confirm Institutional Outcome Change</AlertDialogTitle>
               <AlertDialogDescription>
@@ -427,11 +427,8 @@ function ReviewChange({ review }: { review: OutcomeWriteReview }) {
 
 function ReviewColumn({ label, value }: { label: string; value: unknown }) {
   return (
-    <section
-      className="bg-muted/50 border-border flex flex-col gap-2 rounded-lg border p-3 sm:p-4"
-      aria-label={label}
-    >
-      <h3 className="font-semibold text-foreground text-sm">{label}</h3>
+    <section className="bg-muted border-border rounded-lg border p-4" aria-label={label}>
+      <h3 className="font-medium">{label}</h3>
       <ReviewValue value={value} />
     </section>
   );
@@ -440,12 +437,12 @@ function ReviewColumn({ label, value }: { label: string; value: unknown }) {
 function ReviewValue({ value }: { value: unknown }) {
   if (Array.isArray(value)) return <ReviewList value={value} />;
   if (value && typeof value === "object") return <ReviewRecord value={value} />;
-  return <p className="text-muted-foreground mt-2 text-sm">No existing record.</p>;
+  return <p className="text-muted-foreground mt-3 text-sm">No existing record.</p>;
 }
 
 function ReviewList({ value }: { value: unknown[] }) {
   return (
-    <ol className="flex flex-col gap-2 text-sm">
+    <ol className="mt-3 flex flex-col gap-2 text-sm">
       {value.map((item, index) => (
         <ReviewListItem key={reviewItemKey(item, index)} item={item} index={index} />
       ))}
@@ -461,20 +458,16 @@ function reviewItemKey(item: unknown, index: number): string {
 function ReviewListItem({ item, index }: { item: unknown; index: number }) {
   const row = item as Record<string, unknown>;
   return (
-    <li className="bg-card border-border rounded-md border p-2.5 shadow-2xs">
-      <span className="font-medium text-foreground">{String(row.code ?? row.id ?? `Item ${index + 1}`)}</span>
+    <li className="border-border rounded-md border p-2">
+      <span className="font-medium">{String(row.code ?? row.id ?? `Item ${index + 1}`)}</span>
       {"description" in row && (
-        <p className="text-muted-foreground mt-1 text-xs sm:text-sm leading-relaxed break-words">
-          {String(row.description)}
-        </p>
+        <p className="text-muted-foreground mt-1">{String(row.description)}</p>
       )}
       {"order" in row && (
-        <p className="text-muted-foreground mt-1 text-xs">Display order: {String(row.order)}</p>
+        <p className="text-muted-foreground mt-1">Display order: {String(row.order)}</p>
       )}
       {"is_active" in row && (
-        <p className="text-muted-foreground mt-1 text-xs">
-          State: {row.is_active ? "Active" : "Archived"}
-        </p>
+        <p className="text-muted-foreground mt-1">State: {row.is_active ? "Active" : "Archived"}</p>
       )}
     </li>
   );
