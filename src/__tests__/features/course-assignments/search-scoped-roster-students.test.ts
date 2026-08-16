@@ -81,7 +81,7 @@ describe("searchScopedRosterStudents", () => {
         expect(item).not.toHaveProperty("student_id_number");
       }
     }
-    expect(JSON.stringify(result)).not.toMatch(/studentIdNumber|student_id_number|Student ID/i);
+    expect(JSON.stringify(result)).not.toMatch(/studentId|studentIdNumber|student_id_number|Student ID/i);
   });
 
   it("does not disclose candidates outside the shared server-authorized scope", async () => {
