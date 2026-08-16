@@ -61,6 +61,56 @@ describe("ProgramHeadSwitcher", () => {
     );
   });
 
+  it("drops program-scoped dynamic IDs when preserving a subroute", async () => {
+    pathnameMock.mockReturnValue(
+      "/program-head/programs/program-1/tools/4f0f4ec2-9c37-4d45-b0e6-6f5c1d4a2b8f/edit"
+    );
+    render(<ProgramHeadSwitcher programs={programs} />);
+    fireEvent.click(screen.getByRole("button", { name: "Switch program" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    const bsedLink = screen
+      .getAllByRole("menuitem")
+      .find((item) => item.textContent?.includes("BSED"));
+    // Template IDs are Program-scoped; fall back to the section base, not the ID route.
+    expect(bsedLink).toHaveAttribute("href", "/program-head/programs/program-2/tools");
+  });
+
+  it("preserves static subroutes that carry no Program-scoped IDs", async () => {
+    pathnameMock.mockReturnValue("/program-head/programs/program-1/outcomes/mapping");
+    render(<ProgramHeadSwitcher programs={programs} />);
+    fireEvent.click(screen.getByRole("button", { name: "Switch program" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    const bsedLink = screen
+      .getAllByRole("menuitem")
+      .find((item) => item.textContent?.includes("BSED"));
+    expect(bsedLink).toHaveAttribute("href", "/program-head/programs/program-2/outcomes/mapping");
+  });
+
+  it("falls back to the destination dashboard for unlisted subroutes", async () => {
+    pathnameMock.mockReturnValue(
+      "/program-head/programs/program-1/cilo-reviews/6e8bca99-4f4d-4c1a-9f7a-1c1b9e4f9b3c"
+    );
+    render(<ProgramHeadSwitcher programs={programs} />);
+    fireEvent.click(screen.getByRole("button", { name: "Switch program" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    const bsedLink = screen
+      .getAllByRole("menuitem")
+      .find((item) => item.textContent?.includes("BSED"));
+    expect(bsedLink).toHaveAttribute("href", "/program-head/programs/program-2/dashboard");
+  });
+
   it("renders in Topbar header when multi-program program head is active", () => {
     render(
       <AppearanceProvider enabled={false}>

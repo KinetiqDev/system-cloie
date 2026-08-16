@@ -30,6 +30,14 @@ interface ProgramHeadSwitcherProps {
   programs?: ProgramHeadProgram[];
 }
 
+/**
+ * Dynamic route params in Program Head routes (template, evaluation,
+ * response, and roster IDs) are scoped to the source Program. Preserving
+ * them across a Program switch would make the destination route fail its
+ * scope check, so any UUID-shaped segment falls back to the section base.
+ */
+const PROGRAM_SCOPED_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function resolveTargetHref(targetProgramId: string, currentPathname: string): string {
   const currentProgramId = getProgramHeadProgramIdFromPathname(currentPathname);
   if (!currentProgramId) {
@@ -37,18 +45,28 @@ function resolveTargetHref(targetProgramId: string, currentPathname: string): st
   }
 
   const basePath = `${PROGRAM_HEAD_ENTRY_PATH}/programs/${encodeURIComponent(currentProgramId)}`;
-  if (currentPathname.startsWith(basePath)) {
-    const subPath = currentPathname.slice(basePath.length).replace(/^\/+/, "");
-    // Check if subPath matches known child paths
-    const matchedItem = PROGRAM_HEAD_NAV.find(
-      (item) => item.programHeadChildPath && subPath.startsWith(item.programHeadChildPath)
-    );
-    if (matchedItem?.programHeadChildPath) {
-      return buildProgramHeadProgramPath(targetProgramId, subPath);
-    }
+  if (!currentPathname.startsWith(basePath)) {
+    return buildProgramHeadDashboardPath(targetProgramId);
   }
 
-  return buildProgramHeadDashboardPath(targetProgramId);
+  const subPath = currentPathname.slice(basePath.length).replace(/^\/+/, "");
+  const matchedItem = PROGRAM_HEAD_NAV.find(
+    (item) => item.programHeadChildPath && subPath.startsWith(item.programHeadChildPath)
+  );
+  if (!matchedItem?.programHeadChildPath) {
+    return buildProgramHeadDashboardPath(targetProgramId);
+  }
+
+  const remainder = subPath.slice(matchedItem.programHeadChildPath.length).replace(/^\/+/, "");
+  const carriesProgramScopedId = remainder
+    .split("/")
+    .filter(Boolean)
+    .some((segment) => PROGRAM_SCOPED_ID_PATTERN.test(segment));
+
+  return buildProgramHeadProgramPath(
+    targetProgramId,
+    carriesProgramScopedId ? matchedItem.programHeadChildPath : subPath
+  );
 }
 
 export function ProgramHeadSwitcher({ programs = [] }: ProgramHeadSwitcherProps) {
