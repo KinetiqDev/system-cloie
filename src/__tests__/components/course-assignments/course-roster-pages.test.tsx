@@ -311,6 +311,8 @@ describe("course roster pages", () => {
     expect(screen.getByRole("searchbox", { name: "Search students" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /include removed students/i })).not.toBeChecked();
     expect(screen.getByText(/course roster members and current eligibility/i)).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Student" })).toBeInTheDocument();
+    expect(screen.queryByText(/student id/i)).not.toBeInTheDocument();
   });
 
   it("renders safe error output without technical details", () => {
