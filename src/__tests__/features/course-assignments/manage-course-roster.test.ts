@@ -503,6 +503,10 @@ describe("confirmRosterResolution", () => {
       },
     });
     expect(prismaMock.courseAssignmentMembership.create).toHaveBeenCalledTimes(2);
+    const confirmationLog = consoleError.mock.calls.find(
+      ([message]) => message === "Course roster confirmation stopped unexpectedly"
+    );
+    expect(confirmationLog?.[1]).not.toHaveProperty("sourceIndex");
     consoleError.mockRestore();
   });
 

@@ -37,7 +37,7 @@
 
 - Invalid name values remain row-level `INVALID_NAME`; structural file failures reject before preview.
 - Preview source rows preserve original decoded text while comparison keys remain internal.
-- A stale matching-contract version fails confirmation before writes.
+- Live server revalidation of selected `User.id` values makes client contract-version tracking unnecessary.
 - Request-level roster read-only state prevents all writes; expected row-specific changes permit partial success.
 - Final results are not returned to editable reconciliation; a later attempt starts from a new upload/search.
 

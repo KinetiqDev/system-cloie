@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -12,7 +12,7 @@ Faculty receives official Course rosters as Student names, but System CLOIE curr
 
 Faculty-provided names are identity-resolution inputs, not durable identifiers. System CLOIE resolves names only within an authorized Course-assignment candidate scope, preserves ambiguity for human reconciliation, and confirms selected internal `User.id` values. Canonical account names are never overwritten, parsed into semantic parts, made unique, or persisted in normalized form. `CourseAssignmentMembership.student_user_id` remains the authoritative explicit Course roster and the only roster identity consumed by Course-bound evaluation publication.
 
-System CLOIE will no longer collect or store Student ID because no authoritative institutional source verifies Student-entered values. Existing values may be discarded. `StudentAcademicProfile` remains required and owns stable Program and applicable Major affiliation; `StudentEnrollment` remains active-period placement. Student ID removal uses a code-first compatibility release before a generated contract migration drops the column.
+System CLOIE will no longer collect or store Student ID because no authoritative institutional source verifies Student-entered values. Existing values were discarded. `StudentAcademicProfile` remains required and owns stable Program and applicable Major affiliation; `StudentEnrollment` remains active-period placement. Student ID removal used a code-first compatibility release before the generated contract migration dropped the column. After that drop, recovery is forward-only: a new compatible migration may restore service behavior, but the discarded column and historical migration history are not restored.
 
 Name resolution is preview-first. Parsing and candidate discovery perform no membership mutation. Unique strict-normalized matches may be prepared automatically; conservative middle-token, initial, punctuation, suffix, or diacritic differences are suggestions rather than identity proof; same-name and uncertain cases require Faculty reconciliation. Final writes reauthorize and revalidate current account, profile, placement, assignment scope, membership, and conflict state using internal identities.
 

@@ -157,7 +157,7 @@ No data is persistently or shared cached.
 - [Preview is lost on refresh] Accepted tradeoff: component-only state avoids disproportionate draft/token infrastructure; dirty-close warning prevents common accidental loss.
 - [Row-wise writes create partial success] Intentional and existing behavior; exact results and failed export make completion explicit.
 - [Application/schema skew during Student ID removal] Mitigation: two gated releases with code-first verification before generated `DROP COLUMN`.
-- [Matching rule changes while an old client is open] Mitigation: internal contract version rejects stale confirmation before writes.
+- [Matching rule changes while an old client is open] Mitigation: server revalidates every selected `User.id` against current scope and business state before writes; no client contract-version state exists.
 - [Large reconciliation UI on mobile] Mitigation: 100-row cap, filters, adaptive cards, scrollable Drawer body, persistent reachable actions.
 
 ## Migration Plan

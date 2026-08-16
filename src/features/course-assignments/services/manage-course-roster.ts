@@ -251,7 +251,6 @@ async function processConfirmationRows(
       operation: "confirm_roster_resolution",
       actorId: actorId ?? null,
       assignmentId: input.assignmentId,
-      sourceIndex: row.sourceIndex,
       referenceId,
     });
     for (const laterRow of input.rows.slice(index + 1)) {
