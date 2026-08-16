@@ -6,7 +6,7 @@ argument-hint: "Which issue/ticket number is the slice?"
 
 # Ship Slice
 
-Ship one vertical slice from ticket to merged `main`: orient, cut the branch, build, review loop, verify, ship. Run the steps in order; each step's `Done when` criterion is met before the next begins. A parent of many slices is `/slice-relay`.
+Ship one vertical slice from ticket to merged `main`: orient, cut the branch, build, verify, review loop, ship. Run the steps in order; each step's `Done when` criterion is met before the next begins. A parent of many slices is `/slice-relay`.
 
 ## 1. Orient the slice
 
@@ -32,15 +32,7 @@ Done when: the branch is checked out, based on the integration base that contain
 
 Done when: focused tests pass and changed files are typecheck and lint clean.
 
-## 4. Run the review loop
-
-- **Mandatory:** invoke `/code-review` with its code-reviewer subagents against `origin/main`; the primary workflow must not substitute a self-review. It runs Standards and Spec as parallel read-only subagents.
-- Accept or reject every finding. Accepted findings get fixed. Rejected ones must be out-of-slice per the parent's plan — record the rationale now; it ships in the PR body.
-- Material changes restart the loop. Repeat until a round reports no accepted findings.
-
-Done when: the last round is clean on both axes and every rejection rationale is written down.
-
-## 5. Verify
+## 4. Verify
 
 - `pnpm test`, `pnpm lint`, `pnpm build`.
 - Reproduce the CI fallow gate locally: `pnpm exec tsx scripts/run-fallow-audit.ts <base-sha>`; trace findings before fixing, fix only new findings in changed files.
@@ -49,6 +41,13 @@ Done when: the last round is clean on both axes and every rejection rationale is
 
 Done when: every command passes and migration preflight counts are recorded for the PR body.
 
+## 5. Run the review loop
+
+- **Mandatory:** invoke `/code-review` with its code-reviewer subagents against `origin/main`; the primary workflow must not substitute a self-review. It runs Standards and Spec as parallel read-only subagents.
+- Accept or reject every finding. Accepted findings get fixed. Rejected ones must be out-of-slice per the parent's plan — record the rationale now; it ships in the PR body.
+- Material changes restart verification, then the review loop. Repeat until a verified round reports no accepted findings.
+
+Done when: the last round is clean on both axes, all required verification has passed after the last accepted change, and every rejection rationale is written down.
 ## 6. Ship
 
 - Commit the logical groups from step 3 with conventional messages (`/git-commit`).
