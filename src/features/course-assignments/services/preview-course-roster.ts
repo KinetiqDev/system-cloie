@@ -64,17 +64,42 @@ export async function previewCourseRoster(
     const scoped = await loadScopedRosterCandidates(input.assignmentId, input.programId);
     if (!scoped.success) return scoped;
     const { assignment, candidates } = scoped.data;
-    const selectable = candidates.filter((candidate) => candidate.selectable);
-    const diagnostics = candidates.filter((candidate) => !candidate.selectable);
-    const studentIds = candidates.map((candidate) => candidate.userId);
     const [memberships, conflicts] = await Promise.all([
       prisma.courseAssignmentMembership.findMany({
-        where: { course_assignment_id: assignment.assignmentId, student_user_id: { in: studentIds } },
-        select: { student_user_id: true, is_active: true, removed_at: true },
+        where: { course_assignment_id: assignment.assignmentId },
+        select: {
+          student_user_id: true,
+          is_active: true,
+          removed_at: true,
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              student_profile: {
+                select: {
+                  program_id: true,
+                  program: { select: { code: true, name: true } },
+                  major: { select: { name: true } },
+                },
+              },
+              enrollments: {
+                where: { term_instance_id: assignment.termInstanceId, is_active: true },
+                select: {
+                  program_id: true,
+                  year_level: true,
+                  section: true,
+                  program: { select: { code: true, name: true } },
+                  major: { select: { name: true } },
+                },
+              },
+            },
+          },
+        },
       }),
       prisma.courseAssignmentMembership.findMany({
         where: {
-          student_user_id: { in: studentIds },
+          student_user_id: { in: candidates.map((candidate) => candidate.userId) },
           course_id: assignment.courseId,
           term_instance_id: assignment.termInstanceId,
           program_id: assignment.programId,
@@ -84,12 +109,32 @@ export async function previewCourseRoster(
         select: { student_user_id: true },
       }),
     ]);
-
     const membershipByStudentId = new Map(
       memberships.map((membership) => [membership.student_user_id, membership])
     );
+    const existingMemberCandidates = memberships.map((membership) => ({
+      userId: membership.student.id,
+      name: membership.student.name,
+      email: membership.student.email,
+      programId: membership.student.student_profile?.program_id ?? "",
+      programCode: membership.student.enrollments[0]?.program?.code ?? membership.student.student_profile?.program?.code ?? null,
+      programName: membership.student.enrollments[0]?.program?.name ?? membership.student.student_profile?.program?.name ?? null,
+      yearLevel: membership.student.enrollments[0]?.year_level ?? null,
+      section: membership.student.enrollments[0]?.section ?? null,
+      majorName: membership.student.enrollments[0]?.major?.name ?? membership.student.student_profile?.major?.name ?? null,
+      selectable: false,
+      reason: null,
+    }));
+    const candidatesByStudentId = new Map(
+      [...candidates, ...existingMemberCandidates].map((candidate) => [candidate.userId, candidate])
+    );
+    const selectable = candidates.filter((candidate) => candidate.selectable);
+    const diagnostics = candidates.filter((candidate) => !candidate.selectable);
+    const existingMemberNameCandidates: RosterNameCandidate[] = existingMemberCandidates.map((candidate) => ({
+      id: candidate.userId,
+      name: candidate.name,
+    }));
     const conflictingStudentIds = new Set(conflicts.map((conflict) => conflict.student_user_id));
-
     const selectableCandidates: RosterNameCandidate[] = selectable.map((student) => ({
       id: student.userId,
       name: student.name,
@@ -98,6 +143,7 @@ export async function previewCourseRoster(
       id: student.userId,
       name: student.name,
     }));
+    const resolvedStudentIds = new Set<string>();
     const rows: CourseRosterPreviewRow[] = input.rows.map((row) => {
       if (row.status === "INVALID_NAME") {
         return {
@@ -106,6 +152,35 @@ export async function previewCourseRoster(
           resolution: { status: "INVALID_NAME" as const, reason: "INVALID" as const, candidateIds: [] },
           disposition: null,
           candidates: [] as CourseRosterPreviewCandidate[],
+        };
+      }
+
+      const existingMemberMatch = matchRosterName(row.submittedName, existingMemberNameCandidates);
+      if (
+        existingMemberMatch.status === "EXACT_MATCH" ||
+        existingMemberMatch.status === "SUGGESTED_MATCH"
+      ) {
+        const candidateId = existingMemberMatch.matchedIds[0];
+        if (resolvedStudentIds.has(candidateId)) {
+          return {
+            sourceIndex: row.sourceIndex,
+            submittedName: row.submittedName,
+            resolution: {
+              status: "DUPLICATE_MATCH" as const,
+              reason: "DUPLICATE_IDENTITY" as const,
+              candidateIds: [candidateId],
+            },
+            disposition: null,
+            candidates: [toPreviewCandidate(candidateId)],
+          };
+        }
+        resolvedStudentIds.add(candidateId);
+        return {
+          sourceIndex: row.sourceIndex,
+          submittedName: row.submittedName,
+          resolution: toResolution(existingMemberMatch),
+          disposition: dispositionFor(candidateId),
+          candidates: [toPreviewCandidate(candidateId)],
         };
       }
 
@@ -131,9 +206,27 @@ export async function previewCourseRoster(
 
       const resolution = toResolution(match);
       const candidateId = match.matchedIds[0];
+      if (
+        (match.status === "EXACT_MATCH" || match.status === "SUGGESTED_MATCH") &&
+        resolvedStudentIds.has(candidateId)
+      ) {
+        return {
+          sourceIndex: row.sourceIndex,
+          submittedName: row.submittedName,
+          resolution: {
+            status: "DUPLICATE_MATCH" as const,
+            reason: "DUPLICATE_IDENTITY" as const,
+            candidateIds: [candidateId],
+          },
+          disposition: null,
+          candidates: [toPreviewCandidate(candidateId)],
+        };
+      }
+      if (match.status === "EXACT_MATCH" || match.status === "SUGGESTED_MATCH") {
+        resolvedStudentIds.add(candidateId);
+      }
       const disposition: CourseRosterPreviewDisposition | null =
         match.status === "AMBIGUOUS" ? null : dispositionFor(candidateId);
-
 
       return {
         sourceIndex: row.sourceIndex,
@@ -155,6 +248,7 @@ export async function previewCourseRoster(
         (row) =>
           row.resolution.status === "SUGGESTED_MATCH" ||
           row.resolution.status === "AMBIGUOUS" ||
+          row.resolution.status === "DUPLICATE_MATCH" ||
           row.resolution.status === "NO_MATCH" ||
           row.resolution.status === "INVALID_NAME"
       ).length,
@@ -167,7 +261,7 @@ export async function previewCourseRoster(
     return { success: true, data: { assignmentId: assignment.assignmentId, rows, summary } };
 
     function toPreviewCandidate(studentId: string): CourseRosterPreviewCandidate {
-      const student = candidates.find((candidate) => candidate.userId === studentId);
+      const student = candidatesByStudentId.get(studentId);
       if (!student) {
         return {
           userId: studentId,

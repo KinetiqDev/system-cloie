@@ -107,18 +107,22 @@ export async function loadScopedRosterCandidates(
     },
   });
 
+  // A program-specific roster manager may diagnose ineligible accounts only
+  // inside the assignment's academic neighborhood. Program-mismatched accounts
+  // are neither selectable nor safe to disclose through preview or search.
+  const candidates = students
+    .map((student) => {
+      const eligibility = projectRosterEligibility(
+        { courseScope: assignment.courseScope, programId: assignment.programId },
+        student as RosterEligibilityStudent
+      );
+      const placement = student.enrollments[0];
+      return toScopedCandidate(student, eligibility, placement);
+    })
+    .filter((candidate) => candidate.reason !== "PROGRAM_MISMATCH");
+
   return {
     success: true,
-    data: {
-      assignment,
-      candidates: students.map((student) => {
-        const eligibility = projectRosterEligibility(
-          { courseScope: assignment.courseScope, programId: assignment.programId },
-          student as RosterEligibilityStudent
-        );
-        const placement = student.enrollments[0];
-        return toScopedCandidate(student, eligibility, placement);
-      }),
-    },
+    data: { assignment, candidates },
   };
 }
