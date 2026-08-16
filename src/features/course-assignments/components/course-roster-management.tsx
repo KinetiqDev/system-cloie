@@ -151,6 +151,8 @@ function resolutionBadge(resolution: CourseRosterPreviewResolution) {
       return <Badge variant="warning">Suggested match</Badge>;
     case "AMBIGUOUS":
       return <Badge variant="warning">Ambiguous</Badge>;
+    case "DUPLICATE_MATCH":
+      return <Badge variant="warning">Duplicate match</Badge>;
     case "NO_MATCH":
       return <Badge variant="secondary">No match</Badge>;
     case "INVALID_NAME":

@@ -217,6 +217,7 @@ export type CourseRosterPreviewResolution =
       candidateIds: string[];
     }
   | { status: "AMBIGUOUS"; reason: "EQUAL_TIER"; candidateIds: string[] }
+  | { status: "DUPLICATE_MATCH"; reason: "DUPLICATE_IDENTITY"; candidateIds: string[] }
   | { status: "NO_MATCH"; reason: "NO_EVIDENCE"; candidateIds: [] }
   | { status: "INVALID_NAME"; reason: "INVALID"; candidateIds: [] };
 
