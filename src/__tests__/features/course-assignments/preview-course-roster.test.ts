@@ -282,6 +282,36 @@ describe("previewCourseRoster service", () => {
     }
   });
 
+  it("reports an existing member without a current placement as ALREADY_ACTIVE", async () => {
+    const memberWithoutPlacement = {
+      ...student("student-1", "Unplaced Member", "program-1"),
+      enrollments: [],
+    };
+    vi.mocked(prisma.courseAssignmentMembership.findMany)
+      .mockResolvedValueOnce([
+        {
+          student_user_id: "student-1",
+          is_active: true,
+          removed_at: null,
+          student: memberWithoutPlacement,
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [{ sourceIndex: 0, submittedName: "Unplaced Member", status: "VALID" }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]).toMatchObject({
+        resolution: { status: "EXACT_MATCH", candidateIds: ["student-1"] },
+        disposition: "ALREADY_ACTIVE",
+      });
+    }
+  });
+
   it("marks repeated exact matches as needing review instead of promising a second create", async () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Repeated Student", "program-1"),
@@ -308,6 +338,126 @@ describe("previewCourseRoster service", () => {
       expect(result.data.summary).toMatchObject({ readyToCreate: 1, needsReview: 1 });
     }
   });
+
+  it("does not disclose a program-mismatched existing member", async () => {
+    vi.mocked(prisma.courseAssignmentMembership.findMany)
+      .mockResolvedValueOnce([
+        {
+          student_user_id: "student-2",
+          is_active: true,
+          removed_at: null,
+          student: student("student-2", "Andy Egut", "program-2"),
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      programId: "program-1",
+      rows: [{ sourceIndex: 0, submittedName: "Andy Egut", status: "VALID" }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]).toEqual({
+        sourceIndex: 0,
+        submittedName: "Andy Egut",
+        resolution: { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] },
+        disposition: null,
+        candidates: [],
+      });
+    }
+  });
+
+  it("prefers an exact eligible match over a suggested existing member", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      student("student-1", "Andy Egut", "program-1"),
+    ] as never);
+    vi.mocked(prisma.courseAssignmentMembership.findMany)
+      .mockResolvedValueOnce([
+        {
+          student_user_id: "student-2",
+          is_active: true,
+          removed_at: null,
+          student: student("student-2", "Andy Egut Jr", "program-1"),
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [{ sourceIndex: 0, submittedName: "Andy Egut", status: "VALID" }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]).toMatchObject({
+        resolution: { status: "EXACT_MATCH", candidateIds: ["student-1"] },
+        disposition: "READY_CREATE",
+      });
+    }
+  });
+
+  it("keeps an existing member and a same-name eligible Student ambiguous", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      student("student-1", "Andy Egut", "program-1"),
+    ] as never);
+    vi.mocked(prisma.courseAssignmentMembership.findMany)
+      .mockResolvedValueOnce([
+        {
+          student_user_id: "student-2",
+          is_active: true,
+          removed_at: null,
+          student: student("student-2", "Andy Egut", "program-1"),
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [{ sourceIndex: 0, submittedName: "Andy Egut", status: "VALID" }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]?.resolution).toMatchObject({
+        status: "AMBIGUOUS",
+        reason: "EQUAL_TIER",
+      });
+      expect(result.data.rows[0]?.resolution.candidateIds).toEqual(
+        expect.arrayContaining(["student-1", "student-2"])
+      );
+      expect(result.data.rows[0]?.disposition).toBeNull();
+    }
+  });
+
+  it("lets a later exact match keep the identity claimed by an earlier suggestion", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      student("student-1", "Maria Therese Reyes", "program-1"),
+    ] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [
+        { sourceIndex: 0, submittedName: "MARIA THERESE ANN GONZALES REYES", status: "VALID" },
+        { sourceIndex: 1, submittedName: "Maria Therese Reyes", status: "VALID" },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]).toMatchObject({
+        resolution: { status: "DUPLICATE_MATCH", reason: "DUPLICATE_IDENTITY", candidateIds: ["student-1"] },
+        disposition: null,
+      });
+      expect(result.data.rows[1]).toMatchObject({
+        resolution: { status: "EXACT_MATCH", candidateIds: ["student-1"] },
+        disposition: "READY_CREATE",
+      });
+      expect(result.data.summary).toMatchObject({ readyToCreate: 1, needsReview: 1 });
+    }
+  });
+
   it("accepts any active placement for a General Education assignment", async () => {
 
     vi.mocked(rosterModule.resolveAuthorizedCourseAssignmentRoster).mockResolvedValue({

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { CourseScope } from "@prisma/client";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { prisma } from "@/lib/db/prisma";
@@ -11,11 +12,36 @@ import type {
   CourseRosterPreviewResolution,
   CourseRosterPreviewRow,
   RosterServiceResult,
+  ScopedRosterCandidate,
 } from "../types";
-import { matchRosterName, type RosterNameCandidate } from "./course-roster-name-match";
+import { matchRosterName, type RosterNameCandidate, type RosterNameMatch } from "./course-roster-name-match";
 import { loadScopedRosterCandidates } from "./course-roster-candidate-scope";
 
 const SAFE_FAILURE_ERROR = "The roster preview could not be completed.";
+
+type ExistingMemberStudent = {
+  id: string;
+  name: string;
+  email: string;
+  student_profile: {
+    program_id: string | null;
+    program: { code: string; name: string } | null;
+    major: { name: string } | null;
+  } | null;
+  enrollments: Array<{
+    program_id: string;
+    year_level: string | null;
+    section: string | null;
+    program: { code: string; name: string } | null;
+    major: { name: string } | null;
+  }>;
+};
+
+type AssignmentScope = {
+  courseScope: CourseScope;
+  programId: string;
+};
+
 function previewFailure(
   operation: string,
   actorId: string | undefined,
@@ -41,6 +67,146 @@ function previewFailure(
     error: errorDetails,
   });
   return { success: false, error: SAFE_FAILURE_ERROR, referenceId };
+}
+
+function isProgramMismatchedMember(assignment: AssignmentScope, student: ExistingMemberStudent) {
+  if (assignment.courseScope !== CourseScope.PROGRAM_SPECIFIC) return false;
+  const profileProgramId = student.student_profile?.program_id;
+  const placementProgramId = student.enrollments[0]?.program_id;
+  if (profileProgramId && profileProgramId !== assignment.programId) return true;
+  if (placementProgramId && placementProgramId !== assignment.programId) return true;
+  return false;
+}
+
+function toExistingMemberCandidate(student: ExistingMemberStudent): CourseRosterPreviewCandidate {
+  const placement = student.enrollments[0] ?? {
+    program_id: "",
+    year_level: null,
+    section: null,
+    program: null,
+    major: null,
+  };
+  const profile = student.student_profile ?? {
+    program_id: "",
+    program: null,
+    major: null,
+  };
+  const program = placement.program ?? profile.program;
+  const major = placement.major ?? profile.major;
+  return {
+    userId: student.id,
+    name: student.name,
+    email: student.email,
+    programId: profile.program_id ?? "",
+    programCode: program ? program.code : null,
+    programName: program ? program.name : null,
+    yearLevel: placement.year_level,
+    section: placement.section,
+    majorName: major ? major.name : null,
+    selectable: false,
+    reason: null,
+  };
+}
+
+function toNameCandidate(candidate: { userId: string; name: string }): RosterNameCandidate {
+  return { id: candidate.userId, name: candidate.name };
+}
+
+function matchStrength(status: RosterNameMatch["status"]) {
+  if (status === "EXACT_MATCH") return 2;
+  if (status === "SUGGESTED_MATCH") return 1;
+  return 0;
+}
+
+function toResolution(match: RosterNameMatch): CourseRosterPreviewResolution {
+  switch (match.status) {
+    case "EXACT_MATCH":
+      return { status: "EXACT_MATCH", reason: "EXACT", candidateIds: match.matchedIds };
+    case "SUGGESTED_MATCH":
+      return {
+        status: "SUGGESTED_MATCH",
+        reason: match.reason as Extract<CourseRosterPreviewResolution, { status: "SUGGESTED_MATCH" }>["reason"],
+        candidateIds: match.matchedIds,
+      };
+    case "AMBIGUOUS":
+      return { status: "AMBIGUOUS", reason: "EQUAL_TIER", candidateIds: match.matchedIds };
+    case "NO_MATCH":
+      return { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] };
+  }
+}
+
+function emptyPreviewCandidate(studentId: string): CourseRosterPreviewCandidate {
+  return {
+    userId: studentId,
+    name: "",
+    email: "",
+    programId: "",
+    programCode: null,
+    programName: null,
+    yearLevel: null,
+    section: null,
+    majorName: null,
+    selectable: false,
+    reason: null,
+  };
+}
+
+function previewRow(
+  sourceIndex: number,
+  submittedName: string,
+  resolution: CourseRosterPreviewResolution,
+  disposition: CourseRosterPreviewDisposition | null,
+  candidates: CourseRosterPreviewCandidate[]
+): CourseRosterPreviewRow {
+  return { sourceIndex, submittedName, resolution, disposition, candidates };
+}
+
+function chooseIdentityMatch(existingMatch: RosterNameMatch, selectableMatch: RosterNameMatch) {
+  const existingStrength = matchStrength(existingMatch.status);
+  const selectableStrength = matchStrength(selectableMatch.status);
+  if (existingStrength > 0 && selectableStrength > 0) {
+    const existingId = existingMatch.matchedIds[0];
+    const selectableId = selectableMatch.matchedIds[0];
+    if (existingId === selectableId) return existingMatch;
+    if (existingStrength === selectableStrength) {
+      return {
+        status: "AMBIGUOUS" as const,
+        reason: "EQUAL_TIER" as const,
+        matchedIds: [...new Set([...existingMatch.matchedIds, ...selectableMatch.matchedIds])],
+      };
+    }
+    return selectableStrength > existingStrength ? selectableMatch : existingMatch;
+  }
+  if (existingMatch.status === "AMBIGUOUS") return existingMatch;
+  if (selectableMatch.status === "AMBIGUOUS") return selectableMatch;
+  if (existingStrength > 0) return existingMatch;
+  return selectableMatch;
+}
+
+function reserveResolvedIdentities(rows: CourseRosterPreviewRow[]): CourseRosterPreviewRow[] {
+  const reserved = new Set<string>();
+  const claim = (row: CourseRosterPreviewRow): CourseRosterPreviewRow => {
+    const candidateId = row.resolution.candidateIds[0];
+    if (!candidateId) return row;
+    if (reserved.has(candidateId)) {
+      return previewRow(
+        row.sourceIndex,
+        row.submittedName,
+        { status: "DUPLICATE_MATCH", reason: "DUPLICATE_IDENTITY", candidateIds: [candidateId] },
+        null,
+        row.candidates
+      );
+    }
+    reserved.add(candidateId);
+    return row;
+  };
+
+  const withExactClaims = rows.map((row) =>
+    row.resolution.status === "EXACT_MATCH" ? claim(row) : row
+  );
+  return withExactClaims.map((row) =>
+    row.resolution.status === "SUGGESTED_MATCH" ? claim(row) : row
+  );
 }
 
 /**
@@ -112,133 +278,21 @@ export async function previewCourseRoster(
     const membershipByStudentId = new Map(
       memberships.map((membership) => [membership.student_user_id, membership])
     );
-    const existingMemberCandidates = memberships.map((membership) => ({
-      userId: membership.student.id,
-      name: membership.student.name,
-      email: membership.student.email,
-      programId: membership.student.student_profile?.program_id ?? "",
-      programCode: membership.student.enrollments[0]?.program?.code ?? membership.student.student_profile?.program?.code ?? null,
-      programName: membership.student.enrollments[0]?.program?.name ?? membership.student.student_profile?.program?.name ?? null,
-      yearLevel: membership.student.enrollments[0]?.year_level ?? null,
-      section: membership.student.enrollments[0]?.section ?? null,
-      majorName: membership.student.enrollments[0]?.major?.name ?? membership.student.student_profile?.major?.name ?? null,
-      selectable: false,
-      reason: null,
-    }));
-    const candidatesByStudentId = new Map(
+    const existingMemberCandidates = memberships
+      .filter((membership) => !isProgramMismatchedMember(assignment, membership.student))
+      .map((membership) => toExistingMemberCandidate(membership.student));
+    const candidatesByStudentId = new Map<string, CourseRosterPreviewCandidate | ScopedRosterCandidate>(
       [...candidates, ...existingMemberCandidates].map((candidate) => [candidate.userId, candidate])
     );
     const selectable = candidates.filter((candidate) => candidate.selectable);
     const diagnostics = candidates.filter((candidate) => !candidate.selectable);
-    const existingMemberNameCandidates: RosterNameCandidate[] = existingMemberCandidates.map((candidate) => ({
-      id: candidate.userId,
-      name: candidate.name,
-    }));
+    const existingMemberNameCandidates = existingMemberCandidates.map(toNameCandidate);
     const conflictingStudentIds = new Set(conflicts.map((conflict) => conflict.student_user_id));
-    const selectableCandidates: RosterNameCandidate[] = selectable.map((student) => ({
-      id: student.userId,
-      name: student.name,
-    }));
-    const diagnosticCandidates: RosterNameCandidate[] = diagnostics.map((student) => ({
-      id: student.userId,
-      name: student.name,
-    }));
-    const resolvedStudentIds = new Set<string>();
-    const rows: CourseRosterPreviewRow[] = input.rows.map((row) => {
-      if (row.status === "INVALID_NAME") {
-        return {
-          sourceIndex: row.sourceIndex,
-          submittedName: row.submittedName,
-          resolution: { status: "INVALID_NAME" as const, reason: "INVALID" as const, candidateIds: [] },
-          disposition: null,
-          candidates: [] as CourseRosterPreviewCandidate[],
-        };
-      }
+    const selectableCandidates = selectable.map(toNameCandidate);
+    const diagnosticCandidates = diagnostics.map(toNameCandidate);
 
-      const existingMemberMatch = matchRosterName(row.submittedName, existingMemberNameCandidates);
-      if (
-        existingMemberMatch.status === "EXACT_MATCH" ||
-        existingMemberMatch.status === "SUGGESTED_MATCH"
-      ) {
-        const candidateId = existingMemberMatch.matchedIds[0];
-        if (resolvedStudentIds.has(candidateId)) {
-          return {
-            sourceIndex: row.sourceIndex,
-            submittedName: row.submittedName,
-            resolution: {
-              status: "DUPLICATE_MATCH" as const,
-              reason: "DUPLICATE_IDENTITY" as const,
-              candidateIds: [candidateId],
-            },
-            disposition: null,
-            candidates: [toPreviewCandidate(candidateId)],
-          };
-        }
-        resolvedStudentIds.add(candidateId);
-        return {
-          sourceIndex: row.sourceIndex,
-          submittedName: row.submittedName,
-          resolution: toResolution(existingMemberMatch),
-          disposition: dispositionFor(candidateId),
-          candidates: [toPreviewCandidate(candidateId)],
-        };
-      }
-
-      const match = matchRosterName(row.submittedName, selectableCandidates);
-      if (match.status === "NO_MATCH") {
-        const diagnosticMatch = matchRosterName(row.submittedName, diagnosticCandidates);
-        const diagnosticsForRow =
-          diagnosticMatch.status === "EXACT_MATCH" || diagnosticMatch.status === "SUGGESTED_MATCH"
-            ? diagnosticMatch.matchedIds.map((id) => toPreviewCandidate(id))
-            : [];
-        return {
-          sourceIndex: row.sourceIndex,
-          submittedName: row.submittedName,
-          resolution: {
-            status: "NO_MATCH" as const,
-            reason: "NO_EVIDENCE" as const,
-            candidateIds: [],
-          },
-          disposition: null,
-          candidates: diagnosticsForRow,
-        };
-      }
-
-      const resolution = toResolution(match);
-      const candidateId = match.matchedIds[0];
-      if (
-        (match.status === "EXACT_MATCH" || match.status === "SUGGESTED_MATCH") &&
-        resolvedStudentIds.has(candidateId)
-      ) {
-        return {
-          sourceIndex: row.sourceIndex,
-          submittedName: row.submittedName,
-          resolution: {
-            status: "DUPLICATE_MATCH" as const,
-            reason: "DUPLICATE_IDENTITY" as const,
-            candidateIds: [candidateId],
-          },
-          disposition: null,
-          candidates: [toPreviewCandidate(candidateId)],
-        };
-      }
-      if (match.status === "EXACT_MATCH" || match.status === "SUGGESTED_MATCH") {
-        resolvedStudentIds.add(candidateId);
-      }
-      const disposition: CourseRosterPreviewDisposition | null =
-        match.status === "AMBIGUOUS" ? null : dispositionFor(candidateId);
-
-      return {
-        sourceIndex: row.sourceIndex,
-        submittedName: row.submittedName,
-        resolution,
-        disposition,
-        candidates:
-          match.status === "AMBIGUOUS"
-            ? match.matchedIds.map((id) => toPreviewCandidate(id))
-            : [toPreviewCandidate(candidateId)],
-      };
-    });
+    const classifiedRows = input.rows.map((row) => classifyPreviewRow(row));
+    const rows = reserveResolvedIdentities(classifiedRows);
 
     const summary = {
       readyToCreate: rows.filter((row) => row.disposition === "READY_CREATE").length,
@@ -262,21 +316,7 @@ export async function previewCourseRoster(
 
     function toPreviewCandidate(studentId: string): CourseRosterPreviewCandidate {
       const student = candidatesByStudentId.get(studentId);
-      if (!student) {
-        return {
-          userId: studentId,
-          name: "",
-          email: "",
-          programId: "",
-          programCode: null,
-          programName: null,
-          yearLevel: null,
-          section: null,
-          majorName: null,
-          selectable: false,
-          reason: null,
-        };
-      }
+      if (!student) return emptyPreviewCandidate(studentId);
       return {
         userId: student.userId,
         name: student.name,
@@ -300,23 +340,53 @@ export async function previewCourseRoster(
       return "READY_CREATE";
     }
 
-    function toResolution(
-      match: ReturnType<typeof matchRosterName>
-    ): CourseRosterPreviewResolution {
-      switch (match.status) {
-        case "EXACT_MATCH":
-          return { status: "EXACT_MATCH", reason: "EXACT", candidateIds: match.matchedIds };
-        case "SUGGESTED_MATCH":
-          return {
-            status: "SUGGESTED_MATCH",
-            reason: match.reason as Extract<CourseRosterPreviewResolution, { status: "SUGGESTED_MATCH" }>["reason"],
-            candidateIds: match.matchedIds,
-          };
-        case "AMBIGUOUS":
-          return { status: "AMBIGUOUS", reason: "EQUAL_TIER", candidateIds: match.matchedIds };
-        case "NO_MATCH":
-          return { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] };
+    function classifyPreviewRow(row: PreviewCourseRosterInput["rows"][number]): CourseRosterPreviewRow {
+      if (row.status === "INVALID_NAME") {
+        return previewRow(
+          row.sourceIndex,
+          row.submittedName,
+          { status: "INVALID_NAME", reason: "INVALID", candidateIds: [] },
+          null,
+          []
+        );
       }
+
+      const chosen = chooseIdentityMatch(
+        matchRosterName(row.submittedName, existingMemberNameCandidates),
+        matchRosterName(row.submittedName, selectableCandidates)
+      );
+      if (chosen.status === "NO_MATCH") {
+        const diagnosticMatch = matchRosterName(row.submittedName, diagnosticCandidates);
+        const diagnosticsForRow =
+          matchStrength(diagnosticMatch.status) > 0
+            ? diagnosticMatch.matchedIds.map((id) => toPreviewCandidate(id))
+            : [];
+        return previewRow(
+          row.sourceIndex,
+          row.submittedName,
+          { status: "NO_MATCH", reason: "NO_EVIDENCE", candidateIds: [] },
+          null,
+          diagnosticsForRow
+        );
+      }
+      if (chosen.status === "AMBIGUOUS") {
+        return previewRow(
+          row.sourceIndex,
+          row.submittedName,
+          toResolution(chosen),
+          null,
+          chosen.matchedIds.map((id) => toPreviewCandidate(id))
+        );
+      }
+
+      const candidateId = chosen.matchedIds[0];
+      return previewRow(
+        row.sourceIndex,
+        row.submittedName,
+        toResolution(chosen),
+        dispositionFor(candidateId),
+        [toPreviewCandidate(candidateId)]
+      );
     }
   } catch (error) {
     return previewFailure("preview_course_roster", actorId, input.assignmentId, error);
