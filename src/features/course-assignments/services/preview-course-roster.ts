@@ -161,25 +161,26 @@ function previewRow(
   return { sourceIndex, submittedName, resolution, disposition, candidates };
 }
 
-function chooseIdentityMatch(existingMatch: RosterNameMatch, selectableMatch: RosterNameMatch) {
-  const existingStrength = matchStrength(existingMatch.status);
-  const selectableStrength = matchStrength(selectableMatch.status);
-  if (existingStrength > 0 && selectableStrength > 0) {
-    const existingId = existingMatch.matchedIds[0];
-    const selectableId = selectableMatch.matchedIds[0];
-    if (existingId === selectableId) return existingMatch;
-    if (existingStrength === selectableStrength) {
-      return {
-        status: "AMBIGUOUS" as const,
-        reason: "EQUAL_TIER" as const,
-        matchedIds: [...new Set([...existingMatch.matchedIds, ...selectableMatch.matchedIds])],
-      };
-    }
-    return selectableStrength > existingStrength ? selectableMatch : existingMatch;
+function compareUniqueMatches(existingMatch: RosterNameMatch, selectableMatch: RosterNameMatch) {
+  if (existingMatch.matchedIds[0] === selectableMatch.matchedIds[0]) return existingMatch;
+  if (matchStrength(existingMatch.status) !== matchStrength(selectableMatch.status)) {
+    return matchStrength(selectableMatch.status) > matchStrength(existingMatch.status)
+      ? selectableMatch
+      : existingMatch;
   }
-  if (existingMatch.status === "AMBIGUOUS") return existingMatch;
-  if (selectableMatch.status === "AMBIGUOUS") return selectableMatch;
-  if (existingStrength > 0) return existingMatch;
+  return {
+    status: "AMBIGUOUS" as const,
+    reason: "EQUAL_TIER" as const,
+    matchedIds: [...new Set([...existingMatch.matchedIds, ...selectableMatch.matchedIds])],
+  };
+}
+
+function chooseIdentityMatch(existingMatch: RosterNameMatch, selectableMatch: RosterNameMatch) {
+  if (matchStrength(existingMatch.status) > 0 && matchStrength(selectableMatch.status) > 0) {
+    return compareUniqueMatches(existingMatch, selectableMatch);
+  }
+  if (matchStrength(selectableMatch.status) === 2) return selectableMatch;
+  if (existingMatch.status !== "NO_MATCH") return existingMatch;
   return selectableMatch;
 }
 
@@ -232,7 +233,27 @@ export async function previewCourseRoster(
     const { assignment, candidates } = scoped.data;
     const [memberships, conflicts] = await Promise.all([
       prisma.courseAssignmentMembership.findMany({
-        where: { course_assignment_id: assignment.assignmentId },
+        where: {
+          course_assignment_id: assignment.assignmentId,
+          ...(assignment.courseScope === CourseScope.PROGRAM_SPECIFIC
+            ? {
+                student: {
+                  OR: [
+                    { student_profile: { is: { program_id: assignment.programId } } },
+                    {
+                      enrollments: {
+                        some: {
+                          term_instance_id: assignment.termInstanceId,
+                          is_active: true,
+                          program_id: assignment.programId,
+                        },
+                      },
+                    },
+                  ],
+                },
+              }
+            : {}),
+        },
         select: {
           student_user_id: true,
           is_active: true,

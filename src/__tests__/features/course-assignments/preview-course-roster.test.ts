@@ -398,6 +398,41 @@ describe("previewCourseRoster service", () => {
     }
   });
 
+  it("prefers an exact eligible Student over ambiguous existing-member suggestions", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      student("student-1", "Maria Therese Reyes", "program-1"),
+    ] as never);
+    vi.mocked(prisma.courseAssignmentMembership.findMany)
+      .mockResolvedValueOnce([
+        {
+          student_user_id: "student-2",
+          is_active: true,
+          removed_at: null,
+          student: student("student-2", "Maria Therese Ann Reyes", "program-1"),
+        },
+        {
+          student_user_id: "student-3",
+          is_active: true,
+          removed_at: null,
+          student: student("student-3", "Maria Therese Gonzales Reyes", "program-1"),
+        },
+      ] as never)
+      .mockResolvedValueOnce([] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [{ sourceIndex: 0, submittedName: "Maria Therese Reyes", status: "VALID" }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]).toMatchObject({
+        resolution: { status: "EXACT_MATCH", candidateIds: ["student-1"] },
+        disposition: "READY_CREATE",
+      });
+    }
+  });
+
   it("keeps an existing member and a same-name eligible Student ambiguous", async () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       student("student-1", "Andy Egut", "program-1"),
