@@ -47,6 +47,7 @@ function rankCandidate(candidate: ScopedRosterCandidate, query: string) {
     name === query ? 0 : tokens.some((token) => token.startsWith(query)) ? 1 : 2,
     position,
     name,
+    candidate.userId,
   ] as const;
 }
 

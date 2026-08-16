@@ -84,6 +84,34 @@ describe("searchScopedRosterStudents", () => {
     expect(JSON.stringify(result)).not.toMatch(/studentId|studentIdNumber|student_id_number|Student ID/i);
   });
 
+  it("returns the same ten tied candidates regardless of loader order", async () => {
+    const tied = Array.from({ length: 12 }, (_, index) =>
+      candidate(`student-${String(index + 1).padStart(2, "0")}`, "JOSÉ ÁLVAREZ")
+    );
+    const { searchScopedRosterStudents } = await import(
+      "@/features/course-assignments/services/search-scoped-roster-students"
+    );
+
+    async function search(candidates: ScopedRosterCandidate[]) {
+      loadScopedRosterCandidatesMock.mockResolvedValue({
+        success: true,
+        data: { assignment: { assignmentId: "assignment-1" }, candidates },
+      });
+      return searchScopedRosterStudents("assignment-1", "josé");
+    }
+
+    const forward = await search(tied);
+    const reverse = await search([...tied].reverse());
+    const expected = tied.slice(0, 10).map((item) => item.userId);
+
+    expect(forward).toMatchObject({ success: true });
+    expect(reverse).toMatchObject({ success: true });
+    if (forward.success && reverse.success) {
+      expect(forward.data.candidates.map((item) => item.userId)).toEqual(expected);
+      expect(reverse.data.candidates.map((item) => item.userId)).toEqual(expected);
+    }
+  });
+
   it("does not disclose candidates outside the shared server-authorized scope", async () => {
     loadScopedRosterCandidatesMock.mockResolvedValue({
       success: false,
