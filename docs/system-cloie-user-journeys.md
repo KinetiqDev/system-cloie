@@ -339,10 +339,10 @@ The Faculty Member owns the authoring and operational work for the Course contex
 3. The Faculty Member searches or includes historical assignments.
 4. The Faculty Member opens `/course-rosters/[assignmentId]` for one authorized Course assignment.
 5. The Faculty Member reviews Student name, email, program, major, year level, section, membership-added date, and safe eligibility state.
-6. The Faculty Member adds an existing Student by normalized email or downloads the browser-generated fixed CSV template.
-7. For CSV import, the Faculty Member uploads a UTF-8 file with exactly one unquoted `email` header and at most 500 rows.
-8. CLOIE validates file structure before any write, then processes valid rows with partial-success semantics.
-9. The Faculty Member reviews created, restored, duplicate, conflict, ineligible, and unprocessed results and can export failed rows with safe messages only.
+6. The Faculty Member adds one existing Student through scoped name search, selects the intended account using canonical name, ACD email, and academic context, then adds that selected account directly; or downloads the browser-generated name-column template.
+7. For name-list upload, the Faculty Member uploads a UTF-8 CSV with one `name` or `Student Name` column, standard CSV quoting, and 1 to 100 source rows. Blank rows may be ignored; non-empty extra columns reject the file.
+8. System CLOIE validates file structure and prepares a no-write preview. The Faculty Member reconciles each source row by reviewing exact or suggested matches, selecting an ambiguous account, or explicitly skipping unresolved rows; suggested matches require acknowledgement before confirmation.
+9. System CLOIE confirms selected account identities with current authorization and eligibility checks, then reports created, restored, already-active, conflict, ineligible, skipped, and unprocessed outcomes. Failed-row export uses source row, uploaded name, safe status, and safe error without candidate emails or account identifiers.
 10. The Faculty Member removes a membership after a confirmation explaining that the change affects only this Course roster and future Course-bound evaluation eligibility.
 11. The Faculty Member can restore a removed membership if the Student is still eligible and no other section membership conflicts.
 
@@ -594,7 +594,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 | Secretary and Dean all-program Course assignments     | Implemented                                              | ADR `0003`; role-owned routes                                                    |
 | Program Head Program-specific assignment management   | Implemented                                              | General Education management remains Secretary/Dean-only                         |
 | Faculty roster manual management                      | Implemented                                              | Roster membership services; browser verification remains open                    |
-| Faculty CSV roster import                             | Implemented in service/UI, verification partial          | Strict email-only contract; issues #130/#141/#143                                |
+| Faculty name-list roster reconciliation                | Implemented; runtime desktop/mobile verification partial | Name CSV preview, scoped identity search, and `CourseAssignmentMembership` writes |
 | Graduate Outcome authoring                            | Implemented for Program Head; Secretary authority exists | Secretary UI/protected-write coverage is partial                                 |
 | Faculty Course-level CILO authoring                   | Implemented                                              | `/faculty/cilos` and evaluation services                                         |
 | Typed outcome mapping (CILO→ILO for General Education, CILO→GO for Program-specific) and readiness | Implemented                                              | ADR `0005`; Course alignment workspace, typed readiness, publication gate       |
