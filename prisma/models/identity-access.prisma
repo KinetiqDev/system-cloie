@@ -84,12 +84,11 @@ model StudentAcademicProfile {
   user_id           String   @unique @db.Uuid
   program_id        String   @db.Uuid
   major_id          String?  @db.Uuid
-  student_id_number String?
   created_at        DateTime @default(now())
   updated_at        DateTime @updatedAt
 
   // Phase 9: academic_year, year_level, section removed - now in StudentEnrollment ledger
-  // Keeping program_id, major_id, student_id_number as static cohort identifiers
+  // Program and major remain the static academic profile affiliation
 
   user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   program Program @relation(fields: [program_id], references: [id], onDelete: Restrict)
