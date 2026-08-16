@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PeriodReadiness } from "@/features/academic-calendar/services/read-period-readiness";
 
 const { prismaMock, readinessMock, readinessTotalsMock } = vi.hoisted(() => ({
   prismaMock: {
@@ -75,7 +74,7 @@ function generalEducationAssignment() {
   });
 }
 
-function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE"): PeriodReadiness {
+function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE") {
   return {
     period: { id: PERIOD_ID, status },
     schemaVersion: 2,

@@ -1,18 +1,21 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-const { notFoundMock, resolveContextMock } = vi.hoisted(() => ({
+const { notFoundMock, resolveContextMock, headerMock } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),
   resolveContextMock: vi.fn(),
+  headerMock: vi.fn(({ program }: { program: { code: string } }) => <div>{program.code}</div>),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveContextMock,
 }));
-// ProgramHeadContextHeader removed from selected program layout; verified in header/topbar
+vi.mock("@/features/auth/components/program-head-context-header", () => ({
+  ProgramHeadContextHeader: headerMock,
+}));
 
 describe("selected Program layout", () => {
   it("passes the route Program to the server resolver and renders the selected context", async () => {
@@ -32,19 +35,22 @@ describe("selected Program layout", () => {
     });
 
     expect(resolveContextMock).toHaveBeenCalledWith("program-2");
-    const { container } = render(result);
-    expect(container).toHaveTextContent("Selected content");
+    render(result);
+    expect(headerMock).toHaveBeenCalledWith(
+      expect.objectContaining({ program: expect.objectContaining({ code: "BSED" }) }),
+      undefined
+    );
     expect(result).toBeDefined();
   });
 
   it("does not render selected content when the server rejects the route Program", async () => {
-    // When resolver fails, layout throws NOT_FOUND
+    headerMock.mockClear();
     resolveContextMock.mockResolvedValue({ success: false, error: "Program unavailable" });
     const Layout = (await import("@/app/(app)/program-head/programs/[programId]/layout")).default;
 
     await expect(
       Layout({ params: Promise.resolve({ programId: "unassigned" }), children: <div /> })
     ).rejects.toThrow("NOT_FOUND");
-    // Header is no longer in layout
+    expect(headerMock).not.toHaveBeenCalled();
   });
 });

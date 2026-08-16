@@ -6,7 +6,6 @@ import { DevRoleSwitcher, DevRoleSwitcherDesktop } from "@/features/auth/compone
 import { DemoRoleSwitcher, DemoRoleSwitcherDesktop } from "@/features/auth/components/demo-role-switcher";
 import type { RoleSwitcherUser } from "@/features/auth/components/role-switcher-list";
 import type { Role } from "@/lib/constants/roles";
-import type { ProgramHeadProgram } from "@/features/auth/services/resolve-program-head-context";
 import { getMobileNavMode } from "@/lib/constants/navigation";
 
 interface AppShellProps {
@@ -21,7 +20,6 @@ interface AppShellProps {
   demoEnabled?: boolean;
   demoUsers?: readonly RoleSwitcherUser[];
   appearanceEnabled?: boolean;
-  authorizedPrograms?: ProgramHeadProgram[];
 }
 
 export function AppShell({
@@ -32,7 +30,6 @@ export function AppShell({
   demoEnabled = false,
   demoUsers = [],
   appearanceEnabled = false,
-  authorizedPrograms = [],
 }: AppShellProps) {
   const activeRoles = activeRole ? [activeRole] : roles ?? [];
   const mobileNavMode = getMobileNavMode(activeRoles);
@@ -51,7 +48,6 @@ export function AppShell({
           mobileNavMode={mobileNavMode}
           roles={activeRoles}
           appearanceEnabled={appearanceEnabled}
-          authorizedPrograms={authorizedPrograms}
         >
           <DevRoleSwitcherDesktop activeEmail={user?.email} />
           <DemoRoleSwitcherDesktop enabled={demoEnabled} activeEmail={user?.email} users={demoUsers} />

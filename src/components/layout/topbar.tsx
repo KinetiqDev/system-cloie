@@ -13,10 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MobileSidebarDrawer } from "./mobile-sidebar-drawer";
 import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
-import { ProgramHeadSwitcher } from "@/features/auth/components/program-head-switcher";
 import type { Role } from "@/lib/constants/roles";
 import type { MobileNavMode } from "@/lib/constants/navigation";
-import type { ProgramHeadProgram } from "@/features/auth/services/resolve-program-head-context";
 
 interface TopbarProps {
   user?: {
@@ -28,7 +26,6 @@ interface TopbarProps {
   roles?: Role[];
   children?: React.ReactNode;
   appearanceEnabled?: boolean;
-  authorizedPrograms?: ProgramHeadProgram[];
 }
 
 export function Topbar({
@@ -37,7 +34,6 @@ export function Topbar({
   roles,
   children,
   appearanceEnabled = false,
-  authorizedPrograms = [],
 }: TopbarProps) {
   const router = useRouter();
 
@@ -68,16 +64,9 @@ export function Topbar({
           </>
         )}
       </div>
-      {/* Program switcher on desktop (left/center) or spacer */}
-      <div className="hidden lg:flex lg:items-center lg:gap-3">
-        <ProgramHeadSwitcher programs={authorizedPrograms} />
-      </div>
+      <div className="hidden lg:flex" /> {/* Empty spacer for desktop */}
       {/* Right side actions */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Program switcher for mobile/tablet when hamburger/header is visible */}
-        <div className="flex lg:hidden">
-          <ProgramHeadSwitcher programs={authorizedPrograms} />
-        </div>
+      <div className="flex items-center gap-3">
         {children}
         <AppearanceMenuTrigger enabled={appearanceEnabled} />
         {/* Profile avatar + dropdown */}

@@ -2117,12 +2117,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/auth/components/program-head-switcher.tsx",
-    disposition: "task",
-    taskId: 18,
-    category: "feature_component",
-  },
-  {
     path: "src/features/auth/components/program-head-selector.tsx",
     disposition: "task",
     taskId: 18,

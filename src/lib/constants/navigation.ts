@@ -72,7 +72,7 @@ const SECRETARY_NAV: NavItem[] = [
   { name: "Tools", href: "/secretary/instruments", icon: ClipboardList },
 ];
 
-export const PROGRAM_HEAD_NAV: NavItem[] = [
+const PROGRAM_HEAD_NAV: NavItem[] = [
   {
     name: "Dashboard",
     href: "/program-head/dashboard",
