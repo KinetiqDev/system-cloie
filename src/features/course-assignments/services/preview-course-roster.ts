@@ -180,6 +180,16 @@ function chooseIdentityMatch(existingMatch: RosterNameMatch, selectableMatch: Ro
     return compareUniqueMatches(existingMatch, selectableMatch);
   }
   if (matchStrength(selectableMatch.status) === 2) return selectableMatch;
+  // Multiple equal-tier eligible matches must be resolved by the manager; a
+  // single suggested existing member does not override that ambiguity. Only an
+  // exact existing-member match remains decisive over eligible ambiguity.
+  if (selectableMatch.status === "AMBIGUOUS" && matchStrength(existingMatch.status) < 2) {
+    return {
+      status: "AMBIGUOUS" as const,
+      reason: "EQUAL_TIER" as const,
+      matchedIds: [...new Set([...selectableMatch.matchedIds, ...existingMatch.matchedIds])],
+    };
+  }
   if (existingMatch.status !== "NO_MATCH") return existingMatch;
   return selectableMatch;
 }
