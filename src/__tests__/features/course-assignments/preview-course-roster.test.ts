@@ -194,7 +194,15 @@ describe("previewCourseRoster service", () => {
         section: "AFTERNOON",
         majorName: "Software Engineering",
       });
+      for (const row of result.data.rows) {
+        for (const candidate of row.candidates) {
+          expect(candidate).not.toHaveProperty("studentId");
+          expect(candidate).not.toHaveProperty("studentIdNumber");
+          expect(candidate).not.toHaveProperty("student_id_number");
+        }
+      }
     }
+    expect(JSON.stringify(result)).not.toMatch(/studentId|studentIdNumber|student_id_number|Student ID/i);
   });
 
   it("keeps a Program-mismatched Student non-selectable and shows it as a diagnostic", async () => {

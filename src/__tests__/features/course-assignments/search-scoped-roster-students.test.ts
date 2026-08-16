@@ -75,7 +75,13 @@ describe("searchScopedRosterStudents", () => {
       );
       expect(result.data.candidates[0]?.userId).toBe("exact");
       expect(result.data.candidates.map((item) => item.userId)).not.toContain("diagnostic");
+      for (const item of result.data.candidates) {
+        expect(item).not.toHaveProperty("studentId");
+        expect(item).not.toHaveProperty("studentIdNumber");
+        expect(item).not.toHaveProperty("student_id_number");
+      }
     }
+    expect(JSON.stringify(result)).not.toMatch(/studentId|studentIdNumber|student_id_number|Student ID/i);
   });
 
   it("does not disclose candidates outside the shared server-authorized scope", async () => {
