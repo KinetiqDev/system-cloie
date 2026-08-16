@@ -1801,7 +1801,6 @@ export type Database = {
           id: string
           major_id: string | null
           program_id: string
-          student_id_number: string | null
           updated_at: string
           user_id: string
         }
@@ -1810,7 +1809,6 @@ export type Database = {
           id?: string
           major_id?: string | null
           program_id: string
-          student_id_number?: string | null
           updated_at: string
           user_id: string
         }
@@ -1819,7 +1817,6 @@ export type Database = {
           id?: string
           major_id?: string | null
           program_id?: string
-          student_id_number?: string | null
           updated_at?: string
           user_id?: string
         }
