@@ -42,7 +42,7 @@ function toProgramHeadProgram(program: {
   return { id: program.id, code: program.code, name: program.name };
 }
 
-async function resolveAuthorizedPrograms(userId: string): Promise<ProgramHeadProgram[]> {
+export async function resolveAuthorizedPrograms(userId: string): Promise<ProgramHeadProgram[]> {
   const assignments = await prisma.programHeadAssignment.findMany({
     where: { program_head_id: userId, is_active: true },
     select: {

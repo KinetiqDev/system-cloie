@@ -1,21 +1,18 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-const { notFoundMock, resolveContextMock, headerMock } = vi.hoisted(() => ({
+const { notFoundMock, resolveContextMock } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),
   resolveContextMock: vi.fn(),
-  headerMock: vi.fn(({ program }: { program: { code: string } }) => <div>{program.code}</div>),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveContextMock,
 }));
-vi.mock("@/features/auth/components/program-head-context-header", () => ({
-  ProgramHeadContextHeader: headerMock,
-}));
+// ProgramHeadContextHeader removed from selected program layout; verified in header/topbar
 
 describe("selected Program layout", () => {
   it("passes the route Program to the server resolver and renders the selected context", async () => {
@@ -35,22 +32,19 @@ describe("selected Program layout", () => {
     });
 
     expect(resolveContextMock).toHaveBeenCalledWith("program-2");
-    render(result);
-    expect(headerMock).toHaveBeenCalledWith(
-      expect.objectContaining({ program: expect.objectContaining({ code: "BSED" }) }),
-      undefined
-    );
+    const { container } = render(result);
+    expect(container).toHaveTextContent("Selected content");
     expect(result).toBeDefined();
   });
 
   it("does not render selected content when the server rejects the route Program", async () => {
-    headerMock.mockClear();
+    // When resolver fails, layout throws NOT_FOUND
     resolveContextMock.mockResolvedValue({ success: false, error: "Program unavailable" });
     const Layout = (await import("@/app/(app)/program-head/programs/[programId]/layout")).default;
 
     await expect(
       Layout({ params: Promise.resolve({ programId: "unassigned" }), children: <div /> })
     ).rejects.toThrow("NOT_FOUND");
-    expect(headerMock).not.toHaveBeenCalled();
+    // Header is no longer in layout
   });
 });
