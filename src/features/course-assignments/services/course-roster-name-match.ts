@@ -221,12 +221,11 @@ function stripRecognizedSuffix(values: string[]) {
     return { core: values, stripped: false, suffix: "" };
   }
 
-  const core = values.map(stripTrailingPeriod);
-  const suffix = core.at(-1) ?? "";
+  const suffix = stripTrailingPeriod(values.at(-1) ?? "");
   if (!Object.hasOwn(SUFFIXES, suffix)) {
-    return { core, stripped: false, suffix: "" };
+    return { core: values, stripped: false, suffix: "" };
   }
-  return { core: core.slice(0, -1), stripped: true, suffix };
+  return { core: values.slice(0, -1), stripped: true, suffix };
 }
 
 function foldMarks(key: string) {
