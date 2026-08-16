@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   addRosterMembershipSchema,
   confirmRosterResolutionSchema,
+  previewCourseRosterSchema,
 } from "@/features/course-assignments/schemas/course-assignment";
 
 const assignmentId = "11111111-1111-4111-8111-111111111111";
@@ -99,12 +100,12 @@ describe("confirmRosterResolutionSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects source indexes beyond the row bound", () => {
+  it("accepts source indexes from blank-row-tolerant files", () => {
     const result = confirmRosterResolutionSchema.safeParse({
       ...valid,
       rows: [{ sourceIndex: 102, studentUserId: userIdA }],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it("rejects an oversized skipped list", () => {
@@ -122,5 +123,16 @@ describe("confirmRosterResolutionSchema", () => {
     });
     expect(result.success).toBe(true);
     expect(result.data?.suggestedAcknowledged).toBe(false);
+  });
+
+  it("accepts an over-200-character submitted name as an invalid preview row", () => {
+    const result = previewCourseRosterSchema.safeParse({
+      assignmentId,
+      rows: [
+        { sourceIndex: 2, submittedName: "Maria Santos", status: "VALID" },
+        { sourceIndex: 3, submittedName: "a".repeat(201), status: "INVALID_NAME" },
+      ],
+    });
+    expect(result.success).toBe(true);
   });
 });

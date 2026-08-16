@@ -67,6 +67,7 @@ import type {
   CourseRosterPreviewRow,
   CourseRosterConfirmation,
   CourseRosterConfirmationOutcome,
+  ScopedRosterCandidate,
 } from "../types";
 import {
   COURSE_ROSTER_MAX_ROWS,
@@ -143,16 +144,40 @@ const PREVIEW_FILTERS: Array<{ key: PreviewFilter; label: string }> = [
   { key: "already-active", label: "Already active" },
 ];
 
+function suggestionReasonLabel(
+  reason: Extract<CourseRosterPreviewResolution, { status: "SUGGESTED_MATCH" }>["reason"]
+) {
+  switch (reason) {
+    case "MIDDLE_TOKEN":
+      return "extra or omitted middle names";
+    case "INITIAL":
+      return "initials differ";
+    case "SEPARATOR_PUNCTUATION":
+      return "punctuation differs";
+    case "SUFFIX":
+      return "suffix differs";
+    case "DIACRITIC":
+      return "accent marks differ";
+  }
+}
+
 function resolutionBadge(resolution: CourseRosterPreviewResolution) {
   switch (resolution.status) {
     case "EXACT_MATCH":
       return <Badge variant="success">Exact match</Badge>;
     case "SUGGESTED_MATCH":
-      return <Badge variant="warning">Suggested match</Badge>;
+      return (
+        <span className="flex flex-wrap items-center gap-2">
+          <Badge variant="warning">Suggested match</Badge>
+          <span className="text-body-sm text-muted-foreground">
+            {suggestionReasonLabel(resolution.reason)}
+          </span>
+        </span>
+      );
     case "AMBIGUOUS":
       return <Badge variant="warning">Ambiguous</Badge>;
     case "DUPLICATE_MATCH":
-      return <Badge variant="warning">Duplicate match</Badge>;
+      return <Badge variant="warning">Already claimed by another row</Badge>;
     case "NO_MATCH":
       return <Badge variant="secondary">No match</Badge>;
     case "INVALID_NAME":
@@ -372,7 +397,7 @@ function ReviewRowControls({
   skipped,
   hasSelection,
   needsSearch,
-  isSuggested,
+  isPrepared,
   onClearSelection,
   onOpenSearch,
   onToggleSkip,
@@ -380,7 +405,7 @@ function ReviewRowControls({
   skipped: boolean;
   hasSelection: boolean;
   needsSearch: boolean;
-  isSuggested: boolean;
+  isPrepared: boolean;
   onClearSelection: () => void;
   onOpenSearch: () => void;
   onToggleSkip: () => void;
@@ -400,7 +425,7 @@ function ReviewRowControls({
               Change
             </Button>
           )}
-          {isSuggested && !hasSelection && (
+          {isPrepared && !hasSelection && (
             <Button type="button" variant="outline" size="sm" onClick={onOpenSearch}>
               <RotateCcw data-icon="inline-start" />
               Change
@@ -511,8 +536,12 @@ function ReviewRowCard({
   onToggleSkip: () => void;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
-  const needsSearch = row.resolution.status === "AMBIGUOUS" || row.resolution.status === "NO_MATCH";
-  const isSuggested = row.resolution.status === "SUGGESTED_MATCH";
+  const needsSearch =
+    row.resolution.status === "AMBIGUOUS" ||
+    row.resolution.status === "NO_MATCH" ||
+    row.resolution.status === "DUPLICATE_MATCH";
+  const isPrepared =
+    row.resolution.status === "SUGGESTED_MATCH" || row.resolution.status === "EXACT_MATCH";
   const isAlreadyActive = row.disposition === "ALREADY_ACTIVE";
 
   return (
@@ -534,20 +563,13 @@ function ReviewRowCard({
 
       <RowCandidateDisplay candidate={selectedCandidate} candidates={row.candidates} />
 
-      {assignment && (
-        <p className="text-body-sm text-muted-foreground">
-          {assignment.courseCode} — {assignment.courseTitle} ({assignment.programCode},{" "}
-          {getYearLevelDisplay(assignment.yearLevel)}, {getSectionLabel(assignment.section)},{" "}
-          {assignment.termLabel})
-        </p>
-      )}
 
       {!isAlreadyActive && (
         <ReviewRowControls
           skipped={skipped}
           hasSelection={selectedCandidate !== undefined}
           needsSearch={needsSearch}
-          isSuggested={isSuggested}
+          isPrepared={isPrepared}
           onClearSelection={onClearSelection}
           onOpenSearch={() => setSearchOpen(true)}
           onToggleSkip={onToggleSkip}
@@ -602,9 +624,31 @@ function ReviewPreviewBlock({
   const visibleRows = preview.rows.filter(
     (row) => filter === "all" || rowGroup(row, skipped, selectedCandidateByIndex) === filter
   );
+  const confirmCount = Object.keys(
+    effectiveCandidateByIndexFor({
+      preview,
+      skippedIndexes,
+      selectedCandidateByIndex,
+      suggestionsAcknowledged,
+    })
+  ).length;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {assignment && (
+        <p className="text-body-sm text-muted-foreground">
+          {assignment.courseCode} — {assignment.courseTitle} ({assignment.programCode},{" "}
+          {getYearLevelDisplay(assignment.yearLevel)}, {getSectionLabel(assignment.section)},{" "}
+          {assignment.termLabel})
+        </p>
+      )}
+      <p className="text-body-sm">
+        {confirmCount === 0
+          ? "This confirmation will not add or restore any Students."
+          : confirmCount === 1
+            ? "This confirmation will add or restore 1 Student."
+            : `This confirmation will add or restore ${confirmCount} Students.`}
+      </p>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Preview filters">
         {PREVIEW_FILTERS.map((item) => (
           <Button
@@ -1287,7 +1331,7 @@ export function RosterManagementDialog({
                 }}
                 primaryDisabled={primaryDisabled}
                 primaryLabel={primaryLabel}
-                showBack={phase !== "results"}
+                showBack={phase === "review"}
               />
             </DialogFooter>
           </DialogContent>
@@ -1323,7 +1367,7 @@ export function RosterManagementDialog({
                 }}
                 primaryDisabled={primaryDisabled}
                 primaryLabel={primaryLabel}
-                showBack={phase !== "results"}
+                showBack={phase === "review"}
               />
             </DrawerFooter>
           </DrawerContent>
@@ -1369,21 +1413,22 @@ function AddRosterMember({
   assignmentId: string;
   programId?: string;
 }) {
-  const [studentUserId, setStudentUserId] = useState("");
+  const [selectedCandidate, setSelectedCandidate] = useState<ScopedRosterCandidate | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!selectedCandidate) return;
     setMessage(null);
     startTransition(async () => {
       const result = await addRosterMembershipAction({
         assignmentId,
         programId,
-        studentUserId,
+        studentUserId: selectedCandidate.userId,
       });
       setMessage(resultMessage(result));
-      if (result.success) setStudentUserId("");
+      if (result.success) setSelectedCandidate(null);
     });
   }
 
@@ -1396,7 +1441,7 @@ function AddRosterMember({
           assignment.
         </p>
       </div>
-      <form className="flex flex-col gap-2 sm:flex-row sm:items-end" onSubmit={submit}>
+      <form className="flex flex-col gap-3" onSubmit={submit}>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <label htmlFor="roster-student-search" className="text-label-md">
             Scoped Student search
@@ -1404,10 +1449,30 @@ function AddRosterMember({
           <ScopedRosterStudentSearch
             assignmentId={assignmentId}
             programId={programId}
-            onSelect={(candidate) => setStudentUserId(candidate.userId)}
+            selectedUserId={selectedCandidate?.userId}
+            onQueryChange={() => setSelectedCandidate(null)}
+            onSelect={setSelectedCandidate}
           />
         </div>
-        <Button type="submit" disabled={isPending || studentUserId === ""}>
+        {selectedCandidate && (
+          <div className="rounded-lg border p-3" aria-live="polite">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-label-md">Selected Student</p>
+                <CandidateContext candidate={selectedCandidate} />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedCandidate(null)}
+              >
+                Clear selection
+              </Button>
+            </div>
+          </div>
+        )}
+        <Button type="submit" disabled={isPending || selectedCandidate === null}>
           <UserPlus data-icon="inline-start" />
           {isPending ? "Adding..." : "Add Student"}
         </Button>

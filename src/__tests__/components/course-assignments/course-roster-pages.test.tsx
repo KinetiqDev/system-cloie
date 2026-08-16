@@ -946,6 +946,10 @@ describe("course roster pages", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/Resolve or skip 1 row before continuing/i);
 
     expect(screen.getByText("Suggested match")).toBeInTheDocument();
+    expect(screen.getByText("extra or omitted middle names")).toBeInTheDocument();
+    expect(
+      screen.getByText("This confirmation will not add or restore any Students.")
+    ).toBeInTheDocument();
     // Suggested rows need review even when the disposition is ready.
     expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ready: 0" })).toBeInTheDocument();
@@ -1124,6 +1128,7 @@ describe("course roster pages", () => {
     fireEvent.click(ack);
     expect(ack).toBeChecked();
     expect(reviewComplete).toBeEnabled();
+    expect(screen.getByText("This confirmation will add or restore 1 Student.")).toBeInTheDocument();
 
     // Changing the suggested account clears the acknowledgement.
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
@@ -1371,6 +1376,7 @@ describe("course roster pages", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       /The same Student is selected for rows 2 and 3/
     );
+    expect(screen.getAllByRole("button", { name: "Change" })).toHaveLength(2);
 
     // Skipping one repeated row removes its prepared identity and unblocks.
     fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[0]);
@@ -1926,6 +1932,8 @@ describe("course roster confirmation results", () => {
     const addSpy = vi.spyOn(rosterActions, "addRosterMembershipAction");
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Maria" } });
     fireEvent.click(await screen.findByRole("button", { name: /maria santos/i }));
+    expect(screen.getByText("Selected Student")).toBeInTheDocument();
+    expect(screen.getAllByText("Education").length).toBeGreaterThan(0);
     fireEvent.submit(screen.getByRole("button", { name: /add student/i }).closest("form")!);
     await waitFor(() =>
       expect(addSpy).toHaveBeenCalledWith({

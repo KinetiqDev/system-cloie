@@ -66,6 +66,7 @@ describe("ScopedRosterStudentSearch", () => {
       query: "John",
     });
     expect(screen.getByRole("button", { name: /john paul cruz/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /bs computer science/i })).toBeInTheDocument();
   });
 
   it("ignores a stale search response after the manager changes the query", async () => {
