@@ -19,20 +19,30 @@ Copy **model** and **effort** into the baton. Use `worktree create --agent <id> 
 
 Each slice is its own PR off the repo default base. Create an independent top-level worktree: `--no-parent`, omit `--base-branch`, `--setup run`, `--agent <id> --prompt "<baton>"`, name `slice-<N>-<slug>`.
 
-If Orca cannot launch, leave that ticket claimed only if a worker actually has the baton. Otherwise release the claim and record `Orca unavailable` as the reason — this session still ships its own slice.
+Create worktrees only for frontier tickets within the relay's bounded-wave cap ([SKILL.md](SKILL.md) step 3): at most two live slice sessions, this session's own included. Tickets beyond the cap stay unclaimed for a later wave. Record the complete `worktree.id` from the creation receipt. If Orca cannot launch, leave that ticket unclaimed and record `Orca unavailable` as the reason — this session still ships its own slice.
+
+Verify a launch before delivering its baton: `ORCA worktree ps --json` lists the receipt's complete `worktree.id` with a live terminal (`liveTerminalCount > 0` or `hasAttachedPty: true`). A dead or absent worktree is recreated — never hand a baton to a worktree that is not running.
 
 ## Baton
 
-The baton starts with the slash so the next agent user-invokes this skill. Include the `Claimed slice` line only when this launch already owns a ticket (step 3 siblings). Step 5 omits it so the next leg surveys.
+The baton starts with the slash so the next agent user-invokes this skill. Label the ticket as `Assigned slice`; assignment is not a claim. The receiving child must invoke `/slice-relay`, perform the lease audit from [SURVEY.md](SURVEY.md), and proceed only when that audit returns `owned`.
 
 ```text
 /slice-relay <parent> <agent> <model> <effort>
 
 You are a leg of a slice relay on parent #<parent> (<parent title>).
-Claimed slice: #<N> (<slice title>).
-Close only the claimed slice ticket; the parent stays open.
+Assigned slice: #<N> (<slice title>).
+Close only the assigned slice ticket after its lease audit returns owned; the parent stays open.
 
 Invoke /slice-relay with the arguments above, then follow it.
 ```
 
-Drop the `model` / `effort` tokens when the call did not name them. One launch per claimed ticket; the receipt's `worktree.id` is the proof the baton was delivered.
+Drop the `model` / `effort` tokens when the call did not name them. One launch per assigned ticket; the receipt's complete `worktree.id` is the proof the baton was delivered. A launch failure leaves the ticket unclaimed.
+
+## Teardown
+
+One worktree, one slice: a slice worktree lives until its PR merges, then it is deleted.
+
+- After the slice's PR merges and this session has no further launches to make (relay step 5 exits), delete the worktree: `ORCA worktree rm --worktree current`.
+- Teardown applies only to a slice worktree: skip it when `ORCA worktree current --json` shows `isMainWorktree: true`. The main worktree is never deleted.
+- Verify removal with `ORCA worktree list --json` — the worktree's complete ID must be absent. A worktree that survives the first attempt is retried with `--force`, then reported if it still remains.
