@@ -102,7 +102,7 @@ export const privacyNotice: LegalDocument = {
           items: [
             "Google Sign-In and authentication data, including email address, name, provider identifier, verification information, session timestamps, and basic provider metadata",
             "General account and role data, including name, email, system role, account and verification status, authorized program scope, and account timestamps",
-            "Student data, including student identification number, academic program and major, academic term, year level, section, enrollment status, assigned courses, and evaluation instruments",
+            "Student data, including academic program and major, academic term, year level, section, enrollment status, assigned courses, and evaluation instruments",
             "Faculty and academic personnel data, including program affiliations, assigned courses and sections, organizational scope, managed outcomes, evaluation instruments, and administrative actions",
             "Alumni data, including graduation year, academic program and major, verification status, assignments, and participation records",
             "Industry partner data, including name, email, company or organization, position, program association, verification status, and assigned evaluations",

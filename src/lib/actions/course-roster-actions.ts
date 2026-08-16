@@ -12,7 +12,6 @@ import {
 import {
   addRosterMembershipSchema,
   confirmRosterResolutionSchema,
-  importCourseRosterTextSchema,
   previewCourseRosterSchema,
   removeRosterMembershipSchema,
   restoreRosterMembershipSchema,
@@ -24,7 +23,6 @@ import {
   removeRosterMembership,
   restoreRosterMembership,
 } from "@/features/course-assignments/services/manage-course-roster";
-import { importCourseRoster } from "@/features/course-assignments/services/import-course-roster";
 import { previewCourseRoster } from "@/features/course-assignments/services/preview-course-roster";
 import { searchScopedRosterStudents } from "@/features/course-assignments/services/search-scoped-roster-students";
 
@@ -112,45 +110,6 @@ export async function removeRosterMembershipAction(input: unknown) {
   return result;
 }
 
-export async function importCourseRosterAction(input: unknown) {
-  if (input instanceof FormData) {
-    const assignmentId = input.get("assignmentId");
-    const programIdValue = input.get("programId");
-    const programId = typeof programIdValue === "string" ? programIdValue : null;
-    const file = input.get("file");
-    if (
-      typeof assignmentId !== "string" ||
-      !importCourseRosterTextSchema.shape.assignmentId.safeParse(assignmentId).success ||
-      (programId !== null &&
-        !importCourseRosterTextSchema.shape.programId.safeParse(programId).success) ||
-      !isFileLike(file)
-    ) {
-      return { success: false as const, error: "Choose a valid CSV file." };
-    }
-    if (!(await validateProgramHeadActionScope(programId ?? undefined))) {
-      return { success: false as const, error: "Course assignment not found." };
-    }
-    const result = await importCourseRoster(assignmentId, new Uint8Array(await file.arrayBuffer()));
-    return result;
-  }
-
-  if (
-    typeof input === "object" &&
-    input !== null &&
-    "assignmentId" in input &&
-    "csvText" in input &&
-    importCourseRosterTextSchema.safeParse(input).success
-  ) {
-    const parsed = importCourseRosterTextSchema.parse(input);
-    if (!(await validateProgramHeadActionScope(parsed.programId))) {
-      return { success: false as const, error: "Course assignment not found." };
-    }
-    const result = await importCourseRoster(parsed.assignmentId, parsed.csvText);
-    return result;
-  }
-
-  return { success: false as const, error: "Choose a valid CSV file." };
-}
 
 export async function previewCourseRosterAction(input: unknown) {
   const parsed = previewCourseRosterSchema.safeParse(input);
@@ -180,6 +139,3 @@ export async function searchScopedRosterStudentsAction(input: unknown) {
 }
 
 
-function isFileLike(value: FormDataEntryValue | null): value is File {
-  return value !== null && typeof value !== "string" && typeof value.arrayBuffer === "function";
-}

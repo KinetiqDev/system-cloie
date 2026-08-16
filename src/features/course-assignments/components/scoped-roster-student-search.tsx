@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { YearLevel, StudentSection } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { searchScopedRosterStudentsAction } from "@/lib/actions/course-roster-actions";
 import type { ScopedRosterCandidate } from "../types";
 
@@ -15,14 +17,28 @@ type ScopedRosterStudentSearchProps = {
   assignmentId: string;
   programId?: string;
   onSelect?: (candidate: ScopedRosterCandidate) => void;
+  onQueryChange?: () => void;
   selectedUserId?: string | null;
   inputAriaLabel?: string;
 };
+
+function candidateAcademicContext(candidate: ScopedRosterCandidate) {
+  const yearLevel = candidate.yearLevel
+    ? getYearLevelDisplay(candidate.yearLevel as YearLevel)
+    : null;
+  const section = candidate.section ? getSectionLabel(candidate.section as StudentSection) : null;
+  return (
+    [candidate.programName ?? candidate.programCode, yearLevel, section, candidate.majorName]
+      .filter(Boolean)
+      .join(" · ") || "—"
+  );
+}
 
 export function ScopedRosterStudentSearch({
   assignmentId,
   programId,
   onSelect,
+  onQueryChange,
   selectedUserId,
   inputAriaLabel = "Search scoped Students",
 }: ScopedRosterStudentSearchProps) {
@@ -88,6 +104,7 @@ export function ScopedRosterStudentSearch({
           requestVersionRef.current += 1;
           setQuery(nextQuery);
           setCandidates([]);
+          onQueryChange?.();
           setMessage(
             [...normalizedNextQuery].length < MIN_ROSTER_SEARCH_CHARACTERS
               ? nextQuery.length > 0
@@ -117,6 +134,9 @@ export function ScopedRosterStudentSearch({
               >
                 <span className="font-medium">{candidate.name}</span>
                 <span className="text-muted-foreground text-sm">{candidate.email}</span>
+                <span className="text-muted-foreground text-body-sm">
+                  {candidateAcademicContext(candidate)}
+                </span>
                 {!candidate.selectable && candidate.reason && (
                   <Badge variant="warning">{candidate.reason.replaceAll("_", " ")}</Badge>
                 )}

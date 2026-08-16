@@ -83,14 +83,14 @@ export const confirmRosterResolutionSchema = z
     rows: z
       .array(
         z.object({
-          sourceIndex: z.number().int().nonnegative().max(COURSE_ROSTER_MAX_ROWS + 1),
+          sourceIndex: z.number().int().nonnegative(),
           studentUserId: z.string().uuid(),
         })
       )
       .min(1)
       .max(COURSE_ROSTER_MAX_ROWS),
     skippedIndexes: z
-      .array(z.number().int().nonnegative().max(COURSE_ROSTER_MAX_ROWS + 1))
+      .array(z.number().int().nonnegative())
       .max(COURSE_ROSTER_MAX_ROWS),
     suggestedAcknowledged: z.boolean(),
   })
@@ -136,11 +136,6 @@ export const restoreRosterMembershipSchema = z.object({
 
 export const removeRosterMembershipSchema = restoreRosterMembershipSchema;
 
-export const importCourseRosterTextSchema = z.object({
-  assignmentId: z.string().uuid(),
-  programId: z.string().uuid().optional(),
-  csvText: z.string(),
-});
 
 export const previewCourseRosterSchema = z.object({
   assignmentId: z.string().uuid(),
@@ -149,7 +144,7 @@ export const previewCourseRosterSchema = z.object({
     .array(
       z.object({
         sourceIndex: z.number().int().nonnegative(),
-        submittedName: z.string().max(200),
+        submittedName: z.string().max(10_000),
         status: z.enum(["VALID", "INVALID_NAME"]),
       })
     )
@@ -180,7 +175,6 @@ export type AddRosterMembershipInput = z.infer<typeof addRosterMembershipSchema>
 export type ConfirmRosterResolutionInput = z.infer<typeof confirmRosterResolutionSchema>;
 export type RestoreRosterMembershipInput = z.infer<typeof restoreRosterMembershipSchema>;
 export type RemoveRosterMembershipInput = z.infer<typeof removeRosterMembershipSchema>;
-export type ImportCourseRosterTextInput = z.infer<typeof importCourseRosterTextSchema>;
 export type PreviewCourseRosterInput = z.infer<typeof previewCourseRosterSchema>;
 
 // Public preview contract; consumers are the scoped candidate search

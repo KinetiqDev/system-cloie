@@ -690,6 +690,27 @@ describe("previewCourseRoster service", () => {
     }
   });
 
+  it("recomputes an overlong submitted name as INVALID_NAME", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      student("student-1", "Andy Egut", "program-1"),
+    ] as never);
+
+    const result = await previewCourseRoster({
+      assignmentId: "assignment-1",
+      rows: [{ sourceIndex: 8, submittedName: "a".repeat(201), status: "VALID" }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rows[0]).toMatchObject({
+        sourceIndex: 8,
+        resolution: { status: "INVALID_NAME", reason: "INVALID", candidateIds: [] },
+        disposition: null,
+        candidates: [],
+      });
+    }
+  });
+
   it("performs zero membership writes during preview", async () => {
 
     vi.mocked(prisma.user.findMany).mockResolvedValue([

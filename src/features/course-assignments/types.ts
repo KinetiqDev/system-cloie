@@ -314,19 +314,6 @@ export type CourseRosterConfirmation = {
   referenceId?: string;
 };
 
-export type CourseRosterImportRow = {
-  sourceIndex: number;
-  name: string;
-  status: "PARSED" | "INVALID_NAME";
-  error: string;
-};
-
-export type CourseRosterImportSummary = {
-  total: number;
-  parsed: number;
-  invalid: number;
-  rows: CourseRosterImportRow[];
-};
 
 export type AuthorizedRosterAssignment = {
   assignmentId: string;

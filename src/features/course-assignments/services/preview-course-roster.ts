@@ -16,6 +16,7 @@ import type {
 } from "../types";
 import { matchRosterName, type RosterNameCandidate, type RosterNameMatch } from "./course-roster-name-match";
 import { loadScopedRosterCandidates } from "./course-roster-candidate-scope";
+import { normalizeRosterName } from "./course-roster-csv";
 
 const SAFE_FAILURE_ERROR = "The roster preview could not be completed.";
 
@@ -372,7 +373,12 @@ export async function previewCourseRoster(
     }
 
     function classifyPreviewRow(row: PreviewCourseRosterInput["rows"][number]): CourseRosterPreviewRow {
-      if (row.status === "INVALID_NAME") {
+      const normalizedName = normalizeRosterName(row.submittedName);
+      if (
+        row.status === "INVALID_NAME" ||
+        normalizedName.length === 0 ||
+        normalizedName.length > 200
+      ) {
         return previewRow(
           row.sourceIndex,
           row.submittedName,
