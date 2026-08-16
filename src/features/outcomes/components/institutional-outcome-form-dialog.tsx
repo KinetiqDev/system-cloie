@@ -93,8 +93,8 @@ export function InstitutionalOutcomeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[min(90dvh,42rem)] flex-col sm:max-w-lg">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription>{copy.description}</DialogDescription>
         </DialogHeader>
@@ -103,19 +103,22 @@ export function InstitutionalOutcomeFormDialog({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <div hidden={Boolean(review)}>
-          <OutcomeDraftForm
-            mode={mode}
-            outcome={outcome}
-            isPending={isPending}
-            onOpenChange={onOpenChange}
-            onPrepared={showPreparedReview}
-            onError={setError}
-          />
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {review ? (
+            <ReviewPanel review={review} />
+          ) : (
+            <OutcomeDraftForm
+              mode={mode}
+              outcome={outcome}
+              isPending={isPending}
+              onOpenChange={onOpenChange}
+              onPrepared={showPreparedReview}
+              onError={setError}
+            />
+          )}
         </div>
-        {review && <ReviewPanel review={review} />}
         {review && (
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex shrink-0 justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setReview(null)} disabled={isPending}>
               Back
             </Button>

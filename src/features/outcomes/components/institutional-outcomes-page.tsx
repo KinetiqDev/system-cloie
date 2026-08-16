@@ -287,16 +287,18 @@ export function InstitutionalOutcomesPage({
             if (!open) dismissReview();
           }}
         >
-          <AlertDialogContent className="sm:max-w-lg">
-            <AlertDialogHeader>
+          <AlertDialogContent className="flex max-h-[min(90dvh,42rem)] flex-col sm:max-w-lg">
+            <AlertDialogHeader className="shrink-0">
               <AlertDialogTitle>Confirm Institutional Outcome Change</AlertDialogTitle>
               <AlertDialogDescription>
                 Confirm this exact before-and-after change. The save is atomic and rejects stale
                 reviews.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <ReviewChange review={review} />
-            <AlertDialogFooter>
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <ReviewChange review={review} />
+            </div>
+            <AlertDialogFooter className="shrink-0">
               <Button variant="outline" disabled={isPending} onClick={dismissReview}>
                 Cancel
               </Button>
