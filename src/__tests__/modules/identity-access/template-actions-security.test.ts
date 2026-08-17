@@ -109,11 +109,33 @@ describe("template-actions security", () => {
       expect(result).toEqual({ success: false, error: "Insufficient permissions." });
     });
 
-    it("accepts right role", async () => {
+    it("forwards the exact reordered structure", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await updateDeanTemplateAction(makeTemplateFormData("Updated", true));
-      expect(updateBaselineTemplateWithStructure).toHaveBeenCalledTimes(1);
+      const reorderedStructure = [
+        {
+          key: "section-b",
+          title: "Section B",
+          description: undefined,
+          order: 0,
+          questions: [{ key: "question-b", prompt: "Question B", type: "likert", order: 0, required: true }],
+        },
+        {
+          key: "section-a",
+          title: "Section A",
+          description: undefined,
+          order: 1,
+          questions: [{ key: "question-a", prompt: "Question A", type: "likert", order: 0, required: true }],
+        },
+      ];
+      const formData = makeTemplateFormData("Updated", true);
+      formData.set("structure", JSON.stringify(reorderedStructure));
+
+      const result = await updateDeanTemplateAction(formData);
+
       expect(result).toEqual({ success: true });
+      expect(updateBaselineTemplateWithStructure).toHaveBeenCalledWith(
+        expect.objectContaining({ structure: reorderedStructure })
+      );
     });
   });
 
@@ -195,11 +217,33 @@ describe("template-actions security", () => {
       expect(result).toEqual({ success: false, error: "Insufficient permissions." });
     });
 
-    it("accepts right role", async () => {
+    it("forwards the exact reordered structure", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await updateAdminTemplateAction(makeTemplateFormData("Updated", true));
-      expect(updateBaselineTemplateWithStructure).toHaveBeenCalledTimes(1);
+      const reorderedStructure = [
+        {
+          key: "section-b",
+          title: "Section B",
+          description: undefined,
+          order: 0,
+          questions: [{ key: "question-b", prompt: "Question B", type: "likert", order: 0, required: true }],
+        },
+        {
+          key: "section-a",
+          title: "Section A",
+          description: undefined,
+          order: 1,
+          questions: [{ key: "question-a", prompt: "Question A", type: "likert", order: 0, required: true }],
+        },
+      ];
+      const formData = makeTemplateFormData("Updated", true);
+      formData.set("structure", JSON.stringify(reorderedStructure));
+
+      const result = await updateAdminTemplateAction(formData);
+
       expect(result).toEqual({ success: true });
+      expect(updateBaselineTemplateWithStructure).toHaveBeenCalledWith(
+        expect.objectContaining({ structure: reorderedStructure })
+      );
     });
   });
 

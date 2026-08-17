@@ -55,18 +55,62 @@ describe("createBaselineCopy", () => {
     );
   });
 
-  it("creates the institutional baseline copy in the selected Program", async () => {
+  it("creates a copy and version one with the exact reordered structure", async () => {
+    const reorderedStructure = [
+      {
+        key: "section-b",
+        title: "Section B",
+        description: undefined,
+        order: 0,
+        questions: [
+          {
+            key: "question-b",
+            prompt: "Question B",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+        ],
+      },
+      {
+        key: "section-a",
+        title: "Section A",
+        description: undefined,
+        order: 1,
+        questions: [
+          {
+            key: "question-a",
+            prompt: "Question A",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+        ],
+      },
+    ];
     const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
     const result = await createBaselineCopy({
       programId: "program-2",
       baselineId: "baseline-1",
       customName: "BSED Copy",
-      structure: [],
+      structure: reorderedStructure,
     });
 
     expect(result).toEqual({ success: true, data: { id: "copy-1" } });
     expect(templateCreateMock).toHaveBeenCalledWith({
-      data: expect.objectContaining({ program_id: "program-2", source_template_id: "baseline-1" }),
+      data: expect.objectContaining({
+        program_id: "program-2",
+        source_template_id: "baseline-1",
+        structure: reorderedStructure,
+      }),
+    });
+    expect(versionCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        template_id: "copy-1",
+        version_number: 1,
+        structure_snapshot: reorderedStructure,
+        is_active: true,
+      }),
     });
   });
 

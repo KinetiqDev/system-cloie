@@ -2,7 +2,27 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+  type KeyboardCoordinateGetter,
+  type UniqueIdentifier,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical, Plus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,6 +145,157 @@ function hasDuplicateSuggestedResponse(existingResponses: string[] | undefined, 
   );
 }
 
+function normalizeTemplateStructure(structure: TemplateStructure): TemplateStructure {
+  return structure.map((section, sectionIndex) => ({
+    ...section,
+    order: sectionIndex,
+    questions: section.questions.map((question, questionIndex) => ({
+      ...question,
+      order: questionIndex,
+    })),
+  }));
+}
+
+/**
+ * Opaque sortable identifier. Never parsed: persisted section/question keys are
+ * arbitrary nonempty strings that may contain separators, so the identifier is
+ * derived structurally with JSON.stringify and keys are only ever resolved
+ * through the current-list map.
+ */
+function toSortableId(
+  kind: "section" | "question",
+  sectionKey: string,
+  questionKey?: string
+): string {
+  return JSON.stringify([kind, sectionKey, questionKey]);
+}
+
+type SortableEntity =
+  | { kind: "section"; sectionKey: string }
+  | { kind: "question"; sectionKey: string; questionKey: string };
+
+function buildSortableIndex(structure: TemplateStructure): Map<UniqueIdentifier, SortableEntity> {
+  const index = new Map<UniqueIdentifier, SortableEntity>();
+
+  for (const section of structure) {
+    index.set(toSortableId("section", section.key), { kind: "section", sectionKey: section.key });
+
+    for (const question of section.questions) {
+      index.set(toSortableId("question", section.key, question.key), {
+        kind: "question",
+        sectionKey: section.key,
+        questionKey: question.key,
+      });
+    }
+  }
+
+  return index;
+}
+
+/**
+ * A section drag only collides with sections, and a question drag only with
+ * questions from the same originating section (which also keeps keyboard
+ * movement inside the current list). Active container comes from the sortable
+ * metadata attached by useSortable; droppables from other lists are filtered
+ * out before closestCenter runs.
+ */
+const filteredContainerCollisionDetection: CollisionDetection = (args) => {
+  const activeContainerId = args.active.data.current?.sortable?.containerId;
+
+  const filteredContainers =
+    activeContainerId === undefined
+      ? []
+      : args.droppableContainers.filter(
+          (container) => container.data.current?.sortable?.containerId === activeContainerId
+        );
+
+  return closestCenter({ ...args, droppableContainers: filteredContainers });
+};
+
+/**
+ * Keyboard movement stays inside the active item's own sortable container.
+ * `sortableKeyboardCoordinates` measures against every registered droppable,
+ * so the nearest candidate below a section is usually one of that section's
+ * own descendant questions, whose coordinate then resolves back to the
+ * originating container and Arrow keys never move the section. Restricting
+ * candidates to the active container before the geometry pass keeps sections
+ * moving among sections and questions within their own section.
+ */
+const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event, args) => {
+  const { context } = args;
+  const active = context.active;
+
+  if (!active) {
+    return sortableKeyboardCoordinates(event, args);
+  }
+
+  const activeDroppable = context.droppableContainers.get(active.id);
+  const containerId = activeDroppable?.data.current?.sortable?.containerId;
+
+  if (containerId === undefined) {
+    return sortableKeyboardCoordinates(event, args);
+  }
+
+  const sameContainer = context.droppableContainers
+    .getEnabled()
+    .filter(
+      (container) =>
+        !container.disabled &&
+        container.data.current?.sortable?.containerId === containerId
+    );
+
+
+  const activeIndex = sameContainer.findIndex((container) => container.id === active.id);
+  if (activeIndex < 0) {
+    return sortableKeyboardCoordinates(event, args);
+  }
+
+  let nextIndex = activeIndex;
+
+  switch (event.code) {
+    case "ArrowDown":
+    case "ArrowRight":
+      nextIndex = activeIndex + 1;
+      break;
+    case "ArrowUp":
+    case "ArrowLeft":
+      nextIndex = activeIndex - 1;
+      break;
+    default:
+      return sortableKeyboardCoordinates(event, args);
+  }
+
+  if (nextIndex < 0 || nextIndex >= sameContainer.length) {
+    return;
+  }
+
+  const target = sameContainer[nextIndex];
+  const rect = context.droppableRects.get(target.id);
+
+  const activeRect = context.droppableRects.get(active.id);
+
+  if (!rect || !activeRect) {
+    return;
+  }
+  const offset = nextIndex > activeIndex ? activeRect.height - rect.height : 0;
+
+  return { x: rect.left, y: rect.top - offset };
+};
+/**
+ * Faculty CILO binding map keys. The legacy `${sectionKey}:${itemKey}` encoding
+ * broke keys that contain separators, so bindings are keyed by the JSON-encoded
+ * pair and decoded structurally (never split).
+ */
+function encodeBindingKey(sectionKey: string, itemKey: string): string {
+  return JSON.stringify([sectionKey, itemKey]);
+}
+
+function decodeBindingKey(encodedKey: string): { sectionKey: string; itemKey: string } {
+  const [sectionKey, itemKey] = JSON.parse(encodedKey) as [string, string];
+
+  return { sectionKey, itemKey };
+}
+
 function formatCourseContextLabel(
   context: Pick<FacultyCourseContext, "courseCode" | "courseTitle" | "scopeLabel">
 ) {
@@ -173,8 +344,10 @@ export function TemplateBuilder({
   );
 
   // Structure state
-  const [sections, setSections] = useState<TemplateStructure>(
-    initialData?.structure?.length ? initialData.structure : [createSection(0)]
+  const [sections, setSections] = useState<TemplateStructure>(() =>
+    normalizeTemplateStructure(
+      initialData?.structure?.length ? initialData.structure : [createSection(0)]
+    )
   );
   const [boundProgramId, setBoundProgramId] = useState(initialData?.bound_program_id ?? "");
   const [boundMajorId, setBoundMajorId] = useState(initialData?.bound_major_id ?? "");
@@ -182,7 +355,7 @@ export function TemplateBuilder({
   const [ciloQuestionBindings, setCiloQuestionBindings] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       (facultyConfig?.initialBindings ?? []).map((binding) => [
-        `${binding.sectionKey}:${binding.itemKey}`,
+        encodeBindingKey(binding.sectionKey, binding.itemKey),
         binding.ciloId,
       ])
     )
@@ -309,15 +482,12 @@ export function TemplateBuilder({
       const idx = insertIndex ?? prev.length;
       const newSection = createSection(idx);
       const updated = [...prev.slice(0, idx), newSection, ...prev.slice(idx)];
-      return updated.map((s, i) => ({ ...s, order: i }));
+      return normalizeTemplateStructure(updated);
     });
   }, []);
 
   const removeSection = useCallback((key: string) => {
-    setSections((prev) => {
-      const filtered = prev.filter((s) => s.key !== key);
-      return filtered.map((s, i) => ({ ...s, order: i }));
-    });
+    setSections((prev) => normalizeTemplateStructure(prev.filter((s) => s.key !== key)));
   }, []);
 
   const updateSection = useCallback(
@@ -331,24 +501,24 @@ export function TemplateBuilder({
 
   const addQuestion = useCallback((sectionKey: string) => {
     setSections((prev) =>
-      prev.map((s) => {
-        if (s.key !== sectionKey) return s;
-        const newQuestion = createQuestion(s.questions.length);
-        return { ...s, questions: [...s.questions, newQuestion] };
-      })
+      normalizeTemplateStructure(
+        prev.map((s) => {
+          if (s.key !== sectionKey) return s;
+          const newQuestion = createQuestion(s.questions.length);
+          return { ...s, questions: [...s.questions, newQuestion] };
+        })
+      )
     );
   }, []);
 
   const removeQuestion = useCallback((sectionKey: string, questionKey: string) => {
     setSections((prev) =>
-      prev.map((s) => {
-        if (s.key !== sectionKey) return s;
-        const filtered = s.questions.filter((q) => q.key !== questionKey);
-        return {
-          ...s,
-          questions: filtered.map((q, i) => ({ ...q, order: i })),
-        };
-      })
+      normalizeTemplateStructure(
+        prev.map((s) => {
+          if (s.key !== sectionKey) return s;
+          return { ...s, questions: s.questions.filter((q) => q.key !== questionKey) };
+        })
+      )
     );
   }, []);
 
@@ -419,7 +589,6 @@ export function TemplateBuilder({
     },
     []
   );
-
   // ─── Suggested Response Operations ───────────────────────────────────
 
   const addSuggestedResponse = useCallback(
@@ -431,25 +600,27 @@ export function TemplateBuilder({
       let hasDuplicate = false;
 
       setSections((prev) =>
-        prev.map((s) => {
-          if (s.key !== sectionKey) return s;
-          return {
-            ...s,
-            questions: s.questions.map((q) => {
-              if (q.key !== questionKey) return q;
+        normalizeTemplateStructure(
+          prev.map((s) => {
+            if (s.key !== sectionKey) return s;
+            return {
+              ...s,
+              questions: s.questions.map((q) => {
+                if (q.key !== questionKey) return q;
 
-              if (hasDuplicateSuggestedResponse(q.suggestedResponses, normalizedResponse)) {
-                hasDuplicate = true;
-                return q;
-              }
+                if (hasDuplicateSuggestedResponse(q.suggestedResponses, normalizedResponse)) {
+                  hasDuplicate = true;
+                  return q;
+                }
 
-              return {
-                ...q,
-                suggestedResponses: [...(q.suggestedResponses ?? []), normalizedResponse],
-              };
-            }),
-          };
-        })
+                return {
+                  ...q,
+                  suggestedResponses: [...(q.suggestedResponses ?? []), normalizedResponse],
+                };
+              }),
+            };
+          })
+        )
       );
 
       if (hasDuplicate) {
@@ -465,21 +636,108 @@ export function TemplateBuilder({
   const removeSuggestedResponse = useCallback(
     (sectionKey: string, questionKey: string, index: number) => {
       setSections((prev) =>
-        prev.map((s) => {
-          if (s.key !== sectionKey) return s;
-          return {
-            ...s,
-            questions: s.questions.map((q) => {
-              if (q.key !== questionKey) return q;
-              const updated = [...(q.suggestedResponses ?? [])];
-              updated.splice(index, 1);
-              return { ...q, suggestedResponses: updated };
-            }),
-          };
-        })
+        normalizeTemplateStructure(
+          prev.map((s) => {
+            if (s.key !== sectionKey) return s;
+            return {
+              ...s,
+              questions: s.questions.map((q) => {
+                if (q.key !== questionKey) return q;
+                const updated = [...(q.suggestedResponses ?? [])];
+                updated.splice(index, 1);
+                return { ...q, suggestedResponses: updated };
+              }),
+            };
+          })
+        )
       );
     },
     []
+  );
+
+  // ─── Drag Reordering ─────────────────────────────────────────────────
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sameContainerKeyboardCoordinates })
+  );
+
+  const sortableMap = useMemo(() => buildSortableIndex(sections), [sections]);
+  const sectionIds = useMemo(
+    () => sections.map((section) => toSortableId("section", section.key)),
+    [sections]
+  );
+
+  const handleSectionDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+
+      if (!over || active.id === over.id) return;
+
+      const activeEntity = sortableMap.get(active.id);
+      const overEntity = sortableMap.get(over.id);
+
+      if (activeEntity?.kind !== "section" || overEntity?.kind !== "section") return;
+
+      setSections((prev) => {
+        const fromIndex = prev.findIndex((s) => s.key === activeEntity.sectionKey);
+        const toIndex = prev.findIndex((s) => s.key === overEntity.sectionKey);
+
+        if (fromIndex < 0 || toIndex < 0) return prev;
+
+        return normalizeTemplateStructure(arrayMove(prev, fromIndex, toIndex));
+      });
+    },
+    [sortableMap]
+  );
+
+  const handleQuestionDragEnd = useCallback(
+    (sectionKey: string, event: DragEndEvent) => {
+      const { active, over } = event;
+
+      if (!over || active.id === over.id) return;
+
+      const activeEntity = sortableMap.get(active.id);
+      const overEntity = sortableMap.get(over.id);
+
+      if (activeEntity?.kind !== "question" || overEntity?.kind !== "question") return;
+      if (activeEntity.sectionKey !== sectionKey || overEntity.sectionKey !== sectionKey) return;
+
+      setSections((prev) => {
+        const section = prev.find((s) => s.key === sectionKey);
+        if (!section) return prev;
+
+        const fromIndex = section.questions.findIndex((q) => q.key === activeEntity.questionKey);
+        const toIndex = section.questions.findIndex((q) => q.key === overEntity.questionKey);
+
+        if (fromIndex < 0 || toIndex < 0) return prev;
+
+        return normalizeTemplateStructure(
+          prev.map((s) =>
+            s.key === sectionKey
+              ? { ...s, questions: arrayMove(s.questions, fromIndex, toIndex) }
+              : s
+          )
+        );
+      });
+    },
+    [sortableMap]
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const activeEntity = sortableMap.get(event.active.id);
+
+      if (activeEntity?.kind === "section") {
+        handleSectionDragEnd(event);
+        return;
+      }
+
+      if (activeEntity?.kind === "question") {
+        handleQuestionDragEnd(activeEntity.sectionKey, event);
+      }
+    },
+    [handleQuestionDragEnd, handleSectionDragEnd, sortableMap]
   );
 
   // ─── Save Handler ────────────────────────────────────────────────────
@@ -498,7 +756,7 @@ export function TemplateBuilder({
       "is_faculty_accessible",
       effectiveTemplateType === "COURSE_BOUND" && isFacultyAccessible ? "true" : "false"
     );
-    formData.set("structure", JSON.stringify(sections));
+    formData.set("structure", JSON.stringify(normalizeTemplateStructure(sections)));
 
     if (facultyMode) {
       formData.set("bound_course_id", boundCourseId);
@@ -509,8 +767,8 @@ export function TemplateBuilder({
         JSON.stringify(
           Object.entries(ciloQuestionBindings)
             .filter(([, ciloId]) => ciloId)
-            .map(([questionKey, ciloId]) => {
-              const [sectionKey, itemKey] = questionKey.split(":");
+            .map(([encodedKey, ciloId]) => {
+              const { sectionKey, itemKey } = decodeBindingKey(encodedKey);
               return { ciloId, itemKey, sectionKey };
             })
         )
@@ -530,7 +788,6 @@ export function TemplateBuilder({
     name,
     sections,
     templateId,
-    templateType,
   ]);
 
   const saveDraft = useCallback(async () => {
@@ -552,7 +809,7 @@ export function TemplateBuilder({
     if (!templateId || !onSaveAsCopy) return;
 
     setIsCopyPending(true);
-    const result = await onSaveAsCopy(templateId, copyName, sections);
+    const result = await onSaveAsCopy(templateId, copyName, normalizeTemplateStructure(sections));
     setIsCopyPending(false);
     setCopyNameDialogOpen(false);
 
@@ -792,11 +1049,96 @@ export function TemplateBuilder({
       </div>
 
       {/* Section Cards */}
-      {sections.map((section, sectionIndex) => (
-        <div key={section.key} className="space-y-4">
-          <SectionCard
-            section={section}
-            sectionIndex={sectionIndex}
+      <DndContext
+        id="template-builder-sections"
+        sensors={sensors}
+        collisionDetection={filteredContainerCollisionDetection}
+        onDragEnd={handleDragEnd}
+        accessibility={{
+          screenReaderInstructions: {
+            draggable:
+              "To pick up a section or question, press the space bar. While dragging, use the arrow keys to move it: sections reorder among sections, and questions reorder within their current section. Press the space bar to drop the item in its new position, or press escape to cancel.",
+          },
+          announcements: {
+            onDragStart({ active }) {
+              const item = sortableMap.get(active.id);
+
+              if (!item) return;
+
+              return item.kind === "section"
+                ? "Picked up a section. Use the arrow keys to move it among sections, press space or enter to drop, or press escape to cancel."
+                : "Picked up a question. Use the arrow keys to move it within the current section, press space or enter to drop, or press escape to cancel.";
+            },
+            onDragOver({ active, over }) {
+              if (!over) return;
+
+              const activeItem = sortableMap.get(active.id);
+              const overItem = sortableMap.get(over.id);
+
+              if (!activeItem || !overItem) return;
+
+              if (activeItem.kind === "section" && overItem.kind === "section") {
+                const position = sections.findIndex((s) => s.key === overItem.sectionKey) + 1;
+                return `Section moved to position ${position} of ${sections.length}.`;
+              }
+
+              if (
+                activeItem.kind === "question" &&
+                overItem.kind === "question" &&
+                activeItem.sectionKey === overItem.sectionKey
+              ) {
+                const section = sections.find((s) => s.key === activeItem.sectionKey);
+                const position = section
+                  ? section.questions.findIndex((q) => q.key === overItem.questionKey) + 1
+                  : 0;
+                const sectionPosition =
+                  sections.findIndex((s) => s.key === activeItem.sectionKey) + 1;
+                return `Question moved to position ${position} within section ${sectionPosition}.`;
+              }
+
+              return;
+            },
+            onDragEnd({ active, over }) {
+              const activeItem = sortableMap.get(active.id);
+              const overItem = over ? sortableMap.get(over.id) : undefined;
+
+              if (activeItem?.kind === "section" && overItem?.kind === "section") {
+                const position = sections.findIndex((s) => s.key === overItem.sectionKey) + 1;
+                return `Section dropped at position ${position} of ${sections.length}.`;
+              }
+
+              if (
+                activeItem?.kind === "question" &&
+                overItem?.kind === "question" &&
+                activeItem.sectionKey === overItem.sectionKey
+              ) {
+                const section = sections.find((s) => s.key === activeItem.sectionKey);
+                const position = section
+                  ? section.questions.findIndex((q) => q.key === overItem.questionKey) + 1
+                  : 0;
+                const sectionPosition =
+                  sections.findIndex((s) => s.key === activeItem.sectionKey) + 1;
+                return `Question dropped at position ${position} within section ${sectionPosition}.`;
+              }
+
+              return "Dropped.";
+            },
+            onDragCancel() {
+              return "Dragging cancelled.";
+            },
+          },
+        }}
+      >
+        <SortableContext id="sections" items={sectionIds} strategy={verticalListSortingStrategy}>
+          {sections.map((section, sectionIndex) => (
+            <div key={section.key} className="space-y-4">
+              <SectionCard
+                section={section}
+                sectionIndex={sectionIndex}
+                sortableId={toSortableId("section", section.key)}
+                questionIds={section.questions.map((question) =>
+                  toSortableId("question", section.key, question.key)
+                )}
             onUpdateSection={updateSection}
             onRemoveSection={removeSection}
             onAddQuestion={addQuestion}
@@ -831,8 +1173,10 @@ export function TemplateBuilder({
               </button>
             </div>
           )}
-        </div>
-      ))}
+          </div>
+          ))}
+        </SortableContext>
+      </DndContext>
 
       {/* Add Section Button (bottom) */}
       <div className="flex justify-center">
@@ -899,6 +1243,34 @@ export function TemplateBuilder({
   );
 }
 
+// ─── Drag Handle ─────────────────────────────────────────────────────────────
+
+type SortableDragHandleProps = {
+  label: string;
+  attributes: ReturnType<typeof useSortable>["attributes"];
+  listeners: ReturnType<typeof useSortable>["listeners"];
+};
+
+/**
+ * 44px handle that carries the sortable keyboard/pointer listeners. The Button,
+ * not the glyph, owns the accessible name; the icon is decorative.
+ */
+function SortableDragHandle({ label, attributes, listeners }: SortableDragHandleProps) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-11 shrink-0 cursor-grab touch-none active:cursor-grabbing"
+      aria-label={label}
+      title={label}
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical aria-hidden="true" />
+    </Button>
+  );
+}
+
 // ─── Section Card Sub-component ──────────────────────────────────────────────
 
 interface SectionCardProps {
@@ -907,6 +1279,8 @@ interface SectionCardProps {
   selectedCiloLabels: Map<string, string>;
   section: TemplateSection;
   sectionIndex: number;
+  sortableId: string;
+  questionIds: string[];
   facultyMode: boolean;
   onUpdateSection: (
     key: string,
@@ -940,6 +1314,8 @@ function SectionCard({
   selectedCiloLabels,
   section,
   sectionIndex,
+  sortableId,
+  questionIds,
   facultyMode,
   onUpdateSection,
   onRemoveSection,
@@ -954,15 +1330,30 @@ function SectionCard({
   selectedCiloIds,
   canRemove,
 }: SectionCardProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: sortableId,
+    data: { kind: "section", sectionKey: section.key },
+  });
+
   return (
-    <Card className="relative overflow-visible">
+    <Card
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`relative overflow-visible ${isDragging ? "opacity-90 shadow-lg" : ""}`}
+    >
       {/* Left accent bar */}
       <div className="bg-primary absolute top-8 -left-3 h-12 w-1 rounded-r" />
 
       <CardContent className="space-y-6 pt-6">
         {/* Section Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
+            <SortableDragHandle
+              label={`Drag section: ${section.title || `Section ${sectionIndex + 1}`}`}
+              attributes={attributes}
+              listeners={listeners}
+            />
+            <div className="min-w-0 flex-1 space-y-3">
             <input
               type="text"
               className="placeholder:text-muted-foreground/50 hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent py-1 text-lg font-semibold transition-colors focus:outline-none"
@@ -982,55 +1373,63 @@ function SectionCard({
               }
             />
           </div>
-          {canRemove && (
-            <button
-              type="button"
-              onClick={() => onRemoveSection(section.key)}
-              className="text-muted-foreground hover:bg-danger-soft hover:text-danger focus-visible:ring-ring mt-1 rounded-md p-1.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
-              title="Remove section"
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
+          </div>
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            {canRemove && (
+              <button
+                type="button"
+                onClick={() => onRemoveSection(section.key)}
+                className="text-muted-foreground hover:bg-danger-soft hover:text-danger focus-visible:ring-ring mt-1 rounded-md p-1.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
+                title="Remove section"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
-          )}
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Questions */}
-        <div className="bg-muted space-y-4 rounded-xl p-4">
-          {section.questions.map((question, questionIndex) => (
-            <QuestionCard
-              key={question.key}
-              sectionKey={section.key}
-              question={question}
-              questionIndex={questionIndex}
-              onUpdate={onUpdateQuestion}
-              onRemove={onRemoveQuestion}
-              onChangeType={onChangeQuestionType}
-              onUpdateLikertDescriptor={onUpdateLikertDescriptor}
-              onAddSuggestedResponse={onAddSuggestedResponse}
-              onRemoveSuggestedResponse={onRemoveSuggestedResponse}
-              ciloOptions={ciloOptions}
-              facultyMode={facultyMode}
-              onCiloBindingChange={onCiloBindingChange}
-              selectedCiloLabel={selectedCiloLabels.get(
-                ciloQuestionBindings[`${section.key}:${question.key}`] ?? ""
-              )}
-              selectedCiloIds={selectedCiloIds}
-              selectedCiloId={ciloQuestionBindings[`${section.key}:${question.key}`] ?? ""}
-              canRemove={section.questions.length > 1}
-            />
-          ))}
+        <SortableContext id={sortableId} items={questionIds} strategy={verticalListSortingStrategy}>
+          <div className="bg-muted space-y-4 rounded-xl p-4">
+            {section.questions.map((question, questionIndex) => (
+              <QuestionCard
+                key={question.key}
+                sectionKey={section.key}
+                sectionIndex={sectionIndex}
+                question={question}
+                questionIndex={questionIndex}
+                sortableId={questionIds[questionIndex]}
+                onUpdate={onUpdateQuestion}
+                onRemove={onRemoveQuestion}
+                onChangeType={onChangeQuestionType}
+                onUpdateLikertDescriptor={onUpdateLikertDescriptor}
+                onAddSuggestedResponse={onAddSuggestedResponse}
+                onRemoveSuggestedResponse={onRemoveSuggestedResponse}
+                ciloOptions={ciloOptions}
+                facultyMode={facultyMode}
+                onCiloBindingChange={onCiloBindingChange}
+                selectedCiloLabel={selectedCiloLabels.get(
+                  ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
+                )}
+                selectedCiloIds={selectedCiloIds}
+                selectedCiloId={
+                  ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
+                }
+                canRemove={section.questions.length > 1}
+              />
+            ))}
 
           {/* Add Question Button */}
           <div className="flex justify-center pt-2">
@@ -1043,7 +1442,8 @@ function SectionCard({
               Add Question
             </button>
           </div>
-        </div>
+          </div>
+        </SortableContext>
       </CardContent>
     </Card>
   );
@@ -1054,8 +1454,10 @@ function SectionCard({
 interface QuestionCardProps {
   ciloOptions: Array<{ description: string; id: string }>;
   sectionKey: string;
+  sectionIndex: number;
   question: TemplateQuestion;
   questionIndex: number;
+  sortableId: string;
   facultyMode: boolean;
   onUpdate: (sectionKey: string, questionKey: string, updates: Partial<TemplateQuestion>) => void;
   onRemove: (sectionKey: string, questionKey: string) => void;
@@ -1078,8 +1480,10 @@ interface QuestionCardProps {
 function QuestionCard({
   ciloOptions,
   sectionKey,
+  sectionIndex,
   question,
   questionIndex,
+  sortableId,
   facultyMode,
   onUpdate,
   onRemove,
@@ -1094,26 +1498,45 @@ function QuestionCard({
   canRemove,
 }: QuestionCardProps) {
   const [newResponse, setNewResponse] = useState("");
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: sortableId,
+    data: { kind: "question", sectionKey, questionKey: question.key },
+  });
 
   return (
-    <div className="group border-border bg-background space-y-4 rounded-lg border p-4">
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`group border-border bg-background space-y-4 rounded-lg border p-4 ${
+        isDragging ? "opacity-90 shadow-lg" : ""
+      }`}
+    >
       {/* Question Header */}
-      <div className="flex items-center justify-between gap-4">
-        <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
-          Question {questionIndex + 1}
-        </p>
-        <Select
-          value={question.type}
-          onValueChange={(value) => onChangeType(sectionKey, question.key, value as QuestionType)}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue>{formatQuestionTypeLabel(question.type)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="likert">Likert</SelectItem>
-            <SelectItem value="guided_open_ended">Guided Open-Ended</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <SortableDragHandle
+            label={`Drag question ${questionIndex + 1} in section ${sectionIndex + 1}`}
+            attributes={attributes}
+            listeners={listeners}
+          />
+          <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
+            Question {questionIndex + 1}
+          </p>
+        </div>
+        <div className="w-full sm:w-auto">
+          <Select
+            value={question.type}
+            onValueChange={(value) => onChangeType(sectionKey, question.key, value as QuestionType)}
+          >
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue>{formatQuestionTypeLabel(question.type)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="likert">Likert</SelectItem>
+              <SelectItem value="guided_open_ended">Guided Open-Ended</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Prompt Input */}
@@ -1146,7 +1569,7 @@ function QuestionCard({
                   const ciloId = !value || value === "none" ? "" : value;
 
                   // Update CILO binding
-                  onCiloBindingChange(`${sectionKey}:${question.key}`, ciloId);
+                  onCiloBindingChange(encodeBindingKey(sectionKey, question.key), ciloId);
 
                   // Auto-populate question title with CILO description
                   if (ciloId) {
