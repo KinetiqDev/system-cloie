@@ -367,6 +367,21 @@ export function buildProgramHeadOverviewKpi(input: {
 // Program GO outcome evidence
 // ---------------------------------------------------------------------------
 
+/** Raw item entries of a snapshot section across all supported formats. */
+function rawSectionItemCandidates(section: SnapshotSection): Array<Record<string, unknown>> {
+  const raw = section as unknown as Record<string, unknown>;
+  if (Array.isArray(raw.items)) {
+    return raw.items as Array<Record<string, unknown>>;
+  }
+  if (Array.isArray(raw.questions)) {
+    return raw.questions as Array<Record<string, unknown>>;
+  }
+  if (Array.isArray(raw.quantitative_items)) {
+    return raw.quantitative_items as Array<Record<string, unknown>>;
+  }
+  return [];
+}
+
 /**
  * Resolve the Likert scale for one rating item from the instrument version's
  * frozen structure snapshot. The item is located by its canonical section and
@@ -388,15 +403,7 @@ export function resolveSnapshotItemScale(
     if (!isSnapshotSection(section) || section.key !== sectionKey) {
       continue;
     }
-    const raw = section as unknown as Record<string, unknown>;
-    const rawItems = Array.isArray(raw.items)
-      ? (raw.items as Array<Record<string, unknown>>)
-      : Array.isArray(raw.questions)
-        ? (raw.questions as Array<Record<string, unknown>>)
-        : Array.isArray(raw.quantitative_items)
-          ? (raw.quantitative_items as Array<Record<string, unknown>>)
-          : [];
-    const candidate = rawItems.find((entry) => entry.key === itemKey);
+    const candidate = rawSectionItemCandidates(section).find((entry) => entry.key === itemKey);
     if (!candidate) {
       continue;
     }

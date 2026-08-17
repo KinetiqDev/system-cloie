@@ -517,6 +517,85 @@ function buildCourseBoundResponseScope(programId: string, termInstanceWhere: Rec
   };
 }
 
+/** Narrow projection of a course-bound rating row for GO evidence. */
+type OutcomeRatingRow = {
+  rating_value: number;
+  response_id: string;
+  section_key: string;
+  item_key: string;
+  response: {
+    assignment: {
+      course_bound_id: string | null;
+      course_bound: { instrument_version_id: string | null } | null;
+    };
+  };
+};
+
+/** Narrow projection of a publication-time CILO question binding. */
+type OutcomeBindingRow = {
+  section_key: string;
+  item_key: string;
+  course_bound_evaluation_id: string;
+  course_bound_evaluation: { deployment_name: string };
+  cilo: {
+    id: string;
+    description: string;
+    course: { id: string; code: string; title: string } | null;
+    cilo_mappings: Array<{ go: { id: string; code: string; description: string } }>;
+  } | null;
+};
+
+function toGoMapping(mapping: { go: { id: string; code: string; description: string } }) {
+  return { goId: mapping.go.id, code: mapping.go.code, name: mapping.go.description };
+}
+
+function resolveInstrumentSnapshot(
+  instrumentVersionId: string | null,
+  snapshotById: Map<string, unknown>
+): { id: string; structureSnapshot: unknown } | null {
+  if (!instrumentVersionId) {
+    return null;
+  }
+  return {
+    id: instrumentVersionId,
+    structureSnapshot: snapshotById.get(instrumentVersionId) ?? null,
+  };
+}
+
+/**
+ * Map one course-bound rating to its normalized GO evidence row through the
+ * publication-time binding identified by evaluation plus section/item keys.
+ * Returns null when the item has no binding, the bound CILO was deleted, or
+ * the CILO has no canonical mapping for the selected Program.
+ */
+function toOutcomeEvidenceRow(
+  row: OutcomeRatingRow,
+  bindingByItemKey: Map<string, OutcomeBindingRow>,
+  snapshotById: Map<string, unknown>
+): OutcomeEvidenceRow | null {
+  const binding = bindingByItemKey.get(
+    `${row.response.assignment.course_bound_id ?? ""}:${row.section_key}:${row.item_key}`
+  );
+  const cilo = binding?.cilo;
+  if (!cilo || cilo.cilo_mappings.length === 0) {
+    return null;
+  }
+  return {
+    ratingValue: row.rating_value,
+    responseId: row.response_id,
+    sectionKey: row.section_key,
+    itemKey: row.item_key,
+    instrumentVersion: resolveInstrumentSnapshot(
+      row.response.assignment.course_bound?.instrument_version_id ?? null,
+      snapshotById
+    ),
+    cilo: { id: cilo.id, description: cilo.description, course: cilo.course },
+    goMappings: cilo.cilo_mappings.map(toGoMapping),
+    evaluationId: binding.course_bound_evaluation_id,
+    deploymentName: binding.course_bound_evaluation.deployment_name,
+  };
+}
+
 /**
  * Disclosure that historical ratings are grouped by the Program's current
  * CILO-to-GO mappings. Publication-time mapping snapshots do not exist yet,
@@ -657,44 +736,9 @@ export async function getProgramHeadOutcomes(
     instrumentVersions.map((version) => [version.id, version.structure_snapshot])
   );
 
-  const evidenceRows: OutcomeEvidenceRow[] = ratingRows.flatMap((row) => {
-    const evaluationId = row.response.assignment.course_bound_id;
-    if (!evaluationId) {
-      return [];
-    }
-    const binding = bindingByItemKey.get(
-      `${evaluationId}:${row.section_key}:${row.item_key}`
-    );
-    const cilo = binding?.cilo;
-    if (!binding || !cilo) {
-      return [];
-    }
-    const goMappings = cilo.cilo_mappings.map((mapping) => ({
-      goId: mapping.go.id,
-      code: mapping.go.code,
-      name: mapping.go.description,
-    }));
-    if (goMappings.length === 0) {
-      return [];
-    }
-    const instrumentVersionId =
-      row.response.assignment.course_bound?.instrument_version_id ?? null;
-    return [
-      {
-        ratingValue: row.rating_value,
-        responseId: row.response_id,
-        sectionKey: row.section_key,
-        itemKey: row.item_key,
-        instrumentVersion: instrumentVersionId
-          ? { id: instrumentVersionId, structureSnapshot: snapshotById.get(instrumentVersionId) ?? null }
-          : null,
-        cilo: { id: cilo.id, description: cilo.description, course: cilo.course },
-        goMappings,
-        evaluationId,
-        deploymentName: binding.course_bound_evaluation.deployment_name,
-      },
-    ];
-  });
+  const evidenceRows: OutcomeEvidenceRow[] = ratingRows
+    .map((row) => toOutcomeEvidenceRow(row, bindingByItemKey, snapshotById))
+    .filter((row): row is OutcomeEvidenceRow => row !== null);
 
   const aggregation = aggregateOutcomeEvidence(evidenceRows);
   const outcomes = buildProgramHeadOutcomeDtos(aggregation);
