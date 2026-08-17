@@ -48,7 +48,17 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
               { value: 5, label: null, count: 1, percentage: 1 / 3 },
             ],
           },
+          {
+            scaleLabel: "1–4 (4-point)",
+            categories: [
+              { value: 1, label: "Strongly Disagree", count: 0, percentage: 0 },
+              { value: 2, label: "Disagree", count: 0, percentage: 0 },
+              { value: 3, label: "Agree", count: 1, percentage: 1 },
+              { value: 4, label: "Strongly Agree", count: 0, percentage: 0 },
+            ],
+          },
         ],
+        spansMultipleScales: true,
         excludedRatingCount: 0,
       },
       {
@@ -62,6 +72,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         contributingCourses: [{ id: "course-3", code: "MATH 101", title: "Math 101" }],
         evidenceEvaluations: [{ evaluationId: "eval-3", deploymentName: "CILO Evaluation 3" }],
         distributions: [],
+        spansMultipleScales: false,
         excludedRatingCount: 1,
       },
     ],
@@ -169,6 +180,11 @@ describe("ProgramHeadOutcomesView", () => {
     expect(within(go1Detail).getByText("Scale: 1–5 (5-point)")).toBeInTheDocument();
     expect(within(go1Detail).getAllByText("33.3%")).toHaveLength(3);
     expect(within(go1Detail).getByText("3 valid ratings on this scale.")).toBeInTheDocument();
+
+    // Mixed-scale rows disclose that the pooled mean spans distinct scales.
+    expect(
+      within(go1Detail).getByText(/pools ratings from 2 distinct rating scales/)
+    ).toBeInTheDocument();
 
     // Excluded-rating diagnostic appears only for rows with exclusions.
     fireEvent.click(screen.getByText("Details for GO-2"));

@@ -142,6 +142,13 @@ export type ProgramHeadOutcomeDTO = {
   evidenceEvaluations: Array<{ evaluationId: string; deploymentName: string }>;
   /** Scale-separated Likert distributions resolved from frozen structure snapshots. */
   distributions: ProgramHeadOutcomeScaleDistributionDTO[];
+  /**
+   * True when the pooled mean combines ratings from more than one distinct
+   * instrument-version scale identity. The mean stays spec-mandated
+   * full-precision, and the UI discloses that cross-scale values are not
+   * directly comparable.
+   */
+  spansMultipleScales: boolean;
   /** Ratings excluded from the valid aggregate (unresolvable or out-of-scale values). */
   excludedRatingCount: number;
 };

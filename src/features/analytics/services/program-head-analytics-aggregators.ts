@@ -612,6 +612,7 @@ export function buildProgramHeadOutcomeDtos(
         .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
         .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName)),
       distributions,
+      spansMultipleScales: aggregate.distributions.size > 1,
       excludedRatingCount: aggregate.excludedRatingCount,
     });
   }

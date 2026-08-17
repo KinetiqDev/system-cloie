@@ -34,6 +34,13 @@ export function ProgramHeadGoDetail({ outcome }: { outcome: ProgramHeadOutcomeDT
         </div>
       )}
 
+      {outcome.spansMultipleScales && (
+        <p className="text-body-sm text-text-secondary">
+          This row&apos;s mean pools ratings from {outcome.distributions.length} distinct rating
+          scales. Values across different scales are not directly comparable.
+        </p>
+      )}
+
       {outcome.excludedRatingCount > 0 && (
         <p className="text-body-sm text-text-secondary">
           {outcome.excludedRatingCount} rating

@@ -312,6 +312,7 @@ describe("getProgramHeadOutcomes", () => {
       { evaluationId: "eval-1", deploymentName: "CILO Evaluation" },
       { evaluationId: "eval-2", deploymentName: "CILO Evaluation" },
     ]);
+    expect(row.spansMultipleScales).toBe(false);
   });
 
   it("ranks GO rows by mean rating descending", async () => {
@@ -519,6 +520,7 @@ describe("getProgramHeadOutcomes", () => {
     expect(result!.outcomes).toHaveLength(1);
     const row = result!.outcomes[0];
     expect(row.meanRating).toBe(3.5); // (4 + 3) / 2
+    expect(row.spansMultipleScales).toBe(true);
     expect(row.distributions).toHaveLength(2);
     const labels = row.distributions.map((distribution) => distribution.scaleLabel).sort();
     expect(labels).toEqual(["1–4 (4-point)", "1–5 (5-point)"]);
