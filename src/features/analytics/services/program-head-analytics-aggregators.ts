@@ -1,5 +1,8 @@
 import { isSnapshotSection, type SnapshotSection } from "./snapshot-structure";
 import type {
+  ProgramHeadOutcomeCategoryDTO,
+  ProgramHeadOutcomeDTO,
+  ProgramHeadOutcomeScaleDistributionDTO,
   ProgramHeadOverviewKPI,
   ProgramHeadTrendBreakDTO,
   ProgramHeadTrendPeriodDTO,
@@ -358,4 +361,267 @@ export function buildProgramHeadOverviewKpi(input: {
     ratingCount,
     meanRating: ratingCount === 0 ? null : ratingSum / ratingCount,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Program GO outcome evidence
+// ---------------------------------------------------------------------------
+
+/** Raw item entries of a snapshot section across all supported formats. */
+function rawSectionItemCandidates(section: SnapshotSection): Array<Record<string, unknown>> {
+  const raw = section as unknown as Record<string, unknown>;
+  if (Array.isArray(raw.items)) {
+    return raw.items as Array<Record<string, unknown>>;
+  }
+  if (Array.isArray(raw.questions)) {
+    return raw.questions as Array<Record<string, unknown>>;
+  }
+  if (Array.isArray(raw.quantitative_items)) {
+    return raw.quantitative_items as Array<Record<string, unknown>>;
+  }
+  return [];
+}
+
+/**
+ * Resolve the Likert scale for one rating item from the instrument version's
+ * frozen structure snapshot. The item is located by its canonical section and
+ * item keys across the modern `items`, `questions`, and legacy
+ * `quantitative_items` snapshot formats; category values and labels come from
+ * the snapshot rather than a universal 1–5 assumption. Returns null when the
+ * item (or its scale) cannot be resolved.
+ */
+export function resolveSnapshotItemScale(
+  structureSnapshot: unknown,
+  sectionKey: string,
+  itemKey: string
+): ScaleDescriptor[] | null {
+  if (!Array.isArray(structureSnapshot)) {
+    return null;
+  }
+
+  for (const section of structureSnapshot) {
+    if (!isSnapshotSection(section) || section.key !== sectionKey) {
+      continue;
+    }
+    const candidate = rawSectionItemCandidates(section).find((entry) => entry.key === itemKey);
+    if (!candidate) {
+      continue;
+    }
+    const descriptors = extractDescriptors(candidate);
+    if (descriptors.length === 0) {
+      return null;
+    }
+    return [...descriptors].sort((left, right) => left.value - right.value);
+  }
+
+  return null;
+}
+
+/** One normalized course-bound rating row ready for Program GO aggregation. */
+export type OutcomeEvidenceRow = {
+  ratingValue: number;
+  responseId: string;
+  sectionKey: string;
+  itemKey: string;
+  /** Frozen structure snapshot of the instrument version that produced the rating. */
+  instrumentVersion: { id: string; structureSnapshot: unknown } | null;
+  /** Binding subject; null when the bound CILO was deleted (no mapping possible). */
+  cilo: { id: string; description: string; course: { id: string; code: string; title: string } | null } | null;
+  /** Current CILO-to-GO mappings for the selected Program only. */
+  goMappings: Array<{ goId: string; code: string; name: string }>;
+  evaluationId: string;
+  deploymentName: string;
+};
+
+/** Accumulated evidence behind one Graduate Outcome row. */
+type OutcomeEvidenceAggregate = {
+  goId: string;
+  code: string;
+  name: string;
+  ratingSum: number;
+  ratingCount: number;
+  responseIds: Set<string>;
+  cilos: Map<string, string>;
+  courses: Map<string, { code: string; title: string }>;
+  evaluations: Map<string, string>;
+  /** scaleKey (sorted descriptor JSON) -> per-category counts */
+  distributions: Map<string, { descriptors: ScaleDescriptor[]; counts: Map<number, number> }>;
+  excludedRatingCount: number;
+};
+
+type OutcomeEvidenceAggregation = {
+  /** Aggregates keyed by GO id. */
+  outcomes: Map<string, OutcomeEvidenceAggregate>;
+  /** True when any contributing CILO maps to more than one selected-Program GO. */
+  hasMultiMappedCilo: boolean;
+};
+
+function getOrCreateOutcomeAggregate(
+  outcomes: Map<string, OutcomeEvidenceAggregate>,
+  mapping: OutcomeEvidenceRow["goMappings"][number]
+): OutcomeEvidenceAggregate {
+  let aggregate = outcomes.get(mapping.goId);
+  if (!aggregate) {
+    aggregate = {
+      goId: mapping.goId,
+      code: mapping.code,
+      name: mapping.name,
+      ratingSum: 0,
+      ratingCount: 0,
+      responseIds: new Set(),
+      cilos: new Map(),
+      courses: new Map(),
+      evaluations: new Map(),
+      distributions: new Map(),
+      excludedRatingCount: 0,
+    };
+    outcomes.set(mapping.goId, aggregate);
+  }
+  return aggregate;
+}
+
+/** Resolve the frozen scale for one rating row; null when unresolvable. */
+function resolveRatingScale(row: OutcomeEvidenceRow): ScaleDescriptor[] | null {
+  return row.instrumentVersion
+    ? resolveSnapshotItemScale(
+        row.instrumentVersion.structureSnapshot,
+        row.sectionKey,
+        row.itemKey
+      )
+    : null;
+}
+
+/** A rating is valid only when its value belongs to the item's frozen scale. */
+function ratingIsValid(descriptors: ScaleDescriptor[] | null, value: number): boolean {
+  return descriptors !== null && descriptors.some((descriptor) => descriptor.value === value);
+}
+
+function accumulateOutcomeRow(
+  aggregate: OutcomeEvidenceAggregate,
+  row: OutcomeEvidenceRow,
+  cilo: NonNullable<OutcomeEvidenceRow["cilo"]>,
+  descriptors: ScaleDescriptor[] | null,
+  isValidRating: boolean
+): void {
+  aggregate.cilos.set(cilo.id, cilo.description);
+  if (cilo.course) {
+    aggregate.courses.set(cilo.course.id, {
+      code: cilo.course.code,
+      title: cilo.course.title,
+    });
+  }
+  aggregate.evaluations.set(row.evaluationId, row.deploymentName);
+
+  if (!isValidRating) {
+    aggregate.excludedRatingCount += 1;
+    return;
+  }
+
+  aggregate.ratingSum += row.ratingValue;
+  aggregate.ratingCount += 1;
+  aggregate.responseIds.add(row.responseId);
+
+  if (!descriptors) {
+    return;
+  }
+  const scaleKey = JSON.stringify(descriptors);
+  let distribution = aggregate.distributions.get(scaleKey);
+  if (!distribution) {
+    distribution = { descriptors, counts: new Map() };
+    aggregate.distributions.set(scaleKey, distribution);
+  }
+  distribution.counts.set(row.ratingValue, (distribution.counts.get(row.ratingValue) ?? 0) + 1);
+}
+
+/**
+ * Aggregate course-bound ratings into Program GO rows. Each rating contributes
+ * once to every mapped GO (many-to-many). Ratings are valid only when their
+ * value belongs to the applicable item's frozen snapshot scale; unresolvable
+ * or out-of-scale ratings are excluded from the valid aggregate and counted
+ * diagnostically. Central items and unmapped CILOs never create rows because
+ * the caller supplies only course-bound rows with canonical mappings.
+ */
+export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvidenceAggregation {
+  const outcomes = new Map<string, OutcomeEvidenceAggregate>();
+  let hasMultiMappedCilo = false;
+
+  for (const row of rows) {
+    if (!row.cilo || row.goMappings.length === 0) {
+      continue;
+    }
+    if (row.goMappings.length > 1) {
+      hasMultiMappedCilo = true;
+    }
+
+    const descriptors = resolveRatingScale(row);
+    const isValidRating = ratingIsValid(descriptors, row.ratingValue);
+
+    for (const mapping of row.goMappings) {
+      const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
+      accumulateOutcomeRow(aggregate, row, row.cilo, descriptors, isValidRating);
+    }
+  }
+
+  return { outcomes, hasMultiMappedCilo };
+}
+
+/**
+ * Convert GO evidence aggregates into ranked, closed DTO rows. Rows rank by
+ * mean rating descending (stronger evidence first), then GO code for stable
+ * ordering. Distribution percentages are computed at full precision and
+ * rounded only for display.
+ */
+export function buildProgramHeadOutcomeDtos(
+  aggregation: OutcomeEvidenceAggregation
+): ProgramHeadOutcomeDTO[] {
+  const rows: ProgramHeadOutcomeDTO[] = [];
+
+  for (const aggregate of aggregation.outcomes.values()) {
+    const distributions: ProgramHeadOutcomeScaleDistributionDTO[] = [];
+    for (const distribution of aggregate.distributions.values()) {
+      const total = [...distribution.counts.values()].reduce((sum, count) => sum + count, 0);
+      const categories: ProgramHeadOutcomeCategoryDTO[] = distribution.descriptors.map(
+        (descriptor) => {
+          const count = distribution.counts.get(descriptor.value) ?? 0;
+          return {
+            value: descriptor.value,
+            label: descriptor.label,
+            count,
+            percentage: total === 0 ? 0 : count / total,
+          };
+        }
+      );
+      distributions.push({ scaleLabel: describeScale(distribution.descriptors), categories });
+    }
+    distributions.sort((left, right) => left.scaleLabel.localeCompare(right.scaleLabel));
+
+    rows.push({
+      goId: aggregate.goId,
+      code: aggregate.code,
+      name: aggregate.name,
+      meanRating: aggregate.ratingCount === 0 ? null : aggregate.ratingSum / aggregate.ratingCount,
+      ratingCount: aggregate.ratingCount,
+      submittedResponseCount: aggregate.responseIds.size,
+      contributingCilos: [...aggregate.cilos.entries()]
+        .map(([id, description]) => ({ id, description }))
+        .sort((left, right) => left.description.localeCompare(right.description)),
+      contributingCourses: [...aggregate.courses.entries()]
+        .map(([id, course]) => ({ id, code: course.code, title: course.title }))
+        .sort((left, right) => left.code.localeCompare(right.code)),
+      evidenceEvaluations: [...aggregate.evaluations.entries()]
+        .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
+        .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName)),
+      distributions,
+      spansMultipleScales: aggregate.distributions.size > 1,
+      excludedRatingCount: aggregate.excludedRatingCount,
+    });
+  }
+
+  rows.sort((left, right) => {
+    const leftMean = left.meanRating ?? -Infinity;
+    const rightMean = right.meanRating ?? -Infinity;
+    return rightMean - leftMean || left.code.localeCompare(right.code) || left.goId.localeCompare(right.goId);
+  });
+
+  return rows;
 }
