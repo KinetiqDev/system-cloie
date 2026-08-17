@@ -2147,6 +2147,36 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "New server component rendering one accessible per-scale Likert table with snapshot labels",
   },
   {
+    path: "src/features/analytics/components/program-head-stakeholder-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server component composing source-separation disclosure, ranked source means, and response composition",
+  },
+  {
+    path: "src/features/analytics/components/program-head-comparison-chart.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New client ranked-bar comparison chart with semantic tokens, insight, legend, and exact-value table",
+  },
+  {
+    path: "src/features/analytics/components/program-head-response-composition-donut.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New client donut reserved for genuine response composition, never independent means",
+  },
+  {
+    path: "src/features/analytics/components/program-head-breakdowns-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server component composing course, instrument, major, and year-level breakdowns with Unspecified attribution",
+  },
+  {
+    path: "src/features/analytics/components/program-head-instrument-breakdown-chart.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New client grouped-bar instrument chart keeping every evidence source separate",
+  },
+  {
     path: "src/features/auth/components/authenticated-app-shell.tsx",
     disposition: "task",
     taskId: 18,

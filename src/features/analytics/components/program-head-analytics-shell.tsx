@@ -29,7 +29,11 @@ export function ProgramHeadAnalyticsShell({
   children,
 }: ProgramHeadAnalyticsShellProps) {
   const hasLiveView =
-    filters.tab === "overview" || filters.tab === "outcomes" || filters.tab === "trends";
+    filters.tab === "overview" ||
+    filters.tab === "outcomes" ||
+    filters.tab === "stakeholders" ||
+    filters.tab === "breakdowns" ||
+    filters.tab === "trends";
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,9 +1,17 @@
 import { isSnapshotSection, type SnapshotSection } from "./snapshot-structure";
+import type { YearLevel } from "@prisma/client";
+import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type {
+  ProgramHeadBreakdownRowDTO,
+  ProgramHeadCourseBreakdownRowDTO,
+  ProgramHeadInstrumentBreakdownRowDTO,
+  ProgramHeadInstrumentSourceDTO,
   ProgramHeadOutcomeCategoryDTO,
   ProgramHeadOutcomeDTO,
   ProgramHeadOutcomeScaleDistributionDTO,
   ProgramHeadOverviewKPI,
+  ProgramHeadStakeholderBucketDTO,
+  ProgramHeadStakeholderSourceKey,
   ProgramHeadTrendBreakDTO,
   ProgramHeadTrendPeriodDTO,
   ProgramHeadTrendsEmptyReason,
@@ -624,4 +632,436 @@ export function buildProgramHeadOutcomeDtos(
   });
 
   return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Stakeholder and contextual breakdown evidence
+// ---------------------------------------------------------------------------
+
+/**
+ * Narrow structural rating row for stakeholder and breakdown aggregation.
+ * The service's Prisma select output must structurally match this shape;
+ * helpers stay pure and unit-testable.
+ */
+export type BreakdownRatingRow = {
+  rating_value: number;
+  response_id: string;
+  response: {
+    assignment: {
+      course_bound: {
+        id: string;
+        deployment_name: string;
+        course_assignment: { course: { id: string; code: string; title: string } };
+        instrument_version: {
+          id: string;
+          version_number: number;
+          template: { name: string };
+        };
+        /**
+         * Year-level targets for the selected Program only. The service
+         * pre-filters targets by the selected Program; a single non-null
+         * target makes year-level attribution defensible.
+         */
+        targets: Array<{ year_level: YearLevel | null }>;
+      } | null;
+      central_deployment: {
+        target_stakeholder: string;
+        major: { id: string; name: string } | null;
+        year_level: YearLevel | null;
+        instrument_version: {
+          id: string;
+          version_number: number;
+          template: { name: string };
+        };
+      } | null;
+    };
+  };
+};
+
+/** Narrow structural response row used for bucket response counts. */
+type BreakdownResponseRow = {
+  id: string;
+  assignment: {
+    course_bound: { id: string } | null;
+    central_deployment: { target_stakeholder: string } | null;
+  };
+};
+
+/** Canonical evidence source metadata in display order. */
+const STAKEHOLDER_SOURCES: ReadonlyArray<{
+  key: ProgramHeadStakeholderSourceKey;
+  label: string;
+  description: string;
+}> = [
+  {
+    key: "COURSE_STUDENT",
+    label: "Course-bound student evidence",
+    description: "Course-bound evaluations of assigned students.",
+  },
+  {
+    key: "CENTRAL_STUDENT",
+    label: "Central student-respondent evidence",
+    description: "Central deployments targeting student respondents.",
+  },
+  {
+    key: "ALUMNI",
+    label: "Alumni evidence",
+    description: "Central deployments targeting alumni respondents.",
+  },
+  {
+    key: "INDUSTRY_PARTNER",
+    label: "Industry Partner evidence",
+    description: "Central deployments targeting industry partner respondents.",
+  },
+];
+
+/** Resolve the canonical source bucket of one rating row. */
+function ratingRowSourceKey(row: BreakdownRatingRow): ProgramHeadStakeholderSourceKey {
+  if (row.response.assignment.course_bound) {
+    return "COURSE_STUDENT";
+  }
+  const target = row.response.assignment.central_deployment?.target_stakeholder;
+  if (target === "ALUMNI") {
+    return "ALUMNI";
+  }
+  if (target === "INDUSTRY_PARTNER") {
+    return "INDUSTRY_PARTNER";
+  }
+  return "CENTRAL_STUDENT";
+}
+
+function instrumentLabel(version: {
+  version_number: number;
+  template: { name: string };
+}): string {
+  return `${version.template.name} v${version.version_number}`;
+}
+
+type StakeholderBucketAggregate = {
+  sourceKey: ProgramHeadStakeholderSourceKey;
+  ratingSum: number;
+  ratingCount: number;
+  responseIds: Set<string>;
+  /** instrument version id -> readable label */
+  instruments: Map<string, string>;
+};
+
+function getOrCreateBucket(
+  buckets: Map<ProgramHeadStakeholderSourceKey, StakeholderBucketAggregate>,
+  sourceKey: ProgramHeadStakeholderSourceKey
+): StakeholderBucketAggregate {
+  let bucket = buckets.get(sourceKey);
+  if (!bucket) {
+    bucket = {
+      sourceKey,
+      ratingSum: 0,
+      ratingCount: 0,
+      responseIds: new Set(),
+      instruments: new Map(),
+    };
+    buckets.set(sourceKey, bucket);
+  }
+  return bucket;
+}
+
+/**
+ * Aggregate submitted evidence into source-aware stakeholder buckets.
+ * Course-bound ratings form the COURSE_STUDENT bucket; central ratings are
+ * bucketed by their deployment's target stakeholder. Means are pooled within
+ * a source only; rating count stays distinct from submitted response count.
+ * Response rows contribute distinct submitted responses even when unrated.
+ */
+export function buildStakeholderBuckets(
+  ratingRows: BreakdownRatingRow[],
+  responseRows: BreakdownResponseRow[]
+): ProgramHeadStakeholderBucketDTO[] {
+  const buckets = new Map<ProgramHeadStakeholderSourceKey, StakeholderBucketAggregate>();
+
+  for (const row of ratingRows) {
+    const sourceKey = ratingRowSourceKey(row);
+    const bucket = getOrCreateBucket(buckets, sourceKey);
+    bucket.ratingSum += row.rating_value;
+    bucket.ratingCount += 1;
+    bucket.responseIds.add(row.response_id);
+    const version = row.response.assignment.course_bound?.instrument_version ??
+      row.response.assignment.central_deployment?.instrument_version;
+    if (version) {
+      bucket.instruments.set(version.id, instrumentLabel(version));
+    }
+  }
+
+  for (const row of responseRows) {
+    const sourceKey = row.assignment.course_bound
+      ? "COURSE_STUDENT"
+      : row.assignment.central_deployment?.target_stakeholder === "ALUMNI"
+        ? "ALUMNI"
+        : row.assignment.central_deployment?.target_stakeholder === "INDUSTRY_PARTNER"
+          ? "INDUSTRY_PARTNER"
+          : "CENTRAL_STUDENT";
+    getOrCreateBucket(buckets, sourceKey).responseIds.add(row.id);
+  }
+
+  return STAKEHOLDER_SOURCES.flatMap((source) => {
+    const bucket = buckets.get(source.key);
+    if (!bucket || bucket.responseIds.size === 0) {
+      return [];
+    }
+    const instruments = [...bucket.instruments.values()].sort();
+    return [
+      {
+        sourceKey: bucket.sourceKey,
+        sourceLabel: source.label,
+        sourceDescription: source.description,
+        instrumentContext: instruments.length > 0 ? instruments.join(", ") : null,
+        meanRating:
+          bucket.ratingCount === 0 ? null : bucket.ratingSum / bucket.ratingCount,
+        ratingCount: bucket.ratingCount,
+        submittedResponseCount: bucket.responseIds.size,
+      },
+    ];
+  });
+}
+
+type BreakdownAggregate = {
+  ratingSum: number;
+  ratingCount: number;
+  responseIds: Set<string>;
+};
+
+function emptyBreakdownAggregate(): BreakdownAggregate {
+  return { ratingSum: 0, ratingCount: 0, responseIds: new Set() };
+}
+
+function toBreakdownRow(
+  aggregate: BreakdownAggregate,
+  key: string,
+  label: string,
+  isUnspecified: boolean
+): ProgramHeadBreakdownRowDTO {
+  return {
+    key,
+    label,
+    isUnspecified,
+    meanRating:
+      aggregate.ratingCount === 0 ? null : aggregate.ratingSum / aggregate.ratingCount,
+    ratingCount: aggregate.ratingCount,
+    submittedResponseCount: aggregate.responseIds.size,
+  };
+}
+
+/**
+ * Group course-bound ratings by course. Central ratings never contribute to
+ * course rows because course attribution exists only for course-bound
+ * evidence. Rows carry instrument disclosure and the course-bound evaluations
+ * behind them for authorized review drill-through.
+ */
+export function buildCourseBreakdownRows(
+  ratingRows: BreakdownRatingRow[]
+): ProgramHeadCourseBreakdownRowDTO[] {
+  const byCourse = new Map<
+    string,
+    BreakdownAggregate & {
+      course: { id: string; code: string; title: string };
+      instruments: Map<string, string>;
+      evaluations: Map<string, string>;
+    }
+  >();
+
+  for (const row of ratingRows) {
+    const courseBound = row.response.assignment.course_bound;
+    if (!courseBound) {
+      continue;
+    }
+    const course = courseBound.course_assignment.course;
+    let aggregate = byCourse.get(course.id);
+    if (!aggregate) {
+      aggregate = {
+        ...emptyBreakdownAggregate(),
+        course,
+        instruments: new Map(),
+        evaluations: new Map(),
+      };
+      byCourse.set(course.id, aggregate);
+    }
+    accumulateInto(aggregate, row);
+    aggregate.instruments.set(courseBound.instrument_version.id, instrumentLabel(courseBound.instrument_version));
+    aggregate.evaluations.set(courseBound.id, courseBound.deployment_name);
+  }
+
+  const rows: ProgramHeadCourseBreakdownRowDTO[] = [...byCourse.values()].map(
+    (aggregate) => {
+      const instruments = [...aggregate.instruments.values()].sort();
+      const evaluations = [...aggregate.evaluations.entries()]
+        .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
+        .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName));
+      return {
+        ...toBreakdownRow(
+          aggregate,
+          aggregate.course.id,
+          `${aggregate.course.code} — ${aggregate.course.title}`,
+          false
+        ),
+        courseCode: aggregate.course.code,
+        instrumentContext: instruments.length > 0 ? instruments.join(", ") : null,
+        evidenceEvaluations: evaluations,
+      };
+    }
+  );
+
+  rows.sort((left, right) => left.courseCode.localeCompare(right.courseCode));
+  return rows;
+}
+
+/**
+ * Group ratings by instrument version with per-source separation. A row never
+ * pools means across evidence sources: each source keeps its own mean, rating
+ * count, and response count so unlike populations are not treated as one
+ * construct.
+ */
+export function buildInstrumentBreakdownRows(
+  ratingRows: BreakdownRatingRow[]
+): ProgramHeadInstrumentBreakdownRowDTO[] {
+  const byInstrument = new Map<
+    string,
+    {
+      label: string;
+      sources: Map<ProgramHeadStakeholderSourceKey, BreakdownAggregate>;
+    }
+  >();
+
+  for (const row of ratingRows) {
+    const sourceKey = ratingRowSourceKey(row);
+    const version =
+      row.response.assignment.course_bound?.instrument_version ??
+      row.response.assignment.central_deployment?.instrument_version;
+    if (!version) {
+      continue;
+    }
+    let entry = byInstrument.get(version.id);
+    if (!entry) {
+      entry = { label: instrumentLabel(version), sources: new Map() };
+      byInstrument.set(version.id, entry);
+    }
+    let source = entry.sources.get(sourceKey);
+    if (!source) {
+      source = emptyBreakdownAggregate();
+      entry.sources.set(sourceKey, source);
+    }
+    source.ratingSum += row.rating_value;
+    source.ratingCount += 1;
+    source.responseIds.add(row.response_id);
+  }
+
+  const rows: ProgramHeadInstrumentBreakdownRowDTO[] = [...byInstrument.entries()]
+    .map(([instrumentVersionId, entry]) => {
+      const sources: ProgramHeadInstrumentSourceDTO[] = STAKEHOLDER_SOURCES.flatMap(
+        (source) => {
+          const aggregate = entry.sources.get(source.key);
+          if (!aggregate || aggregate.responseIds.size === 0) {
+            return [];
+          }
+          return [
+            {
+              ...toBreakdownRow(aggregate, `${instrumentVersionId}:${source.key}`, source.label, false),
+              sourceKey: source.key,
+              sourceLabel: source.label,
+            },
+          ];
+        }
+      );
+      return { instrumentVersionId, instrumentLabel: entry.label, sources };
+    })
+    .filter((row) => row.sources.length > 0);
+
+  rows.sort((left, right) => left.instrumentLabel.localeCompare(right.instrumentLabel));
+  return rows;
+}
+
+/**
+ * Group ratings by a defensible attribution key. Rows whose attribution is
+ * missing (or ambiguous) fall into a single `Unspecified` aggregate; the
+ * system never guesses an attribute from names, text, or current profiles.
+ * Defensible rows rank by mean rating descending, then label.
+ */
+export function buildAttributionBreakdown(
+  ratingRows: BreakdownRatingRow[],
+  attributionOf: (row: BreakdownRatingRow) => { key: string; label: string } | null
+): { rows: ProgramHeadBreakdownRowDTO[]; unspecified: ProgramHeadBreakdownRowDTO | null } {
+  const byKey = new Map<string, BreakdownAggregate & { key: string; label: string }>();
+  let unspecified: BreakdownAggregate | null = null;
+
+  for (const row of ratingRows) {
+    const attribution = attributionOf(row);
+    if (!attribution) {
+      unspecified ??= emptyBreakdownAggregate();
+      accumulateInto(unspecified, row);
+      continue;
+    }
+    let aggregate = byKey.get(attribution.key);
+    if (!aggregate) {
+      aggregate = { ...emptyBreakdownAggregate(), key: attribution.key, label: attribution.label };
+      byKey.set(attribution.key, aggregate);
+    }
+    accumulateInto(aggregate, row);
+  }
+
+  const rows = [...byKey.values()].map((aggregate) =>
+    toBreakdownRow(aggregate, aggregate.key, aggregate.label, false)
+  );
+  rows.sort(
+    (left, right) =>
+      (right.meanRating ?? -Infinity) - (left.meanRating ?? -Infinity) ||
+      left.label.localeCompare(right.label)
+  );
+
+  return {
+    rows,
+    unspecified: unspecified
+      ? toBreakdownRow(unspecified, "unspecified", "Unspecified", true)
+      : null,
+  };
+}
+
+/** Accumulate one rating row into an existing breakdown aggregate. */
+function accumulateInto(aggregate: BreakdownAggregate, row: BreakdownRatingRow): void {
+  aggregate.ratingSum += row.rating_value;
+  aggregate.ratingCount += 1;
+  aggregate.responseIds.add(row.response_id);
+}
+
+/**
+ * Major attribution is defensible only for central deployments that target a
+ * major. Course-bound evidence does not snapshot a major and central
+ * deployments without a targeted major are reported as Unspecified.
+ */
+export function majorAttributionOf(
+  row: BreakdownRatingRow
+): { key: string; label: string } | null {
+  const major = row.response.assignment.central_deployment?.major;
+  return major ? { key: major.id, label: major.name } : null;
+}
+
+/**
+ * Year-level attribution is defensible when a central deployment targets one
+ * year level, or a course-bound evaluation targets exactly one year level for
+ * the selected Program (the service pre-filters targets by Program). Untargeted
+ * or multi-year evaluations are reported as Unspecified.
+ */
+export function yearLevelAttributionOf(
+  row: BreakdownRatingRow
+): { key: string; label: string } | null {
+  const central = row.response.assignment.central_deployment;
+  if (central) {
+    return central.year_level
+      ? { key: `year-${central.year_level}`, label: getYearLevelDisplay(central.year_level) }
+      : null;
+  }
+  const targets = row.response.assignment.course_bound?.targets ?? [];
+  if (targets.length !== 1 || !targets[0].year_level) {
+    return null;
+  }
+  return {
+    key: `year-${targets[0].year_level}`,
+    label: getYearLevelDisplay(targets[0].year_level),
+  };
 }
