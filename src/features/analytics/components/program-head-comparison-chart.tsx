@@ -43,6 +43,73 @@ type ProgramHeadComparisonChartProps = {
   tableOnlyRows?: ProgramHeadComparisonDatum[];
 };
 
+/** Exact-value disclosure shared by the chart and its unrated empty state. */
+function ComparisonExactValuesTable({
+  rows,
+}: {
+  rows: ProgramHeadComparisonDatum[];
+}) {
+  const showsContext = rows.some((row) => row.context != null);
+  const showsLinks = rows.some((row) => (row.links?.length ?? 0) > 0);
+
+  return (
+    <details>
+      <summary className="text-label-sm text-text-secondary cursor-pointer pointer-coarse:min-h-11">
+        View exact values
+      </summary>
+      <div className="border-border mt-3 overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Group</TableHead>
+              <TableHead className="text-right">Mean Rating</TableHead>
+              <TableHead className="text-right">Rating Count</TableHead>
+              <TableHead className="text-right">Submitted Responses</TableHead>
+              {showsContext ? <TableHead>Instruments</TableHead> : null}
+              {showsLinks ? <TableHead>Review Evidence</TableHead> : null}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.key}>
+                <TableCell className="font-medium">{row.label}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{row.ratingCount}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.submittedResponseCount}
+                </TableCell>
+                {showsContext ? <TableCell>{row.context ?? "—"}</TableCell> : null}
+                {showsLinks ? (
+                  <TableCell>
+                    {row.links && row.links.length > 0 ? (
+                      <ul className="flex flex-col gap-1">
+                        {row.links.map((link) => (
+                          <li key={link.href}>
+                            <Link
+                              href={link.href}
+                              className="text-link underline underline-offset-3 hover:text-foreground pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+                            >
+                              {link.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
+                ) : null}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </details>
+  );
+}
+
 export function ProgramHeadComparisonChart({
   title,
   description,
@@ -60,6 +127,8 @@ export function ProgramHeadComparisonChart({
     )
     .sort((left, right) => right.meanRating - left.meanRating);
 
+  const allTableRows = [...rows, ...tableOnlyRows];
+
   if (ranked.length === 0) {
     return (
       <div className="space-y-3">
@@ -71,19 +140,22 @@ export function ProgramHeadComparisonChart({
           <EmptyTitle>No comparable means yet</EmptyTitle>
           <EmptyDescription>No rated evidence is available for this comparison.</EmptyDescription>
         </Empty>
+        {allTableRows.length > 0 ? <ComparisonExactValuesTable rows={allTableRows} /> : null}
       </div>
     );
   }
 
-  const maxMean = ranked[0].meanRating;
+  const values = ranked.map((row) => row.meanRating);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  // Data-derived domain: frozen snapshot scales are not guaranteed to start
+  // at 1 (or to be positive), so a fixed [0, max] axis could clip or mislead.
+  const domain: [number, number] =
+    values.length === 1 ? [min - 0.5, max + 0.5] : [Math.min(0, min - 0.5), max + 0.5];
   const insight =
     ranked.length === 1
       ? `Mean Rating for ${ranked[0].label}: ${ranked[0].meanRating.toFixed(2)} (${ranked[0].submittedResponseCount} ${ranked[0].submittedResponseCount === 1 ? "response" : "responses"}).`
       : `Highest Mean Rating: ${ranked[0].label} (${ranked[0].meanRating.toFixed(2)}). Lowest Mean Rating: ${ranked[ranked.length - 1].label} (${ranked[ranked.length - 1].meanRating.toFixed(2)}).`;
-
-  const allTableRows = [...rows, ...tableOnlyRows];
-  const showsContext = allTableRows.some((row) => row.context != null);
-  const showsLinks = allTableRows.some((row) => (row.links?.length ?? 0) > 0);
 
   return (
     <div className="space-y-3">
@@ -108,7 +180,7 @@ export function ProgramHeadComparisonChart({
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
             <XAxis
               type="number"
-              domain={[0, maxMean * 1.15]}
+              domain={domain}
               tickLine={false}
               axisLine={false}
               tickFormatter={(value: number) => value.toFixed(1)}
@@ -119,6 +191,11 @@ export function ProgramHeadComparisonChart({
               width={152}
               tickLine={false}
               axisLine={false}
+              // Long source/course labels are truncated on the axis at narrow
+              // viewports; the legend and exact-value table keep full labels.
+              tickFormatter={(label: string) =>
+                label.length > 18 ? `${label.slice(0, 17)}…` : label
+              }
             />
             <Tooltip
               formatter={(_value, _name, item) => {
@@ -167,60 +244,7 @@ export function ProgramHeadComparisonChart({
       <p id={insightId} className="text-body-sm text-text-secondary">
         {insight}
       </p>
-      <details>
-        <summary className="text-label-sm text-text-secondary cursor-pointer">
-          View exact values
-        </summary>
-        <div className="border-border mt-3 overflow-x-auto rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Group</TableHead>
-                <TableHead className="text-right">Mean Rating</TableHead>
-                <TableHead className="text-right">Rating Count</TableHead>
-                <TableHead className="text-right">Submitted Responses</TableHead>
-                {showsContext ? <TableHead>Instruments</TableHead> : null}
-                {showsLinks ? <TableHead>Review Evidence</TableHead> : null}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allTableRows.map((row) => (
-                <TableRow key={row.key}>
-                  <TableCell className="font-medium">{row.label}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{row.ratingCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {row.submittedResponseCount}
-                  </TableCell>
-                  {showsContext ? <TableCell>{row.context ?? "—"}</TableCell> : null}
-                  {showsLinks ? (
-                    <TableCell>
-                      {row.links && row.links.length > 0 ? (
-                        <ul className="flex flex-col gap-1">
-                          {row.links.map((link) => (
-                            <li key={link.href}>
-                              <Link
-                                href={link.href}
-                                className="text-link underline underline-offset-3 hover:text-foreground"
-                              >
-                                {link.label}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                  ) : null}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </details>
+      <ComparisonExactValuesTable rows={allTableRows} />
     </div>
   );
 }

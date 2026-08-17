@@ -391,15 +391,24 @@ describe("selected Program insights routes", () => {
       majorBreakdown: {
         rows: [
           {
-            key: "major-1",
-            label: "Mathematics",
+            key: "CENTRAL_STUDENT:major-1",
+            label: "Mathematics — Central student-respondent evidence",
             isUnspecified: false,
             meanRating: 4.0,
             ratingCount: 8,
             submittedResponseCount: 4,
           },
         ],
-        unspecified: null,
+        unspecified: [
+          {
+            key: "unspecified:COURSE_STUDENT",
+            label: "Unspecified — Course-bound student evidence",
+            isUnspecified: true,
+            meanRating: 3.5,
+            ratingCount: 2,
+            submittedResponseCount: 1,
+          },
+        ],
         attributionNote: "Major attribution comes only from central deployment targeting.",
       },
       yearLevelBreakdown: null,
@@ -417,7 +426,8 @@ describe("selected Program insights routes", () => {
     expect(screen.getByText("Mean Rating by Course")).toBeInTheDocument();
     expect(screen.getAllByText("CS101 — Intro to CS").length).toBeGreaterThan(0);
     expect(screen.getByText("Mean Rating by Major")).toBeInTheDocument();
-    expect(screen.getAllByText("Mathematics").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Mathematics — Central student-respondent evidence").length).toBeGreaterThan(0);
+    expect(screen.getByText("Unspecified — Course-bound student evidence")).toBeInTheDocument();
     // No defensible year-level attribution: the dimension is omitted.
     expect(screen.getByText("Year-Level Breakdown")).toBeInTheDocument();
     expect(screen.queryByText(/not available yet/)).not.toBeInTheDocument();

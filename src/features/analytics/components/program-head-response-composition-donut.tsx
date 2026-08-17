@@ -115,7 +115,7 @@ export function ProgramHeadResponseCompositionDonut({
         {insight}
       </p>
       <details>
-        <summary className="text-label-sm text-text-secondary cursor-pointer">
+        <summary className="text-label-sm text-text-secondary cursor-pointer pointer-coarse:min-h-11">
           View exact values
         </summary>
         <div className="border-border mt-3 overflow-x-auto rounded-lg border">

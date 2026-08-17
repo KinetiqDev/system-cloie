@@ -101,6 +101,21 @@ export function ProgramHeadStakeholderView({
         <AlertDescription>{sourceSeparationDisclosure}</AlertDescription>
       </Alert>
 
+      <div className="flex flex-col gap-2">
+        <h3 className="text-title-sm text-foreground">About these evidence sources</h3>
+        <ul className="flex flex-col gap-1.5">
+          {buckets.map((bucket) => (
+            <li key={bucket.sourceKey} className="text-body-sm text-text-secondary">
+              <span className="font-semibold text-foreground">{bucket.sourceLabel}:</span>{" "}
+              {bucket.sourceDescription}
+              {bucket.instrumentContext
+                ? ` Instruments: ${bucket.instrumentContext}.`
+                : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <ProgramHeadComparisonChart
         title="Mean Rating by Evidence Source"
         description="Independent Mean Ratings per evidence source. Means are pooled within each source only and are never combined across sources."

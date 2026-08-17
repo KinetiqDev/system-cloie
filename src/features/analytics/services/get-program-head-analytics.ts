@@ -18,7 +18,9 @@ import {
   semesterOrder,
   termOrder,
   yearLevelAttributionOf,
+  type BreakdownAssignmentContext,
   type BreakdownRatingRow,
+  type BreakdownResponseRow,
   type OutcomeEvidenceRow,
   type ScaleDescriptor,
   type TrendSeriesPeriodInput,
@@ -920,6 +922,8 @@ function buildBreakdownRatingRowSelect(programId: string) {
   return {
     rating_value: true,
     response_id: true,
+    section_key: true,
+    item_key: true,
     response: {
       select: {
         assignment: {
@@ -931,7 +935,7 @@ function buildBreakdownRatingRowSelect(programId: string) {
                 course_assignment: {
                   select: { course: { select: { id: true, code: true, title: true } } },
                 },
-                instrument_version: INSTRUMENT_VERSION_SELECT,
+                instrument: INSTRUMENT_VERSION_SELECT,
                 targets: {
                   where: { program_id: programId },
                   select: { year_level: true },
@@ -943,7 +947,7 @@ function buildBreakdownRatingRowSelect(programId: string) {
                 target_stakeholder: true,
                 major: { select: { id: true, name: true } },
                 year_level: true,
-                instrument_version: INSTRUMENT_VERSION_SELECT,
+                instrument: INSTRUMENT_VERSION_SELECT,
               },
             },
           },
@@ -953,16 +957,43 @@ function buildBreakdownRatingRowSelect(programId: string) {
   } as const;
 }
 
-/** Narrow response-row projection for bucket response counts. */
-const STAKEHOLDER_RESPONSE_ROW_SELECT = {
-  id: true,
-  assignment: {
-    select: {
-      course_bound: { select: { id: true } },
-      central_deployment: { select: { target_stakeholder: true } },
+/**
+ * Narrow response-row projection for bucket and breakdown response counts.
+ * The output structurally matches the aggregators' `BreakdownResponseRow`, so
+ * unrated submitted responses still contribute `submittedResponseCount`.
+ * Year-level targets are pre-filtered to the selected Program.
+ */
+function buildBreakdownResponseRowSelect(programId: string) {
+  return {
+    id: true,
+    assignment: {
+      select: {
+        course_bound: {
+          select: {
+            id: true,
+            deployment_name: true,
+            course_assignment: {
+              select: { course: { select: { id: true, code: true, title: true } } },
+            },
+            instrument: INSTRUMENT_VERSION_SELECT,
+            targets: {
+              where: { program_id: programId },
+              select: { year_level: true },
+            },
+          },
+        },
+        central_deployment: {
+          select: {
+            target_stakeholder: true,
+            major: { select: { id: true, name: true } },
+            year_level: true,
+            instrument: INSTRUMENT_VERSION_SELECT,
+          },
+        },
+      },
     },
-  },
-} as const;
+  } as const;
+}
 
 /**
  * Disclosure that evidence sources use different instruments and respondent
@@ -1013,7 +1044,7 @@ export async function getProgramHeadStakeholders(
       }),
       prisma.response.findMany({
         where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
-        select: STAKEHOLDER_RESPONSE_ROW_SELECT,
+        select: buildBreakdownResponseRowSelect(selectedProgram.id),
       }),
       prisma.evaluationAssignment.count({ where: programOpportunityScope }),
       prisma.response.count({
@@ -1021,7 +1052,29 @@ export async function getProgramHeadStakeholders(
       }),
     ]);
 
-  const buckets = buildStakeholderBuckets(ratingRows, responseRows);
+  const instrumentVersionIds = [
+    ...new Set(
+      ratingRows
+        .map(
+          (row) =>
+            row.response.assignment.course_bound?.instrument.id ??
+            row.response.assignment.central_deployment?.instrument.id
+        )
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const instrumentVersions =
+    instrumentVersionIds.length > 0
+      ? await prisma.instrumentVersion.findMany({
+          where: { id: { in: instrumentVersionIds } },
+          select: { id: true, structure_snapshot: true },
+        })
+      : [];
+  const snapshotById = new Map(
+    instrumentVersions.map((version) => [version.id, version.structure_snapshot])
+  );
+
+  const buckets = buildStakeholderBuckets(ratingRows, responseRows, snapshotById);
 
   const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason: ProgramHeadStakeholdersEmptyReason =
@@ -1059,10 +1112,17 @@ const YEAR_LEVEL_ATTRIBUTION_NOTE =
 
 function buildContextualBreakdown(
   ratingRows: BreakdownRatingRow[],
-  attributionOf: (row: BreakdownRatingRow) => { key: string; label: string } | null,
+  responseRows: BreakdownResponseRow[],
+  snapshotById: Map<string, unknown>,
+  attributionOf: (assignment: BreakdownAssignmentContext) => { key: string; label: string } | null,
   attributionNote: string
 ): ProgramHeadContextualBreakdownDTO | null {
-  const { rows, unspecified } = buildAttributionBreakdown(ratingRows, attributionOf);
+  const { rows, unspecified } = buildAttributionBreakdown(
+    ratingRows,
+    responseRows,
+    snapshotById,
+    attributionOf
+  );
   if (rows.length === 0) {
     return null;
   }
@@ -1100,26 +1160,57 @@ export async function getProgramHeadBreakdowns(
     termInstanceWhere
   );
 
-  const [ratingRows, evaluationOpportunityCount, submittedResponseCount] = await Promise.all([
-    prisma.quantitativeResponseItem.findMany({
-      where: { response: { status: ResponseStatus.SUBMITTED, ...programResponseScope } },
-      select: buildBreakdownRatingRowSelect(selectedProgram.id),
-    }),
-    prisma.evaluationAssignment.count({ where: programOpportunityScope }),
-    prisma.response.count({
-      where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
-    }),
-  ]);
+  const [ratingRows, responseRows, evaluationOpportunityCount, submittedResponseCount] =
+    await Promise.all([
+      prisma.quantitativeResponseItem.findMany({
+        where: { response: { status: ResponseStatus.SUBMITTED, ...programResponseScope } },
+        select: buildBreakdownRatingRowSelect(selectedProgram.id),
+      }),
+      prisma.response.findMany({
+        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+        select: buildBreakdownResponseRowSelect(selectedProgram.id),
+      }),
+      prisma.evaluationAssignment.count({ where: programOpportunityScope }),
+      prisma.response.count({
+        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+      }),
+    ]);
 
-  const courseRows = buildCourseBreakdownRows(ratingRows);
-  const instrumentRows = buildInstrumentBreakdownRows(ratingRows);
+  const instrumentVersionIds = [
+    ...new Set(
+      ratingRows
+        .map(
+          (row) =>
+            row.response.assignment.course_bound?.instrument.id ??
+            row.response.assignment.central_deployment?.instrument.id
+        )
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const instrumentVersions =
+    instrumentVersionIds.length > 0
+      ? await prisma.instrumentVersion.findMany({
+          where: { id: { in: instrumentVersionIds } },
+          select: { id: true, structure_snapshot: true },
+        })
+      : [];
+  const snapshotById = new Map(
+    instrumentVersions.map((version) => [version.id, version.structure_snapshot])
+  );
+
+  const courseRows = buildCourseBreakdownRows(ratingRows, responseRows, snapshotById);
+  const instrumentRows = buildInstrumentBreakdownRows(ratingRows, responseRows, snapshotById);
   const majorBreakdown = buildContextualBreakdown(
     ratingRows,
+    responseRows,
+    snapshotById,
     majorAttributionOf,
     MAJOR_ATTRIBUTION_NOTE
   );
   const yearLevelBreakdown = buildContextualBreakdown(
     ratingRows,
+    responseRows,
+    snapshotById,
     yearLevelAttributionOf,
     YEAR_LEVEL_ATTRIBUTION_NOTE
   );

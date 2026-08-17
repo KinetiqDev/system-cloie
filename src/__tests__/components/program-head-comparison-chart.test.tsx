@@ -132,6 +132,30 @@ describe("ProgramHeadComparisonChart", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps counts and instrument context visible when no row is rated", () => {
+    render(
+      <ProgramHeadComparisonChart
+        title="Mean Rating by Evidence Source"
+        rows={[
+          {
+            key: "a",
+            label: "Alumni evidence",
+            meanRating: null,
+            ratingCount: 0,
+            submittedResponseCount: 6,
+            context: "Alumni Survey v1",
+          },
+        ]}
+      />
+    );
+
+    // The disclosure table survives the no-rated-means empty state.
+    expect(screen.getByText("No comparable means yet")).toBeInTheDocument();
+    expect(screen.getByText("6")).toBeInTheDocument(); // submitted responses
+    expect(screen.getByText("Alumni Survey v1")).toBeInTheDocument(); // instruments
+    expect(screen.getByText("—")).toBeInTheDocument(); // no mean
+  });
+
   it("never draws unrated rows but discloses them in the table", () => {
     const { container } = render(
       <ProgramHeadComparisonChart
@@ -416,5 +440,38 @@ describe("ProgramHeadInstrumentBreakdownChart", () => {
     // Table rows are per (instrument, source), never a pooled row.
     expect(screen.getAllByText("Shared Survey v1").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Evidence Source")).toHaveLength(1);
+  });
+
+  it("renders an explicit unrated state while keeping response counts", () => {
+    const { container } = render(
+      <ProgramHeadInstrumentBreakdownChart
+        rows={[
+          {
+            instrumentVersionId: "iv-1",
+            instrumentLabel: "Alumni Survey v1",
+            sources: [
+              {
+                key: "iv-1:ALUMNI",
+                label: "Alumni evidence",
+                isUnspecified: false,
+                meanRating: null,
+                ratingCount: 0,
+                submittedResponseCount: 4,
+                sourceKey: "ALUMNI",
+                sourceLabel: "Alumni evidence",
+              },
+            ],
+          },
+        ]}
+      />
+    );
+
+    expect(screen.getByText("No rated instrument evidence yet")).toBeInTheDocument();
+    // No blank zero-axis chart is rendered.
+    expect(container.querySelector(".recharts-bar-rectangle")).toBeNull();
+    expect(container.querySelector(".recharts-surface")).toBeNull();
+    expect(screen.getByText("4")).toBeInTheDocument(); // submitted responses
+    expect(screen.getByText("Alumni Survey v1")).toBeInTheDocument(); // instrument label
+    expect(screen.getByText("—")).toBeInTheDocument(); // no mean
   });
 });

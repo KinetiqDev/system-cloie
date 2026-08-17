@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -19,6 +20,51 @@ import type {
 type ProgramHeadInstrumentBreakdownChartProps = {
   rows: ProgramHeadInstrumentBreakdownRowDTO[];
 };
+
+/** Exact per-source values shared by the chart and its unrated empty state. */
+function InstrumentExactValuesTable({
+  rows,
+}: {
+  rows: ProgramHeadInstrumentBreakdownRowDTO[];
+}) {
+  return (
+    <details>
+      <summary className="text-label-sm text-text-secondary cursor-pointer pointer-coarse:min-h-11">
+        View exact values
+      </summary>
+      <div className="border-border mt-3 overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Instrument</TableHead>
+              <TableHead>Evidence Source</TableHead>
+              <TableHead className="text-right">Mean Rating</TableHead>
+              <TableHead className="text-right">Rating Count</TableHead>
+              <TableHead className="text-right">Submitted Responses</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.flatMap((row) =>
+              row.sources.map((source) => (
+                <TableRow key={`${row.instrumentVersionId}-${source.sourceKey}`}>
+                  <TableCell className="font-medium">{row.instrumentLabel}</TableCell>
+                  <TableCell>{source.sourceLabel}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {source.meanRating === null ? "—" : source.meanRating.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{source.ratingCount}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {source.submittedResponseCount}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </details>
+  );
+}
 
 /**
  * Instrument breakdown as grouped bars: one group per instrument version, one
@@ -60,7 +106,11 @@ export function ProgramHeadInstrumentBreakdownChart({
   const ranked = rated
     .filter((entry): entry is { label: string; meanRating: number } => entry.meanRating !== null)
     .sort((left, right) => right.meanRating - left.meanRating);
-  const maxMean = Math.max(...ranked.map((entry) => entry.meanRating), 0);
+  const ratedValues = ranked.map((entry) => entry.meanRating);
+  const domain: [number, number] =
+    ratedValues.length === 1
+      ? [ratedValues[0] - 0.5, ratedValues[0] + 0.5]
+      : [Math.min(0, Math.min(...ratedValues) - 0.5), Math.max(...ratedValues) + 0.5];
 
   const insight =
     ranked.length === 1
@@ -69,7 +119,30 @@ export function ProgramHeadInstrumentBreakdownChart({
         ? `Highest Mean Rating: ${ranked[0].label} (${ranked[0].meanRating.toFixed(2)}). Lowest Mean Rating: ${ranked[ranked.length - 1].label} (${ranked[ranked.length - 1].meanRating.toFixed(2)}).`
         : "No rated instrument evidence in this scope.";
 
-  const sourceLabelByKey = new Map(rows.flatMap((row) => row.sources.map((source) => [source.sourceKey, source.sourceLabel] as const)));
+  const sourceLabelByKey = new Map<string, string>(
+    rows.flatMap((row) => row.sources.map((source) => [source.sourceKey, source.sourceLabel] as const))
+  );
+
+  if (ranked.length === 0) {
+    return (
+      <div className="space-y-3">
+        <h3 id={titleId} className="text-title-sm text-foreground">
+          Mean Rating by Instrument and Evidence Source
+        </h3>
+        <p className="text-body-sm text-text-secondary">
+          One group per instrument version, one bar per evidence source. Sources are never pooled;
+          missing bars mean that source has no ratings for the instrument in this scope.
+        </p>
+        <Empty className="h-64">
+          <EmptyTitle>No rated instrument evidence yet</EmptyTitle>
+          <EmptyDescription>
+            No rated instrument evidence is available for this comparison.
+          </EmptyDescription>
+        </Empty>
+        <InstrumentExactValuesTable rows={rows} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -91,20 +164,25 @@ export function ProgramHeadInstrumentBreakdownChart({
           <BarChart data={chartData} margin={{ bottom: 10, left: 0, right: 0, top: 10 }}>
             <ChartPatternDefs chartId={chartId} categoryCount={sourceKeys.length} />
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} interval={0} />
+            <XAxis
+              dataKey="label"
+              tickLine={false}
+              axisLine={false}
+              // Recharts thins overlapping category ticks at narrow widths;
+              // the exact table and tooltip keep every instrument label.
+            />
             <YAxis
-              domain={[0, maxMean * 1.15]}
+              domain={domain}
               tickLine={false}
               axisLine={false}
               tickFormatter={(value: number) => value.toFixed(1)}
             />
             <Tooltip
-              formatter={(_value, name, item) => {
-                const payload = item?.payload as Record<string, unknown> | undefined;
-                const key = String(name);
-                const original = payload ? (payload[key] as number | undefined) : undefined;
-                const label = sourceLabelByKey.get(key as ProgramHeadStakeholderSourceKey) ?? key;
-                return [original == null ? "No ratings" : original.toFixed(2), label];
+              formatter={(value, name) => {
+                // `value` is the hovered datum for this Bar's dataKey; `name`
+                // is the Bar's display label (the evidence source).
+                const label = sourceLabelByKey.get(String(name)) ?? String(name);
+                return [value == null ? "No ratings" : Number(value).toFixed(2), label];
               }}
               contentStyle={{
                 borderRadius: "8px",
@@ -146,41 +224,7 @@ export function ProgramHeadInstrumentBreakdownChart({
       <p id={insightId} className="text-body-sm text-text-secondary">
         {insight}
       </p>
-      <details>
-        <summary className="text-label-sm text-text-secondary cursor-pointer">
-          View exact values
-        </summary>
-        <div className="border-border mt-3 overflow-x-auto rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Instrument</TableHead>
-                <TableHead>Evidence Source</TableHead>
-                <TableHead className="text-right">Mean Rating</TableHead>
-                <TableHead className="text-right">Rating Count</TableHead>
-                <TableHead className="text-right">Submitted Responses</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.flatMap((row) =>
-                row.sources.map((source) => (
-                  <TableRow key={`${row.instrumentVersionId}-${source.sourceKey}`}>
-                    <TableCell className="font-medium">{row.instrumentLabel}</TableCell>
-                    <TableCell>{source.sourceLabel}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {source.meanRating === null ? "—" : source.meanRating.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{source.ratingCount}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {source.submittedResponseCount}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </details>
+      <InstrumentExactValuesTable rows={rows} />
     </div>
   );
 }

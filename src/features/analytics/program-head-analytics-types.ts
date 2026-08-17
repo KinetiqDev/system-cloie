@@ -279,13 +279,14 @@ export type ProgramHeadInstrumentBreakdownRowDTO = {
 
 /**
  * A defensible contextual dimension (major or year level). Rows carry only
- * evidence whose attribution is defensible; evidence without applicable
- * attribution is aggregated into `unspecified` rather than guessed.
+ * evidence whose attribution is defensible and are separated by evidence
+ * source; evidence without applicable attribution is aggregated into
+ * per-source `Unspecified` rows rather than guessed.
  */
 export type ProgramHeadContextualBreakdownDTO = {
   rows: ProgramHeadBreakdownRowDTO[];
-  /** Aggregate of evidence without defensible attribution; null when none exists. */
-  unspecified: ProgramHeadBreakdownRowDTO | null;
+  /** Per-source aggregates of evidence without defensible attribution; empty when none exists. */
+  unspecified: ProgramHeadBreakdownRowDTO[];
   /** Explains how attribution is derived and when it is reported as Unspecified. */
   attributionNote: string;
 };

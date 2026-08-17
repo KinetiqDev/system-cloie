@@ -62,18 +62,36 @@ function contextualChart(
       title={title}
       description={breakdown.attributionNote}
       rows={breakdown.rows.map(breakdownRowToDatum)}
-      tableOnlyRows={breakdown.unspecified ? [breakdownRowToDatum(breakdown.unspecified)] : []}
+      tableOnlyRows={breakdown.unspecified.map(breakdownRowToDatum)}
     />
   );
 }
 
 /** Meaningful empty note for a dimension with no applicable evidence. */
-function DimensionNote({ title, children }: { title: string; children: string }) {
+function DimensionNote({
+  title,
+  children,
+  resetHref,
+}: {
+  title: string;
+  children: string;
+  resetHref: string;
+}) {
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-title-sm text-foreground">{title}</h3>
-      <p className="text-body-sm text-text-secondary">{children}</p>
-    </div>
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Inbox aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{children}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Link href={resetHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+          View all periods
+        </Link>
+      </EmptyContent>
+    </Empty>
   );
 }
 
@@ -146,7 +164,7 @@ export function ProgramHeadBreakdownsView({
           />
         </section>
       ) : (
-        <DimensionNote title="Course Breakdown">
+        <DimensionNote title="Course Breakdown" resetHref={resetHref}>
           No course-bound student evidence exists in this scope, so there is no defensible course
           attribution to break down.
         </DimensionNote>
@@ -157,7 +175,7 @@ export function ProgramHeadBreakdownsView({
           <ProgramHeadInstrumentBreakdownChart rows={instrumentRows} />
         </section>
       ) : (
-        <DimensionNote title="Instrument Breakdown">
+        <DimensionNote title="Instrument Breakdown" resetHref={resetHref}>
           No instrument evidence exists in this scope.
         </DimensionNote>
       )}
@@ -167,7 +185,7 @@ export function ProgramHeadBreakdownsView({
           {contextualChart("Mean Rating by Major", majorBreakdown)}
         </section>
       ) : (
-        <DimensionNote title="Major Breakdown">
+        <DimensionNote title="Major Breakdown" resetHref={resetHref}>
           No evidence in this scope has defensible major attribution, so no major comparison is
           shown. Major attribution comes only from central deployment targeting; course-bound
           evidence does not snapshot a major.
@@ -179,7 +197,7 @@ export function ProgramHeadBreakdownsView({
           {contextualChart("Mean Rating by Year Level", yearLevelBreakdown)}
         </section>
       ) : (
-        <DimensionNote title="Year-Level Breakdown">
+        <DimensionNote title="Year-Level Breakdown" resetHref={resetHref}>
           No evidence in this scope has defensible year-level attribution, so no year-level
           comparison is shown. Attribution requires a central deployment targeting one year level
           or a course-bound evaluation targeting exactly one year level for this Program.
