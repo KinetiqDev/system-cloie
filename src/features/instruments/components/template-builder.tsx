@@ -199,7 +199,7 @@ function buildSortableIndex(structure: TemplateStructure): Map<UniqueIdentifier,
  * metadata attached by useSortable; droppables from other lists are filtered
  * out before closestCenter runs.
  */
-const filteredContainerCollisionDetection: CollisionDetection = (args) => {
+export const filteredContainerCollisionDetection: CollisionDetection = (args) => {
   const activeContainerId = args.active.data.current?.sortable?.containerId;
 
   const filteredContainers =
@@ -222,7 +222,7 @@ const filteredContainerCollisionDetection: CollisionDetection = (args) => {
  * moving among sections and questions within their own section.
  */
 // fallow-ignore-next-line
-const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event, args) => {
+export const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event, args) => {
   const { context } = args;
   const active = context.active;
 

@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { TemplateBuilder } from "@/features/instruments/components/template-builder";
+import {
+  TemplateBuilder,
+  filteredContainerCollisionDetection,
+  sameContainerKeyboardCoordinates,
+} from "@/features/instruments/components/template-builder";
 
 const { pushMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
@@ -604,5 +608,53 @@ describe("TemplateBuilder", () => {
       })
     );
     expect(screen.getByText("Save failed.")).toBeInTheDocument();
+  });
+
+  test("filters collision and keyboard targets to the active sortable container", () => {
+    const sectionA = JSON.stringify(["section", "a"]);
+    const sectionB = JSON.stringify(["section", "b"]);
+    const questionA = JSON.stringify(["question", "a", "qa"]);
+    const questionA2 = JSON.stringify(["question", "a", "qa2"]);
+    const questionB = JSON.stringify(["question", "b", "qb"]);
+    const data = (containerId: string) => ({ current: { sortable: { containerId } } });
+    const containers = [
+      { id: sectionA, data: data("sections"), disabled: false },
+      { id: sectionB, data: data("sections"), disabled: false },
+      { id: questionA, data: data(sectionA), disabled: false },
+      { id: questionA2, data: data(sectionA), disabled: false },
+      { id: questionB, data: data(sectionB), disabled: false },
+    ];
+    const collision = filteredContainerCollisionDetection({
+      active: { id: questionA, data: data(sectionA) },
+      collisionRect: { top: 0, bottom: 10, left: 0, right: 10, width: 10, height: 10 },
+      droppableRects: new Map(),
+      droppableContainers: containers,
+      pointerCoordinates: null,
+    } as never);
+
+    expect(collision.every(({ id }) => id !== questionB)).toBe(true);
+
+    const droppableContainers = {
+      get: (id: string) => containers.find((container) => container.id === id),
+      getEnabled: () => containers,
+    };
+    const keyboardTarget = sameContainerKeyboardCoordinates(
+      { code: "ArrowDown" } as KeyboardEvent,
+      {
+        active: questionA,
+        currentCoordinates: { x: 0, y: 0 },
+        context: {
+          active: { id: questionA },
+          droppableContainers,
+          droppableRects: new Map([
+            [questionA, { top: 0, left: 0, width: 10, height: 10 }],
+            [questionA2, { top: 20, left: 0, width: 10, height: 10 }],
+            [questionB, { top: 40, left: 0, width: 10, height: 10 }],
+          ]),
+        },
+      } as never
+    );
+
+    expect(keyboardTarget).toEqual({ x: 0, y: 20 });
   });
 });
