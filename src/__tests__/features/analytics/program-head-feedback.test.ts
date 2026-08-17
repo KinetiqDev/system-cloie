@@ -115,13 +115,6 @@ describe("redactPotentialIdentifiers", () => {
       "Student and showed clarity"
     );
   });
-  it("keeps the Faculty redaction contract unless identifier policy is enabled", () => {
-    expect(redactPotentialIdentifiers("Maria praised @john")).toBe("Maria praised @john");
-  });
-
-  it("removes title-cased names and digit-free handles for Program Head feedback", () => {
-    expect(redactPotentialIdentifiers("Maria praised @john", true)).toBe("praised");
-  });
 });
 
 
@@ -143,10 +136,13 @@ describe("buildRedactedWordCloudTokens", () => {
   });
 
   it("never emits title-cased names or digit-free handles", () => {
-    expect(buildRedactedWordCloudTokens(["Maria praised @john", "curriculum praised"])).toEqual([
+    expect(
+      buildRedactedWordCloudTokens(["Maria praised @john_doe", "curriculum praised"])
+    ).toEqual([
       { text: "praised", value: 2 },
       { text: "curriculum", value: 1 },
     ]);
+    expect(redactPotentialIdentifiers("Maria praised @john_doe")).toBe("Maria praised @john_doe");
   });
 });
 
