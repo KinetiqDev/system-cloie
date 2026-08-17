@@ -25,12 +25,23 @@ import {
   type ScaleDescriptor,
   type TrendSeriesPeriodInput,
 } from "./program-head-analytics-aggregators";
+import {
+  FEEDBACK_SOURCE_LABELS,
+  buildRedactedWordCloudTokens,
+  feedbackSourceKey,
+} from "./qualitative-analytics";
+import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
 import type {
   ProgramHeadAnalyticsScopeSummary,
   ProgramHeadBreakdownsDTO,
   ProgramHeadBreakdownsEmptyReason,
   ProgramHeadContextualBreakdownDTO,
+  ProgramHeadFeedbackDTO,
+  ProgramHeadFeedbackEmptyReason,
+  ProgramHeadFeedbackEvidenceDTO,
+  ProgramHeadFeedbackPromptCountDTO,
+  ProgramHeadFeedbackSourceCountDTO,
   ProgramHeadOutcomesDTO,
   ProgramHeadOutcomesEmptyReason,
   ProgramHeadOverviewDTO,
@@ -1237,5 +1248,281 @@ export async function getProgramHeadBreakdowns(
     instrumentRows,
     majorBreakdown,
     yearLevelBreakdown,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Feedback read
+// ---------------------------------------------------------------------------
+
+const FEEDBACK_SOURCE_ORDER = [
+  "COURSE_STUDENT",
+  "CENTRAL_STUDENT",
+  "ALUMNI",
+  "INDUSTRY_PARTNER",
+] as const;
+
+type FeedbackQualitativeRow = {
+  text_content: string;
+  section_key: string;
+  prompt_key: string;
+  response: {
+    id: string;
+    assignment: {
+      course_bound: {
+        id: string;
+        deployment_name: string;
+        instrument: { id: string; structure_snapshot: unknown };
+      } | null;
+      central_deployment: {
+        target_stakeholder: string;
+        instrument: { id: string; structure_snapshot: unknown };
+      } | null;
+    };
+  };
+};
+
+function resolveFeedbackPromptLabel(
+  snapshot: unknown,
+  sectionKey: string,
+  promptKey: string
+): string {
+  if (!Array.isArray(snapshot)) {
+    return "Unlabeled prompt";
+  }
+
+  const section = snapshot.find(
+    (candidate) => isSnapshotSection(candidate) && candidate.key === sectionKey
+  );
+  if (!section || !isSnapshotSection(section)) {
+    return "Unlabeled prompt";
+  }
+
+  return (
+    getSnapshotSectionItems(section).find((item) => item.key === promptKey)?.prompt ??
+    "Unlabeled prompt"
+  );
+}
+
+function instrumentOf(row: FeedbackQualitativeRow): { id: string; structureSnapshot: unknown } | null {
+  const instrument =
+    row.response.assignment.course_bound?.instrument ??
+    row.response.assignment.central_deployment?.instrument;
+  return instrument ? { id: instrument.id, structureSnapshot: instrument.structure_snapshot } : null;
+}
+
+function aggregateFeedbackEvidence(rows: FeedbackQualitativeRow[]): {
+  texts: string[];
+  qualitativeItemCount: number;
+  qualitativeResponseCount: number;
+  sourceCounts: ProgramHeadFeedbackSourceCountDTO[];
+  promptCounts: ProgramHeadFeedbackPromptCountDTO[];
+  evidenceEvaluations: ProgramHeadFeedbackEvidenceDTO[];
+} {
+  const contributing = rows.filter((row) => row.text_content.trim().length > 0);
+  const responseIds = new Set(contributing.map((row) => row.response.id));
+
+  const sourceBuckets = new Map<
+    ProgramHeadFeedbackSourceCountDTO["sourceKey"],
+    { itemCount: number; responseIds: Set<string> }
+  >();
+  const promptBuckets = new Map<
+    string,
+    { sourceLabel: string; promptLabel: string; itemCount: number; responseIds: Set<string> }
+  >();
+  const evaluations = new Map<string, string>();
+
+  for (const row of contributing) {
+    const sourceKey = feedbackSourceKey({
+      courseBound: row.response.assignment.course_bound,
+      targetStakeholder: row.response.assignment.central_deployment?.target_stakeholder,
+    });
+    const source = sourceBuckets.get(sourceKey) ?? { itemCount: 0, responseIds: new Set<string>() };
+    source.itemCount += 1;
+    source.responseIds.add(row.response.id);
+    sourceBuckets.set(sourceKey, source);
+
+    const instrument = instrumentOf(row);
+    const promptLabel = resolveFeedbackPromptLabel(
+      instrument?.structureSnapshot,
+      row.section_key,
+      row.prompt_key
+    );
+    const promptBucketKey = `${sourceKey}:${instrument?.id ?? "unknown"}:${row.section_key}:${row.prompt_key}`;
+    const prompt = promptBuckets.get(promptBucketKey) ?? {
+      sourceLabel: FEEDBACK_SOURCE_LABELS[sourceKey],
+      promptLabel,
+      itemCount: 0,
+      responseIds: new Set<string>(),
+    };
+    prompt.itemCount += 1;
+    prompt.responseIds.add(row.response.id);
+    promptBuckets.set(promptBucketKey, prompt);
+
+    const evaluation = row.response.assignment.course_bound;
+    if (evaluation) {
+      evaluations.set(evaluation.id, evaluation.deployment_name);
+    }
+  }
+
+  return {
+    texts: contributing.map((row) => row.text_content),
+    qualitativeItemCount: contributing.length,
+    qualitativeResponseCount: responseIds.size,
+    sourceCounts: FEEDBACK_SOURCE_ORDER.flatMap((sourceKey) => {
+      const bucket = sourceBuckets.get(sourceKey);
+      if (!bucket) {
+        return [];
+      }
+      return [
+        {
+          sourceKey,
+          sourceLabel: FEEDBACK_SOURCE_LABELS[sourceKey],
+          itemCount: bucket.itemCount,
+          responseCount: bucket.responseIds.size,
+        },
+      ];
+    }),
+    promptCounts: (() => {
+      const displayBuckets = new Map<
+        string,
+        { sourceLabel: string; promptLabel: string; itemCount: number; responseIds: Set<string> }
+      >();
+
+      for (const bucket of promptBuckets.values()) {
+        const key = `${bucket.sourceLabel}:${bucket.promptLabel}`;
+        const display = displayBuckets.get(key) ?? {
+          sourceLabel: bucket.sourceLabel,
+          promptLabel: bucket.promptLabel,
+          itemCount: 0,
+          responseIds: new Set<string>(),
+        };
+        display.itemCount += bucket.itemCount;
+        for (const responseId of bucket.responseIds) {
+          display.responseIds.add(responseId);
+        }
+        displayBuckets.set(key, display);
+      }
+
+      return [...displayBuckets.values()]
+        .map((bucket) => ({
+          sourceLabel: bucket.sourceLabel,
+          promptLabel: bucket.promptLabel,
+          itemCount: bucket.itemCount,
+          responseCount: bucket.responseIds.size,
+        }))
+        .sort((left, right) => {
+          if (right.itemCount !== left.itemCount) {
+            return right.itemCount - left.itemCount;
+          }
+          const sourceOrder = left.sourceLabel.localeCompare(right.sourceLabel);
+          return sourceOrder === 0 ? left.promptLabel.localeCompare(right.promptLabel) : sourceOrder;
+        });
+    })(),
+    evidenceEvaluations: [...evaluations.entries()]
+      .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
+      .sort(
+        (left, right) =>
+          left.deploymentName.localeCompare(right.deploymentName) ||
+          left.evaluationId.localeCompare(right.evaluationId)
+      ),
+  };
+}
+
+/**
+ * Authorized Feedback read for the selected Program. Only non-empty
+ * qualitative items on SUBMITTED responses contribute. Tokens are identifier-
+ * redacted before winkNLP tokenization. The returned DTO is aggregate-only.
+ */
+export async function getProgramHeadFeedback(
+  programId: string,
+  filters: AnalyticsFilterState
+): Promise<ProgramHeadFeedbackDTO | null> {
+  const contextResult = await resolveProgramHeadContext(programId);
+
+  if (!contextResult.success) {
+    return null;
+  }
+
+  const { selectedProgram } = contextResult.data;
+
+  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
+    resolveTermInstanceFilter(selectedProgram.id, filters),
+    listProgramPeriodOptions(selectedProgram.id),
+  ]);
+
+  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere);
+  const programOpportunityScope = buildProgramOpportunityScope(
+    selectedProgram.id,
+    termInstanceWhere
+  );
+
+  const [qualitativeRows, evaluationOpportunityCount, submittedResponseCount] = await Promise.all([
+    prisma.qualitativeResponseItem.findMany({
+      where: {
+        response: {
+          status: ResponseStatus.SUBMITTED,
+          ...programResponseScope,
+        },
+      },
+      select: {
+        text_content: true,
+        section_key: true,
+        prompt_key: true,
+        response: {
+          select: {
+            id: true,
+            assignment: {
+              select: {
+                course_bound: {
+                  select: {
+                    id: true,
+                    deployment_name: true,
+                    instrument: { select: { id: true, structure_snapshot: true } },
+                  },
+                },
+                central_deployment: {
+                  select: {
+                    target_stakeholder: true,
+                    instrument: { select: { id: true, structure_snapshot: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.evaluationAssignment.count({ where: programOpportunityScope }),
+    prisma.response.count({
+      where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+    }),
+  ]);
+
+  const aggregated = aggregateFeedbackEvidence(qualitativeRows);
+  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
+  const emptyReason: ProgramHeadFeedbackEmptyReason =
+    evaluationOpportunityCount === 0
+      ? "no-assignments"
+      : submittedResponseCount === 0
+        ? "no-submissions"
+        : aggregated.qualitativeItemCount === 0
+          ? "no-qualitative-evidence"
+          : null;
+
+  return {
+    scope: {
+      programCode: selectedProgram.code,
+      programName: selectedProgram.name,
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+    },
+    periodOptions: buildPeriodOptions(periodInstances),
+    emptyReason,
+    tokens: buildRedactedWordCloudTokens(aggregated.texts),
+    qualitativeItemCount: aggregated.qualitativeItemCount,
+    qualitativeResponseCount: aggregated.qualitativeResponseCount,
+    sourceCounts: aggregated.sourceCounts,
+    promptCounts: aggregated.promptCounts,
+    evidenceEvaluations: aggregated.evidenceEvaluations,
   };
 }

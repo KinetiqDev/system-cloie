@@ -6,9 +6,11 @@ import { ProgramHeadOutcomesView } from "@/features/analytics/components/program
 import { ProgramHeadTrendsView } from "@/features/analytics/components/program-head-trends-view";
 import { ProgramHeadStakeholderView } from "@/features/analytics/components/program-head-stakeholder-view";
 import { ProgramHeadBreakdownsView } from "@/features/analytics/components/program-head-breakdowns-view";
+import { ProgramHeadFeedbackView } from "@/features/analytics/components/program-head-feedback-view";
 import {
   getProgramHeadAnalytics,
   getProgramHeadBreakdowns,
+  getProgramHeadFeedback,
   getProgramHeadOutcomes,
   getProgramHeadStakeholders,
   getProgramHeadTrends,
@@ -60,11 +62,9 @@ async function withTabData<TData extends { scope: ProgramHeadAnalyticsScopeSumma
     children: render(data),
   };
 }
-
 /**
- * Resolve the selected tab's authorized read into shell content. The default
- * case covers the Overview landing tab and the upcoming Feedback/AI tabs,
- * which still read the Overview scope until their views land.
+ * Resolve the selected tab's authorized read into shell content. Upcoming AI
+ * still reads Overview until that view lands.
  */
 function resolveAnalyticsTab(
   programId: string,
@@ -99,6 +99,14 @@ function resolveAnalyticsTab(
         <ProgramHeadTrendsView
           data={dto}
           resetHref={buildAnalyticsUrl(programId, { tab: "trends" })}
+        />
+      ));
+    case "feedback":
+      return withTabData(programId, filters, getProgramHeadFeedback, (dto) => (
+        <ProgramHeadFeedbackView
+          programId={programId}
+          data={dto}
+          resetHref={buildAnalyticsUrl(programId, { tab: "feedback" })}
         />
       ));
     default:

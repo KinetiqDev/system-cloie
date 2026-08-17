@@ -2123,6 +2123,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "New server component composing trends empty states, chart, and exact-value table",
   },
   {
+    path: "src/features/analytics/components/program-head-feedback-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Server component composing aggregate-only qualitative feedback, accessible word-cloud alternatives, counts, empty states, and authorized review links",
+  },
+  {
     path: "src/features/analytics/components/program-head-outcomes-view.tsx",
     disposition: "already_compliant",
     category: "feature_component",
