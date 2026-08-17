@@ -124,6 +124,26 @@ describe("selected Program insights routes", () => {
     expect(screen.queryByText(/BEED/)).not.toBeInTheDocument();
   });
 
+  it("renders the AI Insights view for the ai tab without running other view reads", async () => {
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "ai" }),
+    });
+
+    render(page);
+
+    expect(analyticsMock).toHaveBeenCalledWith("program-bsed", { tab: "ai" });
+    expect(outcomesMock).not.toHaveBeenCalled();
+    expect(trendsMock).not.toHaveBeenCalled();
+    expect(stakeholdersMock).not.toHaveBeenCalled();
+    expect(breakdownsMock).not.toHaveBeenCalled();
+    expect(feedbackMock).not.toHaveBeenCalled();
+    // The AI view is strictly on-demand: no generation starts on render.
+    expect(screen.getByRole("button", { name: "Generate interpretation" })).toBeInTheDocument();
+    expect(screen.getByText("On-demand interpretation")).toBeInTheDocument();
+  });
+
   it("renders no analytics data when the analytics read denies a selected Program", async () => {
     analyticsMock.mockResolvedValue(null);
     const Page = await loadAnalyticsPage();
@@ -647,19 +667,6 @@ describe("selected Program insights routes", () => {
     ).rejects.toThrow("NOT_FOUND");
     expect(feedbackMock).toHaveBeenCalledWith("program-3", { tab: "feedback" });
     expect(analyticsMock).not.toHaveBeenCalled();
-  });
-
-  it("renders upcoming notice for non-live tabs", async () => {
-    analyticsMock.mockResolvedValue(bsedOverview);
-    const Page = await loadAnalyticsPage();
-    const page = await Page({
-      params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "ai" }),
-    });
-
-    render(page);
-
-    expect(screen.getByText(/AI Insights view is not available yet/)).toBeInTheDocument();
   });
 
   it("labels the reports placeholder with the selected Program only", async () => {
