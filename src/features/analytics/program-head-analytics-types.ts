@@ -92,3 +92,82 @@ export type ProgramHeadTrendsDTO = {
   emptyReason: ProgramHeadTrendsEmptyReason;
   periodOptions: ProgramHeadAnalyticsPeriodOptions;
 };
+
+// ---------------------------------------------------------------------------
+// Outcomes
+// ---------------------------------------------------------------------------
+
+/** One category of a scale-resolved Likert distribution. */
+export type ProgramHeadOutcomeCategoryDTO = {
+  value: number;
+  label: string | null;
+  count: number;
+  /** Full-precision share of the scale group; round only for display. */
+  percentage: number;
+};
+
+/**
+ * A Likert distribution for one instrument-version scale identity. Scales are
+ * never merged: each distinct frozen descriptor set produces its own group.
+ */
+export type ProgramHeadOutcomeScaleDistributionDTO = {
+  /** Readable scale summary, e.g. "1–5 (5-point)"; labels come from the frozen snapshot. */
+  scaleLabel: string;
+  categories: ProgramHeadOutcomeCategoryDTO[];
+};
+
+/**
+ * One ranked Program Graduate Outcome evidence row. Mean retains full
+ * precision; rating count is distinct from submitted response count.
+ */
+export type ProgramHeadOutcomeDTO = {
+  goId: string;
+  code: string;
+  name: string;
+  /** Full-precision mean of valid ratings; null when the row has no valid ratings. */
+  meanRating: number | null;
+  /** Count of valid in-scale ratings mapped to this GO. */
+  ratingCount: number;
+  /** Distinct submitted responses that contributed valid ratings to this GO. */
+  submittedResponseCount: number;
+  /** CILOs that contributed ratings to this row. */
+  contributingCilos: Array<{ id: string; description: string }>;
+  /** Courses whose course-bound evidence contributed to this row. */
+  contributingCourses: Array<{ id: string; code: string; title: string }>;
+  /**
+   * Course-bound evaluations behind this row. Links resolve to the existing
+   * selected-Program CILO review route, which independently re-authorizes
+   * before exposing any raw response text.
+   */
+  evidenceEvaluations: Array<{ evaluationId: string; deploymentName: string }>;
+  /** Scale-separated Likert distributions resolved from frozen structure snapshots. */
+  distributions: ProgramHeadOutcomeScaleDistributionDTO[];
+  /** Ratings excluded from the valid aggregate (unresolvable or out-of-scale values). */
+  excludedRatingCount: number;
+};
+
+/**
+ * Reasons the Outcomes view may show an empty state. The chain mirrors the
+ * Overview: no assignments, no submissions, then no mapped outcome evidence.
+ */
+export type ProgramHeadOutcomesEmptyReason =
+  | "no-assignments"
+  | "no-submissions"
+  | "no-mapped-outcomes"
+  | null;
+
+/** Closed, serializable Outcomes projection. */
+export type ProgramHeadOutcomesDTO = {
+  scope: ProgramHeadAnalyticsScopeSummary;
+  periodOptions: ProgramHeadAnalyticsPeriodOptions;
+  emptyReason: ProgramHeadOutcomesEmptyReason;
+  /**
+   * Disclosure that historical ratings are grouped by the Program's current
+   * CILO-to-GO mappings because publication-time mapping snapshots do not
+   * exist yet.
+   */
+  currentMappingDisclosure: string;
+  /** True when a contributing CILO maps to more than one selected-Program GO. */
+  manyToManyDisclosure: boolean;
+  outcomes: ProgramHeadOutcomeDTO[];
+};

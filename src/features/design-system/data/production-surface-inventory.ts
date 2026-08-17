@@ -2123,6 +2123,30 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "New server component composing trends empty states, chart, and exact-value table",
   },
   {
+    path: "src/features/analytics/components/program-head-outcomes-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server component composing outcome disclosures, ranked chart, exact-value table, and detail rows",
+  },
+  {
+    path: "src/features/analytics/components/program-head-outcome-ranking-chart.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New client ranked outcome chart with data-derived axis domain, legend, insight, and exact-value table",
+  },
+  {
+    path: "src/features/analytics/components/program-head-go-detail.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server component exposing full-precision mean, scale-separated distributions, and excluded-rating diagnostics",
+  },
+  {
+    path: "src/features/analytics/components/program-head-likert-distribution.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server component rendering one accessible per-scale Likert table with snapshot labels",
+  },
+  {
     path: "src/features/auth/components/authenticated-app-shell.tsx",
     disposition: "task",
     taskId: 18,

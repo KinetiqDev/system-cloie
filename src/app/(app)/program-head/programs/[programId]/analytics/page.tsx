@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { ProgramHeadAnalyticsShell } from "@/features/analytics/components/program-head-analytics-shell";
 import { ProgramHeadOverviewKPIs } from "@/features/analytics/components/program-head-overview-kpis";
+import { ProgramHeadOutcomesView } from "@/features/analytics/components/program-head-outcomes-view";
 import { ProgramHeadTrendsView } from "@/features/analytics/components/program-head-trends-view";
 import {
   getProgramHeadAnalytics,
+  getProgramHeadOutcomes,
   getProgramHeadTrends,
 } from "@/features/analytics/services/get-program-head-analytics";
 import {
@@ -34,6 +36,28 @@ export default async function SelectedProgramAnalyticsPage({
   if (rawQuery !== canonicalQuery) {
     const basePath = buildProgramHeadProgramPath(programId, "analytics");
     redirect(canonicalQuery ? `${basePath}?${canonicalQuery}` : basePath);
+  }
+
+  if (filters.tab === "outcomes") {
+    const outcomes = await getProgramHeadOutcomes(programId, filters);
+    if (!outcomes) {
+      notFound();
+    }
+
+    return (
+      <ProgramHeadAnalyticsShell
+        programId={programId}
+        filters={filters}
+        scope={outcomes.scope}
+        periodOptions={outcomes.periodOptions}
+      >
+        <ProgramHeadOutcomesView
+          programId={programId}
+          data={outcomes}
+          resetHref={buildAnalyticsUrl(programId, { tab: "outcomes" })}
+        />
+      </ProgramHeadAnalyticsShell>
+    );
   }
 
   if (filters.tab === "trends") {

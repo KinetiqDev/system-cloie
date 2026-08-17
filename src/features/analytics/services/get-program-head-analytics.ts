@@ -3,19 +3,24 @@ import { ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import {
+  aggregateOutcomeEvidence,
   buildProgramHeadOverviewKpi,
+  buildProgramHeadOutcomeDtos,
   buildScaleIdentities,
   buildTrendSeries,
   describeScales,
   extractDistinctScales,
   semesterOrder,
   termOrder,
+  type OutcomeEvidenceRow,
   type ScaleDescriptor,
   type TrendSeriesPeriodInput,
 } from "./program-head-analytics-aggregators";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
 import type {
   ProgramHeadAnalyticsScopeSummary,
+  ProgramHeadOutcomesDTO,
+  ProgramHeadOutcomesEmptyReason,
   ProgramHeadOverviewDTO,
   ProgramHeadTrendsDTO,
   OverviewEmptyReason,
@@ -497,6 +502,185 @@ function buildTrendSeriesInputs(
   }
 
   return inputs;
+}
+
+/** Response predicate scoped to the selected Program's course-bound evidence only. */
+function buildCourseBoundResponseScope(programId: string, termInstanceWhere: Record<string, unknown>) {
+  return {
+    deployment_type: "COURSE_BOUND" as const,
+    assignment: {
+      course_bound: {
+        course_assignment: { program_id: programId },
+        ...termInstanceWhere,
+      },
+    },
+  };
+}
+
+/**
+ * Disclosure that historical ratings are grouped by the Program's current
+ * CILO-to-GO mappings. Publication-time mapping snapshots do not exist yet,
+ * so later mapping edits may reinterpret historical outcome rows.
+ */
+const CURRENT_MAPPING_DISCLOSURE =
+  "Outcome rows group historical ratings using the Program's current CILO-to-GO mappings. " +
+  "Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.";
+
+/**
+ * Authorized Program GO evidence read for the selected Program. Only
+ * course-bound quantitative items with a publication-time CILO question
+ * binding and a canonical selected-Program CILO-to-GO mapping contribute.
+ * Central instrument questions and Institutional Outcome evidence never enter
+ * Program GO rows because no canonical central question-to-GO relation exists.
+ *
+ * Historical ratings are grouped by the Program's current mappings and the
+ * limitation is disclosed on the DTO. Means and distributions use only
+ * in-scale ratings resolved from the frozen instrument-version structure
+ * snapshot; incompatible scales are never merged. Returns null for
+ * unauthorized or malformed Program requests.
+ */
+export async function getProgramHeadOutcomes(
+  programId: string,
+  filters: AnalyticsFilterState
+): Promise<ProgramHeadOutcomesDTO | null> {
+  const contextResult = await resolveProgramHeadContext(programId);
+
+  if (!contextResult.success) {
+    return null;
+  }
+
+  const { selectedProgram } = contextResult.data;
+
+  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
+    resolveTermInstanceFilter(selectedProgram.id, filters),
+    listProgramPeriodOptions(selectedProgram.id),
+  ]);
+
+  const courseBoundResponseScope = buildCourseBoundResponseScope(
+    selectedProgram.id,
+    termInstanceWhere
+  );
+
+  const [ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount] = await Promise.all([
+    prisma.quantitativeResponseItem.findMany({
+      where: {
+        cilo_question_binding_id: { not: null },
+        response: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope },
+      },
+      select: {
+        rating_value: true,
+        response_id: true,
+        section_key: true,
+        item_key: true,
+        cilo_question_binding: {
+          select: {
+            course_bound_evaluation: { select: { id: true, deployment_name: true } },
+            cilo: {
+              select: {
+                id: true,
+                description: true,
+                course: { select: { id: true, code: true, title: true } },
+                cilo_mappings: {
+                  where: { go: { program_id: selectedProgram.id } },
+                  select: { go: { select: { id: true, code: true, description: true } } },
+                },
+              },
+            },
+          },
+        },
+        response: {
+          select: {
+            assignment: { select: { course_bound: { select: { instrument_version_id: true } } } },
+          },
+        },
+      },
+    }),
+    prisma.evaluationAssignment.count({
+      where: {
+        course_bound: { course_assignment: { program_id: selectedProgram.id }, ...termInstanceWhere },
+      },
+    }),
+    prisma.response.count({
+      where: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope },
+    }),
+  ]);
+
+  const instrumentVersionIds = [
+    ...new Set(
+      ratingRows
+        .map((row) => row.response.assignment.course_bound?.instrument_version_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const instrumentVersions =
+    instrumentVersionIds.length > 0
+      ? await prisma.instrumentVersion.findMany({
+          where: { id: { in: instrumentVersionIds } },
+          select: { id: true, structure_snapshot: true },
+        })
+      : [];
+  const snapshotById = new Map(
+    instrumentVersions.map((version) => [version.id, version.structure_snapshot])
+  );
+
+  const evidenceRows: OutcomeEvidenceRow[] = ratingRows.flatMap((row) => {
+    const binding = row.cilo_question_binding;
+    const cilo = binding?.cilo;
+    if (!binding || !cilo) {
+      return [];
+    }
+    const goMappings = cilo.cilo_mappings.map((mapping) => ({
+      goId: mapping.go.id,
+      code: mapping.go.code,
+      name: mapping.go.description,
+    }));
+    if (goMappings.length === 0) {
+      return [];
+    }
+    const instrumentVersionId =
+      row.response.assignment.course_bound?.instrument_version_id ?? null;
+    return [
+      {
+        ratingValue: row.rating_value,
+        responseId: row.response_id,
+        sectionKey: row.section_key,
+        itemKey: row.item_key,
+        instrumentVersion: instrumentVersionId
+          ? { id: instrumentVersionId, structureSnapshot: snapshotById.get(instrumentVersionId) ?? null }
+          : null,
+        cilo: { id: cilo.id, description: cilo.description, course: cilo.course },
+        goMappings,
+        evaluationId: binding.course_bound_evaluation.id,
+        deploymentName: binding.course_bound_evaluation.deployment_name,
+      },
+    ];
+  });
+
+  const aggregation = aggregateOutcomeEvidence(evidenceRows);
+  const outcomes = buildProgramHeadOutcomeDtos(aggregation);
+
+  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
+  const emptyReason: ProgramHeadOutcomesEmptyReason =
+    courseBoundOpportunityCount === 0
+      ? "no-assignments"
+      : courseBoundSubmittedCount === 0
+        ? "no-submissions"
+        : outcomes.length === 0
+          ? "no-mapped-outcomes"
+          : null;
+
+  return {
+    scope: {
+      programCode: selectedProgram.code,
+      programName: selectedProgram.name,
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+    },
+    periodOptions: buildPeriodOptions(periodInstances),
+    emptyReason,
+    currentMappingDisclosure: CURRENT_MAPPING_DISCLOSURE,
+    manyToManyDisclosure: aggregation.hasMultiMappedCilo,
+    outcomes,
+  };
 }
 
 /**
