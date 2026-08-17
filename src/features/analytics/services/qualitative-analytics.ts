@@ -6,16 +6,23 @@ import type {
 } from "../program-head-analytics-types";
 
 /**
- * Deterministic identifier redaction applied before tokenization.
- * Emails and digit-bearing tokens are replaced with spaces so they never
- * become word-cloud evidence. Faculty dashboard output stays identical when
- * this helper is reused.
+ * Deterministic pre-tokenization identifier policy. The existing Faculty
+ * contract removes emails and digit-bearing identifiers only. Program Head
+ * Feedback additionally removes visible names and `@` handles before its
+ * aggregate browser DTO is built.
  */
-export function redactPotentialIdentifiers(text: string): string {
-  return text
+export function redactPotentialIdentifiers(text: string, redactAlphabeticIdentifiers = false): string {
+  const redacted = text
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, " ")
     .replace(/\b[A-Za-z]*\d[A-Za-z\d-]*\b/g, " ")
-    .replace(/\b\d{4,}\b/g, " ")
+    .replace(/\b\d{4,}\b/g, " ");
+
+  return (redactAlphabeticIdentifiers
+    ? redacted
+        .replace(/(^|\s)@[A-Za-z][A-Za-z-]*/g, "$1 ")
+        .replace(/\b[A-Z][a-z]+(?:[- ][A-Z][a-z]+)*\b/g, " ")
+    : redacted
+  )
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -31,11 +38,13 @@ export function prepareWordCloudTokens(tokens: WordCloudToken[]): WordCloudToken
 }
 
 /**
- * Redact identifiers, drop empty remnants, tokenize with the shared winkNLP
- * builder, then close the token shape. Sort remains value-desc, then localeCompare.
+ * Program Head browser-token pipeline. In addition to the established email
+ * and digit rules, it removes title-cased names and `@` handles deterministically.
  */
 export function buildRedactedWordCloudTokens(texts: string[]): ProgramHeadFeedbackTokenDTO[] {
-  const redacted = texts.map(redactPotentialIdentifiers).filter((text) => text.trim().length > 0);
+  const redacted = texts
+    .map((text) => redactPotentialIdentifiers(text, true))
+    .filter((text) => text.trim().length > 0);
   return prepareWordCloudTokens(buildReviewWordCloudTokens(redacted));
 }
 

@@ -115,7 +115,15 @@ describe("redactPotentialIdentifiers", () => {
       "Student and showed clarity"
     );
   });
+  it("keeps the Faculty redaction contract unless identifier policy is enabled", () => {
+    expect(redactPotentialIdentifiers("Maria praised @john")).toBe("Maria praised @john");
+  });
+
+  it("removes title-cased names and digit-free handles for Program Head feedback", () => {
+    expect(redactPotentialIdentifiers("Maria praised @john", true)).toBe("praised");
+  });
 });
+
 
 describe("buildRedactedWordCloudTokens", () => {
   it("orders tokens by count descending then localeCompare", () => {
@@ -131,6 +139,13 @@ describe("buildRedactedWordCloudTokens", () => {
       { text: "apple", value: 2 },
       { text: "banana", value: 2 },
       { text: "clarity", value: 2 },
+    ]);
+  });
+
+  it("never emits title-cased names or digit-free handles", () => {
+    expect(buildRedactedWordCloudTokens(["Maria praised @john", "curriculum praised"])).toEqual([
+      { text: "praised", value: 2 },
+      { text: "curriculum", value: 1 },
     ]);
   });
 });
@@ -195,7 +210,6 @@ describe("getProgramHeadFeedback", () => {
     expect(result?.tokens).toEqual(
       expect.arrayContaining([
         { text: "clarity", value: 1 },
-        { text: "excellent", value: 1 },
         { text: "teaching", value: 1 },
       ])
     );
@@ -212,7 +226,7 @@ describe("getProgramHeadFeedback", () => {
 
     const result = await getProgramHeadFeedback("program-bsed", feedbackFilters);
 
-    expect(result?.tokens.map((token) => token.text)).toEqual(["clarity", "email", "teaching"]);
+    expect(result?.tokens.map((token) => token.text)).toEqual(["clarity", "teaching"]);
     expect(result?.tokens).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({ text: "student" }),
