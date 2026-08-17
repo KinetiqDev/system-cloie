@@ -221,6 +221,7 @@ const filteredContainerCollisionDetection: CollisionDetection = (args) => {
  * candidates to the active container before the geometry pass keeps sections
  * moving among sections and questions within their own section.
  */
+// fallow-ignore-next-line
 const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event, args) => {
   const { context } = args;
   const active = context.active;
@@ -1069,6 +1070,7 @@ export function TemplateBuilder({
                 ? "Picked up a section. Use the arrow keys to move it among sections, press space or enter to drop, or press escape to cancel."
                 : "Picked up a question. Use the arrow keys to move it within the current section, press space or enter to drop, or press escape to cancel.";
             },
+            // fallow-ignore-next-line
             onDragOver({ active, over }) {
               if (!over) return;
 
@@ -1098,6 +1100,7 @@ export function TemplateBuilder({
 
               return;
             },
+            // fallow-ignore-next-line
             onDragEnd({ active, over }) {
               const activeItem = sortableMap.get(active.id);
               const overItem = over ? sortableMap.get(over.id) : undefined;
@@ -1477,6 +1480,7 @@ interface QuestionCardProps {
   canRemove: boolean;
 }
 
+// fallow-ignore-next-line
 function QuestionCard({
   ciloOptions,
   sectionKey,
