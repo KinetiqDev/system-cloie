@@ -12,6 +12,7 @@ const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
     academicTermInstance: { findMany: vi.fn() },
     schoolYear: { findUnique: vi.fn() },
     quantitativeResponseItem: { findMany: vi.fn() },
+    courseBoundCiloQuestionBinding: { findMany: vi.fn() },
     evaluationAssignment: { count: vi.fn() },
     response: { count: vi.fn() },
     instrumentVersion: { findMany: vi.fn() },
@@ -95,24 +96,16 @@ function prismaRatingRow(opts: {
   sectionKey: string;
   itemKey: string;
   instrumentVersionId: string | null;
-  binding?: {
-    course_bound_evaluation: { id: string; deployment_name: string };
-    cilo: {
-      id: string;
-      description: string;
-      course: { id: string; code: string; title: string };
-      cilo_mappings: Array<{ go: { id: string; code: string; description: string } }>;
-    } | null;
-  } | null;
+  evaluationId?: string;
 }) {
   return {
     rating_value: opts.ratingValue,
     response_id: opts.responseId,
     section_key: opts.sectionKey,
     item_key: opts.itemKey,
-    cilo_question_binding: opts.binding ?? null,
     response: {
       assignment: {
+        course_bound_id: opts.evaluationId ?? "eval-1",
         course_bound: { instrument_version_id: opts.instrumentVersionId },
       },
     },
@@ -122,9 +115,7 @@ function prismaRatingRow(opts: {
 const goA = { go: { id: "go-a", code: "GO-1", description: "Effective communicator" } };
 const goB = { go: { id: "go-b", code: "GO-2", description: "Critical thinker" } };
 
-function ciloBinding(opts: {
-  evaluationId?: string;
-  deploymentName?: string;
+function ciloRow(opts: {
   ciloId?: string;
   ciloDescription?: string;
   courseCode?: string;
@@ -132,16 +123,26 @@ function ciloBinding(opts: {
 } = {}) {
   const { ciloId = "cilo-1", ciloDescription = "Achieve the outcome", courseCode = "EDUC 101" } = opts;
   return {
-    course_bound_evaluation: {
-      id: opts.evaluationId ?? "eval-1",
-      deployment_name: opts.deploymentName ?? "CILO Evaluation",
-    },
-    cilo: {
-      id: ciloId,
-      description: ciloDescription,
-      course: { id: "course-1", code: courseCode, title: "Education 101" },
-      cilo_mappings: opts.goMappings ?? [goA],
-    },
+    id: ciloId,
+    description: ciloDescription,
+    course: { id: "course-1", code: courseCode, title: "Education 101" },
+    cilo_mappings: opts.goMappings ?? [goA],
+  };
+}
+
+function bindingRow(opts: {
+  evaluationId?: string;
+  deploymentName?: string;
+  sectionKey?: string;
+  itemKey?: string;
+  cilo?: ReturnType<typeof ciloRow> | null;
+} = {}) {
+  return {
+    section_key: opts.sectionKey ?? "cilo-items",
+    item_key: opts.itemKey ?? "cilo-attainment-1",
+    course_bound_evaluation_id: opts.evaluationId ?? "eval-1",
+    course_bound_evaluation: { deployment_name: opts.deploymentName ?? "CILO Evaluation" },
+    cilo: opts.cilo === undefined ? ciloRow() : opts.cilo,
   };
 }
 
@@ -156,6 +157,7 @@ describe("getProgramHeadOutcomes", () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.schoolYear.findUnique.mockResolvedValue(null);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([]);
     mockScopeCounts({ opportunities: 5, submitted: 3 });
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
@@ -201,7 +203,6 @@ describe("getProgramHeadOutcomes", () => {
     expect(ratingCall.where.response.assignment.course_bound.course_assignment.program_id).toBe(
       "program-bsed"
     );
-    expect(ratingCall.where.cilo_question_binding_id).toEqual({ not: null });
 
     const opportunityCall = prismaMock.evaluationAssignment.count.mock.calls[0][0];
     expect(opportunityCall.where.course_bound.course_assignment.program_id).toBe("program-bsed");
@@ -212,6 +213,29 @@ describe("getProgramHeadOutcomes", () => {
     expect(submittedCall.where.assignment.course_bound.course_assignment.program_id).toBe(
       "program-bsed"
     );
+  });
+
+  it("resolves publication-time bindings by evaluation and item keys with mapped CILOs only", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      prismaRatingRow({
+        ratingValue: 4,
+        responseId: "resp-1",
+        sectionKey: "cilo-items",
+        itemKey: "cilo-attainment-1",
+        instrumentVersionId: "iv-cilo-v1",
+      }),
+    ]);
+
+    await getProgramHeadOutcomes("program-bsed", outcomesFilters);
+
+    expect(prismaMock.courseBoundCiloQuestionBinding.findMany).toHaveBeenCalledWith({
+      where: { course_bound_evaluation_id: { in: ["eval-1"] }, cilo_id: { not: null } },
+      select: expect.objectContaining({
+        section_key: true,
+        item_key: true,
+        course_bound_evaluation_id: true,
+      }),
+    });
   });
 
   it("passes a validated term instance filter to every outcome read", async () => {
@@ -240,7 +264,6 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding(),
       }),
       prismaRatingRow({
         ratingValue: 5,
@@ -248,7 +271,6 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding(),
       }),
       prismaRatingRow({
         ratingValue: 3,
@@ -256,7 +278,14 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding({ ciloId: "cilo-2", ciloDescription: "Analyze evidence" }),
+        evaluationId: "eval-2",
+      }),
+    ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+      bindingRow(),
+      bindingRow({
+        evaluationId: "eval-2",
+        cilo: ciloRow({ ciloId: "cilo-2", ciloDescription: "Analyze evidence" }),
       }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
@@ -281,6 +310,7 @@ describe("getProgramHeadOutcomes", () => {
     ]);
     expect(row.evidenceEvaluations).toEqual([
       { evaluationId: "eval-1", deploymentName: "CILO Evaluation" },
+      { evaluationId: "eval-2", deploymentName: "CILO Evaluation" },
     ]);
   });
 
@@ -292,7 +322,6 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding({ ciloId: "cilo-a", goMappings: [goA] }),
       }),
       prismaRatingRow({
         ratingValue: 5,
@@ -300,7 +329,14 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding({ ciloId: "cilo-b", goMappings: [goB] }),
+        evaluationId: "eval-2",
+      }),
+    ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-a", goMappings: [goA] }) }),
+      bindingRow({
+        evaluationId: "eval-2",
+        cilo: ciloRow({ ciloId: "cilo-b", goMappings: [goB] }),
       }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
@@ -320,8 +356,10 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding({ ciloId: "cilo-multi", goMappings: [goA, goB] }),
       }),
+    ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-multi", goMappings: [goA, goB] }) }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
@@ -345,8 +383,10 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding({ goMappings: [goA] }),
       }),
+    ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+      bindingRow({ cilo: ciloRow({ goMappings: [goA] }) }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
@@ -360,27 +400,25 @@ describe("getProgramHeadOutcomes", () => {
 
   it("never creates a GO row from an unbound or deleted-CILO rating", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      // Deleted CILO: binding exists but the CILO is gone — no mapping possible.
+      // Rating whose item has no published binding in this evaluation.
       prismaRatingRow({
         ratingValue: 4,
         responseId: "resp-1",
         sectionKey: "cilo-items",
-        itemKey: "cilo-attainment-1",
+        itemKey: "unbound-item",
         instrumentVersionId: "iv-cilo-v1",
-        binding: {
-          course_bound_evaluation: { id: "eval-1", deployment_name: "CILO Evaluation" },
-          cilo: null,
-        },
       }),
-      // Bound CILO with no canonical mapping for the selected Program.
+      // Deleted CILO: binding exists but the CILO is gone — no mapping possible.
       prismaRatingRow({
         ratingValue: 5,
         responseId: "resp-2",
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding({ ciloId: "cilo-unmapped", goMappings: [] }),
       }),
+    ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+      bindingRow({ itemKey: "cilo-attainment-1", cilo: null }),
     ]);
     mockScopeCounts({ opportunities: 5, submitted: 3 });
 
@@ -388,6 +426,27 @@ describe("getProgramHeadOutcomes", () => {
 
     expect(result!.outcomes).toHaveLength(0);
     // Ratings exist but nothing maps: the view explains the absence explicitly.
+    expect(result!.emptyReason).toBe("no-mapped-outcomes");
+  });
+
+  it("never creates a GO row when a bound CILO has no canonical mapping", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      prismaRatingRow({
+        ratingValue: 5,
+        responseId: "resp-2",
+        sectionKey: "cilo-items",
+        itemKey: "cilo-attainment-1",
+        instrumentVersionId: "iv-cilo-v1",
+      }),
+    ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-unmapped", goMappings: [] }) }),
+    ]);
+    mockScopeCounts({ opportunities: 5, submitted: 3 });
+
+    const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
+
+    expect(result!.outcomes).toHaveLength(0);
     expect(result!.emptyReason).toBe("no-mapped-outcomes");
   });
 
@@ -401,7 +460,6 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding(),
       }),
       // 9 is not a value on the 1–5 scale in the frozen snapshot.
       prismaRatingRow({
@@ -410,9 +468,9 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding(),
       }),
     ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([bindingRow()]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
@@ -435,7 +493,6 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding({ ciloId: "cilo-a" }),
       }),
       prismaRatingRow({
         ratingValue: 3,
@@ -443,7 +500,16 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "program-academic",
         itemKey: "q1",
         instrumentVersionId: "iv-exit-v1",
-        binding: ciloBinding({ ciloId: "cilo-b", courseCode: "EDUC 202" }),
+        evaluationId: "eval-2",
+      }),
+    ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-a" }) }),
+      bindingRow({
+        evaluationId: "eval-2",
+        sectionKey: "program-academic",
+        itemKey: "q1",
+        cilo: ciloRow({ ciloId: "cilo-b", courseCode: "EDUC 202" }),
       }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue(instrumentVersions);
@@ -468,17 +534,28 @@ describe("getProgramHeadOutcomes", () => {
   });
 
   it("does not fabricate a distribution when the item scale cannot be resolved", async () => {
+    // The binding exists and maps to a GO, but the frozen snapshot does not
+    // carry the item's scale, so the rating cannot be validated or binned.
+    const emptyStructure = [
+      {
+        key: "cilo-items",
+        title: "CILO",
+        items: [],
+      },
+    ];
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       prismaRatingRow({
         ratingValue: 4,
         responseId: "resp-1",
-        sectionKey: "unknown-section",
-        itemKey: "unknown-item",
-        instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding(),
+        sectionKey: "cilo-items",
+        itemKey: "cilo-attainment-1",
+        instrumentVersionId: "iv-empty",
       }),
     ]);
-    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([bindingRow()]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([
+      { id: "iv-empty", structure_snapshot: emptyStructure },
+    ]);
 
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
 
@@ -500,15 +577,40 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding(),
       }),
     ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([bindingRow()]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
 
     expect(result!.currentMappingDisclosure).toMatch(/current CILO-to-GO mappings/i);
     expect(result!.currentMappingDisclosure).toMatch(/publication-time/i);
+  });
+
+  it("resolves ratings written without a binding ID through publication-time item bindings", async () => {
+    // The live student submission flow writes quantitative items with only
+    // section/item keys (no cilo_question_binding_id); the Outcomes read must
+    // still attach them to their published bindings via evaluation + keys.
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      prismaRatingRow({
+        ratingValue: 5,
+        responseId: "resp-1",
+        sectionKey: "cilo-items",
+        itemKey: "cilo-attainment-1",
+        instrumentVersionId: "iv-cilo-v1",
+      }),
+    ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([bindingRow()]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
+
+    const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
+
+    expect(result!.outcomes).toHaveLength(1);
+    expect(result!.outcomes[0].code).toBe("GO-1");
+    expect(result!.outcomes[0].meanRating).toBe(5);
+    expect(result!.outcomes[0].ratingCount).toBe(1);
+    expect(result!.outcomes[0].submittedResponseCount).toBe(1);
   });
 
   // ── Empty reasons ────────────────────────────────────────────────────────
@@ -540,9 +642,9 @@ describe("getProgramHeadOutcomes", () => {
         sectionKey: "cilo-items",
         itemKey: "cilo-attainment-1",
         instrumentVersionId: "iv-cilo-v1",
-        binding: ciloBinding(),
       }),
     ]);
+    prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([bindingRow()]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
@@ -585,6 +687,27 @@ describe("resolveSnapshotItemScale", () => {
       { value: 2, label: "Disagree" },
       { value: 3, label: "Agree" },
       { value: 4, label: "Strongly Agree" },
+    ]);
+  });
+
+  it("resolves a numeric scale from the legacy quantitative_items format", () => {
+    const legacyStructure = [
+      {
+        key: "legacy-section",
+        title: "Legacy",
+        quantitative_items: [
+          { key: "legacy-q1", prompt: "Q", scale: [1, 2, 3, 4, 5, 6] },
+        ],
+      },
+    ];
+
+    expect(resolveSnapshotItemScale(legacyStructure, "legacy-section", "legacy-q1")).toEqual([
+      { value: 1, label: null },
+      { value: 2, label: null },
+      { value: 3, label: null },
+      { value: 4, label: null },
+      { value: 5, label: null },
+      { value: 6, label: null },
     ]);
   });
 

@@ -530,8 +530,11 @@ const CURRENT_MAPPING_DISCLOSURE =
  * Authorized Program GO evidence read for the selected Program. Only
  * course-bound quantitative items with a publication-time CILO question
  * binding and a canonical selected-Program CILO-to-GO mapping contribute.
- * Central instrument questions and Institutional Outcome evidence never enter
- * Program GO rows because no canonical central question-to-GO relation exists.
+ * Bindings are resolved by evaluation plus section/item keys because the live
+ * student submission flow writes ratings without a binding ID, mirroring the
+ * existing review evidence compensation. Central instrument questions and
+ * Institutional Outcome evidence never enter Program GO rows because no
+ * canonical central question-to-GO relation exists.
  *
  * Historical ratings are grouped by the Program's current mappings and the
  * limitation is disclosed on the DTO. Means and distributions use only
@@ -564,7 +567,6 @@ export async function getProgramHeadOutcomes(
   const [ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount] = await Promise.all([
     prisma.quantitativeResponseItem.findMany({
       where: {
-        cilo_question_binding_id: { not: null },
         response: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope },
       },
       select: {
@@ -572,25 +574,14 @@ export async function getProgramHeadOutcomes(
         response_id: true,
         section_key: true,
         item_key: true,
-        cilo_question_binding: {
-          select: {
-            course_bound_evaluation: { select: { id: true, deployment_name: true } },
-            cilo: {
-              select: {
-                id: true,
-                description: true,
-                course: { select: { id: true, code: true, title: true } },
-                cilo_mappings: {
-                  where: { go: { program_id: selectedProgram.id } },
-                  select: { go: { select: { id: true, code: true, description: true } } },
-                },
-              },
-            },
-          },
-        },
         response: {
           select: {
-            assignment: { select: { course_bound: { select: { instrument_version_id: true } } } },
+            assignment: {
+              select: {
+                course_bound_id: true,
+                course_bound: { select: { instrument_version_id: true } },
+              },
+            },
           },
         },
       },
@@ -604,6 +595,49 @@ export async function getProgramHeadOutcomes(
       where: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope },
     }),
   ]);
+
+  // Publication-time CILO question bindings are resolved by evaluation +
+  // section/item keys, because the current student submission flow writes
+  // ratings without a binding ID. This mirrors the existing review and faculty
+  // analytics compensation and honors the binding's unique
+  // (evaluation, section_key, item_key) identity.
+  const evaluationIds = [
+    ...new Set(
+      ratingRows
+        .map((row) => row.response.assignment.course_bound_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const bindings =
+    evaluationIds.length > 0
+      ? await prisma.courseBoundCiloQuestionBinding.findMany({
+          where: { course_bound_evaluation_id: { in: evaluationIds }, cilo_id: { not: null } },
+          select: {
+            section_key: true,
+            item_key: true,
+            course_bound_evaluation_id: true,
+            course_bound_evaluation: { select: { deployment_name: true } },
+            cilo: {
+              select: {
+                id: true,
+                description: true,
+                course: { select: { id: true, code: true, title: true } },
+                cilo_mappings: {
+                  where: { go: { program_id: selectedProgram.id } },
+                  select: { go: { select: { id: true, code: true, description: true } } },
+                },
+              },
+            },
+          },
+        })
+      : [];
+  const bindingByItemKey = new Map<string, (typeof bindings)[number]>();
+  for (const binding of bindings) {
+    const key = `${binding.course_bound_evaluation_id}:${binding.section_key}:${binding.item_key}`;
+    if (!bindingByItemKey.has(key)) {
+      bindingByItemKey.set(key, binding);
+    }
+  }
 
   const instrumentVersionIds = [
     ...new Set(
@@ -624,7 +658,13 @@ export async function getProgramHeadOutcomes(
   );
 
   const evidenceRows: OutcomeEvidenceRow[] = ratingRows.flatMap((row) => {
-    const binding = row.cilo_question_binding;
+    const evaluationId = row.response.assignment.course_bound_id;
+    if (!evaluationId) {
+      return [];
+    }
+    const binding = bindingByItemKey.get(
+      `${evaluationId}:${row.section_key}:${row.item_key}`
+    );
     const cilo = binding?.cilo;
     if (!binding || !cilo) {
       return [];
@@ -650,7 +690,7 @@ export async function getProgramHeadOutcomes(
           : null,
         cilo: { id: cilo.id, description: cilo.description, course: cilo.course },
         goMappings,
-        evaluationId: binding.course_bound_evaluation.id,
+        evaluationId,
         deploymentName: binding.course_bound_evaluation.deployment_name,
       },
     ];

@@ -370,9 +370,10 @@ export function buildProgramHeadOverviewKpi(input: {
 /**
  * Resolve the Likert scale for one rating item from the instrument version's
  * frozen structure snapshot. The item is located by its canonical section and
- * item keys; category values and labels come from the snapshot rather than a
- * universal 1–5 assumption. Returns null when the item (or its scale) cannot
- * be resolved.
+ * item keys across the modern `items`, `questions`, and legacy
+ * `quantitative_items` snapshot formats; category values and labels come from
+ * the snapshot rather than a universal 1–5 assumption. Returns null when the
+ * item (or its scale) cannot be resolved.
  */
 export function resolveSnapshotItemScale(
   structureSnapshot: unknown,
@@ -392,7 +393,9 @@ export function resolveSnapshotItemScale(
       ? (raw.items as Array<Record<string, unknown>>)
       : Array.isArray(raw.questions)
         ? (raw.questions as Array<Record<string, unknown>>)
-        : [];
+        : Array.isArray(raw.quantitative_items)
+          ? (raw.quantitative_items as Array<Record<string, unknown>>)
+          : [];
     const candidate = rawItems.find((entry) => entry.key === itemKey);
     if (!candidate) {
       continue;
