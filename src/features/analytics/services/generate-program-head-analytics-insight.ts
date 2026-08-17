@@ -3,6 +3,7 @@ import {
   AI_EVIDENCE_END,
   AI_EVIDENCE_START,
   AI_MAX_OUTPUT_CHARS,
+  AI_MAX_OUTPUT_TOKENS,
   AI_PROVIDER_TIMEOUT_MS,
   AI_SENTIMENT_STATUSES,
   aiInsightOutputSchema,
@@ -214,18 +215,6 @@ export function buildAiEvidencePacket(
 ): { packet: AiEvidencePacket; evidenceScope: AiPacketEvidenceScope } {
   const { overview, outcomes, stakeholders, breakdowns, trends, feedback } = reads;
 
-  const availableTokens = sortedDescending(feedback.tokens);
-  const tokenTextBudget = config.maxPacketChars - JSON.stringify({ wordFrequencyTokens: availableTokens }).length;
-  const tokensByCharBudget: typeof availableTokens = [];
-  let remainingBudget = tokenTextBudget;
-  for (const token of availableTokens) {
-    const text = token.text.length <= MAX_TOKEN_TEXT_CHARS ? token.text : token.text.slice(0, MAX_TOKEN_TEXT_CHARS - 1) + "…";
-    const size = JSON.stringify({ text, value: token.value }).length;
-    if (tokensByCharBudget.length >= config.maxTokens || size > remainingBudget) break;
-    tokensByCharBudget.push({ text, value: token.value });
-    remainingBudget -= size;
-  }
-
   const sourceLabels = [
     ...stakeholders.buckets.map((bucket) => bucket.sourceLabel),
     ...feedback.sourceCounts.map((source) => source.sourceLabel),
@@ -240,7 +229,7 @@ export function buildAiEvidencePacket(
     ),
   ].filter((limitation) => limitation.length > 0);
 
-  const packet: AiEvidencePacket = {
+  const packetBase: Omit<AiEvidencePacket, "wordFrequencyTokens"> = {
     program: {
       code: overview.scope.programCode,
       name: clampLabel(overview.scope.programName),
@@ -349,8 +338,33 @@ export function buildAiEvidencePacket(
         responseCount: prompt.responseCount,
       })),
     },
-    wordFrequencyTokens: tokensByCharBudget,
     limitations,
+  };
+
+  // Budget word-frequency tokens against the serialized base packet, so a
+  // corpus larger than the maximum packet size cannot starve the qualitative
+  // token slice.
+  const availableTokens = sortedDescending(feedback.tokens);
+  const baseSize =
+    JSON.stringify({ ...packetBase, wordFrequencyTokens: [] }).length -
+    JSON.stringify([]).length;
+  let remainingBudget = config.maxPacketChars - baseSize;
+  const tokensByCharBudget: typeof availableTokens = [];
+  for (const [index, token] of availableTokens.entries()) {
+    if (tokensByCharBudget.length >= config.maxTokens) break;
+    const text =
+      token.text.length <= MAX_TOKEN_TEXT_CHARS
+        ? token.text
+        : token.text.slice(0, MAX_TOKEN_TEXT_CHARS - 1) + "…";
+    const size = JSON.stringify({ text, value: token.value }).length + (index > 0 ? 1 : 0);
+    if (size > remainingBudget) break;
+    tokensByCharBudget.push({ text, value: token.value });
+    remainingBudget -= size;
+  }
+
+  const packet: AiEvidencePacket = {
+    ...packetBase,
+    wordFrequencyTokens: tokensByCharBudget,
   };
 
   const packetJson = JSON.stringify(packet);
@@ -413,11 +427,13 @@ export type AiModelTransport = (input: {
   systemInstruction: string;
   userMessage: string;
   timeoutMs: number;
+  /** Provider-compatible completion-token cap; local validation still binds. */
+  maxOutputTokens: number;
 }) => Promise<AiModelTransportResult>;
 
 /** Default transport over the reviewed `openai` SDK against the configured base URL. */
 function createOpenAiCompatTransport(config: AiConfiguration): AiModelTransport {
-  return async ({ model, systemInstruction, userMessage, timeoutMs }) => {
+  return async ({ model, systemInstruction, userMessage, timeoutMs, maxOutputTokens }) => {
     const client = new OpenAI({
       apiKey: config.apiKey,
       baseURL: config.baseUrl,
@@ -427,6 +443,7 @@ function createOpenAiCompatTransport(config: AiConfiguration): AiModelTransport 
       const completion = await client.chat.completions.create({
         model,
         temperature: 0.2,
+        max_tokens: maxOutputTokens,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemInstruction },
@@ -543,6 +560,7 @@ export async function generateProgramHeadAnalyticsInsight(
     systemInstruction: SYSTEM_INSTRUCTION,
     userMessage: buildAiUserMessage(JSON.stringify(packet)),
     timeoutMs: AI_PROVIDER_TIMEOUT_MS,
+    maxOutputTokens: AI_MAX_OUTPUT_TOKENS,
   });
   if (!transportResult.ok) {
     return { ok: false, state: transportResult.timedOut ? "timeout" : "provider-error" };

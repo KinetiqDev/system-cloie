@@ -27,6 +27,13 @@ export const AI_PROVIDER_TIMEOUT_MS = 60_000;
 /** Hard cap on validated output characters before Zod parsing. */
 export const AI_MAX_OUTPUT_CHARS = 12_000;
 
+/**
+ * Provider-side completion-token cap aligned with the response budget
+ * (~3 chars per token worst case). The local character and schema validation
+ * remains the binding ceiling; this only stops unbounded provider generation.
+ */
+export const AI_MAX_OUTPUT_TOKENS = 4_000;
+
 /** Validated server-only AI configuration. */
 export type AiConfiguration = {
   apiKey: string;
@@ -117,9 +124,6 @@ export const aiInsightOutputSchema = z.object({
   limitations: z.array(boundedText(300)).max(5),
 });
 
-/** Parsed, validated provider output type. */
-type AiInsightOutput = z.infer<typeof aiInsightOutputSchema>;
-
 /**
  * The AI Server Action accepts only the selected `programId` and validated
  * tab/filter state. Unknown keys (client-supplied aggregates, comments, or
@@ -136,9 +140,6 @@ export const aiActionInputSchema = z
     }),
   })
   .strict();
-
-/** Validated Server Action input. */
-type AiActionInput = z.infer<typeof aiActionInputSchema>;
 
 /**
  * Fixed instruction boundary markers. Qualitative token text is embedded as

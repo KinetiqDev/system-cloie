@@ -273,8 +273,33 @@ describe("AI evidence packet privacy bounds", () => {
       { ...CONFIG, maxPacketChars: budget, maxTokens: 500 }
     );
     expect(JSON.stringify(packet).length).toBeLessThanOrEqual(budget);
+    expect(evidenceScope.tokenAnalysis.includedTokenCount).toBeGreaterThan(0);
     expect(evidenceScope.tokenAnalysis.includedTokenCount).toBeLessThan(500);
     expect(evidenceScope.tokenAnalysis.truncated).toBe(true);
+  });
+
+  it("keeps tokens when the raw corpus alone exceeds the packet budget", () => {
+    // Regression: the token budget must come from the packet without tokens;
+    // otherwise a corpus larger than maxPacketChars drives the remaining
+    // budget negative and all qualitative tokens are dropped.
+    const manyTokens = Array.from({ length: 500 }, (_, index) => ({
+      text: `token-${index}`,
+      value: 1000 - index,
+    }));
+    const fullCorpusSize = JSON.stringify({ wordFrequencyTokens: manyTokens }).length;
+    const base = buildAiEvidencePacket(
+      buildReads({ feedback: { ...feedback, tokens: [] } }),
+      { ...CONFIG, maxPacketChars: 1_000_000, maxTokens: 500 }
+    );
+    const budget = JSON.stringify(base.packet).length + 200;
+    expect(budget).toBeLessThan(fullCorpusSize);
+
+    const { packet, evidenceScope } = buildAiEvidencePacket(
+      buildReads({ feedback: { ...feedback, tokens: manyTokens } }),
+      { ...CONFIG, maxPacketChars: budget, maxTokens: 500 }
+    );
+    expect(evidenceScope.tokenAnalysis.includedTokenCount).toBeGreaterThan(0);
+    expect(JSON.stringify(packet).length).toBeLessThanOrEqual(budget);
   });
 
   it("reports analyzed versus available evidence", () => {
