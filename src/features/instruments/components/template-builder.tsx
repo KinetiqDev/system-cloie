@@ -251,19 +251,16 @@ export const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event
     return sortableKeyboardCoordinates(event, args);
   }
 
-  let nextIndex = activeIndex;
+  const direction =
+    event.code === "ArrowDown" || event.code === "ArrowRight"
+      ? 1
+      : event.code === "ArrowUp" || event.code === "ArrowLeft"
+        ? -1
+        : 0;
+  const nextIndex = activeIndex + direction;
 
-  switch (event.code) {
-    case "ArrowDown":
-    case "ArrowRight":
-      nextIndex = activeIndex + 1;
-      break;
-    case "ArrowUp":
-    case "ArrowLeft":
-      nextIndex = activeIndex - 1;
-      break;
-    default:
-      return sortableKeyboardCoordinates(event, args);
+  if (direction === 0 || nextIndex < 0 || nextIndex >= sameContainer.length) {
+    return;
   }
 
   if (nextIndex < 0 || nextIndex >= sameContainer.length) {
