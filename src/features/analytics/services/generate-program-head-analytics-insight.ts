@@ -343,11 +343,11 @@ export function buildAiEvidencePacket(
 
   // Budget word-frequency tokens against the serialized base packet, so a
   // corpus larger than the maximum packet size cannot starve the qualitative
-  // token slice.
+  // token slice. The empty-array brackets stay in the base size; each added
+  // entry costs its serialized size plus a comma when not first, so the
+  // final serialized packet can never exceed maxPacketChars.
   const availableTokens = sortedDescending(feedback.tokens);
-  const baseSize =
-    JSON.stringify({ ...packetBase, wordFrequencyTokens: [] }).length -
-    JSON.stringify([]).length;
+  const baseSize = JSON.stringify({ ...packetBase, wordFrequencyTokens: [] }).length;
   let remainingBudget = config.maxPacketChars - baseSize;
   const tokensByCharBudget: typeof availableTokens = [];
   for (const [index, token] of availableTokens.entries()) {

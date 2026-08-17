@@ -278,6 +278,39 @@ describe("AI evidence packet privacy bounds", () => {
     expect(evidenceScope.tokenAnalysis.truncated).toBe(true);
   });
 
+  it("never exceeds the packet limit at the token budget boundary", () => {
+    // Regression: bracket characters must stay in the base size so a token
+    // that exactly fills the limit is accepted and one character over is
+    // dropped instead of throwing the size guard.
+    const base = buildAiEvidencePacket(buildReads(), {
+      ...CONFIG,
+      maxPacketChars: 1_000_000,
+      maxTokens: 1,
+    });
+    const baseWithEmptyTokens = JSON.stringify({
+      ...base.packet,
+      wordFrequencyTokens: [],
+    }).length;
+    const entrySize = JSON.stringify({ text: "helpful", value: 6 }).length;
+    const exactLimit = baseWithEmptyTokens + entrySize;
+
+    const atLimit = buildAiEvidencePacket(buildReads(), {
+      ...CONFIG,
+      maxPacketChars: exactLimit,
+      maxTokens: 1,
+    });
+    expect(atLimit.packet.wordFrequencyTokens).toHaveLength(1);
+    expect(JSON.stringify(atLimit.packet).length).toBe(exactLimit);
+
+    const oneLess = buildAiEvidencePacket(buildReads(), {
+      ...CONFIG,
+      maxPacketChars: exactLimit - 1,
+      maxTokens: 1,
+    });
+    expect(oneLess.packet.wordFrequencyTokens).toHaveLength(0);
+    expect(JSON.stringify(oneLess.packet).length).toBeLessThanOrEqual(exactLimit - 1);
+  });
+
   it("keeps tokens when the raw corpus alone exceeds the packet budget", () => {
     // Regression: the token budget must come from the packet without tokens;
     // otherwise a corpus larger than maxPacketChars drives the remaining
