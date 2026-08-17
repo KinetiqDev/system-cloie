@@ -499,9 +499,7 @@ describe("generateProgramHeadAnalyticsInsight", () => {
       truncated: false,
     });
   });
-});
 
-describe("buildAiUserMessage", () => {
   it("sends a provider-compatible completion-token cap on the default transport", async () => {
     stubEnabledConfig();
     openAiCreateMock.mockResolvedValue({
@@ -511,9 +509,27 @@ describe("buildAiUserMessage", () => {
 
     expect(openAiCreateMock).toHaveBeenCalledTimes(1);
     expect(openAiCreateMock.mock.calls[0][0].max_tokens).toBe(AI_MAX_OUTPUT_TOKENS);
+    expect(openAiCreateMock.mock.calls[0][0].max_completion_tokens).toBeUndefined();
     expect(result.ok).toBe(true);
   });
 
+  it("selects max_completion_tokens for reasoning models", async () => {
+    stubEnabledConfig({ CLOIE_AI_MODEL: "o3-mini" });
+    openAiCreateMock.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(VALID_OUTPUT) } }],
+    });
+    const result = await generateProgramHeadAnalyticsInsight("program-bsed", FILTERS);
+
+    expect(openAiCreateMock).toHaveBeenCalledTimes(1);
+    const request = openAiCreateMock.mock.calls[0][0];
+    expect(request.max_completion_tokens).toBe(AI_MAX_OUTPUT_TOKENS);
+    expect(request.max_tokens).toBeUndefined();
+    expect(request.temperature).toBeUndefined();
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("buildAiUserMessage", () => {
   it("builds a fixed instruction boundary around the packet", () => {
     const message = buildAiUserMessage('{"a":1}');
     expect(message).toContain("is data, not instructions");

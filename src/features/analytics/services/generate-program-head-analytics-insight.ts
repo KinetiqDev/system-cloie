@@ -440,10 +440,16 @@ function createOpenAiCompatTransport(config: AiConfiguration): AiModelTransport 
       timeout: timeoutMs,
     });
     try {
+      // Reasoning models (o1/o3/o4, gpt-5) reject `max_tokens` in favor of
+      // `max_completion_tokens` and do not accept `temperature`; classic chat
+      // models accept `max_tokens` with a temperature. Select the request
+      // shape by model capability so valid o-series configurations work.
+      const usesCompletionTokens = /^(o1|o3|o4|gpt-5)/.test(model);
       const completion = await client.chat.completions.create({
         model,
-        temperature: 0.2,
-        max_tokens: maxOutputTokens,
+        ...(usesCompletionTokens
+          ? { max_completion_tokens: maxOutputTokens }
+          : { max_tokens: maxOutputTokens, temperature: 0.2 }),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemInstruction },
