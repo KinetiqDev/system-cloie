@@ -40,9 +40,10 @@ export type AiConfiguration = {
 
 function positiveIntegerEnv(value: string | undefined): number | null {
   if (value === undefined) return null;
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0) return null;
-  return parsed;
+  const trimmed = value.trim();
+  if (!/^[1-9][0-9]*$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 /**

@@ -245,6 +245,22 @@ describe("generateProgramHeadAnalyticsInsight", () => {
     expect(result).toEqual({ ok: false, state: "disabled" });
   });
 
+  it.each([
+    ["10junk", "10.5"],
+    ["1.5", "10"],
+    ["0", "10"],
+    ["-3", "10"],
+    ["", "10"],
+  ])("stays disabled when a required numeric threshold is not a whole positive integer (%s)", async (submitted, qualitative) => {
+    stubEnabledConfig({
+      CLOIE_AI_MIN_SUBMITTED_RESPONSES: submitted,
+      CLOIE_AI_MIN_QUALITATIVE_ITEMS: qualitative,
+    });
+    const result = await generateProgramHeadAnalyticsInsight("program-bsed", FILTERS, enabledTransport({ ok: true, content: "" }));
+
+    expect(result).toEqual({ ok: false, state: "disabled" });
+  });
+
   it("fails safely as unauthorized when any evidence rebuild is denied", async () => {
     stubEnabledConfig();
     getProgramHeadFeedbackMock.mockResolvedValue(null);
