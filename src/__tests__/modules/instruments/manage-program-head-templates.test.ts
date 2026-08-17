@@ -285,6 +285,157 @@ describe("manage-program-head-templates", () => {
     });
   });
 
+  it("updates the exact reordered structure and latest snapshot when there are no deployments", async () => {
+    const reorderedStructure = [
+      {
+        key: "section-b",
+        title: "Section B",
+        description: undefined,
+        order: 0,
+        questions: [
+          {
+            key: "question-b",
+            prompt: "Question B",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+        ],
+      },
+      {
+        key: "section-a",
+        title: "Section A",
+        description: undefined,
+        order: 1,
+        questions: [
+          {
+            key: "question-a",
+            prompt: "Question A",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+        ],
+      },
+    ];
+    instrumentTemplateFindUniqueMock.mockResolvedValue({
+      id: TEMPLATE_ID,
+      program_id: PROGRAM_ID,
+      _count: { versions: 1 },
+    });
+    instrumentVersionFindFirstMock.mockResolvedValue(null);
+    transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        instrumentTemplate: {
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          update: instrumentTemplateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID }),
+        },
+        instrumentVersion: {
+          findFirst: instrumentVersionFindFirstMock.mockResolvedValue({ id: "ver-1" }),
+          update: instrumentVersionUpdateMock.mockResolvedValue({ id: "ver-1" }),
+        },
+      })
+    );
+
+    const result = await updateProgramHeadTemplate({
+      programId: PROGRAM_ID,
+      id: TEMPLATE_ID,
+      name: "Reordered",
+      template_type: EvaluationTemplateType.COURSE_BOUND,
+      is_faculty_accessible: true,
+      structure: reorderedStructure,
+    });
+
+    expect(result).toEqual({ success: true, data: { id: TEMPLATE_ID } });
+    expect(instrumentTemplateUpdateMock).toHaveBeenCalledWith({
+      where: { id: TEMPLATE_ID },
+      data: expect.objectContaining({ structure: reorderedStructure }),
+    });
+    expect(instrumentVersionUpdateMock).toHaveBeenCalledWith({
+      where: { id: "ver-1" },
+      data: { structure_snapshot: reorderedStructure },
+    });
+    expect(instrumentVersionCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("writes the exact reordered structure as a new version when deployments exist", async () => {
+    const reorderedStructure = [
+      {
+        key: "section-b",
+        title: "Section B",
+        description: undefined,
+        order: 0,
+        questions: [
+          {
+            key: "question-b",
+            prompt: "Question B",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+        ],
+      },
+      {
+        key: "section-a",
+        title: "Section A",
+        description: undefined,
+        order: 1,
+        questions: [
+          {
+            key: "question-a",
+            prompt: "Question A",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+        ],
+      },
+    ];
+    instrumentTemplateFindUniqueMock.mockResolvedValue({
+      id: TEMPLATE_ID,
+      program_id: PROGRAM_ID,
+      _count: { versions: 2 },
+    });
+    instrumentVersionFindFirstMock
+      .mockResolvedValueOnce({ id: "deployed-version" })
+      .mockResolvedValueOnce({ version_number: 2 });
+    transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        instrumentTemplate: {
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          update: instrumentTemplateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID }),
+        },
+        instrumentVersion: {
+          create: instrumentVersionCreateMock.mockResolvedValue({ id: "ver-3" }),
+        },
+      })
+    );
+
+    const result = await updateProgramHeadTemplate({
+      programId: PROGRAM_ID,
+      id: TEMPLATE_ID,
+      name: "Reordered",
+      template_type: EvaluationTemplateType.COURSE_BOUND,
+      is_faculty_accessible: true,
+      structure: reorderedStructure,
+    });
+
+    expect(result).toEqual({ success: true, data: { id: TEMPLATE_ID } });
+    expect(instrumentTemplateUpdateMock).toHaveBeenCalledWith({
+      where: { id: TEMPLATE_ID },
+      data: expect.objectContaining({ structure: reorderedStructure }),
+    });
+    expect(instrumentVersionCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        template_id: TEMPLATE_ID,
+        version_number: 3,
+        structure_snapshot: reorderedStructure,
+        is_active: true,
+      }),
+    });
+    expect(instrumentVersionUpdateMock).not.toHaveBeenCalled();
+  });
+
   it("PH cannot create template outside assigned program", async () => {
     programHeadAssignmentFindManyMock.mockResolvedValue([]);
     resolveProgramHeadContextMock.mockResolvedValue({
