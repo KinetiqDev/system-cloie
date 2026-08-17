@@ -184,4 +184,26 @@ describe("QualitativeWordCloud", () => {
     );
     expect(screen.getByText("Top 7 words from 1 qualitative response")).toBeInTheDocument();
   });
+
+  it("disables word transitions under prefers-reduced-motion", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false),
+      }))
+    );
+
+    render(
+      <QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />
+    );
+
+    expect(wordCloudPropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ transition: "none" })
+    );
+  });
 });

@@ -42,11 +42,16 @@ function buildDimensions(containerWidth: number): Pick<WordCloudConfig, "height"
 function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(
     (onStoreChange) => {
+      if (typeof window.matchMedia !== "function") {
+        return () => undefined;
+      }
       const query = window.matchMedia("(prefers-reduced-motion: reduce)");
       query.addEventListener("change", onStoreChange);
       return () => query.removeEventListener("change", onStoreChange);
     },
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () =>
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     () => false // server snapshot: allow motion
   );
 }
