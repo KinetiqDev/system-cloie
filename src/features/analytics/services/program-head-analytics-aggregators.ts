@@ -749,7 +749,7 @@ const STAKEHOLDER_SOURCES: ReadonlyArray<{
  * Course-bound evidence is always the COURSE_STUDENT bucket.
  */
 function sourceKeyForTarget(
-  courseBound: unknown,
+  courseBound: BreakdownResponseRow["assignment"]["course_bound"],
   targetStakeholder: TargetStakeholder | undefined
 ): ProgramHeadStakeholderSourceKey {
   if (courseBound) {
