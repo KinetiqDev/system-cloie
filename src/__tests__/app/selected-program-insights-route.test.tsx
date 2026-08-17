@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { notFoundMock, redirectMock, analyticsMock, trendsMock, resolveProgramHeadContextMock } =
+const { notFoundMock, redirectMock, analyticsMock, outcomesMock, trendsMock, resolveProgramHeadContextMock } =
   vi.hoisted(() => ({
     notFoundMock: vi.fn(() => {
       throw new Error("NOT_FOUND");
@@ -10,6 +10,7 @@ const { notFoundMock, redirectMock, analyticsMock, trendsMock, resolveProgramHea
       throw new Error(`REDIRECT:${url}`);
     }),
     analyticsMock: vi.fn(),
+    outcomesMock: vi.fn(),
     trendsMock: vi.fn(),
     resolveProgramHeadContextMock: vi.fn(),
   }));
@@ -17,6 +18,7 @@ const { notFoundMock, redirectMock, analyticsMock, trendsMock, resolveProgramHea
 vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
 vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
   getProgramHeadAnalytics: analyticsMock,
+  getProgramHeadOutcomes: outcomesMock,
   getProgramHeadTrends: trendsMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
@@ -70,6 +72,7 @@ describe("selected Program insights routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     analyticsMock.mockResolvedValue(bsedOverview);
+    outcomesMock.mockResolvedValue(null);
     trendsMock.mockResolvedValue(null);
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
   });
@@ -155,16 +158,33 @@ describe("selected Program insights routes", () => {
   it("preserves valid tab and filter parameters", async () => {
     const Page = await loadAnalyticsPage();
     const termId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    outcomesMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periodOptions: {
+        schoolYears: [{ id: "school-year-1", label: "2025-2026" }],
+        semesters: [{ value: "FIRST", label: "1st Semester" }],
+        termInstances: [],
+      },
+      emptyReason: null,
+      currentMappingDisclosure: "current mappings",
+      manyToManyDisclosure: false,
+      outcomes: [],
+    });
 
     await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
       searchParams: Promise.resolve({ tab: "outcomes", termInstanceId: termId }),
     });
 
-    expect(analyticsMock).toHaveBeenCalledWith("program-bsed", {
+    expect(outcomesMock).toHaveBeenCalledWith("program-bsed", {
       tab: "outcomes",
       termInstanceId: termId,
     });
+    expect(analyticsMock).not.toHaveBeenCalled();
   });
 
   it("renders the Trends view with comparable periods and exact values", async () => {
@@ -361,17 +381,17 @@ describe("selected Program insights routes", () => {
     expect(screen.getByText("AI Insights")).toBeInTheDocument();
   });
 
-  it("renders upcoming notice for non-overview tabs", async () => {
+  it("renders upcoming notice for non-live tabs", async () => {
     analyticsMock.mockResolvedValue(bsedOverview);
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "outcomes" }),
+      searchParams: Promise.resolve({ tab: "stakeholders" }),
     });
 
     render(page);
 
-    expect(screen.getByText(/Outcomes view is not available yet/)).toBeInTheDocument();
+    expect(screen.getByText(/Stakeholders view is not available yet/)).toBeInTheDocument();
   });
 
   it("labels the reports placeholder with the selected Program only", async () => {
