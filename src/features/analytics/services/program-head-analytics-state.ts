@@ -13,6 +13,18 @@ export const ANALYTICS_TABS = [
   "ai",
 ] as const;
 
+/**
+ * Tabs with a shipped view. Upcoming tabs render the shell's explanatory
+ * notice instead of their (not-yet-shipped) view content.
+ */
+export const LIVE_ANALYTICS_TABS: readonly AnalyticsTab[] = [
+  "overview",
+  "outcomes",
+  "stakeholders",
+  "breakdowns",
+  "trends",
+];
+
 export type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
 
 /** Filter state parsed from the analytics URL query string. */

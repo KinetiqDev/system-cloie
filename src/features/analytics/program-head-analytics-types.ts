@@ -178,3 +178,133 @@ export type ProgramHeadOutcomesDTO = {
   manyToManyDisclosure: boolean;
   outcomes: ProgramHeadOutcomeDTO[];
 };
+
+// ---------------------------------------------------------------------------
+// Stakeholders
+// ---------------------------------------------------------------------------
+
+/**
+ * Canonical evidence source buckets for the selected Program. Course-bound
+ * student evidence is distinct from central student-respondent evidence;
+ * Alumni and Industry Partner evidence are central-deployment sources. Sources
+ * are never interchangeable merely because they use rating values.
+ */
+export type ProgramHeadStakeholderSourceKey =
+  | "COURSE_STUDENT"
+  | "CENTRAL_STUDENT"
+  | "ALUMNI"
+  | "INDUSTRY_PARTNER";
+
+/** One source-aware stakeholder evidence bucket. */
+export type ProgramHeadStakeholderBucketDTO = {
+  sourceKey: ProgramHeadStakeholderSourceKey;
+  sourceLabel: string;
+  /** Short disclosure of what produced this evidence. */
+  sourceDescription: string;
+  /**
+   * Distinct instrument labels behind the bucket (e.g. "CILO Evaluation v2");
+   * null when the bucket has no instrument disclosure.
+   */
+  instrumentContext: string | null;
+  /** Full-precision mean pooled within this source only; null when unrated. */
+  meanRating: number | null;
+  /** Valid quantitative items in this bucket, distinct from response count. */
+  ratingCount: number;
+  /** Distinct submitted responses in this bucket. */
+  submittedResponseCount: number;
+};
+
+/** Reasons the Stakeholders view may show an empty state. */
+export type ProgramHeadStakeholdersEmptyReason = "no-assignments" | "no-submissions" | null;
+
+/** Closed, serializable Stakeholders projection. */
+export type ProgramHeadStakeholdersDTO = {
+  scope: ProgramHeadAnalyticsScopeSummary;
+  periodOptions: ProgramHeadAnalyticsPeriodOptions;
+  emptyReason: ProgramHeadStakeholdersEmptyReason;
+  /** Disclosure that evidence sources use different instruments and populations. */
+  sourceSeparationDisclosure: string;
+  /** Only buckets with submitted evidence in the selected scope. */
+  buckets: ProgramHeadStakeholderBucketDTO[];
+};
+
+// ---------------------------------------------------------------------------
+// Breakdowns
+// ---------------------------------------------------------------------------
+
+/** One defensible or Unspecified breakdown row. */
+export type ProgramHeadBreakdownRowDTO = {
+  /** Stable row identity (course id, instrument version id, major id, year level). */
+  key: string;
+  label: string;
+  /** True for the aggregate of evidence without defensible attribution. */
+  isUnspecified: boolean;
+  /** Full-precision mean; null when the row has no valid ratings. */
+  meanRating: number | null;
+  /** Valid quantitative items in this row, distinct from response count. */
+  ratingCount: number;
+  /** Distinct submitted responses contributing to this row. */
+  submittedResponseCount: number;
+};
+
+/** Course breakdown row: course-bound student evidence only. */
+export type ProgramHeadCourseBreakdownRowDTO = ProgramHeadBreakdownRowDTO & {
+  courseCode: string;
+  /** Distinct instrument labels behind the course; null when none. */
+  instrumentContext: string | null;
+  /**
+   * Course-bound evaluations behind this row. Links resolve to the existing
+   * selected-Program CILO review route, which independently re-authorizes
+   * before exposing any raw response text.
+   */
+  evidenceEvaluations: Array<{ evaluationId: string; deploymentName: string }>;
+};
+
+/** Per-source stats of one instrument version; sources are never pooled. */
+export type ProgramHeadInstrumentSourceDTO = ProgramHeadBreakdownRowDTO & {
+  sourceKey: ProgramHeadStakeholderSourceKey;
+  sourceLabel: string;
+};
+
+/**
+ * One instrument version breakdown row. Ratings are separated by evidence
+ * source so unlike populations are never pooled into one construct.
+ */
+export type ProgramHeadInstrumentBreakdownRowDTO = {
+  instrumentVersionId: string;
+  /** Readable instrument label, e.g. "CILO Evaluation v2". */
+  instrumentLabel: string;
+  sources: ProgramHeadInstrumentSourceDTO[];
+};
+
+/**
+ * A defensible contextual dimension (major or year level). Rows carry only
+ * evidence whose attribution is defensible and are separated by evidence
+ * source; evidence without applicable attribution is aggregated into
+ * per-source `Unspecified` rows rather than guessed.
+ */
+export type ProgramHeadContextualBreakdownDTO = {
+  rows: ProgramHeadBreakdownRowDTO[];
+  /** Per-source aggregates of evidence without defensible attribution; empty when none exists. */
+  unspecified: ProgramHeadBreakdownRowDTO[];
+  /** Explains how attribution is derived and when it is reported as Unspecified. */
+  attributionNote: string;
+};
+
+/** Reasons the Breakdowns view may show an empty state. */
+export type ProgramHeadBreakdownsEmptyReason = "no-assignments" | "no-submissions" | null;
+
+/** Closed, serializable Breakdowns projection. */
+export type ProgramHeadBreakdownsDTO = {
+  scope: ProgramHeadAnalyticsScopeSummary;
+  periodOptions: ProgramHeadAnalyticsPeriodOptions;
+  emptyReason: ProgramHeadBreakdownsEmptyReason;
+  /** Course-bound student evidence grouped by course; empty when none exists. */
+  courseRows: ProgramHeadCourseBreakdownRowDTO[];
+  /** Instrument-version rows with per-source separation; empty when none exists. */
+  instrumentRows: ProgramHeadInstrumentBreakdownRowDTO[];
+  /** Null when no evidence has defensible major attribution. */
+  majorBreakdown: ProgramHeadContextualBreakdownDTO | null;
+  /** Null when no evidence has defensible year-level attribution. */
+  yearLevelBreakdown: ProgramHeadContextualBreakdownDTO | null;
+};

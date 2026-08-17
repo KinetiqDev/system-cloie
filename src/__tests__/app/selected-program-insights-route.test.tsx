@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { notFoundMock, redirectMock, analyticsMock, outcomesMock, trendsMock, resolveProgramHeadContextMock } =
+const { notFoundMock, redirectMock, analyticsMock, outcomesMock, trendsMock, stakeholdersMock, breakdownsMock, resolveProgramHeadContextMock } =
   vi.hoisted(() => ({
     notFoundMock: vi.fn(() => {
       throw new Error("NOT_FOUND");
@@ -12,6 +12,8 @@ const { notFoundMock, redirectMock, analyticsMock, outcomesMock, trendsMock, res
     analyticsMock: vi.fn(),
     outcomesMock: vi.fn(),
     trendsMock: vi.fn(),
+    stakeholdersMock: vi.fn(),
+    breakdownsMock: vi.fn(),
     resolveProgramHeadContextMock: vi.fn(),
   }));
 
@@ -20,6 +22,8 @@ vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
   getProgramHeadAnalytics: analyticsMock,
   getProgramHeadOutcomes: outcomesMock,
   getProgramHeadTrends: trendsMock,
+  getProgramHeadStakeholders: stakeholdersMock,
+  getProgramHeadBreakdowns: breakdownsMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
@@ -74,6 +78,8 @@ describe("selected Program insights routes", () => {
     analyticsMock.mockResolvedValue(bsedOverview);
     outcomesMock.mockResolvedValue(null);
     trendsMock.mockResolvedValue(null);
+    stakeholdersMock.mockResolvedValue(null);
+    breakdownsMock.mockResolvedValue(null);
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
   });
 
@@ -263,6 +269,208 @@ describe("selected Program insights routes", () => {
     expect(trendsMock).toHaveBeenCalledWith("program-3", { tab: "trends" });
   });
 
+  it("renders the Stakeholders view with separated evidence source buckets", async () => {
+    stakeholdersMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periodOptions: {
+        schoolYears: [],
+        semesters: [],
+        termInstances: [],
+      },
+      emptyReason: null,
+      sourceSeparationDisclosure: "Evidence sources are kept separate.",
+      buckets: [
+        {
+          sourceKey: "COURSE_STUDENT",
+          sourceLabel: "Course-bound student evidence",
+          sourceDescription: "Course-bound evaluations of assigned students.",
+          instrumentContext: "CILO Evaluation v2",
+          meanRating: 4.25,
+          ratingCount: 24,
+          submittedResponseCount: 12,
+        },
+        {
+          sourceKey: "ALUMNI",
+          sourceLabel: "Alumni evidence",
+          sourceDescription: "Central deployments targeting alumni respondents.",
+          instrumentContext: "Alumni Survey v1",
+          meanRating: 3.8,
+          ratingCount: 8,
+          submittedResponseCount: 4,
+        },
+      ],
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "stakeholders" }),
+    });
+
+    render(page);
+
+    expect(stakeholdersMock).toHaveBeenCalledWith("program-bsed", { tab: "stakeholders" });
+    expect(analyticsMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
+    expect(screen.getByText("Evidence sources are kept separate")).toBeInTheDocument();
+    expect(screen.getAllByText("Course-bound student evidence").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Alumni evidence").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/not available yet/)).not.toBeInTheDocument();
+  });
+
+  it("renders no Stakeholders data when the stakeholders read denies the selected Program", async () => {
+    stakeholdersMock.mockResolvedValue(null);
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-3" }),
+        searchParams: Promise.resolve({ tab: "stakeholders" }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+    expect(stakeholdersMock).toHaveBeenCalledWith("program-3", { tab: "stakeholders" });
+  });
+
+  it("renders the Stakeholders no-assignments empty state", async () => {
+    stakeholdersMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+      emptyReason: "no-assignments",
+      sourceSeparationDisclosure: "Evidence sources are kept separate.",
+      buckets: [],
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "stakeholders" }),
+    });
+
+    render(page);
+
+    expect(screen.getByText("No evaluation assignments")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "View all periods" })
+    ).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-bsed/analytics?tab=stakeholders"
+    );
+  });
+
+  it("renders the Breakdowns view with course and contextual dimensions", async () => {
+    breakdownsMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+      emptyReason: null,
+      courseRows: [
+        {
+          key: "course-1",
+          label: "CS101 — Intro to CS",
+          courseCode: "CS101",
+          isUnspecified: false,
+          meanRating: 4.1,
+          ratingCount: 12,
+          submittedResponseCount: 6,
+          instrumentContext: "CILO Evaluation v2",
+          evidenceEvaluations: [
+            { evaluationId: "eval-1", deploymentName: "CILO Deployment" },
+          ],
+        },
+      ],
+      instrumentRows: [],
+      majorBreakdown: {
+        rows: [
+          {
+            key: "CENTRAL_STUDENT:major-1",
+            label: "Mathematics — Central student-respondent evidence",
+            isUnspecified: false,
+            meanRating: 4.0,
+            ratingCount: 8,
+            submittedResponseCount: 4,
+          },
+        ],
+        unspecified: [
+          {
+            key: "unspecified:COURSE_STUDENT",
+            label: "Unspecified — Course-bound student evidence",
+            isUnspecified: true,
+            meanRating: 3.5,
+            ratingCount: 2,
+            submittedResponseCount: 1,
+          },
+        ],
+        attributionNote: "Major attribution comes only from central deployment targeting.",
+      },
+      yearLevelBreakdown: null,
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "breakdowns" }),
+    });
+
+    render(page);
+
+    expect(breakdownsMock).toHaveBeenCalledWith("program-bsed", { tab: "breakdowns" });
+    expect(analyticsMock).not.toHaveBeenCalled();
+    expect(screen.getByText("Mean Rating by Course")).toBeInTheDocument();
+    expect(screen.getAllByText("CS101 — Intro to CS").length).toBeGreaterThan(0);
+    expect(screen.getByText("Mean Rating by Major")).toBeInTheDocument();
+    expect(screen.getAllByText("Mathematics — Central student-respondent evidence").length).toBeGreaterThan(0);
+    expect(screen.getByText("Unspecified — Course-bound student evidence")).toBeInTheDocument();
+    // No defensible year-level attribution: the dimension is omitted.
+    expect(screen.getByText("Year-Level Breakdown")).toBeInTheDocument();
+    expect(screen.queryByText(/not available yet/)).not.toBeInTheDocument();
+  });
+
+  it("renders no Breakdowns data when the breakdowns read denies the selected Program", async () => {
+    breakdownsMock.mockResolvedValue(null);
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-3" }),
+        searchParams: Promise.resolve({ tab: "breakdowns" }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+    expect(breakdownsMock).toHaveBeenCalledWith("program-3", { tab: "breakdowns" });
+  });
+
+  it("renders the Breakdowns no-submissions empty state", async () => {
+    breakdownsMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+      emptyReason: "no-submissions",
+      courseRows: [],
+      instrumentRows: [],
+      majorBreakdown: null,
+      yearLevelBreakdown: null,
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "breakdowns" }),
+    });
+
+    render(page);
+
+    expect(screen.getByText("No submitted responses")).toBeInTheDocument();
+  });
+
   it("renders the no-submitted-evidence Trends empty state", async () => {
     trendsMock.mockResolvedValue({
       scope: {
@@ -386,12 +594,12 @@ describe("selected Program insights routes", () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "stakeholders" }),
+      searchParams: Promise.resolve({ tab: "feedback" }),
     });
 
     render(page);
 
-    expect(screen.getByText(/Stakeholders view is not available yet/)).toBeInTheDocument();
+    expect(screen.getByText(/Feedback view is not available yet/)).toBeInTheDocument();
   });
 
   it("labels the reports placeholder with the selected Program only", async () => {

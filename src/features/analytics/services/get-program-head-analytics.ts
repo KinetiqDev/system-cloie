@@ -4,14 +4,23 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import {
   aggregateOutcomeEvidence,
+  buildAttributionBreakdown,
+  buildCourseBreakdownRows,
+  buildInstrumentBreakdownRows,
   buildProgramHeadOverviewKpi,
   buildProgramHeadOutcomeDtos,
   buildScaleIdentities,
+  buildStakeholderBuckets,
   buildTrendSeries,
   describeScales,
   extractDistinctScales,
+  majorAttributionOf,
   semesterOrder,
   termOrder,
+  yearLevelAttributionOf,
+  type BreakdownAssignmentContext,
+  type BreakdownRatingRow,
+  type BreakdownResponseRow,
   type OutcomeEvidenceRow,
   type ScaleDescriptor,
   type TrendSeriesPeriodInput,
@@ -19,9 +28,14 @@ import {
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
 import type {
   ProgramHeadAnalyticsScopeSummary,
+  ProgramHeadBreakdownsDTO,
+  ProgramHeadBreakdownsEmptyReason,
+  ProgramHeadContextualBreakdownDTO,
   ProgramHeadOutcomesDTO,
   ProgramHeadOutcomesEmptyReason,
   ProgramHeadOverviewDTO,
+  ProgramHeadStakeholdersDTO,
+  ProgramHeadStakeholdersEmptyReason,
   ProgramHeadTrendsDTO,
   OverviewEmptyReason,
 } from "../program-head-analytics-types";
@@ -881,5 +895,347 @@ export async function getProgramHeadTrends(
     breaks,
     emptyReason,
     periodOptions: buildPeriodOptions(periodInstances),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Stakeholders and Breakdowns reads
+// ---------------------------------------------------------------------------
+
+/** Narrow instrument-version projection shared by stakeholder/breakdown reads. */
+const INSTRUMENT_VERSION_SELECT = {
+  select: {
+    id: true,
+    version_number: true,
+    template: { select: { name: true } },
+  },
+} as const;
+
+/**
+ * Narrow rating-row projection for stakeholder and breakdown aggregation.
+ * The output structurally matches `BreakdownRatingRow`, so the pure helpers
+ * stay unit-testable without a database. Year-level targets are pre-filtered
+ * to the selected Program: attribution is defensible only for the Program
+ * that owns the evidence scope.
+ */
+function buildBreakdownRatingRowSelect(programId: string) {
+  return {
+    rating_value: true,
+    response_id: true,
+    section_key: true,
+    item_key: true,
+    response: {
+      select: {
+        assignment: {
+          select: {
+            course_bound: {
+              select: {
+                id: true,
+                deployment_name: true,
+                course_assignment: {
+                  select: { course: { select: { id: true, code: true, title: true } } },
+                },
+                instrument: INSTRUMENT_VERSION_SELECT,
+                targets: {
+                  where: { program_id: programId },
+                  select: { year_level: true },
+                },
+              },
+            },
+            central_deployment: {
+              select: {
+                target_stakeholder: true,
+                major: { select: { id: true, name: true } },
+                year_level: true,
+                instrument: INSTRUMENT_VERSION_SELECT,
+              },
+            },
+          },
+        },
+      },
+    },
+  } as const;
+}
+
+/**
+ * Narrow response-row projection for bucket and breakdown response counts.
+ * The output structurally matches the aggregators' `BreakdownResponseRow`, so
+ * unrated submitted responses still contribute `submittedResponseCount`.
+ * Year-level targets are pre-filtered to the selected Program.
+ */
+function buildBreakdownResponseRowSelect(programId: string) {
+  return {
+    id: true,
+    assignment: {
+      select: {
+        course_bound: {
+          select: {
+            id: true,
+            deployment_name: true,
+            course_assignment: {
+              select: { course: { select: { id: true, code: true, title: true } } },
+            },
+            instrument: INSTRUMENT_VERSION_SELECT,
+            targets: {
+              where: { program_id: programId },
+              select: { year_level: true },
+            },
+          },
+        },
+        central_deployment: {
+          select: {
+            target_stakeholder: true,
+            major: { select: { id: true, name: true } },
+            year_level: true,
+            instrument: INSTRUMENT_VERSION_SELECT,
+          },
+        },
+      },
+    },
+  } as const;
+}
+
+/**
+ * Disclosure that evidence sources use different instruments and respondent
+ * populations, so their means are never interchangeable or combined.
+ */
+const SOURCE_SEPARATION_DISCLOSURE =
+  "Evidence sources are kept separate because they use different instruments and " +
+  "respondent populations. Each source pools only its own ratings; sources are never " +
+  "combined into one construct.";
+
+/**
+ * Authorized Stakeholders read for the selected Program. Course-bound student
+ * evidence and central student-respondent, alumni, and industry-partner
+ * evidence form distinct source buckets with instrument disclosure. Central
+ * evidence is scoped through `central_deployment.program_id` equality, so
+ * deployments with a NULL Program are excluded rather than inferred from a
+ * respondent, instrument, or any transitive attribute. Returns null for
+ * unauthorized or malformed Program requests.
+ */
+export async function getProgramHeadStakeholders(
+  programId: string,
+  filters: AnalyticsFilterState
+): Promise<ProgramHeadStakeholdersDTO | null> {
+  const contextResult = await resolveProgramHeadContext(programId);
+
+  if (!contextResult.success) {
+    return null;
+  }
+
+  const { selectedProgram } = contextResult.data;
+
+  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
+    resolveTermInstanceFilter(selectedProgram.id, filters),
+    listProgramPeriodOptions(selectedProgram.id),
+  ]);
+
+  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere);
+  const programOpportunityScope = buildProgramOpportunityScope(
+    selectedProgram.id,
+    termInstanceWhere
+  );
+
+  const [ratingRows, responseRows, evaluationOpportunityCount, submittedResponseCount] =
+    await Promise.all([
+      prisma.quantitativeResponseItem.findMany({
+        where: { response: { status: ResponseStatus.SUBMITTED, ...programResponseScope } },
+        select: buildBreakdownRatingRowSelect(selectedProgram.id),
+      }),
+      prisma.response.findMany({
+        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+        select: buildBreakdownResponseRowSelect(selectedProgram.id),
+      }),
+      prisma.evaluationAssignment.count({ where: programOpportunityScope }),
+      prisma.response.count({
+        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+      }),
+    ]);
+
+  const instrumentVersionIds = [
+    ...new Set(
+      ratingRows
+        .map(
+          (row) =>
+            row.response.assignment.course_bound?.instrument.id ??
+            row.response.assignment.central_deployment?.instrument.id
+        )
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const instrumentVersions =
+    instrumentVersionIds.length > 0
+      ? await prisma.instrumentVersion.findMany({
+          where: { id: { in: instrumentVersionIds } },
+          select: { id: true, structure_snapshot: true },
+        })
+      : [];
+  const snapshotById = new Map(
+    instrumentVersions.map((version) => [version.id, version.structure_snapshot])
+  );
+
+  const buckets = buildStakeholderBuckets(ratingRows, responseRows, snapshotById);
+
+  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
+  const emptyReason: ProgramHeadStakeholdersEmptyReason =
+    evaluationOpportunityCount === 0
+      ? "no-assignments"
+      : submittedResponseCount === 0
+        ? "no-submissions"
+        : null;
+
+  return {
+    scope: {
+      programCode: selectedProgram.code,
+      programName: selectedProgram.name,
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+    },
+    periodOptions: buildPeriodOptions(periodInstances),
+    emptyReason,
+    sourceSeparationDisclosure: SOURCE_SEPARATION_DISCLOSURE,
+    buckets,
+  };
+}
+
+/** Explanatory copy for the major dimension's attribution rule. */
+const MAJOR_ATTRIBUTION_NOTE =
+  "Major attribution comes only from central deployment targeting. Course-bound " +
+  "evidence does not snapshot a major, and central deployments without a targeted " +
+  "major are reported as Unspecified rather than guessed.";
+
+/** Explanatory copy for the year-level dimension's attribution rule. */
+const YEAR_LEVEL_ATTRIBUTION_NOTE =
+  "Year-level attribution comes from deployment targeting: central deployments " +
+  "target one year level, and course-bound evaluations must target exactly one year " +
+  "level for this Program. Untargeted or multi-year-level evidence is reported as " +
+  "Unspecified rather than guessed.";
+
+function buildContextualBreakdown(
+  ratingRows: BreakdownRatingRow[],
+  responseRows: BreakdownResponseRow[],
+  snapshotById: Map<string, unknown>,
+  attributionOf: (assignment: BreakdownAssignmentContext) => { key: string; label: string } | null,
+  attributionNote: string
+): ProgramHeadContextualBreakdownDTO | null {
+  const { rows, unspecified } = buildAttributionBreakdown(
+    ratingRows,
+    responseRows,
+    snapshotById,
+    attributionOf
+  );
+  // Evidence with no defensible attribution still has to stay visible as
+  // per-source Unspecified rows instead of vanishing into an empty note.
+  if (rows.length === 0 && unspecified.length === 0) {
+    return null;
+  }
+  return { rows, unspecified, attributionNote };
+}
+
+/**
+ * Authorized Breakdowns read for the selected Program. Course rows cover
+ * course-bound student evidence only; instrument rows keep every evidence
+ * source separate. Major and year-level dimensions appear only when
+ * attribution is defensible; incomplete attribution is reported as
+ * `Unspecified` and never inferred from names, text, or current profiles.
+ * Returns null for unauthorized or malformed Program requests.
+ */
+export async function getProgramHeadBreakdowns(
+  programId: string,
+  filters: AnalyticsFilterState
+): Promise<ProgramHeadBreakdownsDTO | null> {
+  const contextResult = await resolveProgramHeadContext(programId);
+
+  if (!contextResult.success) {
+    return null;
+  }
+
+  const { selectedProgram } = contextResult.data;
+
+  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
+    resolveTermInstanceFilter(selectedProgram.id, filters),
+    listProgramPeriodOptions(selectedProgram.id),
+  ]);
+
+  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere);
+  const programOpportunityScope = buildProgramOpportunityScope(
+    selectedProgram.id,
+    termInstanceWhere
+  );
+
+  const [ratingRows, responseRows, evaluationOpportunityCount, submittedResponseCount] =
+    await Promise.all([
+      prisma.quantitativeResponseItem.findMany({
+        where: { response: { status: ResponseStatus.SUBMITTED, ...programResponseScope } },
+        select: buildBreakdownRatingRowSelect(selectedProgram.id),
+      }),
+      prisma.response.findMany({
+        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+        select: buildBreakdownResponseRowSelect(selectedProgram.id),
+      }),
+      prisma.evaluationAssignment.count({ where: programOpportunityScope }),
+      prisma.response.count({
+        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+      }),
+    ]);
+
+  const instrumentVersionIds = [
+    ...new Set(
+      ratingRows
+        .map(
+          (row) =>
+            row.response.assignment.course_bound?.instrument.id ??
+            row.response.assignment.central_deployment?.instrument.id
+        )
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const instrumentVersions =
+    instrumentVersionIds.length > 0
+      ? await prisma.instrumentVersion.findMany({
+          where: { id: { in: instrumentVersionIds } },
+          select: { id: true, structure_snapshot: true },
+        })
+      : [];
+  const snapshotById = new Map(
+    instrumentVersions.map((version) => [version.id, version.structure_snapshot])
+  );
+
+  const courseRows = buildCourseBreakdownRows(ratingRows, responseRows, snapshotById);
+  const instrumentRows = buildInstrumentBreakdownRows(ratingRows, responseRows, snapshotById);
+  const majorBreakdown = buildContextualBreakdown(
+    ratingRows,
+    responseRows,
+    snapshotById,
+    majorAttributionOf,
+    MAJOR_ATTRIBUTION_NOTE
+  );
+  const yearLevelBreakdown = buildContextualBreakdown(
+    ratingRows,
+    responseRows,
+    snapshotById,
+    yearLevelAttributionOf,
+    YEAR_LEVEL_ATTRIBUTION_NOTE
+  );
+
+  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
+  const emptyReason: ProgramHeadBreakdownsEmptyReason =
+    evaluationOpportunityCount === 0
+      ? "no-assignments"
+      : submittedResponseCount === 0
+        ? "no-submissions"
+        : null;
+
+  return {
+    scope: {
+      programCode: selectedProgram.code,
+      programName: selectedProgram.name,
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+    },
+    periodOptions: buildPeriodOptions(periodInstances),
+    emptyReason,
+    courseRows,
+    instrumentRows,
+    majorBreakdown,
+    yearLevelBreakdown,
   };
 }

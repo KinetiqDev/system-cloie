@@ -10,6 +10,7 @@ import type { AnalyticsFilterState, AnalyticsTab } from "@/features/analytics/se
 import {
   ANALYTICS_TABS,
   ANALYTICS_TAB_LABELS,
+  LIVE_ANALYTICS_TABS,
   buildAnalyticsTabUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
 
@@ -28,8 +29,7 @@ export function ProgramHeadAnalyticsShell({
   periodOptions,
   children,
 }: ProgramHeadAnalyticsShellProps) {
-  const hasLiveView =
-    filters.tab === "overview" || filters.tab === "outcomes" || filters.tab === "trends";
+  const hasLiveView = LIVE_ANALYTICS_TABS.includes(filters.tab);
 
   return (
     <div className="flex flex-col gap-6">
