@@ -308,3 +308,66 @@ export type ProgramHeadBreakdownsDTO = {
   /** Null when no evidence has defensible year-level attribution. */
   yearLevelBreakdown: ProgramHeadContextualBreakdownDTO | null;
 };
+
+// ---------------------------------------------------------------------------
+// Feedback
+// ---------------------------------------------------------------------------
+
+/** One de-identified word-frequency token. Keys stay `{ text, value }`. */
+export type ProgramHeadFeedbackTokenDTO = {
+  text: string;
+  value: number;
+};
+
+/** Aggregate qualitative item and response counts for one evidence source. */
+export type ProgramHeadFeedbackSourceCountDTO = {
+  sourceKey: ProgramHeadStakeholderSourceKey;
+  sourceLabel: string;
+  itemCount: number;
+  responseCount: number;
+};
+
+/** Aggregate qualitative item and response counts for one source-qualified prompt. */
+export type ProgramHeadFeedbackPromptCountDTO = {
+  sourceLabel: string;
+  promptLabel: string;
+  itemCount: number;
+  responseCount: number;
+};
+
+/**
+ * Course-bound evaluation that contributed qualitative evidence. The view
+ * builds the selected-Program CILO review path; that route independently
+ * re-authorizes before showing raw comments.
+ */
+export type ProgramHeadFeedbackEvidenceDTO = {
+  evaluationId: string;
+  deploymentName: string;
+};
+
+/**
+ * Reasons the Feedback view may show an empty state. The chain mirrors
+ * Outcomes: assignments, submissions, then qualitative evidence.
+ */
+export type ProgramHeadFeedbackEmptyReason =
+  | "no-assignments"
+  | "no-submissions"
+  | "no-qualitative-evidence"
+  | null;
+
+/**
+ * Closed, serializable Feedback projection. Tokens, counts, labels, and
+ * authorized evaluation links only. Raw qualitative text, response IDs,
+ * respondent IDs, emails, assignments, and qualitative item rows stay out.
+ */
+export type ProgramHeadFeedbackDTO = {
+  scope: ProgramHeadAnalyticsScopeSummary;
+  periodOptions: ProgramHeadAnalyticsPeriodOptions;
+  emptyReason: ProgramHeadFeedbackEmptyReason;
+  tokens: ProgramHeadFeedbackTokenDTO[];
+  qualitativeItemCount: number;
+  qualitativeResponseCount: number;
+  sourceCounts: ProgramHeadFeedbackSourceCountDTO[];
+  promptCounts: ProgramHeadFeedbackPromptCountDTO[];
+  evidenceEvaluations: ProgramHeadFeedbackEvidenceDTO[];
+};

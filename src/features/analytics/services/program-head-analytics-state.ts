@@ -23,6 +23,7 @@ export const LIVE_ANALYTICS_TABS: readonly AnalyticsTab[] = [
   "stakeholders",
   "breakdowns",
   "trends",
+  "feedback",
 ];
 
 export type AnalyticsTab = (typeof ANALYTICS_TABS)[number];

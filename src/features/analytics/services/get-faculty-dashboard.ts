@@ -4,6 +4,7 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { countEligibleCourseBoundEvaluationAssignments } from "@/features/course-assignments/services/course-assignment-roster";
 import { ROLES } from "@/lib/constants/roles";
 import { buildReviewWordCloudTokens } from "./get-course-bound-review-detail";
+import { prepareWordCloudTokens, redactPotentialIdentifiers } from "./qualitative-analytics";
 import type { WordCloudToken } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -54,27 +55,6 @@ type AuthorizedFacultyScope = {
 function roundToTwo(n: number): number {
   return Math.round(n * 100) / 100;
 }
-
-function prepareFacultyWordCloudTokens(tokens: WordCloudToken[]): WordCloudToken[] {
-  return tokens
-    .filter(
-      (token) =>
-        /^[a-z][a-z-]*$/.test(token.text) &&
-        Number.isFinite(token.value) &&
-        token.value > 0
-    )
-    .map(({ text, value }) => ({ text, value }));
-}
-
-function redactPotentialIdentifiers(text: string): string {
-  return text
-    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, " ")
-    .replace(/\b[A-Za-z]*\d[A-Za-z\d-]*\b/g, " ")
-    .replace(/\b\d{4,}\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 // ---------------------------------------------------------------------------
 // Authorization
 // ---------------------------------------------------------------------------
@@ -264,7 +244,7 @@ async function readFacultyDashboardVisualizations(
   return {
     courseMeans,
     qualitativeItemCount: texts.length,
-    wordCloudTokens: prepareFacultyWordCloudTokens(buildReviewWordCloudTokens(texts)),
+    wordCloudTokens: prepareWordCloudTokens(buildReviewWordCloudTokens(texts)),
   };
 }
 

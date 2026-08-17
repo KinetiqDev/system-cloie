@@ -1,21 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { notFoundMock, redirectMock, analyticsMock, outcomesMock, trendsMock, stakeholdersMock, breakdownsMock, resolveProgramHeadContextMock } =
-  vi.hoisted(() => ({
-    notFoundMock: vi.fn(() => {
-      throw new Error("NOT_FOUND");
-    }),
-    redirectMock: vi.fn((url: string) => {
-      throw new Error(`REDIRECT:${url}`);
-    }),
-    analyticsMock: vi.fn(),
-    outcomesMock: vi.fn(),
-    trendsMock: vi.fn(),
-    stakeholdersMock: vi.fn(),
-    breakdownsMock: vi.fn(),
-    resolveProgramHeadContextMock: vi.fn(),
-  }));
+const {
+  notFoundMock,
+  redirectMock,
+  analyticsMock,
+  outcomesMock,
+  trendsMock,
+  stakeholdersMock,
+  breakdownsMock,
+  feedbackMock,
+  resolveProgramHeadContextMock,
+} = vi.hoisted(() => ({
+  notFoundMock: vi.fn(() => {
+    throw new Error("NOT_FOUND");
+  }),
+  redirectMock: vi.fn((url: string) => {
+    throw new Error(`REDIRECT:${url}`);
+  }),
+  analyticsMock: vi.fn(),
+  outcomesMock: vi.fn(),
+  trendsMock: vi.fn(),
+  stakeholdersMock: vi.fn(),
+  breakdownsMock: vi.fn(),
+  feedbackMock: vi.fn(),
+  resolveProgramHeadContextMock: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
 vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
@@ -24,6 +34,7 @@ vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
   getProgramHeadTrends: trendsMock,
   getProgramHeadStakeholders: stakeholdersMock,
   getProgramHeadBreakdowns: breakdownsMock,
+  getProgramHeadFeedback: feedbackMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
@@ -80,6 +91,7 @@ describe("selected Program insights routes", () => {
     trendsMock.mockResolvedValue(null);
     stakeholdersMock.mockResolvedValue(null);
     breakdownsMock.mockResolvedValue(null);
+    feedbackMock.mockResolvedValue(null);
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
   });
 
@@ -589,8 +601,26 @@ describe("selected Program insights routes", () => {
     expect(screen.getByText("AI Insights")).toBeInTheDocument();
   });
 
-  it("renders upcoming notice for non-live tabs", async () => {
-    analyticsMock.mockResolvedValue(bsedOverview);
+  it("renders the Feedback view without falling back to Overview", async () => {
+    feedbackMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periodOptions: {
+        schoolYears: [],
+        semesters: [],
+        termInstances: [],
+      },
+      emptyReason: "no-qualitative-evidence",
+      tokens: [],
+      qualitativeItemCount: 0,
+      qualitativeResponseCount: 0,
+      sourceCounts: [],
+      promptCounts: [],
+      evidenceEvaluations: [],
+    });
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
@@ -599,7 +629,37 @@ describe("selected Program insights routes", () => {
 
     render(page);
 
-    expect(screen.getByText(/Feedback view is not available yet/)).toBeInTheDocument();
+    expect(feedbackMock).toHaveBeenCalledWith("program-bsed", { tab: "feedback" });
+    expect(analyticsMock).not.toHaveBeenCalled();
+    expect(screen.getByText("No qualitative evidence")).toBeInTheDocument();
+    expect(screen.queryByText(/Feedback view is not available yet/)).not.toBeInTheDocument();
+  });
+
+  it("renders no Feedback data when the feedback read denies the selected Program", async () => {
+    feedbackMock.mockResolvedValue(null);
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-3" }),
+        searchParams: Promise.resolve({ tab: "feedback" }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+    expect(feedbackMock).toHaveBeenCalledWith("program-3", { tab: "feedback" });
+    expect(analyticsMock).not.toHaveBeenCalled();
+  });
+
+  it("renders upcoming notice for non-live tabs", async () => {
+    analyticsMock.mockResolvedValue(bsedOverview);
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "ai" }),
+    });
+
+    render(page);
+
+    expect(screen.getByText(/AI Insights view is not available yet/)).toBeInTheDocument();
   });
 
   it("labels the reports placeholder with the selected Program only", async () => {
