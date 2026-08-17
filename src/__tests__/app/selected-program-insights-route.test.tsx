@@ -1,60 +1,56 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { notFoundMock, dashboardMock, resolveProgramHeadContextMock } = vi.hoisted(() => ({
-  notFoundMock: vi.fn(() => {
-    throw new Error("NOT_FOUND");
-  }),
-  dashboardMock: vi.fn(),
-  resolveProgramHeadContextMock: vi.fn(),
-}));
+const { notFoundMock, redirectMock, analyticsMock, resolveProgramHeadContextMock } = vi.hoisted(
+  () => ({
+    notFoundMock: vi.fn(() => {
+      throw new Error("NOT_FOUND");
+    }),
+    redirectMock: vi.fn((url: string) => {
+      throw new Error(`REDIRECT:${url}`);
+    }),
+    analyticsMock: vi.fn(),
+    resolveProgramHeadContextMock: vi.fn(),
+  })
+);
 
-vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
-vi.mock("@/features/analytics/services/get-program-head-dashboard", () => ({
-  getProgramHeadDashboard: dashboardMock,
+vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
+vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
+  getProgramHeadAnalytics: analyticsMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
 }));
-vi.mock("@/features/analytics/components/mean-bar-chart", () => ({
-  MeanBarChart: ({
-    title,
-    data,
-  }: {
-    title: string;
-    data: Array<{ label: string; value: number | null }>;
-  }) => (
-    <div>
-      Mean chart: {title} ({data.map((item) => `${item.label}:${item.value}`).join(", ") || "no data"})
-    </div>
-  ),
-}));
-vi.mock("@/features/analytics/components/qualitative-word-cloud", () => ({
-  QualitativeWordCloud: ({
-    title,
-    tokens,
-    responseCount,
-  }: {
-    title: string;
-    tokens: Array<{ text: string; value: number }>;
-    responseCount: number;
-  }) => (
-    <div>
-      Word cloud: {title} ({responseCount} responses;{" "}
-      {tokens.map((token) => token.text).join(", ") || "no tokens"})
-    </div>
-  ),
-}));
 
-const bsedDashboard = {
-  programCode: "BSED",
-  programLabel: "Bachelor of Secondary Education",
-  kpi: { activeDeployments: 0, totalResponses: 0, overallMean: null, pendingResponses: 0 },
-  stakeholderMeans: [
-    { stakeholder: "STUDENT", label: "Students", mean: 4.2, responseCount: 3 },
-  ],
-  wordCloudTokens: [{ text: "clear", value: 2 }],
-  qualitativeItemCount: 1,
+const bsedOverview = {
+  scope: {
+    programCode: "BSED",
+    programName: "Bachelor of Secondary Education",
+    periodLabel: null,
+  },
+  kpi: {
+    submittedResponseCount: 12,
+    evaluationOpportunityCount: 20,
+    responseRate: 0.6,
+    ratingCount: 48,
+    meanRating: 4.1875,
+  },
+  emptyReason: null,
+  periodOptions: {
+    schoolYears: [{ id: "school-year-1", label: "2025-2026" }],
+    semesters: [{ value: "FIRST", label: "1st Semester" }],
+    termInstances: [
+      {
+        id: "term-1",
+        schoolYearId: "school-year-1",
+        schoolYearLabel: "2025-2026",
+        semester: "FIRST",
+        semesterLabel: "1st Semester",
+        termLabel: "1st Term",
+        label: "2025-2026 · 1st Semester · 1st Term",
+      },
+    ],
+  },
 };
 
 const bsedContext = {
@@ -72,42 +68,202 @@ const bsedContext = {
 describe("selected Program insights routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    dashboardMock.mockResolvedValue(bsedDashboard);
+    analyticsMock.mockResolvedValue(bsedOverview);
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
   });
 
-  it("passes only the explicitly selected Program to the analytics read", async () => {
+  it("passes only the explicitly selected Program and parsed filters to the analytics read", async () => {
     const Page = await loadAnalyticsPage();
 
-    await Page({ params: Promise.resolve({ programId: "program-bsed" }) });
+    await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({}),
+    });
 
-    expect(dashboardMock).toHaveBeenCalledWith("program-bsed");
+    expect(analyticsMock).toHaveBeenCalledWith("program-bsed", { tab: "overview" });
   });
 
-  it("renders only selected-Program analytics data and labels", async () => {
+  it("renders only selected-Program scope summary and KPI data", async () => {
     const Page = await loadAnalyticsPage();
-    const page = await Page({ params: Promise.resolve({ programId: "program-bsed" }) });
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({}),
+    });
 
     render(page);
 
     expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
-    expect(
-      screen.getByText("Mean chart: Mean Attainment by Stakeholder (Students:4.2)")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Word cloud: Qualitative Response Insights (1 responses; clear)")
-    ).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument(); // submitted responses
+    expect(screen.getByText("20")).toBeInTheDocument(); // evaluation opportunities
+    expect(screen.getByText("60.0%")).toBeInTheDocument(); // response rate
+    expect(screen.getByText("48")).toBeInTheDocument(); // rating count
+    expect(screen.getByText("4.19")).toBeInTheDocument(); // mean rating (rounded display)
     expect(screen.queryByText(/BEED/)).not.toBeInTheDocument();
   });
 
   it("renders no analytics data when the analytics read denies a selected Program", async () => {
-    dashboardMock.mockResolvedValue(null);
+    analyticsMock.mockResolvedValue(null);
     const Page = await loadAnalyticsPage();
 
-    await expect(Page({ params: Promise.resolve({ programId: "program-3" }) })).rejects.toThrow(
-      "NOT_FOUND"
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-3" }),
+        searchParams: Promise.resolve({}),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+    expect(analyticsMock).toHaveBeenCalledWith("program-3", { tab: "overview" });
+  });
+
+  it("renders context-aware period filter controls when options exist", async () => {
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({}),
+    });
+
+    render(page);
+
+    expect(screen.getByLabelText("School Year")).toBeInTheDocument();
+    expect(screen.getByLabelText("Semester")).toBeInTheDocument();
+    expect(screen.getByLabelText("Academic Term")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Reset" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-bsed/analytics"
     );
-    expect(dashboardMock).toHaveBeenCalledWith("program-3");
+  });
+
+  it("redirects to canonical URL when tab is invalid", async () => {
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-bsed" }),
+        searchParams: Promise.resolve({ tab: "invalid-tab" }),
+      })
+    ).rejects.toThrow(/REDIRECT/);
+
+    // Should redirect to canonical URL without the invalid tab param
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.stringContaining("/program-head/programs/program-bsed/analytics")
+    );
+    // Should NOT call the analytics service since redirect happens first
+    expect(analyticsMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves valid tab and filter parameters", async () => {
+    const Page = await loadAnalyticsPage();
+    const termId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
+    await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "outcomes", termInstanceId: termId }),
+    });
+
+    expect(analyticsMock).toHaveBeenCalledWith("program-bsed", {
+      tab: "outcomes",
+      termInstanceId: termId,
+    });
+  });
+
+  it("renders the no-assignments empty state", async () => {
+    analyticsMock.mockResolvedValue({
+      ...bsedOverview,
+      kpi: {
+        submittedResponseCount: 0,
+        evaluationOpportunityCount: 0,
+        responseRate: null,
+        ratingCount: 0,
+        meanRating: null,
+      },
+      emptyReason: "no-assignments",
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({}),
+    });
+
+    render(page);
+
+    expect(screen.getByText("No evaluation assignments")).toBeInTheDocument();
+  });
+
+  it("renders the no-submissions empty state", async () => {
+    analyticsMock.mockResolvedValue({
+      ...bsedOverview,
+      kpi: {
+        submittedResponseCount: 0,
+        evaluationOpportunityCount: 5,
+        responseRate: null,
+        ratingCount: 0,
+        meanRating: null,
+      },
+      emptyReason: "no-submissions",
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({}),
+    });
+
+    render(page);
+
+    expect(screen.getByText("No submitted responses")).toBeInTheDocument();
+  });
+
+  it("shows unavailable response rate and mean when zero denominator", async () => {
+    analyticsMock.mockResolvedValue({
+      ...bsedOverview,
+      kpi: {
+        submittedResponseCount: 0,
+        evaluationOpportunityCount: 5,
+        responseRate: null,
+        ratingCount: 0,
+        meanRating: null,
+      },
+      emptyReason: "no-submissions",
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({}),
+    });
+
+    render(page);
+
+    // KPI cards not rendered because emptyReason is set
+    expect(screen.getByText("No submitted responses")).toBeInTheDocument();
+  });
+
+  it("renders all 7 tab navigation links", async () => {
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({}),
+    });
+
+    render(page);
+
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("Outcomes")).toBeInTheDocument();
+    expect(screen.getByText("Stakeholders")).toBeInTheDocument();
+    expect(screen.getByText("Breakdowns")).toBeInTheDocument();
+    expect(screen.getByText("Trends")).toBeInTheDocument();
+    expect(screen.getByText("Feedback")).toBeInTheDocument();
+    expect(screen.getByText("AI Insights")).toBeInTheDocument();
+  });
+
+  it("renders upcoming notice for non-overview tabs", async () => {
+    analyticsMock.mockResolvedValue(bsedOverview);
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "outcomes" }),
+    });
+
+    render(page);
+
+    expect(screen.getByText(/Outcomes view is not available yet/)).toBeInTheDocument();
   });
 
   it("labels the reports placeholder with the selected Program only", async () => {
@@ -136,12 +292,12 @@ describe("selected Program insights routes", () => {
     );
   });
 
-  it("does not read dashboard analytics while opening reports", async () => {
+  it("does not read analytics while opening reports", async () => {
     const Page = await loadReportsPage();
 
     await Page({ params: Promise.resolve({ programId: "program-bsed" }) });
 
-    expect(dashboardMock).not.toHaveBeenCalled();
+    expect(analyticsMock).not.toHaveBeenCalled();
   });
 });
 
