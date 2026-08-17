@@ -64,6 +64,26 @@ describe("ProgramHeadTrendChart", () => {
     expect(container.querySelectorAll(".recharts-line-curve")).toHaveLength(0);
   });
 
+  it("draws no break marker for an unrated gap when the server reports no breaks", () => {
+    const { container } = render(
+      <ProgramHeadTrendChart
+        title="Mean Rating by Academic Period"
+        periods={[
+          period({ periodLabel: "A", meanRating: 4.4 }),
+          period({ periodLabel: "B", meanRating: null }),
+          period({ periodLabel: "C", meanRating: 4.1 }),
+          period({ periodLabel: "D", meanRating: 4.0, comparableWithPrevious: true }),
+        ]}
+        breaks={[]}
+      />
+    );
+
+    // C → D is a drawable run, but the A→B→C gap is an unrated period, not a
+    // comparability break: no dashed marker and no fabricated break copy.
+    expect(container.querySelectorAll(".recharts-reference-line")).toHaveLength(0);
+    expect(screen.queryByText("Comparability breaks")).not.toBeInTheDocument();
+  });
+
   it("names the chart region from its title and insight", () => {
     render(
       <ProgramHeadTrendChart

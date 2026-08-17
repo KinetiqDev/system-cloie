@@ -48,8 +48,12 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
     return row;
   });
 
+  // Only genuine instrument/scale/outcome breaks (server-derived) draw a
+  // marker; a gap from an unrated period is visible as a missing point and
+  // never gets unexplained dashed markers.
+  const breakLabelSet = new Set(breaks.map((breakInfo) => breakInfo.toPeriodLabel));
   const breakLabels = chartable
-    .filter((period, index) => index > 0 && !period.comparableWithPrevious)
+    .filter((period) => breakLabelSet.has(period.periodLabel))
     .map((period) => period.periodLabel);
 
   const rated = chartable.map((period) => ({
