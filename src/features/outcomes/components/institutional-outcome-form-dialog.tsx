@@ -104,9 +104,7 @@ export function InstitutionalOutcomeFormDialog({
           </Alert>
         )}
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-          {review ? (
-            <ReviewPanel review={review} />
-          ) : (
+          <div hidden={Boolean(review)}>
             <OutcomeDraftForm
               mode={mode}
               outcome={outcome}
@@ -115,7 +113,8 @@ export function InstitutionalOutcomeFormDialog({
               onPrepared={showPreparedReview}
               onError={setError}
             />
-          )}
+          </div>
+          {review ? <ReviewPanel review={review} /> : null}
         </div>
         {review && (
           <div className="flex shrink-0 justify-end gap-2 pt-2">
