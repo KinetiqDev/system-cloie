@@ -387,10 +387,29 @@ describe("ProgramHeadResponseCompositionDonut", () => {
     expect(screen.getByText("10.0%")).toBeInTheDocument();
   });
 
-  it("renders nothing when there is no composition to show", () => {
+  it("renders an explicit empty state when there is no composition to show", () => {
     const { container } = render(<ProgramHeadResponseCompositionDonut data={[]} />);
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByText("No response composition yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("No submitted responses are available to compose in this scope.")
+    ).toBeInTheDocument();
+    // No blank donut is rendered for an empty composition.
+    expect(container.querySelector(".recharts-pie-sector")).toBeNull();
+  });
+
+  it("renders the same empty state when every bucket has zero submitted responses", () => {
+    const { container } = render(
+      <ProgramHeadResponseCompositionDonut
+        data={[
+          { key: "COURSE_STUDENT", label: "Course-bound student evidence", count: 0 },
+          { key: "ALUMNI", label: "Alumni evidence", count: 0 },
+        ]}
+      />
+    );
+
+    expect(screen.getByText("No response composition yet")).toBeInTheDocument();
+    expect(container.querySelector(".recharts-pie-sector")).toBeNull();
   });
 
   it("explains a single-source composition without a comparison claim", () => {

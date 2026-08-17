@@ -248,7 +248,7 @@ function InterpretationResult({
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <Table>
+            <Table aria-label="Sentiment overview counts">
               <TableHeader>
                 <TableRow>
                   <TableHead>Sentiment</TableHead>

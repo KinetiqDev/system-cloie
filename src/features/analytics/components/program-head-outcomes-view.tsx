@@ -148,7 +148,7 @@ function OutcomesExactValueTable({
     <div className="flex flex-col gap-3">
       <h3 className="text-title-sm text-foreground">Exact values by Graduate Outcome</h3>
       <div className="border-border overflow-x-auto rounded-lg border">
-        <Table>
+        <Table aria-label="Exact values by graduate outcome">
           <TableHeader>
             <TableRow>
               <TableHead>Graduate Outcome</TableHead>

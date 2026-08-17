@@ -58,7 +58,7 @@ function ComparisonExactValuesTable({
         View exact values
       </summary>
       <div className="border-border mt-3 overflow-x-auto rounded-lg border">
-        <Table>
+        <Table aria-label="Exact values by comparison group">
           <TableHeader>
             <TableRow>
               <TableHead>Group</TableHead>

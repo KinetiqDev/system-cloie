@@ -33,7 +33,7 @@ function InstrumentExactValuesTable({
         View exact values
       </summary>
       <div className="border-border mt-3 overflow-x-auto rounded-lg border">
-        <Table>
+        <Table aria-label="Exact values by instrument and evidence source">
           <TableHeader>
             <TableRow>
               <TableHead>Instrument</TableHead>

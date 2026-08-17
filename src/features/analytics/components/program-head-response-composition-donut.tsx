@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { Cell, Pie, PieChart, Tooltip } from "recharts";
 import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -40,7 +41,23 @@ export function ProgramHeadResponseCompositionDonut({
   const largest = [...data].sort((left, right) => right.count - left.count)[0];
 
   if (data.length === 0 || total === 0) {
-    return null;
+    return (
+      <div className="space-y-3">
+        <h3 id={titleId} className="text-title-sm text-foreground">
+          Submitted Responses by Evidence Source
+        </h3>
+        <p className="text-body-sm text-text-secondary">
+          Share of submitted responses per evidence source. This is response composition, not a
+          comparison of means.
+        </p>
+        <Empty className="h-64">
+          <EmptyTitle>No response composition yet</EmptyTitle>
+          <EmptyDescription>
+            No submitted responses are available to compose in this scope.
+          </EmptyDescription>
+        </Empty>
+      </div>
+    );
   }
 
   const insight =
@@ -119,7 +136,7 @@ export function ProgramHeadResponseCompositionDonut({
           View exact values
         </summary>
         <div className="border-border mt-3 overflow-x-auto rounded-lg border">
-          <Table>
+          <Table aria-label="Exact values by evidence source">
             <TableHeader>
               <TableRow>
                 <TableHead>Evidence Source</TableHead>

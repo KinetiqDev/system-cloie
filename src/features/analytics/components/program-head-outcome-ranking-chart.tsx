@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -51,7 +52,23 @@ export function ProgramHeadOutcomeRankingChart({
     .sort((left, right) => right.value - left.value);
 
   if (ranked.length === 0) {
-    return null;
+    return (
+      <div className="space-y-3">
+        <h3 id={titleId} className="text-title-sm text-foreground">
+          {title}
+        </h3>
+        <p className="text-body-sm text-text-secondary">
+          Only Graduate Outcomes with at least one valid rating can be ranked; rows without a
+          mean carry no defensible central tendency.
+        </p>
+        <Empty className="h-64">
+          <EmptyTitle>No rated outcome evidence yet</EmptyTitle>
+          <EmptyDescription>
+            No rated Graduate Outcome evidence is available for this ranking.
+          </EmptyDescription>
+        </Empty>
+      </div>
+    );
   }
 
   const values = ranked.map((entry) => entry.value);
@@ -123,7 +140,7 @@ export function ProgramHeadOutcomeRankingChart({
           View exact values
         </summary>
         <div className="border-border mt-3 overflow-x-auto rounded-lg border">
-          <Table>
+          <Table aria-label="Ranked mean ratings by graduate outcome">
             <TableHeader>
               <TableRow>
                 <TableHead>Graduate Outcome</TableHead>
