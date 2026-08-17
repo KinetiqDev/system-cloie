@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ANALYTICS_TABS,
   ANALYTICS_TAB_LABELS,
+  buildAnalyticsFilterFingerprint,
   buildAnalyticsTabUrl,
   buildAnalyticsUrl,
   parseAnalyticsSearchParams,
@@ -146,5 +147,40 @@ describe("ANALYTICS_TAB_LABELS", () => {
 
   it("labels the ai tab as AI Insights", () => {
     expect(ANALYTICS_TAB_LABELS.ai).toBe("AI Insights");
+  });
+});
+
+describe("buildAnalyticsFilterFingerprint", () => {
+  it("is deterministic for an empty scope", () => {
+    expect(buildAnalyticsFilterFingerprint({})).toBe("||");
+    expect(buildAnalyticsFilterFingerprint({})).toBe(buildAnalyticsFilterFingerprint({}));
+  });
+
+  it("joins the canonical period filter fields in a stable order", () => {
+    expect(
+      buildAnalyticsFilterFingerprint({
+        schoolYearId: "school-year-1",
+        semester: "FIRST",
+        termInstanceId: "term-1",
+      })
+    ).toBe("school-year-1|FIRST|term-1");
+  });
+
+  it("distinguishes scopes that differ by any single filter", () => {
+    const base = { schoolYearId: "school-year-1", semester: "FIRST", termInstanceId: "term-1" };
+    expect(buildAnalyticsFilterFingerprint(base)).not.toBe(
+      buildAnalyticsFilterFingerprint({ ...base, termInstanceId: "term-2" })
+    );
+    expect(buildAnalyticsFilterFingerprint(base)).not.toBe(
+      buildAnalyticsFilterFingerprint({ ...base, semester: "SECOND" })
+    );
+    expect(buildAnalyticsFilterFingerprint(base)).not.toBe(
+      buildAnalyticsFilterFingerprint({ ...base, schoolYearId: "school-year-2" })
+    );
+  });
+
+  it("is stable across repeated computations for the same scope", () => {
+    const filters = { schoolYearId: "school-year-1", semester: "SECOND", termInstanceId: "term-9" };
+    expect(buildAnalyticsFilterFingerprint(filters)).toBe(buildAnalyticsFilterFingerprint(filters));
   });
 });

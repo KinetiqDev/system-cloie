@@ -24,6 +24,7 @@ export const LIVE_ANALYTICS_TABS: readonly AnalyticsTab[] = [
   "breakdowns",
   "trends",
   "feedback",
+  "ai",
 ];
 
 export type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
@@ -143,4 +144,19 @@ export function buildAnalyticsTabUrl(
   currentFilters: AnalyticsFilterState
 ): string {
   return buildAnalyticsUrl(programId, { ...currentFilters, tab });
+}
+
+/**
+ * Deterministic fingerprint of the analytics scope filters. The AI Server
+ * Action attaches it to every generated interpretation so the client can mark
+ * results stale when the URL filter state changes after generation.
+ */
+export function buildAnalyticsFilterFingerprint(
+  filters: Pick<AnalyticsFilterState, "schoolYearId" | "semester" | "termInstanceId">
+): string {
+  return [
+    filters.schoolYearId ?? "",
+    filters.semester ?? "",
+    filters.termInstanceId ?? "",
+  ].join("|");
 }

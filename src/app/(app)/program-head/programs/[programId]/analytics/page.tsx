@@ -7,6 +7,7 @@ import { ProgramHeadTrendsView } from "@/features/analytics/components/program-h
 import { ProgramHeadStakeholderView } from "@/features/analytics/components/program-head-stakeholder-view";
 import { ProgramHeadBreakdownsView } from "@/features/analytics/components/program-head-breakdowns-view";
 import { ProgramHeadFeedbackView } from "@/features/analytics/components/program-head-feedback-view";
+import { ProgramHeadAIInsightsView } from "@/features/analytics/components/program-head-ai-insights-view";
 import {
   getProgramHeadAnalytics,
   getProgramHeadBreakdowns,
@@ -63,8 +64,7 @@ async function withTabData<TData extends { scope: ProgramHeadAnalyticsScopeSumma
   };
 }
 /**
- * Resolve the selected tab's authorized read into shell content. Upcoming AI
- * still reads Overview until that view lands.
+ * Resolve the selected tab's authorized read into shell content.
  */
 function resolveAnalyticsTab(
   programId: string,
@@ -108,6 +108,12 @@ function resolveAnalyticsTab(
           data={dto}
           resetHref={buildAnalyticsUrl(programId, { tab: "feedback" })}
         />
+      ));
+    case "ai":
+      // The AI view is an on-demand client flow: the shell still resolves the
+      // authorized scope and period options through the shared overview read.
+      return withTabData(programId, filters, getProgramHeadAnalytics, (dto) => (
+        <ProgramHeadAIInsightsView programId={programId} filters={filters} scope={dto.scope} />
       ));
     default:
       return withTabData(programId, filters, getProgramHeadAnalytics, (dto) => (

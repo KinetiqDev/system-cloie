@@ -2129,6 +2129,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "Server component composing aggregate-only qualitative feedback, accessible word-cloud alternatives, counts, empty states, and authorized review links",
   },
   {
+    path: "src/features/analytics/components/program-head-ai-insights-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Client on-demand AI interpretation view with fixed prompt boundary, validated aggregate-only output, locally computed sentiment counts, stale fingerprints, and recoverable failure states",
+  },
+  {
     path: "src/features/analytics/components/program-head-outcomes-view.tsx",
     disposition: "already_compliant",
     category: "feature_component",
