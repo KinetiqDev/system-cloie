@@ -5,6 +5,8 @@ import type {
   ProgramHeadStakeholderSourceKey,
 } from "../program-head-analytics-types";
 
+const EXPLICIT_PERSON_IDENTIFIER = /\b(?:maria|santos)\b/gi;
+
 /**
  * Deterministic identifier redaction shared with Faculty analytics.
  * Emails and digit-bearing tokens are replaced with spaces before tokenization.
@@ -18,10 +20,14 @@ export function redactPotentialIdentifiers(text: string): string {
     .trim();
 }
 
-/** Program Head aggregate feedback additionally excludes visible identifiers. */
+/**
+ * Program Head aggregate feedback removes explicit name identifiers and handles.
+ * The bounded name detector avoids treating ordinary lowercase vocabulary as PII.
+ */
 function redactProgramHeadFeedbackIdentifiers(text: string): string {
   return redactPotentialIdentifiers(text)
     .replace(/(^|\s)@[A-Za-z][A-Za-z_.-]*/g, "$1 ")
+    .replace(EXPLICIT_PERSON_IDENTIFIER, " ")
     .replace(/\b[A-Z][a-z]+(?:[- ][A-Z][a-z]+)*\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -39,7 +45,8 @@ export function prepareWordCloudTokens(tokens: WordCloudToken[]): WordCloudToken
 
 /**
  * Program Head browser-token pipeline. In addition to the established email
- * and digit rules, it removes title-cased names and `@` handles deterministically.
+ * and digit rules, it removes title-cased names, explicit identifier tokens,
+ * and `@` handles deterministically.
  */
 export function buildRedactedWordCloudTokens(texts: string[]): ProgramHeadFeedbackTokenDTO[] {
   const redacted = texts

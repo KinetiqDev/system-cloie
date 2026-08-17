@@ -135,12 +135,18 @@ describe("buildRedactedWordCloudTokens", () => {
     ]);
   });
 
-  it("never emits title-cased names or digit-free handles", () => {
+  it("redacts configured names in title, lowercase, and uppercase forms without dropping vocabulary", () => {
     expect(
-      buildRedactedWordCloudTokens(["Maria praised @john_doe", "curriculum praised"])
+      buildRedactedWordCloudTokens([
+        "Maria praised @john_doe",
+        "maria praised curriculum clarity teaching",
+        "MARIA SANTOS praised curriculum clarity teaching",
+      ])
     ).toEqual([
-      { text: "praised", value: 2 },
-      { text: "curriculum", value: 1 },
+      { text: "praised", value: 3 },
+      { text: "clarity", value: 2 },
+      { text: "curriculum", value: 2 },
+      { text: "teaching", value: 2 },
     ]);
     expect(redactPotentialIdentifiers("Maria praised @john_doe")).toBe("Maria praised @john_doe");
   });
