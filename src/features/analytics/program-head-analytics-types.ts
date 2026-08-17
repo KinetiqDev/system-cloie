@@ -371,3 +371,72 @@ export type ProgramHeadFeedbackDTO = {
   promptCounts: ProgramHeadFeedbackPromptCountDTO[];
   evidenceEvaluations: ProgramHeadFeedbackEvidenceDTO[];
 };
+
+// ---------------------------------------------------------------------------
+// AI Insights
+// ---------------------------------------------------------------------------
+
+/**
+ * Sentiment labels a provider may assign to one bounded evidence category.
+ * The union is fixed; System CLOIE computes displayed counts and percentages
+ * from the validated classifications instead of trusting model totals.
+ */
+export type ProgramHeadAISentimentStatus = "positive" | "negative" | "neutral" | "mixed";
+
+/** One provider classification over one supplied aggregate evidence category. */
+type ProgramHeadAISentimentClassificationDTO = {
+  /** Bounded label of the analyzed aggregate evidence category, e.g. a source label. */
+  evidenceCategory: string;
+  sentiment: ProgramHeadAISentimentStatus;
+  rationale: string;
+};
+
+/** Locally computed sentiment count and share of all classifications. */
+type ProgramHeadAISentimentCountDTO = {
+  sentiment: ProgramHeadAISentimentStatus;
+  count: number;
+  /** Full-precision share of all classifications; round only for display. */
+  percentage: number;
+};
+
+/** One bounded theme over the supplied aggregate evidence. */
+type ProgramHeadAIThemeDTO = {
+  name: string;
+  summary: string;
+};
+
+/**
+ * What the provider actually analyzed vs. what was available. Discloses that
+ * interpretation covers bounded aggregate evidence only, never raw comments.
+ */
+type ProgramHeadAIEvidenceScopeDTO = {
+  submittedResponseCount: number;
+  qualitativeItemCount: number;
+  /** Distinct readable source labels included in the evidence packet. */
+  evaluatedSourceLabels: string[];
+  tokenAnalysis: {
+    availableTokenCount: number;
+    includedTokenCount: number;
+    truncated: boolean;
+  };
+};
+
+/**
+ * Validated, bounded AI interpretation returned to the browser. Contains only
+ * model-authored aggregate findings plus System CLOIE-computed counts and the
+ * filter fingerprint; no raw evidence, identifiers, or response rows.
+ */
+export type ProgramHeadAIInsightsSuccessDTO = {
+  /** Filter fingerprint of the scope this interpretation was generated for. */
+  fingerprint: string;
+  scope: ProgramHeadAnalyticsScopeSummary;
+  summary: string;
+  strengths: string[];
+  areasForReview: string[];
+  themes: ProgramHeadAIThemeDTO[];
+  sentimentClassifications: ProgramHeadAISentimentClassificationDTO[];
+  sentimentCounts: ProgramHeadAISentimentCountDTO[];
+  questionsForHumanReview: string[];
+  limitations: string[];
+  evidenceScope: ProgramHeadAIEvidenceScopeDTO;
+};
