@@ -113,57 +113,27 @@ function FilterForm({
       className={drawer ? "flex flex-col gap-4" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"}
     >
       {filters.tab !== "overview" ? <input type="hidden" name="tab" value={filters.tab} /> : null}
-      {options.schoolYears.length > 0 ? (
-        <label className="flex min-w-0 flex-col gap-1.5 text-label-md text-foreground">
-          School Year
-          <select
-            name="schoolYearId"
-            defaultValue={filters.schoolYearId ?? ""}
-            className="h-11 rounded-lg border border-border bg-background px-3 text-body-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">All school years</option>
-            {options.schoolYears.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      {options.semesters.length > 0 ? (
-        <label className="flex min-w-0 flex-col gap-1.5 text-label-md text-foreground">
-          Semester
-          <select
-            name="semester"
-            defaultValue={filters.semester ?? ""}
-            className="h-11 rounded-lg border border-border bg-background px-3 text-body-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">All semesters</option>
-            {options.semesters.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      {options.termInstances.length > 0 ? (
-        <label className="flex min-w-0 flex-col gap-1.5 text-label-md text-foreground">
-          Academic Term
-          <select
-            name="termInstanceId"
-            defaultValue={filters.termInstanceId ?? ""}
-            className="h-11 rounded-lg border border-border bg-background px-3 text-body-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">All terms</option>
-            {options.termInstances.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
+      <PeriodSelect
+        label="School Year"
+        selectName="schoolYearId"
+        value={filters.schoolYearId ?? ""}
+        options={options.schoolYears.map((option) => ({ value: option.id, label: option.label }))}
+        blankLabel="All school years"
+      />
+      <PeriodSelect
+        label="Semester"
+        selectName="semester"
+        value={filters.semester ?? ""}
+        options={options.semesters}
+        blankLabel="All semesters"
+      />
+      <PeriodSelect
+        label="Academic Term"
+        selectName="termInstanceId"
+        value={filters.termInstanceId ?? ""}
+        options={options.termInstances.map((option) => ({ value: option.id, label: option.label }))}
+        blankLabel="All terms"
+      />
       <div className={drawer ? "flex items-center gap-2" : "flex items-end gap-2"}>
         <Button type="submit" size="sm" className={drawer ? "flex-1" : undefined}>
           Apply filters
@@ -176,5 +146,40 @@ function FilterForm({
         </Link>
       </div>
     </form>
+  );
+}
+
+function PeriodSelect({
+  label,
+  selectName,
+  value,
+  options,
+  blankLabel,
+}: {
+  label: string;
+  selectName: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  blankLabel: string;
+}) {
+  if (options.length === 0) {
+    return null;
+  }
+  return (
+    <label className="flex min-w-0 flex-col gap-1.5 text-label-md text-foreground">
+      {label}
+      <select
+        name={selectName}
+        defaultValue={value}
+        className="h-11 rounded-lg border border-border bg-background px-3 text-body-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <option value="">{blankLabel}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
