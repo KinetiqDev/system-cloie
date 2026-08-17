@@ -705,7 +705,7 @@ describe("getProgramHeadBreakdowns", () => {
     expect(result!.majorBreakdown!.rows.map((row) => row.meanRating)).toEqual([5, 1]);
   });
 
-  it("omits the major dimension when no evidence has defensible major attribution", async () => {
+  it("keeps unattributable evidence visible as Unspecified when no major is defensible", async () => {
     defaultSnapshotResolution();
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       courseBoundRatingRow({
@@ -725,7 +725,16 @@ describe("getProgramHeadBreakdowns", () => {
 
     const result = await getProgramHeadBreakdowns("program-bsed", breakdownFilters);
 
-    expect(result!.majorBreakdown).toBeNull();
+    // No comparison is shown, but the evidence is not silently discarded:
+    // it stays disclosed as a per-source Unspecified row with counts.
+    expect(result!.majorBreakdown).not.toBeNull();
+    expect(result!.majorBreakdown!.rows).toEqual([]);
+    expect(result!.majorBreakdown!.unspecified).toHaveLength(1);
+    expect(result!.majorBreakdown!.unspecified[0].label).toBe(
+      "Unspecified — Course-bound student evidence"
+    );
+    expect(result!.majorBreakdown!.unspecified[0].meanRating).toBe(5);
+    expect(result!.majorBreakdown!.unspecified[0].submittedResponseCount).toBe(1);
   });
 
   it("attributes year levels from central deployment targeting and single-target evaluations", async () => {
@@ -796,7 +805,15 @@ describe("getProgramHeadBreakdowns", () => {
 
     const result = await getProgramHeadBreakdowns("program-bsed", breakdownFilters);
 
-    expect(result!.yearLevelBreakdown).toBeNull();
+    // No year-level comparison is shown, but the evidence stays disclosed as
+    // per-source Unspecified rows rather than vanishing.
+    expect(result!.yearLevelBreakdown).not.toBeNull();
+    expect(result!.yearLevelBreakdown!.rows).toEqual([]);
+    expect(result!.yearLevelBreakdown!.unspecified.map((row) => row.label)).toEqual([
+      "Unspecified — Course-bound student evidence",
+      "Unspecified — Central student-respondent evidence",
+    ]);
+    expect(result!.yearLevelBreakdown!.unspecified[0].ratingCount).toBe(1);
   });
 
   it("excludes out-of-scale ratings from breakdown rows", async () => {

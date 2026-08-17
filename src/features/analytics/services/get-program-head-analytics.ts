@@ -1123,7 +1123,9 @@ function buildContextualBreakdown(
     snapshotById,
     attributionOf
   );
-  if (rows.length === 0) {
+  // Evidence with no defensible attribution still has to stay visible as
+  // per-source Unspecified rows instead of vanishing into an empty note.
+  if (rows.length === 0 && unspecified.length === 0) {
     return null;
   }
   return { rows, unspecified, attributionNote };
