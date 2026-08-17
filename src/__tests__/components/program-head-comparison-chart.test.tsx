@@ -289,6 +289,59 @@ describe("ProgramHeadComparisonChart", () => {
     expect(regions).toHaveLength(2);
     expect(new Set(regions.map((region) => region.getAttribute("data-chart"))).size).toBe(2);
   });
+
+  it("keeps touch targets and scrollable disclosures at a narrow mobile viewport", () => {
+    window.innerWidth = 320;
+    const { container } = render(
+      <div>
+        <ProgramHeadComparisonChart
+          title="Mean Rating by Evidence Source"
+          rows={rows}
+        />
+        <ProgramHeadInstrumentBreakdownChart
+          rows={[
+            {
+              instrumentVersionId: "iv-1",
+              instrumentLabel: "Alumni Survey v1",
+              sources: [
+                {
+                  key: "iv-1:ALUMNI",
+                  label: "Alumni evidence",
+                  isUnspecified: false,
+                  meanRating: 3.5,
+                  ratingCount: 8,
+                  submittedResponseCount: 4,
+                  sourceKey: "ALUMNI",
+                  sourceLabel: "Alumni evidence",
+                },
+              ],
+            },
+          ]}
+        />
+        <ProgramHeadResponseCompositionDonut
+          data={[
+            { key: "COURSE_STUDENT", label: "Course-bound student evidence", count: 60 },
+            { key: "ALUMNI", label: "Alumni evidence", count: 30 },
+          ]}
+        />
+      </div>
+    );
+
+    // Interactive disclosures carry the >=44px touch-target sizing contract.
+    const summaries = Array.from(container.querySelectorAll("summary"));
+    expect(summaries.length).toBeGreaterThanOrEqual(3);
+    for (const summary of summaries) {
+      expect(summary.className).toContain("pointer-coarse:min-h-11");
+    }
+    // Exact-value tables live in horizontally scrollable wrappers so long
+    // labels cannot push the page wider than the viewport.
+    const scrollWrappers = Array.from(
+      container.querySelectorAll(".overflow-x-auto.rounded-lg.border")
+    );
+    expect(scrollWrappers.length).toBeGreaterThanOrEqual(3);
+    // Charts render without crashing at the narrow viewport.
+    expect(container.querySelectorAll('[data-slot="chart"]').length).toBe(3);
+  });
 });
 
 describe("ProgramHeadResponseCompositionDonut", () => {
