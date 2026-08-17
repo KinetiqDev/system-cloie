@@ -134,9 +134,10 @@ export function describeScales(scales: ScaleDescriptor[][]): string | null {
 
 /**
  * Identity of a period's evidence for trend comparability. Two periods are
- * comparable only when every dimension matches: the instrument versions that
- * produced the ratings, the Likert scale identities, and the mapped Graduate
- * Outcome codes. All arrays are sorted so equality is order-independent.
+ * comparable only when every dimension matches: the immutable instrument
+ * version IDs that produced the ratings (display labels can collide across
+ * templates), the Likert scale identities, and the mapped Graduate Outcome
+ * codes. All arrays are sorted so equality is order-independent.
  */
 export type TrendComparabilityFingerprint = {
   instrumentVersions: string[];

@@ -469,6 +469,7 @@ function buildTrendSeriesInputs(
     }
 
     const instrumentVersionsSorted = [...new Set(versionLabels)].sort();
+    const instrumentVersionIdsSorted = [...evidence.instrumentVersionIds].sort();
     const scaleIdentities = buildScaleIdentities(scales);
     const outcomeCodes = [...evidence.outcomeCodes].sort();
 
@@ -488,7 +489,7 @@ function buildTrendSeriesInputs(
       scaleContext: describeScales(scales),
       outcomeCodes,
       fingerprint: {
-        instrumentVersions: instrumentVersionsSorted,
+        instrumentVersions: instrumentVersionIdsSorted,
         scaleIdentities,
         outcomeCodes,
       },

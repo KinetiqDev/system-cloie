@@ -114,6 +114,9 @@ const instrumentVersions = [
   { id: "iv-cilo-v1", version_number: 1, structure_snapshot: ciloStructureV1, template: { name: "CILO Evaluation" } },
   { id: "iv-cilo-v2", version_number: 2, structure_snapshot: ciloStructureV2, template: { name: "CILO Evaluation" } },
   { id: "iv-exit-v1", version_number: 1, structure_snapshot: exitStructure, template: { name: "Exit Survey" } },
+  // Distinct versions whose display labels collide (same template name + version number).
+  { id: "iv-collide-a", version_number: 1, structure_snapshot: ciloStructureV2, template: { name: "Course Evaluation" } },
+  { id: "iv-collide-b", version_number: 1, structure_snapshot: ciloStructureV2, template: { name: "Course Evaluation" } },
 ];
 
 function ratingRow(opts: {
@@ -391,6 +394,28 @@ describe("getProgramHeadTrends", () => {
 
     expect(result!.periods[1].comparableWithPrevious).toBe(false);
     expect(result!.breaks[0].reason).toMatch(/outcomes/i);
+  });
+
+  it("breaks when distinct instrument versions share a display label", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-collide-a", value: 5, responseId: "resp-a", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-collide-b", value: 4, responseId: "resp-b", goCodes: ["GO-1"] }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
+      responseRow({ termInstanceId: "term-2025-1st", id: "resp-b" }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([
+      instrumentVersions[3],
+      instrumentVersions[4],
+    ]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    // Same template name and version number, different version IDs: not comparable.
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/instrument version/i);
   });
 
   it("never silently merges unlike periods into one comparable run", async () => {
