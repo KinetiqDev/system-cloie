@@ -2087,6 +2087,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/analytics/components/stakeholder-mean-comparison.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New client chart replacing mean pie for independent stakeholder means; semantic tokens, exact-value table, reduced-motion safe",
+  },
+  {
     path: "src/features/analytics/components/program-head-analytics-shell.tsx",
     disposition: "already_compliant",
     category: "feature_component",

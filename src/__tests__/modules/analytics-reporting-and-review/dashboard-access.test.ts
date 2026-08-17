@@ -117,7 +117,10 @@ describe("analytics dashboard access", () => {
     prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
     prismaMock.response.count.mockResolvedValue(0);
     prismaMock.evaluationAssignment.count.mockResolvedValue(0);
-    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({ _avg: { rating_value: null } });
+    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
+      _sum: { rating_value: null },
+      _count: { rating_value: 0 },
+    });
     prismaMock.centralDeployment.findMany.mockResolvedValue([]);
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
     countEligibleMock.mockResolvedValue(0);
@@ -153,7 +156,8 @@ describe("analytics dashboard access", () => {
     prismaMock.response.count.mockResolvedValue(0);
     prismaMock.evaluationAssignment.count.mockResolvedValue(0);
     prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _avg: { rating_value: null },
+      _sum: { rating_value: null },
+      _count: { rating_value: 0 },
     });
     prismaMock.centralDeployment.findMany.mockResolvedValue([]);
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
@@ -193,7 +197,8 @@ describe("analytics dashboard access", () => {
     prismaMock.response.count.mockResolvedValue(0);
     prismaMock.evaluationAssignment.count.mockResolvedValue(0);
     prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _avg: { rating_value: null },
+      _sum: { rating_value: null },
+      _count: { rating_value: 0 },
     });
     prismaMock.centralDeployment.findMany.mockResolvedValue([]);
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
@@ -221,6 +226,107 @@ describe("analytics dashboard access", () => {
       expect(serialized).toContain("program-bsed");
       expect(serialized).not.toContain("program-beed");
     }
+  });
+
+  it("shares submitted, opportunity, rating-count, and full-precision mean semantics with Analytics", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "program-head-1",
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+    });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "program-head-1",
+        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
+        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
+      },
+    });
+    prismaMock.centralDeployment.count.mockResolvedValue(2);
+    prismaMock.courseBoundEvaluation.count.mockResolvedValue(1);
+    prismaMock.response.count.mockResolvedValue(7);
+    prismaMock.evaluationAssignment.count.mockResolvedValue(13);
+    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
+      _sum: { rating_value: 30 },
+      _count: { rating_value: 9 },
+    });
+    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
+    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
+    countEligibleMock.mockResolvedValue(0);
+
+    const result = await getProgramHeadDashboard("program-1");
+
+    expect(result).not.toBeNull();
+    if (!result) return;
+
+    expect(result.kpi).toMatchObject({
+      submittedResponseCount: 7,
+      evaluationOpportunityCount: 13,
+      ratingCount: 9,
+    });
+
+    // Mean Rating retains full precision in the server contract; presentation rounds.
+    expect(result.kpi.meanRating).toBe(30 / 9);
+    expect(result.kpi.meanRating).not.toBe(Math.round((30 / 9) * 100) / 100);
+
+    // The evaluation-opportunity denominator counts ALL in-scope assignments,
+    // matching Analytics: no response-status or availability filter.
+    const opportunityCall = prismaMock.evaluationAssignment.count.mock.calls.find(
+      (call) => call[0]?.where?.OR?.[0]?.central_deployment?.program_id === "program-1"
+    );
+    expect(opportunityCall?.[0].where).not.toHaveProperty("response");
+    expect(opportunityCall?.[0].where.OR).toHaveLength(2);
+    expect(opportunityCall?.[0].where.OR[0].central_deployment.program_id).toBe("program-1");
+    expect(opportunityCall?.[0].where.OR[1].course_bound.course_assignment.program_id).toBe(
+      "program-1"
+    );
+  });
+
+  it("keeps stakeholder comparison means at full precision", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "program-head-1",
+      activeRole: ROLES.PROGRAM_HEAD,
+      roles: [ROLES.PROGRAM_HEAD],
+    });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "program-head-1",
+        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
+        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
+      },
+    });
+    prismaMock.centralDeployment.count.mockResolvedValue(0);
+    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
+    prismaMock.response.count.mockResolvedValue(0);
+    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
+    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
+      _sum: { rating_value: null },
+      _count: { rating_value: 0 },
+    });
+    prismaMock.centralDeployment.findMany.mockResolvedValue([
+      {
+        target_stakeholder: "STUDENT",
+        assignments: [
+          {
+            response: {
+              quant_items: [{ rating_value: 4 }, { rating_value: 4 }, { rating_value: 5 }],
+            },
+          },
+        ],
+      },
+    ]);
+    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
+    countEligibleMock.mockResolvedValue(0);
+
+    const result = await getProgramHeadDashboard("program-1");
+
+    expect(result).not.toBeNull();
+    if (!result) return;
+
+    expect(result.stakeholderMeans).toEqual([
+      { stakeholder: "STUDENT", label: "Students", mean: 13 / 3, responseCount: 1 },
+    ]);
   });
 
   it("preserves Faculty KPI values in the primary metrics read model", async () => {
@@ -360,7 +466,8 @@ describe("analytics dashboard access", () => {
     prismaMock.response.count.mockResolvedValue(0);
     prismaMock.evaluationAssignment.count.mockResolvedValue(0);
     prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _avg: { rating_value: null },
+      _sum: { rating_value: null },
+      _count: { rating_value: 0 },
     });
     prismaMock.centralDeployment.findMany.mockResolvedValue([]);
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
@@ -395,6 +502,17 @@ describe("analytics dashboard access", () => {
         "qualitativeItemCount",
         "stakeholderMeans",
         "wordCloudTokens",
+      ].sort()
+    );
+    expect(Object.keys(result.kpi).sort()).toEqual(
+      [
+        "activeDeployments",
+        "evaluationOpportunityCount",
+        "meanRating",
+        "pendingResponses",
+        "ratingCount",
+        "responseRate",
+        "submittedResponseCount",
       ].sort()
     );
     expect(Object.keys(result.wordCloudTokens[0]).sort()).toEqual(["text", "value"]);

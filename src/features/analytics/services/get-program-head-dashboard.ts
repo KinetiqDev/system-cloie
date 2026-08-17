@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { countEligibleCourseBoundEvaluationAssignments } from "@/features/course-assignments/services/course-assignment-roster";
 import { buildReviewWordCloudTokens } from "./get-course-bound-review-detail";
+import { buildProgramHeadOverviewKpi } from "./program-head-analytics-aggregators";
+import type { ProgramHeadOverviewKPI } from "../program-head-analytics-types";
 import type { WordCloudToken } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -12,14 +14,18 @@ import type { WordCloudToken } from "../types";
 export type StakeholderMeanItem = {
   stakeholder: string;
   label: string;
+  /** Full-precision mean rating; rounded only at presentation. */
   mean: number;
   responseCount: number;
 };
 
-export type ProgramHeadDashboardKPI = {
+/**
+ * Dashboard KPI projection. The submitted/opportunity/rating/mean fields share
+ * the Analytics Overview semantics via `buildProgramHeadOverviewKpi`; the
+ * operational fields are current-state values unique to the compact surface.
+ */
+export type ProgramHeadDashboardKPI = ProgramHeadOverviewKPI & {
   activeDeployments: number;
-  totalResponses: number;
-  overallMean: number | null;
   pendingResponses: number;
 };
 
@@ -47,10 +53,6 @@ const STAKEHOLDER_LABELS: Record<string, string> = {
   ALUMNI: "Alumni",
   INDUSTRY_PARTNER: "Industry Partners",
 };
-
-function roundToTwo(n: number): number {
-  return Math.round(n * 100) / 100;
-}
 
 // ---------------------------------------------------------------------------
 // Main service function
@@ -83,25 +85,8 @@ async function getProgramHeadDashboardForScope(
 
   // ── KPI Queries ──────────────────────────────────────────────────────────
 
-  // 1. Active deployments (central + course-bound)
-  const [centralDeploymentCount, courseBoundEvalCount] = await Promise.all([
-    prisma.centralDeployment.count({
-      where: {
-        program_id: programId,
-        status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
-      },
-    }),
-    prisma.courseBoundEvaluation.count({
-      where: {
-        course_assignment: { program_id: programId },
-        status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
-      },
-    }),
-  ]);
-  const activeDeployments = centralDeploymentCount + courseBoundEvalCount;
-
-  // 2. Total submitted responses + pending responses
-  // Build the scope: responses tied to this program via central deployments OR course-bound evaluations
+  // Responses tied to this program via central deployments OR course-bound
+  // evaluations, following the same scope predicate as the analytics service.
   const programResponseScope = {
     OR: [
       {
@@ -121,57 +106,106 @@ async function getProgramHeadDashboardForScope(
     ],
   };
 
-  const [totalResponses, centralPendingAssignments, courseBoundPendingAssignments] =
-    await Promise.all([
-      prisma.response.count({
-        where: {
+  // Every in-scope EvaluationAssignment is an evaluation opportunity,
+  // matching the Analytics denominator regardless of response status.
+  const programOpportunityScope = {
+    OR: [
+      {
+        central_deployment: { program_id: programId },
+      },
+      {
+        course_bound: {
+          course_assignment: { program_id: programId },
+        },
+      },
+    ],
+  };
+
+  const [
+    centralDeploymentCount,
+    courseBoundEvalCount,
+    submittedResponseCount,
+    evaluationOpportunityCount,
+    ratingAggregate,
+    centralPendingAssignments,
+    courseBoundPendingAssignments,
+  ] = await Promise.all([
+    // 1. Active deployments (central + course-bound)
+    prisma.centralDeployment.count({
+      where: {
+        program_id: programId,
+        status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+      },
+    }),
+    prisma.courseBoundEvaluation.count({
+      where: {
+        course_assignment: { program_id: programId },
+        status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+      },
+    }),
+    // 2. Submitted responses (shared Analytics semantics)
+    prisma.response.count({
+      where: {
+        status: ResponseStatus.SUBMITTED,
+        ...programResponseScope,
+      },
+    }),
+    // 3. Evaluation opportunities (shared Analytics semantics)
+    prisma.evaluationAssignment.count({
+      where: programOpportunityScope,
+    }),
+    // 4. Rating count + full-precision mean (shared Analytics semantics)
+    prisma.quantitativeResponseItem.aggregate({
+      _sum: { rating_value: true },
+      _count: { rating_value: true },
+      where: {
+        response: {
           status: ResponseStatus.SUBMITTED,
           ...programResponseScope,
         },
-      }),
-      prisma.evaluationAssignment.count({
-        where: {
-          OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }],
-          central_deployment: {
-            program_id: programId,
+      },
+    }),
+    // 5. Operational pending responses (current-state, not the historical denominator)
+    prisma.evaluationAssignment.count({
+      where: {
+        OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }],
+        central_deployment: {
+          program_id: programId,
+          status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+          OR: [{ activation_at: null }, { activation_at: { lte: new Date() } }],
+          AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: new Date() } }] }],
+        },
+      },
+    }),
+    countEligibleCourseBoundEvaluationAssignments({
+      AND: [
+        { OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }] },
+        {
+          course_bound: {
+            course_assignment: { program_id: programId },
             status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
             OR: [{ activation_at: null }, { activation_at: { lte: new Date() } }],
             AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: new Date() } }] }],
           },
         },
-      }),
-      countEligibleCourseBoundEvaluationAssignments({
-        AND: [
-          { OR: [{ response: null }, { response: { status: ResponseStatus.IN_PROGRESS } }] },
-          {
-            course_bound: {
-              course_assignment: { program_id: programId },
-              status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
-              OR: [{ activation_at: null }, { activation_at: { lte: new Date() } }],
-              AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: new Date() } }] }],
-            },
-          },
-        ],
-      }),
-    ]);
+      ],
+    }),
+  ]);
 
-  // 3. Overall quantitative mean
-  const overallMeanResult = await prisma.quantitativeResponseItem.aggregate({
-    _avg: { rating_value: true },
-    where: {
-      response: {
-        status: ResponseStatus.SUBMITTED,
-        ...programResponseScope,
-      },
-    },
-  });
-  const averageRating = overallMeanResult._avg?.rating_value;
-  const overallMean =
-    averageRating === null || averageRating === undefined
-      ? null
-      : roundToTwo(averageRating);
+  const activeDeployments = centralDeploymentCount + courseBoundEvalCount;
 
-  // ── Pie Chart: Mean per stakeholder type ─────────────────────────────────
+  const kpi: ProgramHeadDashboardKPI = {
+    ...buildProgramHeadOverviewKpi({
+      submittedResponseCount,
+      evaluationOpportunityCount,
+      ratingCount: ratingAggregate._count.rating_value,
+      ratingSum: ratingAggregate._sum.rating_value ?? 0,
+    }),
+    activeDeployments,
+    pendingResponses: centralPendingAssignments + courseBoundPendingAssignments,
+  };
+
+  // ── Comparison: Mean Rating per stakeholder type ─────────────────────────
 
   // Only central deployments have target_stakeholder
   const stakeholderGroups = await prisma.centralDeployment.findMany({
@@ -232,7 +266,7 @@ async function getProgramHeadDashboardForScope(
       stakeholderMeans.push({
         stakeholder,
         label: STAKEHOLDER_LABELS[stakeholder] ?? stakeholder,
-        mean: roundToTwo(data.totalRating / data.ratingCount),
+        mean: data.totalRating / data.ratingCount,
         responseCount: data.responseCount,
       });
     }
@@ -259,12 +293,7 @@ async function getProgramHeadDashboardForScope(
   return {
     programLabel,
     programCode,
-    kpi: {
-      activeDeployments,
-      totalResponses,
-      overallMean,
-      pendingResponses: centralPendingAssignments + courseBoundPendingAssignments,
-    },
+    kpi,
     stakeholderMeans,
     qualitativeItemCount: texts.length,
     wordCloudTokens,

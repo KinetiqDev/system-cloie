@@ -2,11 +2,11 @@ import type { AcademicSemester } from "@prisma/client";
 import { ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
+import { buildProgramHeadOverviewKpi } from "./program-head-analytics-aggregators";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
 import type {
   ProgramHeadAnalyticsScopeSummary,
   ProgramHeadOverviewDTO,
-  ProgramHeadOverviewKPI,
   OverviewEmptyReason,
 } from "../program-head-analytics-types";
 
@@ -247,14 +247,12 @@ export async function getProgramHeadAnalytics(
   const ratingCount = ratingAggregate._count.rating_value;
   const ratingSum = ratingAggregate._sum.rating_value ?? 0;
 
-  const kpi: ProgramHeadOverviewKPI = {
+  const kpi = buildProgramHeadOverviewKpi({
     submittedResponseCount,
     evaluationOpportunityCount,
-    responseRate:
-      evaluationOpportunityCount === 0 ? null : submittedResponseCount / evaluationOpportunityCount,
     ratingCount,
-    meanRating: ratingCount === 0 ? null : ratingSum / ratingCount,
-  };
+    ratingSum,
+  });
 
   const hasMatchingTerm =
     termInstanceWhere.term_instance_id !== "00000000-0000-0000-0000-000000000000";
