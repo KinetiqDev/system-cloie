@@ -1,7 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { ProgramHeadAnalyticsShell } from "@/features/analytics/components/program-head-analytics-shell";
 import { ProgramHeadOverviewKPIs } from "@/features/analytics/components/program-head-overview-kpis";
-import { getProgramHeadAnalytics } from "@/features/analytics/services/get-program-head-analytics";
+import { ProgramHeadTrendsView } from "@/features/analytics/components/program-head-trends-view";
+import {
+  getProgramHeadAnalytics,
+  getProgramHeadTrends,
+} from "@/features/analytics/services/get-program-head-analytics";
 import {
   buildAnalyticsQueryString,
   buildAnalyticsUrl,
@@ -30,6 +34,27 @@ export default async function SelectedProgramAnalyticsPage({
   if (rawQuery !== canonicalQuery) {
     const basePath = buildProgramHeadProgramPath(programId, "analytics");
     redirect(canonicalQuery ? `${basePath}?${canonicalQuery}` : basePath);
+  }
+
+  if (filters.tab === "trends") {
+    const trends = await getProgramHeadTrends(programId, filters);
+    if (!trends) {
+      notFound();
+    }
+
+    return (
+      <ProgramHeadAnalyticsShell
+        programId={programId}
+        filters={filters}
+        scope={trends.scope}
+        periodOptions={trends.periodOptions}
+      >
+        <ProgramHeadTrendsView
+          data={trends}
+          resetHref={buildAnalyticsUrl(programId, { tab: "trends" })}
+        />
+      </ProgramHeadAnalyticsShell>
+    );
   }
 
   const data = await getProgramHeadAnalytics(programId, filters);

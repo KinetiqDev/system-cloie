@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-const { notFoundMock, redirectMock, analyticsMock, resolveProgramHeadContextMock } = vi.hoisted(
-  () => ({
+const { notFoundMock, redirectMock, analyticsMock, trendsMock, resolveProgramHeadContextMock } =
+  vi.hoisted(() => ({
     notFoundMock: vi.fn(() => {
       throw new Error("NOT_FOUND");
     }),
@@ -10,13 +10,14 @@ const { notFoundMock, redirectMock, analyticsMock, resolveProgramHeadContextMock
       throw new Error(`REDIRECT:${url}`);
     }),
     analyticsMock: vi.fn(),
+    trendsMock: vi.fn(),
     resolveProgramHeadContextMock: vi.fn(),
-  })
-);
+  }));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
 vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
   getProgramHeadAnalytics: analyticsMock,
+  getProgramHeadTrends: trendsMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
@@ -69,6 +70,7 @@ describe("selected Program insights routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     analyticsMock.mockResolvedValue(bsedOverview);
+    trendsMock.mockResolvedValue(null);
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
   });
 
@@ -163,6 +165,112 @@ describe("selected Program insights routes", () => {
       tab: "outcomes",
       termInstanceId: termId,
     });
+  });
+
+  it("renders the Trends view with comparable periods and exact values", async () => {
+    trendsMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periods: [
+        {
+          termInstanceId: "term-1",
+          periodLabel: "2024-2025 · 1st Semester · 1st Term",
+          meanRating: 4.4,
+          submittedResponseCount: 12,
+          ratingCount: 36,
+          instrumentContext: "CILO Evaluation v1",
+          scaleContext: "1–5 (5-point)",
+          outcomeCodes: ["GO-1"],
+          comparableWithPrevious: false,
+        },
+        {
+          termInstanceId: "term-2",
+          periodLabel: "2025-2026 · 1st Semester · 1st Term",
+          meanRating: 4.2,
+          submittedResponseCount: 14,
+          ratingCount: 42,
+          instrumentContext: "CILO Evaluation v2",
+          scaleContext: "1–5 (5-point)",
+          outcomeCodes: ["GO-1"],
+          comparableWithPrevious: false,
+        },
+      ],
+      breaks: [
+        {
+          fromPeriodLabel: "2024-2025 · 1st Semester · 1st Term",
+          toPeriodLabel: "2025-2026 · 1st Semester · 1st Term",
+          reason: "The instrument version changed between these periods.",
+        },
+      ],
+      emptyReason: "no-comparable-history",
+      periodOptions: {
+        schoolYears: [{ id: "school-year-1", label: "2025-2026" }],
+        semesters: [{ value: "FIRST", label: "1st Semester" }],
+        termInstances: [],
+      },
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "trends" }),
+    });
+
+    render(page);
+
+    expect(trendsMock).toHaveBeenCalledWith("program-bsed", { tab: "trends" });
+    expect(analyticsMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
+    expect(screen.getByText("No comparable history")).toBeInTheDocument();
+    expect(screen.getByText("2024-2025 · 1st Semester · 1st Term")).toBeInTheDocument();
+    expect(screen.getByText("4.40")).toBeInTheDocument();
+    expect(screen.getByText("CILO Evaluation v1")).toBeInTheDocument();
+    expect(screen.getByText(/Not directly comparable with the previous period/)).toBeInTheDocument();
+  });
+
+  it("renders no Trends data when the trends read denies the selected Program", async () => {
+    trendsMock.mockResolvedValue(null);
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-3" }),
+        searchParams: Promise.resolve({ tab: "trends" }),
+      })
+    ).rejects.toThrow("NOT_FOUND");
+    expect(trendsMock).toHaveBeenCalledWith("program-3", { tab: "trends" });
+  });
+
+  it("renders the no-submitted-evidence Trends empty state", async () => {
+    trendsMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periods: [],
+      breaks: [],
+      emptyReason: "no-evidence",
+      periodOptions: {
+        schoolYears: [],
+        semesters: [],
+        termInstances: [],
+      },
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "trends" }),
+    });
+
+    render(page);
+
+    expect(screen.getByText("No submitted evidence")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "View all periods" })
+    ).toHaveAttribute("href", "/program-head/programs/program-bsed/analytics?tab=trends");
   });
 
   it("renders the no-assignments empty state", async () => {
