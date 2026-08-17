@@ -102,7 +102,7 @@ function TrendsExactValueTable({
     <div className="flex flex-col gap-3">
       <h3 className="text-title-sm text-foreground">Exact values by period</h3>
       <div className="border-border overflow-x-auto rounded-lg border">
-        <Table>
+        <Table aria-label="Exact values by academic period">
           <TableHeader>
             <TableRow>
               <TableHead>Period</TableHead>

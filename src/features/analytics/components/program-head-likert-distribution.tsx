@@ -1,4 +1,5 @@
 import type { ProgramHeadOutcomeScaleDistributionDTO } from "@/features/analytics/program-head-analytics-types";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -20,11 +21,25 @@ export function ProgramHeadLikertDistribution({
 }) {
   const total = distribution.categories.reduce((sum, category) => sum + category.count, 0);
 
+  if (total === 0) {
+    return (
+      <div className="flex flex-col gap-2">
+        <h4 className="text-label-md text-foreground">Scale: {distribution.scaleLabel}</h4>
+        <Empty className="py-4">
+          <EmptyTitle>No ratings on this scale</EmptyTitle>
+          <EmptyDescription>
+            No valid ratings were aggregated for this scale in the selected scope.
+          </EmptyDescription>
+        </Empty>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <h4 className="text-label-md text-foreground">Scale: {distribution.scaleLabel}</h4>
       <div className="border-border overflow-x-auto rounded-lg border">
-        <Table>
+        <Table aria-label="Likert distribution by category">
           <TableHeader>
             <TableRow>
               <TableHead>Category</TableHead>

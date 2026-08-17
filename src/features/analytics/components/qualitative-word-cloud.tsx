@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { WordCloud } from "@isoterik/react-word-cloud";
 import type { WordCloudConfig } from "@isoterik/react-word-cloud";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,12 +38,26 @@ function buildDimensions(containerWidth: number): Pick<WordCloudConfig, "height"
   return { height, width };
 }
 
+/** Client-side `prefers-reduced-motion` resolution, defaults to motion allowed. */
+function usePrefersReducedMotion(): boolean {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+      query.addEventListener("change", onStoreChange);
+      return () => query.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false // server snapshot: allow motion
+  );
+}
+
 export function QualitativeWordCloud({ title, tokens, responseCount }: QualitativeWordCloudProps) {
   const instanceId = useId().replace(/[:]/g, "");
   const chartId = `word-cloud-${instanceId}`;
   const titleId = `${chartId}-title`;
   const insightId = `${chartId}-insight`;
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [dimensions, setDimensions] = useState<Pick<WordCloudConfig, "height" | "width">>({
     height: 320,
     width: 360,
@@ -125,6 +139,7 @@ export function QualitativeWordCloud({ title, tokens, responseCount }: Qualitati
               fontSize={(word) => 16 + word.value * 4}
               rotate={() => 0}
               enableTooltip
+              transition={prefersReducedMotion ? "none" : "opacity 200ms ease"}
             />
           </div>
         </div>
@@ -136,7 +151,7 @@ export function QualitativeWordCloud({ title, tokens, responseCount }: Qualitati
             View exact values
           </summary>
           <div className="border-border mt-3 overflow-x-auto rounded-lg border">
-            <Table>
+            <Table aria-label="Exact word frequency values">
               <TableHeader>
                 <TableRow>
                   <TableHead>Word</TableHead>

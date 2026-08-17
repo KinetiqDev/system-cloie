@@ -225,6 +225,97 @@ describe("selected Program insights routes", () => {
     expect(analyticsMock).not.toHaveBeenCalled();
   });
 
+  it("redirects duplicate tab parameters to one canonical URL", async () => {
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-bsed" }),
+        searchParams: Promise.resolve({ tab: ["outcomes", "overview"] }),
+      })
+    ).rejects.toThrow(/REDIRECT/);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/program-head/programs/program-bsed/analytics?tab=outcomes"
+    );
+    expect(analyticsMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects whitespace-padded filter values to the trimmed canonical URL", async () => {
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-bsed" }),
+        searchParams: Promise.resolve({ tab: " trends " }),
+      })
+    ).rejects.toThrow(/REDIRECT/);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/program-head/programs/program-bsed/analytics?tab=trends"
+    );
+    expect(analyticsMock).not.toHaveBeenCalled();
+  });
+
+  it("shows the active-filter count on the mobile filter trigger", async () => {
+    const schoolYearId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ schoolYearId }),
+    });
+
+    render(page);
+
+    expect(screen.getByText("1 active")).toBeInTheDocument();
+  });
+
+  it("preserves valid canonical filters across every tab link", async () => {
+    const schoolYearId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    outcomesMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periodOptions: {
+        schoolYears: [{ id: "school-year-1", label: "2025-2026" }],
+        semesters: [{ value: "FIRST", label: "1st Semester" }],
+        termInstances: [],
+      },
+      emptyReason: null,
+      currentMappingDisclosure: "current mappings",
+      manyToManyDisclosure: false,
+      outcomes: [],
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "outcomes", schoolYearId, semester: "FIRST" }),
+    });
+
+    render(page);
+
+    const trendsLink = screen.getByRole("link", { name: "Trends" });
+    expect(trendsLink).toHaveAttribute(
+      "href",
+      `/program-head/programs/program-bsed/analytics?tab=trends&schoolYearId=${schoolYearId}&semester=FIRST`
+    );
+    // The active tab keeps its filters and is marked current.
+    const outcomesLink = screen.getByRole("link", { name: "Outcomes" });
+    expect(outcomesLink).toHaveAttribute(
+      "href",
+      `/program-head/programs/program-bsed/analytics?tab=outcomes&schoolYearId=${schoolYearId}&semester=FIRST`
+    );
+    expect(outcomesLink).toHaveAttribute("aria-current", "page");
+    // Default overview tab omits `tab=overview` but keeps the scope filters.
+    const overviewLink = screen.getByRole("link", { name: "Overview" });
+    expect(overviewLink).toHaveAttribute(
+      "href",
+      `/program-head/programs/program-bsed/analytics?schoolYearId=${schoolYearId}&semester=FIRST`
+    );
+  });
+
   it("renders the Trends view with comparable periods and exact values", async () => {
     trendsMock.mockResolvedValue({
       scope: {

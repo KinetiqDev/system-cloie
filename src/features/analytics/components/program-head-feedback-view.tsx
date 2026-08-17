@@ -171,7 +171,7 @@ function FeedbackCountTable({
         <p className="text-body-sm text-text-secondary">{caption}</p>
       </div>
       <div className="border-border overflow-x-auto rounded-lg border">
-        <Table>
+        <Table aria-label={`Exact values: ${title}`}>
           <TableHeader>
             <TableRow>
               <TableHead>Label</TableHead>
