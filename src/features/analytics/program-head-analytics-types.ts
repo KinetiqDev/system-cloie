@@ -44,3 +44,51 @@ export type ProgramHeadOverviewDTO = {
   emptyReason: OverviewEmptyReason;
   periodOptions: ProgramHeadAnalyticsPeriodOptions;
 };
+
+// ---------------------------------------------------------------------------
+// Trends
+// ---------------------------------------------------------------------------
+
+/**
+ * One comparable period in the Trends view. `comparableWithPrevious` is true
+ * only when the previous chronological period is also rated and shares the
+ * same instrument version, Likert scale identity, and mapped outcome identity.
+ */
+export type ProgramHeadTrendPeriodDTO = {
+  termInstanceId: string;
+  periodLabel: string;
+  /** Full precision mean; null when the period has no valid ratings */
+  meanRating: number | null;
+  submittedResponseCount: number;
+  ratingCount: number;
+  /** Readable instrument/version context, e.g. "CILO Evaluation v2"; null without ratings */
+  instrumentContext: string | null;
+  /** Readable scale context, e.g. "1–5 (5-point)"; null without ratings */
+  scaleContext: string | null;
+  /** Graduate Outcome codes covered by the period's mapped evidence */
+  outcomeCodes: string[];
+  comparableWithPrevious: boolean;
+};
+
+/** Explanatory copy for a comparability break between two periods. */
+export type ProgramHeadTrendBreakDTO = {
+  fromPeriodLabel: string;
+  toPeriodLabel: string;
+  reason: string;
+};
+
+/**
+ * Reasons the Trends view may show an empty state. `no-comparable-history`
+ * still exposes the evidence table; the chart is omitted so a single point is
+ * never implied to be a flat trend.
+ */
+export type ProgramHeadTrendsEmptyReason = "no-evidence" | "no-comparable-history" | null;
+
+/** Closed, serializable Trends projection. */
+export type ProgramHeadTrendsDTO = {
+  scope: ProgramHeadAnalyticsScopeSummary;
+  periods: ProgramHeadTrendPeriodDTO[];
+  breaks: ProgramHeadTrendBreakDTO[];
+  emptyReason: ProgramHeadTrendsEmptyReason;
+  periodOptions: ProgramHeadAnalyticsPeriodOptions;
+};

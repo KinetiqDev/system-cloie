@@ -2111,6 +2111,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "New server-rendered URL filter controls using semantic tokens",
   },
   {
+    path: "src/features/analytics/components/program-head-trend-chart.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New client trend chart using semantic tokens, legends, comparability breaks, and reduced-motion-safe behavior",
+  },
+  {
+    path: "src/features/analytics/components/program-head-trends-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "New server component composing trends empty states, chart, and exact-value table",
+  },
+  {
     path: "src/features/auth/components/authenticated-app-shell.tsx",
     disposition: "task",
     taskId: 18,

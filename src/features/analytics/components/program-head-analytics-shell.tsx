@@ -28,7 +28,7 @@ export function ProgramHeadAnalyticsShell({
   periodOptions,
   children,
 }: ProgramHeadAnalyticsShellProps) {
-  const isOverview = filters.tab === "overview";
+  const hasLiveView = filters.tab === "overview" || filters.tab === "trends";
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,7 +71,7 @@ export function ProgramHeadAnalyticsShell({
           })}
         </nav>
 
-        {isOverview ? children : <UpcomingTabNotice tab={filters.tab} />}
+        {hasLiveView ? children : <UpcomingTabNotice tab={filters.tab} />}
       </div>
     </div>
   );
