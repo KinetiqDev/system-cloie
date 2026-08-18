@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Building2, Users } from "lucide-react";
-import { PortalChoiceCard } from "@/features/portals";
+import { PortalChoiceCard, InstallAppButton } from "@/features/portals";
 
 export default function Home() {
   return (
@@ -21,6 +21,9 @@ export default function Home() {
               <p className="text-title-md font-bold text-link">System CLOIE</p>
               <p className="text-caption text-muted-foreground">Assumption College of Davao</p>
             </div>
+          </div>
+          <div>
+            <InstallAppButton />
           </div>
         </div>
       </header>
