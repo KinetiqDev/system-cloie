@@ -444,6 +444,7 @@ function AlignmentDialogs({
                   );
                 })
               ) : (
+                // fallow-ignore-next-line complexity
                 (() => {
                   const linesByCilo = new Map<string, string[]>();
                   for (const addition of review.additions) {
