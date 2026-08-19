@@ -48,11 +48,11 @@ const outcomes: ProgramHeadOutcomesDTO = {
   scope: SCOPE,
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
-  currentMappingDisclosure: "Current CILO-to-GO mappings group historical ratings.",
+  currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
   manyToManyDisclosure: true,
   outcomes: [
     {
-      goId: "go-1",
+      ploId: "go-1",
       code: "GO-1",
       name: "Effective communicator",
       meanRating: 11 / 3,

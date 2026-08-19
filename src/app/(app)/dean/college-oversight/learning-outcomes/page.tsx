@@ -73,8 +73,8 @@ export default async function DeanLearningOutcomesPage({
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Learning Outcomes</h1>
         <p className="text-body-md text-text-secondary max-w-2xl">
-          Read-only college oversight of Institutional Outcomes, Graduate Outcomes, and typed
-          Course Intended Learning Outcome mapping gaps.
+          Read-only college oversight of Institutional Outcomes, Program Learning Outcomes, and
+          typed Course Intended Learning Outcome mapping gaps.
         </p>
       </div>
       <PeriodControls periods={periods} selectedPeriodId={selectedPeriodId} risk={risk} />
@@ -217,7 +217,7 @@ function ProgramDetail({
   const institutionalGaps = program.mappingGaps.filter(
     (gap) => gap.targetType === "INSTITUTIONAL_OUTCOME"
   );
-  const graduateGaps = program.mappingGaps.filter((gap) => gap.targetType !== "INSTITUTIONAL_OUTCOME");
+  const ploGaps = program.mappingGaps.filter((gap) => gap.targetType !== "INSTITUTIONAL_OUTCOME");
   const notReady = program.missingCiloContexts + program.incompleteMappingContexts;
   const coverage =
     program.activeContexts === 0
@@ -229,8 +229,8 @@ function ProgramDetail({
         <span className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-medium">{program.name}</span>
           <span className="text-text-secondary text-xs tabular-nums">
-            {program.graduateOutcomeCount} Graduate Outcomes · {institutionalGaps.length}{" "}
-            Institutional Outcome gaps · {graduateGaps.length} Graduate Outcome gaps
+            {program.ploCount} Program Learning Outcomes · {institutionalGaps.length}{" "}
+            Institutional Outcome gaps · {ploGaps.length} Program Learning Outcome gaps
           </span>
           <span className="text-text-secondary text-xs">
             {program.activeContexts} active · {program.readyContexts} ready ·{" "}
@@ -261,7 +261,7 @@ function ProgramDetail({
         <ProgramContent
           program={program}
           institutionalGaps={institutionalGaps}
-          graduateGaps={graduateGaps}
+          ploGaps={ploGaps}
         />
       </div>
     </details>
@@ -271,11 +271,11 @@ function ProgramDetail({
 function ProgramContent({
   program,
   institutionalGaps,
-  graduateGaps,
+  ploGaps,
 }: {
   program: DeanLearningOutcomesData["programs"][number];
   institutionalGaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
-  graduateGaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
+  ploGaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
 }) {
   return (
     <div className="mt-6 flex flex-col gap-6">
@@ -290,23 +290,23 @@ function ProgramContent({
         )}
       </div>
       <div>
-        <h3 className="text-sm font-semibold">Graduate Outcomes</h3>
-        {program.graduateOutcomes.length === 0 ? (
+        <h3 className="text-sm font-semibold">Program Learning Outcomes</h3>
+        {program.plos.length === 0 ? (
           <p className="text-text-secondary mt-2 text-sm">
-            No Graduate Outcomes recorded for this Program.
+            No Program Learning Outcomes recorded for this Program.
           </p>
         ) : (
-          <CatalogList className="mt-2" outcomes={program.graduateOutcomes} />
+          <CatalogList className="mt-2" outcomes={program.plos} />
         )}
       </div>
       <div>
-        <h3 className="text-sm font-semibold">Graduate Outcome mapping gaps</h3>
-        {graduateGaps.length === 0 ? (
+        <h3 className="text-sm font-semibold">Program Learning Outcome mapping gaps</h3>
+        {ploGaps.length === 0 ? (
           <p className="text-text-secondary mt-2 text-sm">
-            No Program-specific Graduate Outcome gaps.
+            No Program-specific Program Learning Outcome gaps.
           </p>
         ) : (
-          <GapList gaps={graduateGaps} />
+          <GapList gaps={ploGaps} />
         )}
       </div>
     </div>
@@ -367,7 +367,7 @@ function GapList({
               {gap.targetType === "INSTITUTIONAL_OUTCOME"
                 ? "Incomplete Institutional Outcome mapping:"
                 : gap.targetType === "GRADUATE_OUTCOME"
-                  ? "Incomplete Graduate Outcome mapping:"
+                  ? "Incomplete Program Learning Outcome mapping:"
                   : "Incomplete mapping:"}{" "}
               {gap.ciloStatement}
               {gap.ciloIsArchived ? (

@@ -51,7 +51,7 @@ function renderEditor({ prepareAction, commitAction }: EditorActions) {
 }
 
 function stageTarget() {
-  fireEvent.click(screen.getByRole("button", { name: "Choose Graduate Outcomes" }));
+  fireEvent.click(screen.getByRole("button", { name: "Choose Program Learning Outcomes" }));
   fireEvent.click(screen.getByRole("checkbox", { name: /GO-1: Think critically/i }));
 }
 
@@ -61,14 +61,14 @@ describe("CourseAlignmentEditor", () => {
     const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 1 });
     renderEditor({ prepareAction, commitAction });
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose Graduate Outcomes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Choose Program Learning Outcomes" }));
     expect(screen.getByText("GO-1")).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("textbox", { name: "Search Graduate Outcomes" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Search Program Learning Outcomes" }), {
       target: { value: "think" },
     });
     expect(screen.getByText("GO-1")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox", { name: /GO-1: Think critically/i }));
-    expect(screen.getByText("1 Graduate Outcome mapped")).toBeInTheDocument();
+    expect(screen.getByText("1 Program Learning Outcome mapped")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
     await waitFor(() =>
@@ -179,7 +179,7 @@ describe("CourseAlignmentEditor", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Remove unavailable GO-1 mapping" }));
-    expect(screen.getByText("0 Graduate Outcomes mapped")).toBeInTheDocument();
+    expect(screen.getByText("0 Program Learning Outcomes mapped")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Review 1 change/i })).toBeEnabled();
   });
 
@@ -263,7 +263,7 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByText(/apply to every active assignment using this shared Course/i))
       .toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Choose Institutional Outcomes" })).toBeEnabled();
-    expect(screen.queryByRole("button", { name: "Choose Graduate Outcomes" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Choose Program Learning Outcomes" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Choose Institutional Outcomes" }));
     fireEvent.click(screen.getByRole("checkbox", { name: /ILO-1: Think critically/i }));

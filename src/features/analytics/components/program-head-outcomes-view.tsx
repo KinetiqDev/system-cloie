@@ -21,15 +21,15 @@ import {
 import { cn } from "@/lib/utils";
 import { buildProgramHeadCiloReviewDetailPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
-import { ProgramHeadGoDetail } from "./program-head-go-detail";
+import { ProgramHeadPLODetail } from "./program-head-plo-detail";
 import { ProgramHeadOutcomeRankingChart } from "./program-head-outcome-ranking-chart";
 
 /**
  * Many-to-many contribution rule: a rating bound to a CILO mapped to several
- * selected-Program Graduate Outcomes counts once in each mapped outcome row.
+ * selected-Program Program Learning Outcomes counts once in each mapped outcome row.
  */
 const MANY_TO_MANY_DISCLOSURE =
-  "A rating bound to a CILO mapped to more than one Graduate Outcome contributes to each mapped outcome row.";
+  "A rating bound to a CILO mapped to more than one Program Learning Outcome contributes to each mapped outcome row.";
 
 type ProgramHeadOutcomesViewProps = {
   programId: string;
@@ -57,7 +57,7 @@ export function ProgramHeadOutcomesView({
             <EmptyTitle>No evaluation assignments</EmptyTitle>
             <EmptyDescription>
               This Program has no course-bound evaluation assignments in the selected scope, so
-              there is no course-bound evidence to map to Graduate Outcomes.
+              there is no course-bound evidence to map to Program Learning Outcomes.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
@@ -97,8 +97,8 @@ export function ProgramHeadOutcomesView({
             <EmptyTitle>No mapped outcome evidence</EmptyTitle>
             <EmptyDescription>
               Submitted course-bound ratings exist in this scope, but none are bound to a CILO with
-              a canonical mapping to a Graduate Outcome of this Program. Central instrument
-              questions and Institutional Outcome evidence are never assigned to a Graduate Outcome
+              a canonical mapping to a Program Learning Outcome of this Program. Central instrument
+              questions and Institutional Outcome evidence are never assigned to a Program Learning Outcome
               by wording or item key.
             </EmptyDescription>
           </EmptyHeader>
@@ -114,19 +114,19 @@ export function ProgramHeadOutcomesView({
         <>
           <div className="flex flex-col gap-3">
             <Alert variant="information">
-              <AlertTitle>Current CILO-to-GO mappings</AlertTitle>
+              <AlertTitle>Current CILO-to-PLO mappings</AlertTitle>
               <AlertDescription>{currentMappingDisclosure}</AlertDescription>
             </Alert>
             {manyToManyDisclosure && (
               <Alert variant="information">
-                <AlertTitle>Multiple Graduate Outcome mapping</AlertTitle>
+                <AlertTitle>Multiple Program Learning Outcome mapping</AlertTitle>
                 <AlertDescription>{MANY_TO_MANY_DISCLOSURE}</AlertDescription>
               </Alert>
             )}
           </div>
 
           <ProgramHeadOutcomeRankingChart
-            title="Mean Rating by Graduate Outcome"
+            title="Mean Rating by Program Learning Outcome"
             outcomes={outcomes}
           />
 
@@ -146,12 +146,12 @@ function OutcomesExactValueTable({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-title-sm text-foreground">Exact values by Graduate Outcome</h3>
+      <h3 className="text-title-sm text-foreground">Exact values by Program Learning Outcome</h3>
       <div className="border-border overflow-x-auto rounded-lg border">
         <Table aria-label="Exact values by graduate outcome">
           <TableHeader>
             <TableRow>
-              <TableHead>Graduate Outcome</TableHead>
+              <TableHead>Program Learning Outcome</TableHead>
               <TableHead className="text-right">Mean Rating</TableHead>
               <TableHead className="text-right">Rating Count</TableHead>
               <TableHead className="text-right">Submitted Responses</TableHead>
@@ -162,9 +162,9 @@ function OutcomesExactValueTable({
           </TableHeader>
           <TableBody>
             {outcomes.flatMap((outcome) => {
-              const detailId = `go-detail-${outcome.goId}`;
+              const detailId = `plo-detail-${outcome.ploId}`;
               const rows = [
-                <TableRow key={outcome.goId}>
+                <TableRow key={outcome.ploId}>
                   <TableCell className="align-top">
                     <div className="flex flex-col">
                       <span className="font-semibold">{outcome.code}</span>
@@ -220,7 +220,7 @@ function OutcomesExactValueTable({
                     )}
                   </TableCell>
                 </TableRow>,
-                <TableRow key={`${outcome.goId}-detail`}>
+                <TableRow key={`${outcome.ploId}-detail`}>
                   <TableCell colSpan={7}>
                     <details>
                       <summary
@@ -230,7 +230,7 @@ function OutcomesExactValueTable({
                         Details for {outcome.code}
                       </summary>
                       <div className="pt-3">
-                        <ProgramHeadGoDetail outcome={outcome} />
+                        <ProgramHeadPLODetail outcome={outcome} />
                       </div>
                     </details>
                   </TableCell>

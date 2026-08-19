@@ -12,7 +12,7 @@ const { notFoundMock, listGOsMock, listMappingsMock } = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@/features/outcomes/services/manage-program-head-outcomes", () => ({
-  listProgramGOs: listGOsMock,
+  listProgramPLOs: listGOsMock,
   listCILOMappingsForProgram: listMappingsMock,
 }));
 
@@ -122,7 +122,7 @@ describe("selected Program Outcome routes", () => {
     expect(html).toContain("ILO-1");
     expect(html).toContain("Aligned");
     expect(html).toContain("Needs mapping");
-    expect(html).toContain("Faculty or the Secretary can align this CILO to Graduate Outcomes.");
+    expect(html).toContain("Faculty or the Secretary can align this CILO to Program Learning Outcomes.");
     expect(html).not.toContain("<button");
   });
 });

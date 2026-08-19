@@ -11,7 +11,7 @@ import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
 export type ProgramDependencyCounts = {
-  academicSetup: { majors: number; courses: number; graduateOutcomes: number };
+  academicSetup: { majors: number; courses: number; plos: number };
   peopleAndHistory: { studentProfiles: number; enrollments: number; alumniProfiles: number };
   teaching: { courseAssignments: number; facultyAffiliations: number; programHeadAssignments: number };
   evaluation: { evaluationTargets: number; centralDeployments: number; instrumentTemplates: number };
@@ -38,10 +38,10 @@ async function countProgramDependencies(
   db: typeof prisma | Prisma.TransactionClient,
   programId: string
 ): Promise<ProgramDependencyCounts> {
-  const [majors, courses, graduateOutcomes, studentProfiles, enrollments, alumniProfiles, courseAssignments, facultyAffiliations, programHeadAssignments, evaluationTargets, centralDeployments, templatesByProgram, templatesByBoundProgram, stakeholderInvites, industryPartnerProfiles] = await Promise.all([
+  const [majors, courses, plos, studentProfiles, enrollments, alumniProfiles, courseAssignments, facultyAffiliations, programHeadAssignments, evaluationTargets, centralDeployments, templatesByProgram, templatesByBoundProgram, stakeholderInvites, industryPartnerProfiles] = await Promise.all([
     db.major.count({ where: { program_id: programId } }),
     db.course.count({ where: { program_id: programId } }),
-    db.gO.count({ where: { program_id: programId } }),
+    db.pLO.count({ where: { program_id: programId } }),
     db.studentAcademicProfile.count({ where: { program_id: programId } }),
     db.studentEnrollment.count({ where: { program_id: programId } }),
     db.alumniProfile.count({ where: { program_id: programId } }),
@@ -61,7 +61,7 @@ async function countProgramDependencies(
   });
 
   return {
-    academicSetup: { majors, courses, graduateOutcomes },
+    academicSetup: { majors, courses, plos },
     peopleAndHistory: { studentProfiles, enrollments, alumniProfiles },
     teaching: { courseAssignments, facultyAffiliations, programHeadAssignments },
     evaluation: {
@@ -148,7 +148,7 @@ async function listPrograms() {
       _count: {
         select: {
           courses: true,
-          gos: true,
+          plos: true,
           student_profiles: true,
           faculty_program_affiliations: true,
         },
@@ -168,7 +168,7 @@ export async function getProgram(id: string) {
       _count: {
         select: {
           courses: true,
-          gos: true,
+          plos: true,
           student_profiles: true,
           faculty_program_affiliations: true,
         },

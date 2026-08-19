@@ -2147,7 +2147,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "New client ranked outcome chart with data-derived axis domain, legend, insight, and exact-value table",
   },
   {
-    path: "src/features/analytics/components/program-head-go-detail.tsx",
+    path: "src/features/analytics/components/program-head-plo-detail.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes: "New server component exposing full-precision mean, scale-separated distributions, and excluded-rating diagnostics",
@@ -2532,7 +2532,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/outcomes/components/go-form-dialog.tsx",
+    path: "src/features/outcomes/components/plo-form-dialog.tsx",
     disposition: "task",
     taskId: 17,
     category: "feature_component",

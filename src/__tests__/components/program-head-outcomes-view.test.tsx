@@ -15,11 +15,11 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
     periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
     emptyReason: null,
     currentMappingDisclosure:
-      "Outcome rows group historical ratings using the Program's current CILO-to-GO mappings. Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.",
+      "Outcome rows group historical ratings using the Program's current CILO-to-PLO mappings. Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.",
     manyToManyDisclosure: false,
     outcomes: [
       {
-        goId: "go-a",
+        ploId: "go-a",
         code: "GO-1",
         name: "Effective communicator",
         meanRating: 13 / 3, // 4.3333... full precision
@@ -62,7 +62,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         excludedRatingCount: 0,
       },
       {
-        goId: "go-b",
+        ploId: "go-b",
         code: "GO-2",
         name: "Critical thinker",
         meanRating: 2,
@@ -113,18 +113,18 @@ describe("ProgramHeadOutcomesView", () => {
   it("discloses current-mapping interpretation whenever outcome rows exist", () => {
     renderView(outcomeDTO());
 
-    expect(screen.getByText("Current CILO-to-GO mappings")).toBeInTheDocument();
+    expect(screen.getByText("Current CILO-to-PLO mappings")).toBeInTheDocument();
     expect(screen.getByText(/Publication-time mapping snapshots are not yet available/)).toBeInTheDocument();
   });
 
   it("discloses the many-to-many contribution rule only when it applies", () => {
     const { unmount } = renderView(outcomeDTO({ manyToManyDisclosure: true }));
-    expect(screen.getByText("Multiple Graduate Outcome mapping")).toBeInTheDocument();
+    expect(screen.getByText("Multiple Program Learning Outcome mapping")).toBeInTheDocument();
     expect(screen.getByText(/contributes to each mapped outcome row/)).toBeInTheDocument();
     unmount();
 
     renderView(outcomeDTO({ manyToManyDisclosure: false }));
-    expect(screen.queryByText("Multiple Graduate Outcome mapping")).not.toBeInTheDocument();
+    expect(screen.queryByText("Multiple Program Learning Outcome mapping")).not.toBeInTheDocument();
   });
 
   it("exposes code, name, mean, rating count, response count, CILOs, and courses per row", () => {
@@ -158,7 +158,7 @@ describe("ProgramHeadOutcomesView", () => {
   it("shows the ranking chart insight and exact-value alternative", () => {
     renderView(outcomeDTO());
 
-    expect(screen.getByText("Mean Rating by Graduate Outcome")).toBeInTheDocument();
+    expect(screen.getByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
     expect(screen.getByText(/Highest mean: GO-1 \(4.33\)/)).toBeInTheDocument();
     expect(screen.getByText("View exact values")).toBeInTheDocument();
   });

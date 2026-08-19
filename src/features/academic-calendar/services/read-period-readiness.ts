@@ -55,14 +55,14 @@ export type ReadinessContext = {
     isArchived: boolean;
     /** Targets of the context's typed layer, with archived state at read time. */
     mappedTargets: ReadinessTarget[];
-    missingGraduateOutcomeIds: string[];
+    missingPloIds: string[];
     missingInstitutionalOutcomeIds: string[];
   }>;
   /** College-wide catalog for General Education contexts; empty otherwise. */
   institutionalOutcomes: ReadinessCatalogTarget[];
-  graduateOutcomes: ReadinessCatalogTarget[];
+  plos: ReadinessCatalogTarget[];
   affectedCiloIds: string[];
-  affectedGraduateOutcomeIds: string[];
+  affectedPloIds: string[];
   affectedInstitutionalOutcomeIds: string[];
 };
 
@@ -83,7 +83,7 @@ export type PeriodReadiness = {
 };
 
 type ReadinessCilo = {
-  cilo_mappings: Array<{ go: { program_id: string | null; is_active: boolean } }>;
+  cilo_mappings: Array<{ plo: { program_id: string | null; is_active: boolean } }>;
   cilo_institutional_outcome_mappings: Array<{
     institutional_outcome: { id: string; is_active: boolean };
   }>;
@@ -105,7 +105,7 @@ type ContextSource = {
       id: string;
       description: string;
       is_active: boolean;
-      cilo_mappings: Array<{ go: { id: string; program_id: string | null; is_active: boolean } }>;
+      cilo_mappings: Array<{ plo: { id: string; program_id: string | null; is_active: boolean } }>;
       cilo_institutional_outcome_mappings: Array<{
         institutional_outcome: { id: string; is_active: boolean };
       }>;
@@ -115,7 +115,7 @@ type ContextSource = {
     id: string;
     name: string;
     is_active: boolean;
-    gos: Array<{
+    plos: Array<{
       id: string;
       code: string;
       description: string;
@@ -148,7 +148,7 @@ const contextInclude = {
           description: true,
           is_active: true,
           cilo_mappings: {
-            select: { go: { select: { id: true, program_id: true, is_active: true } } },
+            select: { plo: { select: { id: true, program_id: true, is_active: true } } },
           },
           cilo_institutional_outcome_mappings: {
             select: { institutional_outcome: { select: { id: true, is_active: true } } },
@@ -162,7 +162,7 @@ const contextInclude = {
       id: true,
       name: true,
       is_active: true,
-      gos: {
+      plos: {
         orderBy: { order: "asc" },
         select: { id: true, code: true, description: true, is_active: true, order: true },
       },
@@ -182,8 +182,8 @@ function typedMappedTargets(
           is_active: institutional_outcome.is_active,
         }))
       : cilo.cilo_mappings
-          .filter(({ go }) => go.program_id === owningProgramId)
-          .map(({ go }) => ({ id: go.id, is_active: go.is_active }));
+          .filter(({ plo }) => plo.program_id === owningProgramId)
+          .map(({ plo }) => ({ id: plo.id, is_active: plo.is_active }));
   return mappings
     .map(({ id, is_active }) => ({ id, isArchived: !is_active }))
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -218,12 +218,12 @@ function buildContexts(
         const activeMappedIds = new Set(
           mappedTargets.filter((target) => !target.isArchived).map((target) => target.id)
         );
-        const missingGraduateOutcomeIds =
+        const missingPloIds =
           courseScope === "GENERAL_EDUCATION"
             ? []
-            : first.program.gos
-                .filter((go) => go.is_active && !activeMappedIds.has(go.id))
-                .map((go) => go.id);
+            : first.program.plos
+                .filter((plo) => plo.is_active && !activeMappedIds.has(plo.id))
+                .map((plo) => plo.id);
         const missingInstitutionalOutcomeIds =
           courseScope === "GENERAL_EDUCATION"
             ? institutionalOutcomes
@@ -235,7 +235,7 @@ function buildContexts(
           description: cilo.description,
           isArchived: !cilo.is_active,
           mappedTargets,
-          missingGraduateOutcomeIds,
+          missingPloIds,
           missingInstitutionalOutcomeIds,
         };
       });
@@ -246,8 +246,8 @@ function buildContexts(
           : activeCilos
               .filter((cilo) => !ciloHasValidActiveTarget(cilo, courseScope, owningProgramId))
               .map((cilo) => cilo.id);
-      const affectedGraduateOutcomeIds = [
-        ...new Set(cilos.flatMap((cilo) => cilo.missingGraduateOutcomeIds)),
+      const affectedPloIds = [
+        ...new Set(cilos.flatMap((cilo) => cilo.missingPloIds)),
       ];
       const affectedInstitutionalOutcomeIds = [
         ...new Set(cilos.flatMap((cilo) => cilo.missingInstitutionalOutcomeIds)),
@@ -282,17 +282,17 @@ function buildContexts(
                   order: ilo.order,
                 }))
             : [],
-        graduateOutcomes: [...first.program.gos]
+        plos: [...first.program.plos]
           .sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.order - b.order)
-          .map((go) => ({
-            id: go.id,
-            code: go.code,
-            description: go.description,
-            isArchived: !go.is_active,
-            order: go.order,
+          .map((plo) => ({
+            id: plo.id,
+            code: plo.code,
+            description: plo.description,
+            isArchived: !plo.is_active,
+            order: plo.order,
           })),
         affectedCiloIds,
-        affectedGraduateOutcomeIds,
+        affectedPloIds,
         affectedInstitutionalOutcomeIds,
       };
     })
@@ -383,7 +383,7 @@ async function calculateLiveTotals(periodId: string): Promise<ProgramReadinessTo
             where: { is_active: true },
             select: {
               cilo_mappings: {
-                select: { go: { select: { program_id: true, is_active: true } } },
+                select: { plo: { select: { program_id: true, is_active: true } } },
               },
               cilo_institutional_outcome_mappings: {
                 select: { institutional_outcome: { select: { id: true, is_active: true } } },

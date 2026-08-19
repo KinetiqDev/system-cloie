@@ -5,7 +5,7 @@ import type { ProgramHeadOutcomeDTO } from "@/features/analytics/program-head-an
 
 const ratedOutcomes: ProgramHeadOutcomeDTO[] = [
   {
-    goId: "go-1",
+    ploId: "go-1",
     code: "GO-3",
     name: "Critical Thinking",
     meanRating: 4.1,
@@ -19,7 +19,7 @@ const ratedOutcomes: ProgramHeadOutcomeDTO[] = [
     excludedRatingCount: 0,
   },
   {
-    goId: "go-2",
+    ploId: "go-2",
     code: "GO-1",
     name: "Communication",
     meanRating: 4.4,
@@ -36,10 +36,10 @@ const ratedOutcomes: ProgramHeadOutcomeDTO[] = [
 
 describe("ProgramHeadOutcomeRankingChart", () => {
   it("ranks outcomes by mean descending and reports highest and lowest", () => {
-    render(<ProgramHeadOutcomeRankingChart title="Mean Rating by Graduate Outcome" outcomes={ratedOutcomes} />);
+    render(<ProgramHeadOutcomeRankingChart title="Mean Rating by Program Learning Outcome" outcomes={ratedOutcomes} />);
 
     // Recharts renders bars in data order; the series is pre-sorted.
-    expect(screen.getByRole("region", { name: "Mean Rating by Graduate Outcome" })).toHaveAttribute(
+    expect(screen.getByRole("region", { name: "Mean Rating by Program Learning Outcome" })).toHaveAttribute(
       "aria-describedby"
     );
     expect(screen.getByText(/Highest mean: GO-1 \(4\.40\)/)).toBeInTheDocument();
@@ -47,7 +47,7 @@ describe("ProgramHeadOutcomeRankingChart", () => {
   });
 
   it("exposes exact values in a named table alternative", () => {
-    render(<ProgramHeadOutcomeRankingChart title="Mean Rating by Graduate Outcome" outcomes={ratedOutcomes} />);
+    render(<ProgramHeadOutcomeRankingChart title="Mean Rating by Program Learning Outcome" outcomes={ratedOutcomes} />);
 
     const table = screen.getByRole("table", { name: "Ranked mean ratings by graduate outcome" });
     expect(table).toBeInTheDocument();
@@ -63,7 +63,7 @@ describe("ProgramHeadOutcomeRankingChart", () => {
       ratingCount: 0,
     }));
     const { container } = render(
-      <ProgramHeadOutcomeRankingChart title="Mean Rating by Graduate Outcome" outcomes={unrated} />
+      <ProgramHeadOutcomeRankingChart title="Mean Rating by Program Learning Outcome" outcomes={unrated} />
     );
 
     expect(screen.getByText("No rated outcome evidence yet")).toBeInTheDocument();

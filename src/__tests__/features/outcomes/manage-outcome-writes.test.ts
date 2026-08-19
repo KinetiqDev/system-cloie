@@ -4,7 +4,7 @@ import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-te
 
 const mocks = vi.hoisted(() => ({
   session: vi.fn(),
-  go: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+  plo: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
   cilo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
   mapping: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
   institutionalOutcome: { findUnique: vi.fn() },
@@ -25,7 +25,7 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 }));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    gO: mocks.go,
+    pLO: mocks.plo,
     cILO: mocks.cilo,
     cILOMapping: mocks.mapping,
     institutionalOutcome: mocks.institutionalOutcome,
@@ -76,7 +76,7 @@ describe("manage-outcome-writes", () => {
     mocks.ph.findFirst.mockResolvedValue({ id: "assignment-1" });
     mocks.transaction.mockImplementation(async (callback) =>
       callback({
-        gO: mocks.go,
+        pLO: mocks.plo,
         cILO: mocks.cilo,
         cILOMapping: mocks.mapping,
         institutionalOutcome: mocks.institutionalOutcome,
@@ -85,7 +85,7 @@ describe("manage-outcome-writes", () => {
         programHeadAssignment: mocks.ph,
       })
     );
-    mocks.go.findUnique.mockResolvedValue({
+    mocks.plo.findUnique.mockResolvedValue({
       id: "go-1",
       code: "GO-1",
       description: "Old",
@@ -99,7 +99,7 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PLO",
       action: "update",
       programId: "program-1",
       id: "go-1",
@@ -141,7 +141,7 @@ describe("manage-outcome-writes", () => {
       await import("@/features/outcomes/services/manage-outcome-writes");
     expect(
       await prepareOutcomeWrite({
-        kind: "GO",
+        kind: "PLO",
         action: "update",
         programId: "program-1",
         id: "go-1",
@@ -149,21 +149,21 @@ describe("manage-outcome-writes", () => {
         description: "New",
       })
     ).toEqual({ success: false, error: "You do not have permission to modify this outcome." });
-    expect(mocks.go.findUnique).not.toHaveBeenCalled();
+    expect(mocks.plo.findUnique).not.toHaveBeenCalled();
   });
 
   it("rejects stale confirmation and preserves database write", async () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PLO",
       action: "update",
       programId: "program-1",
       id: "go-1",
       code: "GO-2",
       description: "New",
     });
-    mocks.go.findUnique.mockResolvedValue({
+    mocks.plo.findUnique.mockResolvedValue({
       id: "go-1",
       code: "GO-CHANGED",
       description: "Changed",
@@ -175,7 +175,7 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "Outcome changed after review. Prepare a new review.",
     });
-    expect(mocks.go.update).not.toHaveBeenCalled();
+    expect(mocks.plo.update).not.toHaveBeenCalled();
   });
 
   it("translates duplicate mapping race", async () => {
@@ -192,21 +192,21 @@ describe("manage-outcome-writes", () => {
       action: "create",
       programId: "program-1",
       ciloId: "cilo-1",
-      goId: "go-1",
+      ploId: "go-1",
     });
     expect(review.success).toBe(true);
     expect(await commitOutcomeWrite(review.success ? review.data : fail("review"), true)).toEqual({
       success: false,
-      error: "CILO-to-GO mapping already exists.",
+      error: "CILO-to-PLO mapping already exists.",
     });
   });
 
-  it("rejects General Education CILO-to-GO writes for every role after the cutover", async () => {
+  it("rejects General Education CILO-to-PLO writes for every role after the cutover", async () => {
     mocks.cilo.findUnique.mockResolvedValue({
       is_active: true,
       course: { course_scope: "GENERAL_EDUCATION", program_id: null },
     });
-    mocks.go.findUnique.mockResolvedValue({ id: "go-1", is_active: true, program_id: "program-1" });
+    mocks.plo.findUnique.mockResolvedValue({ id: "go-1", is_active: true, program_id: "program-1" });
     mocks.mapping.findUnique.mockResolvedValue(null);
 
     const { prepareOutcomeWrite } =
@@ -217,7 +217,7 @@ describe("manage-outcome-writes", () => {
         action: "create",
         programId: "program-1",
         ciloId: "cilo-ge",
-        goId: "go-1",
+        ploId: "go-1",
       })
     ).resolves.toEqual({
       success: false,
@@ -358,7 +358,7 @@ describe("manage-outcome-writes", () => {
       profileGate: COMPLETE_PROFILE_GATE,
     };
     mocks.session.mockResolvedValue(PROGRAM_HEAD);
-    mocks.go.findUnique.mockResolvedValue({ is_active: true, program_id: "program-1" });
+    mocks.plo.findUnique.mockResolvedValue({ is_active: true, program_id: "program-1" });
     mocks.mapping.findUnique.mockResolvedValue(null);
 
     const { prepareOutcomeWrite } =
@@ -369,7 +369,7 @@ describe("manage-outcome-writes", () => {
         action: "create",
         programId: "program-1",
         ciloId: "cilo-1",
-        goId: "go-1",
+        ploId: "go-1",
       })
     ).resolves.toEqual({
       success: false,
@@ -410,7 +410,7 @@ describe("manage-outcome-writes", () => {
       is_active: true,
       course: { is_active: true, course_scope: "PROGRAM_SPECIFIC", program_id: "program-1" },
     });
-    mocks.go.findUnique.mockResolvedValue({ id: "go-1", is_active: true, program_id: "program-1" });
+    mocks.plo.findUnique.mockResolvedValue({ id: "go-1", is_active: true, program_id: "program-1" });
     mocks.mapping.findUnique.mockResolvedValue(null);
     mocks.mapping.create.mockResolvedValue({ id: "mapping-1" });
     const { prepareOutcomeWrite, commitOutcomeWrite } =
@@ -420,7 +420,7 @@ describe("manage-outcome-writes", () => {
       action: "create",
       programId: "program-1",
       ciloId: "cilo-1",
-      goId: "go-1",
+      ploId: "go-1",
     });
     expect(review.success).toBe(true);
     expect(
@@ -432,7 +432,7 @@ describe("manage-outcome-writes", () => {
     expect(mocks.mapping.create).toHaveBeenCalledWith({
       data: {
         cilo_id: "cilo-1",
-        go_id: "go-1",
+        plo_id: "go-1",
         created_by: "secretary",
         updated_by: "secretary",
       },
@@ -443,7 +443,7 @@ describe("manage-outcome-writes", () => {
     mocks.mapping.findUnique.mockResolvedValue({
       id: "mapping-1",
       cilo_id: "cilo-1",
-      go_id: "go-1",
+      plo_id: "go-1",
     });
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
@@ -467,7 +467,7 @@ describe("manage-outcome-writes", () => {
       course_id: "course-1",
       course: { is_active: true, course_scope: "PROGRAM_SPECIFIC", program_id: "program-1" },
     });
-    mocks.go.findUnique.mockResolvedValue({ is_active: true, program_id: "program-1" });
+    mocks.plo.findUnique.mockResolvedValue({ is_active: true, program_id: "program-1" });
     mocks.mapping.findUnique.mockResolvedValue(null);
     mocks.assignment.findFirst.mockResolvedValue({ id: "assignment-1" });
     const { prepareOutcomeWrite } =
@@ -479,7 +479,7 @@ describe("manage-outcome-writes", () => {
         action: "create",
         programId: "program-1",
         ciloId: "cilo-1",
-        goId: "go-1",
+        ploId: "go-1",
       })
     ).resolves.toMatchObject({ success: true });
   });
@@ -502,7 +502,7 @@ describe("manage-outcome-writes", () => {
         action: "create",
         programId: "program-1",
         ciloId: "cilo-1",
-        goId: "go-1",
+        ploId: "go-1",
       })
     ).resolves.toEqual({
       success: false,
@@ -515,7 +515,7 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PLO",
       action: "update",
       programId: "program-1",
       id: "go-1",
@@ -529,7 +529,7 @@ describe("manage-outcome-writes", () => {
         {
           ...review.data,
           input: {
-            kind: "GO",
+            kind: "PLO",
             action: "update",
             programId: "program-1",
             id: "go-1",
@@ -547,14 +547,14 @@ describe("manage-outcome-writes", () => {
   });
 
   it("rejects partial GO reorder without changing an order", async () => {
-    mocks.go.findMany.mockResolvedValue([
+    mocks.plo.findMany.mockResolvedValue([
       { id: "go-1", order: 0 },
       { id: "go-2", order: 1 },
     ]);
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PLO",
       action: "reorder",
       programId: "program-1",
       orderedIds: ["go-1"],
@@ -563,9 +563,9 @@ describe("manage-outcome-writes", () => {
 
     expect(await commitOutcomeWrite(review.data, true)).toEqual({
       success: false,
-      error: "Graduate Outcomes must be a complete unique program order.",
+      error: "Program Learning Outcomes must be a complete unique program order.",
     });
-    expect(mocks.go.update).not.toHaveBeenCalled();
+    expect(mocks.plo.update).not.toHaveBeenCalled();
   });
 
   it("requires Faculty active assignment-period scope", async () => {
@@ -601,7 +601,7 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PLO",
       action: "update",
       programId: "program-1",
       id: "go-1",
@@ -614,7 +614,7 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
-    expect(mocks.go.update).not.toHaveBeenCalled();
+    expect(mocks.plo.update).not.toHaveBeenCalled();
   });
 
   it("rolls back a failed GO reorder", async () => {
@@ -622,12 +622,12 @@ describe("manage-outcome-writes", () => {
       { id: "go-1", order: 0 },
       { id: "go-2", order: 1 },
     ];
-    mocks.go.findMany.mockResolvedValue(persisted);
+    mocks.plo.findMany.mockResolvedValue(persisted);
     mocks.transaction.mockImplementation(async (callback) => {
       const staged = persisted.map((go) => ({ ...go }));
       let calls = 0;
       const tx = {
-        gO: {
+        pLO: {
           findMany: vi.fn().mockResolvedValue(staged),
           update: vi.fn(async ({ where, data }) => {
             calls += 1;
@@ -642,7 +642,7 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PLO",
       action: "reorder",
       programId: "program-1",
       orderedIds: ["go-2", "go-1"],

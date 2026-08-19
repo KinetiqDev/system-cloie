@@ -57,8 +57,8 @@ type AlignmentCiloRow = {
   id: string;
   description: string;
   cilo_mappings: Array<{
-    go_id: string;
-    go: { id: string; code: string; description: string; is_active: boolean };
+    plo_id: string;
+    plo: { id: string; code: string; description: string; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
     institutional_outcome_id: string;
@@ -74,7 +74,7 @@ type AlignmentCiloRow = {
 function targetIdsForScope(cilo: AlignmentCiloRow, scope: CourseScope): string[] {
   return scope === "GENERAL_EDUCATION"
     ? cilo.cilo_institutional_outcome_mappings.map((mapping) => mapping.institutional_outcome_id)
-    : cilo.cilo_mappings.map((mapping) => mapping.go_id);
+    : cilo.cilo_mappings.map((mapping) => mapping.plo_id);
 }
 
 function stableSnapshot(rows: AlignmentCiloRow[], scope: CourseScope): AlignmentSnapshot {
@@ -173,8 +173,8 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
           description: true,
           cilo_mappings: {
             select: {
-              go_id: true,
-              go: { select: { id: true, code: true, description: true, is_active: true } },
+              plo_id: true,
+              plo: { select: { id: true, code: true, description: true, is_active: true } },
             },
           },
           cilo_institutional_outcome_mappings: {
@@ -210,7 +210,7 @@ async function readValidTargets(db: Prisma.TransactionClient | typeof prisma, co
         select: { id: true, code: true, description: true },
         orderBy: [{ order: "asc" }, { code: "asc" }],
       })
-    : db.gO.findMany({
+    : db.pLO.findMany({
         where: { program_id: course.program_id!, is_active: true },
         select: { id: true, code: true, description: true },
         orderBy: [{ order: "asc" }, { code: "asc" }],
@@ -227,7 +227,7 @@ async function countValidAddedTargets(
     ? db.institutionalOutcome.count({
         where: { id: { in: targetIds }, is_active: true },
       })
-    : db.gO.count({
+    : db.pLO.count({
         where: { id: { in: targetIds }, program_id: course.program_id!, is_active: true },
       });
 }
@@ -237,7 +237,7 @@ function unavailableTargetsFor(course: AlignmentCourse, validTargetIds: Set<stri
   const mappedTargets = course.cilos.flatMap((cilo) =>
     scope === "GENERAL_EDUCATION"
       ? cilo.cilo_institutional_outcome_mappings.map((mapping) => mapping.institutional_outcome)
-      : cilo.cilo_mappings.map((mapping) => mapping.go)
+      : cilo.cilo_mappings.map((mapping) => mapping.plo)
   );
   return mappedTargets
     .filter((target) => !validTargetIds.has(target.id))
@@ -362,7 +362,7 @@ export async function prepareCourseAlignmentWrite(input: {
       error:
         scope === "GENERAL_EDUCATION"
           ? "Institutional Outcome availability changed. Reload and review the latest mappings."
-          : "Graduate Outcome availability changed. Reload and review the latest mappings.",
+          : "Program Learning Outcome availability changed. Reload and review the latest mappings.",
     };
   }
   const afterPairs = mappingPairs(after);
@@ -441,7 +441,7 @@ export async function commitCourseAlignmentWrite(
             error:
               scope === "GENERAL_EDUCATION"
                 ? "Institutional Outcome availability changed. Reload and review the latest catalog."
-                : "Graduate Outcome availability changed. Reload and review the latest catalog.",
+                : "Program Learning Outcome availability changed. Reload and review the latest catalog.",
           };
         }
 
@@ -472,7 +472,7 @@ export async function commitCourseAlignmentWrite(
               where: {
                 OR: review.removals.map((item) => ({
                   cilo_id: item.ciloId,
-                  go_id: item.targetId,
+                  plo_id: item.targetId,
                 })),
               },
             });
@@ -481,7 +481,7 @@ export async function commitCourseAlignmentWrite(
             await tx.cILOMapping.createMany({
               data: review.additions.map((item) => ({
                 cilo_id: item.ciloId,
-                go_id: item.targetId,
+                plo_id: item.targetId,
                 created_by: session.userId,
                 updated_by: session.userId,
               })),
@@ -553,7 +553,7 @@ export async function listCourseAlignmentSummaries(): Promise<
         select: {
           id: true,
           cilo_mappings: {
-            select: { go: { select: { id: true, is_active: true, program_id: true } } },
+            select: { plo: { select: { id: true, is_active: true, program_id: true } } },
           },
           cilo_institutional_outcome_mappings: {
             select: { institutional_outcome: { select: { id: true, is_active: true } } },

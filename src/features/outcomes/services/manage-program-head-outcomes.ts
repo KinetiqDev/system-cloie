@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import type { CourseScope } from "@prisma/client";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
-import type { CreateGOInput, UpdateGOInput } from "../schemas/go";
+import type { CreatePLOInput, UpdatePLOInput } from "../schemas/plo";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { commitOutcomeWrite, prepareOutcomeWrite } from "./manage-outcome-writes";
@@ -14,9 +14,9 @@ async function writeProgramHeadOutcome(
   return commitOutcomeWrite(review.data, true);
 }
 
-// ─── List GOs ────────────────────────────────────────────────────────────────
+// ─── List PLOs ──────────────────────────────────────────────────────────────
 
-export type ProgramGOItem = {
+export type ProgramPLOItem = {
   id: string;
   code: string;
   description: string;
@@ -28,14 +28,14 @@ export type ProgramGOItem = {
   _count: { cilo_mappings: number };
 };
 
-export type ListProgramGOsResult = {
-  gos: ProgramGOItem[];
+type ListProgramPLOsResult = {
+  plos: ProgramPLOItem[];
   program: { id: string; code: string; name: string };
 };
 
-export async function listProgramGOs(
+export async function listProgramPLOs(
   programId: string
-): Promise<ServiceResult<ListProgramGOsResult>> {
+): Promise<ServiceResult<ListProgramPLOsResult>> {
   const contextResult = await resolveProgramHeadContext(programId);
   if (!contextResult.success) return contextResult;
 
@@ -50,7 +50,7 @@ export async function listProgramGOs(
     return { success: false, error: "Assigned program not found." };
   }
 
-  const gos = await prisma.gO.findMany({
+  const plos = await prisma.pLO.findMany({
     where: { program_id: selectedProgramId },
     include: {
       _count: {
@@ -62,53 +62,53 @@ export async function listProgramGOs(
 
   return {
     success: true,
-    data: { gos, program },
+    data: { plos, program },
   };
 }
 
-// ─── Create GO ───────────────────────────────────────────────────────────────
+// ─── Create PLO ─────────────────────────────────────────────────────────────
 
-export async function createGO(input: CreateGOInput): Promise<ServiceResult<{ id: string }>> {
+export async function createPLO(input: CreatePLOInput): Promise<ServiceResult<{ id: string }>> {
   const contextResult = await resolveProgramHeadContext(input.programId);
   if (!contextResult.success) return contextResult;
 
-  const result = await writeProgramHeadOutcome({ kind: "GO", action: "create", ...input });
+  const result = await writeProgramHeadOutcome({ kind: "PLO", action: "create", ...input });
   if (!result.success) return result;
-  if (!result.data.id) return { success: false, error: "Graduate Outcome was not created." };
+  if (!result.data.id) return { success: false, error: "Program Learning Outcome was not created." };
   return { success: true, data: { id: result.data.id } };
 }
 
-// ─── Update GO ───────────────────────────────────────────────────────────────
+// ─── Update PLO ─────────────────────────────────────────────────────────────
 
-export async function updateGO(input: UpdateGOInput): Promise<ServiceResult<{ id: string }>> {
+export async function updatePLO(input: UpdatePLOInput): Promise<ServiceResult<{ id: string }>> {
   const contextResult = await resolveProgramHeadContext(input.programId);
   if (!contextResult.success) return contextResult;
 
-  const existingGO = await prisma.gO.findUnique({
+  const existingPLO = await prisma.pLO.findUnique({
     where: { id: input.id },
     select: { id: true, program_id: true },
   });
 
-  if (!existingGO) {
-    return { success: false, error: "Graduate Outcome not found." };
+  if (!existingPLO) {
+    return { success: false, error: "Program Learning Outcome not found." };
   }
 
-  if (input.programId !== existingGO.program_id) {
+  if (input.programId !== existingPLO.program_id) {
     return {
       success: false,
-      error: "You do not have permission to modify this Graduate Outcome.",
+      error: "You do not have permission to modify this Program Learning Outcome.",
     };
   }
 
-  const result = await writeProgramHeadOutcome({ kind: "GO", action: "update", ...input });
+  const result = await writeProgramHeadOutcome({ kind: "PLO", action: "update", ...input });
   if (!result.success) return result;
-  if (!result.data.id) return { success: false, error: "Graduate Outcome was not updated." };
+  if (!result.data.id) return { success: false, error: "Program Learning Outcome was not updated." };
   return { success: true, data: { id: result.data.id } };
 }
 
-// ─── Delete GO ───────────────────────────────────────────────────────────────
+// ─── Delete PLO ─────────────────────────────────────────────────────────────
 
-async function transitionGOArchiveState(
+async function transitionPLOArchiveState(
   programId: string,
   id: string,
   action: "archive" | "restore",
@@ -117,45 +117,45 @@ async function transitionGOArchiveState(
   const contextResult = await resolveProgramHeadContext(programId);
   if (!contextResult.success) return contextResult;
 
-  const existingGO = await prisma.gO.findUnique({
+  const existingPLO = await prisma.pLO.findUnique({
     where: { id },
     select: { id: true, program_id: true },
   });
 
-  if (!existingGO) {
-    return { success: false, error: "Graduate Outcome not found." };
+  if (!existingPLO) {
+    return { success: false, error: "Program Learning Outcome not found." };
   }
 
-  if (programId !== existingGO.program_id) {
+  if (programId !== existingPLO.program_id) {
     return {
       success: false,
-      error: `You do not have permission to ${permissionVerb} this Graduate Outcome.`,
+      error: `You do not have permission to ${permissionVerb} this Program Learning Outcome.`,
     };
   }
 
-  const result = await writeProgramHeadOutcome({ kind: "GO", action, programId, id });
+  const result = await writeProgramHeadOutcome({ kind: "PLO", action, programId, id });
   if (!result.success) return result;
   return { success: true, data: undefined };
 }
 
-export async function deleteGO(programId: string, id: string): Promise<ServiceResult> {
-  return transitionGOArchiveState(programId, id, "archive", "delete");
+export async function deletePLO(programId: string, id: string): Promise<ServiceResult> {
+  return transitionPLOArchiveState(programId, id, "archive", "delete");
 }
 
-// ─── Restore GO ──────────────────────────────────────────────────────────────
+// ─── Restore PLO ────────────────────────────────────────────────────────────
 
-export async function restoreGO(programId: string, id: string): Promise<ServiceResult> {
-  return transitionGOArchiveState(programId, id, "restore", "restore");
+export async function restorePLO(programId: string, id: string): Promise<ServiceResult> {
+  return transitionPLOArchiveState(programId, id, "restore", "restore");
 }
 
-// ─── Reorder GOs ─────────────────────────────────────────────────────────────
+// ─── Reorder PLOs ───────────────────────────────────────────────────────────
 
-export async function reorderGOs(programId: string, orderedIds: string[]): Promise<ServiceResult> {
+export async function reorderPLOs(programId: string, orderedIds: string[]): Promise<ServiceResult> {
   const contextResult = await resolveProgramHeadContext(programId);
   if (!contextResult.success) return contextResult;
 
   const result = await writeProgramHeadOutcome({
-    kind: "GO",
+    kind: "PLO",
     action: "reorder",
     programId,
     orderedIds,
@@ -171,7 +171,7 @@ type ProgramMappedTarget = {
   mappingId: string;
   code: string;
   description: string;
-  kind: "GO" | "ILO";
+  kind: "PLO" | "ILO";
   is_active: boolean;
 };
 
@@ -235,10 +235,10 @@ export async function listCILOMappingsForProgram(
           id: true,
           description: true,
           cilo_mappings: {
-            where: { go: { program_id: selectedProgramId } },
+            where: { plo: { program_id: selectedProgramId } },
             select: {
               id: true,
-              go: {
+              plo: {
                 select: {
                   id: true,
                   code: true,
@@ -287,13 +287,13 @@ export async function listCILOMappingsForProgram(
                 kind: "ILO",
                 is_active: mapping.institutional_outcome.is_active,
               }))
-            : cilo.cilo_mappings.map((mapping) => ({
-                id: mapping.go.id,
+: cilo.cilo_mappings.map((mapping) => ({
+                id: mapping.plo.id,
                 mappingId: mapping.id,
-                code: mapping.go.code,
-                description: mapping.go.description,
-                kind: "GO",
-                is_active: mapping.go.is_active,
+                code: mapping.plo.code,
+                description: mapping.plo.description,
+                kind: "PLO",
+                is_active: mapping.plo.is_active,
               }));
         return {
           id: cilo.id,

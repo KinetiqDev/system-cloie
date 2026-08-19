@@ -32,7 +32,7 @@ export default async function SelectedProgramOutcomeMappingPage({
           className="mb-4 inline-flex items-center gap-2 px-0"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Graduate Outcomes
+          Back to Program Learning Outcomes
         </Button>
         <h1 className="font-heading text-text-primary mb-2 text-4xl font-bold tracking-tight lg:text-5xl">
           CILO Mapping Review
@@ -60,7 +60,7 @@ export default async function SelectedProgramOutcomeMappingPage({
             render={<Link href={buildProgramHeadOutcomesPath(programId)} />}
             variant="outline"
           >
-            Review Graduate Outcomes
+            Review Program Learning Outcomes
           </Button>
         </Empty>
       ) : (
@@ -121,7 +121,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                             No mapped outcome.{" "}
                             {course.courseScope === "GENERAL_EDUCATION"
                               ? "Faculty or the Secretary can align this CILO to Institutional Outcomes."
-                              : "Faculty or the Secretary can align this CILO to Graduate Outcomes."}
+                              : "Faculty or the Secretary can align this CILO to Program Learning Outcomes."}
                           </AlertDescription>
                         </Alert>
                       )}

@@ -70,7 +70,7 @@ async function classifyPublicationAlignment(
     select: {
       id: true,
       cilo_mappings: {
-        select: { go: { select: { program_id: true, is_active: true } } },
+        select: { plo: { select: { program_id: true, is_active: true } } },
       },
       cilo_institutional_outcome_mappings: {
         select: { institutional_outcome: { select: { is_active: true } } },
@@ -426,7 +426,7 @@ export async function publishCourseBoundEvaluation({
               const targetLabel =
                 courseScope === CourseScope.GENERAL_EDUCATION
                   ? "Institutional Outcome"
-                  : "Graduate Outcome from the Course's owning Academic Program";
+                  : "Program Learning Outcome from the Course's owning Academic Program";
               const isFacultyPublisher = authSession.activeRole === ROLES.FACULTY;
               throw new PublicationValidationError(
                 isFacultyPublisher

@@ -7,7 +7,7 @@ import {
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     cILO: { findUnique: vi.fn() },
-    gO: { findUnique: vi.fn() },
+    pLO: { findUnique: vi.fn() },
     institutionalOutcome: { findUnique: vi.fn() },
   },
 }));
@@ -25,7 +25,7 @@ describe("validateCiloMapping", () => {
       is_active: true,
       course: { course_scope: "PROGRAM_SPECIFIC", program_id: "program-1" },
     } as never);
-    vi.mocked(prisma.gO.findUnique).mockResolvedValue({
+    vi.mocked(prisma.pLO.findUnique).mockResolvedValue({
       id: "go-1",
       is_active: true,
       program_id: "program-2",
@@ -36,12 +36,12 @@ describe("validateCiloMapping", () => {
     );
   });
 
-  it("rejects General Education CILO-to-GO mappings after the cutover", async () => {
+  it("rejects General Education CILO-to-PLO mappings after the cutover", async () => {
     vi.mocked(prisma.cILO.findUnique).mockResolvedValue({
       is_active: true,
       course: { course_scope: "GENERAL_EDUCATION", program_id: null },
     } as never);
-    vi.mocked(prisma.gO.findUnique).mockResolvedValue({
+    vi.mocked(prisma.pLO.findUnique).mockResolvedValue({
       id: "go-1",
       is_active: true,
       program_id: "program-2",
@@ -51,7 +51,7 @@ describe("validateCiloMapping", () => {
       success: false,
       error: "General Education CILOs map only to Institutional Outcomes",
     });
-    expect(prisma.gO.findUnique).toHaveBeenCalled();
+    expect(prisma.pLO.findUnique).toHaveBeenCalled();
   });
 
   it("allows Program-specific mapping to the owning Program GO", async () => {
@@ -59,7 +59,7 @@ describe("validateCiloMapping", () => {
       is_active: true,
       course: { course_scope: "PROGRAM_SPECIFIC", program_id: "program-2" },
     } as never);
-    vi.mocked(prisma.gO.findUnique).mockResolvedValue({
+    vi.mocked(prisma.pLO.findUnique).mockResolvedValue({
       id: "go-1",
       is_active: true,
       program_id: "program-2",

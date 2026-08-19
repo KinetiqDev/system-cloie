@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   assignment: { findFirst: vi.fn() },
   course: { findFirst: vi.fn(), findMany: vi.fn() },
-  go: { count: vi.fn(), findMany: vi.fn() },
+  plo: { count: vi.fn(), findMany: vi.fn() },
   ilo: { count: vi.fn(), findMany: vi.fn() },
   transaction: vi.fn(),
 }));
@@ -17,7 +17,7 @@ vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     courseAssignment: mocks.assignment,
     course: mocks.course,
-    gO: mocks.go,
+    pLO: mocks.plo,
     institutionalOutcome: mocks.ilo,
     $transaction: mocks.transaction,
   },
@@ -25,10 +25,10 @@ vi.mock("@/lib/db/prisma", () => ({
 
 const COURSE_ID = "11111111-1111-4111-8111-111111111111";
 const CILO_ID = "22222222-2222-4222-8222-222222222222";
-const GO_ID = "33333333-3333-4333-8333-333333333333";
+const PLO_ID = "33333333-3333-4333-8333-333333333333";
 const PROGRAM_ID = "44444444-4444-4444-8444-444444444444";
 const FACULTY = { userId: "faculty-1", activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY] };
-const FRESHNESS_TOKEN = JSON.stringify([{ ciloId: CILO_ID, targetIds: [GO_ID] }]);
+const FRESHNESS_TOKEN = JSON.stringify([{ ciloId: CILO_ID, targetIds: [PLO_ID] }]);
 
 function course(overrides: Record<string, unknown> = {}) {
   return {
@@ -44,8 +44,8 @@ function course(overrides: Record<string, unknown> = {}) {
         description: "Apply core concepts",
         cilo_mappings: [
           {
-            go_id: GO_ID,
-            go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true },
+            plo_id: PLO_ID,
+            plo: { id: PLO_ID, code: "GO-1", description: "Think critically", is_active: true },
           },
         ],
         cilo_institutional_outcome_mappings: [],
@@ -93,10 +93,10 @@ describe("Course alignment service", () => {
     mocks.session.mockResolvedValue(FACULTY);
     mocks.assignment.findFirst.mockResolvedValue({ id: "assignment-1" });
     mocks.course.findFirst.mockResolvedValue(course());
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO-1", description: "Think critically" },
+    mocks.plo.findMany.mockResolvedValue([
+      { id: PLO_ID, code: "GO-1", description: "Think critically" },
     ]);
-    mocks.go.count.mockResolvedValue(1);
+    mocks.plo.count.mockResolvedValue(1);
     mocks.ilo.findMany.mockResolvedValue([]);
     mocks.ilo.count.mockResolvedValue(0);
   });
@@ -108,12 +108,12 @@ describe("Course alignment service", () => {
       success: true,
       data: {
         course: { id: COURSE_ID, program: { id: PROGRAM_ID } },
-        targets: [{ id: GO_ID }],
-        cilos: [{ id: CILO_ID, targetIds: [GO_ID] }],
+        targets: [{ id: PLO_ID }],
+        cilos: [{ id: CILO_ID, targetIds: [PLO_ID] }],
         readiness: "ready",
       },
     });
-    expect(mocks.go.findMany).toHaveBeenCalledWith(
+    expect(mocks.plo.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { program_id: PROGRAM_ID, is_active: true } })
     );
   });
@@ -129,9 +129,9 @@ describe("Course alignment service", () => {
             description: "Apply core concepts",
             cilo_mappings: [
               {
-                go_id: GO_ID,
-                go: {
-                  id: GO_ID,
+                plo_id: PLO_ID,
+                plo: {
+                  id: PLO_ID,
                   code: "GO-1",
                   description: "Think critically",
                   is_active: false,
@@ -142,14 +142,14 @@ describe("Course alignment service", () => {
         ],
       })
     );
-    mocks.go.findMany.mockResolvedValue([]);
+    mocks.plo.findMany.mockResolvedValue([]);
 
     await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
       success: true,
       data: {
-        cilos: [{ id: CILO_ID, targetIds: [GO_ID] }],
+        cilos: [{ id: CILO_ID, targetIds: [PLO_ID] }],
         targets: [],
-        unavailableTargets: [{ id: GO_ID, code: "GO-1" }],
+        unavailableTargets: [{ id: PLO_ID, code: "GO-1" }],
         readiness: "incomplete-mapping",
       },
     });
@@ -213,7 +213,7 @@ describe("Course alignment service", () => {
       success: false,
       error: "Course alignment changed. Reload and review the latest mappings.",
     });
-    expect(mocks.go.count).not.toHaveBeenCalled();
+    expect(mocks.plo.count).not.toHaveBeenCalled();
   });
 
   it("prepares an exact multi-CILO diff and rejects a forged cross-Program target", async () => {
@@ -227,14 +227,14 @@ describe("Course alignment service", () => {
     expect(review).toMatchObject({
       success: true,
       data: {
-        before: [{ ciloId: CILO_ID, targetIds: [GO_ID] }],
+        before: [{ ciloId: CILO_ID, targetIds: [PLO_ID] }],
         after: [{ ciloId: CILO_ID, targetIds: [] }],
         additions: [],
-        removals: [{ ciloId: CILO_ID, targetId: GO_ID }],
+        removals: [{ ciloId: CILO_ID, targetId: PLO_ID }],
       },
     });
 
-    mocks.go.count.mockResolvedValue(0);
+    mocks.plo.count.mockResolvedValue(0);
     await expect(
       prepareCourseAlignmentWrite({
         courseId: COURSE_ID,
@@ -243,7 +243,7 @@ describe("Course alignment service", () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: "Graduate Outcome availability changed. Reload and review the latest mappings.",
+      error: "Program Learning Outcome availability changed. Reload and review the latest mappings.",
     });
   });
 
@@ -260,7 +260,7 @@ describe("Course alignment service", () => {
       callback({
         courseAssignment: mocks.assignment,
         course: { findFirst: vi.fn().mockResolvedValue(course()) },
-        gO: mocks.go,
+        pLO: mocks.plo,
         cILOMapping: { deleteMany: vi.fn(), createMany: vi.fn() },
       })
     );
@@ -298,10 +298,10 @@ describe("Course alignment service", () => {
     expect(mocks.ilo.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { is_active: true } })
     );
-    expect(mocks.go.findMany).not.toHaveBeenCalled();
+    expect(mocks.plo.findMany).not.toHaveBeenCalled();
   });
 
-  it("never mixes Graduate Outcomes into a General Education alignment read", async () => {
+  it("never mixes Program Learning Outcomes into a General Education alignment read", async () => {
     const { readCourseAlignment } =
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(
@@ -310,7 +310,7 @@ describe("Course alignment service", () => {
           {
             id: CILO_ID,
             description: "Analyze science and technology interactions",
-            cilo_mappings: [{ go_id: GO_ID, go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true } }],
+            cilo_mappings: [{ plo_id: PLO_ID, plo: { id: PLO_ID, code: "GO-1", description: "Think critically", is_active: true } }],
             cilo_institutional_outcome_mappings: [],
           },
         ],
@@ -330,7 +330,7 @@ describe("Course alignment service", () => {
     });
   });
 
-  it("rejects a forged General Education mapping to a Graduate Outcome", async () => {
+  it("rejects a forged General Education mapping to a Program Learning Outcome", async () => {
     const { prepareCourseAlignmentWrite } =
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
@@ -339,7 +339,7 @@ describe("Course alignment service", () => {
     await expect(
       prepareCourseAlignmentWrite({
         courseId: COURSE_ID,
-        desired: [{ ciloId: CILO_ID, targetIds: [GO_ID] }],
+        desired: [{ ciloId: CILO_ID, targetIds: [PLO_ID] }],
         freshnessToken: freshness,
       })
     ).resolves.toEqual({
@@ -347,7 +347,7 @@ describe("Course alignment service", () => {
       error: "Institutional Outcome availability changed. Reload and review the latest mappings.",
     });
     expect(mocks.ilo.count).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: { in: [GO_ID] }, is_active: true } })
+      expect.objectContaining({ where: { id: { in: [PLO_ID] }, is_active: true } })
     );
   });
 
@@ -376,7 +376,7 @@ describe("Course alignment service", () => {
       callback({
         courseAssignment: mocks.assignment,
         course: { findFirst: vi.fn().mockResolvedValue(generalEducationCourse()) },
-        gO: mocks.go,
+        pLO: mocks.plo,
         institutionalOutcome: mocks.ilo,
         cILOInstitutionalOutcomeMapping: { deleteMany, createMany: vi.fn() },
       })
@@ -402,7 +402,7 @@ describe("Course alignment service", () => {
       success: true,
       data: {
         course: { id: COURSE_ID, program: { id: PROGRAM_ID } },
-        cilos: [{ id: CILO_ID, targetIds: [GO_ID] }],
+        cilos: [{ id: CILO_ID, targetIds: [PLO_ID] }],
         readiness: "ready",
       },
     });
@@ -437,20 +437,20 @@ describe("Course alignment service", () => {
   it("prepares and commits a Secretary correction with actor provenance", async () => {
     const SECRETARY = { userId: "secretary-1", activeRole: ROLES.SECRETARY, roles: [ROLES.SECRETARY] };
     mocks.session.mockResolvedValue(SECRETARY);
-    const NEW_GO_ID = "77777777-7777-4777-8777-777777777777";
+    const NEW_PLO_ID = "77777777-7777-4777-8777-777777777777";
     const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
       await import("@/features/outcomes/services/manage-course-alignment");
     const reviewResult = await prepareCourseAlignmentWrite({
       courseId: COURSE_ID,
       desired: [
-        { ciloId: CILO_ID, targetIds: [GO_ID, NEW_GO_ID] },
+        { ciloId: CILO_ID, targetIds: [PLO_ID, NEW_PLO_ID] },
       ],
       freshnessToken: FRESHNESS_TOKEN,
     });
     expect(reviewResult).toMatchObject({
       success: true,
       data: {
-        additions: [{ ciloId: CILO_ID, targetId: NEW_GO_ID }],
+        additions: [{ ciloId: CILO_ID, targetId: NEW_PLO_ID }],
         removals: [],
       },
     });
@@ -460,7 +460,7 @@ describe("Course alignment service", () => {
       callback({
         courseAssignment: mocks.assignment,
         course: { findFirst: vi.fn().mockResolvedValue(course()) },
-        gO: mocks.go,
+        pLO: mocks.plo,
         cILOMapping: { deleteMany: vi.fn(), createMany },
       })
     );
@@ -472,7 +472,7 @@ describe("Course alignment service", () => {
       data: [
         {
           cilo_id: CILO_ID,
-          go_id: NEW_GO_ID,
+          plo_id: NEW_PLO_ID,
           created_by: "secretary-1",
           updated_by: "secretary-1",
         },
@@ -510,7 +510,7 @@ describe("Course alignment service", () => {
         cilos: [
           {
             id: "cilo-ok",
-            cilo_mappings: [{ go: { id: GO_ID, is_active: true, program_id: PROGRAM_ID } }],
+            cilo_mappings: [{ plo: { id: PLO_ID, is_active: true, program_id: PROGRAM_ID } }],
             cilo_institutional_outcome_mappings: [],
           },
           {

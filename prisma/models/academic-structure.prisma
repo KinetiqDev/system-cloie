@@ -10,7 +10,7 @@ model Program {
   majors                       Major[]
   courses                      Course[]
   student_profiles             StudentAcademicProfile[]
-  gos                          GO[]
+  plos                         PLO[]
   faculty_program_affiliations FacultyProgramAffiliation[]
   program_head_assignments     ProgramHeadAssignment[]
   course_bound_targets         CourseBoundEvaluationTarget[]
