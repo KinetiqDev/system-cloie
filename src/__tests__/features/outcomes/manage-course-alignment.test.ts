@@ -28,7 +28,11 @@ const CILO_ID = "22222222-2222-4222-8222-222222222222";
 const PLO_ID = "33333333-3333-4333-8333-333333333333";
 const PROGRAM_ID = "44444444-4444-4444-8444-444444444444";
 const FACULTY = { userId: "faculty-1", activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY] };
-const FRESHNESS_TOKEN = JSON.stringify([{ ciloId: CILO_ID, targetIds: [PLO_ID] }]);
+const FRESHNESS_TOKEN = JSON.stringify({
+  ciloIds: [CILO_ID],
+  catalogIds: [PLO_ID],
+  mappings: [{ ciloId: CILO_ID, targetId: PLO_ID, manifestation: null }],
+});
 
 function course(overrides: Record<string, unknown> = {}) {
   return {
@@ -109,7 +113,7 @@ describe("Course alignment service", () => {
       data: {
         course: { id: COURSE_ID, program: { id: PROGRAM_ID } },
         targets: [{ id: PLO_ID }],
-        cilos: [{ id: CILO_ID, targetIds: [PLO_ID] }],
+        cilos: [{ id: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: null }] }],
         readiness: "ready",
       },
     });
@@ -147,7 +151,7 @@ describe("Course alignment service", () => {
     await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
       success: true,
       data: {
-        cilos: [{ id: CILO_ID, targetIds: [PLO_ID] }],
+        cilos: [{ id: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: null }] }],
         targets: [],
         unavailableTargets: [{ id: PLO_ID, code: "GO-1" }],
         readiness: "incomplete-mapping",
@@ -266,7 +270,14 @@ describe("Course alignment service", () => {
     );
     await expect(commitCourseAlignmentWrite(reviewResult.data, true)).resolves.toEqual({
       success: true,
-      data: { changed: 1 },
+      data: {
+        changed: 1,
+        freshnessToken: JSON.stringify({
+          ciloIds: [CILO_ID],
+          catalogIds: [PLO_ID],
+          mappings: [],
+        }),
+      },
     });
     expect(mocks.transaction).toHaveBeenCalledWith(
       expect.any(Function),
@@ -334,7 +345,14 @@ describe("Course alignment service", () => {
     const { prepareCourseAlignmentWrite } =
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
-    const freshness = JSON.stringify([{ ciloId: CILO_ID, targetIds: [ILO_ID] }]);
+    mocks.ilo.findMany.mockResolvedValue([
+      { id: ILO_ID, code: "ILO-1", description: "Think critically" },
+    ]);
+    const freshness = JSON.stringify({
+      ciloIds: [CILO_ID],
+      catalogIds: [ILO_ID],
+      mappings: [{ ciloId: CILO_ID, targetId: ILO_ID, manifestation: null }],
+    });
 
     await expect(
       prepareCourseAlignmentWrite({
@@ -355,7 +373,14 @@ describe("Course alignment service", () => {
     const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
-    const freshness = JSON.stringify([{ ciloId: CILO_ID, targetIds: [ILO_ID] }]);
+    mocks.ilo.findMany.mockResolvedValue([
+      { id: ILO_ID, code: "ILO-1", description: "Think critically" },
+    ]);
+    const freshness = JSON.stringify({
+      ciloIds: [CILO_ID],
+      catalogIds: [ILO_ID],
+      mappings: [{ ciloId: CILO_ID, targetId: ILO_ID, manifestation: null }],
+    });
     const reviewResult = await prepareCourseAlignmentWrite({
       courseId: COURSE_ID,
       desired: [{ ciloId: CILO_ID, targetIds: [] }],
@@ -383,7 +408,14 @@ describe("Course alignment service", () => {
     );
     await expect(commitCourseAlignmentWrite(reviewResult.data, true)).resolves.toEqual({
       success: true,
-      data: { changed: 1 },
+      data: {
+        changed: 1,
+        freshnessToken: JSON.stringify({
+          ciloIds: [CILO_ID],
+          catalogIds: [ILO_ID],
+          mappings: [],
+        }),
+      },
     });
     expect(deleteMany).toHaveBeenCalledWith({
       where: {
@@ -402,7 +434,7 @@ describe("Course alignment service", () => {
       success: true,
       data: {
         course: { id: COURSE_ID, program: { id: PROGRAM_ID } },
-        cilos: [{ id: CILO_ID, targetIds: [PLO_ID] }],
+        cilos: [{ id: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: null }] }],
         readiness: "ready",
       },
     });
@@ -466,7 +498,17 @@ describe("Course alignment service", () => {
     );
     await expect(commitCourseAlignmentWrite(reviewResult.data, true)).resolves.toEqual({
       success: true,
-      data: { changed: 1 },
+      data: {
+        changed: 1,
+        freshnessToken: JSON.stringify({
+          ciloIds: [CILO_ID],
+          catalogIds: [PLO_ID],
+          mappings: [
+            { ciloId: CILO_ID, targetId: PLO_ID, manifestation: null },
+            { ciloId: CILO_ID, targetId: NEW_PLO_ID, manifestation: null },
+          ],
+        }),
+      },
     });
     expect(createMany).toHaveBeenCalledWith({
       data: [
@@ -561,5 +603,152 @@ describe("Course alignment service", () => {
       error: "Course alignment is unavailable.",
     });
     expect(mocks.course.findMany).not.toHaveBeenCalled();
+  });
+
+  it("surfaces classified and legacy manifestations per pairing", async () => {
+    const SECOND_PLO_ID = "55555555-5555-4555-8555-555555555555";
+    mocks.course.findFirst.mockResolvedValue(
+      course({
+        cilos: [
+          {
+            id: CILO_ID,
+            description: "Apply core concepts",
+            cilo_mappings: [
+              {
+                plo_id: PLO_ID,
+                manifestation: "LEARNING",
+                plo: { id: PLO_ID, code: "GO-1", description: "Think critically", is_active: true },
+              },
+              {
+                plo_id: SECOND_PLO_ID,
+                manifestation: null,
+                plo: { id: SECOND_PLO_ID, code: "GO-2", description: "Communicate", is_active: true },
+              },
+            ],
+            cilo_institutional_outcome_mappings: [],
+          },
+        ],
+      })
+    );
+    mocks.plo.findMany.mockResolvedValue([
+      { id: PLO_ID, code: "GO-1", description: "Think critically" },
+      { id: SECOND_PLO_ID, code: "GO-2", description: "Communicate" },
+    ]);
+
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+      success: true,
+      data: {
+        cilos: [
+          {
+            id: CILO_ID,
+            mappings: [
+              { ploId: PLO_ID, manifestation: "LEARNING" },
+              { ploId: SECOND_PLO_ID, manifestation: null },
+            ],
+          },
+        ],
+      },
+    });
+  });
+
+  it("keeps the freshness token stable while nothing observable changed", async () => {
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+    const first = await readCourseAlignment(COURSE_ID);
+    const second = await readCourseAlignment(COURSE_ID);
+    expect(first.success).toBe(true);
+    expect(second.success).toBe(true);
+    if (!first.success || !second.success) throw new Error("expected successful reads");
+    expect(first.data.freshnessToken).toBe(second.data.freshnessToken);
+  });
+
+  it("invalidates the token when a manifestation changes", async () => {
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+    const classifiedCourse = (overrides: Record<string, unknown> = {}) =>
+      course({
+        cilos: [
+          {
+            id: CILO_ID,
+            description: "Apply core concepts",
+            cilo_mappings: [
+              {
+                plo_id: PLO_ID,
+                manifestation: "LEARNING",
+                plo: { id: PLO_ID, code: "GO-1", description: "Think critically", is_active: true },
+              },
+            ],
+            cilo_institutional_outcome_mappings: [],
+          },
+        ],
+        ...overrides,
+      });
+    mocks.course.findFirst.mockResolvedValue(classifiedCourse());
+    const learning = await readCourseAlignment(COURSE_ID);
+    mocks.course.findFirst.mockResolvedValue(
+      classifiedCourse({ cilos: [{ id: CILO_ID, cilo_mappings: [{ plo_id: PLO_ID, manifestation: "PRACTICE", plo: { id: PLO_ID, code: "GO-1", description: "Think critically", is_active: true } }], cilo_institutional_outcome_mappings: [] }] })
+    );
+    const practice = await readCourseAlignment(COURSE_ID);
+    expect(learning.success).toBe(true);
+    expect(practice.success).toBe(true);
+    if (!learning.success || !practice.success) throw new Error("expected successful reads");
+    expect(learning.data.freshnessToken).not.toBe(practice.data.freshnessToken);
+  });
+
+  it("invalidates the token when pair membership changes", async () => {
+    const SECOND_PLO_ID = "55555555-5555-4555-8555-555555555555";
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+    mocks.course.findFirst.mockResolvedValue(course());
+    mocks.plo.findMany.mockResolvedValue([
+      { id: PLO_ID, code: "GO-1", description: "Think critically" },
+      { id: SECOND_PLO_ID, code: "GO-2", description: "Communicate" },
+    ]);
+    const before = await readCourseAlignment(COURSE_ID);
+    mocks.course.findFirst.mockResolvedValue(
+      course({
+        cilos: [
+          {
+            id: CILO_ID,
+            description: "Apply core concepts",
+            cilo_mappings: [
+              {
+                plo_id: PLO_ID,
+                plo: { id: PLO_ID, code: "GO-1", description: "Think critically", is_active: true },
+              },
+              {
+                plo_id: SECOND_PLO_ID,
+                plo: { id: SECOND_PLO_ID, code: "GO-2", description: "Communicate", is_active: true },
+              },
+            ],
+            cilo_institutional_outcome_mappings: [],
+          },
+        ],
+      })
+    );
+    const after = await readCourseAlignment(COURSE_ID);
+    expect(before.success).toBe(true);
+    expect(after.success).toBe(true);
+    if (!before.success || !after.success) throw new Error("expected successful reads");
+    expect(before.data.freshnessToken).not.toBe(after.data.freshnessToken);
+  });
+
+  it("invalidates the token when catalog membership changes", async () => {
+    const NEW_PLO_ID = "55555555-5555-4555-8555-555555555555";
+    const { readCourseAlignment } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+    mocks.course.findFirst.mockResolvedValue(course());
+    const before = await readCourseAlignment(COURSE_ID);
+    mocks.plo.findMany.mockResolvedValue([
+      { id: PLO_ID, code: "GO-1", description: "Think critically" },
+      { id: NEW_PLO_ID, code: "GO-3", description: "Collaborate" },
+    ]);
+    const after = await readCourseAlignment(COURSE_ID);
+    expect(before.success).toBe(true);
+    expect(after.success).toBe(true);
+    if (!before.success || !after.success) throw new Error("expected successful reads");
+    expect(before.data.freshnessToken).not.toBe(after.data.freshnessToken);
   });
 });

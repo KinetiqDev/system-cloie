@@ -45,7 +45,10 @@ type Props = {
   commitAction: (
     review: unknown,
     confirmed: boolean
-  ) => Promise<{ success: true; changed: number } | { success: false; error: string }>;
+  ) => Promise<
+    | { success: true; changed: number; freshnessToken: string }
+    | { success: false; error: string }
+  >;
 };
 
 const HISTORY_GUARD_KEY = "cloie-course-alignment-dirty-entry";
@@ -449,7 +452,12 @@ export function CourseAlignmentEditor({
   commitAction,
 }: Props) {
   const initialTargetIds = Object.fromEntries(
-    alignment.cilos.map((cilo) => [cilo.id, cilo.targetIds])
+    alignment.cilos.map((cilo) => [
+      cilo.id,
+      "targetIds" in cilo
+        ? cilo.targetIds
+        : cilo.mappings.map((mapping) => mapping.ploId),
+    ])
   ) as Record<string, string[]>;
   const [draft, setDraft] = useState(initialTargetIds);
   const [savedTargetIds, setSavedTargetIds] = useState(initialTargetIds);
@@ -548,7 +556,7 @@ export function CourseAlignmentEditor({
         const committedTargetIds = snapshotTargetIds(reviewToCommit.after);
         setDraft(committedTargetIds);
         setSavedTargetIds(committedTargetIds);
-        setFreshnessToken(JSON.stringify(reviewToCommit.after));
+        setFreshnessToken(result.freshnessToken);
         setSuccess(`${result.changed} mapping change${result.changed === 1 ? "" : "s"} saved.`);
       } else {
         setError(result.error);

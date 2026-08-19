@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { Prisma } from "@prisma/client";
+import { Prisma, type CILOMappingManifestation } from "@prisma/client";
 import type { CourseScope } from "@prisma/client";
 import { z } from "zod";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -16,11 +16,14 @@ type CourseAlignmentTarget = {
   description: string;
 };
 
-type CourseAlignmentCilo = {
-  id: string;
-  description: string;
-  targetIds: string[];
+type CourseAlignmentMapping = {
+  ploId: string;
+  manifestation: CILOMappingManifestation | null;
 };
+
+type CourseAlignmentCilo =
+  | { id: string; description: string; targetIds: string[] }
+  | { id: string; description: string; mappings: CourseAlignmentMapping[] };
 
 export type CourseAlignment = {
   course: {
@@ -58,6 +61,7 @@ type AlignmentCiloRow = {
   description: string;
   cilo_mappings: Array<{
     plo_id: string;
+    manifestation: CILOMappingManifestation | null;
     plo: { id: string; code: string; description: string; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
@@ -75,6 +79,57 @@ function targetIdsForScope(cilo: AlignmentCiloRow, scope: CourseScope): string[]
   return scope === "GENERAL_EDUCATION"
     ? cilo.cilo_institutional_outcome_mappings.map((mapping) => mapping.institutional_outcome_id)
     : cilo.cilo_mappings.map((mapping) => mapping.plo_id);
+}
+
+type FreshnessMapping = {
+  ciloId: string;
+  targetId: string;
+  manifestation: CILOMappingManifestation | null;
+};
+
+function freshnessMappingsForScope(rows: AlignmentCiloRow[], scope: CourseScope): FreshnessMapping[] {
+  return scope === "GENERAL_EDUCATION"
+    ? rows.flatMap((cilo) =>
+        cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
+          ciloId: cilo.id,
+          targetId: mapping.institutional_outcome_id,
+          manifestation: null,
+        }))
+      )
+    : rows.flatMap((cilo) =>
+        cilo.cilo_mappings.map((mapping) => ({
+          ciloId: cilo.id,
+          targetId: mapping.plo_id,
+          manifestation: mapping.manifestation ?? null,
+        }))
+      );
+}
+
+function freshnessTokenValue(
+  ciloIds: string[],
+  catalogIds: string[],
+  mappings: FreshnessMapping[]
+): string {
+  return JSON.stringify({
+    ciloIds: [...ciloIds].sort((left, right) => left.localeCompare(right)),
+    catalogIds: [...catalogIds].sort((left, right) => left.localeCompare(right)),
+    mappings: [...mappings].sort(
+      (left, right) =>
+        left.ciloId.localeCompare(right.ciloId) || left.targetId.localeCompare(right.targetId)
+    ),
+  });
+}
+
+function freshnessTokenOf(
+  rows: AlignmentCiloRow[],
+  scope: CourseScope,
+  catalogIds: string[]
+): string {
+  return freshnessTokenValue(
+    rows.map((cilo) => cilo.id),
+    catalogIds,
+    freshnessMappingsForScope(rows, scope)
+  );
 }
 
 function stableSnapshot(rows: AlignmentCiloRow[], scope: CourseScope): AlignmentSnapshot {
@@ -174,6 +229,7 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
           cilo_mappings: {
             select: {
               plo_id: true,
+              manifestation: true,
               plo: { select: { id: true, code: true, description: true, is_active: true } },
             },
           },
@@ -273,11 +329,22 @@ export async function readCourseAlignment(
   const targets = await readValidTargets(prisma, course);
   const validTargetIds = new Set(targets.map((target) => target.id));
   const unavailableTargets = unavailableTargetsFor(course, validTargetIds);
-  const cilos = course.cilos.map((cilo) => ({
-    id: cilo.id,
-    description: cilo.description,
-    targetIds: targetIdsForScope(cilo, scope),
-  }));
+  const cilos: CourseAlignmentCilo[] = course.cilos.map((cilo) =>
+    scope === "GENERAL_EDUCATION"
+      ? {
+          id: cilo.id,
+          description: cilo.description,
+          targetIds: targetIdsForScope(cilo, scope),
+        }
+      : {
+          id: cilo.id,
+          description: cilo.description,
+          mappings: cilo.cilo_mappings.map((mapping) => ({
+            ploId: mapping.plo_id,
+            manifestation: mapping.manifestation ?? null,
+          })),
+        }
+  );
   const hasActiveTarget = new Map(
     course.cilos.map((cilo) => [
       cilo.id,
@@ -307,7 +374,7 @@ export async function readCourseAlignment(
           : cilos.every((cilo) => hasActiveTarget.get(cilo.id))
             ? "ready"
             : "incomplete-mapping",
-      freshnessToken: token(stableSnapshot(course.cilos, scope)),
+      freshnessToken: freshnessTokenOf(course.cilos, scope, targets.map((target) => target.id)),
     },
   };
 }
@@ -333,9 +400,11 @@ export async function prepareCourseAlignmentWrite(input: {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
   const scope = courseScopeOf(course);
+  const targets = await readValidTargets(prisma, course);
+  const catalogIds = targets.map((target) => target.id);
 
   const before = stableSnapshot(course.cilos, scope);
-  if (input.freshnessToken !== token(before)) {
+  if (input.freshnessToken !== freshnessTokenOf(course.cilos, scope, catalogIds)) {
     return {
       success: false,
       error: "Course alignment changed. Reload and review the latest mappings.",
@@ -384,7 +453,7 @@ export async function prepareCourseAlignmentWrite(input: {
     after,
     additions,
     removals,
-    freshnessToken: token(before),
+    freshnessToken: freshnessTokenOf(course.cilos, scope, catalogIds),
   };
 
   return {
@@ -396,7 +465,7 @@ export async function prepareCourseAlignmentWrite(input: {
 export async function commitCourseAlignmentWrite(
   review: CourseAlignmentReview,
   confirmed: boolean
-): Promise<ServiceResult<{ changed: number }>> {
+): Promise<ServiceResult<{ changed: number; freshnessToken: string }>> {
   if (!confirmed) return { success: false, error: "Explicit confirmation is required." };
   const session = await resolveAuthSession();
   if (
@@ -425,8 +494,9 @@ export async function commitCourseAlignmentWrite(
           return { success: false, error: SAFE_ACCESS_ERROR };
         }
         const scope = courseScopeOf(course);
-        const current = stableSnapshot(course.cilos, scope);
-        if (token(current) !== review.freshnessToken) {
+        const targets = await readValidTargets(tx, course);
+        const catalogIds = targets.map((target) => target.id);
+        if (freshnessTokenOf(course.cilos, scope, catalogIds) !== review.freshnessToken) {
           return {
             success: false,
             error: "Course alignment changed after review. Reload and review the latest mappings.",
@@ -488,9 +558,29 @@ export async function commitCourseAlignmentWrite(
             });
           }
         }
+        const postWriteMappings: FreshnessMapping[] = review.after.flatMap((item) =>
+          item.targetIds.map((targetId) => ({
+            ciloId: item.ciloId,
+            targetId,
+            manifestation:
+              scope === "GENERAL_EDUCATION"
+                ? null
+                : course.cilos
+                    .find((cilo) => cilo.id === item.ciloId)
+                    ?.cilo_mappings.find((mapping) => mapping.plo_id === targetId)?.manifestation ??
+                  null,
+          }))
+        );
         return {
           success: true,
-          data: { changed: review.additions.length + review.removals.length },
+          data: {
+            changed: review.additions.length + review.removals.length,
+            freshnessToken: freshnessTokenValue(
+              review.after.map((item) => item.ciloId),
+              catalogIds,
+              postWriteMappings
+            ),
+          },
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
