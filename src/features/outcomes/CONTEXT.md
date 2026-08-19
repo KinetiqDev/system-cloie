@@ -53,15 +53,15 @@ Actor and timestamp records for new or changed typed mapping rows; legacy rows w
 _Avoid_: Anonymous write, inferred actor
 
 **Outcome readiness**:
-The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO lacks a valid active target), or `ready` (every active CILO has at least one valid active target).
-_Avoid_: PLO-only readiness, per-assignment readiness, CILO count as readiness
+The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one valid active Institutional Outcome target. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active PLO of the Course's owning Academic Program; a Program with zero active PLOs alongside active CILOs is incomplete, not ready.
+_Avoid_: PLO-only readiness, per-assignment readiness, CILO count as readiness, vacuous readiness with zero active PLOs
 
 **Completed-period readiness snapshot**:
 An immutable, versioned record of readiness written when an Academic Period completes; it carries typed target details for new snapshots, while existing snapshots retain their legacy interpretation and are never rewritten by later mapping or catalog changes. Legacy snapshots may persist `GRADUATE_OUTCOME` as a stored target-layer value; it is data, not terminology, and is never surfaced verbatim to users.
 _Avoid_: Live readiness read, mutable snapshot, relabeled legacy snapshot
 
 **Publication alignment gate**:
-The server-side rule that rejects new Course-bound evaluation publication while any active CILO of the locked Course lacks a valid active target, with a direct repair path to Course alignment.
+The server-side rule that rejects new Course-bound evaluation publication while any active CILO of the locked Course fails the typed alignment rule (exhaustive manifestation coverage for Program-specific Courses, at-least-one active Institutional Outcome for General Education), with a direct repair path to Course alignment.
 _Avoid_: Publish-with-gaps, alignment warning only
 
 **Faculty mapping responsibility**:

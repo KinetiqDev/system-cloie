@@ -11,7 +11,10 @@ import {
   type PeriodReadiness,
   type ReadinessContext,
 } from "@/features/academic-calendar/services/read-period-readiness";
-import type { CourseAlignmentTargetLayer } from "@/features/outcomes/services/classify-course-alignment";
+import {
+  hasExhaustivePloCoverage,
+  type CourseAlignmentTargetLayer,
+} from "@/features/outcomes/services/classify-course-alignment";
 
 export class DeanReadModelNotFoundError extends Error {}
 export class DeanReadModelBadRequestError extends Error {}
@@ -315,13 +318,32 @@ function gapCourseScope(context: ReadinessContext, assignment: AssignmentRow): C
     : "PROGRAM_SPECIFIC";
 }
 
+function v2CiloIsIncomplete(
+  cilo: ReadinessContext["cilos"][number],
+  context: ReadinessContext
+): boolean {
+  if (!Array.isArray(cilo.mappedTargets)) {
+    return (cilo.missingPloIds?.length ?? 0) > 0;
+  }
+  if (context.courseScope === "GENERAL_EDUCATION") {
+    return !cilo.mappedTargets.some((target) => !target.isArchived);
+  }
+  // Program-specific CILOs share the classifier's exhaustive rule: a CILO
+  // is a gap unless it classifies every active owning-Program PLO, and
+  // zero active PLOs alongside an active CILO is incomplete, not ready.
+  return !hasExhaustivePloCoverage(
+    (cilo.mappedTargets ?? [])
+      .filter((target) => !target.isArchived)
+      .map((target) => target.id),
+    (context.plos ?? []).filter((plo) => !plo.isArchived).map((plo) => plo.id)
+  );
+}
+
 function incompleteCilos(context: ReadinessContext, schemaVersion: number) {
   return context.cilos.filter((cilo) => {
     if (cilo.isArchived) return false;
-    if (schemaVersion >= 2 && Array.isArray(cilo.mappedTargets)) {
-      return !cilo.mappedTargets.some((target) => !target.isArchived);
-    }
-    return (cilo.missingPloIds?.length ?? 0) > 0;
+    if (schemaVersion < 2) return (cilo.missingPloIds?.length ?? 0) > 0;
+    return v2CiloIsIncomplete(cilo, context);
   });
 }
 

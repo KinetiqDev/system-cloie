@@ -655,6 +655,95 @@ describe("Dean oversight read model", () => {
     ]);
   });
 
+  it("lists active Program-specific CILOs as gaps when the Program has zero active PLOs", async () => {
+    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
+    prismaMock.courseAssignment.findMany.mockResolvedValue([assignment()]);
+    const readiness = mixedReadiness();
+    readiness.contexts = [
+      {
+        ...readiness.contexts[1],
+        state: "incomplete-mapping",
+        plos: [],
+        cilos: [
+          {
+            id: "cilo-1",
+            description: "Explain core ideas",
+            isArchived: false,
+            mappedTargets: [],
+            missingPloIds: [],
+            missingInstitutionalOutcomeIds: [],
+          },
+        ],
+      },
+    ];
+    readinessMock.mockResolvedValue(readiness);
+
+    const result = await getDeanLearningOutcomes(PERIOD_ID);
+
+    expect(result.state).toBe("ready");
+    if (result.state !== "ready") throw new Error("expected ready state");
+    expect(result.data.programs[0]?.mappingGaps).toEqual([
+      expect.objectContaining({
+        ciloId: "cilo-1",
+        courseScope: "PROGRAM_SPECIFIC",
+        missingPloIds: [],
+      }),
+    ]);
+  });
+
+  it("falls back to stored missing lists when a version 2 snapshot CILO lacks mappedTargets", async () => {
+    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
+    prismaMock.courseAssignment.findMany.mockResolvedValue([assignment()]);
+    readinessMock.mockResolvedValue({
+      period: { id: PERIOD_ID, status: "COMPLETED" },
+      schemaVersion: 2,
+      programTotals: [],
+      contexts: [
+        {
+          courseId: "course-1",
+          courseCode: "CS101",
+          courseName: "Foundations",
+          courseIsArchived: false,
+          programId: "program-1",
+          programName: "Computer Science",
+          programIsArchived: false,
+          assignmentIds: ["assignment-prog"],
+          courseScope: "PROGRAM_SPECIFIC",
+          targetType: "GRADUATE_OUTCOME",
+          yearLevels: ["FIRST_YEAR"],
+          sections: ["AFTERNOON"],
+          state: "incomplete-mapping",
+          cilos: [
+            {
+              id: "cilo-gap",
+              description: "Explain core ideas",
+              isArchived: false,
+              missingPloIds: ["go-1"],
+              missingInstitutionalOutcomeIds: [],
+            },
+            {
+              id: "cilo-fine",
+              description: "Apply principles",
+              isArchived: false,
+              missingPloIds: [],
+              missingInstitutionalOutcomeIds: [],
+            },
+          ],
+          plos: [],
+          affectedCiloIds: ["cilo-gap"],
+        },
+      ],
+    });
+
+    const result = await getDeanLearningOutcomes(PERIOD_ID);
+
+    expect(result.state).toBe("ready");
+    if (result.state !== "ready") throw new Error("expected ready state");
+    expect(result.data.programs[0]?.mappingGaps).toEqual([
+      expect.objectContaining({ ciloId: "cilo-gap", missingPloIds: ["go-1"] }),
+    ]);
+  });
+
   it("does not list archived CILOs as current mapping gaps", async () => {
     prismaMock.academicTermInstance.findUnique.mockResolvedValue(period("COMPLETED"));
     prismaMock.courseAssignment.findMany.mockResolvedValue([generalEducationAssignment()]);

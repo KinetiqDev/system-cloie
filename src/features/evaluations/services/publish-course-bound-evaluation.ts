@@ -55,9 +55,14 @@ function buildPublicationStatus(activationAt: Date | null | undefined): "ACTIVE"
 }
 
 /**
- * New-publication alignment gate: every active CILO of the locked Course must
- * reach at least one valid active target of the Course scope's typed layer.
- * Archived targets and wrong-layer relations never satisfy the gate.
+ * New-publication alignment gate: for a locked Course, every active CILO must
+ * satisfy the Course scope's typed alignment rule before a Course-bound
+ * evaluation may be published. General Education follows the at-least-one
+ * active Institutional Outcome rule; Program-specific Courses require a
+ * non-null manifestation for every active PLO of the Course's owning
+ * Academic Program (zero active PLOs with active CILOs is incomplete).
+ * Archived targets, wrong-program rows, and rows without a manifestation
+ * never satisfy the gate.
  */
 async function classifyPublicationAlignment(
   db: PublicationContextDb,
@@ -65,19 +70,35 @@ async function classifyPublicationAlignment(
   courseScope: CourseScope,
   owningProgramId: string | null
 ): Promise<CourseAlignmentState> {
-  const cilos = await db.cILO.findMany({
-    where: { course_id: courseId, is_active: true },
-    select: {
-      id: true,
-      cilo_mappings: {
-        select: { plo: { select: { program_id: true, is_active: true } } },
+  const [cilos, activePloIds] = await Promise.all([
+    db.cILO.findMany({
+      where: { course_id: courseId, is_active: true },
+      select: {
+        id: true,
+        cilo_mappings: {
+          select: {
+            manifestation: true,
+            plo: { select: { id: true, program_id: true, is_active: true } },
+          },
+        },
+        cilo_institutional_outcome_mappings: {
+          select: { institutional_outcome: { select: { is_active: true } } },
+        },
       },
-      cilo_institutional_outcome_mappings: {
-        select: { institutional_outcome: { select: { is_active: true } } },
-      },
-    },
-  });
-  return classifyCourseAlignment(cilos, courseScope, owningProgramId);
+    }),
+    courseScope === CourseScope.GENERAL_EDUCATION || owningProgramId === null
+      ? []
+      : db.pLO.findMany({
+          where: { program_id: owningProgramId, is_active: true },
+          select: { id: true },
+        }),
+  ]);
+  return classifyCourseAlignment(
+    cilos,
+    courseScope,
+    owningProgramId,
+    activePloIds.map((plo) => plo.id)
+  );
 }
 
 /**
@@ -411,8 +432,10 @@ export async function publishCourseBoundEvaluation({
             }
 
             // New-publication alignment gate: reject before deployment creation
-            // when any active CILO lacks a valid active target for the locked
-            // Course scope. Runs after the existing template-context validation
+            // when any active CILO fails the Course scope's typed alignment
+            // rule (exhaustive manifestation coverage for Program-specific
+            // Courses, at-least-one active Institutional Outcome for General
+            // Education). Runs after the existing template-context validation
             // so no-CILO and binding errors keep their established semantics.
             // Faculty publishers receive a direct repair path.
             const courseScope = lockedAssignment.course.course_scope as CourseScope;
@@ -423,15 +446,15 @@ export async function publishCourseBoundEvaluation({
               lockedAssignment.course.program_id ?? null
             );
             if (publicationAlignment !== "ready") {
-              const targetLabel =
-                courseScope === CourseScope.GENERAL_EDUCATION
-                  ? "Institutional Outcome"
-                  : "Program Learning Outcome from the Course's owning Academic Program";
               const isFacultyPublisher = authSession.activeRole === ROLES.FACULTY;
+              const requirement =
+                courseScope === CourseScope.GENERAL_EDUCATION
+                  ? "map to at least one active Institutional Outcome"
+                  : "have a manifestation of every active Program Learning Outcome of the Course's owning Academic Program";
               throw new PublicationValidationError(
                 isFacultyPublisher
-                  ? `Every active CILO must map to at least one active ${targetLabel} before publishing. Complete the Course alignment to continue.`
-                  : `Course ${lockedAssignment.course.code} alignment is incomplete: every active CILO must map to at least one active ${targetLabel} before publishing.`,
+                  ? `Every active CILO must ${requirement} before publishing. Complete the Course alignment to continue.`
+                  : `Course ${lockedAssignment.course.code} alignment is incomplete: every active CILO must ${requirement} before publishing.`,
                 isFacultyPublisher ? lockedAssignment.course_id : undefined
               );
             }

@@ -47,7 +47,20 @@ function generalEducationCourse() {
 }
 
 function activePloMapping(id = "go-1", programId = "program-1") {
-  return { plo: { id, program_id: programId, is_active: true } };
+  return {
+    manifestation: "PRACTICE",
+    plo: { id, program_id: programId, is_active: true },
+  };
+}
+
+function activePlos(ids: string[]) {
+  return ids.map((id, index) => ({
+    id,
+    code: `GO-${index + 1}`,
+    description: `Outcome ${index + 1}`,
+    is_active: true,
+    order: index,
+  }));
 }
 
 function activeIloMapping(id = "ilo-1") {
@@ -90,12 +103,18 @@ describe("readPeriodReadiness", () => {
     });
   });
 
-  it("classifies a Program-specific context ready when every active CILO maps an owning-Program GO", async () => {
+  it("classifies a Program-specific context ready when every active CILO classifies every owning-Program PLO", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
     vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([
       assignment({
+        program: {
+          id: "program-1",
+          name: "Program A",
+          is_active: true,
+          plos: activePlos(["go-1"]),
+        },
         course: {
           ...assignment().course,
           cilos: [
@@ -117,6 +136,98 @@ describe("readPeriodReadiness", () => {
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
       mappedTargets: [{ id: "go-1", isArchived: false }],
       missingPloIds: [],
+    });
+  });
+
+  it("treats a legacy null-manifestation row as an unclassified pair", async () => {
+    vi.mocked(prisma.academicTermInstance.findUnique)
+      .mockResolvedValueOnce({ status: "ACTIVE" } as never)
+      .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([
+      assignment({
+        program: {
+          id: "program-1",
+          name: "Program A",
+          is_active: true,
+          plos: activePlos(["go-1"]),
+        },
+        course: {
+          ...assignment().course,
+          cilos: [
+            {
+              id: "cilo-1",
+              description: "Apply knowledge",
+              is_active: true,
+              cilo_mappings: [
+                { manifestation: null, plo: { id: "go-1", program_id: "program-1", is_active: true } },
+              ],
+              cilo_institutional_outcome_mappings: [],
+            },
+          ],
+        },
+      }),
+    ] as never);
+
+    const readiness = await readPeriodReadiness("period-1");
+
+    expect(readiness.contexts[0]).toMatchObject({
+      state: "incomplete-mapping",
+      affectedCiloIds: ["cilo-1"],
+      affectedPloIds: ["go-1"],
+    });
+    expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
+      mappedTargets: [],
+      missingPloIds: ["go-1"],
+    });
+  });
+
+  it("classifies incomplete when an active owning-Program PLO is unclassified for one active CILO", async () => {
+    vi.mocked(prisma.academicTermInstance.findUnique)
+      .mockResolvedValueOnce({ status: "ACTIVE" } as never)
+      .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([
+      assignment({
+        program: {
+          id: "program-1",
+          name: "Program A",
+          is_active: true,
+          plos: activePlos(["go-1", "go-2"]),
+        },
+        course: {
+          ...assignment().course,
+          cilos: [
+            {
+              id: "cilo-1",
+              description: "Apply knowledge",
+              is_active: true,
+              cilo_mappings: [
+                activePloMapping("go-1", "program-1"),
+                activePloMapping("go-2", "program-1"),
+              ],
+              cilo_institutional_outcome_mappings: [],
+            },
+            {
+              id: "cilo-2",
+              description: "Evaluate outcomes",
+              is_active: true,
+              cilo_mappings: [activePloMapping("go-1", "program-1")],
+              cilo_institutional_outcome_mappings: [],
+            },
+          ],
+        },
+      }),
+    ] as never);
+
+    const readiness = await readPeriodReadiness("period-1");
+
+    expect(readiness.contexts[0]).toMatchObject({
+      state: "incomplete-mapping",
+      affectedCiloIds: ["cilo-2"],
+      affectedPloIds: ["go-2"],
+    });
+    expect(readiness.contexts[0]?.cilos[1]).toMatchObject({
+      mappedTargets: [{ id: "go-1", isArchived: false }],
+      missingPloIds: ["go-2"],
     });
   });
 
@@ -193,7 +304,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-1",
               description: "Apply knowledge",
               is_active: true,
-              cilo_mappings: [{ plo: { id: "go-1", program_id: "program-1", is_active: false } }],
+              cilo_mappings: [{ manifestation: "PRACTICE", plo: { id: "go-1", program_id: "program-1", is_active: false } }],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -500,6 +611,12 @@ describe("readPeriodReadiness", () => {
     vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([
       assignment({
         id: "ready-assignment",
+        program: {
+          id: "program-1",
+          name: "Program A",
+          is_active: true,
+          plos: activePlos(["go-1"]),
+        },
         course: {
           ...assignment().course,
           cilos: [
