@@ -74,6 +74,7 @@ describe("selected Program Outcome routes", () => {
           courseTitle: "Purposive Communication",
           courseScope: "GENERAL_EDUCATION",
           plos: [],
+          archivedPlos: [],
           cilos: [
             {
               id: "cilo-ge",
@@ -89,6 +90,7 @@ describe("selected Program Outcome routes", () => {
                 },
               ],
               manifestations: [],
+              archivedManifestations: [],
               readiness: "ready",
             },
             {
@@ -96,6 +98,7 @@ describe("selected Program Outcome routes", () => {
               description: "Apply ethical reasoning",
               mappedTargets: [],
               manifestations: [],
+              archivedManifestations: [],
               readiness: "incomplete-mapping",
             },
           ],
@@ -109,6 +112,9 @@ describe("selected Program Outcome routes", () => {
             { id: "plo-1", code: "PLO-1", description: "Analyze problems" },
             { id: "plo-2", code: "PLO-2", description: "Design solutions" },
           ],
+          archivedPlos: [
+            { id: "plo-9", code: "PLO-9", description: "Retired outcome" },
+          ],
           cilos: [
             {
               id: "cilo-complete",
@@ -118,6 +124,7 @@ describe("selected Program Outcome routes", () => {
                 { ploId: "plo-1", manifestation: "LEARNING" },
                 { ploId: "plo-2", manifestation: "PRACTICE" },
               ],
+              archivedManifestations: [{ ploId: "plo-9", manifestation: "OPPORTUNITY" }],
               readiness: "ready",
             },
             {
@@ -128,6 +135,7 @@ describe("selected Program Outcome routes", () => {
                 { ploId: "plo-1", manifestation: null },
                 { ploId: "plo-2", manifestation: null },
               ],
+              archivedManifestations: [],
               readiness: "incomplete-mapping",
             },
           ],
@@ -156,6 +164,9 @@ describe("selected Program Outcome routes", () => {
     expect(html).toContain("Unanswered");
     expect(html).toContain("Aligned");
     expect(html).toContain("Needs mapping");
+    expect(html).toContain("PLO-9");
+    expect(html).toContain("Archived Program Learning Outcomes");
+    expect(html).toContain("Opportunity (O)");
     expect(html).toContain(
       "Faculty can align this CILO to Institutional Outcomes through Course alignment."
     );

@@ -71,6 +71,16 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
     expect(state).toBe("incomplete-mapping");
   });
 
+  it("flips a fully classified Course back to incomplete when a new PLO is added", () => {
+    const cilos = [mappedCilo("plo-1", "LEARNING")];
+    expect(classify(cilos, "PROGRAM_SPECIFIC", PROGRAM, ["plo-1"])).toBe("ready");
+    // A newly created PLO joins the active catalog, so the same rows no longer
+    // cover every required pair until Faculty classify the new PLO.
+    expect(classify(cilos, "PROGRAM_SPECIFIC", PROGRAM, ["plo-1", "plo-2"])).toBe(
+      "incomplete-mapping"
+    );
+  });
+
   it("classifies incomplete, not ready, when the Program has zero active PLOs alongside active CILOs", () => {
     const state = classify([unmappedCilo()], "PROGRAM_SPECIFIC", PROGRAM, []);
     expect(state).toBe("incomplete-mapping");

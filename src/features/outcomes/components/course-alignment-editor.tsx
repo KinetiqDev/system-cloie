@@ -405,7 +405,7 @@ function AlignmentDialogs({
   onDiscardConfirmationChange,
   onDiscardDraft,
 }: AlignmentDialogsProps) {
-  const { targetById } = indexAlignmentTargets(alignment);
+  const { activeTargetIds, targetById } = indexAlignmentTargets(alignment);
   return (
     <>
       <AlertDialog
@@ -447,6 +447,7 @@ function AlignmentDialogs({
                 // fallow-ignore-next-line complexity
                 (() => {
                   const linesByCilo = new Map<string, string[]>();
+                  const archivedLinesByCilo = new Map<string, string[]>();
                   for (const addition of review.additions) {
                     const lines = linesByCilo.get(addition.ciloId) ?? [];
                     lines.push(
@@ -472,14 +473,38 @@ function AlignmentDialogs({
                     );
                     linesByCilo.set(removal.ciloId, lines);
                   }
-                  return [...linesByCilo.entries()].map(([ciloId, lines]) => {
+                  // Archived PLO pairs carry no diff (they are never rewritten), but the
+                  // review reports their historical manifestation read-only for context.
+                  for (const cilo of alignment.cilos) {
+                    if (!("mappings" in cilo)) continue;
+                    const archivedLines = cilo.mappings
+                      .filter((mapping) => !activeTargetIds.has(mapping.ploId))
+                      .map(
+                        (mapping) =>
+                          `${targetById.get(mapping.ploId)?.code ?? mapping.ploId} (archived): ${manifestationLabel(mapping.manifestation)}`
+                      );
+                    if (archivedLines.length > 0) {
+                      archivedLinesByCilo.set(cilo.id, archivedLines);
+                    }
+                  }
+                  const ciloIds = [
+                    ...new Set([...linesByCilo.keys(), ...archivedLinesByCilo.keys()]),
+                  ];
+                  return ciloIds.map((ciloId) => {
                     const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === ciloId);
+                    const lines = linesByCilo.get(ciloId) ?? [];
+                    const archivedLines = archivedLinesByCilo.get(ciloId) ?? [];
                     return (
                       <div key={ciloId} className="flex flex-col gap-1">
                         <p className="font-medium">CILO {ciloIndex + 1}</p>
                         <ul className="flex flex-col gap-0.5">
                           {lines.map((line) => (
                             <li key={line}>{line}</li>
+                          ))}
+                          {archivedLines.map((line) => (
+                            <li key={line} className="text-muted-foreground">
+                              {line} — read-only
+                            </li>
                           ))}
                         </ul>
                       </div>

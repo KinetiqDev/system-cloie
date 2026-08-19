@@ -275,6 +275,49 @@ export default async function SelectedProgramOutcomeMappingPage({
                         </div>
                       ))}
                     </div>
+                    {course.archivedPlos.length > 0 && (
+                      <div
+                        className="border-border border-dashed bg-muted/30 rounded-lg border p-4"
+                        aria-label="Archived Program Learning Outcome manifestations, read-only"
+                        data-testid="archived-mapping-rows"
+                      >
+                        <p className="text-label-sm font-semibold">
+                          Archived Program Learning Outcomes
+                        </p>
+                        <p className="text-text-muted text-body-sm">
+                          Historical manifestations on archived PLOs are read-only and do not
+                          count toward completeness.
+                        </p>
+                        <ul className="mt-3 flex flex-col gap-2">
+                          {course.cilos.flatMap((cilo, index) =>
+                            cilo.archivedManifestations.map((mapping) => {
+                              const archivedPlo = course.archivedPlos.find(
+                                (plo) => plo.id === mapping.ploId
+                              );
+                              return (
+                                <li
+                                  key={`${cilo.id}:${mapping.ploId}`}
+                                  className="flex flex-wrap items-center gap-2"
+                                >
+                                  <span className="text-label-sm font-semibold">
+                                    CILO {index + 1}
+                                  </span>
+                                  <span className="text-body-sm">
+                                    {archivedPlo?.code ?? mapping.ploId}
+                                  </span>
+                                  <Badge variant="outline" className="text-text-muted">
+                                    Archived
+                                  </Badge>
+                                  <span className="text-body-sm">
+                                    {manifestationLabel(mapping.manifestation)}
+                                  </span>
+                                </li>
+                              );
+                            })
+                          )}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
