@@ -142,8 +142,10 @@ Never create a replacement worktree or run another bootstrap yourself.
 
 ### Standalone mode
 
+Branch name: `<type>/<N>-<slug>`. Default `feat/`; use `fix/` for bug tickets, `docs/` for documentation-only tickets, `chore/` for maintenance, `hotfix/` for urgent fixes.
+
 ```bash
-git checkout -b "ticket-<N>-<slug>" "origin/$BASE"
+git checkout -b "<type>/<N>-<slug>" "origin/$BASE"
 ```
 
 Ensure a runnable checkout: `pnpm install --frozen-lockfile` when dependencies are missing.

@@ -23,10 +23,12 @@ Branch from the fetched `origin/$BASE`, never a stale local checkout.
 
 ## 2. Create the worktree
 
+Branch name: `<type>/<issue>-<slug>`. Default `feat/`; use `fix/` for bug tickets, `docs/` for documentation-only tickets, `chore/` for maintenance, `hotfix/` for urgent fixes.
+
 ```bash
 herdr worktree create \
   --cwd "$ROOT" \
-  --branch "slice/<issue>-<slug>" \
+  --branch "<type>/<issue>-<slug>" \
   --base "origin/$BASE" \
   --label "slice #<issue>" \
   --no-focus \
