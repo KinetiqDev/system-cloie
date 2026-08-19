@@ -3,10 +3,10 @@ import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
 
 const {
-  goCreateMock,
-  goFindManyMock,
-  goFindUniqueMock,
-  goUpdateMock,
+  ploCreateMock,
+  ploFindManyMock,
+  ploFindUniqueMock,
+  ploUpdateMock,
   programFindUniqueMock,
   programHeadAssignmentFindManyMock,
   programHeadAssignmentFindFirstMock,
@@ -16,10 +16,10 @@ const {
   transactionMock,
   courseFindManyMock,
 } = vi.hoisted(() => ({
-  goCreateMock: vi.fn(),
-  goFindManyMock: vi.fn(),
-  goFindUniqueMock: vi.fn(),
-  goUpdateMock: vi.fn(),
+  ploCreateMock: vi.fn(),
+  ploFindManyMock: vi.fn(),
+  ploFindUniqueMock: vi.fn(),
+  ploUpdateMock: vi.fn(),
   programFindUniqueMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
   programHeadAssignmentFindFirstMock: vi.fn(),
@@ -33,10 +33,10 @@ const {
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     pLO: {
-      create: goCreateMock,
-      findMany: goFindManyMock,
-      findUnique: goFindUniqueMock,
-      update: goUpdateMock,
+      create: ploCreateMock,
+      findMany: ploFindManyMock,
+      findUnique: ploFindUniqueMock,
+      update: ploUpdateMock,
     },
     program: {
       findUnique: programFindUniqueMock,
@@ -125,10 +125,10 @@ describe("manage-program-head-outcomes", () => {
     transactionMock.mockImplementation(async (callback) =>
       callback({
         pLO: {
-          findMany: goFindManyMock,
-          findUnique: goFindUniqueMock,
-          create: goCreateMock,
-          update: goUpdateMock,
+          findMany: ploFindManyMock,
+          findUnique: ploFindUniqueMock,
+          create: ploCreateMock,
+          update: ploUpdateMock,
         },
         program: { findUnique: programFindUniqueMock },
         programHeadAssignment: { findFirst: programHeadAssignmentFindFirstMock },
@@ -153,7 +153,7 @@ describe("manage-program-head-outcomes", () => {
       code: "BSIT",
       name: "BS Information Technology",
     });
-    goFindManyMock.mockResolvedValue([
+    ploFindManyMock.mockResolvedValue([
       {
         id: PLO_ID,
         code: "GO-1",
@@ -199,7 +199,7 @@ describe("manage-program-head-outcomes", () => {
       code: "BSED",
       name: "Secondary Education",
     });
-    goFindManyMock.mockResolvedValue([]);
+    ploFindManyMock.mockResolvedValue([]);
 
     const result = await listProgramPLOs(selectedProgramId);
 
@@ -210,7 +210,7 @@ describe("manage-program-head-outcomes", () => {
         program: { id: selectedProgramId, code: "BSED", name: "Secondary Education" },
       },
     });
-    expect(goFindManyMock).toHaveBeenCalledWith(
+    expect(ploFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({ where: { program_id: selectedProgramId } })
     );
   });
@@ -218,6 +218,7 @@ describe("manage-program-head-outcomes", () => {
   it("includes assigned General Education courses with Institutional Outcome mappings", async () => {
     const selectedProgramId = "program-2";
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: selectedProgramId }]);
+    ploFindManyMock.mockResolvedValue([]);
     courseFindManyMock.mockResolvedValue([
       {
         id: "course-ge",
@@ -255,6 +256,7 @@ describe("manage-program-head-outcomes", () => {
           courseCode: "GE101",
           courseTitle: "General Education",
           courseScope: "GENERAL_EDUCATION",
+          plos: [],
           cilos: [
             {
               id: "cilo-ge",
@@ -269,6 +271,7 @@ describe("manage-program-head-outcomes", () => {
                   is_active: true,
                 },
               ],
+              manifestations: [],
               readiness: "ready",
             },
           ],
@@ -295,9 +298,13 @@ describe("manage-program-head-outcomes", () => {
     );
   });
 
-  it("reports Program-specific GO mappings and readiness gaps per CILO", async () => {
+  it("lists every active PLO with per-pair manifestations and exhaustive readiness per CILO", async () => {
     const selectedProgramId = "program-1";
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: selectedProgramId }]);
+    ploFindManyMock.mockResolvedValue([
+      { id: "go-1", code: "PLO-1", description: "Analyze problems" },
+      { id: "go-2", code: "PLO-2", description: "Design solutions" },
+    ]);
     courseFindManyMock.mockResolvedValue([
       {
         id: "course-ps",
@@ -311,18 +318,61 @@ describe("manage-program-head-outcomes", () => {
             cilo_mappings: [
               {
                 id: "mapping-1",
-                plo: { id: "go-1", code: "GO-1", description: "Design", is_active: true },
+                manifestation: "LEARNING",
+                plo: {
+                  id: "go-1",
+                  code: "PLO-1",
+                  description: "Analyze problems",
+                  program_id: selectedProgramId,
+                  is_active: true,
+                },
+              },
+              {
+                id: "mapping-2",
+                manifestation: "PRACTICE",
+                plo: {
+                  id: "go-2",
+                  code: "PLO-2",
+                  description: "Design solutions",
+                  program_id: selectedProgramId,
+                  is_active: true,
+                },
               },
             ],
             cilo_institutional_outcome_mappings: [],
           },
           {
-            id: "cilo-archived",
-            description: "Retired outcome",
+            id: "cilo-legacy",
+            description: "Legacy classification",
             cilo_mappings: [
               {
-                id: "mapping-2",
-                plo: { id: "go-2", code: "GO-2", description: "Legacy", is_active: false },
+                id: "mapping-3",
+                manifestation: null,
+                plo: {
+                  id: "go-1",
+                  code: "PLO-1",
+                  description: "Analyze problems",
+                  program_id: selectedProgramId,
+                  is_active: true,
+                },
+              },
+            ],
+            cilo_institutional_outcome_mappings: [],
+          },
+          {
+            id: "cilo-partial",
+            description: "One pair classified",
+            cilo_mappings: [
+              {
+                id: "mapping-4",
+                manifestation: "OPPORTUNITY",
+                plo: {
+                  id: "go-1",
+                  code: "PLO-1",
+                  description: "Analyze problems",
+                  program_id: selectedProgramId,
+                  is_active: true,
+                },
               },
             ],
             cilo_institutional_outcome_mappings: [],
@@ -331,6 +381,24 @@ describe("manage-program-head-outcomes", () => {
             id: "cilo-gap",
             description: "No target yet",
             cilo_mappings: [],
+            cilo_institutional_outcome_mappings: [],
+          },
+          {
+            id: "cilo-archived-target",
+            description: "Only archived target",
+            cilo_mappings: [
+              {
+                id: "mapping-5",
+                manifestation: "LEARNING",
+                plo: {
+                  id: "go-3",
+                  code: "PLO-3",
+                  description: "Retired",
+                  program_id: selectedProgramId,
+                  is_active: false,
+                },
+              },
+            ],
             cilo_institutional_outcome_mappings: [],
           },
         ],
@@ -360,33 +428,122 @@ describe("manage-program-head-outcomes", () => {
         }),
       })
     );
-    expect(result.data[0]).toMatchObject({
-      courseScope: "PROGRAM_SPECIFIC",
-      cilos: [
-        { id: "cilo-aligned", readiness: "ready" },
-        { id: "cilo-archived", readiness: "incomplete-mapping" },
-        { id: "cilo-gap", readiness: "incomplete-mapping" },
-      ],
+    expect(ploFindManyMock).toHaveBeenCalledWith({
+      where: { program_id: selectedProgramId, is_active: true },
+      select: { id: true, code: true, description: true },
+      orderBy: [{ order: "asc" }, { code: "asc" }],
     });
-    expect(result.data[0].cilos[1].mappedTargets).toEqual([
+    expect(result.data[0].courseScope).toBe("PROGRAM_SPECIFIC");
+    expect(result.data[0].plos).toEqual([
+      { id: "go-1", code: "PLO-1", description: "Analyze problems" },
+      { id: "go-2", code: "PLO-2", description: "Design solutions" },
+    ]);
+    expect(result.data[0].cilos).toEqual([
       {
-        id: "go-2",
-        mappingId: "mapping-2",
-        code: "GO-2",
-        description: "Legacy",
-        kind: "PLO",
-        is_active: false,
+        id: "cilo-aligned",
+        description: "Design a solution",
+        mappedTargets: [],
+        manifestations: [
+          { ploId: "go-1", manifestation: "LEARNING" },
+          { ploId: "go-2", manifestation: "PRACTICE" },
+        ],
+        readiness: "ready",
+      },
+      {
+        id: "cilo-legacy",
+        description: "Legacy classification",
+        mappedTargets: [],
+        manifestations: [
+          { ploId: "go-1", manifestation: null },
+          { ploId: "go-2", manifestation: null },
+        ],
+        readiness: "incomplete-mapping",
+      },
+      {
+        id: "cilo-partial",
+        description: "One pair classified",
+        mappedTargets: [],
+        manifestations: [
+          { ploId: "go-1", manifestation: "OPPORTUNITY" },
+          { ploId: "go-2", manifestation: null },
+        ],
+        readiness: "incomplete-mapping",
+      },
+      {
+        id: "cilo-gap",
+        description: "No target yet",
+        mappedTargets: [],
+        manifestations: [
+          { ploId: "go-1", manifestation: null },
+          { ploId: "go-2", manifestation: null },
+        ],
+        readiness: "incomplete-mapping",
+      },
+      {
+        id: "cilo-archived-target",
+        description: "Only archived target",
+        mappedTargets: [],
+        manifestations: [
+          { ploId: "go-1", manifestation: null },
+          { ploId: "go-2", manifestation: null },
+        ],
+        readiness: "incomplete-mapping",
       },
     ]);
-    expect(result.data[0].cilos[2].mappedTargets).toEqual([]);
+  });
+
+  it("reports every Program-specific CILO incomplete when the Program has no active PLOs", async () => {
+    const selectedProgramId = "program-1";
+    programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: selectedProgramId }]);
+    ploFindManyMock.mockResolvedValue([]);
+    courseFindManyMock.mockResolvedValue([
+      {
+        id: "course-ps",
+        code: "CS101",
+        title: "Introduction to Computing",
+        course_scope: "PROGRAM_SPECIFIC",
+        cilos: [
+          {
+            id: "cilo-1",
+            description: "Design a solution",
+            cilo_mappings: [],
+            cilo_institutional_outcome_mappings: [],
+          },
+        ],
+      },
+    ]);
+
+    const result = await listCILOMappingsForProgram(selectedProgramId);
+
+    expect(result).toEqual({
+      success: true,
+      data: [
+        {
+          courseId: "course-ps",
+          courseCode: "CS101",
+          courseTitle: "Introduction to Computing",
+          courseScope: "PROGRAM_SPECIFIC",
+          plos: [],
+          cilos: [
+            {
+              id: "cilo-1",
+              description: "Design a solution",
+              mappedTargets: [],
+              manifestations: [],
+              readiness: "incomplete-mapping",
+            },
+          ],
+        },
+      ],
+    });
   });
 
   // ─── createPLO ────────────────────────────────────────────────────────
 
   it("PH can create a GO within assigned program", async () => {
-    goFindManyMock.mockResolvedValue([]);
+    ploFindManyMock.mockResolvedValue([]);
     programFindUniqueMock.mockResolvedValue({ is_active: true });
-    goCreateMock.mockResolvedValue({ id: PLO_ID });
+    ploCreateMock.mockResolvedValue({ id: PLO_ID });
 
     const result = await createPLO({
       programId: PROGRAM_ID,
@@ -395,7 +552,7 @@ describe("manage-program-head-outcomes", () => {
     });
 
     expect(result).toEqual({ success: true, data: { id: PLO_ID } });
-    expect(goCreateMock).toHaveBeenCalledWith({
+    expect(ploCreateMock).toHaveBeenCalledWith({
       data: {
         code: "GO-1",
         description: "Critical Thinking",
@@ -419,13 +576,13 @@ describe("manage-program-head-outcomes", () => {
       success: false,
       error: "No active program assignment found for this Program Head.",
     });
-    expect(goCreateMock).not.toHaveBeenCalled();
+    expect(ploCreateMock).not.toHaveBeenCalled();
   });
 
   it("unique constraint error on duplicate GO code within program", async () => {
-    goFindManyMock.mockResolvedValue([]);
+    ploFindManyMock.mockResolvedValue([]);
     programFindUniqueMock.mockResolvedValue({ is_active: true });
-    goCreateMock.mockRejectedValue(createPrismaUniqueConstraintError());
+    ploCreateMock.mockRejectedValue(createPrismaUniqueConstraintError());
 
     const result = await createPLO({
       programId: PROGRAM_ID,
@@ -442,7 +599,7 @@ describe("manage-program-head-outcomes", () => {
   // ─── updatePLO ────────────────────────────────────────────────────────
 
   it("PH can update a GO within scope", async () => {
-    goFindUniqueMock.mockResolvedValue({
+    ploFindUniqueMock.mockResolvedValue({
       id: PLO_ID,
       code: "GO-1",
       description: "Original",
@@ -450,7 +607,7 @@ describe("manage-program-head-outcomes", () => {
       is_active: true,
       program_id: PROGRAM_ID,
     });
-    goUpdateMock.mockResolvedValue({ id: PLO_ID });
+    ploUpdateMock.mockResolvedValue({ id: PLO_ID });
 
     const result = await updatePLO({
       programId: PROGRAM_ID,
@@ -460,7 +617,7 @@ describe("manage-program-head-outcomes", () => {
     });
 
     expect(result).toEqual({ success: true, data: { id: PLO_ID } });
-    expect(goUpdateMock).toHaveBeenCalledWith({
+    expect(ploUpdateMock).toHaveBeenCalledWith({
       where: { id: PLO_ID },
       data: {
         code: "GO-1-UPDATED",
@@ -470,7 +627,7 @@ describe("manage-program-head-outcomes", () => {
   });
 
   it("PH cannot update GO outside scope", async () => {
-    goFindUniqueMock.mockResolvedValue({
+    ploFindUniqueMock.mockResolvedValue({
       id: PLO_ID,
       program_id: "other-program",
     });
@@ -486,7 +643,7 @@ describe("manage-program-head-outcomes", () => {
       success: false,
       error: "You do not have permission to modify this Program Learning Outcome.",
     });
-    expect(goUpdateMock).not.toHaveBeenCalled();
+    expect(ploUpdateMock).not.toHaveBeenCalled();
   });
 
   it("rejects a BEED GO from a selected BSED context", async () => {
@@ -495,7 +652,7 @@ describe("manage-program-head-outcomes", () => {
       { program_id: PROGRAM_ID },
       { program_id: selectedProgramId },
     ]);
-    goFindUniqueMock.mockResolvedValue({ id: PLO_ID, program_id: PROGRAM_ID });
+    ploFindUniqueMock.mockResolvedValue({ id: PLO_ID, program_id: PROGRAM_ID });
 
     const result = await updatePLO({
       programId: selectedProgramId,
@@ -508,13 +665,13 @@ describe("manage-program-head-outcomes", () => {
       success: false,
       error: "You do not have permission to modify this Program Learning Outcome.",
     });
-    expect(goUpdateMock).not.toHaveBeenCalled();
+    expect(ploUpdateMock).not.toHaveBeenCalled();
   });
 
   // ─── deletePLO ────────────────────────────────────────────────────────
 
   it("PH archives GO without deleting mappings", async () => {
-    goFindUniqueMock.mockResolvedValue({
+    ploFindUniqueMock.mockResolvedValue({
       id: PLO_ID,
       program_id: PROGRAM_ID,
       code: "GO-1",
@@ -522,16 +679,16 @@ describe("manage-program-head-outcomes", () => {
       order: 0,
       is_active: true,
     });
-    goUpdateMock.mockResolvedValue({ id: PLO_ID });
+    ploUpdateMock.mockResolvedValue({ id: PLO_ID });
 
     const result = await deletePLO(PROGRAM_ID, PLO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
-    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: false } });
+    expect(ploUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: false } });
   });
 
   it("PH archives GO with existing CILO mappings", async () => {
-    goFindUniqueMock.mockResolvedValue({
+    ploFindUniqueMock.mockResolvedValue({
       id: PLO_ID,
       program_id: PROGRAM_ID,
       code: "GO-1",
@@ -539,18 +696,18 @@ describe("manage-program-head-outcomes", () => {
       order: 0,
       is_active: true,
     });
-    goUpdateMock.mockResolvedValue({ id: PLO_ID });
+    ploUpdateMock.mockResolvedValue({ id: PLO_ID });
 
     const result = await deletePLO(PROGRAM_ID, PLO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
-    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: false } });
+    expect(ploUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: false } });
   });
 
   // ─── restorePLO ───────────────────────────────────────────────────────
 
   it("PH restores an archived GO within the assigned program", async () => {
-    goFindUniqueMock.mockResolvedValue({
+    ploFindUniqueMock.mockResolvedValue({
       id: PLO_ID,
       program_id: PROGRAM_ID,
       code: "GO-1",
@@ -558,16 +715,16 @@ describe("manage-program-head-outcomes", () => {
       order: 0,
       is_active: false,
     });
-    goUpdateMock.mockResolvedValue({ id: PLO_ID });
+    ploUpdateMock.mockResolvedValue({ id: PLO_ID });
 
     const result = await restorePLO(PROGRAM_ID, PLO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
-    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: true } });
+    expect(ploUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: true } });
   });
 
   it("PH cannot restore a GO outside the assigned program", async () => {
-    goFindUniqueMock.mockResolvedValue({ id: PLO_ID, program_id: "other-program" });
+    ploFindUniqueMock.mockResolvedValue({ id: PLO_ID, program_id: "other-program" });
 
     const result = await restorePLO(PROGRAM_ID, PLO_ID);
 
@@ -575,22 +732,22 @@ describe("manage-program-head-outcomes", () => {
       success: false,
       error: "You do not have permission to restore this Program Learning Outcome.",
     });
-    expect(goUpdateMock).not.toHaveBeenCalled();
+    expect(ploUpdateMock).not.toHaveBeenCalled();
   });
 
   it("restorePLO fails safely when the GO does not exist", async () => {
-    goFindUniqueMock.mockResolvedValue(null);
+    ploFindUniqueMock.mockResolvedValue(null);
 
     const result = await restorePLO(PROGRAM_ID, PLO_ID);
 
     expect(result).toEqual({ success: false, error: "Program Learning Outcome not found." });
-    expect(goUpdateMock).not.toHaveBeenCalled();
+    expect(ploUpdateMock).not.toHaveBeenCalled();
   });
 
   // ─── reorderPLOs ──────────────────────────────────────────────────────
 
   it("reorder validates all IDs belong to PH's program", async () => {
-    goFindManyMock.mockResolvedValue([{ id: "go-1", order: 0 }]);
+    ploFindManyMock.mockResolvedValue([{ id: "go-1", order: 0 }]);
 
     const result = await reorderPLOs(PROGRAM_ID, ["go-1", "go-2"]);
 
@@ -602,7 +759,7 @@ describe("manage-program-head-outcomes", () => {
   });
 
   it("reorder succeeds when all IDs belong to PH's program", async () => {
-    goFindManyMock.mockResolvedValue([
+    ploFindManyMock.mockResolvedValue([
       { id: "go-1", order: 0 },
       { id: "go-2", order: 1 },
     ]);
