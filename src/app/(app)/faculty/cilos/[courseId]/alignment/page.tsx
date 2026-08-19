@@ -4,6 +4,7 @@ import { readCourseAlignment } from "@/features/outcomes/services/manage-course-
 import {
   commitCourseAlignmentAction,
   prepareCourseAlignmentAction,
+  saveDraftCourseAlignmentAction,
 } from "@/lib/actions/course-alignment-actions";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
@@ -29,6 +30,7 @@ export default async function CourseAlignmentPage({
         alignment={result.data}
         prepareAction={prepareCourseAlignmentAction}
         commitAction={commitCourseAlignmentAction}
+        saveDraftAction={saveDraftCourseAlignmentAction}
       />
     </div>
   );

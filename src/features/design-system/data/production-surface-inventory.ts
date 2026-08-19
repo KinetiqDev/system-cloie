@@ -2532,6 +2532,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/outcomes/components/manifestation-alignment-content.tsx",
+    disposition: "task",
+    taskId: 17,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/outcomes/components/manifestation-picker.tsx",
+    disposition: "task",
+    taskId: 17,
+    category: "feature_component",
+  },
+  {
     path: "src/features/outcomes/components/plo-form-dialog.tsx",
     disposition: "task",
     taskId: 17,

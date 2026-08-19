@@ -24,6 +24,11 @@ import type {
   CourseAlignmentReview,
   CourseAlignment,
 } from "@/features/outcomes/services/manage-course-alignment";
+import {
+  ManifestationAlignmentContent,
+  type ManifestationDraftState,
+} from "@/features/outcomes/components/manifestation-alignment-content";
+import { manifestationLabel } from "@/features/outcomes/components/manifestation-picker";
 import type { CILOMappingManifestation } from "@prisma/client";
 
 declare global {
@@ -50,9 +55,17 @@ type Props = {
     | { success: true; changed: number; freshnessToken: string }
     | { success: false; error: string }
   >;
+  saveDraftAction?: (
+    input: unknown
+  ) => Promise<
+    | { success: true; changed: number; freshnessToken: string }
+    | { success: false; error: string }
+  >;
 };
 
 const HISTORY_GUARD_KEY = "cloie-course-alignment-dirty-entry";
+
+type AlignmentDraft = Record<string, string[]> | ManifestationDraftState;
 
 function isHistoryGuardEntry(marker: string): boolean {
   const state: unknown = window.history.state;
@@ -68,12 +81,6 @@ function indexAlignmentTargets(alignment: CourseAlignment) {
       [...alignment.targets, ...alignment.unavailableTargets].map((target) => [target.id, target])
     ),
   };
-}
-
-function manifestationLabel(value: CILOMappingManifestation | null | undefined): string {
-  if (!value) return "Unanswered";
-  const word = `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
-  return `${word} (${value.charAt(0)})`;
 }
 
 function currentHistoryEntryIndex(): number | undefined {
@@ -304,10 +311,11 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
 
 type AlignmentContentProps = {
   alignment: CourseAlignment;
-  draft: Record<string, string[]>;
+  draft: Record<string, string[]> | ManifestationDraftState;
   disabled: boolean;
   emptyStateAction: { href: string; label: string };
   onToggleTarget: (ciloId: string, targetId: string) => void;
+  onChangeCell: (ciloId: string, ploId: string, manifestation: CILOMappingManifestation | null) => void;
 };
 
 function AlignmentContent({
@@ -316,6 +324,7 @@ function AlignmentContent({
   disabled,
   emptyStateAction,
   onToggleTarget,
+  onChangeCell,
 }: AlignmentContentProps) {
   if (alignment.cilos.length === 0) {
     return (
@@ -336,28 +345,36 @@ function AlignmentContent({
     );
   }
 
+  if (alignment.course.scope === "PROGRAM_SPECIFIC") {
+    return (
+      <ManifestationAlignmentContent
+        alignment={alignment}
+        draft={draft as ManifestationDraftState}
+        disabled={disabled}
+        onChangeCell={onChangeCell}
+      />
+    );
+  }
+
   return (
     <>
       {alignment.targets.length === 0 && (
         <Alert>
           <AlertDescription>
-            {alignment.course.scope === "GENERAL_EDUCATION"
-              ? "No active Institutional Outcomes exist yet. CILOs remain visible, but selection is unavailable until the Secretary creates an active Institutional Outcome."
-              : `${alignment.course.program?.code} has no active Program Learning Outcomes. CILOs remain visible, but selection is unavailable until the Program Head creates an active Program Learning Outcome.`}
+            No active Institutional Outcomes exist yet. CILOs remain visible, but selection is
+            unavailable until the Secretary creates an active Institutional Outcome.
           </AlertDescription>
         </Alert>
       )}
-      {alignment.course.scope === "GENERAL_EDUCATION" && (
-        <Alert>
-          <AlertDescription>
-            This is a General Education Course. Mapping changes apply to every active assignment
-            using this shared Course, not just one section.
-          </AlertDescription>
-        </Alert>
-      )}
+      <Alert>
+        <AlertDescription>
+          This is a General Education Course. Mapping changes apply to every active assignment using
+          this shared Course, not just one section.
+        </AlertDescription>
+      </Alert>
       <CiloMappingRows
         alignment={alignment}
-        draft={draft}
+        draft={draft as Record<string, string[]>}
         disabled={disabled}
         onToggleTarget={onToggleTarget}
       />
@@ -427,31 +444,47 @@ function AlignmentDialogs({
                   );
                 })
               ) : (
-                review.after.map((item) => {
-                  const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === item.ciloId);
-                  const beforeItem = review.before.find((entry) => entry.ciloId === item.ciloId);
-                  const beforeByPloid = new Map(
-                    (beforeItem?.mappings ?? []).map((mapping) => [
-                      mapping.ploId,
-                      mapping.manifestation,
-                    ])
-                  );
-                  return (
-                    <div key={item.ciloId} className="flex flex-col gap-1">
-                      <p className="font-medium">CILO {ciloIndex + 1}</p>
-                      <ul className="flex flex-col gap-1">
-                        {item.mappings.map((mapping) => (
-                          <li key={mapping.ploId}>
-                            {targetById.get(mapping.ploId)?.code ?? mapping.ploId}:{" "}
-                            {manifestationLabel(beforeByPloid.get(mapping.ploId))}
-                            {" \u2192 "}
-                            {manifestationLabel(mapping.manifestation)}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                })
+                (() => {
+                  const linesByCilo = new Map<string, string[]>();
+                  for (const addition of review.additions) {
+                    const lines = linesByCilo.get(addition.ciloId) ?? [];
+                    lines.push(
+                      `${targetById.get(addition.ploId)?.code ?? addition.ploId}: Set to ${manifestationLabel(addition.manifestation)}`
+                    );
+                    linesByCilo.set(addition.ciloId, lines);
+                  }
+                  for (const update of review.updates) {
+                    const lines = linesByCilo.get(update.ciloId) ?? [];
+                    lines.push(
+                      `${targetById.get(update.ploId)?.code ?? update.ploId}: ${manifestationLabel(update.from)} \u2192 ${manifestationLabel(update.to)}`
+                    );
+                    linesByCilo.set(update.ciloId, lines);
+                  }
+                  for (const removal of review.removals) {
+                    const lines = linesByCilo.get(removal.ciloId) ?? [];
+                    const before = review.before.find((item) => item.ciloId === removal.ciloId);
+                    const beforeManifestation = before?.mappings.find(
+                      (mapping) => mapping.ploId === removal.ploId
+                    )?.manifestation;
+                    lines.push(
+                      `${targetById.get(removal.ploId)?.code ?? removal.ploId}: ${manifestationLabel(beforeManifestation)} \u2192 Unanswered`
+                    );
+                    linesByCilo.set(removal.ciloId, lines);
+                  }
+                  return [...linesByCilo.entries()].map(([ciloId, lines]) => {
+                    const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === ciloId);
+                    return (
+                      <div key={ciloId} className="flex flex-col gap-1">
+                        <p className="font-medium">CILO {ciloIndex + 1}</p>
+                        <ul className="flex flex-col gap-0.5">
+                          {lines.map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  });
+                })()
               ))}
           </div>
           <AlertDialogFooter>
@@ -487,15 +520,27 @@ export function CourseAlignmentEditor({
   emptyStateAction = { href: "/faculty/cilos", label: "Manage CILOs" },
   prepareAction,
   commitAction,
+  saveDraftAction,
 }: Props) {
+  const isProgramSpecific = alignment.course.scope === "PROGRAM_SPECIFIC";
+  const { activeTargetIds, targetById } = indexAlignmentTargets(alignment);
   const initialTargetIds = Object.fromEntries(
     alignment.cilos.map((cilo) => [
       cilo.id,
-      "targetIds" in cilo
-        ? cilo.targetIds
-        : cilo.mappings.map((mapping) => mapping.ploId),
+      isProgramSpecific
+        ? Object.fromEntries(
+            ("mappings" in cilo ? cilo.mappings : [])
+              .filter(
+                (mapping) =>
+                  mapping.manifestation !== null && activeTargetIds.has(mapping.ploId)
+              )
+              .map((mapping) => [mapping.ploId, mapping.manifestation])
+          )
+        : "targetIds" in cilo
+          ? cilo.targetIds
+          : [],
     ])
-  ) as Record<string, string[]>;
+  ) as Record<string, string[]> | ManifestationDraftState;
   const [draft, setDraft] = useState(initialTargetIds);
   const [savedTargetIds, setSavedTargetIds] = useState(initialTargetIds);
   const [review, setReview] = useState<CourseAlignmentReview | null>(null);
@@ -505,38 +550,74 @@ export function CourseAlignmentEditor({
   const [success, setSuccess] = useState<string | null>(null);
   const [freshnessToken, setFreshnessToken] = useState(alignment.freshnessToken);
 
-  const { activeTargetIds, targetById } = indexAlignmentTargets(alignment);
-  const isDirty = alignment.cilos.some(
-    (cilo) => JSON.stringify(draft[cilo.id] ?? []) !== JSON.stringify(savedTargetIds[cilo.id] ?? [])
+  const draftCells = isProgramSpecific
+    ? (draft as ManifestationDraftState)
+    : ({} as ManifestationDraftState);
+  const savedCells = isProgramSpecific
+    ? (savedTargetIds as ManifestationDraftState)
+    : ({} as ManifestationDraftState);
+  const geDraft = draft as Record<string, string[]>;
+  const geSaved = savedTargetIds as Record<string, string[]>;
+  const isDirty = alignment.cilos.some((cilo) =>
+    isProgramSpecific
+      ? JSON.stringify(draftCells[cilo.id] ?? {}) !== JSON.stringify(savedCells[cilo.id] ?? {})
+      : JSON.stringify(geDraft[cilo.id] ?? []) !== JSON.stringify(geSaved[cilo.id] ?? [])
   );
   const additions = useMemo(
     () =>
-      alignment.cilos.flatMap((cilo) =>
-        (draft[cilo.id] ?? [])
-          .filter((targetId) => !(savedTargetIds[cilo.id] ?? []).includes(targetId))
-          .map((targetId) => ({ ciloId: cilo.id, targetId }))
-      ),
-    [alignment.cilos, draft, savedTargetIds]
+      isProgramSpecific
+        ? []
+        : alignment.cilos.flatMap((cilo) =>
+            (geDraft[cilo.id] ?? [])
+              .filter((targetId) => !(geSaved[cilo.id] ?? []).includes(targetId))
+              .map((targetId) => ({ ciloId: cilo.id, targetId }))
+          ),
+    [alignment.cilos, geDraft, geSaved, isProgramSpecific]
   );
   const removals = useMemo(
     () =>
-      alignment.cilos.flatMap((cilo) =>
-        (savedTargetIds[cilo.id] ?? [])
-          .filter((targetId) => !(draft[cilo.id] ?? []).includes(targetId))
-          .map((targetId) => ({ ciloId: cilo.id, targetId }))
-      ),
-    [alignment.cilos, draft, savedTargetIds]
+      isProgramSpecific
+        ? []
+        : alignment.cilos.flatMap((cilo) =>
+            (geSaved[cilo.id] ?? [])
+              .filter((targetId) => !(geDraft[cilo.id] ?? []).includes(targetId))
+              .map((targetId) => ({ ciloId: cilo.id, targetId }))
+          ),
+    [alignment.cilos, geDraft, geSaved, isProgramSpecific]
   );
+  const manifestationChangeCount = isProgramSpecific
+    ? alignment.cilos.reduce((total, cilo) => {
+        const current = draftCells[cilo.id] ?? {};
+        const saved = savedCells[cilo.id] ?? {};
+        return (
+          total +
+          alignment.targets.filter(
+            (target) => (current[target.id] ?? null) !== (saved[target.id] ?? null)
+          ).length
+        );
+      }, 0)
+    : 0;
+  const pspComplete =
+    isProgramSpecific &&
+    alignment.targets.length > 0 &&
+    alignment.cilos.every((cilo) =>
+      alignment.targets.every((target) => draftCells[cilo.id]?.[target.id] !== undefined)
+    );
   const readiness =
     alignment.cilos.length === 0
       ? "missing-cilos"
-      : alignment.cilos.every((cilo) =>
-            (draft[cilo.id] ?? []).some((targetId) => activeTargetIds.has(targetId))
+      : isProgramSpecific
+        ? pspComplete
+          ? "ready"
+          : "incomplete-mapping"
+        : alignment.cilos.every((cilo) =>
+            (geDraft[cilo.id] ?? []).some((targetId) => activeTargetIds.has(targetId))
           )
-        ? "ready"
-        : "incomplete-mapping";
+          ? "ready"
+          : "incomplete-mapping";
   const editingLocked = pending || review !== null;
   const needsReload = error?.includes("Reload and review") ?? false;
+  const changeCount = isProgramSpecific ? manifestationChangeCount : additions.length + removals.length;
 
   const targetLabel = (targetId: string) => targetById.get(targetId)?.code ?? targetId;
   const renderTargets = (targetIds: string[]) =>
@@ -544,13 +625,27 @@ export function CourseAlignmentEditor({
 
   const toggleTarget = (ciloId: string, targetId: string) => {
     setDraft((current) => {
-      const selected = current[ciloId] ?? [];
+      const selected = (current as Record<string, string[]>)[ciloId] ?? [];
       return {
         ...current,
         [ciloId]: selected.includes(targetId)
           ? selected.filter((id) => id !== targetId)
           : [...selected, targetId],
-      };
+      } as AlignmentDraft;
+    });
+    setSuccess(null);
+  };
+
+  const changeCell = (
+    ciloId: string,
+    ploId: string,
+    manifestation: CILOMappingManifestation | null
+  ) => {
+    setDraft((current) => {
+      const cells = { ...(current[ciloId] as ManifestationDraftState[string] | undefined) };
+      if (manifestation === null) delete cells[ploId];
+      else cells[ploId] = manifestation;
+      return { ...current, [ciloId]: cells } as AlignmentDraft;
     });
     setSuccess(null);
   };
@@ -561,16 +656,57 @@ export function CourseAlignmentEditor({
     try {
       const result = await prepareAction({
         courseId: alignment.course.id,
-        desired: alignment.cilos.map((cilo) => ({
-          ciloId: cilo.id,
-          targetIds: draft[cilo.id] ?? [],
-        })),
+        desired: alignment.cilos.map((cilo) =>
+          isProgramSpecific
+            ? {
+                ciloId: cilo.id,
+                mappings: alignment.targets.flatMap((target) => {
+                  const manifestation = draftCells[cilo.id]?.[target.id];
+                  return manifestation === undefined
+                    ? []
+                    : [{ ploId: target.id, manifestation }];
+                }),
+              }
+            : { ciloId: cilo.id, targetIds: geDraft[cilo.id] ?? [] }
+        ),
         freshnessToken,
       });
       if (result.success) setReview(result.review);
       else setError(result.error);
     } catch {
       setError("Could not prepare the alignment review.");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const saveProgress = async () => {
+    if (!saveDraftAction) return;
+    setPending(true);
+    setError(null);
+    try {
+      const result = await saveDraftAction({
+        courseId: alignment.course.id,
+        cells: alignment.cilos.map((cilo) => ({
+          ciloId: cilo.id,
+          mappings: alignment.targets.flatMap((target) => {
+            const manifestation = draftCells[cilo.id]?.[target.id];
+            return manifestation === undefined
+              ? []
+              : [{ ploId: target.id, manifestation }];
+          }),
+        })),
+        freshnessToken,
+      });
+      if (result.success) {
+        setSavedTargetIds(draft);
+        setFreshnessToken(result.freshnessToken);
+        setSuccess(`${result.changed} mapping change${result.changed === 1 ? "" : "s"} saved.`);
+      } else {
+        setError(result.error);
+      }
+    } catch {
+      setError("Could not save the alignment draft.");
     } finally {
       setPending(false);
     }
@@ -593,9 +729,11 @@ export function CourseAlignmentEditor({
             : (Object.fromEntries(
                 reviewToCommit.after.map((item) => [
                   item.ciloId,
-                  item.mappings.map((mapping) => mapping.ploId),
+                  Object.fromEntries(
+                    item.mappings.map((mapping) => [mapping.ploId, mapping.manifestation])
+                  ),
                 ])
-              ) as Record<string, string[]>);
+              ) as ManifestationDraftState);
         setDraft(committedState);
         setSavedTargetIds(committedState);
         setFreshnessToken(result.freshnessToken);
@@ -631,7 +769,7 @@ export function CourseAlignmentEditor({
           <p className="text-muted-foreground mt-1 text-body-sm">
             {alignment.course.scope === "GENERAL_EDUCATION"
               ? "Select the active Institutional Outcomes from the college-wide catalog."
-              : `Select the active Program Learning Outcomes owned by ${alignment.course.program?.code}.`}
+              : `Classify each CILO against every active Program Learning Outcome owned by ${alignment.course.program?.code ?? "the program"}.`}
           </p>
         </div>
         <Badge variant={readiness === "ready" ? "default" : "outline"}>
@@ -670,6 +808,7 @@ export function CourseAlignmentEditor({
         disabled={editingLocked}
         emptyStateAction={emptyStateAction}
         onToggleTarget={toggleTarget}
+        onChangeCell={changeCell}
       />
 
       <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:justify-end">
@@ -682,13 +821,33 @@ export function CourseAlignmentEditor({
           <RotateCcw data-icon="inline-start" />
           Discard changes
         </Button>
+        {isProgramSpecific && saveDraftAction && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={saveProgress}
+            disabled={!isDirty || editingLocked}
+          >
+            <Save data-icon="inline-start" />
+            {pending ? "Saving..." : "Save progress"}
+          </Button>
+        )}
         <Button
           type="button"
           onClick={prepareReview}
-          disabled={!isDirty || editingLocked || alignment.cilos.length === 0}
+          disabled={
+            !isDirty ||
+            editingLocked ||
+            alignment.cilos.length === 0 ||
+            (isProgramSpecific && !pspComplete)
+          }
         >
           <Save data-icon="inline-start" />
-          {pending ? "Preparing review..." : `Review ${additions.length + removals.length} changes`}
+          {pending
+            ? "Preparing review..."
+            : isProgramSpecific
+              ? `Review ${manifestationChangeCount} change${manifestationChangeCount === 1 ? "" : "s"}`
+              : `Review ${additions.length + removals.length} changes`}
         </Button>
       </div>
 
