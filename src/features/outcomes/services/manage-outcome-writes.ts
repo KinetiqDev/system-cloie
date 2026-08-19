@@ -14,21 +14,21 @@ import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 type WriterRole = (typeof ROLES)[keyof typeof ROLES];
 
 export type OutcomeWriteInput =
-  | { kind: "GO"; action: "create"; programId: string; code: string; description: string }
+  | { kind: "PLO"; action: "create"; programId: string; code: string; description: string }
   | {
-      kind: "GO";
+      kind: "PLO";
       action: "update";
       programId: string;
       id: string;
       code: string;
       description: string;
     }
-  | { kind: "GO"; action: "archive" | "restore"; programId: string; id: string }
-  | { kind: "GO"; action: "reorder"; programId: string; orderedIds: string[] }
+  | { kind: "PLO"; action: "archive" | "restore"; programId: string; id: string }
+  | { kind: "PLO"; action: "reorder"; programId: string; orderedIds: string[] }
   | { kind: "CILO"; action: "create"; courseId: string; description: string }
   | { kind: "CILO"; action: "update"; id: string; description: string }
   | { kind: "CILO"; action: "archive" | "restore"; id: string }
-  | { kind: "MAPPING"; action: "create"; programId: string; ciloId: string; goId: string }
+  | { kind: "MAPPING"; action: "create"; programId: string; ciloId: string; ploId: string }
   | { kind: "MAPPING"; action: "remove"; programId: string; id: string }
   | { kind: "ILO_MAPPING"; action: "create"; ciloId: string; iloId: string }
   | { kind: "ILO_MAPPING"; action: "remove"; id: string }
@@ -37,7 +37,7 @@ export type OutcomeWriteInput =
   | { kind: "ILO"; action: "archive" | "restore"; id: string }
   | { kind: "ILO"; action: "reorder"; orderedIds: string[] };
 
-type GoWriteInput = Extract<OutcomeWriteInput, { kind: "GO" }>;
+type PLOWriteInput = Extract<OutcomeWriteInput, { kind: "PLO" }>;
 
 type MappingScopeContext = {
   courseId: string;
@@ -89,15 +89,15 @@ function failure(error: string): ServiceResult<never> {
   return { success: false, error };
 }
 
-async function scopeAllowsGo(
-  input: GoWriteInput,
+async function scopeAllowsPLO(
+  input: PLOWriteInput,
   role: WriterRole,
   db: Prisma.TransactionClient | typeof prisma
 ): Promise<boolean> {
   if (role !== ROLES.PROGRAM_HEAD) return false;
   if (input.action === "create" || input.action === "reorder") return true;
-  const go = await db.gO.findUnique({ where: { id: input.id }, select: { program_id: true } });
-  return go?.program_id === input.programId;
+  const plo = await db.pLO.findUnique({ where: { id: input.id }, select: { program_id: true } });
+  return plo?.program_id === input.programId;
 }
 
 async function scopeAllowsCilo(
@@ -240,8 +240,8 @@ async function scopeAllows(
   if (role === ROLES.SECRETARY) return true;
   if (input.kind === "ILO") return false;
   switch (input.kind) {
-    case "GO":
-      return scopeAllowsGo(input, role, db);
+    case "PLO":
+      return scopeAllowsPLO(input, role, db);
     case "CILO":
       return scopeAllowsCilo(input, userId, role, db);
     case "MAPPING":
@@ -251,23 +251,23 @@ async function scopeAllows(
   }
 }
 
-async function readGoState(
-  input: GoWriteInput,
+async function readPLOState(
+  input: PLOWriteInput,
   db: Prisma.TransactionClient | typeof prisma
 ): Promise<ReviewValue> {
   if (input.action === "create")
-    return db.gO.findMany({
+    return db.pLO.findMany({
       where: { program_id: input.programId },
       select: { code: true, description: true, order: true, program_id: true, is_active: true },
       orderBy: { order: "asc" },
     });
   if (input.action === "reorder")
-    return db.gO.findMany({
+    return db.pLO.findMany({
       where: { program_id: input.programId },
       select: { id: true, order: true },
       orderBy: { order: "asc" },
     });
-  return db.gO.findUnique({
+  return db.pLO.findUnique({
     where: { id: input.id },
     select: {
       id: true,
@@ -336,12 +336,12 @@ async function readMappingState(
 ): Promise<ReviewValue> {
   if (input.action === "create")
     return db.cILOMapping.findUnique({
-      where: { cilo_id_go_id: { cilo_id: input.ciloId, go_id: input.goId } },
-      select: { id: true, cilo_id: true, go_id: true },
+      where: { cilo_id_plo_id: { cilo_id: input.ciloId, plo_id: input.ploId } },
+      select: { id: true, cilo_id: true, plo_id: true },
     });
   return db.cILOMapping.findUnique({
     where: { id: input.id },
-    select: { id: true, cilo_id: true, go_id: true },
+    select: { id: true, cilo_id: true, plo_id: true },
   });
 }
 
@@ -370,8 +370,8 @@ async function readState(
   db: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<ReviewValue> {
   switch (input.kind) {
-    case "GO":
-      return readGoState(input, db);
+    case "PLO":
+      return readPLOState(input, db);
     case "CILO":
       return readCiloState(input, db);
     case "ILO":
@@ -383,7 +383,7 @@ async function readState(
   }
 }
 
-function nextGoState(input: GoWriteInput, before: ReviewValue): ReviewValue {
+function nextPLOState(input: PLOWriteInput, before: ReviewValue): ReviewValue {
   if (input.action === "create") {
     const existing = before as Array<Record<string, unknown>>;
     return [
@@ -473,7 +473,7 @@ function nextIloState(input: IloWriteInput, before: ReviewValue): ReviewValue {
 }
 
 function nextMappingState(input: MappingWriteInput, before: ReviewValue): ReviewValue {
-  if (input.action === "create") return { cilo_id: input.ciloId, go_id: input.goId };
+  if (input.action === "create") return { cilo_id: input.ciloId, plo_id: input.ploId };
   if (input.action === "remove") return null;
   return before;
 }
@@ -487,8 +487,8 @@ function nextIloMappingState(input: IloMappingWriteInput, before: ReviewValue): 
 
 function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string): ReviewValue {
   switch (input.kind) {
-    case "GO":
-      return nextGoState(input, before);
+    case "PLO":
+      return nextPLOState(input, before);
     case "CILO":
       return nextCiloState(input, before, userId);
     case "ILO":
@@ -511,7 +511,7 @@ export async function prepareOutcomeWrite(
     (role !== ROLES.SECRETARY && role !== ROLES.PROGRAM_HEAD && role !== ROLES.FACULTY)
   )
     return failure("You do not have permission to modify this outcome.");
-  if (role === ROLES.PROGRAM_HEAD && input.kind === "GO") {
+  if (role === ROLES.PROGRAM_HEAD && input.kind === "PLO") {
     const contextResult = await resolveProgramHeadContext(input.programId);
     if (!contextResult.success || !(await scopeAllows(input, session.userId, role)))
       return failure("You do not have permission to modify this outcome.");
@@ -522,10 +522,10 @@ export async function prepareOutcomeWrite(
   if (input.action !== "create" && !before) return failure("Outcome record was not found.");
   if (input.kind === "MAPPING" && input.action === "create") {
     const validation = await import("./manage-cilo-mappings").then(({ validateCiloMapping }) =>
-      validateCiloMapping(input.ciloId, input.goId)
+      validateCiloMapping(input.ciloId, input.ploId)
     );
     if (!validation.success) return validation as ServiceResult<never>;
-    if (before) return failure("CILO-to-GO mapping already exists.");
+    if (before) return failure("CILO-to-PLO mapping already exists.");
   }
   if (input.kind === "ILO_MAPPING" && input.action === "create") {
     const validation = await import("./manage-cilo-mappings").then(
@@ -547,9 +547,9 @@ export async function prepareOutcomeWrite(
   return { success: true, data: { ...unsigned, signature: signReview(unsigned, session.userId) } };
 }
 
-async function writeGo(
+async function writePLO(
   tx: Prisma.TransactionClient,
-  input: GoWriteInput,
+  input: PLOWriteInput,
   current: ReviewValue
 ): Promise<ServiceResult<{ id?: string }>> {
   if (input.action === "create") {
@@ -562,7 +562,7 @@ async function writeGo(
       success: true,
       data: {
         id: (
-          await tx.gO.create({
+          await tx.pLO.create({
             data: {
               code: input.code.trim().toUpperCase(),
               description: input.description.trim(),
@@ -575,15 +575,15 @@ async function writeGo(
     };
   }
   if (input.action === "reorder") {
-    const gos = current as Array<{ id: string; order: number }>;
+    const plos = current as Array<{ id: string; order: number }>;
     if (
       new Set(input.orderedIds).size !== input.orderedIds.length ||
-      gos.length !== input.orderedIds.length ||
-      gos.some((go) => !input.orderedIds.includes(go.id))
+      plos.length !== input.orderedIds.length ||
+      plos.some((plo) => !input.orderedIds.includes(plo.id))
     )
-      return failure("Graduate Outcomes must be a complete unique program order.");
+      return failure("Program Learning Outcomes must be a complete unique program order.");
     await Promise.all(
-      input.orderedIds.map((id, order) => tx.gO.update({ where: { id }, data: { order } }))
+      input.orderedIds.map((id, order) => tx.pLO.update({ where: { id }, data: { order } }))
     );
     return { success: true, data: {} };
   }
@@ -593,7 +593,7 @@ async function writeGo(
       : { is_active: input.action === "restore" };
   return {
     success: true,
-    data: { id: (await tx.gO.update({ where: { id: input.id }, data })).id },
+    data: { id: (await tx.pLO.update({ where: { id: input.id }, data })).id },
   };
 }
 
@@ -686,14 +686,14 @@ type ActiveMappingCreateRecords = {
     course_id: string;
     course: { course_scope: "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC"; program_id: string | null };
   };
-  go: { program_id: string };
+  plo: { program_id: string };
 };
 
 async function readActiveMappingCreateRecords(
   tx: Prisma.TransactionClient,
   input: Extract<MappingWriteInput, { action: "create" }>
 ): Promise<ActiveMappingCreateRecords | null> {
-  const [cilo, go] = await Promise.all([
+  const [cilo, plo] = await Promise.all([
     tx.cILO.findUnique({
       where: { id: input.ciloId },
       select: {
@@ -702,19 +702,19 @@ async function readActiveMappingCreateRecords(
         course: { select: { is_active: true, course_scope: true, program_id: true } },
       },
     }),
-    tx.gO.findUnique({
-      where: { id: input.goId },
+    tx.pLO.findUnique({
+      where: { id: input.ploId },
       select: { is_active: true, program_id: true },
     }),
   ]);
-  if (!cilo?.is_active || !cilo.course.is_active || !go?.is_active) return null;
-  return { cilo, go };
+  if (!cilo?.is_active || !cilo.course.is_active || !plo?.is_active) return null;
+  return { cilo, plo };
 }
 
 function programSpecificMappingIsValid(records: ActiveMappingCreateRecords): boolean {
   return (
     records.cilo.course.course_scope !== "PROGRAM_SPECIFIC" ||
-    records.cilo.course.program_id === records.go.program_id
+    records.cilo.course.program_id === records.plo.program_id
   );
 }
 
@@ -723,11 +723,11 @@ async function mappingCreateError(
   input: Extract<MappingWriteInput, { action: "create" }>
 ): Promise<string | null> {
   const records = await readActiveMappingCreateRecords(tx, input);
-  if (!records) return "Active CILO, Course, and Graduate Outcome are required.";
+  if (!records) return "Active CILO, Course, and Program Learning Outcome are required.";
   if (records.cilo.course.course_scope === "GENERAL_EDUCATION")
     return "General Education CILOs map only to Institutional Outcomes";
   if (!programSpecificMappingIsValid(records))
-    return "Graduate Outcome must belong to the Course Academic Program";
+    return "Program Learning Outcome must belong to the Course Academic Program";
   return null;
 }
 
@@ -749,7 +749,7 @@ async function writeMapping(
         await tx.cILOMapping.create({
           data: {
             cilo_id: input.ciloId,
-            go_id: input.goId,
+            plo_id: input.ploId,
             created_by: userId,
             updated_by: userId,
           },
@@ -805,7 +805,7 @@ async function programHeadAssignmentIsCurrent(
   userId: string,
   role: WriterRole
 ): Promise<boolean> {
-  if (role !== ROLES.PROGRAM_HEAD || input.kind !== "GO") return true;
+  if (role !== ROLES.PROGRAM_HEAD || input.kind !== "PLO") return true;
   return Boolean(
     await revalidateProgramHeadAssignment(tx, {
       userId,
@@ -832,8 +832,8 @@ function writeReviewedOutcome(
   userId: string
 ): Promise<ServiceResult<{ id?: string }>> {
   switch (input.kind) {
-    case "GO":
-      return writeGo(tx, input, current);
+    case "PLO":
+      return writePLO(tx, input, current);
     case "ILO":
       return writeIlo(tx, input, current);
     case "CILO":
@@ -886,12 +886,12 @@ export async function commitOutcomeWrite(
     if (isUniqueConstraintError(error)) {
       return failure(
         review.input.kind === "MAPPING"
-          ? "CILO-to-GO mapping already exists."
+          ? "CILO-to-PLO mapping already exists."
           : review.input.kind === "ILO_MAPPING"
             ? "CILO-to-Institutional Outcome mapping already exists."
             : review.input.kind === "ILO"
               ? "Institutional Outcome code already exists."
-              : "Graduate Outcome code already exists."
+              : "Program Learning Outcome code already exists."
       );
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")

@@ -23,7 +23,7 @@ const loadingLabels: Record<OperationalLoadingVariant, string> = {
   detail: "Loading review details",
   responseReview: "Loading response review",
   schoolYearDetail: "Loading school year details",
-  outcomeMapping: "Loading CILO-GO mappings",
+  outcomeMapping: "Loading CILO-PLO mappings",
   rollover: "Loading rollover workspace",
   profile: "Loading profile",
 };

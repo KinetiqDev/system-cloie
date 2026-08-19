@@ -32,7 +32,7 @@ const {
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    gO: {
+    pLO: {
       create: goCreateMock,
       findMany: goFindManyMock,
       findUnique: goFindUniqueMock,
@@ -71,15 +71,15 @@ const PH_SESSION = {
 };
 
 const PROGRAM_ID = "program-1";
-const GO_ID = "go-1";
+const PLO_ID = "go-1";
 
 describe("manage-program-head-outcomes", () => {
-  let listProgramGOs: typeof import("@/features/outcomes/services/manage-program-head-outcomes").listProgramGOs;
-  let createGO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").createGO;
-  let updateGO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").updateGO;
-  let deleteGO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").deleteGO;
-  let reorderGOs: typeof import("@/features/outcomes/services/manage-program-head-outcomes").reorderGOs;
-  let restoreGO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").restoreGO;
+  let listProgramPLOs: typeof import("@/features/outcomes/services/manage-program-head-outcomes").listProgramPLOs;
+  let createPLO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").createPLO;
+  let updatePLO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").updatePLO;
+  let deletePLO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").deletePLO;
+  let reorderPLOs: typeof import("@/features/outcomes/services/manage-program-head-outcomes").reorderPLOs;
+  let restorePLO: typeof import("@/features/outcomes/services/manage-program-head-outcomes").restorePLO;
   let listCILOMappingsForProgram: typeof import("@/features/outcomes/services/manage-program-head-outcomes").listCILOMappingsForProgram;
 
   beforeEach(async () => {
@@ -124,7 +124,7 @@ describe("manage-program-head-outcomes", () => {
     });
     transactionMock.mockImplementation(async (callback) =>
       callback({
-        gO: {
+        pLO: {
           findMany: goFindManyMock,
           findUnique: goFindUniqueMock,
           create: goCreateMock,
@@ -136,16 +136,16 @@ describe("manage-program-head-outcomes", () => {
     );
 
     const mod = await import("@/features/outcomes/services/manage-program-head-outcomes");
-    listProgramGOs = mod.listProgramGOs;
-    createGO = mod.createGO;
-    updateGO = mod.updateGO;
-    deleteGO = mod.deleteGO;
-    reorderGOs = mod.reorderGOs;
-    restoreGO = mod.restoreGO;
+    listProgramPLOs = mod.listProgramPLOs;
+    createPLO = mod.createPLO;
+    updatePLO = mod.updatePLO;
+    deletePLO = mod.deletePLO;
+    reorderPLOs = mod.reorderPLOs;
+    restorePLO = mod.restorePLO;
     listCILOMappingsForProgram = mod.listCILOMappingsForProgram;
   });
 
-  // ─── listProgramGOs ──────────────────────────────────────────────────
+  // ─── listProgramPLOs ──────────────────────────────────────────────────
 
   it("PH can list GOs for assigned program", async () => {
     programFindUniqueMock.mockResolvedValue({
@@ -155,7 +155,7 @@ describe("manage-program-head-outcomes", () => {
     });
     goFindManyMock.mockResolvedValue([
       {
-        id: GO_ID,
+        id: PLO_ID,
         code: "GO-1",
         description: "Critical Thinking",
         order: 0,
@@ -167,14 +167,14 @@ describe("manage-program-head-outcomes", () => {
       },
     ]);
 
-    const result = await listProgramGOs(PROGRAM_ID);
+    const result = await listProgramPLOs(PROGRAM_ID);
 
     expect(result).toEqual({
       success: true,
       data: {
-        gos: expect.arrayContaining([
+        plos: expect.arrayContaining([
           expect.objectContaining({
-            id: GO_ID,
+            id: PLO_ID,
             code: "GO-1",
             _count: { cilo_mappings: 2 },
           }),
@@ -201,12 +201,12 @@ describe("manage-program-head-outcomes", () => {
     });
     goFindManyMock.mockResolvedValue([]);
 
-    const result = await listProgramGOs(selectedProgramId);
+    const result = await listProgramPLOs(selectedProgramId);
 
     expect(result).toEqual({
       success: true,
       data: {
-        gos: [],
+        plos: [],
         program: { id: selectedProgramId, code: "BSED", name: "Secondary Education" },
       },
     });
@@ -311,7 +311,7 @@ describe("manage-program-head-outcomes", () => {
             cilo_mappings: [
               {
                 id: "mapping-1",
-                go: { id: "go-1", code: "GO-1", description: "Design", is_active: true },
+                plo: { id: "go-1", code: "GO-1", description: "Design", is_active: true },
               },
             ],
             cilo_institutional_outcome_mappings: [],
@@ -322,7 +322,7 @@ describe("manage-program-head-outcomes", () => {
             cilo_mappings: [
               {
                 id: "mapping-2",
-                go: { id: "go-2", code: "GO-2", description: "Legacy", is_active: false },
+                plo: { id: "go-2", code: "GO-2", description: "Legacy", is_active: false },
               },
             ],
             cilo_institutional_outcome_mappings: [],
@@ -374,27 +374,27 @@ describe("manage-program-head-outcomes", () => {
         mappingId: "mapping-2",
         code: "GO-2",
         description: "Legacy",
-        kind: "GO",
+        kind: "PLO",
         is_active: false,
       },
     ]);
     expect(result.data[0].cilos[2].mappedTargets).toEqual([]);
   });
 
-  // ─── createGO ────────────────────────────────────────────────────────
+  // ─── createPLO ────────────────────────────────────────────────────────
 
   it("PH can create a GO within assigned program", async () => {
     goFindManyMock.mockResolvedValue([]);
     programFindUniqueMock.mockResolvedValue({ is_active: true });
-    goCreateMock.mockResolvedValue({ id: GO_ID });
+    goCreateMock.mockResolvedValue({ id: PLO_ID });
 
-    const result = await createGO({
+    const result = await createPLO({
       programId: PROGRAM_ID,
       code: "GO-1",
       description: "Critical Thinking",
     });
 
-    expect(result).toEqual({ success: true, data: { id: GO_ID } });
+    expect(result).toEqual({ success: true, data: { id: PLO_ID } });
     expect(goCreateMock).toHaveBeenCalledWith({
       data: {
         code: "GO-1",
@@ -409,7 +409,7 @@ describe("manage-program-head-outcomes", () => {
     // Simulate no active assignments
     programHeadAssignmentFindManyMock.mockResolvedValue([]);
 
-    const result = await createGO({
+    const result = await createPLO({
       programId: PROGRAM_ID,
       code: "GO-1",
       description: "Critical Thinking",
@@ -427,7 +427,7 @@ describe("manage-program-head-outcomes", () => {
     programFindUniqueMock.mockResolvedValue({ is_active: true });
     goCreateMock.mockRejectedValue(createPrismaUniqueConstraintError());
 
-    const result = await createGO({
+    const result = await createPLO({
       programId: PROGRAM_ID,
       code: "GO-1",
       description: "Duplicate GO",
@@ -435,33 +435,33 @@ describe("manage-program-head-outcomes", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "Graduate Outcome code already exists.",
+      error: "Program Learning Outcome code already exists.",
     });
   });
 
-  // ─── updateGO ────────────────────────────────────────────────────────
+  // ─── updatePLO ────────────────────────────────────────────────────────
 
   it("PH can update a GO within scope", async () => {
     goFindUniqueMock.mockResolvedValue({
-      id: GO_ID,
+      id: PLO_ID,
       code: "GO-1",
       description: "Original",
       order: 0,
       is_active: true,
       program_id: PROGRAM_ID,
     });
-    goUpdateMock.mockResolvedValue({ id: GO_ID });
+    goUpdateMock.mockResolvedValue({ id: PLO_ID });
 
-    const result = await updateGO({
+    const result = await updatePLO({
       programId: PROGRAM_ID,
-      id: GO_ID,
+      id: PLO_ID,
       code: "GO-1-UPDATED",
       description: "Updated description",
     });
 
-    expect(result).toEqual({ success: true, data: { id: GO_ID } });
+    expect(result).toEqual({ success: true, data: { id: PLO_ID } });
     expect(goUpdateMock).toHaveBeenCalledWith({
-      where: { id: GO_ID },
+      where: { id: PLO_ID },
       data: {
         code: "GO-1-UPDATED",
         description: "Updated description",
@@ -471,20 +471,20 @@ describe("manage-program-head-outcomes", () => {
 
   it("PH cannot update GO outside scope", async () => {
     goFindUniqueMock.mockResolvedValue({
-      id: GO_ID,
+      id: PLO_ID,
       program_id: "other-program",
     });
 
-    const result = await updateGO({
+    const result = await updatePLO({
       programId: PROGRAM_ID,
-      id: GO_ID,
+      id: PLO_ID,
       code: "GO-1",
       description: "Attempt update",
     });
 
     expect(result).toEqual({
       success: false,
-      error: "You do not have permission to modify this Graduate Outcome.",
+      error: "You do not have permission to modify this Program Learning Outcome.",
     });
     expect(goUpdateMock).not.toHaveBeenCalled();
   });
@@ -495,108 +495,108 @@ describe("manage-program-head-outcomes", () => {
       { program_id: PROGRAM_ID },
       { program_id: selectedProgramId },
     ]);
-    goFindUniqueMock.mockResolvedValue({ id: GO_ID, program_id: PROGRAM_ID });
+    goFindUniqueMock.mockResolvedValue({ id: PLO_ID, program_id: PROGRAM_ID });
 
-    const result = await updateGO({
+    const result = await updatePLO({
       programId: selectedProgramId,
-      id: GO_ID,
+      id: PLO_ID,
       code: "GO-1",
       description: "Attempt update",
     });
 
     expect(result).toEqual({
       success: false,
-      error: "You do not have permission to modify this Graduate Outcome.",
+      error: "You do not have permission to modify this Program Learning Outcome.",
     });
     expect(goUpdateMock).not.toHaveBeenCalled();
   });
 
-  // ─── deleteGO ────────────────────────────────────────────────────────
+  // ─── deletePLO ────────────────────────────────────────────────────────
 
   it("PH archives GO without deleting mappings", async () => {
     goFindUniqueMock.mockResolvedValue({
-      id: GO_ID,
+      id: PLO_ID,
       program_id: PROGRAM_ID,
       code: "GO-1",
       description: "Original",
       order: 0,
       is_active: true,
     });
-    goUpdateMock.mockResolvedValue({ id: GO_ID });
+    goUpdateMock.mockResolvedValue({ id: PLO_ID });
 
-    const result = await deleteGO(PROGRAM_ID, GO_ID);
+    const result = await deletePLO(PROGRAM_ID, PLO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
-    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: false } });
+    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: false } });
   });
 
   it("PH archives GO with existing CILO mappings", async () => {
     goFindUniqueMock.mockResolvedValue({
-      id: GO_ID,
+      id: PLO_ID,
       program_id: PROGRAM_ID,
       code: "GO-1",
       description: "Original",
       order: 0,
       is_active: true,
     });
-    goUpdateMock.mockResolvedValue({ id: GO_ID });
+    goUpdateMock.mockResolvedValue({ id: PLO_ID });
 
-    const result = await deleteGO(PROGRAM_ID, GO_ID);
+    const result = await deletePLO(PROGRAM_ID, PLO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
-    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: false } });
+    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: false } });
   });
 
-  // ─── restoreGO ───────────────────────────────────────────────────────
+  // ─── restorePLO ───────────────────────────────────────────────────────
 
   it("PH restores an archived GO within the assigned program", async () => {
     goFindUniqueMock.mockResolvedValue({
-      id: GO_ID,
+      id: PLO_ID,
       program_id: PROGRAM_ID,
       code: "GO-1",
       description: "Original",
       order: 0,
       is_active: false,
     });
-    goUpdateMock.mockResolvedValue({ id: GO_ID });
+    goUpdateMock.mockResolvedValue({ id: PLO_ID });
 
-    const result = await restoreGO(PROGRAM_ID, GO_ID);
+    const result = await restorePLO(PROGRAM_ID, PLO_ID);
 
     expect(result).toEqual({ success: true, data: undefined });
-    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: GO_ID }, data: { is_active: true } });
+    expect(goUpdateMock).toHaveBeenCalledWith({ where: { id: PLO_ID }, data: { is_active: true } });
   });
 
   it("PH cannot restore a GO outside the assigned program", async () => {
-    goFindUniqueMock.mockResolvedValue({ id: GO_ID, program_id: "other-program" });
+    goFindUniqueMock.mockResolvedValue({ id: PLO_ID, program_id: "other-program" });
 
-    const result = await restoreGO(PROGRAM_ID, GO_ID);
+    const result = await restorePLO(PROGRAM_ID, PLO_ID);
 
     expect(result).toEqual({
       success: false,
-      error: "You do not have permission to restore this Graduate Outcome.",
+      error: "You do not have permission to restore this Program Learning Outcome.",
     });
     expect(goUpdateMock).not.toHaveBeenCalled();
   });
 
-  it("restoreGO fails safely when the GO does not exist", async () => {
+  it("restorePLO fails safely when the GO does not exist", async () => {
     goFindUniqueMock.mockResolvedValue(null);
 
-    const result = await restoreGO(PROGRAM_ID, GO_ID);
+    const result = await restorePLO(PROGRAM_ID, PLO_ID);
 
-    expect(result).toEqual({ success: false, error: "Graduate Outcome not found." });
+    expect(result).toEqual({ success: false, error: "Program Learning Outcome not found." });
     expect(goUpdateMock).not.toHaveBeenCalled();
   });
 
-  // ─── reorderGOs ──────────────────────────────────────────────────────
+  // ─── reorderPLOs ──────────────────────────────────────────────────────
 
   it("reorder validates all IDs belong to PH's program", async () => {
     goFindManyMock.mockResolvedValue([{ id: "go-1", order: 0 }]);
 
-    const result = await reorderGOs(PROGRAM_ID, ["go-1", "go-2"]);
+    const result = await reorderPLOs(PROGRAM_ID, ["go-1", "go-2"]);
 
     expect(result).toEqual({
       success: false,
-      error: "Graduate Outcomes must be a complete unique program order.",
+      error: "Program Learning Outcomes must be a complete unique program order.",
     });
     expect(transactionMock).toHaveBeenCalled();
   });
@@ -607,7 +607,7 @@ describe("manage-program-head-outcomes", () => {
       { id: "go-2", order: 1 },
     ]);
 
-    const result = await reorderGOs(PROGRAM_ID, ["go-2", "go-1"]);
+    const result = await reorderPLOs(PROGRAM_ID, ["go-2", "go-1"]);
 
     expect(result).toEqual({ success: true, data: undefined });
     expect(transactionMock).toHaveBeenCalled();
@@ -618,7 +618,7 @@ describe("manage-program-head-outcomes", () => {
   it("rejects unauthenticated requests", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
-    const result = await createGO({
+    const result = await createPLO({
       programId: PROGRAM_ID,
       code: "GO-1",
       description: "Test",
@@ -637,7 +637,7 @@ describe("manage-program-head-outcomes", () => {
       activeRole: ROLES.FACULTY,
     });
 
-    const result = await createGO({
+    const result = await createPLO({
       programId: PROGRAM_ID,
       code: "GO-1",
       description: "Test",

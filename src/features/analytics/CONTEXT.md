@@ -30,13 +30,13 @@ _Avoid_: Course evaluation evidence
 
 ## Outcome evidence
 
-**Program GO evidence**:
-Course-bound quantitative evidence connected through a published evaluation's CILO question binding to a CILO and that CILO's Graduate Outcome mapping in the selected Program. Central instrument questions and Institutional Outcome evidence are not Program GO evidence.
-_Avoid_: Universal outcome attainment, ILO-to-GO evidence
+**Program PLO evidence**:
+Course-bound quantitative evidence connected through a published evaluation's CILO question binding to a CILO and that CILO's PLO mapping in the selected Program. Central instrument questions and Institutional Outcome evidence are not Program PLO evidence.
+_Avoid_: Universal outcome attainment, ILO-to-PLO evidence
 
 **Current-mapping interpretation**:
-The grouping of historical Course-bound ratings by the selected Program's current CILO-to-GO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.
-_Avoid_: Publication-time GO result, immutable historical mapping result
+The grouping of historical Course-bound ratings by the selected Program's current CILO-to-PLO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.
+_Avoid_: Publication-time PLO result, immutable historical mapping result
 
 ## AI-assisted interpretation
 

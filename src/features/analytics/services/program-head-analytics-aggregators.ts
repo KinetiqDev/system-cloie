@@ -147,7 +147,7 @@ export function describeScales(scales: ScaleDescriptor[][]): string | null {
  * Identity of a period's evidence for trend comparability. Two periods are
  * comparable only when every dimension matches: the immutable instrument
  * version IDs that produced the ratings (display labels can collide across
- * templates), the Likert scale identities, and the mapped Graduate Outcome
+ * templates), the Likert scale identities, and the mapped Program Learning Outcome
  * codes. All arrays are sorted so equality is order-independent.
  */
 export type TrendComparabilityFingerprint = {
@@ -372,7 +372,7 @@ export function buildProgramHeadOverviewKpi(input: {
 }
 
 // ---------------------------------------------------------------------------
-// Program GO outcome evidence
+// Program PLO outcome evidence
 // ---------------------------------------------------------------------------
 
 /** Raw item entries of a snapshot section across all supported formats. */
@@ -425,7 +425,7 @@ export function resolveSnapshotItemScale(
   return null;
 }
 
-/** One normalized course-bound rating row ready for Program GO aggregation. */
+/** One normalized course-bound rating row ready for Program PLO aggregation. */
 export type OutcomeEvidenceRow = {
   ratingValue: number;
   responseId: string;
@@ -435,15 +435,15 @@ export type OutcomeEvidenceRow = {
   instrumentVersion: { id: string; structureSnapshot: unknown } | null;
   /** Binding subject; null when the bound CILO was deleted (no mapping possible). */
   cilo: { id: string; description: string; course: { id: string; code: string; title: string } | null } | null;
-  /** Current CILO-to-GO mappings for the selected Program only. */
-  goMappings: Array<{ goId: string; code: string; name: string }>;
+  /** Current CILO-to-PLO mappings for the selected Program only. */
+  ploMappings: Array<{ ploId: string; code: string; name: string }>;
   evaluationId: string;
   deploymentName: string;
 };
 
-/** Accumulated evidence behind one Graduate Outcome row. */
+/** Accumulated evidence behind one Program Learning Outcome row. */
 type OutcomeEvidenceAggregate = {
-  goId: string;
+  ploId: string;
   code: string;
   name: string;
   ratingSum: number;
@@ -458,20 +458,20 @@ type OutcomeEvidenceAggregate = {
 };
 
 type OutcomeEvidenceAggregation = {
-  /** Aggregates keyed by GO id. */
+  /** Aggregates keyed by PLO id. */
   outcomes: Map<string, OutcomeEvidenceAggregate>;
-  /** True when any contributing CILO maps to more than one selected-Program GO. */
+  /** True when any contributing CILO maps to more than one selected-Program PLO. */
   hasMultiMappedCilo: boolean;
 };
 
 function getOrCreateOutcomeAggregate(
   outcomes: Map<string, OutcomeEvidenceAggregate>,
-  mapping: OutcomeEvidenceRow["goMappings"][number]
+  mapping: OutcomeEvidenceRow["ploMappings"][number]
 ): OutcomeEvidenceAggregate {
-  let aggregate = outcomes.get(mapping.goId);
+  let aggregate = outcomes.get(mapping.ploId);
   if (!aggregate) {
     aggregate = {
-      goId: mapping.goId,
+      ploId: mapping.ploId,
       code: mapping.code,
       name: mapping.name,
       ratingSum: 0,
@@ -483,7 +483,7 @@ function getOrCreateOutcomeAggregate(
       distributions: new Map(),
       excludedRatingCount: 0,
     };
-    outcomes.set(mapping.goId, aggregate);
+    outcomes.set(mapping.ploId, aggregate);
   }
   return aggregate;
 }
@@ -542,8 +542,8 @@ function accumulateOutcomeRow(
 }
 
 /**
- * Aggregate course-bound ratings into Program GO rows. Each rating contributes
- * once to every mapped GO (many-to-many). Ratings are valid only when their
+ * Aggregate course-bound ratings into Program PLO rows. Each rating contributes
+ * once to every mapped PLO (many-to-many). Ratings are valid only when their
  * value belongs to the applicable item's frozen snapshot scale; unresolvable
  * or out-of-scale ratings are excluded from the valid aggregate and counted
  * diagnostically. Central items and unmapped CILOs never create rows because
@@ -554,17 +554,17 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
   let hasMultiMappedCilo = false;
 
   for (const row of rows) {
-    if (!row.cilo || row.goMappings.length === 0) {
+    if (!row.cilo || row.ploMappings.length === 0) {
       continue;
     }
-    if (row.goMappings.length > 1) {
+    if (row.ploMappings.length > 1) {
       hasMultiMappedCilo = true;
     }
 
     const descriptors = resolveRatingScale(row);
     const isValidRating = ratingIsValid(descriptors, row.ratingValue);
 
-    for (const mapping of row.goMappings) {
+    for (const mapping of row.ploMappings) {
       const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
       accumulateOutcomeRow(aggregate, row, row.cilo, descriptors, isValidRating);
     }
@@ -574,8 +574,8 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
 }
 
 /**
- * Convert GO evidence aggregates into ranked, closed DTO rows. Rows rank by
- * mean rating descending (stronger evidence first), then GO code for stable
+ * Convert PLO evidence aggregates into ranked, closed DTO rows. Rows rank by
+ * mean rating descending (stronger evidence first), then PLO code for stable
  * ordering. Distribution percentages are computed at full precision and
  * rounded only for display.
  */
@@ -604,7 +604,7 @@ export function buildProgramHeadOutcomeDtos(
     distributions.sort((left, right) => left.scaleLabel.localeCompare(right.scaleLabel));
 
     rows.push({
-      goId: aggregate.goId,
+      ploId: aggregate.ploId,
       code: aggregate.code,
       name: aggregate.name,
       meanRating: aggregate.ratingCount === 0 ? null : aggregate.ratingSum / aggregate.ratingCount,
@@ -628,7 +628,7 @@ export function buildProgramHeadOutcomeDtos(
   rows.sort((left, right) => {
     const leftMean = left.meanRating ?? -Infinity;
     const rightMean = right.meanRating ?? -Infinity;
-    return rightMean - leftMean || left.code.localeCompare(right.code) || left.goId.localeCompare(right.goId);
+    return rightMean - leftMean || left.code.localeCompare(right.code) || left.ploId.localeCompare(right.ploId);
   });
 
   return rows;

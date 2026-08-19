@@ -349,7 +349,7 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
         cilo: {
           select: {
             cilo_mappings: {
-              select: { go: { select: { code: true } } };
+              select: { plo: { select: { code: true } } };
             };
           };
         };
@@ -456,7 +456,7 @@ function accumulateRatingRow(
     evidence.instrumentVersionIds.add(context.instrumentVersionId);
   }
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
-    evidence.outcomeCodes.add(mapping.go.code);
+    evidence.outcomeCodes.add(mapping.plo.code);
   }
 }
 
@@ -542,7 +542,7 @@ function buildCourseBoundResponseScope(programId: string, termInstanceWhere: Rec
   };
 }
 
-/** Narrow projection of a course-bound rating row for GO evidence. */
+/** Narrow projection of a course-bound rating row for PLO evidence. */
 type OutcomeRatingRow = {
   rating_value: number;
   response_id: string;
@@ -566,12 +566,12 @@ type OutcomeBindingRow = {
     id: string;
     description: string;
     course: { id: string; code: string; title: string } | null;
-    cilo_mappings: Array<{ go: { id: string; code: string; description: string } }>;
+    cilo_mappings: Array<{ plo: { id: string; code: string; description: string } }>;
   } | null;
 };
 
-function toGoMapping(mapping: { go: { id: string; code: string; description: string } }) {
-  return { goId: mapping.go.id, code: mapping.go.code, name: mapping.go.description };
+function toPloMapping(mapping: { plo: { id: string; code: string; description: string } }) {
+  return { ploId: mapping.plo.id, code: mapping.plo.code, name: mapping.plo.description };
 }
 
 function resolveInstrumentSnapshot(
@@ -588,7 +588,7 @@ function resolveInstrumentSnapshot(
 }
 
 /**
- * Map one course-bound rating to its normalized GO evidence row through the
+ * Map one course-bound rating to its normalized PLO evidence row through the
  * publication-time binding identified by evaluation plus section/item keys.
  * Returns null when the item has no binding, the bound CILO was deleted, or
  * the CILO has no canonical mapping for the selected Program.
@@ -615,7 +615,7 @@ function toOutcomeEvidenceRow(
       snapshotById
     ),
     cilo: { id: cilo.id, description: cilo.description, course: cilo.course },
-    goMappings: cilo.cilo_mappings.map(toGoMapping),
+    ploMappings: cilo.cilo_mappings.map(toPloMapping),
     evaluationId: binding.course_bound_evaluation_id,
     deploymentName: binding.course_bound_evaluation.deployment_name,
   };
@@ -623,22 +623,22 @@ function toOutcomeEvidenceRow(
 
 /**
  * Disclosure that historical ratings are grouped by the Program's current
- * CILO-to-GO mappings. Publication-time mapping snapshots do not exist yet,
+ * CILO-to-PLO mappings. Publication-time mapping snapshots do not exist yet,
  * so later mapping edits may reinterpret historical outcome rows.
  */
 const CURRENT_MAPPING_DISCLOSURE =
-  "Outcome rows group historical ratings using the Program's current CILO-to-GO mappings. " +
+  "Outcome rows group historical ratings using the Program's current CILO-to-PLO mappings. " +
   "Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.";
 
 /**
- * Authorized Program GO evidence read for the selected Program. Only
+ * Authorized Program PLO evidence read for the selected Program. Only
  * course-bound quantitative items with a publication-time CILO question
- * binding and a canonical selected-Program CILO-to-GO mapping contribute.
+ * binding and a canonical selected-Program CILO-to-PLO mapping contribute.
  * Bindings are resolved by evaluation plus section/item keys because the live
  * student submission flow writes ratings without a binding ID, mirroring the
  * existing review evidence compensation. Central instrument questions and
- * Institutional Outcome evidence never enter Program GO rows because no
- * canonical central question-to-GO relation exists.
+ * Institutional Outcome evidence never enter Program PLO rows because no
+ * canonical central question-to-PLO relation exists.
  *
  * Historical ratings are grouped by the Program's current mappings and the
  * limitation is disclosed on the DTO. Means and distributions use only
@@ -727,8 +727,8 @@ export async function getProgramHeadOutcomes(
                 description: true,
                 course: { select: { id: true, code: true, title: true } },
                 cilo_mappings: {
-                  where: { go: { program_id: selectedProgram.id } },
-                  select: { go: { select: { id: true, code: true, description: true } } },
+                  where: { plo: { program_id: selectedProgram.id } },
+                  select: { plo: { select: { id: true, code: true, description: true } } },
                 },
               },
             },
@@ -830,8 +830,8 @@ export async function getProgramHeadTrends(
             cilo: {
               select: {
                 cilo_mappings: {
-                  where: { go: { program_id: selectedProgram.id } },
-                  select: { go: { select: { code: true } } },
+                  where: { plo: { program_id: selectedProgram.id } },
+                  select: { plo: { select: { code: true } } },
                 },
               },
             },

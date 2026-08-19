@@ -112,21 +112,21 @@ function prismaRatingRow(opts: {
   };
 }
 
-const goA = { go: { id: "go-a", code: "GO-1", description: "Effective communicator" } };
-const goB = { go: { id: "go-b", code: "GO-2", description: "Critical thinker" } };
+const ploA = { plo: { id: "go-a", code: "GO-1", description: "Effective communicator" } };
+const ploB = { plo: { id: "go-b", code: "GO-2", description: "Critical thinker" } };
 
 function ciloRow(opts: {
   ciloId?: string;
   ciloDescription?: string;
   courseCode?: string;
-  goMappings?: Array<typeof goA>;
+  ploMappings?: Array<typeof ploA>;
 } = {}) {
   const { ciloId = "cilo-1", ciloDescription = "Achieve the outcome", courseCode = "EDUC 101" } = opts;
   return {
     id: ciloId,
     description: ciloDescription,
     course: { id: "course-1", code: courseCode, title: "Education 101" },
-    cilo_mappings: opts.goMappings ?? [goA],
+    cilo_mappings: opts.ploMappings ?? [ploA],
   };
 }
 
@@ -334,10 +334,10 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-a", goMappings: [goA] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-a", ploMappings: [ploA] }) }),
       bindingRow({
         evaluationId: "eval-2",
-        cilo: ciloRow({ ciloId: "cilo-b", goMappings: [goB] }),
+        cilo: ciloRow({ ciloId: "cilo-b", ploMappings: [ploB] }),
       }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
@@ -360,7 +360,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-multi", goMappings: [goA, goB] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-multi", ploMappings: [ploA, ploB] }) }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
@@ -387,7 +387,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ goMappings: [goA] }) }),
+      bindingRow({ cilo: ciloRow({ ploMappings: [ploA] }) }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
@@ -441,7 +441,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-unmapped", goMappings: [] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-unmapped", ploMappings: [] }) }),
     ]);
     mockScopeCounts({ opportunities: 5, submitted: 3 });
 
@@ -586,7 +586,7 @@ describe("getProgramHeadOutcomes", () => {
 
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
 
-    expect(result!.currentMappingDisclosure).toMatch(/current CILO-to-GO mappings/i);
+    expect(result!.currentMappingDisclosure).toMatch(/current CILO-to-PLO mappings/i);
     expect(result!.currentMappingDisclosure).toMatch(/publication-time/i);
   });
 
@@ -733,7 +733,7 @@ describe("aggregateOutcomeEvidence", () => {
         description: "Achieve the outcome",
         course: { id: "course-1", code: "EDUC 101", title: "Education 101" },
       },
-      goMappings: [{ goId: "go-a", code: "GO-1", name: "Effective communicator" }],
+      ploMappings: [{ ploId: "go-a", code: "GO-1", name: "Effective communicator" }],
       evaluationId: "eval-1",
       deploymentName: "CILO Evaluation",
       ...overrides,
@@ -743,7 +743,7 @@ describe("aggregateOutcomeEvidence", () => {
   it("skips rows without a CILO or without any mapped GO", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({ cilo: null }),
-      evidenceRow({ goMappings: [] }),
+      evidenceRow({ ploMappings: [] }),
     ]);
 
     expect(aggregation.outcomes.size).toBe(0);
@@ -753,9 +753,9 @@ describe("aggregateOutcomeEvidence", () => {
   it("flags many-to-many mapping when one CILO maps to multiple GOs", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({
-        goMappings: [
-          { goId: "go-a", code: "GO-1", name: "A" },
-          { goId: "go-b", code: "GO-2", name: "B" },
+        ploMappings: [
+          { ploId: "go-a", code: "GO-1", name: "A" },
+          { ploId: "go-b", code: "GO-2", name: "B" },
         ],
       }),
     ]);

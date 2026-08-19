@@ -13,7 +13,7 @@ const { counts, prismaMock } = vi.hoisted(() => {
   const counts = {
   major: { count: vi.fn() },
   course: { count: vi.fn() },
-  gO: { count: vi.fn() },
+  pLO: { count: vi.fn() },
   studentAcademicProfile: { count: vi.fn() },
   studentEnrollment: { count: vi.fn() },
   alumniProfile: { count: vi.fn() },
@@ -88,7 +88,7 @@ describe("Program deletion service", () => {
     prismaMock.program.findUnique.mockResolvedValue(program);
     counts.major.count.mockResolvedValue(1);
     counts.course.count.mockResolvedValue(2);
-    counts.gO.count.mockResolvedValue(3);
+    counts.pLO.count.mockResolvedValue(3);
     counts.studentAcademicProfile.count.mockResolvedValue(4);
     counts.studentEnrollment.count.mockResolvedValue(5);
     counts.alumniProfile.count.mockResolvedValue(6);
@@ -104,7 +104,7 @@ describe("Program deletion service", () => {
     const result = await preflightProgramDeletion(program.id);
 
     expect(result).toHaveProperty("data.dependencies", {
-      academicSetup: { majors: 1, courses: 2, graduateOutcomes: 3 },
+      academicSetup: { majors: 1, courses: 2, plos: 3 },
       peopleAndHistory: { studentProfiles: 4, enrollments: 5, alumniProfiles: 6 },
       teaching: { courseAssignments: 7, facultyAffiliations: 8, programHeadAssignments: 9 },
       evaluation: { evaluationTargets: 10, centralDeployments: 11, instrumentTemplates: 0 },

@@ -261,13 +261,13 @@ describe("publishCourseBoundEvaluation", () => {
       {
         description: "Apply capstone planning fundamentals.",
         id: "cilo-1",
-        cilo_mappings: [{ go: { program_id: "program-1", is_active: true } }],
+        cilo_mappings: [{ plo: { program_id: "program-1", is_active: true } }],
         cilo_institutional_outcome_mappings: [],
       },
       {
         description: "Produce a proposal-aligned outline defense artifact.",
         id: "cilo-2",
-        cilo_mappings: [{ go: { program_id: "program-1", is_active: true } }],
+        cilo_mappings: [{ plo: { program_id: "program-1", is_active: true } }],
         cilo_institutional_outcome_mappings: [],
       },
     ]);
@@ -678,7 +678,7 @@ describe("publishCourseBoundEvaluation", () => {
         {
           description: "Produce a proposal-aligned outline defense artifact.",
           id: "cilo-2",
-          cilo_mappings: [{ go: { program_id: "program-1", is_active: true } }],
+          cilo_mappings: [{ plo: { program_id: "program-1", is_active: true } }],
           cilo_institutional_outcome_mappings: [],
         },
       ]);
@@ -691,7 +691,7 @@ describe("publishCourseBoundEvaluation", () => {
         })
       ).resolves.toEqual({
         error:
-          "Every active CILO must map to at least one active Graduate Outcome from the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+          "Every active CILO must map to at least one active Program Learning Outcome from the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
         success: false,
         alignmentCourseId: "course-1",
       });
@@ -823,7 +823,7 @@ describe("publishCourseBoundEvaluation", () => {
         {
           description: "Produce a proposal-aligned outline defense artifact.",
           id: "cilo-2",
-          cilo_mappings: [{ go: { program_id: "program-1", is_active: true } }],
+          cilo_mappings: [{ plo: { program_id: "program-1", is_active: true } }],
           cilo_institutional_outcome_mappings: [],
         },
       ]);
@@ -837,7 +837,7 @@ describe("publishCourseBoundEvaluation", () => {
         })
       ).resolves.toEqual({
         error:
-          "Course IT-401 alignment is incomplete: every active CILO must map to at least one active Graduate Outcome from the Course's owning Academic Program before publishing.",
+          "Course IT-401 alignment is incomplete: every active CILO must map to at least one active Program Learning Outcome from the Course's owning Academic Program before publishing.",
         success: false,
       });
       expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();

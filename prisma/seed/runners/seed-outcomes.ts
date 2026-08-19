@@ -6,7 +6,7 @@ import {
   ciloDefsMKT,
   ciloDefsNewCourses,
   ciloMappingDefs,
-  goDefs,
+  ploDefs,
   iloDefs,
 } from "../fixtures/outcomes";
 import type { FoundationContext, OutcomeContext } from "../types";
@@ -15,16 +15,16 @@ export async function seedOutcomes({
   pMap,
   cMap,
 }: Pick<FoundationContext, "pMap" | "cMap">): Promise<OutcomeContext> {
-  console.log("  → Graduate Outcomes...");
-  const goMap = new Map<string, { id: string }>();
-  for (const g of goDefs) {
+  console.log("  → Program Learning Outcomes...");
+  const ploMap = new Map<string, { id: string }>();
+  for (const g of ploDefs) {
     const prog = pMap.get(g.pc)!;
-    const go = await prisma.gO.upsert({
+    const plo = await prisma.pLO.upsert({
       where: { program_id_code: { program_id: prog.id, code: g.code } },
       update: { description: g.desc, is_active: true },
       create: { code: g.code, description: g.desc, program_id: prog.id },
     });
-    goMap.set(g.code, go);
+    ploMap.set(g.code, plo);
   }
 
   console.log("  → Institutional Outcomes...");
@@ -72,13 +72,13 @@ export async function seedOutcomes({
   console.log("  → CILO Mappings...");
   for (const def of ciloMappingDefs) {
     const cilo = (ciloMap.get(def.courseCode) ?? []).find((c) => c.order === def.ciloOrder);
-    const go = goMap.get(def.goCode)!;
+    const plo = ploMap.get(def.ploCode)!;
     const existing = await prisma.cILOMapping.findFirst({
-      where: { cilo_id: cilo!.id, go_id: go.id },
+      where: { cilo_id: cilo!.id, plo_id: plo.id },
     });
     if (!existing) {
       await prisma.cILOMapping.create({
-        data: { cilo_id: cilo!.id, go_id: go.id, manifestation: def.manifestation },
+        data: { cilo_id: cilo!.id, plo_id: plo.id, manifestation: def.manifestation },
       });
     } else if (existing.manifestation === null) {
       // Classify legacy rows created before the manifestation column existed.
@@ -114,5 +114,5 @@ export async function seedOutcomes({
     }
   }
 
-  return { goMap, iloMap, ciloMap };
+  return { ploMap, iloMap, ciloMap };
 }

@@ -97,7 +97,7 @@ type DeanMappingGap = {
   ciloStatement: string | null;
   ciloIsArchived: boolean | null;
   reason: "missing-cilos" | "incomplete-mapping";
-  missingGraduateOutcomeIds: string[];
+  missingPloIds: string[];
   missingInstitutionalOutcomeIds: string[];
 };
 
@@ -109,12 +109,12 @@ export type DeanLearningOutcomesData = {
   programs: Array<{
     id: string;
     name: string;
-    graduateOutcomeCount: number;
+    ploCount: number;
     activeContexts: number;
     readyContexts: number;
     missingCiloContexts: number;
     incompleteMappingContexts: number;
-    graduateOutcomes: DeanOutcomeCatalogEntry[];
+    plos: DeanOutcomeCatalogEntry[];
     mappingGaps: DeanMappingGap[];
   }>;
 };
@@ -321,7 +321,7 @@ function incompleteCilos(context: ReadinessContext, schemaVersion: number) {
     if (schemaVersion >= 2 && Array.isArray(cilo.mappedTargets)) {
       return !cilo.mappedTargets.some((target) => !target.isArchived);
     }
-    return (cilo.missingGraduateOutcomeIds?.length ?? 0) > 0;
+    return (cilo.missingPloIds?.length ?? 0) > 0;
   });
 }
 
@@ -332,7 +332,7 @@ function mappingGapBase(
   schemaVersion: number
 ): Omit<
   DeanMappingGap,
-  "ciloId" | "ciloStatement" | "ciloIsArchived" | "reason" | "missingGraduateOutcomeIds" | "missingInstitutionalOutcomeIds"
+  "ciloId" | "ciloStatement" | "ciloIsArchived" | "reason" | "missingPloIds" | "missingInstitutionalOutcomeIds"
 > {
   return {
     courseId: assignment.course_id,
@@ -525,17 +525,17 @@ export async function getDeanLearningOutcomes(
     const program = programs.get(assignment.program_id) ?? {
       id: assignment.program.id,
       name: archivedLabel(assignment.program.name, !assignment.program.is_active, period.status),
-      graduateOutcomeCount: 0,
+      ploCount: 0,
       activeContexts: total.activeContexts,
       readyContexts: total.readyContexts,
       missingCiloContexts: total.missingCiloContexts,
       incompleteMappingContexts: total.incompleteMappingContexts,
-      graduateOutcomes: [],
+plos: [],
       mappingGaps: [],
     };
-    if (program.graduateOutcomes.length === 0 && (context.graduateOutcomes?.length ?? 0) > 0) {
-      program.graduateOutcomes = visibleCatalog(context.graduateOutcomes, period.status);
-      program.graduateOutcomeCount = program.graduateOutcomes.length;
+    if (program.plos.length === 0 && (context.plos?.length ?? 0) > 0) {
+      program.plos = visibleCatalog(context.plos, period.status);
+      program.ploCount = program.plos.length;
     }
     if (context.state === "missing-cilos") {
       program.mappingGaps.push({
@@ -544,7 +544,7 @@ export async function getDeanLearningOutcomes(
         ciloStatement: null,
         ciloIsArchived: null,
         reason: "missing-cilos",
-        missingGraduateOutcomeIds: [],
+        missingPloIds: [],
         missingInstitutionalOutcomeIds: [],
       });
     } else if (context.state === "incomplete-mapping") {
@@ -555,7 +555,7 @@ export async function getDeanLearningOutcomes(
           ciloStatement: cilo.description,
           ciloIsArchived: cilo.isArchived,
           reason: "incomplete-mapping",
-          missingGraduateOutcomeIds: cilo.missingGraduateOutcomeIds ?? [],
+          missingPloIds: cilo.missingPloIds ?? [],
           missingInstitutionalOutcomeIds: cilo.missingInstitutionalOutcomeIds ?? [],
         });
       }

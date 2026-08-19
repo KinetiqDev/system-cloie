@@ -61,7 +61,7 @@ const expectedModels = [
   "EvaluationAssignment",
   "ExternalStakeholderInvite",
   "FacultyProgramAffiliation",
-  "GO",
+  "PLO",
   "IndustryPartnerProfile",
   "InstitutionalOutcome",
   "InstrumentTemplate",
@@ -135,7 +135,7 @@ describe("Prisma schema structure", () => {
     expect(model).toContain("updated_by");
     expect(model).toContain('@relation("CILOMappingCreator", fields: [created_by]');
     expect(model).toContain('@relation("CILOMappingUpdater", fields: [updated_by]');
-    expect(model).toContain("@@unique([cilo_id, go_id])");
+    expect(model).toContain("@@unique([cilo_id, plo_id])");
     expect(model).toContain('@@map("cilo_mappings")');
   });
 

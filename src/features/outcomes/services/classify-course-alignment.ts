@@ -5,8 +5,8 @@ import type { CourseScope } from "@prisma/client";
  *
  * A CILO is aligned only through the typed relation its Course scope owns:
  * - General Education CILOs require an active Institutional Outcome mapping.
- * - Program-specific CILOs require an active Graduate Outcome mapping owned by
- *   the Course's owning Academic Program.
+ * - Program-specific CILOs require an active Program Learning Outcome mapping
+ *   owned by the Course's owning Academic Program.
  *
  * Archived targets and targets from the wrong typed relation never satisfy
  * alignment, regardless of any historical relation elsewhere.
@@ -21,7 +21,7 @@ export function targetLayerForScope(courseScope: CourseScope): CourseAlignmentTa
 }
 
 type CiloAlignmentRow = {
-  cilo_mappings: Array<{ go: { program_id: string | null; is_active: boolean } }>;
+  cilo_mappings: Array<{ plo: { program_id: string | null; is_active: boolean } }>;
   cilo_institutional_outcome_mappings: Array<{
     institutional_outcome: { is_active: boolean };
   }>;
@@ -38,7 +38,7 @@ export function ciloHasValidActiveTarget(
     );
   }
   return cilo.cilo_mappings.some(
-    ({ go }) => go.is_active && go.program_id === owningProgramId
+    ({ plo }) => plo.is_active && plo.program_id === owningProgramId
   );
 }
 

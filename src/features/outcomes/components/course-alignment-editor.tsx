@@ -150,7 +150,7 @@ function CiloMappingRows({ alignment, draft, disabled, onToggleTarget }: CiloMap
   const targetNoun =
     alignment.course.scope === "GENERAL_EDUCATION"
       ? "Institutional Outcome"
-      : "Graduate Outcome";
+      : "Program Learning Outcome";
 
   return (
     <div className="flex flex-col gap-4">
@@ -333,7 +333,7 @@ function AlignmentContent({
           <AlertDescription>
             {alignment.course.scope === "GENERAL_EDUCATION"
               ? "No active Institutional Outcomes exist yet. CILOs remain visible, but selection is unavailable until the Secretary creates an active Institutional Outcome."
-              : `${alignment.course.program?.code} has no active Graduate Outcomes. CILOs remain visible, but selection is unavailable until the Program Head creates an active Graduate Outcome.`}
+              : `${alignment.course.program?.code} has no active Program Learning Outcomes. CILOs remain visible, but selection is unavailable until the Program Head creates an active Program Learning Outcome.`}
           </AlertDescription>
         </Alert>
       )}
@@ -581,7 +581,7 @@ export function CourseAlignmentEditor({
           <p className="text-muted-foreground mt-1 text-body-sm">
             {alignment.course.scope === "GENERAL_EDUCATION"
               ? "Select the active Institutional Outcomes from the college-wide catalog."
-              : `Select the active Graduate Outcomes owned by ${alignment.course.program?.code}.`}
+              : `Select the active Program Learning Outcomes owned by ${alignment.course.program?.code}.`}
           </p>
         </div>
         <Badge variant={readiness === "ready" ? "default" : "outline"}>

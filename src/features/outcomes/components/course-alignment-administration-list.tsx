@@ -22,7 +22,7 @@ export function CourseAlignmentAdministrationList({
         <p className="text-body-md text-text-muted mt-2">
           Review and correct Course alignment across the college. General Education Courses map to
           Institutional Outcomes; Program-specific Courses map to their owning Program&apos;s
-          Graduate Outcomes.
+          Program Learning Outcomes.
         </p>
       </div>
       {courses.length === 0 ? (

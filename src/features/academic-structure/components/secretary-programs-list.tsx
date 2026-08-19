@@ -367,7 +367,7 @@ export function SecretaryProgramsList({
                     faculty
                   </span>
                   <span>
-                    <span className="text-text-secondary font-medium">{program.goCount}</span> GOs
+                    <span className="text-text-secondary font-medium">{program.ploCount}</span> PLOs
                   </span>
                 </div>
               </div>
@@ -388,7 +388,7 @@ export function SecretaryProgramsList({
                 <TableHead>Program Name</TableHead>
                 <TableHead>Majors</TableHead>
                 <TableHead className="text-right">Courses</TableHead>
-                <TableHead className="text-right">GOs</TableHead>
+                <TableHead className="text-right">PLOs</TableHead>
                 <TableHead className="text-right">Students</TableHead>
                 <TableHead className="text-right">Faculty</TableHead>
                 <TableHead>Status</TableHead>
@@ -411,7 +411,7 @@ export function SecretaryProgramsList({
                       {program.majorNames.length > 0 ? program.majorNames.join(", ") : "—"}
                     </TableCell>
                     <TableCell className="text-right">{program.courseCount}</TableCell>
-                    <TableCell className="text-right">{program.goCount}</TableCell>
+                    <TableCell className="text-right">{program.ploCount}</TableCell>
                     <TableCell className="text-right">{program.studentCount}</TableCell>
                     <TableCell className="text-right">{program.facultyCount}</TableCell>
                     <TableCell>
@@ -553,7 +553,11 @@ export function SecretaryProgramsList({
                                 key={`${group}-${label}`}
                                 className="flex justify-between gap-3 rounded-md border px-3 py-2"
                               >
-                                <span>{label.replaceAll(/([A-Z])/g, " $1")}</span>
+                                <span>
+                                  {label === "plos"
+                                    ? "Program Learning Outcomes"
+                                    : label.replaceAll(/([A-Z])/g, " $1")}
+                                </span>
                                 <strong>{count}</strong>
                               </div>
                             ))}

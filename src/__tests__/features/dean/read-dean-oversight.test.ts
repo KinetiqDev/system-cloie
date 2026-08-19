@@ -99,7 +99,7 @@ function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE") {
             description: "Examine civic duty",
             isArchived: false,
             mappedTargets: [],
-            missingGraduateOutcomeIds: [],
+            missingPloIds: [],
             missingInstitutionalOutcomeIds: ["ilo-1"],
           },
         ],
@@ -119,9 +119,9 @@ function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE") {
             order: 1,
           },
         ],
-        graduateOutcomes: [],
+        plos: [],
         affectedCiloIds: ["cilo-ge"],
-        affectedGraduateOutcomeIds: [],
+        affectedPloIds: [],
         affectedInstitutionalOutcomeIds: ["ilo-1"],
       },
       {
@@ -144,12 +144,12 @@ function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE") {
             description: "Explain core ideas",
             isArchived: false,
             mappedTargets: [],
-            missingGraduateOutcomeIds: ["go-1"],
+            missingPloIds: ["go-1"],
             missingInstitutionalOutcomeIds: [],
           },
         ],
         institutionalOutcomes: [],
-        graduateOutcomes: [
+        plos: [
           {
             id: "go-1",
             code: "GO1",
@@ -166,7 +166,7 @@ function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE") {
           },
         ],
         affectedCiloIds: ["cilo-1"],
-        affectedGraduateOutcomeIds: ["go-1"],
+        affectedPloIds: ["go-1"],
         affectedInstitutionalOutcomeIds: [],
       },
     ],
@@ -472,20 +472,20 @@ describe("Dean oversight read model", () => {
     });
     if (result.state !== "ready") throw new Error("expected ready state");
     const [program] = result.data.programs;
-    expect(program?.graduateOutcomes.map((outcome) => outcome.code)).toEqual(["GO1"]);
+    expect(program?.plos.map((outcome) => outcome.code)).toEqual(["GO1"]);
     expect(program?.mappingGaps).toEqual([
       expect.objectContaining({
         courseCode: "CS101",
         targetType: "GRADUATE_OUTCOME",
         courseScope: "PROGRAM_SPECIFIC",
-        missingGraduateOutcomeIds: ["go-1"],
+        missingPloIds: ["go-1"],
         missingInstitutionalOutcomeIds: [],
       }),
       expect.objectContaining({
         courseCode: "GE101",
         targetType: "INSTITUTIONAL_OUTCOME",
         courseScope: "GENERAL_EDUCATION",
-        missingGraduateOutcomeIds: [],
+        missingPloIds: [],
         missingInstitutionalOutcomeIds: ["ilo-1"],
         ciloStatement: "Examine civic duty",
       }),
@@ -516,7 +516,7 @@ describe("Dean oversight read model", () => {
       },
     });
     if (result.state !== "ready") throw new Error("expected ready state");
-    expect(result.data.programs[0]?.graduateOutcomes.map((outcome) => outcome.code)).toEqual([
+    expect(result.data.programs[0]?.plos.map((outcome) => outcome.code)).toEqual([
       "GO1",
       "GO2",
     ]);
@@ -548,10 +548,10 @@ describe("Dean oversight read model", () => {
               id: "cilo-ge",
               description: "Examine civic duty",
               isArchived: false,
-              missingGraduateOutcomeIds: ["go-legacy"],
+              missingPloIds: ["go-legacy"],
             },
           ],
-          graduateOutcomes: [
+          plos: [
             {
               id: "go-legacy",
               code: "GO1",
@@ -561,7 +561,7 @@ describe("Dean oversight read model", () => {
             },
           ],
           affectedCiloIds: ["cilo-ge"],
-          affectedGraduateOutcomeIds: ["go-legacy"],
+          affectedPloIds: ["go-legacy"],
         },
       ],
       programTotals: [
@@ -591,7 +591,7 @@ describe("Dean oversight read model", () => {
         courseCode: "GE101",
         targetType: null,
         courseScope: "GENERAL_EDUCATION",
-        missingGraduateOutcomeIds: ["go-legacy"],
+        missingPloIds: ["go-legacy"],
         missingInstitutionalOutcomeIds: [],
       }),
     ]);
@@ -627,7 +627,7 @@ describe("Dean oversight read model", () => {
             description: "Already mapped",
             isArchived: false,
             mappedTargets: [{ id: "ilo-1", isArchived: false }],
-            missingGraduateOutcomeIds: [],
+            missingPloIds: [],
             missingInstitutionalOutcomeIds: ["ilo-2"],
           },
           {
@@ -635,7 +635,7 @@ describe("Dean oversight read model", () => {
             description: "Examine civic duty",
             isArchived: false,
             mappedTargets: [],
-            missingGraduateOutcomeIds: [],
+            missingPloIds: [],
             missingInstitutionalOutcomeIds: ["ilo-1", "ilo-2"],
           },
         ],
@@ -669,7 +669,7 @@ describe("Dean oversight read model", () => {
             description: "Retired CILO",
             isArchived: true,
             mappedTargets: [],
-            missingGraduateOutcomeIds: [],
+            missingPloIds: [],
             missingInstitutionalOutcomeIds: ["ilo-1"],
           },
           {
@@ -677,7 +677,7 @@ describe("Dean oversight read model", () => {
             description: "Examine civic duty",
             isArchived: false,
             mappedTargets: [],
-            missingGraduateOutcomeIds: [],
+            missingPloIds: [],
             missingInstitutionalOutcomeIds: ["ilo-1"],
           },
         ],

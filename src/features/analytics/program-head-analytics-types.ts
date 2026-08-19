@@ -65,7 +65,7 @@ export type ProgramHeadTrendPeriodDTO = {
   instrumentContext: string | null;
   /** Readable scale context, e.g. "1–5 (5-point)"; null without ratings */
   scaleContext: string | null;
-  /** Graduate Outcome codes covered by the period's mapped evidence */
+  /** Program Learning Outcome codes covered by the period's mapped evidence */
   outcomeCodes: string[];
   comparableWithPrevious: boolean;
 };
@@ -117,18 +117,18 @@ export type ProgramHeadOutcomeScaleDistributionDTO = {
 };
 
 /**
- * One ranked Program Graduate Outcome evidence row. Mean retains full
+ * One ranked Program Program Learning Outcome evidence row. Mean retains full
  * precision; rating count is distinct from submitted response count.
  */
 export type ProgramHeadOutcomeDTO = {
-  goId: string;
+  ploId: string;
   code: string;
   name: string;
   /** Full-precision mean of valid ratings; null when the row has no valid ratings. */
   meanRating: number | null;
-  /** Count of valid in-scale ratings mapped to this GO. */
+  /** Count of valid in-scale ratings mapped to this PLO. */
   ratingCount: number;
-  /** Distinct submitted responses that contributed valid ratings to this GO. */
+  /** Distinct submitted responses that contributed valid ratings to this PLO. */
   submittedResponseCount: number;
   /** CILOs that contributed ratings to this row. */
   contributingCilos: Array<{ id: string; description: string }>;
@@ -170,11 +170,11 @@ export type ProgramHeadOutcomesDTO = {
   emptyReason: ProgramHeadOutcomesEmptyReason;
   /**
    * Disclosure that historical ratings are grouped by the Program's current
-   * CILO-to-GO mappings because publication-time mapping snapshots do not
+   * CILO-to-PLO mappings because publication-time mapping snapshots do not
    * exist yet.
    */
   currentMappingDisclosure: string;
-  /** True when a contributing CILO maps to more than one selected-Program GO. */
+  /** True when a contributing CILO maps to more than one selected-Program PLO. */
   manyToManyDisclosure: boolean;
   outcomes: ProgramHeadOutcomeDTO[];
 };

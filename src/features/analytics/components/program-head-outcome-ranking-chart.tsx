@@ -26,7 +26,7 @@ type ProgramHeadOutcomeRankingChartProps = {
 };
 
 /**
- * Ranked Program Graduate Outcome means. The axis domain is derived from the
+ * Ranked Program Program Learning Outcome means. The axis domain is derived from the
  * data rather than a universal 1–5 scale, because contributing instruments
  * may legitimately use different frozen scales. Rows without a mean are never
  * drawn (they carry no defensible central tendency).
@@ -58,13 +58,13 @@ export function ProgramHeadOutcomeRankingChart({
           {title}
         </h3>
         <p className="text-body-sm text-text-secondary">
-          Only Graduate Outcomes with at least one valid rating can be ranked; rows without a
+          Only Program Learning Outcomes with at least one valid rating can be ranked; rows without a
           mean carry no defensible central tendency.
         </p>
         <Empty className="h-64">
           <EmptyTitle>No rated outcome evidence yet</EmptyTitle>
           <EmptyDescription>
-            No rated Graduate Outcome evidence is available for this ranking.
+            No rated Program Learning Outcome evidence is available for this ranking.
           </EmptyDescription>
         </Empty>
       </div>
@@ -143,7 +143,7 @@ export function ProgramHeadOutcomeRankingChart({
           <Table aria-label="Ranked mean ratings by graduate outcome">
             <TableHeader>
               <TableRow>
-                <TableHead>Graduate Outcome</TableHead>
+                <TableHead>Program Learning Outcome</TableHead>
                 <TableHead className="text-right">Mean Rating</TableHead>
                 <TableHead className="text-right">Rating Count</TableHead>
                 <TableHead className="text-right">Submitted Responses</TableHead>

@@ -1,6 +1,6 @@
 import { U } from "../constants/ids";
 
-export const goDefs = [
+export const ploDefs = [
   {
     pc: "BSIT",
     code: "BSIT-GO1",
@@ -263,41 +263,41 @@ export const ciloDefsNewCourses = [
 ] as const;
 
 /**
- * Program-specific CILO → GO mapping pairs with their explicit manifestation
+ * Program-specific CILO → PLO mapping pairs with their explicit manifestation
  * classification. Every seeded mapping carries a manifestation; legacy rows
  * created before the manifestation column are classified on reseed.
  */
 export const ciloMappingDefs = [
-  // ITRES1 → BSIT GOs
+  // ITRES1 → BSIT PLOs
   {
     courseCode: "ITRES1",
     ciloOrder: 1,
-    goCode: "BSIT-GO1",
+    ploCode: "BSIT-GO1",
     manifestation: "PRACTICE",
   },
   {
     courseCode: "ITRES1",
     ciloOrder: 2,
-    goCode: "BSIT-GO1",
+    ploCode: "BSIT-GO1",
     manifestation: "PRACTICE",
   },
   {
     courseCode: "ITRES1",
     ciloOrder: 3,
-    goCode: "BSIT-GO3",
+    ploCode: "BSIT-GO3",
     manifestation: "OPPORTUNITY",
   },
-  // MM201 → BSBA GOs
+  // MM201 → BSBA PLOs
   {
     courseCode: "MM201",
     ciloOrder: 1,
-    goCode: "BSBA-GO1",
+    ploCode: "BSBA-GO1",
     manifestation: "LEARNING",
   },
   {
     courseCode: "MM201",
     ciloOrder: 2,
-    goCode: "BSBA-GO2",
+    ploCode: "BSBA-GO2",
     manifestation: "PRACTICE",
   },
 ] as const;

@@ -124,7 +124,7 @@ function ratingRow(opts: {
   instrumentVersionId: string;
   value: number;
   responseId: string;
-  goCodes?: string[];
+  ploCodes?: string[];
 }) {
   const courseBound = {
     term_instance_id: opts.termInstanceId,
@@ -135,7 +135,7 @@ function ratingRow(opts: {
     response_id: opts.responseId,
     cilo_question_binding: {
       cilo: {
-        cilo_mappings: (opts.goCodes ?? []).map((code) => ({ go: { code } })),
+        cilo_mappings: (opts.ploCodes ?? []).map((code) => ({ plo: { code } })),
       },
     },
     response: {
@@ -225,7 +225,7 @@ describe("getProgramHeadTrends", () => {
       { id: "term-2025-1st", semester: "FIRST", term: "FIRST_TERM", school_year: { id: "sy-2025", code: "2025-2026" } },
     ]);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", ploCodes: ["GO-1"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -278,9 +278,9 @@ describe("getProgramHeadTrends", () => {
 
   it("builds comparable periods with full-precision means and distinct counts", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", goCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-2", goCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-2nd", instrumentVersionId: "iv-cilo-v2", value: 3, responseId: "resp-3", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", ploCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-2", ploCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-2nd", instrumentVersionId: "iv-cilo-v2", value: 3, responseId: "resp-3", ploCodes: ["GO-1"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -338,8 +338,8 @@ describe("getProgramHeadTrends", () => {
 
   it("marks a changed instrument version as a comparability break", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v1", value: 5, responseId: "resp-a", goCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v1", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", ploCodes: ["GO-1"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -361,8 +361,8 @@ describe("getProgramHeadTrends", () => {
 
   it("marks a changed Likert scale identity as a comparability break", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", goCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-exit-v1", value: 4, responseId: "resp-b", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-exit-v1", value: 4, responseId: "resp-b", ploCodes: ["GO-1"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -381,8 +381,8 @@ describe("getProgramHeadTrends", () => {
 
   it("marks a changed outcome identity as a comparability break", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", goCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", goCodes: ["GO-2"] }),
+      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", ploCodes: ["GO-2"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -398,8 +398,8 @@ describe("getProgramHeadTrends", () => {
 
   it("breaks when distinct instrument versions share a display label", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-collide-a", value: 5, responseId: "resp-a", goCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-collide-b", value: 4, responseId: "resp-b", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-collide-a", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-collide-b", value: 4, responseId: "resp-b", ploCodes: ["GO-1"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -420,9 +420,9 @@ describe("getProgramHeadTrends", () => {
 
   it("never silently merges unlike periods into one comparable run", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", goCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", goCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-2nd", instrumentVersionId: "iv-exit-v1", value: 3, responseId: "resp-c", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", ploCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-2nd", instrumentVersionId: "iv-exit-v1", value: 3, responseId: "resp-c", ploCodes: ["GO-1"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -492,7 +492,7 @@ describe("getProgramHeadTrends", () => {
 
   it("exposes unrated periods without fabricating comparability breaks", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -543,7 +543,7 @@ describe("getProgramHeadTrends", () => {
 
   it("returns a closed DTO with only expected keys", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", goCodes: ["GO-1"] }),
+      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", ploCodes: ["GO-1"] }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),

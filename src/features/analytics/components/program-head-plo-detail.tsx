@@ -2,11 +2,11 @@ import type { ProgramHeadOutcomeDTO } from "@/features/analytics/program-head-an
 import { ProgramHeadLikertDistribution } from "./program-head-likert-distribution";
 
 /**
- * Contextual detail for one Graduate Outcome evidence row: the full-precision
+ * Contextual detail for one Program Learning Outcome evidence row: the full-precision
  * mean, scale-separated Likert distributions, and a diagnostic count of
  * ratings excluded from the valid aggregate.
  */
-export function ProgramHeadGoDetail({ outcome }: { outcome: ProgramHeadOutcomeDTO }) {
+export function ProgramHeadPLODetail({ outcome }: { outcome: ProgramHeadOutcomeDTO }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">

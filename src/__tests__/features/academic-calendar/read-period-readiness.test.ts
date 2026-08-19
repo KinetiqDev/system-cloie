@@ -37,7 +37,7 @@ function assignment(overrides: Record<string, unknown> = {}) {
         },
       ],
     },
-    program: { id: "program-1", name: "Program A", is_active: true, gos: [] },
+    program: { id: "program-1", name: "Program A", is_active: true, plos: [] },
     ...overrides,
   };
 }
@@ -46,8 +46,8 @@ function generalEducationCourse() {
   return { ...assignment().course, course_scope: "GENERAL_EDUCATION", program_id: null };
 }
 
-function activeGoMapping(id = "go-1", programId = "program-1") {
-  return { go: { id, program_id: programId, is_active: true } };
+function activePloMapping(id = "go-1", programId = "program-1") {
+  return { plo: { id, program_id: programId, is_active: true } };
 }
 
 function activeIloMapping(id = "ilo-1") {
@@ -80,12 +80,12 @@ describe("readPeriodReadiness", () => {
       state: "incomplete-mapping",
       targetType: "GRADUATE_OUTCOME",
       affectedCiloIds: ["cilo-1"],
-      affectedGraduateOutcomeIds: [],
+      affectedPloIds: [],
       affectedInstitutionalOutcomeIds: [],
     });
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
       mappedTargets: [],
-      missingGraduateOutcomeIds: [],
+      missingPloIds: [],
       missingInstitutionalOutcomeIds: [],
     });
   });
@@ -103,7 +103,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-1",
               description: "Apply knowledge",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePloMapping("go-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -116,7 +116,7 @@ describe("readPeriodReadiness", () => {
     expect(readiness.contexts[0]).toMatchObject({ state: "ready", affectedCiloIds: [] });
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
       mappedTargets: [{ id: "go-1", isArchived: false }],
-      missingGraduateOutcomeIds: [],
+      missingPloIds: [],
     });
   });
 
@@ -133,7 +133,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-1",
               description: "Apply knowledge",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-2", "program-2")],
+              cilo_mappings: [activePloMapping("go-2", "program-2")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -193,7 +193,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-1",
               description: "Apply knowledge",
               is_active: true,
-              cilo_mappings: [{ go: { id: "go-1", program_id: "program-1", is_active: false } }],
+              cilo_mappings: [{ plo: { id: "go-1", program_id: "program-1", is_active: false } }],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -222,7 +222,7 @@ describe("readPeriodReadiness", () => {
           id: "program-1",
           name: "Program A",
           is_active: true,
-          gos: [
+          plos: [
             { id: "go-archived", code: "GO-1", description: "Old", is_active: false, order: 0 },
             { id: "go-active", code: "GO-2", description: "Current", is_active: true, order: 1 },
           ],
@@ -232,7 +232,7 @@ describe("readPeriodReadiness", () => {
 
     const readiness = await readPeriodReadiness("period-1");
 
-    expect(readiness.contexts[0]?.graduateOutcomes.map((go) => go.id)).toEqual([
+    expect(readiness.contexts[0]?.plos.map((plo) => plo.id)).toEqual([
       "go-active",
       "go-archived",
     ]);
@@ -248,7 +248,7 @@ describe("readPeriodReadiness", () => {
       assignment({
         id: "wrong-program",
         program_id: "program-2",
-        program: { id: "program-2", name: "Program B", is_active: true, gos: [] },
+        program: { id: "program-2", name: "Program B", is_active: true, plos: [] },
       }),
     ] as never);
 
@@ -268,7 +268,7 @@ describe("readPeriodReadiness", () => {
         id: "assignment-2",
         program_id: "program-2",
         course: generalEducationCourse(),
-        program: { id: "program-2", name: "Program B", is_active: true, gos: [] },
+        program: { id: "program-2", name: "Program B", is_active: true, plos: [] },
       }),
     ] as never);
 
@@ -311,7 +311,7 @@ describe("readPeriodReadiness", () => {
     });
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
       mappedTargets: [{ id: "ilo-1", isArchived: false }],
-      missingGraduateOutcomeIds: [],
+      missingPloIds: [],
       missingInstitutionalOutcomeIds: [],
     });
   });
@@ -339,7 +339,7 @@ describe("readPeriodReadiness", () => {
         id: "assignment-2",
         program_id: "program-2",
         course: sharedCourse,
-        program: { id: "program-2", name: "Program B", is_active: true, gos: [] },
+        program: { id: "program-2", name: "Program B", is_active: true, plos: [] },
       }),
     ] as never);
 
@@ -367,12 +367,12 @@ describe("readPeriodReadiness", () => {
       state: "incomplete-mapping",
       targetType: "INSTITUTIONAL_OUTCOME",
       affectedCiloIds: ["cilo-1"],
-      affectedGraduateOutcomeIds: [],
+      affectedPloIds: [],
       affectedInstitutionalOutcomeIds: ["ilo-1"],
     });
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
       mappedTargets: [],
-      missingGraduateOutcomeIds: [],
+      missingPloIds: [],
       missingInstitutionalOutcomeIds: ["ilo-1"],
     });
   });
@@ -472,7 +472,7 @@ describe("readPeriodReadiness", () => {
           courseId: "historical-course",
           courseScope: "GENERAL_EDUCATION",
           cilos: [{ id: "cilo-1", description: "Legacy", isArchived: false }],
-          graduateOutcomes: [{ id: "go-1" }],
+          plos: [{ id: "go-1" }],
         },
       ],
       program_totals: [{ programId: "program-1" }],
@@ -507,7 +507,7 @@ describe("readPeriodReadiness", () => {
               id: "ready-cilo",
               description: "Hidden from the totals projection",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePloMapping("go-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -522,7 +522,7 @@ describe("readPeriodReadiness", () => {
         id: "incomplete-assignment",
         course_id: "course-3",
         program_id: "program-2",
-        program: { id: "program-2", name: "Program B", is_active: true, gos: [] },
+        program: { id: "program-2", name: "Program B", is_active: true, plos: [] },
         course: {
           ...assignment().course,
           program_id: "program-2",
@@ -531,7 +531,7 @@ describe("readPeriodReadiness", () => {
               id: "incomplete-cilo",
               description: "Hidden from the totals projection",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePloMapping("go-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -587,7 +587,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-1",
               description: "Apply knowledge",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePloMapping("go-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
