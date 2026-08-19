@@ -24,6 +24,7 @@ import type {
   CourseAlignmentReview,
   CourseAlignment,
 } from "@/features/outcomes/services/manage-course-alignment";
+import type { CILOMappingManifestation } from "@prisma/client";
 
 declare global {
   interface Window {
@@ -67,6 +68,12 @@ function indexAlignmentTargets(alignment: CourseAlignment) {
       [...alignment.targets, ...alignment.unavailableTargets].map((target) => [target.id, target])
     ),
   };
+}
+
+function manifestationLabel(value: CILOMappingManifestation | null | undefined): string {
+  if (!value) return "Unanswered";
+  const word = `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
+  return `${word} (${value.charAt(0)})`;
 }
 
 function currentHistoryEntryIndex(): number | undefined {
@@ -381,6 +388,7 @@ function AlignmentDialogs({
   onDiscardConfirmationChange,
   onDiscardDraft,
 }: AlignmentDialogsProps) {
+  const { targetById } = indexAlignmentTargets(alignment);
   return (
     <>
       <AlertDialog
@@ -399,23 +407,52 @@ function AlignmentDialogs({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex max-h-64 flex-col gap-3 overflow-y-auto text-body-sm">
-            {review?.before.map((before) => {
-              const after = review.after.find((item) => item.ciloId === before.ciloId);
-              const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === before.ciloId);
-              return (
-                <div key={before.ciloId} className="flex flex-col gap-1">
-                  <p className="font-medium">CILO {ciloIndex + 1}</p>
-                  <p>
-                    <span className="text-muted-foreground">Before: </span>
-                    {renderTargets(before.targetIds)}
-                  </p>
-                  <p>
-                    <span className="text-muted-foreground">After: </span>
-                    {renderTargets(after?.targetIds ?? [])}
-                  </p>
-                </div>
-              );
-            })}
+            {review &&
+              (review.scope === "GENERAL_EDUCATION" ? (
+                review.before.map((before) => {
+                  const after = review.after.find((item) => item.ciloId === before.ciloId);
+                  const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === before.ciloId);
+                  return (
+                    <div key={before.ciloId} className="flex flex-col gap-1">
+                      <p className="font-medium">CILO {ciloIndex + 1}</p>
+                      <p>
+                        <span className="text-muted-foreground">Before: </span>
+                        {renderTargets(before.targetIds)}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">After: </span>
+                        {renderTargets(after?.targetIds ?? [])}
+                      </p>
+                    </div>
+                  );
+                })
+              ) : (
+                review.after.map((item) => {
+                  const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === item.ciloId);
+                  const beforeItem = review.before.find((entry) => entry.ciloId === item.ciloId);
+                  const beforeByPloid = new Map(
+                    (beforeItem?.mappings ?? []).map((mapping) => [
+                      mapping.ploId,
+                      mapping.manifestation,
+                    ])
+                  );
+                  return (
+                    <div key={item.ciloId} className="flex flex-col gap-1">
+                      <p className="font-medium">CILO {ciloIndex + 1}</p>
+                      <ul className="flex flex-col gap-1">
+                        {item.mappings.map((mapping) => (
+                          <li key={mapping.ploId}>
+                            {targetById.get(mapping.ploId)?.code ?? mapping.ploId}:{" "}
+                            {manifestationLabel(beforeByPloid.get(mapping.ploId))}
+                            {" \u2192 "}
+                            {manifestationLabel(mapping.manifestation)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })
+              ))}
           </div>
           <AlertDialogFooter>
             <Button type="button" onClick={onCommitReview} disabled={pending}>
@@ -502,11 +539,6 @@ export function CourseAlignmentEditor({
   const needsReload = error?.includes("Reload and review") ?? false;
 
   const targetLabel = (targetId: string) => targetById.get(targetId)?.code ?? targetId;
-  const snapshotTargetIds = (snapshot: CourseAlignmentReview["after"]) =>
-    Object.fromEntries(snapshot.map((item) => [item.ciloId, item.targetIds])) as Record<
-      string,
-      string[]
-    >;
   const renderTargets = (targetIds: string[]) =>
     targetIds.length === 0 ? "None" : targetIds.map(targetLabel).join(", ");
 
@@ -553,9 +585,19 @@ export function CourseAlignmentEditor({
       const result = await commitAction(reviewToCommit, true);
       setReview(null);
       if (result.success) {
-        const committedTargetIds = snapshotTargetIds(reviewToCommit.after);
-        setDraft(committedTargetIds);
-        setSavedTargetIds(committedTargetIds);
+        const committedState =
+          reviewToCommit.scope === "GENERAL_EDUCATION"
+            ? (Object.fromEntries(
+                reviewToCommit.after.map((item) => [item.ciloId, item.targetIds])
+              ) as Record<string, string[]>)
+            : (Object.fromEntries(
+                reviewToCommit.after.map((item) => [
+                  item.ciloId,
+                  item.mappings.map((mapping) => mapping.ploId),
+                ])
+              ) as Record<string, string[]>);
+        setDraft(committedState);
+        setSavedTargetIds(committedState);
         setFreshnessToken(result.freshnessToken);
         setSuccess(`${result.changed} mapping change${result.changed === 1 ? "" : "s"} saved.`);
       } else {

@@ -5,15 +5,44 @@ import { z } from "zod";
 import {
   commitCourseAlignmentWrite,
   prepareCourseAlignmentWrite,
+  saveDraftCourseAlignment,
   type CourseAlignmentReview,
 } from "@/features/outcomes/services/manage-course-alignment";
 
-const desiredAlignmentSchema = z.object({
-  courseId: z.string().uuid("Invalid Course ID."),
-  desired: z.array(
-    z.object({
+const manifestationSchema = z.enum(["LEARNING", "PRACTICE", "OPPORTUNITY"]);
+
+const mappingSchema = z.object({
+  ploId: z.string().uuid("Invalid Program Learning Outcome ID."),
+  manifestation: manifestationSchema,
+});
+
+const desiredItemSchema = z.union([
+  z
+    .object({
       ciloId: z.string().uuid("Invalid CILO ID."),
       targetIds: z.array(z.string().uuid("Invalid outcome target ID.")),
+    })
+    .strict(),
+  z
+    .object({
+      ciloId: z.string().uuid("Invalid CILO ID."),
+      mappings: z.array(mappingSchema),
+    })
+    .strict(),
+]);
+
+const desiredAlignmentSchema = z.object({
+  courseId: z.string().uuid("Invalid Course ID."),
+  desired: z.array(desiredItemSchema),
+  freshnessToken: z.string().min(1, "Alignment is stale. Reload and review the latest mappings."),
+});
+
+const draftSchema = z.object({
+  courseId: z.string().uuid("Invalid Course ID."),
+  cells: z.array(
+    z.object({
+      ciloId: z.string().uuid("Invalid CILO ID."),
+      mappings: z.array(mappingSchema),
     })
   ),
   freshnessToken: z.string().min(1, "Alignment is stale. Reload and review the latest mappings."),
@@ -31,15 +60,51 @@ const snapshotSchema = z.array(
   })
 );
 
-const reviewSchema = z.object({
-  courseId: z.string().uuid(),
-  before: snapshotSchema,
-  after: snapshotSchema,
-  additions: z.array(pairSchema),
-  removals: z.array(pairSchema),
-  freshnessToken: z.string().min(1),
-  signature: z.string().regex(/^[a-f0-9]{64}$/),
+const manifestationSnapshotSchema = z.array(
+  z.object({
+    ciloId: z.string().uuid(),
+    mappings: z.array(
+      z.object({
+        ploId: z.string().uuid(),
+        manifestation: manifestationSchema.nullable(),
+      })
+    ),
+  })
+);
+
+const manifestationPairSchema = z.object({
+  ciloId: z.string().uuid(),
+  ploId: z.string().uuid(),
 });
+
+const manifestationUpdateSchema = manifestationPairSchema.extend({
+  from: manifestationSchema.nullable(),
+  to: manifestationSchema,
+});
+
+const reviewSchema = z.discriminatedUnion("scope", [
+  z.object({
+    scope: z.literal("GENERAL_EDUCATION"),
+    courseId: z.string().uuid(),
+    before: snapshotSchema,
+    after: snapshotSchema,
+    additions: z.array(pairSchema),
+    removals: z.array(pairSchema),
+    freshnessToken: z.string().min(1),
+    signature: z.string().regex(/^[a-f0-9]{64}$/),
+  }),
+  z.object({
+    scope: z.literal("PROGRAM_SPECIFIC"),
+    courseId: z.string().uuid(),
+    before: manifestationSnapshotSchema,
+    after: manifestationSnapshotSchema,
+    additions: z.array(manifestationPairSchema.extend({ manifestation: manifestationSchema })),
+    updates: z.array(manifestationUpdateSchema),
+    removals: z.array(manifestationPairSchema),
+    freshnessToken: z.string().min(1),
+    signature: z.string().regex(/^[a-f0-9]{64}$/),
+  }),
+]);
 
 type PrepareCourseAlignmentActionResult =
   | { success: true; review: CourseAlignmentReview }
@@ -78,6 +143,27 @@ export async function commitCourseAlignmentAction(
   revalidatePath("/faculty/cilos");
   revalidatePath(`/secretary/learning-outcomes/alignment/${parsed.data.courseId}`);
   revalidatePath("/secretary/learning-outcomes");
+  return {
+    success: true,
+    changed: result.data.changed,
+    freshnessToken: result.data.freshnessToken,
+  };
+}
+
+export async function saveDraftCourseAlignmentAction(
+  input: unknown
+): Promise<
+  { success: true; changed: number; freshnessToken: string } | { success: false; error: string }
+> {
+  const parsed = draftSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid alignment draft." };
+  }
+  const result = await saveDraftCourseAlignment(parsed.data);
+  if (!result.success) return result;
+
+  revalidatePath(`/faculty/cilos/${parsed.data.courseId}/alignment`);
+  revalidatePath("/faculty/cilos");
   return {
     success: true,
     changed: result.data.changed,
