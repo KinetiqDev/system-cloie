@@ -532,21 +532,18 @@ describe("Course alignment service", () => {
     });
   });
 
-  it("serves Secretary college-wide reads without consulting assignments", async () => {
+  it("denies Secretary college-wide reads without consulting assignments", async () => {
     const SECRETARY = { userId: "secretary-1", activeRole: ROLES.SECRETARY, roles: [ROLES.SECRETARY] };
     mocks.session.mockResolvedValue(SECRETARY);
     const { readCourseAlignment } =
       await import("@/features/outcomes/services/manage-course-alignment");
 
-    await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
-      success: true,
-      data: {
-        course: { id: COURSE_ID, program: { id: PROGRAM_ID } },
-        cilos: [{ id: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: null }] }],
-        readiness: "ready",
-      },
+    await expect(readCourseAlignment(COURSE_ID)).resolves.toEqual({
+      success: false,
+      error: "Course alignment is unavailable.",
     });
     expect(mocks.assignment.findFirst).not.toHaveBeenCalled();
+    expect(mocks.course.findFirst).not.toHaveBeenCalled();
   });
 
   it("denies Program Head and Dean alignment reads without reading state", async () => {
@@ -574,51 +571,77 @@ describe("Course alignment service", () => {
     expect(mocks.course.findFirst).not.toHaveBeenCalled();
   });
 
-  it("prepares and commits a Secretary correction with actor provenance", async () => {
+  it("denies crafted Secretary mapping create, change, and remove requests before reading state", async () => {
     const SECRETARY = { userId: "secretary-1", activeRole: ROLES.SECRETARY, roles: [ROLES.SECRETARY] };
     mocks.session.mockResolvedValue(SECRETARY);
     mocks.course.findFirst.mockResolvedValue(emptyCourse());
-    const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
+    const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite, saveDraftCourseAlignment } =
       await import("@/features/outcomes/services/manage-course-alignment");
-    const reviewResult = await prepareCourseAlignmentWrite({
-      courseId: COURSE_ID,
-      desired: [
-        { ciloId: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: "LEARNING" as const }] },
-      ],
-      freshnessToken: tokenFor([CILO_ID], [PLO_ID], []),
-    });
-    expect(reviewResult).toMatchObject({
-      success: true,
-      data: {
-        scope: "PROGRAM_SPECIFIC",
+
+    await expect(
+      prepareCourseAlignmentWrite({
+        courseId: COURSE_ID,
+        desired: [
+          { ciloId: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: "LEARNING" as const }] },
+        ],
+        freshnessToken: tokenFor([CILO_ID], [PLO_ID], []),
+      })
+    ).resolves.toEqual({ success: false, error: "Course alignment is unavailable." });
+    await expect(
+      prepareCourseAlignmentWrite({
+        courseId: COURSE_ID,
+        desired: [
+          {
+            ciloId: CILO_ID,
+            mappings: [{ ploId: PLO_ID, manifestation: "PRACTICE" as const }],
+          },
+        ],
+        freshnessToken: CLASSIFIED_TOKEN,
+      })
+    ).resolves.toEqual({ success: false, error: "Course alignment is unavailable." });
+    await expect(
+      prepareCourseAlignmentWrite({
+        courseId: COURSE_ID,
+        desired: [{ ciloId: CILO_ID, mappings: [] }],
+        freshnessToken: CLASSIFIED_TOKEN,
+      })
+    ).resolves.toEqual({ success: false, error: "Course alignment is unavailable." });
+    await expect(
+      prepareCourseAlignmentWrite({
+        courseId: COURSE_ID,
+        desired: [{ ciloId: CILO_ID, targetIds: [ILO_ID] }],
+        freshnessToken: tokenFor([CILO_ID], [ILO_ID], []),
+      })
+    ).resolves.toEqual({ success: false, error: "Course alignment is unavailable." });
+    await expect(
+      saveDraftCourseAlignment({
+        courseId: COURSE_ID,
+        cells: [{ ciloId: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: "LEARNING" }] }],
+        freshnessToken: tokenFor([CILO_ID], [PLO_ID], []),
+      })
+    ).resolves.toEqual({ success: false, error: "Course alignment is unavailable." });
+    expect(mocks.course.findFirst).not.toHaveBeenCalled();
+    expect(mocks.ciloMapping.createMany).not.toHaveBeenCalled();
+    expect(mocks.ciloMapping.deleteMany).not.toHaveBeenCalled();
+
+    const forgedReview = signedReview(
+      {
+        scope: "PROGRAM_SPECIFIC" as const,
+        courseId: COURSE_ID,
         before: [{ ciloId: CILO_ID, mappings: [] }],
+        after: [{ ciloId: CILO_ID, mappings: [] }],
         additions: [{ ciloId: CILO_ID, ploId: PLO_ID, manifestation: "LEARNING" }],
         updates: [],
         removals: [],
+        freshnessToken: tokenFor([CILO_ID], [PLO_ID], []),
       },
+      SECRETARY.userId
+    );
+    await expect(commitCourseAlignmentWrite(forgedReview, true)).resolves.toEqual({
+      success: false,
+      error: "Course alignment is unavailable.",
     });
-    if (!reviewResult.success) throw new Error(reviewResult.error);
-    pspTxMock(emptyCourse());
-    await expect(commitCourseAlignmentWrite(reviewResult.data, true)).resolves.toEqual({
-      success: true,
-      data: {
-        changed: 1,
-        freshnessToken: tokenFor([CILO_ID], [PLO_ID], [
-          { ciloId: CILO_ID, targetId: PLO_ID, manifestation: "LEARNING" },
-        ]),
-      },
-    });
-    expect(mocks.ciloMapping.createMany).toHaveBeenCalledWith({
-      data: [
-        {
-          cilo_id: CILO_ID,
-          plo_id: PLO_ID,
-          manifestation: "LEARNING",
-          created_by: "secretary-1",
-          updated_by: "secretary-1",
-        },
-      ],
-    });
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
   it("lists Secretary college-wide alignment summaries by readiness", async () => {

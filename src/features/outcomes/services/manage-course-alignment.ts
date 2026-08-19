@@ -415,7 +415,6 @@ async function roleAllowsAlignmentAccess(
   userId: string,
   courseId: string
 ): Promise<boolean> {
-  if (role === ROLES.SECRETARY) return true;
   if (role !== ROLES.FACULTY) return false;
   return hasFacultyCourseAccess(db, userId, courseId);
 }
@@ -729,7 +728,7 @@ export async function commitCourseAlignmentWrite(
   if (
     !session ||
     !reviewIsValid(review, session.userId) ||
-    (session.activeRole !== ROLES.FACULTY && session.activeRole !== ROLES.SECRETARY)
+    session.activeRole !== ROLES.FACULTY
   ) {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
