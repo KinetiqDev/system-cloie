@@ -31,6 +31,14 @@ describe("navigation helpers", () => {
     );
   });
 
+  it("omits Learning Outcomes from Secretary navigation", () => {
+    const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
+    expect(secretaryNav.map((item) => item.href)).not.toContain("/secretary/learning-outcomes");
+    expect(getMobileNavByRoles([ROLES.SECRETARY]).map((item) => item.href)).not.toContain(
+      "/secretary/learning-outcomes"
+    );
+  });
+
   it("exposes curricula management to Secretary and Program Head users", () => {
     const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
     expect(secretaryNav.find((item) => item.href === "/secretary/curricula")?.name).toBe(

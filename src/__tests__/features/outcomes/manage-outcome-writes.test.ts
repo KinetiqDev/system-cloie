@@ -5,7 +5,6 @@ const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   plo: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
   cilo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-  institutionalOutcome: { findUnique: vi.fn(), findMany: vi.fn() },
   assignment: { findFirst: vi.fn() },
   selectedContext: vi.fn(),
   revalidateAssignment: vi.fn(),
@@ -23,7 +22,6 @@ vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     pLO: mocks.plo,
     cILO: mocks.cilo,
-    institutionalOutcome: mocks.institutionalOutcome,
     courseAssignment: mocks.assignment,
     $transaction: mocks.transaction,
   },
@@ -76,7 +74,6 @@ describe("manage-outcome-writes", () => {
       callback({
         pLO: mocks.plo,
         cILO: mocks.cilo,
-        institutionalOutcome: mocks.institutionalOutcome,
         courseAssignment: mocks.assignment,
       })
     );
@@ -343,24 +340,6 @@ describe("manage-outcome-writes", () => {
       error: "You do not have permission to modify this outcome.",
     });
     expect(mocks.cilo.findUnique).not.toHaveBeenCalled();
-  });
-
-  it("denies Secretary Institutional Outcome encodes before reading state", async () => {
-    mocks.session.mockResolvedValue(SECRETARY);
-    const { prepareOutcomeWrite } =
-      await import("@/features/outcomes/services/manage-outcome-writes");
-    await expect(
-      prepareOutcomeWrite({
-        kind: "ILO",
-        action: "create",
-        code: "IO-1",
-        description: "New",
-      })
-    ).resolves.toEqual({
-      success: false,
-      error: "You do not have permission to modify this outcome.",
-    });
-    expect(mocks.institutionalOutcome.findMany).not.toHaveBeenCalled();
   });
 });
 
