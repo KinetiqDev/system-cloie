@@ -42,14 +42,65 @@ export type CourseAlignment = {
 
 type AlignmentSnapshot = Array<{ ciloId: string; targetIds: string[] }>;
 
-export type CourseAlignmentReview = {
-  courseId: string;
-  before: AlignmentSnapshot;
-  after: AlignmentSnapshot;
-  additions: Array<{ ciloId: string; targetId: string }>;
-  removals: Array<{ ciloId: string; targetId: string }>;
-  freshnessToken: string;
-  signature: string;
+// Consumed by the slice-6 manifestation matrix editor; not yet imported elsewhere.
+// fallow-ignore-next-line unused-type
+export type ManifestationSnapshot = Array<{
+  ciloId: string;
+  mappings: Array<{ ploId: string; manifestation: CILOMappingManifestation | null }>;
+}>;
+
+// Draft cells for saveDraftCourseAlignment; consumed by the slice-6 editor.
+// fallow-ignore-next-line unused-type
+export type ManifestationDraft = Array<{
+  ciloId: string;
+  mappings: Array<{ ploId: string; manifestation: CILOMappingManifestation }>;
+}>;
+
+export type CourseAlignmentReview =
+  | {
+      scope: "GENERAL_EDUCATION";
+      courseId: string;
+      before: AlignmentSnapshot;
+      after: AlignmentSnapshot;
+      additions: Array<{ ciloId: string; targetId: string }>;
+      removals: Array<{ ciloId: string; targetId: string }>;
+      freshnessToken: string;
+      signature: string;
+    }
+  | {
+      scope: "PROGRAM_SPECIFIC";
+      courseId: string;
+      before: ManifestationSnapshot;
+      after: ManifestationSnapshot;
+      additions: Array<{
+        ciloId: string;
+        ploId: string;
+        manifestation: CILOMappingManifestation;
+      }>;
+      updates: Array<{
+        ciloId: string;
+        ploId: string;
+        from: CILOMappingManifestation | null;
+        to: CILOMappingManifestation;
+      }>;
+      removals: Array<{ ciloId: string; ploId: string }>;
+      freshnessToken: string;
+      signature: string;
+    };
+
+type ManifestationDiff = {
+  additions: Array<{
+    ciloId: string;
+    ploId: string;
+    manifestation: CILOMappingManifestation;
+  }>;
+  updates: Array<{
+    ciloId: string;
+    ploId: string;
+    from: CILOMappingManifestation | null;
+    to: CILOMappingManifestation;
+  }>;
+  removals: Array<{ ciloId: string; ploId: string }>;
 };
 
 const courseIdSchema = z.string().uuid();
@@ -156,6 +207,171 @@ function newlyMappedTargetIds(before: AlignmentSnapshot, after: AlignmentSnapsho
       )
     ),
   ];
+}
+
+// Each check is a distinct acceptance rule: coverage, uniqueness, catalog validity,
+// manifestation enum, and the commit completeness gate.
+// fallow-ignore-next-line complexity
+function validateProgramSpecificState(
+  rows: AlignmentCiloRow[],
+  catalogIds: string[],
+  items: ManifestationSnapshot,
+  requireComplete: boolean
+): { ok: true; state: ManifestationSnapshot } | { ok: false; error: string } {
+  const validCiloIds = new Set(rows.map((cilo) => cilo.id));
+  if (
+    items.length !== validCiloIds.size ||
+    new Set(items.map((item) => item.ciloId)).size !== items.length ||
+    items.some((item) => !validCiloIds.has(item.ciloId))
+  ) {
+    return { ok: false, error: "Submit a complete alignment for every active CILO." };
+  }
+  const validTargetIds = new Set(catalogIds);
+  let submittedPairCount = 0;
+  for (const item of items) {
+    if (new Set(item.mappings.map((mapping) => mapping.ploId)).size !== item.mappings.length) {
+      return { ok: false, error: "Submit each CILO-to-PLO pair exactly once." };
+    }
+    if (item.mappings.some((mapping) => !validTargetIds.has(mapping.ploId))) {
+      return {
+        ok: false,
+        error:
+          "Submit manifestations only for active Program Learning Outcomes of this Course's Program.",
+      };
+    }
+    if (item.mappings.some((mapping) => mapping.manifestation === null)) {
+      return {
+        ok: false,
+        error: "Every required CILO-to-PLO pair needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation.",
+      };
+    }
+    submittedPairCount += item.mappings.length;
+  }
+  if (requireComplete && submittedPairCount !== validCiloIds.size * validTargetIds.size) {
+    return { ok: false, error: "Complete every required CILO-to-PLO pair before committing." };
+  }
+  return {
+    ok: true,
+    state: items
+      .map((item) => ({
+        ciloId: item.ciloId,
+        mappings: [...item.mappings].sort((left, right) => left.ploId.localeCompare(right.ploId)),
+      }))
+      .sort((left, right) => left.ciloId.localeCompare(right.ciloId)),
+  };
+}
+
+function existingManifestationState(
+  rows: AlignmentCiloRow[],
+  activeTargetIds: Set<string>
+): ManifestationSnapshot {
+  return rows
+    .map((cilo) => ({
+      ciloId: cilo.id,
+      mappings: cilo.cilo_mappings
+        .filter((mapping) => activeTargetIds.has(mapping.plo_id))
+        .map((mapping) => ({
+          ploId: mapping.plo_id,
+          manifestation: mapping.manifestation ?? null,
+        }))
+        .sort((left, right) => left.ploId.localeCompare(right.ploId)),
+    }))
+    .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
+}
+
+function manifestationDiff(
+  before: ManifestationSnapshot,
+  after: ManifestationSnapshot
+): ManifestationDiff {
+  const beforePairs = new Map<string, CILOMappingManifestation | null>();
+  for (const item of before) {
+    for (const mapping of item.mappings) {
+      beforePairs.set(`${item.ciloId}:${mapping.ploId}`, mapping.manifestation);
+    }
+  }
+  const additions: ManifestationDiff["additions"] = [];
+  const updates: ManifestationDiff["updates"] = [];
+  for (const item of after) {
+    for (const mapping of item.mappings) {
+      const key = `${item.ciloId}:${mapping.ploId}`;
+      const existing = beforePairs.get(key);
+      if (existing === undefined) {
+        if (mapping.manifestation !== null) {
+          additions.push({
+            ciloId: item.ciloId,
+            ploId: mapping.ploId,
+            manifestation: mapping.manifestation,
+          });
+        }
+      } else if (existing !== mapping.manifestation && mapping.manifestation !== null) {
+        updates.push({
+          ciloId: item.ciloId,
+          ploId: mapping.ploId,
+          from: existing,
+          to: mapping.manifestation,
+        });
+      }
+      beforePairs.delete(key);
+    }
+  }
+  const removals: ManifestationDiff["removals"] = [...beforePairs.keys()].map((key) => {
+    const [ciloId, ploId] = key.split(":");
+    return { ciloId, ploId };
+  });
+  return { additions, updates, removals };
+}
+
+async function applyManifestationDiff(
+  tx: Prisma.TransactionClient,
+  diff: ManifestationDiff,
+  userId: string
+): Promise<void> {
+  if (diff.additions.length > 0) {
+    await tx.cILOMapping.createMany({
+      data: diff.additions.map((item) => ({
+        cilo_id: item.ciloId,
+        plo_id: item.ploId,
+        manifestation: item.manifestation,
+        created_by: userId,
+        updated_by: userId,
+      })),
+    });
+  }
+  for (const update of diff.updates) {
+    await tx.cILOMapping.updateMany({
+      where: { cilo_id: update.ciloId, plo_id: update.ploId },
+      data: { manifestation: update.to, updated_by: userId, updated_at: new Date() },
+    });
+  }
+  if (diff.removals.length > 0) {
+    await tx.cILOMapping.deleteMany({
+      where: { OR: diff.removals.map((item) => ({ cilo_id: item.ciloId, plo_id: item.ploId })) },
+    });
+  }
+}
+
+function postWriteMappingsForProgramSpecific(
+  after: ManifestationSnapshot,
+  rows: AlignmentCiloRow[],
+  activeTargetIds: Set<string>
+): FreshnessMapping[] {
+  const written = after.flatMap((item) =>
+    item.mappings.map((mapping) => ({
+      ciloId: item.ciloId,
+      targetId: mapping.ploId,
+      manifestation: mapping.manifestation,
+    }))
+  );
+  const preserved = rows.flatMap((cilo) =>
+    cilo.cilo_mappings
+      .filter((mapping) => !activeTargetIds.has(mapping.plo_id))
+      .map((mapping) => ({
+        ciloId: cilo.id,
+        targetId: mapping.plo_id,
+        manifestation: mapping.manifestation ?? null,
+      }))
+  );
+  return [...written, ...preserved];
 }
 
 function token(value: unknown): string {
@@ -379,9 +595,15 @@ export async function readCourseAlignment(
   };
 }
 
+// One guarded orchestration: auth, availability, freshness, scope-specific diff, signature.
+// Keeping scope branches adjacent preserves the shared-review contract.
+// fallow-ignore-next-line complexity
 export async function prepareCourseAlignmentWrite(input: {
   courseId: string;
-  desired: AlignmentSnapshot;
+  desired: Array<
+    | { ciloId: string; targetIds: string[] }
+    | { ciloId: string; mappings: Array<{ ploId: string; manifestation: CILOMappingManifestation }> }
+  >;
   freshnessToken: string;
 }): Promise<ServiceResult<CourseAlignmentReview>> {
   if (!courseIdSchema.safeParse(input.courseId).success) {
@@ -402,60 +624,96 @@ export async function prepareCourseAlignmentWrite(input: {
   const scope = courseScopeOf(course);
   const targets = await readValidTargets(prisma, course);
   const catalogIds = targets.map((target) => target.id);
-
-  const before = stableSnapshot(course.cilos, scope);
-  if (input.freshnessToken !== freshnessTokenOf(course.cilos, scope, catalogIds)) {
+  const currentToken = freshnessTokenOf(course.cilos, scope, catalogIds);
+  if (input.freshnessToken !== currentToken) {
     return {
       success: false,
       error: "Course alignment changed. Reload and review the latest mappings.",
     };
   }
-  const validCiloIds = new Set(before.map((item) => item.ciloId));
-  if (
-    input.desired.length !== validCiloIds.size ||
-    new Set(input.desired.map((item) => item.ciloId)).size !== input.desired.length ||
-    input.desired.some((item) => !validCiloIds.has(item.ciloId))
-  ) {
-    return { success: false, error: "Submit a complete alignment for every active CILO." };
-  }
 
-  const after = input.desired
-    .map((item) => ({ ciloId: item.ciloId, targetIds: [...new Set(item.targetIds)].sort() }))
-    .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
-  const beforePairs = mappingPairs(before);
-  const addedTargetIds = newlyMappedTargetIds(before, after);
-  const validTargetCount = await countValidAddedTargets(prisma, course, addedTargetIds);
-  if (validTargetCount !== addedTargetIds.length) {
+  if (scope === "GENERAL_EDUCATION") {
+    if (input.desired.some((item) => !("targetIds" in item))) {
+      return { success: false, error: "Submit a complete alignment for every active CILO." };
+    }
+    const desired = input.desired as Array<{ ciloId: string; targetIds: string[] }>;
+    const before = stableSnapshot(course.cilos, scope);
+    const validCiloIds = new Set(before.map((item) => item.ciloId));
+    if (
+      desired.length !== validCiloIds.size ||
+      new Set(desired.map((item) => item.ciloId)).size !== desired.length ||
+      desired.some((item) => !validCiloIds.has(item.ciloId))
+    ) {
+      return { success: false, error: "Submit a complete alignment for every active CILO." };
+    }
+
+    const after = desired
+      .map((item) => ({ ciloId: item.ciloId, targetIds: [...new Set(item.targetIds)].sort() }))
+      .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
+    const beforePairs = mappingPairs(before);
+    const addedTargetIds = newlyMappedTargetIds(before, after);
+    const validTargetCount = await countValidAddedTargets(prisma, course, addedTargetIds);
+    if (validTargetCount !== addedTargetIds.length) {
+      return {
+        success: false,
+        error: "Institutional Outcome availability changed. Reload and review the latest mappings.",
+      };
+    }
+    const afterPairs = mappingPairs(after);
+    const additions = [...afterPairs]
+      .filter((pair) => !beforePairs.has(pair))
+      .map((pair) => {
+        const [ciloId, targetId] = pair.split(":");
+        return { ciloId, targetId };
+      });
+    const removals = [...beforePairs]
+      .filter((pair) => !afterPairs.has(pair))
+      .map((pair) => {
+        const [ciloId, targetId] = pair.split(":");
+        return { ciloId, targetId };
+      });
+    const unsigned = {
+      scope: "GENERAL_EDUCATION" as const,
+      courseId: input.courseId,
+      before,
+      after,
+      additions,
+      removals,
+      freshnessToken: currentToken,
+    };
     return {
-      success: false,
-      error:
-        scope === "GENERAL_EDUCATION"
-          ? "Institutional Outcome availability changed. Reload and review the latest mappings."
-          : "Program Learning Outcome availability changed. Reload and review the latest mappings.",
+      success: true,
+      data: { ...unsigned, signature: signReview(unsigned, session.userId) },
     };
   }
-  const afterPairs = mappingPairs(after);
-  const additions = [...afterPairs]
-    .filter((pair) => !beforePairs.has(pair))
-    .map((pair) => {
-      const [ciloId, targetId] = pair.split(":");
-      return { ciloId, targetId };
-    });
-  const removals = [...beforePairs]
-    .filter((pair) => !afterPairs.has(pair))
-    .map((pair) => {
-      const [ciloId, targetId] = pair.split(":");
-      return { ciloId, targetId };
-    });
+
+  if (input.desired.some((item) => !("mappings" in item))) {
+    return {
+      success: false,
+      error: "Manifestations are required for every CILO-to-PLO pair.",
+    };
+  }
+  const validated = validateProgramSpecificState(
+    course.cilos,
+    catalogIds,
+    input.desired as ManifestationSnapshot,
+    true
+  );
+  if (!validated.ok) {
+    return { success: false, error: validated.error };
+  }
+  const before = existingManifestationState(course.cilos, new Set(catalogIds));
+  const diff = manifestationDiff(before, validated.state);
   const unsigned = {
+    scope: "PROGRAM_SPECIFIC" as const,
     courseId: input.courseId,
     before,
-    after,
-    additions,
-    removals,
-    freshnessToken: freshnessTokenOf(course.cilos, scope, catalogIds),
+    after: validated.state,
+    additions: diff.additions,
+    updates: diff.updates,
+    removals: diff.removals,
+    freshnessToken: currentToken,
   };
-
   return {
     success: true,
     data: { ...unsigned, signature: signReview(unsigned, session.userId) },
@@ -503,32 +761,58 @@ export async function commitCourseAlignmentWrite(
           };
         }
 
-        const addedTargetIds = newlyMappedTargetIds(review.before, review.after);
-        const validTargetCount = await countValidAddedTargets(tx, course, addedTargetIds);
-        if (validTargetCount !== addedTargetIds.length) {
-          return {
-            success: false,
-            error:
-              scope === "GENERAL_EDUCATION"
-                ? "Institutional Outcome availability changed. Reload and review the latest catalog."
-                : "Program Learning Outcome availability changed. Reload and review the latest catalog.",
-          };
-        }
-
-        if (scope === "GENERAL_EDUCATION") {
-          if (review.removals.length > 0) {
+        if (review.scope === "GENERAL_EDUCATION") {
+          if (scope !== "GENERAL_EDUCATION") {
+            return {
+              success: false,
+              error:
+                "Course alignment changed after review. Reload and review the latest mappings.",
+            };
+          }
+          const before = stableSnapshot(course.cilos, scope);
+          if (JSON.stringify(before) !== JSON.stringify(review.before)) {
+            return {
+              success: false,
+              error:
+                "Course alignment changed after review. Reload and review the latest mappings.",
+            };
+          }
+          const addedTargetIds = newlyMappedTargetIds(review.before, review.after);
+          const validTargetCount = await countValidAddedTargets(tx, course, addedTargetIds);
+          if (validTargetCount !== addedTargetIds.length) {
+            return {
+              success: false,
+              error:
+                "Institutional Outcome availability changed. Reload and review the latest catalog.",
+            };
+          }
+          const beforePairs = mappingPairs(review.before);
+          const afterPairs = mappingPairs(review.after);
+          const additions = [...afterPairs]
+            .filter((pair) => !beforePairs.has(pair))
+            .map((pair) => {
+              const [ciloId, targetId] = pair.split(":");
+              return { ciloId, targetId };
+            });
+          const removals = [...beforePairs]
+            .filter((pair) => !afterPairs.has(pair))
+            .map((pair) => {
+              const [ciloId, targetId] = pair.split(":");
+              return { ciloId, targetId };
+            });
+          if (removals.length > 0) {
             await tx.cILOInstitutionalOutcomeMapping.deleteMany({
               where: {
-                OR: review.removals.map((item) => ({
+                OR: removals.map((item) => ({
                   cilo_id: item.ciloId,
                   institutional_outcome_id: item.targetId,
                 })),
               },
             });
           }
-          if (review.additions.length > 0) {
+          if (additions.length > 0) {
             await tx.cILOInstitutionalOutcomeMapping.createMany({
-              data: review.additions.map((item) => ({
+              data: additions.map((item) => ({
                 cilo_id: item.ciloId,
                 institutional_outcome_id: item.targetId,
                 created_by: session.userId,
@@ -536,49 +820,62 @@ export async function commitCourseAlignmentWrite(
               })),
             });
           }
-        } else {
-          if (review.removals.length > 0) {
-            await tx.cILOMapping.deleteMany({
-              where: {
-                OR: review.removals.map((item) => ({
-                  cilo_id: item.ciloId,
-                  plo_id: item.targetId,
-                })),
-              },
-            });
-          }
-          if (review.additions.length > 0) {
-            await tx.cILOMapping.createMany({
-              data: review.additions.map((item) => ({
-                cilo_id: item.ciloId,
-                plo_id: item.targetId,
-                created_by: session.userId,
-                updated_by: session.userId,
-              })),
-            });
-          }
+          const postWriteMappings: FreshnessMapping[] = review.after.flatMap((item) =>
+            item.targetIds.map((targetId) => ({
+              ciloId: item.ciloId,
+              targetId,
+              manifestation: null,
+            }))
+          );
+          return {
+            success: true,
+            data: {
+              changed: additions.length + removals.length,
+              freshnessToken: freshnessTokenValue(
+                review.after.map((item) => item.ciloId),
+                catalogIds,
+                postWriteMappings
+              ),
+            },
+          };
         }
-        const postWriteMappings: FreshnessMapping[] = review.after.flatMap((item) =>
-          item.targetIds.map((targetId) => ({
-            ciloId: item.ciloId,
-            targetId,
-            manifestation:
-              scope === "GENERAL_EDUCATION"
-                ? null
-                : course.cilos
-                    .find((cilo) => cilo.id === item.ciloId)
-                    ?.cilo_mappings.find((mapping) => mapping.plo_id === targetId)?.manifestation ??
-                  null,
-          }))
+
+        if (scope !== "PROGRAM_SPECIFIC") {
+          return {
+            success: false,
+            error: "Course alignment changed after review. Reload and review the latest mappings.",
+          };
+        }
+        const validated = validateProgramSpecificState(
+          course.cilos,
+          catalogIds,
+          review.after,
+          true
         );
+        if (!validated.ok) {
+          return { success: false, error: validated.error };
+        }
+        const before = existingManifestationState(course.cilos, new Set(catalogIds));
+        if (JSON.stringify(before) !== JSON.stringify(review.before)) {
+          return {
+            success: false,
+            error: "Course alignment changed after review. Reload and review the latest mappings.",
+          };
+        }
+        const diff = manifestationDiff(before, validated.state);
+        await applyManifestationDiff(tx, diff, session.userId);
         return {
           success: true,
           data: {
-            changed: review.additions.length + review.removals.length,
+            changed: diff.additions.length + diff.updates.length + diff.removals.length,
             freshnessToken: freshnessTokenValue(
-              review.after.map((item) => item.ciloId),
+              validated.state.map((item) => item.ciloId),
               catalogIds,
-              postWriteMappings
+              postWriteMappingsForProgramSpecific(
+                validated.state,
+                course.cilos,
+                new Set(catalogIds)
+              )
             ),
           },
         };
@@ -593,6 +890,107 @@ export async function commitCourseAlignmentWrite(
       return {
         success: false,
         error: "Course alignment changed after review. Reload and review the latest mappings.",
+      };
+    }
+    throw error;
+  }
+}
+
+export async function saveDraftCourseAlignment(input: {
+  courseId: string;
+  cells: ManifestationDraft;
+  freshnessToken: string;
+}): Promise<ServiceResult<{ changed: number; freshnessToken: string }>> {
+  if (!courseIdSchema.safeParse(input.courseId).success) {
+    return { success: false, error: SAFE_ACCESS_ERROR };
+  }
+  const session = await resolveAuthSession();
+  if (
+    !session ||
+    !(await roleAllowsAlignmentAccess(prisma, session.activeRole, session.userId, input.courseId))
+  ) {
+    return { success: false, error: SAFE_ACCESS_ERROR };
+  }
+  const course = await readCourse(prisma, input.courseId);
+  if (!course || courseIsUnavailable(course)) {
+    return { success: false, error: SAFE_ACCESS_ERROR };
+  }
+  if (courseScopeOf(course) !== "PROGRAM_SPECIFIC") {
+    return {
+      success: false,
+      error: "Draft saves are available only for Program-specific Course alignments.",
+    };
+  }
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        if (
+          !(await roleAllowsAlignmentAccess(
+            tx,
+            session.activeRole,
+            session.userId,
+            input.courseId
+          ))
+        ) {
+          return { success: false, error: SAFE_ACCESS_ERROR };
+        }
+        const course = await readCourse(tx, input.courseId);
+        if (!course || courseIsUnavailable(course)) {
+          return { success: false, error: SAFE_ACCESS_ERROR };
+        }
+        const scope = courseScopeOf(course);
+        if (scope !== "PROGRAM_SPECIFIC") {
+          return {
+            success: false,
+            error: "Draft saves are available only for Program-specific Course alignments.",
+          };
+        }
+        const targets = await readValidTargets(tx, course);
+        const catalogIds = targets.map((target) => target.id);
+        if (freshnessTokenOf(course.cilos, scope, catalogIds) !== input.freshnessToken) {
+          return {
+            success: false,
+            error: "Course alignment changed. Reload and review the latest mappings.",
+          };
+        }
+        const validated = validateProgramSpecificState(
+          course.cilos,
+          catalogIds,
+          input.cells,
+          false
+        );
+        if (!validated.ok) {
+          return { success: false, error: validated.error };
+        }
+        const before = existingManifestationState(course.cilos, new Set(catalogIds));
+        const diff = manifestationDiff(before, validated.state);
+        await applyManifestationDiff(tx, diff, session.userId);
+        return {
+          success: true,
+          data: {
+            changed: diff.additions.length + diff.updates.length + diff.removals.length,
+            freshnessToken: freshnessTokenValue(
+              validated.state.map((item) => item.ciloId),
+              catalogIds,
+              postWriteMappingsForProgramSpecific(
+                validated.state,
+                course.cilos,
+                new Set(catalogIds)
+              )
+            ),
+          },
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+  } catch (error) {
+    if (
+      isUniqueConstraintError(error) ||
+      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
+    ) {
+      return {
+        success: false,
+        error: "Course alignment changed. Reload and review the latest mappings.",
       };
     }
     throw error;

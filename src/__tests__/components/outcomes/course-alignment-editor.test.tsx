@@ -8,9 +8,25 @@ import type {
 
 const COURSE_ID = "11111111-1111-4111-8111-111111111111";
 const CILO_ID = "22222222-2222-4222-8222-222222222222";
+const ILO_ID = "66666666-6666-4666-8666-666666666666";
 const GO_ID = "33333333-3333-4333-8333-333333333333";
 
 const alignment: CourseAlignment = {
+  course: {
+    id: COURSE_ID,
+    code: "GESTECH",
+    title: "Science, Technology and Society",
+    scope: "GENERAL_EDUCATION",
+    program: null,
+  },
+  cilos: [{ id: CILO_ID, description: "Apply core concepts", targetIds: [] }],
+  targets: [{ id: ILO_ID, code: "ILO-1", description: "Think critically" }],
+  unavailableTargets: [],
+  readiness: "incomplete-mapping",
+  freshnessToken: "freshness",
+};
+
+const pspAlignment: CourseAlignment = {
   course: {
     id: COURSE_ID,
     code: "CS-101",
@@ -18,18 +34,37 @@ const alignment: CourseAlignment = {
     scope: "PROGRAM_SPECIFIC",
     program: { id: "program-1", code: "BSCS", name: "Computer Science" },
   },
-  cilos: [{ id: CILO_ID, description: "Apply core concepts", mappings: [] }],
+  cilos: [
+    {
+      id: CILO_ID,
+      description: "Apply core concepts",
+      mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }],
+    },
+  ],
   targets: [{ id: GO_ID, code: "GO-1", description: "Think critically" }],
   unavailableTargets: [],
-  readiness: "incomplete-mapping",
+  readiness: "ready",
   freshnessToken: "freshness",
 };
 
 const review: CourseAlignmentReview = {
+  scope: "GENERAL_EDUCATION",
   courseId: COURSE_ID,
   before: [{ ciloId: CILO_ID, targetIds: [] }],
-  after: [{ ciloId: CILO_ID, targetIds: [GO_ID] }],
-  additions: [{ ciloId: CILO_ID, targetId: GO_ID }],
+  after: [{ ciloId: CILO_ID, targetIds: [ILO_ID] }],
+  additions: [{ ciloId: CILO_ID, targetId: ILO_ID }],
+  removals: [],
+  freshnessToken: "fresh",
+  signature: "a".repeat(64),
+};
+
+const pspReview: CourseAlignmentReview = {
+  scope: "PROGRAM_SPECIFIC",
+  courseId: COURSE_ID,
+  before: [{ ciloId: CILO_ID, mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] }],
+  after: [{ ciloId: CILO_ID, mappings: [{ ploId: GO_ID, manifestation: "PRACTICE" }] }],
+  additions: [],
+  updates: [{ ciloId: CILO_ID, ploId: GO_ID, from: "LEARNING", to: "PRACTICE" }],
   removals: [],
   freshnessToken: "fresh",
   signature: "a".repeat(64),
@@ -51,8 +86,8 @@ function renderEditor({ prepareAction, commitAction }: EditorActions) {
 }
 
 function stageTarget() {
-  fireEvent.click(screen.getByRole("button", { name: "Choose Program Learning Outcomes" }));
-  fireEvent.click(screen.getByRole("checkbox", { name: /GO-1: Think critically/i }));
+  fireEvent.click(screen.getByRole("button", { name: "Choose Institutional Outcomes" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: /ILO-1: Think critically/i }));
 }
 
 describe("CourseAlignmentEditor", () => {
@@ -61,20 +96,20 @@ describe("CourseAlignmentEditor", () => {
     const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh" });
     renderEditor({ prepareAction, commitAction });
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose Program Learning Outcomes" }));
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("textbox", { name: "Search Program Learning Outcomes" }), {
+    fireEvent.click(screen.getByRole("button", { name: "Choose Institutional Outcomes" }));
+    expect(screen.getByText("ILO-1")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "Search Institutional Outcomes" }), {
       target: { value: "think" },
     });
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("checkbox", { name: /GO-1: Think critically/i }));
-    expect(screen.getByText("1 Program Learning Outcome mapped")).toBeInTheDocument();
+    expect(screen.getByText("ILO-1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: /ILO-1: Think critically/i }));
+    expect(screen.getByText("1 Institutional Outcome mapped")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
     await waitFor(() =>
       expect(prepareAction).toHaveBeenCalledWith({
         courseId: COURSE_ID,
-        desired: [{ ciloId: CILO_ID, targetIds: [GO_ID] }],
+        desired: [{ ciloId: CILO_ID, targetIds: [ILO_ID] }],
         freshnessToken: "freshness",
       })
     );
@@ -83,19 +118,42 @@ describe("CourseAlignmentEditor", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Before:")).toBeInTheDocument();
     expect(screen.getByText("After:")).toBeInTheDocument();
-    expect(screen.getAllByText("GO-1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("ILO-1").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalledWith(review, true));
     expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Discard changes" })).toBeDisabled();
   });
 
+  it("renders the manifestation change list for Program-specific reviews", async () => {
+    const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
+    const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 0, freshnessToken: "fresh" });
+    render(
+      <CourseAlignmentEditor
+        alignment={pspAlignment}
+        prepareAction={prepareAction}
+        commitAction={commitAction}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Choose Program Learning Outcomes" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /GO-1: Think critically/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
+    expect(
+      await screen.findByRole("heading", { name: "Review Course alignment changes" })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/GO-1: Learning \(L\) \u2192 Practice \(P\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
+    await waitFor(() => expect(commitAction).toHaveBeenCalledWith(pspReview, true));
+  });
+
   it("keeps the exact-diff review open while saving", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review });
-    let resolveCommit: (result: { success: true; changed: number }) => void;
+    type CommitResult = { success: true; changed: number; freshnessToken: string };
+    let resolveCommit: (result: CommitResult) => void;
     const commitAction = vi.fn(
       () =>
-        new Promise<{ success: true; changed: number }>((resolve) => {
+        new Promise<CommitResult>((resolve) => {
           resolveCommit = resolve;
         })
     );
@@ -167,10 +225,10 @@ describe("CourseAlignmentEditor", () => {
     render(
       <CourseAlignmentEditor
         alignment={{
-          ...alignment,
-          cilos: [{ ...alignment.cilos[0], mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] }],
+          ...pspAlignment,
+          cilos: [{ ...pspAlignment.cilos[0], mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] }],
           targets: [],
-          unavailableTargets: alignment.targets,
+          unavailableTargets: pspAlignment.targets,
           freshnessToken: "freshness",
         }}
         prepareAction={vi.fn()}
@@ -231,23 +289,17 @@ describe("CourseAlignmentEditor", () => {
     stageTarget();
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Course alignment changed after review."
-    );
+    expect(
+      await screen.findByText("Course alignment changed after review. Reload and review the latest mappings.")
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reload alignment" })).toBeEnabled();
   });
 
   it("shows only Institutional Outcomes and a shared-impact warning for General Education", () => {
-    const ILO_ID = "66666666-6666-4666-8666-666666666666";
     render(
       <CourseAlignmentEditor
         alignment={{
           ...alignment,
-          course: {
-            ...alignment.course,
-            scope: "GENERAL_EDUCATION",
-            program: null,
-          },
           targets: [{ id: ILO_ID, code: "ILO-1", description: "Think critically" }],
         }}
         prepareAction={vi.fn()}
