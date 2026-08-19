@@ -62,11 +62,25 @@ MERGE_READY: issue #<issue>, PR #<pr>, head <sha>
 
 Treat it as a request for merge evaluation, not proof. The orchestrator independently verifies every gate.
 
+Green CI is not the review verdict: a green Greptile check only means Greptile finished scanning. The merge gate is three independent gates — CI green, PR-body verdict positive, review threads resolved — and all three must hold.
+
 ## 6. Verify PR state
 
 ```bash
 gh pr view <PR>
 gh pr checks <PR>
+gh pr view <PR> --json body -q .body
+```
+
+Verify review thread resolution via GraphQL (resolve OWNER/REPO from `gh repo view --json nameWithOwner`):
+
+```bash
+gh api graphql -F owner=OWNER -F name=REPO -F pr=<PR> -f query='
+  query($owner:String!,$name:String!,$pr:Int!) {
+    repository(owner:$owner,name:$name) {
+      pullRequest(number:$pr) { reviewThreads(first: 50) { nodes { isResolved } } }
+    }
+  }'
 ```
 
 Merge only when every gate holds:
@@ -75,9 +89,9 @@ Merge only when every gate holds:
 - PR belongs to the expected child issue
 - PR targets `$BASE`
 - actual head SHA matches the worker report
-- required CI is green
-- required reviews are satisfied
-- required review comments are resolved
+- required CI is green — a green Greptile check only means the scan finished, not that its review is accepted
+- the PR body records the Greptile review as 5/5 and states it is clear to merge
+- every review comment thread is resolved (`isResolved: true`) — Greptile, code-review, and human
 - child issue remains open
 - no known correctness issue remains
 

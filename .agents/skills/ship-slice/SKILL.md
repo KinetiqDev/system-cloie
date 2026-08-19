@@ -247,7 +247,7 @@ Create exactly one PR for this slice. It must:
 - contain `Closes #<N>`
 - identify the parent tracker where useful
 - summarize delivered behavior
-- record verification evidence and code-review status
+- record verification evidence and code-review status; the Greptile verdict line (score and clear-to-merge state) is added to the body once Greptile posts it — copied verbatim from the Greptile review comment, never invented — and becomes the canonical record of the review result
 - record justified rejected/deferred findings
 - note migration/preflight evidence for DB slices
 
@@ -255,17 +255,37 @@ A rebase rewrites pushed history — update the existing PR; never create a seco
 
 Done when: exactly one open PR represents this slice.
 
-## 10. Babysit CI and reviews
+## 10. Babysit CI and the review verdict
+
+Run CI and the review verdict as separate gates. Green CI is not the review verdict: a green Greptile check only means Greptile finished scanning.
 
 ```bash
 gh pr checks <PR>
+gh pr view <PR> --json body -q .body
 ```
 
-Keep working until required CI, required checks, Greptile findings, code-review findings, and human review comments are resolved. Pending checks are not completion.
+**CI gate** — required checks are green.
+
+**Review verdict gate** — the PR body is the canonical record of the Greptile review. Once Greptile posts its review, update the PR body to record the verdict it posted (its score and clear-to-merge statement), copied verbatim from the Greptile review comment — never written by you. Require the body to show the Greptile review is 5/5 and explicitly state it is clear to merge. Until the body carries that verdict, or the recorded score is below 5/5, the review is not done.
+
+**Review threads gate** — every review comment thread is resolved: Greptile findings, `/code-review` findings, and human comments. Verify thread state via GraphQL (resolve OWNER/REPO from `gh repo view --json nameWithOwner -q .nameWithOwner`):
+
+```bash
+gh api graphql -F owner=OWNER -F name=REPO -F pr=<PR> -f query='
+  query($owner:String!,$name:String!,$pr:Int!) {
+    repository(owner:$owner,name:$name) {
+      pullRequest(number:$pr) { reviewThreads(first: 50) { nodes { isResolved } } }
+    }
+  }'
+```
+
+A thread is resolved only when its `isResolved` is `true`. A comment is legit when its concern maps to real code or behavior in this slice — resolve it by fixing the concern or recording a justified rejection, never by ignoring it.
+
+Pending checks are not completion, and green checks are not a resolved review.
 
 After material fixes post-PR: rerun focused tests, `pnpm test`, `pnpm lint`, `pnpm build`, rerun `/code-review`, push, and wait for fresh CI/review state.
 
-Done when: required CI is green, required review gates pass, required comments are resolved, and no known slice correctness issue remains.
+Done when: required CI is green, the PR body records a 5/5 Greptile review and states clear to merge, every review comment thread is resolved, and no known slice correctness issue remains.
 
 ## 11. Final synchronization gate
 
@@ -280,7 +300,7 @@ Do not declare `MERGE_READY` while stale.
 
 ### Orchestrated mode
 
-Do NOT merge. Resolve the PR number and actual remote head SHA, verify it is the current PR head, and report exactly:
+Do NOT merge. Verify the current PR head and the three merge gates — required CI green, PR body records a 5/5 Greptile review and states clear to merge, every review comment thread resolved — then report exactly:
 
 ```text
 MERGE_READY: issue #<N>, PR #<P>, head <sha>
@@ -304,6 +324,6 @@ Done when: `MERGE_READY` is reported with the current PR head, and the PR is int
 
 Fetch `$BASE` once more and require `git merge-base --is-ancestor "origin/$BASE" HEAD`; if stale, run the synchronization recipe and re-check.
 
-When current, green, reviewed, and comment-resolved, merge using the repository's established PR strategy. Confirm through GitHub that the PR is merged and issue #<N> is completed; leave the parent untouched.
+When current, required CI green, the PR body records a 5/5 Greptile review and states clear to merge, and every review comment thread is resolved, merge using the repository's established PR strategy. Confirm through GitHub that the PR is merged and issue #<N> is completed; leave the parent untouched.
 
 Done when: the slice is merged into the integration branch.
