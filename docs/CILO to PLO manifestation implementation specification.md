@@ -17,7 +17,7 @@ The implementation covers:
 - Program Head read-only mapping review
 - Secretary outcome-interface removal
 - responsive UI and UX
-- review, confirmation, freshness, and concurrent-edit handling
+- review, confirmation, draft saves, freshness, and concurrent-edit handling
 - validation and tests
 
 Analytics behavior is explicitly out of scope.
@@ -95,6 +95,7 @@ A Faculty member may:
 - open the Course alignment workspace
 - assign a manifestation for every CILO-to-PLO pair
 - change an existing manifestation
+- save a partial alignment as a draft and resume it later
 - review the complete alignment before saving
 - commit the reviewed alignment
 
@@ -141,9 +142,11 @@ PLO3 = Practice
 PLO4 = Opportunity
 ```
 
-There is no saved "not mapped" state between an active CILO and an active PLO.
+An unanswered CILO/PLO pair is represented by the absence of a mapping row. There is no special "not mapped" value.
 
-A draft UI may temporarily contain unanswered cells while the Faculty member is editing, but the system shall reject final submission until every required CILO-to-PLO pair has a manifestation.
+Faculty may save a draft with unanswered cells and resume later. A draft save persists the cells currently classified and leaves unclassified pairs absent.
+
+The system shall reject final review and commit until every required CILO-to-PLO pair has a manifestation.
 
 Therefore:
 
@@ -309,6 +312,8 @@ Commit shall fail if:
 - the CILO does not belong to the Course
 - the PLO is inactive or otherwise unavailable for a new mapping
 
+Draft saves are exempt from the completeness requirement and may persist a partial state. The failure list above applies to review and commit only.
+
 ## 9. Course-alignment read model
 
 The existing alignment model is based on arrays of target IDs. The current implementation effectively represents mapping as selected versus unselected, which is insufficient for manifestation data.
@@ -349,7 +354,7 @@ The read service must return:
 
 The Course alignment workspace remains the main write boundary for manifestation assignments.
 
-The submitted desired state should represent the complete mapping state for the Course.
+A review commit submits the complete mapping state for the Course. A draft save may submit a partial state; see Draft save below.
 
 Example:
 
@@ -375,9 +380,25 @@ Example:
 }
 ```
 
-Because every CILO must classify every PLO, the submitted state shall contain one entry for every required pair.
+Because every CILO must classify every PLO, a committed state shall contain one entry for every required pair.
 
 The server must never trust the client-provided list of PLOs as the authoritative required set. It shall reread active PLOs and CILOs when preparing and committing the write.
+
+### Draft save
+
+The workspace supports a lighter write for saving progress.
+
+A draft save submits the cells currently classified, which may be a partial state. The server diffs the submitted cells against existing rows over the active CILO and active PLO sets and applies:
+
+- new rows for newly classified pairs
+- updates for pairs whose manifestation changed
+- deletions for pairs the Faculty member cleared
+
+A draft save performs no completeness check and bypasses the review and confirmation ceremony. It runs in the same transaction with the same freshness protection as a commit, so every draft save advances the freshness token.
+
+Deletions apply only within the active CILO and active PLO sets. Rows referencing archived CILOs or archived PLOs are never touched by a draft save or a commit.
+
+The commit path reuses the same diff engine with the completeness gate and review confirmation added.
 
 ## 11. Manifestation updates
 
@@ -446,6 +467,8 @@ Manifestation values must participate in:
 
 This prevents a concurrent manifestation-only edit from being invisible.
 
+Every draft save is a write and advances the freshness token. A stale draft save fails the same stale-write comparison as a commit.
+
 Example:
 
 ```text
@@ -500,7 +523,13 @@ O  Opportunity
 
 There is no final "Not mapped" option.
 
-### Step 5. Validate completeness
+### Step 5. Save progress at any time
+
+Faculty may save the alignment before every cell is classified. The save persists the cells currently classified; unclassified pairs stay unanswered.
+
+The alignment can be reopened later from the Course list and continued.
+
+### Step 6. Validate completeness
 
 The interface immediately shows incomplete cells.
 
@@ -512,11 +541,11 @@ Example:
 
 Review cannot proceed until all required pairs have a value.
 
-### Step 6. Review
+### Step 7. Review
 
 Faculty reviews the complete before/after alignment.
 
-### Step 7. Confirm and save
+### Step 8. Confirm and save
 
 Server revalidates authorization, Course scope, PLO scope, completeness, freshness, and manifestations.
 
@@ -610,7 +639,7 @@ The editor should expose progress such as:
 
 Unanswered cells should be visually distinct but not represented as a fourth academic manifestation.
 
-The Save or Review action shall remain unavailable, or fail with an explicit validation message, until all required cells are classified.
+Save stays available at any time and persists the cells currently classified. Only Review is gated: the Review action shall remain unavailable, or fail with an explicit validation message, until all required cells are classified.
 
 Example message:
 
@@ -857,6 +886,8 @@ Show them as incomplete and require classification.
 
 Do not silently display them as Learning, Practice, or Opportunity.
 
+Unanswered cells left by a saved draft display the same way and count toward the remaining total.
+
 ## 29. Tests
 
 At minimum, test:
@@ -867,6 +898,12 @@ At minimum, test:
 - Faculty mapping editor loads all active PLOs from the Course's Program.
 - Every active CILO requires one manifestation for every active PLO.
 - Missing manifestation prevents review or commit.
+- Faculty can save a draft with unanswered cells and resume it later.
+- Draft save persists only classified cells; unanswered pairs remain absent.
+- Clearing a classified cell in a draft save removes that mapping row.
+- A stale draft save is rejected the same way as a stale commit.
+- Partial draft save leaves the Course incomplete for readiness and publication.
+- Draft saves never touch mapping rows on archived CILOs or PLOs.
 - Invalid manifestation is rejected at the server boundary.
 - Cross-Program PLO is rejected.
 - Same CILO/PLO pair cannot exist twice.
@@ -949,5 +986,7 @@ PROGRAM HEAD
 views CILO-to-PLO manifestation mapping
 read-only
 ```
+
+Faculty may save partial progress at any point before the final review and resume later.
 
 Secretary does not participate in this outcome-management workflow.

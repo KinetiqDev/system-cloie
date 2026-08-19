@@ -102,7 +102,7 @@ Worker identities are deterministic:
 
 ```text
 agent:  slice-<issue>
-branch: slice/<issue>-<slug>
+branch: <type>/<issue>-<slug>
 ```
 
 Match every existing worktree and agent back to its child issue before creating anything. If a worktree exists but its worker is gone, classify it ACTIVE and recover it via WORKTREES.md — never create a duplicate worktree because the orchestrator restarted.
