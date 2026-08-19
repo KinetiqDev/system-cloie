@@ -487,8 +487,13 @@ function AlignmentDialogs({
                       archivedLinesByCilo.set(cilo.id, archivedLines);
                     }
                   }
-                  return [...linesByCilo.entries()].map(([ciloId, lines]) => {
+                  const ciloIds = [
+                    ...new Set([...linesByCilo.keys(), ...archivedLinesByCilo.keys()]),
+                  ];
+                  return ciloIds.map((ciloId) => {
                     const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === ciloId);
+                    const lines = linesByCilo.get(ciloId) ?? [];
+                    const archivedLines = archivedLinesByCilo.get(ciloId) ?? [];
                     return (
                       <div key={ciloId} className="flex flex-col gap-1">
                         <p className="font-medium">CILO {ciloIndex + 1}</p>
@@ -496,7 +501,7 @@ function AlignmentDialogs({
                           {lines.map((line) => (
                             <li key={line}>{line}</li>
                           ))}
-                          {(archivedLinesByCilo.get(ciloId) ?? []).map((line) => (
+                          {archivedLines.map((line) => (
                             <li key={line} className="text-muted-foreground">
                               {line} — read-only
                             </li>

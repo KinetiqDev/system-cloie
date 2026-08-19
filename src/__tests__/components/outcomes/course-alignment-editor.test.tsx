@@ -244,6 +244,7 @@ describe("CourseAlignmentEditor", () => {
 
   it("reports archived PLO manifestations read-only in the review dialog", async () => {
     const ARCHIVED_GO_ID = "77777777-7777-4777-8777-777777777777";
+    const ARCHIVED_GO_2_ID = "88888888-8888-4888-8888-888888888888";
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
     render(
       <CourseAlignmentEditor
@@ -258,9 +259,15 @@ describe("CourseAlignmentEditor", () => {
                 { ploId: ARCHIVED_GO_ID, manifestation: "PRACTICE" },
               ],
             },
+            {
+              id: CILO_2_ID,
+              description: "Evaluate outcomes",
+              mappings: [{ ploId: ARCHIVED_GO_2_ID, manifestation: "OPPORTUNITY" }],
+            },
           ],
           unavailableTargets: [
             { id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" },
+            { id: ARCHIVED_GO_2_ID, code: "GO-8", description: "Retired outcome 2" },
           ],
         }}
         prepareAction={prepareAction}
@@ -272,12 +279,19 @@ describe("CourseAlignmentEditor", () => {
     fireEvent.click(
       within(matrix).getByRole("button", { name: "CILO 1, PLO 1, manifestation: Practice" })
     );
-    fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
+    fireEvent.click(
+      within(matrix).getByRole("button", { name: "CILO 2, PLO 1, manifestation: Learning" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Review 2 changes/i }));
     expect(
       await screen.findByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
     expect(
       screen.getByText("GO-9 (archived): Practice (P) — read-only")
+    ).toBeInTheDocument();
+    // A CILO with no staged changes still reports its archived context read-only.
+    expect(
+      screen.getByText("GO-8 (archived): Opportunity (O) — read-only")
     ).toBeInTheDocument();
   });
 
