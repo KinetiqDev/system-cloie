@@ -104,9 +104,10 @@ describe("AGENTS.md code intelligence guidance", () => {
 });
 
 describe("fallow runbook (docs/agents/fallow.md)", () => {
-  it("names the local MCP server wiring", () => {
+  it("records the deprecated MCP wiring without claiming active server config", () => {
+    expect(RUNBOOK).toMatch(/deprecated/i);
     expect(RUNBOOK).toMatch(/opencode\.json/);
-    expect(RUNBOOK).toMatch(/fallow-mcp/);
+    expect(RUNBOOK).not.toMatch(/declares a project-local MCP server/);
   });
 
   it(
