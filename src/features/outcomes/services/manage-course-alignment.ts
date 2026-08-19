@@ -8,7 +8,6 @@ import { prisma } from "@/lib/db/prisma";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import type { ServiceResult } from "@/lib/utils/service-result";
-import { ciloIsAligned } from "./classify-course-alignment";
 
 type CourseAlignmentTarget = {
   id: string;
@@ -994,96 +993,4 @@ export async function saveDraftCourseAlignment(input: {
     }
     throw error;
   }
-}
-
-export type CourseAlignmentSummary = {
-  courseId: string;
-  code: string;
-  title: string;
-  scope: CourseScope;
-  program: { id: string; code: string; name: string } | null;
-  ciloCount: number;
-  alignedCiloCount: number;
-  readiness: "ready" | "incomplete-mapping";
-};
-
-export async function listCourseAlignmentSummaries(): Promise<
-  ServiceResult<CourseAlignmentSummary[]>
-> {
-  const session = await resolveAuthSession();
-  if (session?.activeRole !== ROLES.SECRETARY) {
-    return { success: false, error: SAFE_ACCESS_ERROR };
-  }
-
-  const courses = await prisma.course.findMany({
-    where: {
-      is_active: true,
-      cilos: { some: { is_active: true } },
-      OR: [
-        {
-          course_scope: "PROGRAM_SPECIFIC",
-          program_id: { not: null },
-          program: { is_active: true },
-        },
-        { course_scope: "GENERAL_EDUCATION" },
-      ],
-    },
-    select: {
-      id: true,
-      code: true,
-      title: true,
-      course_scope: true,
-      program_id: true,
-      program: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          plos: { where: { is_active: true }, select: { id: true } },
-        },
-      },
-      cilos: {
-        where: { is_active: true },
-        select: {
-          id: true,
-          cilo_mappings: {
-            select: {
-              manifestation: true,
-              plo: { select: { id: true, is_active: true, program_id: true } },
-            },
-          },
-          cilo_institutional_outcome_mappings: {
-            select: { institutional_outcome: { select: { id: true, is_active: true } } },
-          },
-        },
-      },
-    },
-    orderBy: { code: "asc" },
-  });
-
-  const data = courses.map((course) => {
-    const scope: CourseScope =
-      course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROGRAM_SPECIFIC";
-    const activePloIds = (course.program?.plos ?? []).map((plo) => plo.id);
-    const alignedCiloCount = course.cilos.filter((cilo) =>
-      ciloIsAligned(cilo, scope, course.program_id, activePloIds)
-    ).length;
-    return {
-      courseId: course.id,
-      code: course.code,
-      title: course.title,
-      scope,
-      program: course.program
-        ? { id: course.program.id, code: course.program.code, name: course.program.name }
-        : null,
-      ciloCount: course.cilos.length,
-      alignedCiloCount,
-      readiness:
-        alignedCiloCount === course.cilos.length
-          ? ("ready" as const)
-          : ("incomplete-mapping" as const),
-    };
-  });
-
-  return { success: true, data };
 }

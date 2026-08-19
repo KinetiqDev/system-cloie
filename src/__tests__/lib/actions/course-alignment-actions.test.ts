@@ -70,7 +70,7 @@ describe("Course alignment actions", () => {
     });
   });
 
-  it("revalidates the Faculty and Secretary alignment surfaces after a commit", async () => {
+  it("revalidates the Faculty alignment surfaces after a commit", async () => {
     const { commitCourseAlignmentAction } = await import(
       "@/lib/actions/course-alignment-actions"
     );
@@ -85,8 +85,6 @@ describe("Course alignment actions", () => {
     expect(revalidatePathMock.mock.calls).toEqual([
       [`/faculty/cilos/${COURSE_ID}/alignment`],
       ["/faculty/cilos"],
-      [`/secretary/learning-outcomes/alignment/${COURSE_ID}`],
-      ["/secretary/learning-outcomes"],
     ]);
   });
 

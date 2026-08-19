@@ -27,19 +27,14 @@ export type OutcomeWriteInput =
   | { kind: "PLO"; action: "reorder"; programId: string; orderedIds: string[] }
   | { kind: "CILO"; action: "create"; courseId: string; description: string }
   | { kind: "CILO"; action: "update"; id: string; description: string }
-  | { kind: "CILO"; action: "archive" | "restore"; id: string }
-  | { kind: "ILO"; action: "create"; code: string; description: string }
-  | { kind: "ILO"; action: "update"; id: string; code: string; description: string }
-  | { kind: "ILO"; action: "archive" | "restore"; id: string }
-  | { kind: "ILO"; action: "reorder"; orderedIds: string[] };
+  | { kind: "CILO"; action: "archive" | "restore"; id: string };
 
 type PLOWriteInput = Extract<OutcomeWriteInput, { kind: "PLO" }>;
 
-type IloWriteInput = Extract<OutcomeWriteInput, { kind: "ILO" }>;
 type CiloWriteInput = Extract<OutcomeWriteInput, { kind: "CILO" }>;
 
 type ReviewValue = unknown;
-export type OutcomeWriteReview = {
+type OutcomeWriteReview = {
   input: OutcomeWriteInput;
   before: ReviewValue;
   after: ReviewValue;
@@ -126,8 +121,6 @@ async function scopeAllows(
       return scopeAllowsPLO(input, role, db);
     case "CILO":
       return scopeAllowsCilo(input, userId, role, db);
-    case "ILO":
-      return false;
   }
 }
 
@@ -176,40 +169,6 @@ async function readCiloState(
   });
 }
 
-async function readIloState(
-  input: IloWriteInput,
-  db: Prisma.TransactionClient | typeof prisma
-): Promise<ReviewValue> {
-  if (input.action === "create")
-    return db.institutionalOutcome.findMany({
-      select: { code: true, description: true, order: true, is_active: true },
-      orderBy: [{ order: "asc" }, { code: "asc" }],
-    });
-  if (input.action === "reorder")
-    return db.institutionalOutcome.findMany({
-      select: {
-        id: true,
-        code: true,
-        description: true,
-        order: true,
-        is_active: true,
-        updated_at: true,
-      },
-      orderBy: [{ order: "asc" }, { code: "asc" }],
-    });
-  return db.institutionalOutcome.findUnique({
-    where: { id: input.id },
-    select: {
-      id: true,
-      code: true,
-      description: true,
-      order: true,
-      is_active: true,
-      updated_at: true,
-    },
-  });
-}
-
 async function readState(
   input: OutcomeWriteInput,
   db: Prisma.TransactionClient | typeof prisma = prisma
@@ -219,8 +178,6 @@ async function readState(
       return readPLOState(input, db);
     case "CILO":
       return readCiloState(input, db);
-    case "ILO":
-      return readIloState(input, db);
   }
 }
 
@@ -271,56 +228,12 @@ function nextCiloState(input: CiloWriteInput, before: ReviewValue, userId: strin
   return record;
 }
 
-function reorderedIloState(
-  before: ReviewValue,
-  orderedIds: string[]
-): Array<Record<string, unknown>> | null {
-  if (!Array.isArray(before) || before.length !== orderedIds.length) return null;
-  if (new Set(orderedIds).size !== orderedIds.length) return null;
-  const outcomes = before as Array<Record<string, unknown>>;
-  const outcomesById = new Map(outcomes.map((outcome) => [String(outcome.id), outcome]));
-  const reordered = orderedIds.map((id) => outcomesById.get(id));
-  if (reordered.some((outcome) => !outcome)) return null;
-  return reordered.map((outcome, order) => ({ ...outcome!, order }));
-}
-
-function nextIloState(input: IloWriteInput, before: ReviewValue): ReviewValue {
-  if (input.action === "create") {
-    const existing = before as Array<Record<string, unknown>>;
-    const nextOrder =
-      existing.reduce((highest, outcome) => Math.max(highest, Number(outcome.order)), -1) + 1;
-    return [
-      ...existing,
-      {
-        code: input.code.trim().toUpperCase(),
-        description: input.description.trim(),
-        order: nextOrder,
-        is_active: true,
-      },
-    ];
-  }
-  if (input.action === "reorder") return reorderedIloState(before, input.orderedIds);
-  if (!before) return null;
-  const record = before as Record<string, unknown>;
-  if (input.action === "archive" || input.action === "restore")
-    return { ...record, is_active: input.action === "restore" };
-  if (input.action === "update")
-    return {
-      ...record,
-      code: input.code.trim().toUpperCase(),
-      description: input.description.trim(),
-    };
-  return record;
-}
-
 function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string): ReviewValue {
   switch (input.kind) {
     case "PLO":
       return nextPLOState(input, before);
     case "CILO":
       return nextCiloState(input, before, userId);
-    case "ILO":
-      return nextIloState(input, before);
   }
 }
 
@@ -331,7 +244,6 @@ export async function prepareOutcomeWrite(
   const role = session?.activeRole;
   if (
     !session ||
-    (input.kind === "ILO" && session.profileGate.status !== "COMPLETE") ||
     (role !== ROLES.PROGRAM_HEAD && role !== ROLES.FACULTY)
   )
     return failure("You do not have permission to modify this outcome.");
@@ -345,8 +257,6 @@ export async function prepareOutcomeWrite(
   const before = await readState(input);
   if (input.action !== "create" && !before) return failure("Outcome record was not found.");
   const after = nextState(input, before, session.userId);
-  if (input.kind === "ILO" && input.action === "reorder" && !after)
-    return failure("Institutional Outcome order must contain each catalog outcome exactly once.");
   const unsigned = {
     input,
     before,
@@ -404,54 +314,6 @@ async function writePLO(
     success: true,
     data: { id: (await tx.pLO.update({ where: { id: input.id }, data })).id },
   };
-}
-
-async function writeIlo(
-  tx: Prisma.TransactionClient,
-  input: IloWriteInput,
-  current: ReviewValue
-): Promise<ServiceResult<{ id?: string }>> {
-  if (input.action === "create") {
-    const nextOrder =
-      (current as Array<{ order: number }>).reduce(
-        (highest, outcome) => Math.max(highest, outcome.order),
-        -1
-      ) + 1;
-    const created = await tx.institutionalOutcome.create({
-      data: {
-        code: input.code.trim().toUpperCase(),
-        description: input.description.trim(),
-        order: nextOrder,
-      },
-      select: { id: true },
-    });
-    return { success: true, data: { id: created.id } };
-  }
-  if (input.action === "reorder") {
-    const outcomes = current as Array<{ id: string; order: number }>;
-    if (
-      new Set(input.orderedIds).size !== input.orderedIds.length ||
-      outcomes.length !== input.orderedIds.length ||
-      outcomes.some((outcome) => !input.orderedIds.includes(outcome.id))
-    )
-      return failure("Institutional Outcomes must be a complete unique order.");
-    await Promise.all(
-      input.orderedIds.map((id, order) =>
-        tx.institutionalOutcome.update({ where: { id }, data: { order } })
-      )
-    );
-    return { success: true, data: {} };
-  }
-  const data =
-    input.action === "update"
-      ? { code: input.code.trim().toUpperCase(), description: input.description.trim() }
-      : { is_active: input.action === "restore" };
-  const updated = await tx.institutionalOutcome.update({
-    where: { id: input.id },
-    data,
-    select: { id: true },
-  });
-  return { success: true, data: { id: updated.id } };
 }
 
 async function writeCilo(
@@ -525,8 +387,6 @@ function writeReviewedOutcome(
   switch (input.kind) {
     case "PLO":
       return writePLO(tx, input, current);
-    case "ILO":
-      return writeIlo(tx, input, current);
     case "CILO":
       return writeCilo(tx, input, userId);
   }
@@ -560,7 +420,6 @@ export async function commitOutcomeWrite(
   if (
     !session ||
     !role ||
-    (review.input.kind === "ILO" && session.profileGate.status !== "COMPLETE") ||
     !reviewIsValid(review, session.userId)
   )
     return failure("You do not have permission to modify this outcome.");
@@ -571,11 +430,7 @@ export async function commitOutcomeWrite(
     );
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      return failure(
-        review.input.kind === "ILO"
-          ? "Institutional Outcome code already exists."
-          : "Program Learning Outcome code already exists."
-      );
+      return failure("Program Learning Outcome code already exists.");
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
       return failure("Outcome changed; prepare a new review.");

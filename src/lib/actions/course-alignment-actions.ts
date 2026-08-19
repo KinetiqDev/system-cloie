@@ -141,8 +141,6 @@ export async function commitCourseAlignmentAction(
 
   revalidatePath(`/faculty/cilos/${parsed.data.courseId}/alignment`);
   revalidatePath("/faculty/cilos");
-  revalidatePath(`/secretary/learning-outcomes/alignment/${parsed.data.courseId}`);
-  revalidatePath("/secretary/learning-outcomes");
   return {
     success: true,
     changed: result.data.changed,

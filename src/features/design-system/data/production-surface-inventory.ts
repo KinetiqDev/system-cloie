@@ -1223,26 +1223,16 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/secretary/learning-outcomes/alignment/[courseId]/loading.tsx",
-    disposition: "task",
-    taskId: 17,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/secretary/learning-outcomes/alignment/[courseId]/page.tsx",
-    disposition: "task",
-    taskId: 17,
+    disposition: "redirect",
     category: "route",
-  },
-  {
-    path: "src/app/(app)/secretary/learning-outcomes/loading.tsx",
-    disposition: "already_compliant",
-    category: "route",
+    notes: "Secretary outcome surface removed; redirects to Secretary landing",
   },
   {
     path: "src/app/(app)/secretary/learning-outcomes/page.tsx",
-    disposition: "already_compliant",
+    disposition: "redirect",
     category: "route",
+    notes: "Secretary outcome surface removed; redirects to Secretary landing",
   },
   {
     path: "src/app/(app)/secretary/dashboard/loading.tsx",
@@ -2507,22 +2497,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/legal/components/mobile-legal-document-nav.tsx",
     disposition: "task",
     taskId: 25,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/outcomes/components/institutional-outcome-form-dialog.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-  },
-  {
-    path: "src/features/outcomes/components/institutional-outcomes-page.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-  },
-  {
-    path: "src/features/outcomes/components/course-alignment-administration-list.tsx",
-    disposition: "task",
-    taskId: 17,
     category: "feature_component",
   },
   {
