@@ -1,3 +1,9 @@
+enum CILOMappingManifestation {
+  LEARNING
+  PRACTICE
+  OPPORTUNITY
+}
+
 model GO {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String
@@ -68,12 +74,14 @@ model CILOInstitutionalOutcomeMapping {
 }
 
 model CILOMapping {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cilo_id    String    @db.Uuid
-  go_id      String    @db.Uuid
-  created_by String?   @db.Uuid
-  updated_by String?   @db.Uuid
-  created_at DateTime  @default(now())
+  id            String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cilo_id       String                     @db.Uuid
+  go_id         String                     @db.Uuid
+  manifestation CILOMappingManifestation?
+  created_by    String?                    @db.Uuid
+  updated_by    String?                    @db.Uuid
+  created_at    DateTime                   @default(now())
+  updated_at    DateTime?
 
   cilo     CILO   @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
   go       GO     @relation(fields: [go_id], references: [id], onDelete: Cascade)

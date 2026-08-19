@@ -294,6 +294,10 @@ export type Database = {
           created_by: string | null
           go_id: string
           id: string
+          manifestation:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
+          updated_at: string | null
           updated_by: string | null
         }
         Insert: {
@@ -302,6 +306,10 @@ export type Database = {
           created_by?: string | null
           go_id: string
           id?: string
+          manifestation?:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
+          updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
@@ -310,6 +318,10 @@ export type Database = {
           created_by?: string | null
           go_id?: string
           id?: string
+          manifestation?:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
+          updated_at?: string | null
           updated_by?: string | null
         }
         Relationships: [
@@ -1995,6 +2007,7 @@ export type Database = {
       academic_period_status: "PLANNED" | "ACTIVE" | "COMPLETED" | "CANCELLED"
       academic_semester: "1ST" | "2ND" | "SUMMER"
       academic_term: "FIRST_TERM" | "SECOND_TERM"
+      CILOMappingManifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY"
       CourseBoundEvaluationExclusionCategory:
         | "APPROVED_ACCOMMODATION"
         | "NOT_TAKING_ASSESSMENT"
@@ -2155,6 +2168,7 @@ export const Constants = {
       academic_period_status: ["PLANNED", "ACTIVE", "COMPLETED", "CANCELLED"],
       academic_semester: ["1ST", "2ND", "SUMMER"],
       academic_term: ["FIRST_TERM", "SECOND_TERM"],
+      CILOMappingManifestation: ["LEARNING", "PRACTICE", "OPPORTUNITY"],
       CourseBoundEvaluationExclusionCategory: [
         "APPROVED_ACCOMMODATION",
         "NOT_TAKING_ASSESSMENT",
