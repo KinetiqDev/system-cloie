@@ -23,6 +23,7 @@ const expectedEnums = [
   "AcademicPeriodStatus",
   "AcademicSemester",
   "AcademicTerm",
+  "CILOMappingManifestation",
   "CourseBoundEvaluationExclusionCategory",
   "CourseBoundEvaluationExclusionReversalCategory",
   "CourseScope",

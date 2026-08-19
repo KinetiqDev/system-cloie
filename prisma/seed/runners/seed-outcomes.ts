@@ -5,6 +5,7 @@ import {
   ciloDefsIT,
   ciloDefsMKT,
   ciloDefsNewCourses,
+  ciloMappingDefs,
   goDefs,
   iloDefs,
 } from "../fixtures/outcomes";
@@ -69,29 +70,23 @@ export async function seedOutcomes({
 
   // CILO Mappings
   console.log("  → CILO Mappings...");
-  const itCilos = ciloMap.get("ITRES1") ?? [];
-  const mktCilos = ciloMap.get("MM201") ?? [];
-
-  // IT CILOs → BSIT GOs
-  for (const cilo of itCilos) {
-    const goCode = cilo.order <= 2 ? "BSIT-GO1" : "BSIT-GO3";
-    const go = goMap.get(goCode)!;
+  for (const def of ciloMappingDefs) {
+    const cilo = (ciloMap.get(def.courseCode) ?? []).find((c) => c.order === def.ciloOrder);
+    const go = goMap.get(def.goCode)!;
     const existing = await prisma.cILOMapping.findFirst({
-      where: { cilo_id: cilo.id, go_id: go.id },
+      where: { cilo_id: cilo!.id, go_id: go.id },
     });
     if (!existing) {
-      await prisma.cILOMapping.create({ data: { cilo_id: cilo.id, go_id: go.id } });
-    }
-  }
-  // MKT CILOs → BSBA GOs
-  for (const cilo of mktCilos) {
-    const goCode = cilo.order === 1 ? "BSBA-GO1" : "BSBA-GO2";
-    const go = goMap.get(goCode)!;
-    const existing = await prisma.cILOMapping.findFirst({
-      where: { cilo_id: cilo.id, go_id: go.id },
-    });
-    if (!existing) {
-      await prisma.cILOMapping.create({ data: { cilo_id: cilo.id, go_id: go.id } });
+      await prisma.cILOMapping.create({
+        data: { cilo_id: cilo!.id, go_id: go.id, manifestation: def.manifestation },
+      });
+    } else if (existing.manifestation === null) {
+      // Classify legacy rows created before the manifestation column existed.
+      // Rows that already carry a manifestation are never overwritten.
+      await prisma.cILOMapping.update({
+        where: { id: existing.id },
+        data: { manifestation: def.manifestation, updated_at: new Date() },
+      });
     }
   }
 

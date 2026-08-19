@@ -262,6 +262,46 @@ export const ciloDefsNewCourses = [
   },
 ] as const;
 
+/**
+ * Program-specific CILO → GO mapping pairs with their explicit manifestation
+ * classification. Every seeded mapping carries a manifestation; legacy rows
+ * created before the manifestation column are classified on reseed.
+ */
+export const ciloMappingDefs = [
+  // ITRES1 → BSIT GOs
+  {
+    courseCode: "ITRES1",
+    ciloOrder: 1,
+    goCode: "BSIT-GO1",
+    manifestation: "PRACTICE",
+  },
+  {
+    courseCode: "ITRES1",
+    ciloOrder: 2,
+    goCode: "BSIT-GO1",
+    manifestation: "PRACTICE",
+  },
+  {
+    courseCode: "ITRES1",
+    ciloOrder: 3,
+    goCode: "BSIT-GO3",
+    manifestation: "OPPORTUNITY",
+  },
+  // MM201 → BSBA GOs
+  {
+    courseCode: "MM201",
+    ciloOrder: 1,
+    goCode: "BSBA-GO1",
+    manifestation: "LEARNING",
+  },
+  {
+    courseCode: "MM201",
+    ciloOrder: 2,
+    goCode: "BSBA-GO2",
+    manifestation: "PRACTICE",
+  },
+] as const;
+
 /** College-wide Institutional Learning Outcomes. Codes stay unique across archive/restore. */
 export const iloDefs = [
   {
