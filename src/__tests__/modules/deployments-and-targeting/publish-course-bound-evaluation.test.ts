@@ -18,6 +18,7 @@ const {
   programHeadAssignmentFindManyMock,
   revalidateProgramHeadAssignmentMock,
   ciloFindManyMock,
+  ploFindManyMock,
   resolveAuthSessionMock,
   resolveProgramHeadContextMock,
   studentEnrollmentFindManyMock,
@@ -37,6 +38,7 @@ const {
   programHeadAssignmentFindManyMock: vi.fn(),
   revalidateProgramHeadAssignmentMock: vi.fn(),
   ciloFindManyMock: vi.fn(),
+  ploFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
   studentEnrollmentFindManyMock: vi.fn(),
@@ -64,6 +66,9 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     cILO: {
       findMany: ciloFindManyMock,
+    },
+    pLO: {
+      findMany: ploFindManyMock,
     },
   },
 }));
@@ -211,6 +216,7 @@ describe("publishCourseBoundEvaluation", () => {
         instrumentVersion: { findFirst: instrumentVersionFindFirstMock },
         programHeadAssignment: { findMany: programHeadAssignmentFindManyMock },
         cILO: { findMany: ciloFindManyMock },
+        pLO: { findMany: ploFindManyMock },
         evaluationAssignment: { createMany: assignmentCreateManyMock },
       })
     );
@@ -261,16 +267,21 @@ describe("publishCourseBoundEvaluation", () => {
       {
         description: "Apply capstone planning fundamentals.",
         id: "cilo-1",
-        cilo_mappings: [{ plo: { program_id: "program-1", is_active: true } }],
+        cilo_mappings: [
+          { manifestation: "LEARNING", plo: { id: "plo-1", program_id: "program-1", is_active: true } },
+        ],
         cilo_institutional_outcome_mappings: [],
       },
       {
         description: "Produce a proposal-aligned outline defense artifact.",
         id: "cilo-2",
-        cilo_mappings: [{ plo: { program_id: "program-1", is_active: true } }],
+        cilo_mappings: [
+          { manifestation: "PRACTICE", plo: { id: "plo-1", program_id: "program-1", is_active: true } },
+        ],
         cilo_institutional_outcome_mappings: [],
       },
     ]);
+    ploFindManyMock.mockResolvedValue([{ id: "plo-1" }]);
 
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: "program-1" }]);
     revalidateProgramHeadAssignmentMock.mockResolvedValue({
@@ -678,7 +689,12 @@ describe("publishCourseBoundEvaluation", () => {
         {
           description: "Produce a proposal-aligned outline defense artifact.",
           id: "cilo-2",
-          cilo_mappings: [{ plo: { program_id: "program-1", is_active: true } }],
+          cilo_mappings: [
+            {
+              manifestation: "LEARNING",
+              plo: { id: "plo-1", program_id: "program-1", is_active: true },
+            },
+          ],
           cilo_institutional_outcome_mappings: [],
         },
       ]);
@@ -691,7 +707,7 @@ describe("publishCourseBoundEvaluation", () => {
         })
       ).resolves.toEqual({
         error:
-          "Every active CILO must map to at least one active Program Learning Outcome from the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+          "Every active CILO must have a manifestation of every active Program Learning Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
         success: false,
         alignmentCourseId: "course-1",
       });
@@ -805,6 +821,84 @@ describe("publishCourseBoundEvaluation", () => {
       expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
     });
 
+    it("rejects publication when a CILO leaves an active owning-Program PLO unclassified", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY],
+        userId: "faculty-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [
+            {
+              manifestation: "LEARNING",
+              plo: { id: "plo-1", program_id: "program-1", is_active: true },
+            },
+          ],
+          cilo_institutional_outcome_mappings: [],
+        },
+      ]);
+      ploFindManyMock.mockResolvedValue([{ id: "plo-1" }, { id: "plo-2" }]);
+
+      await expect(
+        publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "Partial Classification Evaluation",
+          templateId: "template-1",
+        })
+      ).resolves.toEqual({
+        error:
+          "Every active CILO must have a manifestation of every active Program Learning Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+        success: false,
+        alignmentCourseId: "course-1",
+      });
+      expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects publication when an active PLO pairing carries a legacy null manifestation", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY],
+        userId: "faculty-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [
+            {
+              manifestation: null,
+              plo: { id: "plo-1", program_id: "program-1", is_active: true },
+            },
+          ],
+          cilo_institutional_outcome_mappings: [],
+        },
+      ]);
+      ploFindManyMock.mockResolvedValue([{ id: "plo-1" }]);
+
+      await expect(
+        publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "Null Manifestation Evaluation",
+          templateId: "template-1",
+        })
+      ).resolves.toEqual({
+        error:
+          "Every active CILO must have a manifestation of every active Program Learning Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+        success: false,
+        alignmentCourseId: "course-1",
+      });
+      expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
+    });
+
     it("blocks on-behalf publication with a course-scoped message and no Faculty repair link", async () => {
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.DEAN,
@@ -823,7 +917,12 @@ describe("publishCourseBoundEvaluation", () => {
         {
           description: "Produce a proposal-aligned outline defense artifact.",
           id: "cilo-2",
-          cilo_mappings: [{ plo: { program_id: "program-1", is_active: true } }],
+          cilo_mappings: [
+            {
+              manifestation: "LEARNING",
+              plo: { id: "plo-1", program_id: "program-1", is_active: true },
+            },
+          ],
           cilo_institutional_outcome_mappings: [],
         },
       ]);
@@ -837,7 +936,7 @@ describe("publishCourseBoundEvaluation", () => {
         })
       ).resolves.toEqual({
         error:
-          "Course IT-401 alignment is incomplete: every active CILO must map to at least one active Program Learning Outcome from the Course's owning Academic Program before publishing.",
+          "Course IT-401 alignment is incomplete: every active CILO must have a manifestation of every active Program Learning Outcome of the Course's owning Academic Program before publishing.",
         success: false,
       });
       expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();

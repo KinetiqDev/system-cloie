@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import type { ServiceResult } from "@/lib/utils/service-result";
-import { ciloHasValidActiveTarget } from "./classify-course-alignment";
+import { ciloIsAligned } from "./classify-course-alignment";
 
 type CourseAlignmentTarget = {
   id: string;
@@ -1035,13 +1035,23 @@ export async function listCourseAlignmentSummaries(): Promise<
       title: true,
       course_scope: true,
       program_id: true,
-      program: { select: { id: true, code: true, name: true } },
+      program: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          plos: { where: { is_active: true }, select: { id: true } },
+        },
+      },
       cilos: {
         where: { is_active: true },
         select: {
           id: true,
           cilo_mappings: {
-            select: { plo: { select: { id: true, is_active: true, program_id: true } } },
+            select: {
+              manifestation: true,
+              plo: { select: { id: true, is_active: true, program_id: true } },
+            },
           },
           cilo_institutional_outcome_mappings: {
             select: { institutional_outcome: { select: { id: true, is_active: true } } },
@@ -1055,8 +1065,9 @@ export async function listCourseAlignmentSummaries(): Promise<
   const data = courses.map((course) => {
     const scope: CourseScope =
       course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROGRAM_SPECIFIC";
+    const activePloIds = (course.program?.plos ?? []).map((plo) => plo.id);
     const alignedCiloCount = course.cilos.filter((cilo) =>
-      ciloHasValidActiveTarget(cilo, scope, course.program_id)
+      ciloIsAligned(cilo, scope, course.program_id, activePloIds)
     ).length;
     return {
       courseId: course.id,

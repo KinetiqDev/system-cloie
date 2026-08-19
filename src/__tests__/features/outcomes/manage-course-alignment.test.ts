@@ -647,11 +647,21 @@ describe("Course alignment service", () => {
         title: "Computing",
         course_scope: "PROGRAM_SPECIFIC",
         program_id: PROGRAM_ID,
-        program: { id: PROGRAM_ID, code: "BSCS", name: "Computer Science" },
+        program: {
+          id: PROGRAM_ID,
+          code: "BSCS",
+          name: "Computer Science",
+          plos: [{ id: PLO_ID }],
+        },
         cilos: [
           {
             id: "cilo-ok",
-            cilo_mappings: [{ plo: { id: PLO_ID, is_active: true, program_id: PROGRAM_ID } }],
+            cilo_mappings: [
+              {
+                manifestation: "LEARNING",
+                plo: { id: PLO_ID, is_active: true, program_id: PROGRAM_ID },
+              },
+            ],
             cilo_institutional_outcome_mappings: [],
           },
           {
