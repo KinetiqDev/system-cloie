@@ -1,35 +1,22 @@
 ---
 name: grilling
-description: Grill the user relentlessly about implementation and spec gaps in a plan or design. Use when the user wants to stress-test a plan before building, or uses any 'grill' trigger phrases.
+description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
 ---
 
-Interview me relentlessly about the **gaps** in this plan until we reach a shared understanding or the budget is spent. Walk the high-stakes branches of the design tree, resolving dependencies between decisions.
+Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
 
-## Waves
+Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled: the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
 
-Ask questions in **waves of 10**. One wave per turn. Wait for answers to the current wave before asking the next.
+Each question should be formatted like so:
 
-**Budget: 4 waves (40 questions) maximum.** Before each wave, rank remaining gaps and ask the top 10:
+```
+❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
 
-1. **Blockers** — immediate clarifications that would stall or misdirect implementation
-2. **Spec gaps** — ambiguities that would leave the spec weak or underspecified
+➡️ <your recommended answer>
+```
 
-If blockers or spec gaps remain and budget remains, fire another wave. If none remain, stop and ask me to confirm shared understanding. After wave 4, list leftover gaps and wait for me to confirm we proceed with them open. A wave may be shorter than 10 when fewer gaps are left — never pad with filler.
+Each round the user answers reshapes the tree: settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
 
-Carry unresolved branches into later waves; do not re-ask a settled decision.
+Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent to find it; don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report; ask the rest of the frontier now. The _decisions_ are the user's: put each to them and wait.
 
-## Dual phrasing
-
-Every question has both versions, then a recommendation:
-
-1. **Technical** — precise, domain terms, constraints, APIs, invariants.
-2. **Layman** — the same decision and an example, both in plain language, no jargon.
-3. **Recommended** — your answer and why, in one or two sentences.
-
-Number questions 1–10 inside the wave.
-
-## Facts vs decisions
-
-If a *fact* can be found by exploring the codebase, look it up rather than asking me. The *decisions* are mine — put each one to me in a wave and wait for my answers.
-
-Do not enact the plan until I confirm we have reached a shared understanding.
+The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
