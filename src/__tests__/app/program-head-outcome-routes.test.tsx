@@ -39,7 +39,7 @@ describe("selected Program Outcome routes", () => {
   it("passes the route Program to the Outcome read", async () => {
     listGOsMock.mockResolvedValue({
       success: true,
-      data: { gos: [], program: { id: PROGRAM_ID, code: "BSED", name: "Secondary Education" } },
+      data: { plos: [], program: { id: PROGRAM_ID, code: "BSED", name: "Secondary Education" } },
     });
     const Page = (await import("@/app/(app)/program-head/programs/[programId]/outcomes/page"))
       .default;
@@ -64,7 +64,7 @@ describe("selected Program Outcome routes", () => {
     expect(notFoundMock).toHaveBeenCalled();
   });
 
-  it("renders a read-only mapping review with typed targets and readiness gaps", async () => {
+  it("renders a read-only manifestation review with every PLO, full labels, and exhaustive readiness", async () => {
     listMappingsMock.mockResolvedValue({
       success: true,
       data: [
@@ -73,6 +73,7 @@ describe("selected Program Outcome routes", () => {
           courseCode: "GE101",
           courseTitle: "Purposive Communication",
           courseScope: "GENERAL_EDUCATION",
+          plos: [],
           cilos: [
             {
               id: "cilo-ge",
@@ -87,7 +88,15 @@ describe("selected Program Outcome routes", () => {
                   is_active: true,
                 },
               ],
+              manifestations: [],
               readiness: "ready",
+            },
+            {
+              id: "cilo-ge-gap",
+              description: "Apply ethical reasoning",
+              mappedTargets: [],
+              manifestations: [],
+              readiness: "incomplete-mapping",
             },
           ],
         },
@@ -96,11 +105,29 @@ describe("selected Program Outcome routes", () => {
           courseCode: "CS101",
           courseTitle: "Introduction to Computing",
           courseScope: "PROGRAM_SPECIFIC",
+          plos: [
+            { id: "plo-1", code: "PLO-1", description: "Analyze problems" },
+            { id: "plo-2", code: "PLO-2", description: "Design solutions" },
+          ],
           cilos: [
             {
-              id: "cilo-gap",
+              id: "cilo-complete",
               description: "Design a solution",
               mappedTargets: [],
+              manifestations: [
+                { ploId: "plo-1", manifestation: "LEARNING" },
+                { ploId: "plo-2", manifestation: "PRACTICE" },
+              ],
+              readiness: "ready",
+            },
+            {
+              id: "cilo-gap",
+              description: "Evaluate outcomes",
+              mappedTargets: [],
+              manifestations: [
+                { ploId: "plo-1", manifestation: null },
+                { ploId: "plo-2", manifestation: null },
+              ],
               readiness: "incomplete-mapping",
             },
           ],
@@ -120,9 +147,20 @@ describe("selected Program Outcome routes", () => {
     expect(html).toContain("CILO Mapping Review");
     expect(html).toContain("Shared General Education");
     expect(html).toContain("ILO-1");
+    expect(html).toContain("PLO-1");
+    expect(html).toContain("PLO-2");
+    expect(html).toContain("Analyze problems");
+    expect(html).toContain("Design solutions");
+    expect(html).toContain("Learning (L)");
+    expect(html).toContain("Practice (P)");
+    expect(html).toContain("Unanswered");
     expect(html).toContain("Aligned");
     expect(html).toContain("Needs mapping");
-    expect(html).toContain("Faculty or the Secretary can align this CILO to Program Learning Outcomes.");
+    expect(html).toContain(
+      "Faculty can align this CILO to Institutional Outcomes through Course alignment."
+    );
+    expect(html).toContain("This review is read-only.");
+    expect(html).not.toContain("Secretary");
     expect(html).not.toContain("<button");
   });
 });
