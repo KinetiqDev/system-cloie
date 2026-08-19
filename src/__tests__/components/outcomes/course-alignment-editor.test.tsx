@@ -18,7 +18,7 @@ const alignment: CourseAlignment = {
     scope: "PROGRAM_SPECIFIC",
     program: { id: "program-1", code: "BSCS", name: "Computer Science" },
   },
-  cilos: [{ id: CILO_ID, description: "Apply core concepts", targetIds: [] }],
+  cilos: [{ id: CILO_ID, description: "Apply core concepts", mappings: [] }],
   targets: [{ id: GO_ID, code: "GO-1", description: "Think critically" }],
   unavailableTargets: [],
   readiness: "incomplete-mapping",
@@ -58,7 +58,7 @@ function stageTarget() {
 describe("CourseAlignmentEditor", () => {
   it("searches, stages selection, reviews an exact diff, and commits", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review });
-    const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 1 });
+    const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh" });
     renderEditor({ prepareAction, commitAction });
 
     fireEvent.click(screen.getByRole("button", { name: "Choose Program Learning Outcomes" }));
@@ -110,7 +110,7 @@ describe("CourseAlignmentEditor", () => {
       screen.getByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
-    resolveCommit!({ success: true, changed: 1 });
+    resolveCommit!({ success: true, changed: 1, freshnessToken: "fresh" });
     expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
   });
 
@@ -168,7 +168,7 @@ describe("CourseAlignmentEditor", () => {
       <CourseAlignmentEditor
         alignment={{
           ...alignment,
-          cilos: [{ ...alignment.cilos[0], targetIds: [GO_ID] }],
+          cilos: [{ ...alignment.cilos[0], mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] }],
           targets: [],
           unavailableTargets: alignment.targets,
           freshnessToken: "freshness",

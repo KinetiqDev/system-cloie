@@ -61,7 +61,9 @@ export async function prepareCourseAlignmentAction(
 export async function commitCourseAlignmentAction(
   review: unknown,
   confirmed: unknown
-): Promise<{ success: true; changed: number } | { success: false; error: string }> {
+): Promise<
+  { success: true; changed: number; freshnessToken: string } | { success: false; error: string }
+> {
   const parsed = reviewSchema.safeParse(review);
   if (!parsed.success) return { success: false, error: "Invalid alignment review." };
   const confirmedResult = z.boolean().safeParse(confirmed);
@@ -76,5 +78,9 @@ export async function commitCourseAlignmentAction(
   revalidatePath("/faculty/cilos");
   revalidatePath(`/secretary/learning-outcomes/alignment/${parsed.data.courseId}`);
   revalidatePath("/secretary/learning-outcomes");
-  return { success: true, changed: result.data.changed };
+  return {
+    success: true,
+    changed: result.data.changed,
+    freshnessToken: result.data.freshnessToken,
+  };
 }

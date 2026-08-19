@@ -31,7 +31,7 @@ function validReview() {
 describe("Course alignment actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    commitWriteMock.mockResolvedValue({ success: true, data: { changed: 1 } });
+    commitWriteMock.mockResolvedValue({ success: true, data: { changed: 1, freshnessToken: "fresh" } });
     prepareWriteMock.mockResolvedValue({
       success: true,
       data: {
@@ -55,6 +55,7 @@ describe("Course alignment actions", () => {
     await expect(commitCourseAlignmentAction(review, true)).resolves.toEqual({
       success: true,
       changed: 1,
+      freshnessToken: "fresh",
     });
     expect(commitWriteMock).toHaveBeenCalledWith(review, true);
     expect(revalidatePathMock.mock.calls).toEqual([
