@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: ["127.0.0.1:*", "*.trycloudflare.com"],
     },
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "@base-ui/react",
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+    ],
   },
   allowedDevOrigins: ["*.trycloudflare.com", "127.0.0.1"],
   turbopack: {

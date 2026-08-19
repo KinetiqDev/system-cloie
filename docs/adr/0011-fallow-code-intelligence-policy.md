@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-06
+- **Amendment:** 2026-08-19 — the OpenCode MCP transport (`opencode.json`) is deprecated and removed; Fallow access is CLI-only (`pnpm exec fallow …`). All other policy sections stand.
 - **Contexts:** Developer Experience, Engineering Process, Architecture
 
 ## Decision
@@ -63,8 +64,8 @@ Next.js entry points and route handlers (`src/app/**`), Server Actions (`"use se
 
 ### 6. Tooling and upgrade policy
 
-- OpenCode agents reach Fallow through the project-local MCP server declared in `opencode.json` (`pnpm exec fallow-mcp`), pinned by tests to the installed version's tool inventory.
-- A Fallow version upgrade requires maintainer re-verification: rerun the pinned MCP tests, review the tool inventory and command surface, regenerate baselines, and update `docs/agents/fallow.md` before relying on new capabilities.
+- Fallow is accessed through the project-local CLI (`pnpm exec fallow …`). The OpenCode MCP server wiring declared in `opencode.json` was deprecated and removed on 2026-08-19.
+- A Fallow version upgrade requires maintainer re-verification: rerun the guidance tests, review the command surface, regenerate baselines, and update `docs/agents/fallow.md` before relying on new capabilities.
 - Only commands verified against the installed binary are documented; the binary's `--help` is authoritative over third-party references.
 
 ## Consequences
@@ -80,4 +81,4 @@ Next.js entry points and route handlers (`src/app/**`), Server Actions (`"use se
 - OpenSpec change: `openspec/changes/integrate-fallow-code-intelligence/`
 - Runbook: `docs/agents/fallow.md`
 - Skill: `.agents/skills/fallow/SKILL.md`
-- Tests: `src/__tests__/config/opencode-fallow-mcp.test.ts`, `src/__tests__/config/fallow-agent-guidance.test.ts`
+- Tests: `src/__tests__/config/fallow-agent-guidance.test.ts`
