@@ -1,12 +1,14 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import { Target } from "lucide-react";
 import type { CILOMappingManifestation } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import type { CourseAlignment } from "@/features/outcomes/services/manage-course-alignment";
 import { cn } from "@/lib/utils";
-import { MANIFESTATION_OPTIONS, ManifestationPicker } from "./manifestation-picker";
+import { MANIFESTATION_OPTIONS, ManifestationPicker, manifestationLabel } from "./manifestation-picker";
 
 export type ManifestationDraftState = Record<string, Record<string, CILOMappingManifestation>>;
 
@@ -60,17 +62,21 @@ export function ManifestationAlignmentContent({
 
   if (targets.length === 0) {
     return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Target className="h-6 w-6" />
-          </EmptyMedia>
-          <EmptyTitle>No Program Learning Outcomes have been defined for this program.</EmptyTitle>
-          <EmptyDescription>
-            A Program Head must create PLOs before Course alignment can be completed.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Target className="h-6 w-6" />
+            </EmptyMedia>
+            <EmptyTitle>No Program Learning Outcomes have been defined for this program.</EmptyTitle>
+            <EmptyDescription>
+              A Program Head must create PLOs before Course alignment can be completed.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+        {/* Archived PLO historical manifestations stay visible even when the active catalog is empty. */}
+        <ArchivedManifestationRows alignment={alignment} />
+      </>
     );
   }
 
@@ -218,6 +224,68 @@ export function ManifestationAlignmentContent({
           </Card>
         ))}
       </div>
+
+      {/* Archived PLO historical manifestations, read-only */}
+      <ArchivedManifestationRows alignment={alignment} />
     </div>
   );
 }
+
+const ArchivedManifestationRows = memo(function ArchivedManifestationRows({
+  alignment,
+}: {
+  alignment: CourseAlignment;
+}) {
+  const activeTargetIds = useMemo(
+    () => new Set(alignment.targets.map((target) => target.id)),
+    [alignment.targets]
+  );
+  const archivedTargetById = useMemo(
+    () => new Map(alignment.unavailableTargets.map((target) => [target.id, target])),
+    [alignment.unavailableTargets]
+  );
+  const rows = useMemo(
+    () =>
+      alignment.cilos.flatMap((cilo, ciloIndex) =>
+        ("mappings" in cilo ? cilo.mappings : [])
+          .filter((mapping) => !activeTargetIds.has(mapping.ploId))
+          .map((mapping) => ({
+            ciloId: cilo.id,
+            ciloIndex: ciloIndex + 1,
+            ploId: mapping.ploId,
+            manifestation: mapping.manifestation,
+          }))
+      ),
+    [alignment.cilos, activeTargetIds]
+  );
+  if (rows.length === 0) return null;
+  return (
+    <div
+      className="rounded-xl border border-dashed border-border bg-muted/30 p-4"
+      data-testid="archived-manifestation-rows"
+      aria-label="Archived Program Learning Outcome manifestations, read-only"
+    >
+      <p className="font-medium">Archived Program Learning Outcomes</p>
+      <p className="text-muted-foreground text-body-sm">
+        Historical manifestations on archived PLOs are read-only and do not count toward
+        completeness.
+      </p>
+      <ul className="mt-3 flex flex-col gap-2">
+        {rows.map((row) => {
+          const target = archivedTargetById.get(row.ploId);
+          const code = target?.code ?? row.ploId;
+          return (
+            <li key={`${row.ciloId}:${row.ploId}`} className="flex flex-wrap items-center gap-2">
+              <span className="text-body-sm font-medium">CILO {row.ciloIndex}</span>
+              <span className="text-body-sm">{code}</span>
+              <Badge variant="outline" className="text-muted-foreground">
+                Archived
+              </Badge>
+              <span className="text-body-sm">{manifestationLabel(row.manifestation)}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+});

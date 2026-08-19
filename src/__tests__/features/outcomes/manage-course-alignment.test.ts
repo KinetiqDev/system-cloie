@@ -995,6 +995,80 @@ describe("Course alignment service", () => {
       expect(mocks.ciloMapping.deleteMany).not.toHaveBeenCalled();
     });
 
+    it("leaves provenance untouched on a no-op save of a classified pair", async () => {
+      mocks.course.findFirst.mockResolvedValue(
+        classifiedCourse(PLO_ID, "LEARNING", {
+          cilos: [
+            {
+              id: CILO_ID,
+              description: "Apply core concepts",
+              cilo_mappings: [
+                {
+                  plo_id: PLO_ID,
+                  manifestation: "LEARNING",
+                  plo: {
+                    id: PLO_ID,
+                    code: "GO-1",
+                    description: "Think critically",
+                    is_active: true,
+                  },
+                },
+              ],
+              cilo_institutional_outcome_mappings: [],
+            },
+          ],
+        })
+      );
+      const { saveDraftCourseAlignment } =
+        await import("@/features/outcomes/services/manage-course-alignment");
+      pspTxMock(
+        classifiedCourse(PLO_ID, "LEARNING", {
+          cilos: [
+            {
+              id: CILO_ID,
+              description: "Apply core concepts",
+              cilo_mappings: [
+                {
+                  plo_id: PLO_ID,
+                  manifestation: "LEARNING",
+                  plo: {
+                    id: PLO_ID,
+                    code: "GO-1",
+                    description: "Think critically",
+                    is_active: true,
+                  },
+                },
+              ],
+              cilo_institutional_outcome_mappings: [],
+            },
+          ],
+        })
+      );
+
+      await expect(
+        saveDraftCourseAlignment({
+          courseId: COURSE_ID,
+          cells: [
+            { ciloId: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: "LEARNING" }] },
+          ],
+          freshnessToken: CLASSIFIED_TOKEN,
+        })
+      ).resolves.toEqual({
+        success: true,
+        data: { changed: 0, freshnessToken: CLASSIFIED_TOKEN },
+      });
+      // A no-op diff produces no write at all, so the row keeps its recorded
+      // updated_by/updated_at provenance untouched.
+      expect(mocks.ciloMapping.updateMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ updated_by: expect.anything() }) })
+      );
+      expect(mocks.ciloMapping.updateMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ updated_at: expect.anything() }) })
+      );
+      expect(mocks.ciloMapping.createMany).not.toHaveBeenCalled();
+      expect(mocks.ciloMapping.deleteMany).not.toHaveBeenCalled();
+    });
+
     it("rejects a stale draft save with a reload requirement", async () => {
       mocks.course.findFirst.mockResolvedValue(emptyCourse());
       const { saveDraftCourseAlignment } =
@@ -1180,6 +1254,94 @@ describe("Course alignment service", () => {
       expect(mocks.ciloMapping.deleteMany).toHaveBeenCalledWith({
         where: { OR: [{ cilo_id: CILO_ID, plo_id: PLO_ID }] },
       });
+    });
+
+    it("never loads or rewrites rows on archived CILOs", async () => {
+      const ARCHIVED_CILO_ID = "99999999-9999-4999-8999-999999999999";
+      mocks.course.findFirst.mockResolvedValue(
+        course({
+          cilos: [
+            {
+              id: CILO_ID,
+              description: "Apply core concepts",
+              cilo_mappings: [
+                {
+                  plo_id: PLO_ID,
+                  manifestation: "LEARNING",
+                  plo: {
+                    id: PLO_ID,
+                    code: "GO-1",
+                    description: "Think critically",
+                    is_active: true,
+                  },
+                },
+              ],
+              cilo_institutional_outcome_mappings: [],
+            },
+          ],
+        })
+      );
+      const { readCourseAlignment, saveDraftCourseAlignment } =
+        await import("@/features/outcomes/services/manage-course-alignment");
+      // The read query filters CILOs to active rows in the database, so rows on
+      // archived CILOs can never reach the diff/write path.
+      await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
+        success: true,
+        data: { cilos: [{ id: CILO_ID }] },
+      });
+      expect(mocks.course.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: COURSE_ID, is_active: true }),
+          select: expect.objectContaining({
+            cilos: expect.objectContaining({
+              where: { is_active: true },
+              orderBy: { created_at: "asc" },
+            }),
+          }),
+        })
+      );
+      pspTxMock(
+        course({
+          cilos: [
+            {
+              id: CILO_ID,
+              description: "Apply core concepts",
+              cilo_mappings: [
+                {
+                  plo_id: PLO_ID,
+                  manifestation: "LEARNING",
+                  plo: {
+                    id: PLO_ID,
+                    code: "GO-1",
+                    description: "Think critically",
+                    is_active: true,
+                  },
+                },
+              ],
+              cilo_institutional_outcome_mappings: [],
+            },
+          ],
+        })
+      );
+      await expect(
+        saveDraftCourseAlignment({
+          courseId: COURSE_ID,
+          cells: [
+            { ciloId: CILO_ID, mappings: [{ ploId: PLO_ID, manifestation: "LEARNING" }] },
+          ],
+          freshnessToken: CLASSIFIED_TOKEN,
+        })
+      ).resolves.toMatchObject({ success: true, data: { changed: 0 } });
+      // No create/update/delete can carry the archived CILO id.
+      expect(mocks.ciloMapping.createMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.arrayContaining([expect.objectContaining({ cilo_id: ARCHIVED_CILO_ID })]) })
+      );
+      expect(mocks.ciloMapping.updateMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ cilo_id: ARCHIVED_CILO_ID }) })
+      );
+      expect(mocks.ciloMapping.deleteMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ cilo_id: ARCHIVED_CILO_ID }) })
+      );
     });
   });
 
@@ -1587,6 +1749,8 @@ describe("Course alignment service", () => {
         success: true,
         data: { changed: 0, freshnessToken: CLASSIFIED_TOKEN },
       });
+      // An unchanged pair gets no write, so its recorded updated_by/updated_at
+      // provenance stays exactly as stored.
       expect(mocks.ciloMapping.createMany).not.toHaveBeenCalled();
       expect(mocks.ciloMapping.updateMany).not.toHaveBeenCalled();
       expect(mocks.ciloMapping.deleteMany).not.toHaveBeenCalled();

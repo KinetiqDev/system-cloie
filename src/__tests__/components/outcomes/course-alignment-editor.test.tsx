@@ -153,6 +153,134 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: "Discard changes" })).toBeDisabled();
   });
 
+  it("shows archived PLO manifestations read-only and keeps them out of draft saves", async () => {
+    const ARCHIVED_GO_ID = "77777777-7777-4777-8777-777777777777";
+    const archivedAlignment: CourseAlignment = {
+      ...pspAlignment,
+      cilos: [
+        {
+          id: CILO_ID,
+          description: "Apply core concepts",
+          mappings: [
+            { ploId: GO_ID, manifestation: "LEARNING" },
+            { ploId: ARCHIVED_GO_ID, manifestation: "PRACTICE" },
+          ],
+        },
+      ],
+      unavailableTargets: [
+        { id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" },
+      ],
+    };
+    const saveDraftAction = vi
+      .fn()
+      .mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh-2" });
+    render(
+      <CourseAlignmentEditor
+        alignment={archivedAlignment}
+        prepareAction={vi.fn()}
+        commitAction={vi.fn()}
+        saveDraftAction={saveDraftAction}
+      />
+    );
+
+    // Historical manifestation renders read-only at both viewports; no picker exists for it.
+    const archivedBlock = screen.getByTestId("archived-manifestation-rows");
+    expect(within(archivedBlock).getByText("GO-9")).toBeInTheDocument();
+    expect(within(archivedBlock).getByText("Archived")).toBeInTheDocument();
+    expect(within(archivedBlock).getByText("Practice (P)")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /GO-9/i })
+    ).toBeNull();
+
+    // Draft saves submit only the active-pair state; the archived pair is never written.
+    const matrix = screen.getByTestId("manifestation-matrix");
+    fireEvent.click(
+      within(matrix).getByRole("button", { name: "CILO 1, PLO 1, manifestation: Practice" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save progress" }));
+    await waitFor(() =>
+      expect(saveDraftAction).toHaveBeenCalledWith({
+        courseId: COURSE_ID,
+        cells: [
+          { ciloId: CILO_ID, mappings: [{ ploId: GO_ID, manifestation: "PRACTICE" }] },
+        ],
+        freshnessToken: "freshness",
+      })
+    );
+  });
+
+  it("keeps archived PLO manifestations visible when no active PLOs exist", () => {
+    const ARCHIVED_GO_ID = "77777777-7777-4777-8777-777777777777";
+    render(
+      <CourseAlignmentEditor
+        alignment={{
+          ...pspAlignment,
+          targets: [],
+          cilos: [
+            {
+              id: CILO_ID,
+              description: "Apply core concepts",
+              mappings: [{ ploId: ARCHIVED_GO_ID, manifestation: "OPPORTUNITY" }],
+            },
+          ],
+          unavailableTargets: [
+            { id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" },
+          ],
+        }}
+        prepareAction={vi.fn()}
+        commitAction={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText("No Program Learning Outcomes have been defined for this program.")
+    ).toBeInTheDocument();
+    // The historical read-only manifestation stays visible even though the active
+    // PLO catalog is empty.
+    const archivedBlock = screen.getByTestId("archived-manifestation-rows");
+    expect(within(archivedBlock).getByText("GO-9")).toBeInTheDocument();
+    expect(within(archivedBlock).getByText("Opportunity (O)")).toBeInTheDocument();
+  });
+
+  it("reports archived PLO manifestations read-only in the review dialog", async () => {
+    const ARCHIVED_GO_ID = "77777777-7777-4777-8777-777777777777";
+    const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
+    render(
+      <CourseAlignmentEditor
+        alignment={{
+          ...pspAlignment,
+          cilos: [
+            {
+              id: CILO_ID,
+              description: "Apply core concepts",
+              mappings: [
+                { ploId: GO_ID, manifestation: "LEARNING" },
+                { ploId: ARCHIVED_GO_ID, manifestation: "PRACTICE" },
+              ],
+            },
+          ],
+          unavailableTargets: [
+            { id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" },
+          ],
+        }}
+        prepareAction={prepareAction}
+        commitAction={vi.fn()}
+      />
+    );
+
+    const matrix = screen.getByTestId("manifestation-matrix");
+    fireEvent.click(
+      within(matrix).getByRole("button", { name: "CILO 1, PLO 1, manifestation: Practice" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
+    expect(
+      await screen.findByRole("heading", { name: "Review Course alignment changes" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("GO-9 (archived): Practice (P) — read-only")
+    ).toBeInTheDocument();
+  });
+
   it("reports a first-time assignment as Set to in the review dialog", async () => {
     const additionReview: CourseAlignmentReview = {
       scope: "PROGRAM_SPECIFIC",

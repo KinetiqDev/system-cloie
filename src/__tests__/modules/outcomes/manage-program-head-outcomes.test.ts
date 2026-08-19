@@ -257,6 +257,7 @@ describe("manage-program-head-outcomes", () => {
           courseTitle: "General Education",
           courseScope: "GENERAL_EDUCATION",
           plos: [],
+          archivedPlos: [],
           cilos: [
             {
               id: "cilo-ge",
@@ -272,6 +273,7 @@ describe("manage-program-head-outcomes", () => {
                 },
               ],
               manifestations: [],
+              archivedManifestations: [],
               readiness: "ready",
             },
           ],
@@ -438,6 +440,9 @@ describe("manage-program-head-outcomes", () => {
       { id: "go-1", code: "PLO-1", description: "Analyze problems" },
       { id: "go-2", code: "PLO-2", description: "Design solutions" },
     ]);
+    expect(result.data[0].archivedPlos).toEqual([
+      { id: "go-3", code: "PLO-3", description: "Retired" },
+    ]);
     expect(result.data[0].cilos).toEqual([
       {
         id: "cilo-aligned",
@@ -447,6 +452,7 @@ describe("manage-program-head-outcomes", () => {
           { ploId: "go-1", manifestation: "LEARNING" },
           { ploId: "go-2", manifestation: "PRACTICE" },
         ],
+        archivedManifestations: [],
         readiness: "ready",
       },
       {
@@ -457,6 +463,7 @@ describe("manage-program-head-outcomes", () => {
           { ploId: "go-1", manifestation: null },
           { ploId: "go-2", manifestation: null },
         ],
+        archivedManifestations: [],
         readiness: "incomplete-mapping",
       },
       {
@@ -467,6 +474,7 @@ describe("manage-program-head-outcomes", () => {
           { ploId: "go-1", manifestation: "OPPORTUNITY" },
           { ploId: "go-2", manifestation: null },
         ],
+        archivedManifestations: [],
         readiness: "incomplete-mapping",
       },
       {
@@ -477,6 +485,7 @@ describe("manage-program-head-outcomes", () => {
           { ploId: "go-1", manifestation: null },
           { ploId: "go-2", manifestation: null },
         ],
+        archivedManifestations: [],
         readiness: "incomplete-mapping",
       },
       {
@@ -487,6 +496,7 @@ describe("manage-program-head-outcomes", () => {
           { ploId: "go-1", manifestation: null },
           { ploId: "go-2", manifestation: null },
         ],
+        archivedManifestations: [{ ploId: "go-3", manifestation: "LEARNING" }],
         readiness: "incomplete-mapping",
       },
     ]);
@@ -524,12 +534,14 @@ describe("manage-program-head-outcomes", () => {
           courseTitle: "Introduction to Computing",
           courseScope: "PROGRAM_SPECIFIC",
           plos: [],
+          archivedPlos: [],
           cilos: [
             {
               id: "cilo-1",
               description: "Design a solution",
               mappedTargets: [],
               manifestations: [],
+              archivedManifestations: [],
               readiness: "incomplete-mapping",
             },
           ],

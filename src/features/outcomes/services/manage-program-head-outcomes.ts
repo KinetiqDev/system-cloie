@@ -183,6 +183,8 @@ export type CourseCILOMappings = {
   courseScope: CourseScope;
   /** Every active PLO of the owning Program; the column catalog for PROGRAM_SPECIFIC courses. */
   plos: Array<{ id: string; code: string; description: string }>;
+  /** Archived owning-Program PLOs that still carry historical mapping rows in this Course. */
+  archivedPlos: Array<{ id: string; code: string; description: string }>;
   cilos: Array<{
     id: string;
     description: string;
@@ -191,6 +193,11 @@ export type CourseCILOMappings = {
     mappedTargets: ProgramMappedTarget[];
     /** One entry per active PLO for PROGRAM_SPECIFIC courses; null means unanswered. */
     manifestations: Array<{ ploId: string; manifestation: CILOMappingManifestation | null }>;
+    /** Historical manifestation per archived PLO row for PROGRAM_SPECIFIC courses. */
+    archivedManifestations: Array<{
+      ploId: string;
+      manifestation: CILOMappingManifestation | null;
+    }>;
   }>;
 };
 
@@ -287,12 +294,37 @@ export async function listCILOMappingsForProgram(
   const result: CourseCILOMappings[] = courses.map((course) => {
     const courseScope =
       course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROGRAM_SPECIFIC";
+    // Archived owning-Program PLOs that still carry historical mapping rows in this Course.
+    // They stay visible read-only; they never enter the active completeness requirement.
+    const archivedPlos =
+      courseScope === "PROGRAM_SPECIFIC"
+        ? [
+            ...new Map(
+              course.cilos.flatMap((cilo) =>
+                cilo.cilo_mappings
+                  .filter((mapping) => !mapping.plo.is_active)
+                  .map(
+                    (mapping) =>
+                      [
+                        mapping.plo.id,
+                        {
+                          id: mapping.plo.id,
+                          code: mapping.plo.code,
+                          description: mapping.plo.description,
+                        },
+                      ] as const
+                  )
+              )
+            ).values(),
+          ].sort((left, right) => left.code.localeCompare(right.code))
+        : [];
     return {
       courseId: course.id,
       courseCode: course.code,
       courseTitle: course.title,
       courseScope,
       plos: courseScope === "PROGRAM_SPECIFIC" ? activePlos : [],
+      archivedPlos,
       cilos: course.cilos.map((cilo) => {
         if (courseScope === "GENERAL_EDUCATION") {
           return {
@@ -307,6 +339,7 @@ export async function listCILOMappingsForProgram(
               is_active: mapping.institutional_outcome.is_active,
             })),
             manifestations: [],
+            archivedManifestations: [],
             readiness: ciloIsAligned(
               {
                 cilo_mappings: [],
@@ -334,6 +367,12 @@ export async function listCILOMappingsForProgram(
             ploId: plo.id,
             manifestation: manifestationByPloid.get(plo.id) ?? null,
           })),
+          archivedManifestations: archivedPlos
+            .filter((plo) => manifestationByPloid.has(plo.id))
+            .map((plo) => ({
+              ploId: plo.id,
+              manifestation: manifestationByPloid.get(plo.id) ?? null,
+            })),
           readiness: ciloIsAligned(
             {
               cilo_mappings: cilo.cilo_mappings.map((mapping) => ({
