@@ -16,8 +16,13 @@ export async function searchFacultyPool(
 ): Promise<CourseAssignmentResult<{ items: FacultySearchResult[]; total: number }>> {
   const authSession = await resolveAuthSession();
 
-  // Only PH, Admin, Dean can search faculty pool
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  // Secretary, Dean, Coordinator (cross-program), and Program Heads can search faculty pool
+  const allowedRoles: SystemRole[] = [
+    ROLES.SECRETARY,
+    ROLES.DEAN,
+    ROLES.GEN_ED_COORDINATOR,
+    ROLES.PROGRAM_HEAD,
+  ];
   if (!authSession?.activeRole || !allowedRoles.includes(authSession.activeRole)) {
     return { success: false, error: "Access denied." };
   }

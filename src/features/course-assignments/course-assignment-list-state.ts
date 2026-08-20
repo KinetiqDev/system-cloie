@@ -2,7 +2,7 @@ import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { z } from "zod";
 import type { ListCourseAssignmentsFilter } from "./types";
 
-export type CourseAssignmentListRole = "all-program" | "program-head";
+export type CourseAssignmentListRole = "all-program" | "program-head" | "general-education";
 
 export type CourseAssignmentListUrlState = {
   page: number;
@@ -98,9 +98,21 @@ function parseQuery(value: string | string[] | undefined): string | undefined {
 }
 
 function roleDefaultIsActive(role: CourseAssignmentListRole): boolean | undefined {
-  return role === "all-program" ? true : undefined;
+  return role === "all-program" || role === "general-education" ? true : undefined;
 }
 
+function isAllProgramLikeRole(role: CourseAssignmentListRole): boolean {
+  return role === "all-program" || role === "general-education";
+}
+
+function effectiveCourseScopeForRole(
+  role: CourseAssignmentListRole,
+  courseScope: CourseScope | undefined
+): CourseScope | undefined {
+  return role === "general-education" ? CourseScope.GENERAL_EDUCATION : courseScope;
+}
+
+// fallow-ignore-next-line complexity
 export function parseCourseAssignmentListState(
   rawSearchParams: CourseAssignmentSearchParams,
   role: CourseAssignmentListRole
@@ -116,19 +128,21 @@ export function parseCourseAssignmentListState(
   const isActive = parseBoolean(rawSearchParams.isActive);
   const isActiveCandidate = firstNonEmptyValue(rawSearchParams.isActive);
   const q = parseQuery(rawSearchParams.q);
+  const effectiveCourseScope = effectiveCourseScopeForRole(role, courseScope);
+
   const filters: ListCourseAssignmentsFilter = {
     ...(termInstanceId !== undefined && { termInstanceId }),
     ...(courseId !== undefined && { courseId }),
     ...(facultyId !== undefined && { facultyId }),
-    ...(role === "all-program" && programId !== undefined && { programId }),
+    ...(isAllProgramLikeRole(role) && programId !== undefined && { programId }),
     ...(yearLevel !== undefined && { yearLevel }),
     ...(section !== undefined && { section }),
-    ...(courseScope !== undefined && { courseScope }),
+    ...(effectiveCourseScope !== undefined && { courseScope: effectiveCourseScope }),
     ...(isActive !== undefined && { isActive }),
     ...(q !== undefined && { q }),
   };
 
-  if (role === "all-program" && isActiveCandidate === "all") {
+  if (isAllProgramLikeRole(role) && isActiveCandidate === "all") {
     return { page, filters, isActiveMode: "all" };
   }
 
@@ -139,6 +153,7 @@ export function parseCourseAssignmentListState(
   return { page, filters };
 }
 
+// fallow-ignore-next-line complexity
 export function serializeCourseAssignmentListState(
   state: CourseAssignmentListUrlState,
   role: CourseAssignmentListRole
@@ -151,11 +166,11 @@ export function serializeCourseAssignmentListState(
   if (filters.termInstanceId) params.set("termInstanceId", filters.termInstanceId);
   if (filters.courseId) params.set("courseId", filters.courseId);
   if (filters.facultyId) params.set("facultyId", filters.facultyId);
-  if (role === "all-program" && filters.programId) params.set("programId", filters.programId);
+  if (isAllProgramLikeRole(role) && filters.programId) params.set("programId", filters.programId);
   if (filters.yearLevel) params.set("yearLevel", filters.yearLevel);
   if (filters.section) params.set("section", filters.section);
-  if (filters.courseScope) params.set("courseScope", filters.courseScope);
-  if (role === "all-program" && state.isActiveMode === "all") {
+  if (role !== "general-education" && filters.courseScope) params.set("courseScope", filters.courseScope);
+  if (isAllProgramLikeRole(role) && state.isActiveMode === "all") {
     params.set("isActive", "all");
   } else if (filters.isActive !== undefined && filters.isActive !== defaultIsActive) {
     params.set("isActive", String(filters.isActive));

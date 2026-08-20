@@ -42,7 +42,7 @@ interface Program {
   name: string;
 }
 
-type CourseAssignmentFormMode = "program-head" | "all-program";
+type CourseAssignmentFormMode = "program-head" | "all-program" | "general-education";
 
 function getInitialProgramId(
   defaultCourseId: string | null | undefined,
@@ -489,19 +489,21 @@ export function CourseAssignmentFormDialog({
   const assignableCourses =
     mode === "all-program"
       ? availableCourses
-      : availableCourses.filter(
-          (c) =>
-            c.course_scope === CourseScope.PROGRAM_SPECIFIC &&
-            (selectedProgramId
-              ? c.program_id === selectedProgramId
-              : availablePrograms.some((p) => p.id === c.program_id))
-        );
+      : mode === "general-education"
+        ? availableCourses.filter((c) => c.course_scope === CourseScope.GENERAL_EDUCATION)
+        : availableCourses.filter(
+            (c) =>
+              c.course_scope === CourseScope.PROGRAM_SPECIFIC &&
+              (selectedProgramId
+                ? c.program_id === selectedProgramId
+                : availablePrograms.some((p) => p.id === c.program_id))
+          );
 
   const selectedCourse = assignableCourses.find((c) => c.id === courseId);
   const isGeneralEducation = selectedCourse?.course_scope === CourseScope.GENERAL_EDUCATION;
   const programLocked = !isGeneralEducation;
   const selectedProgram = availablePrograms.find((p) => p.id === programId);
-  const curriculumPickerEnabled = mode === "all-program" || !!programId;
+  const curriculumPickerEnabled = mode === "all-program" || mode === "general-education" || !!programId;
 
   const nextStepAfter = (current: Step): Step => {
     if (current === "term") return "course";

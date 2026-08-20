@@ -31,7 +31,7 @@ interface FacultyOption {
   email: string;
 }
 
-export type CourseAssignmentsPageMode = "all-program" | "program-head";
+export type CourseAssignmentsPageMode = "all-program" | "program-head" | "general-education";
 
 export interface CourseAssignmentsPageShellProps {
   pageTitle: string;
@@ -89,7 +89,7 @@ export function CourseAssignmentsPageShell({
         ...(nextFilters.courseScope && { courseScope: nextFilters.courseScope }),
         ...(nextFilters.searchQuery.trim() && { q: nextFilters.searchQuery.trim() }),
       },
-      ...(role === "all-program" && nextFilters.isActive === null
+      ...((role === "all-program" || role === "general-education") && nextFilters.isActive === null
         ? { isActiveMode: "all" as const }
         : {}),
     };
@@ -123,7 +123,8 @@ export function CourseAssignmentsPageShell({
         availablePrograms={availablePrograms}
         availableFaculty={availableFaculty}
         termInstances={termInstances}
-        showProgramFilter={mode === "all-program"}
+        showProgramFilter={mode === "all-program" || mode === "general-education"}
+        hideCourseScopeFilter={mode === "general-education"}
       />
 
       {loadError && (

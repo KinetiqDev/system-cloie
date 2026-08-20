@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { CourseScope, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -60,6 +60,11 @@ export async function listCourseAssignments(
     programIdCondition = filter.programId;
   }
 
+  const isCoordinator = authSession?.activeRole === ROLES.GEN_ED_COORDINATOR;
+  const enforcedCourseScope: CourseScope | undefined = isCoordinator
+    ? CourseScope.GENERAL_EDUCATION
+    : filter.courseScope;
+
   const where: Prisma.CourseAssignmentWhereInput = {
     ...(programIdCondition !== undefined && { program_id: programIdCondition }),
     ...(filter.termInstanceId && { term_instance_id: filter.termInstanceId }),
@@ -68,8 +73,8 @@ export async function listCourseAssignments(
     ...(filter.yearLevel && { year_level: filter.yearLevel }),
     ...(filter.section && { section: filter.section }),
     ...(filter.isActive !== undefined && { is_active: filter.isActive }),
-    ...(filter.courseScope && {
-      course: { course_scope: filter.courseScope },
+    ...(enforcedCourseScope && {
+      course: { course_scope: enforcedCourseScope },
     }),
     ...(filter.q && {
       OR: [
