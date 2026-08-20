@@ -1,8 +1,7 @@
 ---
 description: Independently review code changes against the specification, project standards, security invariants, and established architecture
 mode: subagent
-model: openai/gpt-5.6-sol-fast
-variant: high
+model: 9router/cx/gpt-5.6-terra(high)
 temperature: 0.1
 
 permission:

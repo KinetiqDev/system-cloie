@@ -3,8 +3,7 @@
 description: Implement a bounded System CLOIE task from its specification while preserving project architecture, invariants, and conventions
 
 mode: subagent
-model: openai/gpt-5.6-luna-fast
-variant: high
+model: 9router/oc/muse-spark-1.2-contributor-free(xhigh)
 temperature: 0.1
 
 permission:
