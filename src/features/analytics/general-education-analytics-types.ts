@@ -1,5 +1,5 @@
 /** Canonical period option for the Coordinator analytics workspace. */
-export type GeneralEducationAnalyticsPeriodOption = {
+type GeneralEducationAnalyticsPeriodOption = {
   id: string;
   schoolYearId: string;
   schoolYearLabel: string;
@@ -10,14 +10,14 @@ export type GeneralEducationAnalyticsPeriodOption = {
 };
 
 /** Filter options exposed to the Coordinator workspace. Empty arrays omit controls. */
-export type GeneralEducationAnalyticsPeriodOptions = {
+type GeneralEducationAnalyticsPeriodOptions = {
   schoolYears: Array<{ id: string; label: string }>;
   semesters: Array<{ value: string; label: string }>;
   termInstances: GeneralEducationAnalyticsPeriodOption[];
 };
 
 /** Overview KPI metrics for cross-program General Education evidence. */
-export type GeneralEducationAnalyticsOverviewKPI = {
+type GeneralEducationAnalyticsOverviewKPI = {
   submittedResponseCount: number;
   evaluationOpportunityCount: number;
   /** null when evaluationOpportunityCount is 0 (unavailable rate, not 0%) */
@@ -27,7 +27,7 @@ export type GeneralEducationAnalyticsOverviewKPI = {
   meanRating: number | null;
 };
 
-export type GeneralEducationAnalyticsEmptyReason = "no-assignments" | "no-submissions" | null;
+type GeneralEducationAnalyticsEmptyReason = "no-assignments" | "no-submissions" | null;
 
 /** Closed Coordinator analytics DTO — aggregate only, never raw evidence. */
 export type GeneralEducationAnalyticsDTO = {
@@ -55,7 +55,7 @@ export type GeneralEducationCourseBreakdownRow = {
   outcomeCodes: string[];
 };
 
-export type GeneralEducationTrendPeriodDTO = {
+type GeneralEducationTrendPeriodDTO = {
   termInstanceId: string;
   periodLabel: string;
   meanRating: number | null;
@@ -67,13 +67,13 @@ export type GeneralEducationTrendPeriodDTO = {
   comparableWithPrevious: boolean;
 };
 
-export type GeneralEducationTrendBreakDTO = {
+type GeneralEducationTrendBreakDTO = {
   fromPeriodLabel: string;
   toPeriodLabel: string;
   reason: string;
 };
 
-export type GeneralEducationTrendsEmptyReason = "no-evidence" | "no-comparable-history" | null;
+type GeneralEducationTrendsEmptyReason = "no-evidence" | "no-comparable-history" | null;
 
 export type GeneralEducationTrendsDTO = {
   periods: GeneralEducationTrendPeriodDTO[];
@@ -82,7 +82,7 @@ export type GeneralEducationTrendsDTO = {
 };
 
 /** One de-identified word-frequency token. Keys stay { text, value }. */
-export type GeneralEducationFeedbackTokenDTO = {
+type GeneralEducationFeedbackTokenDTO = {
   text: string;
   value: number;
 };
