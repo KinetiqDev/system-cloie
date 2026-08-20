@@ -35,14 +35,14 @@ describe("public route loading boundaries", () => {
     );
   });
 
-  it("reserves four role cards and the wide staff grid", () => {
+  it("reserves five role cards and the wide staff grid", () => {
     render(<StaffPortalLoading />);
 
     const status = screen.getByRole("status", { name: "Loading portal" });
     const grid = status.querySelector(".xl\\:grid-cols-4");
 
     expect(grid).toBeInTheDocument();
-    expect(grid?.children).toHaveLength(4);
+    expect(grid?.children).toHaveLength(5);
   });
 
   it("reserves three role cards and the compact respondent grid", () => {
