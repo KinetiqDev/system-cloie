@@ -1,3 +1,11 @@
+<!-- NOTE: This delta was intentionally NOT synced to main specs on 2026-08-20.
+     It is preserved here for historical record. The capability `course-roster-management-workspace`
+     was superseded by the archived change `2026-08-16-replace-student-id-with-name-roster-resolution`,
+     which already synced a newer name-based, 3-phase (Add/Review/Results) spec to
+     `openspec/specs/course-roster-management-workspace/spec.md`. Syncing this older
+     email-based, 2-phase delta would have regressed the main spec. Only the sibling
+     `course-roster-detail-hierarchy` delta was synced. -->
+
 ## ADDED Requirements
 
 ### Requirement: Authorized mutable roster has one responsive management workspace

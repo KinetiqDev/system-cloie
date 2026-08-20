@@ -1,11 +1,8 @@
-# Demo Seed Course Catalog
+# demo-seed-course-catalog Specification
 
 ## Purpose
-
-The demo seed course catalog mirrors the official ACD curriculum delivered as `docs/acd_programs_demo_seed_recommended_expanded.csv`: 102 courses (5 GENERAL_EDUCATION, 97 PROGRAM_SPECIFIC) across 6 programs, with deterministic code normalization and complete course placement defaults so every course is eligible for baseline curriculum DRAFT generation.
-
+TBD - created by archiving change update-demo-seed-course-catalog. Update Purpose after archive.
 ## Requirements
-
 ### Requirement: Course catalog mirrors ACD curriculum CSV
 The system SHALL seed the demo `courses` table from the ACD curriculum defined in `docs/acd_programs_demo_seed_recommended_expanded.csv`, replacing all fabricated placeholder courses. Program assignment SHALL come from `program_code`, major assignment from `major_name` (empty = program-level), and course scope from `course_scope`. No fabricated courses from the prior catalog (GEGS101, IT-OD-401, EDUC101, BA101, …) SHALL remain in the fixture.
 
@@ -38,3 +35,4 @@ Course assignment, membership, CILO, course-bound evaluation, and response fixtu
 #### Scenario: Baseline curriculum DRAFTs include CSV courses
 - **WHEN** baseline curriculum DRAFTs are generated for each program after seeding
 - **THEN** every CSV course with a complete default placement is included with its placement, course code snapshot, and title snapshot
+

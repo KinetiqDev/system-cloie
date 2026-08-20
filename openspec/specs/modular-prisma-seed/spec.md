@@ -22,7 +22,7 @@ The system SHALL retain `prisma/seed.ts` as Prisma's configured seed entry point
 - **THEN** the entry point logs the existing seed failure message, exits with status 1, and disconnects Prisma in `finally`
 
 ### Requirement: Deterministic fixture identity and values
-The system SHALL preserve every existing seed fixture record, deterministic UUID, relationship, status, timestamp, text value, rating, ordering value, template structure, and academic context. Seed-only fixtures and constants SHALL remain under `prisma/seed/` and SHALL not move into production feature modules.
+The system SHALL preserve every existing seed fixture record, deterministic UUID, relationship, status, timestamp, text value, rating, ordering value, template structure, and academic context — except the demo course catalog, which the `update-demo-seed-course-catalog` change replaces with the ACD curriculum courses by intent. Seed-only fixtures and constants SHALL remain under `prisma/seed/` and SHALL not move into production feature modules.
 
 #### Scenario: Fixed identity fixture exists
 - **WHEN** the seed completes
@@ -34,7 +34,11 @@ The system SHALL preserve every existing seed fixture record, deterministic UUID
 
 #### Scenario: Response fixture exists
 - **WHEN** the seed completes
-- **THEN** representative submitted and in-progress responses retain their existing response status, submission timestamp, quantitative ratings, qualitative text, section keys, and item keys
+- **THEN** representative submitted and in-progress responses retain their existing response status, submission timestamp, quantitative ratings, section keys, and item keys; remapped-course qualitative text matches its current course
+
+#### Scenario: Course catalog reflects the ACD curriculum
+- **WHEN** the seed completes after the `update-demo-seed-course-catalog` change
+- **THEN** the `courses` table holds the 102 ACD curriculum courses with normalized codes and complete placement defaults, and prior fabricated placeholder courses absent from the fixture are deactivated by immutable seed provenance (user-created courses are untouched)
 
 ### Requirement: Ordered foreign-key-safe seed execution
 The system SHALL run seed phases serially in current dependency order: foundation; academic calendar; users; Course assignments and explicit rosters; outcomes; readiness snapshot; instruments; deployments; responses. Each runner SHALL receive or return only context required for its existing downstream dependency.
@@ -80,3 +84,4 @@ The system SHALL expose extracted seed runner context types and pure Course-assi
 #### Scenario: Test imports shared seed guard
 - **WHEN** the focused Vitest test exercises the Course-assignment guard
 - **THEN** it imports the extracted seed-only helper and does not duplicate guard implementation or connect to Prisma
+
