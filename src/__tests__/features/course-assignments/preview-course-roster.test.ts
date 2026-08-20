@@ -533,6 +533,13 @@ describe("previewCourseRoster service", () => {
         expect.arrayContaining(["student-1", "student-2", "student-3"])
       );
       expect(result.data.rows[0]?.disposition).toBeNull();
+      expect(result.data.summary).toEqual({
+        readyToCreate: 0,
+        willRestore: 0,
+        alreadyActive: 0,
+        needsReview: 1,
+        ineligible: 0,
+      });
     }
   });
 
