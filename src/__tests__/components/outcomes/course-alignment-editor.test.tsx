@@ -551,9 +551,10 @@ describe("CourseAlignmentEditor", () => {
       within(matrix).getByRole("button", { name: "CILO 1, PLO 2, manifestation: Opportunity" })
     ).toHaveAttribute("aria-pressed", "false");
 
-    // The mobile cards render the same cells with full manifestation labels.
+    // The mobile cards render the same cells with letter-only buttons; the
+    // accessible name still carries the full manifestation label.
     const cards = screen.getByTestId("manifestation-cards");
-    expect(within(cards).getAllByText("Learning (L)").length).toBeGreaterThan(0);
+    expect(within(cards).getAllByText("L").length).toBeGreaterThan(0);
     expect(within(cards).getAllByText("Think critically").length).toBeGreaterThan(0);
 
     // Changing a cell in the matrix updates the same draft the cards read.

@@ -82,7 +82,7 @@ export function ManifestationPicker({
               !selected && "text-muted-foreground"
             )}
           >
-            {variant === "compact" ? option.letter : `${option.label} (${option.letter})`}
+            {option.letter}
           </Button>
         );
       })}
