@@ -235,6 +235,9 @@ export type Database = {
           created_by: string
           id: string
           institutional_outcome_id: string
+          manifestation:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
           updated_at: string
           updated_by: string
         }
@@ -244,6 +247,9 @@ export type Database = {
           created_by: string
           id?: string
           institutional_outcome_id: string
+          manifestation?:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
           updated_at: string
           updated_by: string
         }
@@ -253,6 +259,9 @@ export type Database = {
           created_by?: string
           id?: string
           institutional_outcome_id?: string
+          manifestation?:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
           updated_at?: string
           updated_by?: string
         }
