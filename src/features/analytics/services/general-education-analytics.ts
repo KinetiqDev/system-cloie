@@ -1,5 +1,3 @@
-import "server-only";
-
 import type { AcademicSemester } from "@prisma/client";
 import { ResponseStatus } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
