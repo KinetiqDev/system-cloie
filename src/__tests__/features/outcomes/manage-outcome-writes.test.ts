@@ -52,6 +52,12 @@ const FACULTY = {
   roles: [ROLES.FACULTY],
   profileGate: COMPLETE_PROFILE_GATE,
 };
+const GEN_ED_COORDINATOR = {
+  userId: "gen-ed-coordinator",
+  activeRole: ROLES.GEN_ED_COORDINATOR,
+  roles: [ROLES.GEN_ED_COORDINATOR],
+  profileGate: COMPLETE_PROFILE_GATE,
+};
 
 describe("manage-outcome-writes", () => {
   beforeEach(() => {
@@ -340,6 +346,33 @@ describe("manage-outcome-writes", () => {
       error: "You do not have permission to modify this outcome.",
     });
     expect(mocks.cilo.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("denies Coordinator outcome writes before reading state (ILO boundary preserved)", async () => {
+    mocks.session.mockResolvedValue(GEN_ED_COORDINATOR);
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    await expect(
+      prepareOutcomeWrite({ kind: "CILO", action: "archive", id: "cilo-1" })
+    ).resolves.toEqual({
+      success: false,
+      error: "You do not have permission to modify this outcome.",
+    });
+    expect(mocks.cilo.findUnique).not.toHaveBeenCalled();
+    await expect(
+      prepareOutcomeWrite({
+        kind: "PLO",
+        action: "update",
+        programId: "program-1",
+        id: "go-1",
+        code: "GO-2",
+        description: "New",
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: "You do not have permission to modify this outcome.",
+    });
+    expect(mocks.plo.findUnique).not.toHaveBeenCalled();
   });
 });
 
