@@ -18,6 +18,7 @@ const INSTITUTIONAL_EMAIL_ROLES: SystemRole[] = [
   SystemRole.PROGRAM_HEAD,
   SystemRole.FACULTY,
   SystemRole.STUDENT,
+  SystemRole.GEN_ED_COORDINATOR,
 ];
 
 /**

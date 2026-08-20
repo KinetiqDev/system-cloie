@@ -25,7 +25,8 @@ export function resolveSelfServiceEligibility(options: {
   const isPreProvisioned =
     targetRole === SystemRole.SECRETARY ||
     targetRole === SystemRole.DEAN ||
-    targetRole === SystemRole.PROGRAM_HEAD;
+    targetRole === SystemRole.PROGRAM_HEAD ||
+    targetRole === SystemRole.GEN_ED_COORDINATOR;
   if (isPreProvisioned) {
     return { destination: "/status/pre-provisioning-required" };
   }

@@ -60,6 +60,13 @@ export const ROLE_CARDS: RoleCardConfig[] = [
     iconName: "Briefcase",
     category: "self_service_external",
   },
+  {
+    role: ROLES.GEN_ED_COORDINATOR,
+    title: "Gen Ed Coordinator",
+    description: "Coordinate General Education course assignments across programs.",
+    iconName: "Library",
+    category: "pre_provisioned_admin",
+  },
 ];
 
 export const ROLE_CARDS_STAFF = ROLE_CARDS.filter(

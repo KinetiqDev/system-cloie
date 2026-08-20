@@ -3,7 +3,7 @@ import { ROLE_CARDS } from "@/features/portals/lib/role-card-config";
 import { ROLES } from "@/lib/constants/roles";
 
 describe("ROLE_CARDS configuration", () => {
-  it("contains all 7 system roles", () => {
+  it("contains all 8 system roles", () => {
     const roles = ROLE_CARDS.map((c) => c.role);
     expect(roles).toContain(ROLES.SECRETARY);
     expect(roles).toContain(ROLES.DEAN);
@@ -12,7 +12,8 @@ describe("ROLE_CARDS configuration", () => {
     expect(roles).toContain(ROLES.STUDENT);
     expect(roles).toContain(ROLES.ALUMNI);
     expect(roles).toContain(ROLES.INDUSTRY_PARTNER);
-    expect(roles).toHaveLength(7);
+    expect(roles).toContain(ROLES.GEN_ED_COORDINATOR);
+    expect(roles).toHaveLength(8);
   });
 
   it("marks STUDENT as self_service_internal (requires ACD email)", () => {

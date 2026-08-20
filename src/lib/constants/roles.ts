@@ -13,4 +13,5 @@ export const ROLE_LEVELS: Record<Role, number> = {
   [SystemRole.STUDENT]: 10,
   [SystemRole.ALUMNI]: 20,
   [SystemRole.INDUSTRY_PARTNER]: 30,
+  [SystemRole.GEN_ED_COORDINATOR]: 75,
 };

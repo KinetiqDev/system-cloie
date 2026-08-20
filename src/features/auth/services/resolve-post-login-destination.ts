@@ -92,6 +92,8 @@ export function resolvePostLoginDestination({
       return "/alumni/dashboard";
     case ROLES.INDUSTRY_PARTNER:
       return "/industry-partner/dashboard";
+    case ROLES.GEN_ED_COORDINATOR:
+      return "/gen-ed-coordinator/dashboard";
     default:
       return "/dashboard";
   }
