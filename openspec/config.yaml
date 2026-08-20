@@ -99,7 +99,9 @@ context: |
   ## Identity and Access
   - SystemRole values:
     SECRETARY, DEAN, PROGRAM_HEAD, FACULTY, STUDENT, ALUMNI,
-    INDUSTRY_PARTNER.
+    INDUSTRY_PARTNER, GEN_ED_COORDINATOR.
+  - `GEN_ED_COORDINATOR` is a pre-provisioned single-role account. Provisioning requires an eligible institutional email and SHALL not require `program_id`. Self-service role claim SHALL reject the Coordinator role. All Coordinators share one college-wide General Education scope; no portfolio assignment table exists in this change.
+  - Authorization for the approved General Education transfer is college-wide scope via `Course.course_scope == GENERAL_EDUCATION`. A portfolio-partitioned Coordinator model requires a separate approved capability and is not enabled by this change.
   - A CLOIE account has one active account role.
   - UserRole.user_id is unique; do not design multi-role or role-switching behavior
     unless an approved change intentionally replaces this invariant.
@@ -117,6 +119,17 @@ context: |
   - Dedicated demo authentication and data are a separate security boundary from
     primary Production; never target primary Production with demo reset or bypass
     behavior.
+
+  ## General Education Coordinator boundaries (approved in 477)
+  - General Education assignment matrix (server-enforced after the approved transfer):
+    SECRETARY: read-only General Education assignments; retains Program-specific assignment mutation (General Education mutation denied).
+    DEAN: preserves current all-program mutation behavior for General Education and Program-specific assignments.
+    GEN_ED_COORDINATOR: college-wide read and mutation for General Education assignments only (General Education predicate `course.course_scope == GENERAL_EDUCATION` enforced inside server services; Program-specific mutation denied).
+    PROGRAM_HEAD: read-only General Education assignments within the Authorized Program set; mutation denied for General Education.
+    FACULTY: read-only for own assignments; assignment mutation denied for every Faculty account.
+  - Coordinator scope model: shared college-wide. Multiple Coordinators share the same `course.course_scope == GENERAL_EDUCATION` predicate. Separate portfolios require a new OpenSpec capability and assignment model.
+  - First analytics release: Course-bound General Education evidence only (`course.course_scope == GENERAL_EDUCATION`, submitted Course-bound responses). Central Deployments are excluded from Coordinator analytics. ILO attainment and ILO-to-PLO crosswalks are not part of this change.
+  - Deferred: Institutional Learning Outcome catalog ownership and write authority. The ILO ownership/write conflict (ADR 0005 / `introduce-institutional-learning-outcomes` vs `secretary-outcome-access-removal` and live denial) is recorded as deferred. This change adds no ILO catalog mutation path; current denial behavior is preserved.
 
   ## Analytics and AI boundary
   - Deterministic aggregate analytics remains the authoritative evidence surface.
