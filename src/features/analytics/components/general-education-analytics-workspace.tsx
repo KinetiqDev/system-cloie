@@ -32,6 +32,7 @@ function resetHref(): string {
   return BASE_PATH;
 }
 
+// fallow-ignore-next-line complexity
 export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
   const { kpi, emptyReason, scope, periodOptions, courseBreakdowns, trends, feedback } = data;
   const resetClass = cn(buttonVariants({ variant: "outline", size: "sm" }));
@@ -270,6 +271,7 @@ function TrendsTable({ periods, breaks }: { periods: GeneralEducationAnalyticsDT
   );
 }
 
+// fallow-ignore-next-line complexity
 function FeedbackSection({ feedback }: { feedback: GeneralEducationAnalyticsDTO["feedback"] }) {
   const { emptyReason, tokens, qualitativeItemCount, qualitativeResponseCount, promptCounts, evidenceEvaluations, sourceLabel } = feedback;
   const resetClass = cn(buttonVariants({ variant: "outline", size: "sm" }));

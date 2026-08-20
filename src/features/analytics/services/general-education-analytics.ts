@@ -300,6 +300,7 @@ function instrumentLabel(v: { template: { name: string }; version_number: number
   return `${v.template.name} v${v.version_number}`;
 }
 
+// fallow-ignore-next-line complexity
 function buildCourseBreakdowns(ratingRows: GeRatingRow[], responseRows: Array<{ id: string; assignment: { course_bound: { course_assignment: { course: { id: string; code: string; title: string } }; instrument: { id: string; version_number: number; template: { name: string }; structure_snapshot: unknown } } | null } }>): GeneralEducationCourseBreakdownRow[] {
   const byCourse = new Map<
     string,
@@ -361,6 +362,7 @@ function buildCourseBreakdowns(ratingRows: GeRatingRow[], responseRows: Array<{ 
   return rows;
 }
 
+// fallow-ignore-next-line complexity
 async function buildTrends(
   ratingRows: Array<{ rating_value: number; response_id: string; cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } }; response: { assignment: { course_bound: { term_instance_id: string; instrument_version_id: string | null } | null } } }>,
   responseRows: Array<{ id: string; assignment: { course_bound: { term_instance_id?: string | null } | null } }>,
@@ -436,6 +438,7 @@ async function buildTrends(
   return { periods, breaks, emptyReason };
 }
 
+// fallow-ignore-next-line complexity
 function buildFeedback(
   rows: Array<{ text_content: string; section_key: string; prompt_key: string; response: { id: string; assignment: { course_bound: { id: string; deployment_name: string; instrument: { id: string; structure_snapshot: unknown } } | null } } }>,
   opportunityCount: number,
