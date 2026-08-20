@@ -1,5 +1,10 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DEFAULT_GRID_CLASS_NAME,
+  THREE_CARD_GRID_CLASS_NAME,
+} from "@/features/portals/components/portal-shell";
+import type { RoleCardConfig } from "@/features/portals/lib/role-card-config";
 
 type PublicLoadingVariant = "portal" | "form" | "status";
 
@@ -9,35 +14,47 @@ const loadingLabels: Record<PublicLoadingVariant, string> = {
   status: "Loading page",
 };
 
-function PortalSkeleton({ cardCount }: { cardCount: 3 | 4 }) {
+function PortalSkeleton({ cards }: { cards: RoleCardConfig[] }) {
   const gridClassName =
-    cardCount === 3
-      ? "mx-auto grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-      : "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+    cards.length === 3 ? THREE_CARD_GRID_CLASS_NAME : DEFAULT_GRID_CLASS_NAME;
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-16 px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4">
-        <Skeleton className="h-9 w-72 max-w-full" />
-        <Skeleton className="h-5 w-full max-w-md" />
-        <div className="mt-2 flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Skeleton className="h-9 w-full sm:w-56" />
-          <Skeleton className="h-9 w-full sm:w-64" />
-        </div>
+    <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <div data-testid="portal-back-skeleton" className="-ml-2">
+        <Skeleton className="h-9 w-40" />
       </div>
+
+      <div className="mx-auto mt-16 mb-16 max-w-2xl text-center">
+        <Skeleton className="mx-auto mb-4 h-9 w-72 max-w-full" />
+        <Skeleton className="mx-auto h-5 w-full max-w-md" />
+      </div>
+
       <div className={gridClassName}>
-        {Array.from({ length: cardCount }, (_, index) => index + 1).map((card) => (
-          <Card key={card} className="h-full">
-            <CardHeader className="flex flex-col gap-3">
-              <Skeleton className="size-11 rounded-xl" />
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-full" />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <Skeleton className="h-4 w-full max-w-[16rem]" />
-              <Skeleton className="h-11 w-full" />
-            </CardContent>
-          </Card>
+        {cards.map((card) => (
+          <div
+            key={card.role}
+            data-testid="portal-card-skeleton"
+            className="bg-surface border-border flex h-full flex-col rounded-2xl border p-6 shadow-sm"
+          >
+            <div className="mb-4 flex items-center gap-4">
+              <Skeleton className="size-12 rounded-xl" />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-5 w-32" />
+                {card.category === "pre_provisioned_admin" && (
+                  <Skeleton className="h-4 w-24" />
+                )}
+              </div>
+            </div>
+            <Skeleton className="mb-2 h-4 w-full" />
+            <Skeleton className="mb-6 h-4 w-full max-w-[16rem]" />
+            <div className="border-border/50 mt-auto space-y-4">
+              <div className="flex items-start gap-2 rounded-lg border bg-background p-3">
+                <Skeleton className="size-4 shrink-0" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+              <Skeleton className="h-11 w-full rounded-lg" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -85,12 +102,14 @@ function StatusSkeleton() {
   );
 }
 
+import { ROLE_CARDS_RESPONDENT } from "@/features/portals/lib/role-card-config";
+
 export function PublicRouteLoading({
   variant,
-  portalCardCount = 3,
+  cards = ROLE_CARDS_RESPONDENT,
 }: {
   variant: PublicLoadingVariant;
-  portalCardCount?: 3 | 4;
+  cards?: RoleCardConfig[];
 }) {
   return (
     <div
@@ -99,7 +118,7 @@ export function PublicRouteLoading({
       aria-busy="true"
       aria-label={loadingLabels[variant]}
     >
-      {variant === "portal" && <PortalSkeleton cardCount={portalCardCount} />}
+      {variant === "portal" && <PortalSkeleton cards={cards} />}
       {variant === "form" && <FormSkeleton />}
       {variant === "status" && <StatusSkeleton />}
     </div>

@@ -33,10 +33,6 @@ export default async function StaffPortalPage() {
         label: "Back to portal selection",
         href: "/",
       }}
-      crossLink={{
-        label: "Student, Alumni, or Partner? Go to Respondent Portal",
-        href: "/portal/respondents",
-      }}
     />
   );
 }
