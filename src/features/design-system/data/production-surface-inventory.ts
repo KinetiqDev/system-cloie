@@ -1403,6 +1403,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/gen-ed-coordinator/analytics/error.tsx",
+    disposition: "task",
+    taskId: 25,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/gen-ed-coordinator/analytics/loading.tsx",
+    disposition: "task",
+    taskId: 25,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/gen-ed-coordinator/analytics/page.tsx",
     disposition: "task",
     taskId: 12,
@@ -2092,6 +2104,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/faculty-quantitative-breakdown.tsx",
     disposition: "task",
     taskId: 9,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/analytics/components/general-education-analytics-workspace.tsx",
+    disposition: "task",
+    taskId: 12,
     category: "feature_component",
   },
   {
