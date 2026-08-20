@@ -14,9 +14,7 @@ import { cn } from "@/lib/utils";
 import type { GeneralEducationAnalyticsDTO } from "@/features/analytics/general-education-analytics-types";
 import { QualitativeWordCloud } from "@/features/analytics/components/qualitative-word-cloud";
 import { splitComparableRuns } from "@/features/analytics/services/program-head-analytics-aggregators";
-import {
-  buildGeneralEducationAnalyticsQueryString,
-} from "@/features/analytics/services/general-education-analytics-state";
+
 
 type Props = {
   data: GeneralEducationAnalyticsDTO;
@@ -143,7 +141,7 @@ function CourseBreakdownSection({ rows }: { rows: GeneralEducationAnalyticsDTO["
               <BarChart data={chartData} margin={{ bottom: 10, left: 0, right: 0, top: 10 }}>
                 <ChartPatternDefs chartId={chartId} categoryCount={data.length} />
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} interval={0} angle={-20} textAnchor="end" height={60} tick={{ fontSize: 12 }} />
                 <YAxis domain={[0, 5]} tickCount={6} tickLine={false} axisLine={false} />
                 <Tooltip formatter={(_value, _name, item) => { const o = (item?.payload as { value: number | null } | undefined)?.value; return [o == null ? "N/A" : o.toFixed(2), "Mean"]; }} contentStyle={{ borderRadius: "8px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-surface)", fontSize: "13px" }} />
                 <Bar dataKey="chartValue" radius={[6, 6, 0, 0]} isAnimationActive={false}>
