@@ -5,9 +5,13 @@ import type { ProgramHeadTemplateItem } from "@/features/instruments/services/ma
 import type { ProgramHeadDeploymentItem } from "@/features/evaluations/services/list-program-head-deployments";
 import type { InstitutionalBaselineItem } from "@/features/instruments/services/list-institutional-baselines";
 
+const { routerPushMock, routerRefreshMock } = vi.hoisted(() => ({
+  routerPushMock: vi.fn(),
+  routerRefreshMock: vi.fn(),
+}));
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  useSearchParams: () => ({ get: vi.fn(() => null) }),
+  useRouter: () => ({ push: routerPushMock, refresh: routerRefreshMock }),
 }));
 
 const { duplicateTemplateActionMock } = vi.hoisted(() => ({
@@ -82,6 +86,34 @@ function renderPage() {
 describe("ProgramHeadToolsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState({}, "", "/program-head/tools");
+  });
+
+  test("switches tabs locally without navigating to a new page", () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Published" }));
+
+    const publishedPanel = screen.getByRole("tabpanel");
+    expect(within(publishedPanel).getByText("Term 1")).toBeVisible();
+    expect(routerPushMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?tab=published");
+    expect(window.history.state).toBeNull();
+  });
+
+  test("opens the published tab when a deep link requests it", () => {
+    render(
+      <ProgramHeadToolsPage
+        templates={[template]}
+        deployments={[deployment]}
+        baselines={[baseline]}
+        program={{ id: "program-1", code: "BSIT", name: "Information Technology" }}
+        initialTab="published"
+      />
+    );
+
+    const publishedPanel = screen.getByRole("tabpanel");
+    expect(within(publishedPanel).getByText("Term 1")).toBeVisible();
   });
 
   test("does not surface a stale operation error inside the delete confirmation", async () => {

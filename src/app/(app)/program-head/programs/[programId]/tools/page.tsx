@@ -8,10 +8,12 @@ export const metadata = { title: "Evaluation Tools | Program Head | CLOIE" };
 
 export default async function SelectedProgramToolsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ programId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { programId } = await params;
+  const [{ programId }, rawSearchParams] = await Promise.all([params, searchParams]);
   const [templatesResult, deploymentsResult, baselines] = await Promise.all([
     listProgramHeadTemplates(programId),
     listProgramHeadDeployments(programId),
@@ -26,6 +28,7 @@ export default async function SelectedProgramToolsPage({
       deployments={deploymentsResult.data.deployments}
       baselines={baselines}
       program={templatesResult.data.program}
+      initialTab={rawSearchParams.tab === "published" ? "published" : "templates"}
     />
   );
 }

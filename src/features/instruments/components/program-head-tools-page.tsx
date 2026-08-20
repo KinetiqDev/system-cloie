@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   buildProgramHeadEditToolPath,
   buildProgramHeadNewCiloEvaluationPath,
   buildProgramHeadNewToolPath,
   buildProgramHeadPublishToolPath,
-  buildProgramHeadToolsPath,
 } from "@/lib/constants/program-head-routes";
 import {
   ChevronDown,
@@ -43,7 +42,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ProgramHeadDeploymentItem } from "@/features/evaluations/services/list-program-head-deployments";
 import type { ProgramHeadTemplateItem } from "@/features/instruments/services/manage-program-head-templates";
 import type { InstitutionalBaselineItem } from "@/features/instruments/services/list-institutional-baselines";
@@ -53,12 +51,14 @@ import {
   duplicateTemplateAction,
   toggleTemplateActiveAction,
 } from "@/lib/actions/program-head-template-actions";
+import { EvaluationToolsTabs, type EvaluationToolsTab } from "./evaluation-tools-tabs";
 
 type ProgramHeadToolsPageProps = {
   templates: ProgramHeadTemplateItem[];
   deployments: ProgramHeadDeploymentItem[];
   baselines: InstitutionalBaselineItem[];
   program: { id: string; code: string; name: string };
+  initialTab?: EvaluationToolsTab;
 };
 
 function formatDate(date: Date | string | null): string {
@@ -88,11 +88,8 @@ export function ProgramHeadToolsPage({
   deployments,
   baselines,
   program,
+  initialTab = "templates",
 }: ProgramHeadToolsPageProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const defaultTab = searchParams.get("tab") === "published" ? "published" : "templates";
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
@@ -105,23 +102,9 @@ export function ProgramHeadToolsPage({
         </div>
       </div>
 
-      <Tabs
-        value={defaultTab}
-        onValueChange={(v) =>
-          router.push(buildProgramHeadToolsPath(program.id, v as "templates" | "published"))
-        }
-        className="w-full"
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList variant="line" className="h-auto gap-4">
-            <TabsTrigger value="templates" className="px-1 py-2.5 text-sm">
-              Templates
-            </TabsTrigger>
-            <TabsTrigger value="published" className="px-1 py-2.5 text-sm">
-              Published
-            </TabsTrigger>
-          </TabsList>
-
+      <EvaluationToolsTabs
+        initialTab={initialTab}
+        action={
           <Button
             render={<Link href={buildProgramHeadNewToolPath(program.id)} />}
             className="shrink-0"
@@ -129,16 +112,12 @@ export function ProgramHeadToolsPage({
             <Plus className="size-4" data-icon="inline-start" />
             Create New Template
           </Button>
-        </div>
-
-        <TabsContent value="templates" className="pt-6">
+        }
+        templates={
           <TemplatesGrid templates={templates} baselines={baselines} programId={program.id} />
-        </TabsContent>
-
-        <TabsContent value="published" className="pt-6">
-          <PublishedDeploymentsTable deployments={deployments} programId={program.id} />
-        </TabsContent>
-      </Tabs>
+        }
+        published={<PublishedDeploymentsTable deployments={deployments} programId={program.id} />}
+      />
     </div>
   );
 }
@@ -446,14 +425,17 @@ function PublishedDeploymentsTable({
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<DeploymentStatusFilter>("ALL");
   const [currentPage, setCurrentPage] = useState(1);
-  const [localDeployments, setLocalDeployments] = useState(deployments);
+  const [optimisticDeployments, updateDeployment] = useOptimistic(
+    deployments,
+    (currentDeployments, closedDeploymentId: string) =>
+      currentDeployments.map((deployment) =>
+        deployment.id === closedDeploymentId
+          ? { ...deployment, status: "CLOSED" as const }
+          : deployment
+      )
+  );
 
-  // Update local deployments when props change
-  if (JSON.stringify(deployments) !== JSON.stringify(localDeployments)) {
-    setLocalDeployments(deployments);
-  }
-
-  const filteredDeployments = localDeployments.filter((d) => {
+  const filteredDeployments = optimisticDeployments.filter((d) => {
     if (statusFilter === "ALL") return d.status !== "ARCHIVED";
     return d.status === statusFilter;
   });
@@ -485,14 +467,11 @@ function PublishedDeploymentsTable({
 
   function handleClose(deploymentId: string) {
     startTransition(async () => {
+      updateDeployment(deploymentId);
       const result = await closeCentralDeploymentAction(programId, deploymentId);
       if (!result.success) {
         return;
       }
-      // Optimistic update
-      setLocalDeployments((prev) =>
-        prev.map((d) => (d.id === deploymentId ? { ...d, status: "CLOSED" } : d))
-      );
       router.refresh();
     });
   }
@@ -505,7 +484,7 @@ function PublishedDeploymentsTable({
     { label: "Archived", value: "ARCHIVED" },
   ];
 
-  if (localDeployments.length === 0) {
+  if (optimisticDeployments.length === 0) {
     return (
       <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
         <p className="text-muted-foreground">No published tools yet.</p>

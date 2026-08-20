@@ -2422,6 +2422,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/instruments/components/evaluation-tools-tabs.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "feature_component",
+  },
+  {
     path: "src/features/instruments/components/management-template-builder.tsx",
     disposition: "task",
     taskId: 20,

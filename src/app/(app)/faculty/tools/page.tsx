@@ -2,10 +2,15 @@ import { FacultyToolsPage } from "@/features/instruments/components/faculty-tool
 import { listFacultyTemplates } from "@/features/instruments/services/list-faculty-templates";
 import { listFacultyPublishedEvaluations } from "@/features/evaluations/services/list-faculty-published-evaluations";
 
-export default async function FacultyToolsRoute() {
-  const [templatesResult, evaluationsResult] = await Promise.all([
+export default async function FacultyToolsRoute({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [templatesResult, evaluationsResult, rawSearchParams] = await Promise.all([
     listFacultyTemplates(),
     listFacultyPublishedEvaluations(),
+    searchParams,
   ]);
 
   if (!templatesResult.success) {
@@ -25,6 +30,7 @@ export default async function FacultyToolsRoute() {
       program={templatesResult.data.program}
       templates={templatesResult.data.templates}
       evaluations={evaluations}
+      initialTab={rawSearchParams.tab === "published" ? "published" : "templates"}
     />
   );
 }
