@@ -336,7 +336,7 @@ describe("CourseAssignmentsTable", () => {
     renderTable({ assignments: [geAssignment] });
 
     expect(screen.getByText("GE")).toBeInTheDocument();
-    expect(screen.getByText(/managed by secretary\/dean/i)).toBeInTheDocument();
+    expect(screen.getByText(/managed by general education coordinator/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/open actions for GE101/i)).not.toBeInTheDocument();
   });
 
