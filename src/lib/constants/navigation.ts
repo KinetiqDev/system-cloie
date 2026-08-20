@@ -189,11 +189,25 @@ const DEAN_NAV_GROUPS: NavGroup[] = [
 const ALUMNI_NAV: NavItem[] = [
   { name: "Dashboard", href: "/alumni/dashboard", icon: LayoutDashboard },
   { name: "Evaluations", href: "/alumni/evaluations", icon: FileText },
+  { name: "Submission History", href: "/alumni/history", icon: History },
+  { name: "Profile", href: "/alumni/profile", icon: UserCircle },
+];
+
+const ALUMNI_MOBILE_NAV: NavItem[] = [
+  { name: "Dashboard", href: "/alumni/dashboard", icon: LayoutDashboard },
+  { name: "Evaluations", href: "/alumni/evaluations", icon: FileText },
   { name: "History", href: "/alumni/history", icon: History },
   { name: "Profile", href: "/alumni/profile", icon: UserCircle },
 ];
 
 const INDUSTRY_PARTNER_NAV: NavItem[] = [
+  { name: "Dashboard", href: "/industry-partner/dashboard", icon: LayoutDashboard },
+  { name: "Evaluations", href: "/industry-partner/evaluations", icon: FileText },
+  { name: "Submission History", href: "/industry-partner/history", icon: History },
+  { name: "Profile", href: "/industry-partner/profile", icon: UserCircle },
+];
+
+const INDUSTRY_PARTNER_MOBILE_NAV: NavItem[] = [
   { name: "Dashboard", href: "/industry-partner/dashboard", icon: LayoutDashboard },
   { name: "Evaluations", href: "/industry-partner/evaluations", icon: FileText },
   { name: "History", href: "/industry-partner/history", icon: History },
@@ -254,9 +268,9 @@ export function getMobileNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY
     case ROLES.STUDENT:
       return STUDENT_MOBILE_NAV;
     case ROLES.ALUMNI:
-      return ALUMNI_NAV;
+      return ALUMNI_MOBILE_NAV;
     case ROLES.INDUSTRY_PARTNER:
-      return INDUSTRY_PARTNER_NAV;
+      return INDUSTRY_PARTNER_MOBILE_NAV;
     default:
       return DEFAULT_NAV;
   }
