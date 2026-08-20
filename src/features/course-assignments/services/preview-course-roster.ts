@@ -184,11 +184,16 @@ function chooseIdentityMatch(existingMatch: RosterNameMatch, selectableMatch: Ro
   // Multiple equal-tier eligible matches must be resolved by the manager; a
   // single suggested existing member does not override that ambiguity. Only an
   // exact existing-member match remains decisive over eligible ambiguity.
-  if (selectableMatch.status === "AMBIGUOUS" && matchStrength(existingMatch.status) < 2) {
+  // Mirrored: ambiguous existing members must not suppress a suggested
+  // eligible match either; the manager sees both populations when resolving.
+  if (
+    (selectableMatch.status === "AMBIGUOUS" && matchStrength(existingMatch.status) < 2) ||
+    (existingMatch.status === "AMBIGUOUS" && matchStrength(selectableMatch.status) > 0)
+  ) {
     return {
       status: "AMBIGUOUS" as const,
       reason: "EQUAL_TIER" as const,
-      matchedIds: [...new Set([...selectableMatch.matchedIds, ...existingMatch.matchedIds])],
+      matchedIds: [...new Set([...existingMatch.matchedIds, ...selectableMatch.matchedIds])],
     };
   }
   if (existingMatch.status !== "NO_MATCH") return existingMatch;
