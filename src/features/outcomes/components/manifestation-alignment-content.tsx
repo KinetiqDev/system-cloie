@@ -206,7 +206,7 @@ export function ManifestationAlignmentContent({
                     )}
                   >
                     <p className="flex flex-wrap items-baseline gap-x-1.5">
-                      <span className="font-medium">PLO {ploIndex + 1}</span>
+                      <span className="text-label-lg font-medium">PLO {ploIndex + 1}</span>
                       <span className="text-muted-foreground text-body-sm">{target.code}</span>
                     </p>
                     <p className="text-muted-foreground text-body-sm">{target.description}</p>

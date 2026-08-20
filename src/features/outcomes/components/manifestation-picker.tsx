@@ -75,7 +75,7 @@ export function ManifestationPicker({
             onClick={() => onChange(selected ? null : option.value)}
             className={cn(
               "min-w-9",
-              variant === "full" && "min-h-11 flex-1 min-w-fit whitespace-nowrap px-2.5",
+              variant === "full" && "min-h-11 flex-1 min-w-0 px-2.5 text-label-lg",
               !selected && "text-muted-foreground"
             )}
           >
