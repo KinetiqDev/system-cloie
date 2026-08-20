@@ -20,6 +20,7 @@ const ROLE_ORDER: Role[] = [
   ROLES.STUDENT,
   ROLES.ALUMNI,
   ROLES.INDUSTRY_PARTNER,
+  ROLES.GEN_ED_COORDINATOR,
 ];
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -30,6 +31,7 @@ const ROLE_LABELS: Record<Role, string> = {
   STUDENT: "Student",
   ALUMNI: "Alumni",
   INDUSTRY_PARTNER: "Industry Partner",
+  GEN_ED_COORDINATOR: "Gen Ed Coordinator",
 };
 
 function ItemLine({ item }: { item: NavItem }) {

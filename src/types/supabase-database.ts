@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       academic_period_readiness_snapshots: {
@@ -2044,6 +2039,7 @@ export type Database = {
         | "STUDENT"
         | "ALUMNI"
         | "INDUSTRY_PARTNER"
+        | "GEN_ED_COORDINATOR"
       TargetStakeholder: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER"
       verification_status: "PENDING" | "APPROVED" | "REJECTED"
       year_level: "FIRST_YEAR" | "SECOND_YEAR" | "THIRD_YEAR" | "FOURTH_YEAR"
@@ -2207,6 +2203,7 @@ export const Constants = {
         "STUDENT",
         "ALUMNI",
         "INDUSTRY_PARTNER",
+        "GEN_ED_COORDINATOR",
       ],
       TargetStakeholder: ["STUDENT", "ALUMNI", "INDUSTRY_PARTNER"],
       verification_status: ["PENDING", "APPROVED", "REJECTED"],
@@ -2214,3 +2211,4 @@ export const Constants = {
     },
   },
 } as const
+

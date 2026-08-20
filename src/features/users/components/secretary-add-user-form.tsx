@@ -60,6 +60,7 @@ const ROLE_LABELS: Record<SystemRole, string> = {
   [SystemRole.STUDENT]: "Student",
   [SystemRole.ALUMNI]: "Alumni",
   [SystemRole.INDUSTRY_PARTNER]: "Industry Partner",
+  [SystemRole.GEN_ED_COORDINATOR]: "Gen Ed Coordinator",
 };
 
 const SINGLE_SELECT_ROLES: SystemRole[] = [

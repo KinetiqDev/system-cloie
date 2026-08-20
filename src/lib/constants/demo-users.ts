@@ -81,6 +81,7 @@ export const DEMO_USERS = [
     label: "Industry — Karen Sy (BSHM)",
     role: SystemRole.INDUSTRY_PARTNER,
   },
+  { email: "demo-gened@cloie.test", label: "Gen Ed Coordinator", role: SystemRole.GEN_ED_COORDINATOR },
 ] as const;
 
 export const DEMO_USER_EMAILS = DEMO_USERS.map((user) => user.email);

@@ -1,0 +1,2 @@
+-- AlterEnum: add GEN_ED_COORDINATOR to SystemRole
+ALTER TYPE "SystemRole" ADD VALUE 'GEN_ED_COORDINATOR';

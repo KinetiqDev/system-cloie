@@ -21,7 +21,8 @@ export function validateRoleDomain(email: string, intent: SystemRole): Validatio
   if (
     intent === SystemRole.SECRETARY ||
     intent === SystemRole.DEAN ||
-    intent === SystemRole.PROGRAM_HEAD
+    intent === SystemRole.PROGRAM_HEAD ||
+    intent === SystemRole.GEN_ED_COORDINATOR
   ) {
     if (intent === SystemRole.SECRETARY && isBootstrap) {
       return { valid: true };

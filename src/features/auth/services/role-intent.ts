@@ -8,6 +8,7 @@ export const ROLE_INTENTS = {
   student: "STUDENT",
   alumni: "ALUMNI",
   "industry-partner": "INDUSTRY_PARTNER",
+  "gen-ed-coordinator": "GEN_ED_COORDINATOR",
 } as const;
 
 export type RoleIntent = keyof typeof ROLE_INTENTS;
@@ -20,6 +21,7 @@ const ROLE_TO_INTENT: Record<SystemRole, RoleIntent> = {
   STUDENT: "student",
   ALUMNI: "alumni",
   INDUSTRY_PARTNER: "industry-partner",
+  GEN_ED_COORDINATOR: "gen-ed-coordinator",
 };
 
 export function roleToIntent(role: string): RoleIntent | null {

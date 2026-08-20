@@ -214,12 +214,20 @@ const INDUSTRY_PARTNER_MOBILE_NAV: NavItem[] = [
   { name: "Profile", href: "/industry-partner/profile", icon: UserCircle },
 ];
 
+const GEN_ED_COORDINATOR_NAV: NavItem[] = [
+  { name: "Dashboard", href: "/gen-ed-coordinator/dashboard", icon: LayoutDashboard },
+  { name: "Course Assignments", href: "/gen-ed-coordinator/course-assignments", icon: UsersRound },
+  { name: "Analytics", href: "/gen-ed-coordinator/analytics", icon: BarChart3 },
+  { name: "Profile", href: "/gen-ed-coordinator/profile", icon: UserCircle },
+];
+
 const DEFAULT_NAV: NavItem[] = [{ name: "Dashboard", href: "/dashboard", icon: LayoutDashboard }];
 
 const ROLE_NAV_PRECEDENCE = [
   ROLES.SECRETARY,
   ROLES.DEAN,
   ROLES.PROGRAM_HEAD,
+  ROLES.GEN_ED_COORDINATOR,
   ROLES.FACULTY,
   ROLES.INDUSTRY_PARTNER,
   ROLES.ALUMNI,
@@ -240,6 +248,8 @@ export function getMainNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_P
       return DEAN_PRIMARY_NAV;
     case ROLES.PROGRAM_HEAD:
       return getProgramHeadNav(pathname);
+    case ROLES.GEN_ED_COORDINATOR:
+      return GEN_ED_COORDINATOR_NAV;
     case ROLES.FACULTY:
       return FACULTY_NAV;
     case ROLES.STUDENT:
@@ -263,6 +273,8 @@ export function getMobileNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY
       return DEAN_PRIMARY_NAV;
     case ROLES.PROGRAM_HEAD:
       return getProgramHeadNav(pathname);
+    case ROLES.GEN_ED_COORDINATOR:
+      return GEN_ED_COORDINATOR_NAV;
     case ROLES.FACULTY:
       return FACULTY_NAV;
     case ROLES.STUDENT:
@@ -331,7 +343,7 @@ export function getSecondaryNavByRoles(roles: Role[]): NavItem[] {
 export type MobileNavMode = "bottom-nav" | "hamburger";
 
 /**
- * Admin, Dean, Program Head, and Faculty use a hamburger sidebar on mobile.
+ * Admin, Dean, Program Head, Faculty, and Coordinator use a hamburger sidebar on mobile.
  * Student, Alumni, and Industry Partner use a bottom navigation bar.
  */
 export function getMobileNavMode(roles: Role[]): MobileNavMode {
@@ -341,6 +353,7 @@ export function getMobileNavMode(roles: Role[]): MobileNavMode {
     case ROLES.SECRETARY:
     case ROLES.PROGRAM_HEAD:
     case ROLES.FACULTY:
+    case ROLES.GEN_ED_COORDINATOR:
       return "hamburger";
     case ROLES.DEAN:
       return "hamburger";

@@ -22,6 +22,7 @@ const ROLE_BADGE_CLASSES: Record<SystemRole, string> = {
   [SystemRole.STUDENT]: "border-chart-3/30 bg-chart-3/15 text-foreground",
   [SystemRole.ALUMNI]: "border-chart-5/30 bg-chart-5/15 text-foreground",
   [SystemRole.INDUSTRY_PARTNER]: "border-chart-2/30 bg-chart-2/15 text-foreground",
+  [SystemRole.GEN_ED_COORDINATOR]: "border-chart-4/30 bg-chart-4/15 text-foreground",
 };
 
 export function getRoleBadgeClass(role: SystemRole): string {

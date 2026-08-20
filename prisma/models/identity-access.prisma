@@ -6,6 +6,7 @@ enum SystemRole {
   STUDENT
   ALUMNI
   INDUSTRY_PARTNER
+  GEN_ED_COORDINATOR
 }
 
 enum InviteStatus {
