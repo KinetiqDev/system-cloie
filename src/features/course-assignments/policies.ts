@@ -98,12 +98,13 @@ export function canMutateCourseRoster(context: CourseRosterMutabilityContext):
 
 /**
  * Check if user can manage course assignments.
- * Program Heads can manage only Program-specific Courses within their program scope.
- * Admins and Deans can manage any course.
- * Faculty cannot manage assignments (they are assigned by PH/Admin).
+ * Secretary, Dean, Coordinator, and Program Head boundaries are derived from
+ * Course.course_scope. Approved matrix: Secretary read-only for GE, Dean
+ * all-program, Coordinator GE-only college-wide, Program Head read-only for GE.
  */
 export function canManageCourseAssignment(
   session: AuthSessionSnapshot | null,
+  courseScope: CourseScope | null | undefined,
   courseProgramId: string | null,
   phProgramScope: string[] = []
 ): { allowed: true } | { allowed: false; reason: string } {
@@ -111,11 +112,30 @@ export function canManageCourseAssignment(
     return { allowed: false, reason: "Authentication required." };
   }
 
+  const isGeneralEducation = courseScope === CourseScope.GENERAL_EDUCATION;
+
   switch (session.activeRole) {
     case ROLES.SECRETARY:
+      if (isGeneralEducation) {
+        return {
+          allowed: false,
+          reason: "Secretary cannot manage General Education assignments.",
+        };
+      }
+      return { allowed: true };
     case ROLES.DEAN:
       return { allowed: true };
+    case ROLES.GEN_ED_COORDINATOR:
+      return isGeneralEducation
+        ? { allowed: true }
+        : { allowed: false, reason: "Coordinators can only manage General Education assignments." };
     case ROLES.PROGRAM_HEAD:
+      if (isGeneralEducation) {
+        return {
+          allowed: false,
+          reason: "Program Heads cannot manage General Education assignments.",
+        };
+      }
       if (courseProgramId === null) {
         return {
           allowed: false,
@@ -146,6 +166,7 @@ export function canViewCourseAssignments(
     ROLES.DEAN,
     ROLES.PROGRAM_HEAD,
     ROLES.FACULTY,
+    ROLES.GEN_ED_COORDINATOR,
   ];
 
   if (session.activeRole && allowedRoles.includes(session.activeRole)) {

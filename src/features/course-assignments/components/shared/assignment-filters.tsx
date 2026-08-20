@@ -30,6 +30,7 @@ interface AssignmentFiltersProps {
   availableFaculty: Array<{ id: string; name: string; email: string }>;
   termInstances: TermInstanceItem[];
   showProgramFilter?: boolean;
+  hideCourseScopeFilter?: boolean;
 }
 
 export function AssignmentFilters({
@@ -40,6 +41,7 @@ export function AssignmentFilters({
   availableFaculty,
   termInstances,
   showProgramFilter = true,
+  hideCourseScopeFilter = false,
 }: AssignmentFiltersProps) {
   const hasActiveFilters =
     filters.termInstanceId ||
@@ -251,27 +253,29 @@ export function AssignmentFilters({
         </Select>
       </div>
 
-      <div className="min-w-[170px]">
-        <Label htmlFor="assignment-scope">Course scope</Label>
-        <Select
-          value={filters.courseScope ?? "all"}
-          onValueChange={(value) =>
-            updateFilter(
-              "courseScope",
-              value === "all" ? null : (value as CourseScope)
-            )
-          }
-        >
-          <SelectTrigger id="assignment-scope">
-            <SelectValue placeholder="All Scopes">{getScopeLabel(filters.courseScope)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Scopes</SelectItem>
-            <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
-            <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-specific</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {!hideCourseScopeFilter && (
+        <div className="min-w-[170px]">
+          <Label htmlFor="assignment-scope">Course scope</Label>
+          <Select
+            value={filters.courseScope ?? "all"}
+            onValueChange={(value) =>
+              updateFilter(
+                "courseScope",
+                value === "all" ? null : (value as CourseScope)
+              )
+            }
+          >
+            <SelectTrigger id="assignment-scope">
+              <SelectValue placeholder="All Scopes">{getScopeLabel(filters.courseScope)}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Scopes</SelectItem>
+              <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
+              <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-specific</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="min-w-[200px]">
         <Label htmlFor="assignment-search">Search</Label>

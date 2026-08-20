@@ -53,6 +53,7 @@ function revalidateCourseAssignmentRoutes(programIds?: string | string[]) {
   }
   revalidatePath("/secretary/course-assignments");
   revalidatePath("/dean/academic-structure/course-assignments");
+  revalidatePath("/gen-ed-coordinator/course-assignments");
   revalidatePath("/faculty/course-rosters");
 }
 
@@ -120,17 +121,25 @@ export async function loadCurriculumCoursesForProgramAction(
   if (session.activeRole === ROLES.PROGRAM_HEAD) {
     const context = await resolveProgramHeadContext(parsed.data);
     if (!context.success) return context;
-  } else if (session.activeRole !== ROLES.SECRETARY && session.activeRole !== ROLES.DEAN) {
+  } else if (
+    session.activeRole !== ROLES.SECRETARY &&
+    session.activeRole !== ROLES.DEAN &&
+    session.activeRole !== ROLES.GEN_ED_COORDINATOR
+  ) {
     return { success: false, error: "Course assignment management access required." };
   }
 
   try {
+    const options = await listPublishedCurriculumCourseOptions(parsed.data);
+    const filtered =
+      session.activeRole === ROLES.GEN_ED_COORDINATOR
+        ? options.filter((option) => option.courseScope === "GENERAL_EDUCATION")
+        : session.activeRole === ROLES.PROGRAM_HEAD
+          ? options.filter((option) => option.courseScope !== "GENERAL_EDUCATION")
+          : options;
     return {
       success: true,
-      data: (await listPublishedCurriculumCourseOptions(parsed.data)).filter(
-        (option) =>
-          session.activeRole !== ROLES.PROGRAM_HEAD || option.courseScope !== "GENERAL_EDUCATION"
-      ),
+      data: filtered,
     };
   } catch (error) {
     console.error("Failed to load curriculum course options", {

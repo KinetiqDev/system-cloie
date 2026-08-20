@@ -50,7 +50,7 @@ type AssignmentLifecycleRow = {
   section: Parameters<typeof getSectionLabel>[0];
   is_active: boolean;
   updated_at: Date;
-  course: { code: string; title: string; program_id: string | null };
+  course: { code: string; title: string; program_id: string | null; course_scope: string };
   program: { code: string; name: string };
   term_instance: {
     semester: Parameters<typeof formatTermInstanceLabel>[1];
@@ -80,7 +80,7 @@ function assignmentLabel(
 }
 
 const lifecycleAssignmentInclude = {
-  course: { select: { code: true, title: true, program_id: true } },
+  course: { select: { code: true, title: true, program_id: true, course_scope: true } },
   program: { select: { code: true, name: true } },
   term_instance: {
     select: { semester: true, term: true, school_year: { select: { code: true } } },
@@ -168,7 +168,7 @@ async function resolveAssignmentCourse(
 ) {
   const course = await tx.course.findUnique({
     where: { id: input.courseId },
-    select: { program_id: true, is_active: true },
+    select: { program_id: true, is_active: true, course_scope: true },
   });
   if (!course) throw new Error("COURSE_NOT_FOUND");
   if (course.is_active === false) throw new Error("COURSE_INACTIVE");
@@ -240,6 +240,7 @@ export async function createCourseAssignment(
       const { course, yearLevel } = await resolveAssignmentCourse(tx, input);
       const permission = canManageCourseAssignment(
         authSession,
+        course.course_scope,
         course.program_id,
         authSession && isProgramHead(authSession) ? [input.programId] : []
       );
@@ -326,6 +327,7 @@ export async function updateCourseAssignment(
 
       const permission = canManageCourseAssignment(
         authSession,
+        existing.course.course_scope,
         existing.course.program_id,
         isProgramHead(authSession) && input.selectedProgramId ? [input.selectedProgramId] : []
       );
@@ -421,6 +423,7 @@ export async function deactivateCourseAssignment(
       }
       const permission = canManageCourseAssignment(
         authSession,
+        existing.course.course_scope,
         existing.course.program_id,
         authSession && isProgramHead(authSession) && selectedProgramId ? [selectedProgramId] : []
       );
@@ -475,6 +478,7 @@ export async function activateCourseAssignment(
       }
       const permission = canManageCourseAssignment(
         authSession,
+        existing.course.course_scope,
         existing.course.program_id,
         authSession && isProgramHead(authSession) && input.programId ? [input.programId] : []
       );
@@ -533,6 +537,7 @@ export async function preflightCourseAssignmentDeletion(
     }
     const permission = canManageCourseAssignment(
       authSession,
+      existing.course.course_scope,
       existing.course.program_id,
       authSession && isProgramHead(authSession) && selectedProgramId ? [selectedProgramId] : []
     );
@@ -602,6 +607,7 @@ export async function deleteCourseAssignment(
       }
       const permission = canManageCourseAssignment(
         authSession,
+        existing.course.course_scope,
         existing.course.program_id,
         isProgramHead(authSession) && input.programId ? [input.programId] : []
       );
@@ -683,7 +689,12 @@ export async function bulkCreateCourseAssignments(
 ): Promise<BulkCreateResult> {
   const authSession = await resolveAuthSession();
 
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [
+    ROLES.SECRETARY,
+    ROLES.DEAN,
+    ROLES.PROGRAM_HEAD,
+    ROLES.GEN_ED_COORDINATOR,
+  ];
   if (!authSession?.activeRole || !allowedRoles.includes(authSession.activeRole)) {
     return {
       success: false,
@@ -727,6 +738,7 @@ export async function bulkCreateCourseAssignments(
         const { course, yearLevel } = await resolveAssignmentCourse(tx, input);
         const permission = canManageCourseAssignment(
           authSession,
+          course.course_scope,
           course.program_id,
           isProgramHead(authSession) ? [input.programId] : []
         );

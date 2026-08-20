@@ -67,7 +67,7 @@ interface Program {
   name: string;
 }
 
-type CourseAssignmentsTableMode = "program-head" | "all-program";
+type CourseAssignmentsTableMode = "program-head" | "all-program" | "general-education";
 
 interface CourseAssignmentsTableProps {
   assignments: CourseAssignmentItem[];
@@ -250,7 +250,9 @@ export function CourseAssignmentsTable({
           <EmptyDescription>
             {mode === "all-program"
               ? "Assign faculty to a course across any program to get started."
-              : "Assign faculty to a Program-specific Course to get started."}
+              : mode === "general-education"
+                ? "Assign faculty to a General Education Course to get started."
+                : "Assign faculty to a Program-specific Course to get started."}
           </EmptyDescription>
         </EmptyHeader>
         {onAssignFaculty && (
@@ -295,12 +297,17 @@ export function CourseAssignmentsTable({
           <TableBody>
             {assignments.map((assignment) => {
               const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
+              const isCoordinator = mode === "general-education";
               const isReadOnly = isGeneralEducation && mode === "program-head";
 
               return (
                 <TableRow key={assignment.id} data-readonly={isReadOnly || undefined}>
                   <TableCell>
-                    {mode === "all-program" || (mode === "program-head" && selectedProgramId) ? (
+                    {isCoordinator ? (
+                      <span className="text-muted-foreground px-2 text-xs">
+                        Roster managed by Program
+                      </span>
+                    ) : mode === "all-program" || (mode === "program-head" && selectedProgramId) ? (
                       <Link
                         href={
                           mode === "all-program"
@@ -347,8 +354,10 @@ export function CourseAssignmentsTable({
                   <TableCell>
                     {isReadOnly ? (
                       <span className="text-muted-foreground text-xs">
-                        Managed by Secretary/Dean
+                        Managed by General Education Coordinator
                       </span>
+                    ) : isCoordinator && !isGeneralEducation ? (
+                      <span className="text-muted-foreground text-xs">Program-specific</span>
                     ) : (
                       <DropdownMenu>
                         <DropdownMenuTrigger

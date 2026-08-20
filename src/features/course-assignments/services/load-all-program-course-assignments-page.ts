@@ -30,8 +30,17 @@ export type AllProgramCourseAssignmentsPageData = {
  * dropdown-loading queries across role-owned dashboard routes.
  */
 export async function loadAllProgramCourseAssignmentsPageData(
-  selectedProgramId?: string
+  selectedProgramId?: string,
+  courseScopeFilter?: CourseScope
 ): Promise<AllProgramCourseAssignmentsPageData> {
+  const courseWhere: Record<string, unknown> = { is_active: true };
+  if (courseScopeFilter) {
+    courseWhere.course_scope = courseScopeFilter;
+  } else if (selectedProgramId) {
+    courseWhere.program_id = selectedProgramId;
+    courseWhere.course_scope = CourseScope.PROGRAM_SPECIFIC;
+  }
+
   const [schoolYears, programs, courses, faculty] = await Promise.all([
     prisma.schoolYear.findMany({
       include: {
@@ -53,12 +62,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
       orderBy: { code: "asc" },
     }),
     prisma.course.findMany({
-      where: {
-        is_active: true,
-        ...(selectedProgramId
-          ? { program_id: selectedProgramId, course_scope: CourseScope.PROGRAM_SPECIFIC }
-          : {}),
-      },
+      where: courseWhere as never,
       select: {
         id: true,
         code: true,

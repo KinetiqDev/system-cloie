@@ -1,19 +1,46 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { redirect } from "next/navigation";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { ROLES } from "@/lib/constants/roles";
+import { CourseScope } from "@prisma/client";
+import { CourseAssignmentsPageShell } from "@/features/course-assignments/components/course-assignments-page-shell";
+import { loadAllProgramCourseAssignmentsPageData } from "@/features/course-assignments/services/load-all-program-course-assignments-page";
+import { loadCourseAssignmentListPage } from "@/features/course-assignments/services/load-course-assignment-list-page";
 
-export default function GenEdCoordinatorCourseAssignmentsPage() {
+export const metadata = {
+  title: "Course Assignments — Gen Ed Coordinator | CLOIE",
+};
+
+export default async function GenEdCoordinatorCourseAssignmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const session = await resolveAuthSession();
+
+  if (!session || session.activeRole !== ROLES.GEN_ED_COORDINATOR) {
+    redirect("/unauthorized");
+  }
+
+  const [pageData, listPage] = await Promise.all([
+    loadAllProgramCourseAssignmentsPageData(undefined, CourseScope.GENERAL_EDUCATION),
+    loadCourseAssignmentListPage({
+      pathname: "/gen-ed-coordinator/course-assignments",
+      rawSearchParams: await searchParams,
+      role: "general-education",
+    }),
+  ]);
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="font-heading text-text-primary text-2xl font-black">Course Assignments</h1>
-        <p className="text-text-secondary text-sm">General Education course assignments across programs.</p>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Assignments</CardTitle>
-          <CardDescription>Manage General Education course assignments.</CardDescription>
-        </CardHeader>
-        <CardContent className="text-text-secondary text-sm">Assignment management coming in the next slice.</CardContent>
-      </Card>
-    </div>
+    <CourseAssignmentsPageShell
+      key={JSON.stringify(listPage.state)}
+      pageTitle="General Education Assignments"
+      pageDescription="Manage General Education course assignments across all active programs"
+      mode="general-education"
+      initialData={listPage.result.success ? listPage.result.data : null}
+      initialFilters={listPage.initialFilters}
+      initialPage={listPage.state.page}
+      initialError={listPage.result.success ? null : listPage.result.error}
+      {...pageData}
+    />
   );
 }

@@ -2,7 +2,7 @@ import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { z } from "zod";
 import type { ListCourseAssignmentsFilter } from "./types";
 
-export type CourseAssignmentListRole = "all-program" | "program-head";
+export type CourseAssignmentListRole = "all-program" | "program-head" | "general-education";
 
 export type CourseAssignmentListUrlState = {
   page: number;
@@ -98,7 +98,7 @@ function parseQuery(value: string | string[] | undefined): string | undefined {
 }
 
 function roleDefaultIsActive(role: CourseAssignmentListRole): boolean | undefined {
-  return role === "all-program" ? true : undefined;
+  return role === "all-program" || role === "general-education" ? true : undefined;
 }
 
 export function parseCourseAssignmentListState(
@@ -116,19 +116,24 @@ export function parseCourseAssignmentListState(
   const isActive = parseBoolean(rawSearchParams.isActive);
   const isActiveCandidate = firstNonEmptyValue(rawSearchParams.isActive);
   const q = parseQuery(rawSearchParams.q);
+  // general-education mode fixes Course scope server-side; URL cannot widen it
+  const effectiveCourseScope =
+    role === "general-education" ? CourseScope.GENERAL_EDUCATION : courseScope;
+
   const filters: ListCourseAssignmentsFilter = {
     ...(termInstanceId !== undefined && { termInstanceId }),
     ...(courseId !== undefined && { courseId }),
     ...(facultyId !== undefined && { facultyId }),
     ...(role === "all-program" && programId !== undefined && { programId }),
+    ...(role === "general-education" && programId !== undefined && { programId }),
     ...(yearLevel !== undefined && { yearLevel }),
     ...(section !== undefined && { section }),
-    ...(courseScope !== undefined && { courseScope }),
+    ...(effectiveCourseScope !== undefined && { courseScope: effectiveCourseScope }),
     ...(isActive !== undefined && { isActive }),
     ...(q !== undefined && { q }),
   };
 
-  if (role === "all-program" && isActiveCandidate === "all") {
+  if ((role === "all-program" || role === "general-education") && isActiveCandidate === "all") {
     return { page, filters, isActiveMode: "all" };
   }
 
@@ -152,10 +157,11 @@ export function serializeCourseAssignmentListState(
   if (filters.courseId) params.set("courseId", filters.courseId);
   if (filters.facultyId) params.set("facultyId", filters.facultyId);
   if (role === "all-program" && filters.programId) params.set("programId", filters.programId);
+  if (role === "general-education" && filters.programId) params.set("programId", filters.programId);
   if (filters.yearLevel) params.set("yearLevel", filters.yearLevel);
   if (filters.section) params.set("section", filters.section);
-  if (filters.courseScope) params.set("courseScope", filters.courseScope);
-  if (role === "all-program" && state.isActiveMode === "all") {
+  if (role !== "general-education" && filters.courseScope) params.set("courseScope", filters.courseScope);
+  if ((role === "all-program" || role === "general-education") && state.isActiveMode === "all") {
     params.set("isActive", "all");
   } else if (filters.isActive !== undefined && filters.isActive !== defaultIsActive) {
     params.set("isActive", String(filters.isActive));
