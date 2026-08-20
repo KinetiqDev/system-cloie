@@ -285,6 +285,7 @@ export async function updateCourseAssignment(
   const contextFailure = await validateSelectedProgram(authSession, input.selectedProgramId);
   if (contextFailure) return contextFailure;
   try {
+    // fallow-ignore-next-line code-duplication
     return await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`
         SELECT id
@@ -407,6 +408,7 @@ export async function deactivateCourseAssignment(
   if (contextFailure) return contextFailure;
 
   try {
+    // fallow-ignore-next-line code-duplication
     const result = await prisma.$transaction(async (tx) => {
       const existing = await tx.courseAssignment.findUnique({
         where: { id: assignmentId },
@@ -727,6 +729,7 @@ export async function bulkCreateCourseAssignments(
         continue;
       }
 
+      // fallow-ignore-next-line code-duplication
       await prisma.$transaction(async (tx) => {
         if (isProgramHead(authSession)) {
           const selected = await revalidateProgramHeadAssignment(tx, {

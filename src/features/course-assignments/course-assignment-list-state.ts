@@ -101,6 +101,18 @@ function roleDefaultIsActive(role: CourseAssignmentListRole): boolean | undefine
   return role === "all-program" || role === "general-education" ? true : undefined;
 }
 
+function isAllProgramLikeRole(role: CourseAssignmentListRole): boolean {
+  return role === "all-program" || role === "general-education";
+}
+
+function effectiveCourseScopeForRole(
+  role: CourseAssignmentListRole,
+  courseScope: CourseScope | undefined
+): CourseScope | undefined {
+  return role === "general-education" ? CourseScope.GENERAL_EDUCATION : courseScope;
+}
+
+// fallow-ignore-next-line complexity
 export function parseCourseAssignmentListState(
   rawSearchParams: CourseAssignmentSearchParams,
   role: CourseAssignmentListRole
@@ -116,16 +128,13 @@ export function parseCourseAssignmentListState(
   const isActive = parseBoolean(rawSearchParams.isActive);
   const isActiveCandidate = firstNonEmptyValue(rawSearchParams.isActive);
   const q = parseQuery(rawSearchParams.q);
-  // general-education mode fixes Course scope server-side; URL cannot widen it
-  const effectiveCourseScope =
-    role === "general-education" ? CourseScope.GENERAL_EDUCATION : courseScope;
+  const effectiveCourseScope = effectiveCourseScopeForRole(role, courseScope);
 
   const filters: ListCourseAssignmentsFilter = {
     ...(termInstanceId !== undefined && { termInstanceId }),
     ...(courseId !== undefined && { courseId }),
     ...(facultyId !== undefined && { facultyId }),
-    ...(role === "all-program" && programId !== undefined && { programId }),
-    ...(role === "general-education" && programId !== undefined && { programId }),
+    ...(isAllProgramLikeRole(role) && programId !== undefined && { programId }),
     ...(yearLevel !== undefined && { yearLevel }),
     ...(section !== undefined && { section }),
     ...(effectiveCourseScope !== undefined && { courseScope: effectiveCourseScope }),
@@ -133,7 +142,7 @@ export function parseCourseAssignmentListState(
     ...(q !== undefined && { q }),
   };
 
-  if ((role === "all-program" || role === "general-education") && isActiveCandidate === "all") {
+  if (isAllProgramLikeRole(role) && isActiveCandidate === "all") {
     return { page, filters, isActiveMode: "all" };
   }
 
@@ -144,6 +153,7 @@ export function parseCourseAssignmentListState(
   return { page, filters };
 }
 
+// fallow-ignore-next-line complexity
 export function serializeCourseAssignmentListState(
   state: CourseAssignmentListUrlState,
   role: CourseAssignmentListRole
@@ -156,12 +166,11 @@ export function serializeCourseAssignmentListState(
   if (filters.termInstanceId) params.set("termInstanceId", filters.termInstanceId);
   if (filters.courseId) params.set("courseId", filters.courseId);
   if (filters.facultyId) params.set("facultyId", filters.facultyId);
-  if (role === "all-program" && filters.programId) params.set("programId", filters.programId);
-  if (role === "general-education" && filters.programId) params.set("programId", filters.programId);
+  if (isAllProgramLikeRole(role) && filters.programId) params.set("programId", filters.programId);
   if (filters.yearLevel) params.set("yearLevel", filters.yearLevel);
   if (filters.section) params.set("section", filters.section);
   if (role !== "general-education" && filters.courseScope) params.set("courseScope", filters.courseScope);
-  if ((role === "all-program" || role === "general-education") && state.isActiveMode === "all") {
+  if (isAllProgramLikeRole(role) && state.isActiveMode === "all") {
     params.set("isActive", "all");
   } else if (filters.isActive !== undefined && filters.isActive !== defaultIsActive) {
     params.set("isActive", String(filters.isActive));

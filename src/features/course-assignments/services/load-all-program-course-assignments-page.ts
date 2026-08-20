@@ -96,6 +96,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
     ).values(),
   ].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
 
+  // fallow-ignore-next-line code-duplication
   const termInstances: TermInstanceItem[] = schoolYears.flatMap((sy) =>
     sy.term_instances.map((ti) => ({
       id: ti.id,

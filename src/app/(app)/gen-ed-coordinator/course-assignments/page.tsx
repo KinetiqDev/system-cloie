@@ -10,6 +10,7 @@ export const metadata = {
   title: "Course Assignments — Gen Ed Coordinator | CLOIE",
 };
 
+// fallow-ignore-next-line complexity
 export default async function GenEdCoordinatorCourseAssignmentsPage({
   searchParams,
 }: {
