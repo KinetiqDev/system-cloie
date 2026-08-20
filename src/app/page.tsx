@@ -2,8 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Building2, Users } from "lucide-react";
 import { PortalChoiceCard, InstallAppButton } from "@/features/portals";
+import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
+import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
 
 export default function Home() {
+  const appearanceEnabled = resolveAppearanceAvailability();
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
       {/* Header */}
@@ -22,7 +25,8 @@ export default function Home() {
               <p className="text-caption text-muted-foreground">Assumption College of Davao</p>
             </div>
           </div>
-          <div>
+          <div className="flex items-center gap-3">
+            <AppearanceMenuTrigger enabled={appearanceEnabled} />
             <InstallAppButton />
           </div>
         </div>
