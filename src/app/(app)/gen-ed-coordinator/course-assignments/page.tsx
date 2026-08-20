@@ -7,7 +7,7 @@ import { loadAllProgramCourseAssignmentsPageData } from "@/features/course-assig
 import { loadCourseAssignmentListPage } from "@/features/course-assignments/services/load-course-assignment-list-page";
 
 export const metadata = {
-  title: "Course Assignments — Gen Ed Coordinator | CLOIE",
+  title: "Course Assignments — Gen Ed Coordinator | System CLOIE",
 };
 
 // fallow-ignore-next-line complexity
