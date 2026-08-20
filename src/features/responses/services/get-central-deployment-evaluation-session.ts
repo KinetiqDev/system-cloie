@@ -126,8 +126,11 @@ export async function getCentralDeploymentEvaluationSession(
 
   const deployment = assignment.central_deployment;
 
-  // Verify deployment is currently available
-  if (!isCentralDeploymentAvailable(deployment)) {
+  // Keep submitted evaluations readable after the deployment window closes.
+  // Only the wizard needs the availability gate; review pages must not 404
+  // on an answered evaluation.
+  const response = assignment.response ?? null;
+  if (!response?.submitted_at && !isCentralDeploymentAvailable(deployment)) {
     return null;
   }
 
@@ -135,7 +138,6 @@ export async function getCentralDeploymentEvaluationSession(
   const sections = mapTemplateStructureToSections(deployment.instrument.structure_snapshot);
 
   // Load saved answers from existing response (if any)
-  const response = assignment.response ?? null;
   const savedAnswers = response
     ? mapSavedAnswerItems({
         qualitativeItems: response.qual_items,

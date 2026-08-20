@@ -265,4 +265,31 @@ describe("getCentralDeploymentEvaluationSession", () => {
 
     expect(result).toBeNull();
   });
+
+  it("keeps submitted evaluations readable after the deployment window closes", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    findFirstMock.mockResolvedValue(
+      makeAssignment({
+        withResponse: true,
+        responseStatus: "SUBMITTED",
+        submittedAt: new Date("2026-03-10T00:00:00.000Z"),
+        activationAt: new Date("2026-03-01T00:00:00.000Z"),
+        deadlineAt: new Date("2026-03-15T00:00:00.000Z"),
+      })
+    );
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"));
+
+    const { getCentralDeploymentEvaluationSession } =
+      await import("@/features/responses/services/get-central-deployment-evaluation-session");
+
+    const result = await getCentralDeploymentEvaluationSession("deploy-1");
+
+    expect(result).not.toBeNull();
+    expect(result!.session.submittedAt).toEqual(new Date("2026-03-10T00:00:00.000Z"));
+    expect(result!.session.responseId).toBe("response-1");
+
+    vi.useRealTimers();
+  });
 });
