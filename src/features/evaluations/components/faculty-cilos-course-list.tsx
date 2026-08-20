@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, MoreVertical, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowRightLeft, Eye, MoreVertical, Plus, Search, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -470,6 +470,7 @@ export function FacultyCilosCourseList({
                   <DropdownMenuItem
                     render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
                   >
+                    <ArrowRightLeft className="size-4" />
                     Align Course
                   </DropdownMenuItem>
                 </DropdownMenuContent>

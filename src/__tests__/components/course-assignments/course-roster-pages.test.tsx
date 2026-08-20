@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 
@@ -154,6 +154,19 @@ describe("course roster pages", () => {
     expect(screen.queryByText("ada@example.com")).not.toBeInTheDocument();
   });
 
+  it("keeps list mode a horizontally scrollable table on mobile instead of cards", () => {
+    render(<CourseRosterDiscoveryPage data={discovery} view="list" />);
+
+    const container = document.querySelector('[data-view="list"]');
+    expect(container).not.toHaveClass("overflow-hidden");
+    expect(container).toHaveClass("overflow-x-auto");
+    const table = container!.querySelector("table");
+    expect(table).toHaveClass("min-w-[72rem]");
+    // No mobile card-style row labels or stacked grid rows.
+    expect(container!.querySelectorAll(".md\\:hidden")).toHaveLength(0);
+    expect(container!.querySelector('[data-slot="table-row"]')).not.toHaveClass("grid");
+  });
+
   it("renders complete Card facts, separate counts, one action, and no Faculty identity", () => {
     render(
       <CourseRosterDiscoveryPage
@@ -206,7 +219,7 @@ describe("course roster pages", () => {
     expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?search=CS&history=1");
   });
 
-  it("preserves Card in the GET form and paginated links", () => {
+  it("preserves Card in paginated links and instant filter navigation", () => {
     render(
       <CourseRosterDiscoveryPage
         data={{ ...discovery, total: 40, search: "CS", includeHistory: true }}
@@ -214,10 +227,34 @@ describe("course roster pages", () => {
       />
     );
 
-    expect(document.querySelector('input[type="hidden"][name="view"]')).toHaveValue("card");
     expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
       "href",
       "/faculty/course-rosters?page=2&search=CS&history=1&view=card"
+    );
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByRole("searchbox", { name: "Search assignments" }), {
+        target: { value: "CS1" },
+      });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/faculty/course-rosters?search=CS1&history=1&view=card"
+    );
+  });
+
+  it("applies the history filter immediately and preserves search and view", () => {
+    render(<CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="card" />);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /include inactive/i }));
+
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/faculty/course-rosters?search=CS&history=1&view=card"
     );
   });
 
@@ -397,11 +434,39 @@ describe("course roster pages", () => {
       />
     );
 
-    expect(screen.getByRole("link", { name: "Sort by name ascending" })).toHaveAttribute(
-      "href",
-      "/program-head/programs/program-1/course-rosters/assignment-1?search=grace&sort=asc&removed=1"
+    fireEvent.click(screen.getByRole("button", { name: "Sort by name ascending" }));
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/program-head/programs/program-1/course-rosters/assignment-1?search=grace&removed=1&sort=asc"
     );
-    expect(document.querySelector('input[name="sort"]')).toHaveValue("desc");
+  });
+
+  it("streams member search results after a debounce and drops the Search button", () => {
+    render(<CourseRosterDetailPage data={detail} />);
+
+    expect(screen.queryByRole("button", { name: "Search" })).not.toBeInTheDocument();
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByRole("searchbox", { name: "Search students" }), {
+        target: { value: "grace" },
+      });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(replaceMock).toHaveBeenCalledWith("/course-rosters/assignment-1?search=grace&sort=asc");
+  });
+
+  it("applies the removed-students filter immediately and preserves search", () => {
+    render(<CourseRosterDetailPage data={{ ...detail, search: "grace" }} />);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /include removed students/i }));
+
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/course-rosters/assignment-1?search=grace&removed=1&sort=asc"
+    );
   });
 
   it("preserves selected Program roster navigation and action scope", async () => {

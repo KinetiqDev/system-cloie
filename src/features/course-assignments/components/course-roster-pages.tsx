@@ -7,14 +7,13 @@ import {
   ChevronRight,
   History,
   LockKeyhole,
-  Search,
   SearchX,
   UsersRound,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -24,7 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import {
   Empty,
   EmptyContent,
@@ -33,16 +32,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { cn } from "@/lib/utils";
 import { COURSE_ROSTER_MAX_ROWS } from "../services/course-roster-csv";
@@ -61,6 +52,7 @@ import {
 } from "./course-roster-management";
 import { CourseRosterRetry } from "./course-roster-retry";
 import { CourseRosterViewSelector, type CourseRosterViewMode } from "./course-roster-view-selector";
+import { CourseRosterDiscoveryFilters, CourseRosterMemberFilters } from "./course-roster-filters";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
   UNKNOWN_ACCOUNT: "Unknown account",
@@ -217,37 +209,11 @@ export function CourseRosterDiscoveryPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form method="get" role="search">
-            {view === "card" && <input type="hidden" name="view" value="card" />}
-            <FieldGroup className="gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-              <Field>
-                <FieldLabel htmlFor="roster-search">Search assignments</FieldLabel>
-                <Input
-                  id="roster-search"
-                  name="search"
-                  type="search"
-                  defaultValue={data.search}
-                  maxLength={100}
-                  placeholder="Course or program"
-                />
-              </Field>
-              <Button type="submit" className="w-full sm:w-auto">
-                <Search data-icon="inline-start" aria-hidden="true" />
-                Search
-              </Button>
-              <Field orientation="horizontal" className="min-h-11 sm:col-span-2 sm:w-fit">
-                <Checkbox
-                  id="roster-history"
-                  name="history"
-                  value="1"
-                  defaultChecked={data.includeHistory}
-                />
-                <FieldLabel htmlFor="roster-history">
-                  Include inactive and completed assignment history
-                </FieldLabel>
-              </Field>
-            </FieldGroup>
-          </form>
+          <CourseRosterDiscoveryFilters
+            initialSearch={data.search}
+            initialHistory={data.includeHistory}
+            view={view}
+          />
         </CardContent>
       </Card>
 
@@ -292,9 +258,9 @@ export function CourseRosterDiscoveryPage({
 
 function CourseRosterList({ assignments }: { assignments: CourseRosterAssignmentSummary[] }) {
   return (
-    <div className="bg-card overflow-hidden rounded-xl border" data-view="list">
-      <Table aria-label="Course assignments" className="md:min-w-[72rem]">
-        <TableHeader className="hidden md:table-header-group">
+    <div className="bg-card overflow-x-auto rounded-lg border" data-view="list">
+      <table aria-label="Course assignments" className="w-full min-w-[72rem] text-left text-sm">
+        <TableHeader>
           <TableRow>
             <TableHead>Course</TableHead>
             <TableHead>Program</TableHead>
@@ -306,37 +272,30 @@ function CourseRosterList({ assignments }: { assignments: CourseRosterAssignment
             <TableHead>Action</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody className="block md:table-row-group">
+        <TableBody>
           {assignments.map((assignment) => (
-            <TableRow
-              key={assignment.assignmentId}
-              className="grid gap-3 px-4 py-4 md:table-row md:px-0 md:py-0"
-            >
-              <DiscoveryTableCell label="Course">
+            <TableRow key={assignment.assignmentId} className="hover:bg-muted/30">
+              <DiscoveryTableCell>
                 <span className="block font-medium">{assignment.courseCode}</span>
                 <span className="text-muted-foreground block">{assignment.courseTitle}</span>
               </DiscoveryTableCell>
-              <DiscoveryTableCell label="Program">
+              <DiscoveryTableCell>
                 <span className="block">{assignment.programName}</span>
                 <span className="text-muted-foreground block">{assignment.programCode}</span>
               </DiscoveryTableCell>
-              <DiscoveryTableCell label="Class">
+              <DiscoveryTableCell>
                 {getYearLevelDisplay(assignment.yearLevel)} | {getSectionLabel(assignment.section)}
               </DiscoveryTableCell>
-              <DiscoveryTableCell label="Academic Period">
+              <DiscoveryTableCell>
                 <span className="block">{assignment.termLabel}</span>
                 <span className="text-muted-foreground block">{assignment.periodStatus}</span>
               </DiscoveryTableCell>
-              <DiscoveryTableCell label="Active roster" numeric>
-                {assignment.activeRosterCount}
-              </DiscoveryTableCell>
-              <DiscoveryTableCell label="Evaluation-eligible" numeric>
-                {assignment.evaluationEligibleCount}
-              </DiscoveryTableCell>
-              <DiscoveryTableCell label="State">
+              <DiscoveryTableCell numeric>{assignment.activeRosterCount}</DiscoveryTableCell>
+              <DiscoveryTableCell numeric>{assignment.evaluationEligibleCount}</DiscoveryTableCell>
+              <DiscoveryTableCell>
                 <RosterStateBadge state={assignment.rosterState} />
               </DiscoveryTableCell>
-              <TableCell className="block p-0 whitespace-normal md:table-cell md:p-2">
+              <DiscoveryTableCell>
                 <Link
                   href={`/course-rosters/${assignment.assignmentId}`}
                   className={cn(buttonVariants({ size: "sm" }), "w-full md:w-auto")}
@@ -344,37 +303,25 @@ function CourseRosterList({ assignments }: { assignments: CourseRosterAssignment
                   Open roster
                   <ArrowRight data-icon="inline-end" aria-hidden="true" />
                 </Link>
-              </TableCell>
+              </DiscoveryTableCell>
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+      </table>
     </div>
   );
 }
 
 function DiscoveryTableCell({
-  label,
   numeric = false,
   children,
 }: {
-  label: string;
   numeric?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <TableCell
-      className={cn(
-        "flex items-start justify-between gap-4 p-0 whitespace-normal md:table-cell md:p-2",
-        numeric && "md:text-right"
-      )}
-    >
-      <span className="text-muted-foreground shrink-0 text-sm font-medium md:hidden">{label}</span>
-      <div
-        className={cn("min-w-0 text-right md:text-left", numeric && "tabular-nums md:text-right")}
-      >
-        {children}
-      </div>
+    <TableCell className={cn("px-3 py-4 whitespace-normal", numeric && "text-right tabular-nums")}>
+      {children}
     </TableCell>
   );
 }
@@ -676,8 +623,10 @@ export function CourseRosterDetailPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <RosterFilters
-            data={data}
+          <CourseRosterMemberFilters
+            initialSearch={data.search}
+            initialRemoved={data.includeRemoved}
+            sortDirection={data.sortDirection}
             assignmentId={assignment.assignmentId}
             rosterBasePath={rosterBasePath}
           />
@@ -696,65 +645,6 @@ export function CourseRosterDetailPage({
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function RosterFilters({
-  data,
-  assignmentId,
-  rosterBasePath,
-}: {
-  data: CourseRosterDetail;
-  assignmentId: string;
-  rosterBasePath?: string;
-}) {
-  const sortParams = new URLSearchParams({
-    search: data.search,
-    sort: data.sortDirection === "asc" ? "desc" : "asc",
-  });
-  if (data.includeRemoved) sortParams.set("removed", "1");
-
-  return (
-    <form method="get" className="flex flex-col gap-4" role="search">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <label htmlFor="member-search" className="text-sm font-medium">
-            Search students
-          </label>
-          <Input
-            id="member-search"
-            name="search"
-            type="search"
-            defaultValue={data.search}
-            maxLength={100}
-            placeholder="Search by name or email"
-          />
-        </div>
-        <Button type="submit" className="w-full sm:w-auto">
-          <Search data-icon="inline-start" aria-hidden="true" /> Search
-        </Button>
-      </div>
-      <input type="hidden" name="sort" value={data.sortDirection} />
-      <div className="flex flex-wrap items-center gap-4">
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <input
-            type="checkbox"
-            name="removed"
-            value="1"
-            defaultChecked={data.includeRemoved}
-            className="accent-primary size-4"
-          />
-          Include removed students
-        </label>
-        <Link
-          href={`${rosterBasePath ?? "/course-rosters"}/${assignmentId}?${sortParams}`}
-          aria-label={`Sort by name ${data.sortDirection === "asc" ? "descending" : "ascending"}`}
-          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
-        >
-          Sort by name {data.sortDirection === "asc" ? "descending" : "ascending"}
-        </Link>
-      </div>
-    </form>
   );
 }
 

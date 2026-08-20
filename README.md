@@ -8,8 +8,8 @@ A college-level digital evaluation, monitoring, and reporting platform for Assum
 
 ### Prerequisites
 
-- Node.js 18+ (recommended: 20.x)
-- pnpm 9+ (`npm install -g pnpm`)
+- Node.js 22 (see `.nvmrc`)
+- pnpm 10 (`npm install -g pnpm`)
 - A Supabase project (for database, auth, and migrations)
 
 ### Setup
@@ -55,6 +55,8 @@ See `supabase/README.md` for the full Supabase cloud workflow and `AGENTS.md` fo
 | Charts            | Recharts (through shadcn/ui chart primitives) |
 | Drag and Drop     | @dnd-kit (core, sortable) |
 | Qualitative NLP   | winkNLP, stopword |
+| Word Cloud        | @isoterik/react-word-cloud |
+| AI Insights       | OpenAI-compatible API (server-only, bounded; see ADR 0016) |
 | Database          | PostgreSQL 15+ (Supabase) |
 | ORM               | Prisma 6 |
 | Auth              | Supabase Auth (Google OAuth) |
@@ -67,7 +69,7 @@ The project combines two workflows depending on the change's size and stage:
 
 - **OpenSpec workflow** (`openspec/`) — artifact-driven change management. Use `openspec-explore` + `openspec-propose` to draft proposals, designs, specs, and tasks. For fast-tracking, `openspec-ff-change` creates all artifacts in one pass. Implementation follows with `openspec-apply-change`, verification with `openspec-verify-change`, and archiving with `openspec-archive-change`.
 
-- **Matt Pocock skills** — conversation-driven planning and execution. Use `wayfinder` to chart large explorations as investigation tickets, `grill-me` / `grill-with-docs` to stress-test designs and record ADRs, `prototype` to build throwaway artifacts, `to-spec` to synthesize specifications, and `to-tickets` to break work into vertical-slice GitHub issues with blocking edges.
+- **Matt Pocock skills** — conversation-driven planning and execution. Use `wayfinder` to chart large explorations as investigation tickets, `grilling` / `grill-with-docs` to stress-test designs and record ADRs, `prototype` to build throwaway artifacts, `to-spec` to synthesize specifications, and `to-tickets` to break work into vertical-slice GitHub issues with blocking edges.
 
 **In practice** for a big feature or refactor: explore and propose with OpenSpec → grill the design to sharpen it → `to-tickets` to split into dependency-ordered issues → implement each slice → verify and archive. For scouting without a clear destination, `wayfinder` charts the map first and its resolved tickets feed into the OpenSpec proposal.
 
@@ -83,7 +85,7 @@ CLOIE operates with three intentionally separated authentication modes, never co
 | **Local Development** | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails | `NODE_ENV=development` only |
 | **Dedicated Demo** | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration | Separate demo deployment |
 
-The demo deployment is used for production-build route/rendering evidence, cross-role demonstrations, and performance traces. It never replaces OAuth evidence. See `docs/runbooks/dedicated-demo-deployment.md`, `docs/adr/0008-dedicated-demo-deployment-authentication.md`, and the `openspec/changes/add-dedicated-demo-auth/` artifacts for the full contract.
+The demo deployment is used for production-build route/rendering evidence, cross-role demonstrations, and performance traces. It never replaces OAuth evidence. See `docs/runbooks/dedicated-demo-deployment.md`, `docs/adr/0008-dedicated-demo-deployment-authentication.md`, and the archived `openspec/changes/archive/2026-07-29-add-dedicated-demo-auth/` artifacts for the full contract.
 
 Key demo scripts:
 - `pnpm demo:reset` — destructive reset of the isolated demo database (validates target identity first)
@@ -110,9 +112,20 @@ Key demo scripts:
 | `pnpm supabase:push:dry-run`                 | Preview migrations before applying |
 | `pnpm supabase:push`                         | Push migrations to Supabase |
 | `pnpm supabase:types`                        | Regenerate Supabase database types |
+| `pnpm supabase:login`                        | Log in to the Supabase CLI |
+| `pnpm supabase:migration:baseline`           | Create the baseline migration |
+| `pnpm supabase:migration:list`               | List applied migrations |
+| `pnpm supabase:migration:repair-latest`      | Mark the latest migration as applied |
 | `pnpm demo:reset`                            | Destructive reset of isolated demo DB |
 | `pnpm verify:production-auth-boundary`       | Validate primary Production auth is OAuth-only |
 | `pnpm verify:dedicated-demo-auth-boundary`   | Validate demo deployment auth contracts |
+| `pnpm verify:demo-target-isolation`          | Validate the demo reset target is the isolated demo DB |
+| `pnpm fallow:audit`                          | Run the fallow static-analysis audit |
+| `pnpm fallow:baseline`                       | Refresh fallow baselines |
+| `pnpm curriculum:generate-baseline`          | Generate baseline curricula |
+| `pnpm start`                                 | Run the production build |
+
+The full list of scripts lives in `package.json`.
 
 ## Project Architecture
 
@@ -126,6 +139,7 @@ src/
 │   │   ├── course-rosters/
 │   │   ├── dashboard/
 │   │   ├── dean/
+│   │   ├── design-system/
 │   │   ├── faculty/
 │   │   ├── industry-partner/
 │   │   ├── program-head/
@@ -136,23 +150,29 @@ src/
 │   │   ├── onboarding/
 │   │   ├── portal/
 │   │   └── status/
+│   ├── (legal)/           # Legal pages (terms, privacy)
+│   ├── unauthorized/      # Domain/role rejection page
 │   └── api/               # API routes (auth, dean)
 ├── components/            # Shared UI components
 │   └── ui/               # shadcn/ui base components (Base UI primitives)
-├── features/             # Feature-based domain modules (13 domains)
+├── features/             # Feature-based domain modules (16 domains)
 │   ├── academic-calendar/    # School years, semesters, terms, active periods
 │   ├── academic-structure/   # Programs and majors
 │   ├── analytics/            # Faculty/program analytics dashboards
 │   ├── auth/                 # Authentication, sessions, role identity
 │   ├── course-assignments/   # Courses, sections, teaching assignments, enrollment
+│   ├── curriculum/           # Curricula, versions, course placement
 │   ├── dean/                 # Dean college-wide oversight views
+│   ├── design-system/        # Shared design system and showcase
 │   ├── enrollments/          # Student enrollment interfaces
 │   ├── evaluations/          # Evaluation workflows and deployments
 │   ├── instruments/          # Templates, instruments, versioning
+│   ├── legal/                # Legal content, versions, acknowledgements
 │   ├── outcomes/             # Graduate outcomes, CILOs, mappings
 │   ├── portals/              # Role selection and entry portals
 │   ├── responses/            # Quantitative and qualitative response handling
 │   └── users/                # User profiles and admin management
+├── hooks/                # Shared React hooks
 ├── lib/                  # Shared utilities and configurations
 │   ├── actions/          # Server Actions (thin wrappers over feature services)
 │   ├── constants/        # App constants and demo-user catalog
@@ -163,6 +183,8 @@ src/
 ├── types/               # Global TypeScript types (supabase-database.ts is generated)
 └── __tests__/           # Test files mirroring src/ structure
 ```
+Plus, at repo root: `scripts/` holds the Supabase CLI wrappers, demo verification, and fallow baseline scripts; `prisma/` and `supabase/` hold the schema and migrations (see below).
+```
 
 ### Domain Contexts
 
@@ -170,7 +192,7 @@ The domain model is documented through a multi-context layout:
 
 - **`CONTEXT-MAP.md`** — index of domain contexts and their relationships
 - **`src/features/<domain>/CONTEXT.md`** — per-domain glossary, rules, and invariants
-- **`docs/adr/`** — architectural decision records (9 ADRs, see list below)
+- **`docs/adr/`** — architectural decision records (17 ADRs, see list below)
 
 Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 
@@ -187,6 +209,15 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0006 | Dean PWA offline cache contract |
 | 0007 | Course assignment roster membership |
 | 0008 | Dedicated demo deployment authentication |
+| 0009 | Program head selected program context |
+| 0010 | Unified appearance and protected showcase |
+| 0011 | Fallow code intelligence policy |
+| 0012 | Secretary-controlled academic calendar state |
+| 0013 | Versioned curriculum course placement |
+| 0014 | Google authoritative account names |
+| 0015 | Name-based course roster resolution and student ID removal |
+| 0016 | Server-side bounded AI interpretation boundary |
+| 0017 | Program learning outcome canonical terminology |
 
 ### Key Architectural Patterns
 
@@ -196,9 +227,15 @@ Authentication middleware is at `src/proxy.ts` (not the traditional `middleware.
 
 ```typescript
 // src/proxy.ts
-export { proxy } from "@/features/auth/services/proxy";
+import { updateSession } from "@/lib/supabase/middleware";
+
+export async function proxy(request: NextRequest) {
+  // Rewrites Server Action POSTs so updateSession sees the Origin host.
+  return updateSession(request);
+}
+
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };
 ```
 
@@ -259,9 +296,10 @@ Uses the glossary in `src/features/<domain>/CONTEXT.md` and design tokens from `
 Required in `.env.local` (see `.env.example` for complete set):
 
 ```bash
-# Supabase
+# Supabase (client)
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SITE_URL=https://your-app.example.com
 
 # Database (Prisma)
 DATABASE_URL=postgresql://postgres:password@your-project-pooler.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1
@@ -275,6 +313,12 @@ SUPABASE_DB_PASSWORD=your-db-password
 # Bootstrap
 BOOTSTRAP_SECRETARY_EMAIL=secretary@acd.edu.ph
 
+# Secretary edit confirmations (production)
+CONFIRMATION_SECRET=your-confirmation-secret
+
+# Local development only; does not enable dedicated demo authentication
+NEXT_PUBLIC_DEMO_MODE=false
+
 # Demo deployment (server-only, never set on primary Production)
 CLOIE_DEMO_ENABLED=
 CLOIE_DEPLOYMENT_KIND=
@@ -282,6 +326,18 @@ CLOIE_DEMO_SESSION_SECRET=
 CLOIE_DEMO_ALLOWED_USERS=
 CLOIE_DEMO_SUPABASE_PROJECT_REF=
 CLOIE_PRIMARY_SUPABASE_PROJECT_REF=
+
+# Legal acknowledgement ticket (server-only HMAC secret)
+CLOIE_LEGAL_TICKET_SECRET=
+
+# Server-only appearance release control; enable only per docs/runbooks/appearance-production-activation.md
+CLOIE_APPEARANCE_ENABLED=
+
+# Test-only: opt in to DB invariant suites (pnpm test:db)
+RUN_DATABASE_INTEGRATION_TESTS=
+
+# AI Insights (server-only, optional): CLOIE_AI_ENABLED, CLOIE_AI_API_KEY,
+# CLOIE_AI_BASE_URL, CLOIE_AI_MODEL, corpus gates, and bounds. See ADR 0016.
 ```
 
 ## Testing
@@ -296,7 +352,7 @@ pnpm vitest run src/__tests__/path/file.test.ts  # Single file
 
 ### Database Invariant Tests
 
-Five suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a hosted database:
+Seven suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a hosted database:
 
 ```bash
 RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db
@@ -308,7 +364,9 @@ Point `DATABASE_URL` at a disposable test database — never a shared Supabase p
 - `src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts`
 - `src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts`
 - `src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts`
+- `src/__tests__/features/academic-calendar/read-period-readiness-totals-parity.test.ts`
 - `src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts`
+- `src/__tests__/features/academic-calendar/school-year-active-constraint.test.ts`
 
 The destructive dedicated-demo migration replay has a separate gate. Run it only after confirming that the linked Supabase project is the isolated demo target:
 
@@ -356,7 +414,7 @@ See `supabase/README.md` for the complete cloud-only workflow and baseline recov
 
 ## Code Style & Conventions
 
-- **Commit messages**: Conventional Commits (`feat`, `fix`, `refactor`, `perf`, `style`, `test`, `docs`, `build`, `ops`, `chore`). See `docs/conventional-commits-cheatsheet.md`.
+- **Commit messages**: Conventional Commits (`feat`, `fix`, `refactor`, `perf`, `style`, `test`, `docs`, `build`, `ops`, `chore`). See `AGENTS.md`.
 - **Quotes**: Double quotes
 - **Semicolons**: Required
 - **Trailing commas**: ES5 style
