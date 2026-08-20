@@ -3,9 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, MoreVertical, Plus, Search, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
 import { Button } from "@/components/ui/button";
@@ -423,7 +429,7 @@ export function FacultyCilosCourseList({
             <TableHead>Type</TableHead>
             <TableHead>Major</TableHead>
             <TableHead className="text-right">CILOs</TableHead>
-            <TableHead className="w-24">Actions</TableHead>
+            <TableHead className="w-12">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -444,15 +450,30 @@ export function FacultyCilosCourseList({
                 <TableCell>{course.majorName ?? "—"}</TableCell>
                 <TableCell className="text-right">{course.ciloCount}</TableCell>
             <TableCell>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setModalCourse(course)}>
-                  <Eye className="mr-1 size-4" />
-                  View
-                </Button>
-                <Button variant="outline" size="sm" render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}>
-                  Align
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Actions for ${course.code}`}
+                    />
+                  }
+                >
+                  <MoreVertical className="size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setModalCourse(course)}>
+                    <Eye className="size-4" />
+                    View CILOs
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
+                  >
+                    Align Course
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </TableCell>
               </TableRow>
             ))

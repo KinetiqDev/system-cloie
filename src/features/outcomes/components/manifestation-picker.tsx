@@ -75,7 +75,7 @@ export function ManifestationPicker({
             onClick={() => onChange(selected ? null : option.value)}
             className={cn(
               "min-w-9",
-              variant === "full" && "flex-1 px-2.5",
+              variant === "full" && "min-h-11 flex-1 min-w-fit whitespace-nowrap px-2.5",
               !selected && "text-muted-foreground"
             )}
           >
@@ -92,7 +92,10 @@ export function ManifestationPicker({
           title={clearName}
           disabled={disabled}
           onClick={() => onChange(null)}
-          className="text-muted-foreground hover:text-foreground"
+          className={cn(
+            "text-muted-foreground hover:text-foreground",
+            variant === "full" && "min-h-11 min-w-11"
+          )}
         >
           <X aria-hidden="true" />
         </Button>

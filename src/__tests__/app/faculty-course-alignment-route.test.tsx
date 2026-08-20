@@ -70,6 +70,16 @@ describe("Faculty Course alignment route", () => {
       params: Promise.resolve({ courseId: alignment.course.id }),
     });
 
-    expect(page.props.children.props.alignment).toEqual(alignment);
+    type PageChild = { type?: unknown; props?: Record<string, unknown> | null };
+    const children = page.props.children as PageChild[];
+    const editor = children.find((child) => child?.props?.alignment !== undefined);
+    expect(editor?.props?.alignment).toEqual(alignment);
+
+    // Back link and breadcrumb lead back to the Manage CILOs list.
+    const backLink = children[0];
+    expect(backLink?.props?.href).toBe("/faculty/cilos");
+    expect(String(backLink?.props?.children)).toContain("Back to Manage CILOs");
+    const breadcrumb = children.find((child) => child?.type === "nav");
+    expect((breadcrumb?.props?.children as unknown[]).join("")).toContain("CS-101: Computing");
   });
 });

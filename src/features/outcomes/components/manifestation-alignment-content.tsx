@@ -30,9 +30,7 @@ function manifestLegend() {
           >
             {option.letter}
           </span>
-          <span>
-            {option.letter} {option.label}
-          </span>
+          <span>{option.label}</span>
         </li>
       ))}
     </ul>
@@ -111,7 +109,10 @@ export function ManifestationAlignmentContent({
             </caption>
             <thead>
               <tr className="border-b">
-                <th scope="col" className="text-muted-foreground h-10 px-3 text-left font-medium">
+                <th
+                  scope="col"
+                  className="text-muted-foreground sticky left-0 z-10 h-10 bg-background px-3 text-left font-medium"
+                >
                   CILO / PLO
                 </th>
                 {targets.map((target, ploIndex) => (
@@ -119,10 +120,13 @@ export function ManifestationAlignmentContent({
                     key={target.id}
                     scope="col"
                     aria-label={`PLO ${ploIndex + 1}: ${target.code}, ${target.description}`}
-                    className="text-muted-foreground min-w-32 px-3 pt-1 pb-2 text-left align-bottom font-medium"
+                    className="min-w-40 px-3 pt-2 pb-2 text-left align-top font-medium"
                   >
                     <span className="block">PLO {ploIndex + 1}</span>
-                    <span className="text-xs">{target.code}</span>
+                    <span className="block text-xs text-muted-foreground">{target.code}</span>
+                    <span className="mt-1 block text-xs leading-snug break-words font-normal text-muted-foreground">
+                      {target.description}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -132,7 +136,7 @@ export function ManifestationAlignmentContent({
                 <tr key={cilo.id} className="border-b">
                   <th
                     scope="row"
-                    className="max-w-56 px-3 py-3 text-left align-top font-medium"
+                    className="sticky left-0 z-10 max-w-56 bg-background px-3 py-3 text-left align-top font-medium"
                   >
                     <span className="text-foreground">CILO {ciloIndex + 1}</span>
                     <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
