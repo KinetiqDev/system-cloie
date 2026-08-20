@@ -184,8 +184,6 @@ src/
 └── __tests__/           # Test files mirroring src/ structure
 ```
 Plus, at repo root: `scripts/` holds the Supabase CLI wrappers, demo verification, and fallow baseline scripts; `prisma/` and `supabase/` hold the schema and migrations (see below).
-```
-
 ### Domain Contexts
 
 The domain model is documented through a multi-context layout:

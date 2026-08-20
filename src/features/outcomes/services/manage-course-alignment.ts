@@ -15,12 +15,12 @@ type CourseAlignmentTarget = {
   description: string;
 };
 
-export type CourseAlignmentMapping = {
+type CourseAlignmentMapping = {
   targetId: string;
   manifestation: CILOMappingManifestation | null;
 };
 
-export type CourseAlignmentCilo = {
+type CourseAlignmentCilo = {
   id: string;
   description: string;
   mappings: CourseAlignmentMapping[];
@@ -41,11 +41,17 @@ export type CourseAlignment = {
   freshnessToken: string;
 };
 
+// Written by prepareCourseAlignmentWrite and carried on the review contract;
+// consumed by the matrix editor and not imported elsewhere yet.
+// fallow-ignore-next-line unused-type
 export type ManifestationSnapshot = Array<{
   ciloId: string;
   mappings: Array<{ targetId: string; manifestation: CILOMappingManifestation | null }>;
 }>;
 
+// Draft cells for saveDraftCourseAlignment; consumed by the matrix editor and
+// not imported elsewhere yet.
+// fallow-ignore-next-line unused-type
 export type ManifestationDraft = Array<{
   ciloId: string;
   mappings: Array<{ targetId: string; manifestation: CILOMappingManifestation }>;
@@ -288,10 +294,14 @@ function manifestationDiff(
       beforePairs.delete(key);
     }
   }
-  const removals: ManifestationDiff["removals"] = [...beforePairs.keys()].map((key) => {
-    const [ciloId, targetId] = key.split(":");
-    return { ciloId, targetId };
-  });
+  // A null manifestation is legacy unanswered state. Omitting it from a
+  // draft means "still unanswered", not "delete the historical row".
+  const removals: ManifestationDiff["removals"] = [...beforePairs.entries()]
+    .filter(([, manifestation]) => manifestation !== null)
+    .map(([key]) => {
+      const [ciloId, targetId] = key.split(":");
+      return { ciloId, targetId };
+    });
   return { additions, updates, removals };
 }
 
@@ -371,11 +381,19 @@ function postWriteMappings(
       manifestation: mapping.manifestation,
     }))
   );
+  const writtenPairs = new Set(written.map((mapping) => `${mapping.ciloId}:${mapping.targetId}`));
   const preserved =
     scope === "GENERAL_EDUCATION"
       ? rows.flatMap((cilo) =>
           cilo.cilo_institutional_outcome_mappings
-            .filter((mapping) => !activeTargetIds.has(mapping.institutional_outcome_id))
+            .filter((mapping) => {
+              const key = `${cilo.id}:${mapping.institutional_outcome_id}`;
+              return (
+                !writtenPairs.has(key) &&
+                (!activeTargetIds.has(mapping.institutional_outcome_id) ||
+                  mapping.manifestation === null)
+              );
+            })
             .map((mapping) => ({
               ciloId: cilo.id,
               targetId: mapping.institutional_outcome_id,
@@ -384,7 +402,13 @@ function postWriteMappings(
         )
       : rows.flatMap((cilo) =>
           cilo.cilo_mappings
-            .filter((mapping) => !activeTargetIds.has(mapping.plo_id))
+            .filter((mapping) => {
+              const key = `${cilo.id}:${mapping.plo_id}`;
+              return (
+                !writtenPairs.has(key) &&
+                (!activeTargetIds.has(mapping.plo_id) || mapping.manifestation === null)
+              );
+            })
             .map((mapping) => ({
               ciloId: cilo.id,
               targetId: mapping.plo_id,

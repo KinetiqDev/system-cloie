@@ -282,69 +282,12 @@ function AlignmentDialogs({
           </AlertDialogHeader>
           <div className="flex max-h-64 flex-col gap-3 overflow-y-auto text-body-sm">
             {review &&
-              (() => {
-                const linesByCilo = new Map<string, string[]>();
-                const archivedLinesByCilo = new Map<string, string[]>();
-                for (const addition of review.additions) {
-                  const lines = linesByCilo.get(addition.ciloId) ?? [];
-                  lines.push(
-                    `${targetById.get(addition.targetId)?.code ?? addition.targetId}: Set to ${manifestationLabel(addition.manifestation)}`
-                  );
-                  linesByCilo.set(addition.ciloId, lines);
-                }
-                for (const update of review.updates) {
-                  const lines = linesByCilo.get(update.ciloId) ?? [];
-                  lines.push(
-                    `${targetById.get(update.targetId)?.code ?? update.targetId}: ${manifestationLabel(update.from)} \u2192 ${manifestationLabel(update.to)}`
-                  );
-                  linesByCilo.set(update.ciloId, lines);
-                }
-                for (const removal of review.removals) {
-                  const lines = linesByCilo.get(removal.ciloId) ?? [];
-                  const before = review.before.find((item) => item.ciloId === removal.ciloId);
-                  const beforeManifestation = before?.mappings.find(
-                    (mapping) => mapping.targetId === removal.targetId
-                  )?.manifestation;
-                  lines.push(
-                    `${targetById.get(removal.targetId)?.code ?? removal.targetId}: ${manifestationLabel(beforeManifestation)} \u2192 Unanswered`
-                  );
-                  linesByCilo.set(removal.ciloId, lines);
-                }
-                for (const cilo of alignment.cilos) {
-                  const archivedLines = cilo.mappings
-                    .filter((mapping) => !activeTargetIds.has(mapping.targetId))
-                    .map(
-                      (mapping) =>
-                        `${targetById.get(mapping.targetId)?.code ?? mapping.targetId} (archived): ${manifestationLabel(mapping.manifestation)}`
-                    );
-                  if (archivedLines.length > 0) {
-                    archivedLinesByCilo.set(cilo.id, archivedLines);
-                  }
-                }
-                const ciloIds = [
-                  ...new Set([...linesByCilo.keys(), ...archivedLinesByCilo.keys()]),
-                ];
-                return ciloIds.map((ciloId) => {
-                  const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === ciloId);
-                  const lines = linesByCilo.get(ciloId) ?? [];
-                  const archivedLines = archivedLinesByCilo.get(ciloId) ?? [];
-                  return (
-                    <div key={ciloId} className="flex flex-col gap-1">
-                      <p className="font-medium">CILO {ciloIndex + 1}</p>
-                      <ul className="flex flex-col gap-0.5">
-                        {lines.map((line) => (
-                          <li key={line}>{line}</li>
-                        ))}
-                        {archivedLines.map((line) => (
-                          <li key={line} className="text-muted-foreground">
-                            {line} — read-only
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  );
-                });
-              })()}
+              renderReviewLines({
+                alignment,
+                review,
+                targetById,
+                activeTargetIds,
+              })}
           </div>
           <AlertDialogFooter>
             <Button type="button" onClick={onCommitReview} disabled={pending}>
@@ -370,6 +313,110 @@ function AlignmentDialogs({
       </AlertDialog>
     </>
   );
+}
+
+function buildReviewLines({
+  alignment,
+  review,
+  targetById,
+  activeTargetIds,
+}: {
+  alignment: CourseAlignment;
+  review: CourseAlignmentReview;
+  targetById: Map<string, { code: string } | undefined>;
+  activeTargetIds: Set<string>;
+}) {
+  const linesByCilo = new Map<string, string[]>();
+  const archivedLinesByCilo = new Map<string, string[]>();
+
+  function append(ciloId: string, line: string) {
+    const lines = linesByCilo.get(ciloId) ?? [];
+    lines.push(line);
+    linesByCilo.set(ciloId, lines);
+  }
+
+  function additionLine(addition: CourseAlignmentReview["additions"][number]) {
+    append(
+      addition.ciloId,
+      `${targetById.get(addition.targetId)?.code ?? addition.targetId}: Set to ${manifestationLabel(addition.manifestation)}`
+    );
+  }
+
+  function updateLine(update: CourseAlignmentReview["updates"][number]) {
+    append(
+      update.ciloId,
+      `${targetById.get(update.targetId)?.code ?? update.targetId}: ${manifestationLabel(update.from)} \u2192 ${manifestationLabel(update.to)}`
+    );
+  }
+
+  function removalLine(removal: CourseAlignmentReview["removals"][number]) {
+    const before = review.before.find((item) => item.ciloId === removal.ciloId);
+    const beforeManifestation = before?.mappings.find(
+      (mapping) => mapping.targetId === removal.targetId
+    )?.manifestation;
+    append(
+      removal.ciloId,
+      `${targetById.get(removal.targetId)?.code ?? removal.targetId}: ${manifestationLabel(beforeManifestation)} \u2192 Unanswered`
+    );
+  }
+
+  function archivedLine(cilo: CourseAlignment["cilos"][number]) {
+    const lines = cilo.mappings
+      .filter((mapping) => !activeTargetIds.has(mapping.targetId))
+      .map(
+        (mapping) =>
+          `${targetById.get(mapping.targetId)?.code ?? mapping.targetId} (archived): ${manifestationLabel(mapping.manifestation)}`
+      );
+    if (lines.length > 0) {
+      archivedLinesByCilo.set(cilo.id, lines);
+    }
+  }
+
+  review.additions.forEach(additionLine);
+  review.updates.forEach(updateLine);
+  review.removals.forEach(removalLine);
+  alignment.cilos.forEach(archivedLine);
+  return { linesByCilo, archivedLinesByCilo };
+}
+
+function renderReviewLines({
+  alignment,
+  review,
+  targetById,
+  activeTargetIds,
+}: {
+  alignment: CourseAlignment;
+  review: CourseAlignmentReview;
+  targetById: Map<string, { code: string } | undefined>;
+  activeTargetIds: Set<string>;
+}) {
+  const { linesByCilo, archivedLinesByCilo } = buildReviewLines({
+    alignment,
+    review,
+    targetById,
+    activeTargetIds,
+  });
+  const ciloIds = [...new Set([...linesByCilo.keys(), ...archivedLinesByCilo.keys()])];
+  return ciloIds.map((ciloId) => {
+    const ciloIndex = alignment.cilos.findIndex((cilo) => cilo.id === ciloId);
+    const lines = linesByCilo.get(ciloId) ?? [];
+    const archivedLines = archivedLinesByCilo.get(ciloId) ?? [];
+    return (
+      <div key={ciloId} className="flex flex-col gap-1">
+        <p className="font-medium">CILO {ciloIndex + 1}</p>
+        <ul className="flex flex-col gap-0.5">
+          {lines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+          {archivedLines.map((line) => (
+            <li key={line} className="text-muted-foreground">
+              {line} — read-only
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  });
 }
 
 // fallow-ignore-next-line complexity

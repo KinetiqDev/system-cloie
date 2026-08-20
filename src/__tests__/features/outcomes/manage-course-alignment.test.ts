@@ -1143,6 +1143,71 @@ describe("Course alignment service", () => {
         ],
       });
     });
+    it("preserves legacy null ILO mappings while saving a classified GE cell", async () => {
+      const legacyGe = generalEducationCourse({
+        cilos: [
+          {
+            id: CILO_ID,
+            description: "Analyze science and technology interactions",
+            cilo_mappings: [],
+            cilo_institutional_outcome_mappings: [
+              {
+                institutional_outcome_id: ILO_ID,
+                manifestation: null,
+                institutional_outcome: {
+                  id: ILO_ID,
+                  code: "ILO-1",
+                  description: "Think critically",
+                  is_active: true,
+                },
+              },
+            ],
+          },
+        ],
+      });
+      mocks.course.findFirst.mockResolvedValue(legacyGe);
+      mocks.ilo.findMany.mockResolvedValue([
+        { id: ILO_ID, code: "ILO-1", description: "Think critically" },
+        { id: SECOND_PLO_ID, code: "ILO-2", description: "Communicate clearly" },
+      ]);
+      const { saveDraftCourseAlignment } =
+        await import("@/features/outcomes/services/manage-course-alignment");
+      pspTxMock(legacyGe);
+
+      await expect(
+        saveDraftCourseAlignment({
+          courseId: COURSE_ID,
+          cells: [
+            {
+              ciloId: CILO_ID,
+              mappings: [{ targetId: SECOND_PLO_ID, manifestation: "LEARNING" }],
+            },
+          ],
+          freshnessToken: tokenFor([CILO_ID], [ILO_ID, SECOND_PLO_ID], [
+            { ciloId: CILO_ID, targetId: ILO_ID, manifestation: null },
+          ]),
+        })
+      ).resolves.toEqual({
+        success: true,
+        data: {
+          changed: 1,
+          freshnessToken: tokenFor([CILO_ID], [ILO_ID, SECOND_PLO_ID], [
+            { ciloId: CILO_ID, targetId: ILO_ID, manifestation: null },
+            { ciloId: CILO_ID, targetId: SECOND_PLO_ID, manifestation: "LEARNING" },
+          ]),
+        },
+      });
+      expect(mocks.iloMapping.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            cilo_id: CILO_ID,
+            institutional_outcome_id: SECOND_PLO_ID,
+            manifestation: "LEARNING",
+          }),
+        ],
+      });
+      expect(mocks.iloMapping.deleteMany).not.toHaveBeenCalled();
+    });
 
     it("rejects foreign CILOs, pairs outside the active catalog, and duplicate pairs", async () => {
       mocks.course.findFirst.mockResolvedValue(emptyCourse());
