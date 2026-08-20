@@ -8,6 +8,7 @@ type CiloRow = {
     plo: { id: string; program_id: string | null; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
+    manifestation: CILOMappingManifestation | null;
     institutional_outcome: { is_active: boolean };
   }>;
 };
@@ -32,10 +33,14 @@ function unmappedCilo(): CiloRow {
   return { cilo_mappings: [], cilo_institutional_outcome_mappings: [] };
 }
 
-function geCilo(activeTargets: number): CiloRow {
+function geCilo(
+  activeTargets: number,
+  manifestation: CILOMappingManifestation | null = "LEARNING"
+): CiloRow {
   return {
     cilo_mappings: [],
     cilo_institutional_outcome_mappings: Array.from({ length: activeTargets }, () => ({
+      manifestation,
       institutional_outcome: { is_active: true },
     })),
   };
@@ -161,5 +166,28 @@ const cilo: CiloRow = {
   it("keeps General Education incomplete when no valid active Institutional Outcome exists", () => {
     const state = classify([geCilo(0)], "GENERAL_EDUCATION", null, []);
     expect(state).toBe("incomplete-mapping");
+  });
+
+  it("keeps General Education incomplete when the only ILO mapping has no manifestation", () => {
+    const state = classify([geCilo(1, null)], "GENERAL_EDUCATION", null, []);
+    expect(state).toBe("incomplete-mapping");
+  });
+
+  it("keeps General Education ready when one of several ILOs carries a manifestation", () => {
+    const state = classify(
+      [
+        {
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [
+            { manifestation: "PRACTICE", institutional_outcome: { is_active: true } },
+            { manifestation: null, institutional_outcome: { is_active: true } },
+          ],
+        },
+      ],
+      "GENERAL_EDUCATION",
+      null,
+      []
+    );
+    expect(state).toBe("ready");
   });
 });

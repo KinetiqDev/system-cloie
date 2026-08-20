@@ -12,28 +12,20 @@ import {
 const manifestationSchema = z.enum(["LEARNING", "PRACTICE", "OPPORTUNITY"]);
 
 const mappingSchema = z.object({
-  ploId: z.string().uuid("Invalid Program Learning Outcome ID."),
+  targetId: z.string().uuid("Invalid outcome target ID."),
   manifestation: manifestationSchema,
 });
 
-const desiredItemSchema = z.union([
-  z
-    .object({
-      ciloId: z.string().uuid("Invalid CILO ID."),
-      targetIds: z.array(z.string().uuid("Invalid outcome target ID.")),
-    })
-    .strict(),
-  z
-    .object({
-      ciloId: z.string().uuid("Invalid CILO ID."),
-      mappings: z.array(mappingSchema),
-    })
-    .strict(),
-]);
-
 const desiredAlignmentSchema = z.object({
   courseId: z.string().uuid("Invalid Course ID."),
-  desired: z.array(desiredItemSchema),
+  desired: z.array(
+    z
+      .object({
+        ciloId: z.string().uuid("Invalid CILO ID."),
+        mappings: z.array(mappingSchema),
+      })
+      .strict()
+  ),
   freshnessToken: z.string().min(1, "Alignment is stale. Reload and review the latest mappings."),
 });
 
@@ -48,24 +40,12 @@ const draftSchema = z.object({
   freshnessToken: z.string().min(1, "Alignment is stale. Reload and review the latest mappings."),
 });
 
-const pairSchema = z.object({
-  ciloId: z.string().uuid(),
-  targetId: z.string().uuid(),
-});
-
-const snapshotSchema = z.array(
-  z.object({
-    ciloId: z.string().uuid(),
-    targetIds: z.array(z.string().uuid()),
-  })
-);
-
 const manifestationSnapshotSchema = z.array(
   z.object({
     ciloId: z.string().uuid(),
     mappings: z.array(
       z.object({
-        ploId: z.string().uuid(),
+        targetId: z.string().uuid(),
         manifestation: manifestationSchema.nullable(),
       })
     ),
@@ -74,7 +54,7 @@ const manifestationSnapshotSchema = z.array(
 
 const manifestationPairSchema = z.object({
   ciloId: z.string().uuid(),
-  ploId: z.string().uuid(),
+  targetId: z.string().uuid(),
 });
 
 const manifestationUpdateSchema = manifestationPairSchema.extend({
@@ -82,29 +62,17 @@ const manifestationUpdateSchema = manifestationPairSchema.extend({
   to: manifestationSchema,
 });
 
-const reviewSchema = z.discriminatedUnion("scope", [
-  z.object({
-    scope: z.literal("GENERAL_EDUCATION"),
-    courseId: z.string().uuid(),
-    before: snapshotSchema,
-    after: snapshotSchema,
-    additions: z.array(pairSchema),
-    removals: z.array(pairSchema),
-    freshnessToken: z.string().min(1),
-    signature: z.string().regex(/^[a-f0-9]{64}$/),
-  }),
-  z.object({
-    scope: z.literal("PROGRAM_SPECIFIC"),
-    courseId: z.string().uuid(),
-    before: manifestationSnapshotSchema,
-    after: manifestationSnapshotSchema,
-    additions: z.array(manifestationPairSchema.extend({ manifestation: manifestationSchema })),
-    updates: z.array(manifestationUpdateSchema),
-    removals: z.array(manifestationPairSchema),
-    freshnessToken: z.string().min(1),
-    signature: z.string().regex(/^[a-f0-9]{64}$/),
-  }),
-]);
+const reviewSchema = z.object({
+  scope: z.enum(["GENERAL_EDUCATION", "PROGRAM_SPECIFIC"]),
+  courseId: z.string().uuid(),
+  before: manifestationSnapshotSchema,
+  after: manifestationSnapshotSchema,
+  additions: z.array(manifestationPairSchema.extend({ manifestation: manifestationSchema })),
+  updates: z.array(manifestationUpdateSchema),
+  removals: z.array(manifestationPairSchema),
+  freshnessToken: z.string().min(1),
+  signature: z.string().regex(/^[a-f0-9]{64}$/),
+});
 
 type PrepareCourseAlignmentActionResult =
   | { success: true; review: CourseAlignmentReview }

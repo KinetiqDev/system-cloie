@@ -21,7 +21,7 @@ const alignment: CourseAlignment = {
     scope: "GENERAL_EDUCATION",
     program: null,
   },
-  cilos: [{ id: CILO_ID, description: "Apply core concepts", targetIds: [] }],
+  cilos: [{ id: CILO_ID, description: "Apply core concepts", mappings: [] }],
   targets: [{ id: ILO_ID, code: "ILO-1", description: "Think critically" }],
   unavailableTargets: [],
   readiness: "incomplete-mapping",
@@ -40,7 +40,7 @@ const pspAlignment: CourseAlignment = {
     {
       id: CILO_ID,
       description: "Apply core concepts",
-      mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }],
+      mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }],
     },
   ],
   targets: [{ id: GO_ID, code: "GO-1", description: "Think critically" }],
@@ -52,9 +52,12 @@ const pspAlignment: CourseAlignment = {
 const review: CourseAlignmentReview = {
   scope: "GENERAL_EDUCATION",
   courseId: COURSE_ID,
-  before: [{ ciloId: CILO_ID, targetIds: [] }],
-  after: [{ ciloId: CILO_ID, targetIds: [ILO_ID] }],
-  additions: [{ ciloId: CILO_ID, targetId: ILO_ID }],
+  before: [{ ciloId: CILO_ID, mappings: [] }],
+  after: [
+    { ciloId: CILO_ID, mappings: [{ targetId: ILO_ID, manifestation: "LEARNING" }] },
+  ],
+  additions: [{ ciloId: CILO_ID, targetId: ILO_ID, manifestation: "LEARNING" }],
+  updates: [],
   removals: [],
   freshnessToken: "fresh",
   signature: "a".repeat(64),
@@ -63,10 +66,10 @@ const review: CourseAlignmentReview = {
 const pspReview: CourseAlignmentReview = {
   scope: "PROGRAM_SPECIFIC",
   courseId: COURSE_ID,
-  before: [{ ciloId: CILO_ID, mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] }],
-  after: [{ ciloId: CILO_ID, mappings: [{ ploId: GO_ID, manifestation: "PRACTICE" }] }],
+  before: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] }],
+  after: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "PRACTICE" }] }],
   additions: [],
-  updates: [{ ciloId: CILO_ID, ploId: GO_ID, from: "LEARNING", to: "PRACTICE" }],
+  updates: [{ ciloId: CILO_ID, targetId: GO_ID, from: "LEARNING", to: "PRACTICE" }],
   removals: [],
   freshnessToken: "fresh",
   signature: "a".repeat(64),
@@ -88,39 +91,40 @@ function renderEditor({ prepareAction, commitAction }: EditorActions) {
 }
 
 function stageTarget() {
-  fireEvent.click(screen.getByRole("button", { name: "Choose Institutional Outcomes" }));
-  fireEvent.click(screen.getByRole("checkbox", { name: /ILO-1: Think critically/i }));
+  const matrix = screen.getByTestId("manifestation-matrix");
+  fireEvent.click(
+    within(matrix).getByRole("button", { name: "CILO 1, ILO 1, manifestation: Learning" })
+  );
 }
 
 describe("CourseAlignmentEditor", () => {
-  it("searches, stages selection, reviews an exact diff, and commits", async () => {
+  it("stages an ILO manifestation, reviews the exact diff, and commits", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review });
     const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh" });
     renderEditor({ prepareAction, commitAction });
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose Institutional Outcomes" }));
-    expect(screen.getByText("ILO-1")).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("textbox", { name: "Search Institutional Outcomes" }), {
-      target: { value: "think" },
-    });
-    expect(screen.getByText("ILO-1")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("checkbox", { name: /ILO-1: Think critically/i }));
-    expect(screen.getByText("1 Institutional Outcome mapped")).toBeInTheDocument();
+    expect(screen.getByTestId("manifestation-matrix")).toBeInTheDocument();
+    expect(screen.getAllByText("ILO-1").length).toBeGreaterThan(0);
+    stageTarget();
+    expect(screen.getByText("1 of 1 CILOs covered")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
     await waitFor(() =>
       expect(prepareAction).toHaveBeenCalledWith({
         courseId: COURSE_ID,
-        desired: [{ ciloId: CILO_ID, targetIds: [ILO_ID] }],
+        desired: [
+          {
+            ciloId: CILO_ID,
+            mappings: [{ targetId: ILO_ID, manifestation: "LEARNING" }],
+          },
+        ],
         freshnessToken: "freshness",
       })
     );
     expect(
       await screen.findByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
-    expect(screen.getByText("Before:")).toBeInTheDocument();
-    expect(screen.getByText("After:")).toBeInTheDocument();
-    expect(screen.getAllByText("ILO-1").length).toBeGreaterThan(0);
+    expect(screen.getByText(/ILO-1: Set to Learning \(L\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalledWith(review, true));
     expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
@@ -162,8 +166,8 @@ describe("CourseAlignmentEditor", () => {
           id: CILO_ID,
           description: "Apply core concepts",
           mappings: [
-            { ploId: GO_ID, manifestation: "LEARNING" },
-            { ploId: ARCHIVED_GO_ID, manifestation: "PRACTICE" },
+            { targetId: GO_ID, manifestation: "LEARNING" },
+            { targetId: ARCHIVED_GO_ID, manifestation: "PRACTICE" },
           ],
         },
       ],
@@ -202,7 +206,7 @@ describe("CourseAlignmentEditor", () => {
       expect(saveDraftAction).toHaveBeenCalledWith({
         courseId: COURSE_ID,
         cells: [
-          { ciloId: CILO_ID, mappings: [{ ploId: GO_ID, manifestation: "PRACTICE" }] },
+          { ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "PRACTICE" }] },
         ],
         freshnessToken: "freshness",
       })
@@ -220,7 +224,7 @@ describe("CourseAlignmentEditor", () => {
             {
               id: CILO_ID,
               description: "Apply core concepts",
-              mappings: [{ ploId: ARCHIVED_GO_ID, manifestation: "OPPORTUNITY" }],
+              mappings: [{ targetId: ARCHIVED_GO_ID, manifestation: "OPPORTUNITY" }],
             },
           ],
           unavailableTargets: [
@@ -255,14 +259,14 @@ describe("CourseAlignmentEditor", () => {
               id: CILO_ID,
               description: "Apply core concepts",
               mappings: [
-                { ploId: GO_ID, manifestation: "LEARNING" },
-                { ploId: ARCHIVED_GO_ID, manifestation: "PRACTICE" },
+                { targetId: GO_ID, manifestation: "LEARNING" },
+                { targetId: ARCHIVED_GO_ID, manifestation: "PRACTICE" },
               ],
             },
             {
               id: CILO_2_ID,
               description: "Evaluate outcomes",
-              mappings: [{ ploId: ARCHIVED_GO_2_ID, manifestation: "OPPORTUNITY" }],
+              mappings: [{ targetId: ARCHIVED_GO_2_ID, manifestation: "OPPORTUNITY" }],
             },
           ],
           unavailableTargets: [
@@ -300,8 +304,8 @@ describe("CourseAlignmentEditor", () => {
       scope: "PROGRAM_SPECIFIC",
       courseId: COURSE_ID,
       before: [{ ciloId: CILO_ID, mappings: [] }],
-      after: [{ ciloId: CILO_ID, mappings: [{ ploId: GO_ID, manifestation: "OPPORTUNITY" }] }],
-      additions: [{ ciloId: CILO_ID, ploId: GO_ID, manifestation: "OPPORTUNITY" }],
+      after: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "OPPORTUNITY" }] }],
+      additions: [{ ciloId: CILO_ID, targetId: GO_ID, manifestation: "OPPORTUNITY" }],
       updates: [],
       removals: [],
       freshnessToken: "fresh",
@@ -310,7 +314,7 @@ describe("CourseAlignmentEditor", () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review: additionReview });
     render(
       <CourseAlignmentEditor
-        alignment={{ ...pspAlignment, cilos: [{ ...pspAlignment.cilos[0], mappings: [{ ploId: GO_ID, manifestation: null }] }] }}
+        alignment={{ ...pspAlignment, cilos: [{ ...pspAlignment.cilos[0], mappings: [{ targetId: GO_ID, manifestation: null }] }] }}
         prepareAction={prepareAction}
         commitAction={vi.fn()}
       />
@@ -403,12 +407,17 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: "Discard changes" })).toBeDisabled();
   });
 
-  it("stages removal of an unavailable saved mapping in the General Education editor", () => {
+  it("shows archived Institutional Outcome manifestations read-only", () => {
     render(
       <CourseAlignmentEditor
         alignment={{
           ...alignment,
-          cilos: [{ ...alignment.cilos[0], targetIds: [ILO_ID] }],
+          cilos: [
+            {
+              ...alignment.cilos[0],
+              mappings: [{ targetId: ILO_ID, manifestation: "LEARNING" }],
+            },
+          ],
           targets: [],
           unavailableTargets: alignment.targets,
           freshnessToken: "freshness",
@@ -418,9 +427,10 @@ describe("CourseAlignmentEditor", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove unavailable ILO-1 mapping" }));
-    expect(screen.getByText("0 Institutional Outcomes mapped")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Review 1 change/i })).toBeEnabled();
+    expect(screen.getByTestId("archived-manifestation-rows")).toBeInTheDocument();
+    expect(screen.getByText("ILO-1")).toBeInTheDocument();
+    expect(screen.getByText("Learning (L)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Review 0 changes/i })).toBeDisabled();
   });
 
   it("prompts before a dirty draft leaves through application navigation", () => {
@@ -477,38 +487,43 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: "Reload alignment" })).toBeEnabled();
   });
 
-  it("shows only Institutional Outcomes and a shared-impact warning for General Education", () => {
+  it("shows Institutional Outcome columns and a shared-impact warning for General Education", () => {
     render(
       <CourseAlignmentEditor
-        alignment={{
-          ...alignment,
-          targets: [{ id: ILO_ID, code: "ILO-1", description: "Think critically" }],
-        }}
+        alignment={alignment}
         prepareAction={vi.fn()}
         commitAction={vi.fn()}
+        saveDraftAction={vi.fn()}
       />
     );
 
     expect(
       screen.getByText(
-        "Select the active Institutional Outcomes from the college-wide catalog."
+        "Classify each CILO against at least one active Institutional Outcome from the college-wide catalog."
       )
     ).toBeInTheDocument();
-    expect(screen.getByText(/apply to every active assignment using this shared Course/i))
-      .toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Choose Institutional Outcomes" })).toBeEnabled();
-    expect(screen.queryByRole("button", { name: "Choose Program Learning Outcomes" })).toBeNull();
+    expect(
+      screen.getByText(/apply to every active assignment using this shared Course/i)
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("manifestation-matrix")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("manifestation-matrix")).getByRole("columnheader", {
+        name: /ILO 1/,
+      })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: /PLO 1/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Save progress" })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Choose Institutional Outcomes" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /ILO-1: Think critically/i }));
-    expect(screen.getByText("1 Institutional Outcome mapped")).toBeInTheDocument();
+    stageTarget();
+    expect(screen.getByText("1 of 1 CILOs covered")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save progress" })).toBeEnabled();
   });
 
   it("renders the desktop matrix and mobile cards from the same draft", () => {
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] },
+        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
@@ -557,8 +572,8 @@ describe("CourseAlignmentEditor", () => {
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] },
-        { id: CILO_2_ID, description: "Design systems", mappings: [{ ploId: GO_ID, manifestation: null }] },
+        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
+        { id: CILO_2_ID, description: "Design systems", mappings: [{ targetId: GO_ID, manifestation: null }] },
       ],
       targets: [
         { id: GO_ID, code: "GO-1", description: "Think critically" },
@@ -587,7 +602,7 @@ describe("CourseAlignmentEditor", () => {
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] },
+        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
@@ -627,7 +642,7 @@ describe("CourseAlignmentEditor", () => {
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] },
+        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
@@ -658,12 +673,12 @@ describe("CourseAlignmentEditor", () => {
       expect(saveDraftAction).toHaveBeenCalledWith({
         courseId: COURSE_ID,
         cells: [
-          { ciloId: CILO_ID, mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] },
+          { ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
           {
             ciloId: CILO_2_ID,
             mappings: [
-              { ploId: GO_ID, manifestation: "PRACTICE" },
-              { ploId: GO_2_ID, manifestation: "OPPORTUNITY" },
+              { targetId: GO_ID, manifestation: "PRACTICE" },
+              { targetId: GO_2_ID, manifestation: "OPPORTUNITY" },
             ],
           },
         ],
@@ -708,7 +723,7 @@ describe("CourseAlignmentEditor", () => {
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ ploId: GO_ID, manifestation: "LEARNING" }] },
+        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
@@ -752,15 +767,15 @@ describe("CourseAlignmentEditor", () => {
         {
           ciloId: CILO_ID,
           mappings: [
-            { ploId: GO_ID, manifestation: "LEARNING" },
-            { ploId: GO_2_ID, manifestation: "OPPORTUNITY" },
+            { targetId: GO_ID, manifestation: "LEARNING" },
+            { targetId: GO_2_ID, manifestation: "OPPORTUNITY" },
           ],
         },
         {
           ciloId: CILO_2_ID,
           mappings: [
-            { ploId: GO_ID, manifestation: "PRACTICE" },
-            { ploId: GO_2_ID, manifestation: "LEARNING" },
+            { targetId: GO_ID, manifestation: "PRACTICE" },
+            { targetId: GO_2_ID, manifestation: "LEARNING" },
           ],
         },
       ],
@@ -801,14 +816,18 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: "Manage CILOs" })).toBeEnabled();
   });
 
-  it("keeps the General Education editor unchanged", () => {
+  it("renders the General Education manifestation matrix", () => {
     render(
       <CourseAlignmentEditor alignment={alignment} prepareAction={vi.fn()} commitAction={vi.fn()} />
     );
 
-    expect(screen.getByRole("button", { name: "Choose Institutional Outcomes" })).toBeEnabled();
-    expect(screen.queryByTestId("manifestation-matrix")).toBeNull();
-    expect(screen.queryByTestId("manifestation-cards")).toBeNull();
+    expect(screen.getByTestId("manifestation-matrix")).toBeInTheDocument();
+    expect(screen.getByTestId("manifestation-cards")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("manifestation-matrix")).getByRole("button", {
+        name: "CILO 1, ILO 1, manifestation: Learning",
+      })
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save progress" })).toBeNull();
   });
 });

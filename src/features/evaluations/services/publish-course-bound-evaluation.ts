@@ -58,11 +58,11 @@ function buildPublicationStatus(activationAt: Date | null | undefined): "ACTIVE"
  * New-publication alignment gate: for a locked Course, every active CILO must
  * satisfy the Course scope's typed alignment rule before a Course-bound
  * evaluation may be published. General Education follows the at-least-one
- * active Institutional Outcome rule; Program-specific Courses require a
- * non-null manifestation for every active PLO of the Course's owning
- * Academic Program (zero active PLOs with active CILOs is incomplete).
- * Archived targets, wrong-program rows, and rows without a manifestation
- * never satisfy the gate.
+ * active Institutional Outcome rule with a non-null manifestation;
+ * Program-specific Courses require a non-null manifestation for every active
+ * PLO of the Course's owning Academic Program (zero active PLOs with active
+ * CILOs is incomplete). Archived targets, wrong-program rows, and rows without
+ * a manifestation never satisfy the gate.
  */
 async function classifyPublicationAlignment(
   db: PublicationContextDb,
@@ -82,7 +82,10 @@ async function classifyPublicationAlignment(
           },
         },
         cilo_institutional_outcome_mappings: {
-          select: { institutional_outcome: { select: { is_active: true } } },
+          select: {
+            manifestation: true,
+            institutional_outcome: { select: { is_active: true } },
+          },
         },
       },
     }),

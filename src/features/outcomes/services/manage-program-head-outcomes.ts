@@ -174,6 +174,7 @@ type ProgramMappedTarget = {
   description: string;
   kind: "PLO" | "ILO";
   is_active: boolean;
+  manifestation: CILOMappingManifestation | null;
 };
 
 export type CourseCILOMappings = {
@@ -273,6 +274,7 @@ export async function listCILOMappingsForProgram(
           cilo_institutional_outcome_mappings: {
             select: {
               id: true,
+              manifestation: true,
               institutional_outcome: {
                 select: {
                   id: true,
@@ -335,8 +337,9 @@ export async function listCILOMappingsForProgram(
               mappingId: mapping.id,
               code: mapping.institutional_outcome.code,
               description: mapping.institutional_outcome.description,
-              kind: "ILO",
+              kind: "ILO" as const,
               is_active: mapping.institutional_outcome.is_active,
+              manifestation: mapping.manifestation ?? null,
             })),
             manifestations: [],
             archivedManifestations: [],
@@ -345,6 +348,7 @@ export async function listCILOMappingsForProgram(
                 cilo_mappings: [],
                 cilo_institutional_outcome_mappings:
                   cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
+                    manifestation: mapping.manifestation ?? null,
                     institutional_outcome: { is_active: mapping.institutional_outcome.is_active },
                   })),
               },

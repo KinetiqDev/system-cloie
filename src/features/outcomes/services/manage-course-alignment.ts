@@ -15,14 +15,16 @@ type CourseAlignmentTarget = {
   description: string;
 };
 
-type CourseAlignmentMapping = {
-  ploId: string;
+export type CourseAlignmentMapping = {
+  targetId: string;
   manifestation: CILOMappingManifestation | null;
 };
 
-type CourseAlignmentCilo =
-  | { id: string; description: string; targetIds: string[] }
-  | { id: string; description: string; mappings: CourseAlignmentMapping[] };
+export type CourseAlignmentCilo = {
+  id: string;
+  description: string;
+  mappings: CourseAlignmentMapping[];
+};
 
 export type CourseAlignment = {
   course: {
@@ -39,67 +41,41 @@ export type CourseAlignment = {
   freshnessToken: string;
 };
 
-type AlignmentSnapshot = Array<{ ciloId: string; targetIds: string[] }>;
-
-// Consumed by the slice-6 manifestation matrix editor; not yet imported elsewhere.
-// fallow-ignore-next-line unused-type
 export type ManifestationSnapshot = Array<{
   ciloId: string;
-  mappings: Array<{ ploId: string; manifestation: CILOMappingManifestation | null }>;
+  mappings: Array<{ targetId: string; manifestation: CILOMappingManifestation | null }>;
 }>;
 
-// Draft cells for saveDraftCourseAlignment; consumed by the slice-6 editor.
-// fallow-ignore-next-line unused-type
 export type ManifestationDraft = Array<{
   ciloId: string;
-  mappings: Array<{ ploId: string; manifestation: CILOMappingManifestation }>;
+  mappings: Array<{ targetId: string; manifestation: CILOMappingManifestation }>;
 }>;
 
-export type CourseAlignmentReview =
-  | {
-      scope: "GENERAL_EDUCATION";
-      courseId: string;
-      before: AlignmentSnapshot;
-      after: AlignmentSnapshot;
-      additions: Array<{ ciloId: string; targetId: string }>;
-      removals: Array<{ ciloId: string; targetId: string }>;
-      freshnessToken: string;
-      signature: string;
-    }
-  | {
-      scope: "PROGRAM_SPECIFIC";
-      courseId: string;
-      before: ManifestationSnapshot;
-      after: ManifestationSnapshot;
-      additions: Array<{
-        ciloId: string;
-        ploId: string;
-        manifestation: CILOMappingManifestation;
-      }>;
-      updates: Array<{
-        ciloId: string;
-        ploId: string;
-        from: CILOMappingManifestation | null;
-        to: CILOMappingManifestation;
-      }>;
-      removals: Array<{ ciloId: string; ploId: string }>;
-      freshnessToken: string;
-      signature: string;
-    };
-
-type ManifestationDiff = {
+export type CourseAlignmentReview = {
+  scope: CourseScope;
+  courseId: string;
+  before: ManifestationSnapshot;
+  after: ManifestationSnapshot;
   additions: Array<{
     ciloId: string;
-    ploId: string;
+    targetId: string;
     manifestation: CILOMappingManifestation;
   }>;
   updates: Array<{
     ciloId: string;
-    ploId: string;
+    targetId: string;
     from: CILOMappingManifestation | null;
     to: CILOMappingManifestation;
   }>;
-  removals: Array<{ ciloId: string; ploId: string }>;
+  removals: Array<{ ciloId: string; targetId: string }>;
+  freshnessToken: string;
+  signature: string;
+};
+
+type ManifestationDiff = {
+  additions: CourseAlignmentReview["additions"];
+  updates: CourseAlignmentReview["updates"];
+  removals: CourseAlignmentReview["removals"];
 };
 
 const courseIdSchema = z.string().uuid();
@@ -116,6 +92,7 @@ type AlignmentCiloRow = {
   }>;
   cilo_institutional_outcome_mappings: Array<{
     institutional_outcome_id: string;
+    manifestation: CILOMappingManifestation | null;
     institutional_outcome: {
       id: string;
       code: string;
@@ -124,12 +101,6 @@ type AlignmentCiloRow = {
     };
   }>;
 };
-
-function targetIdsForScope(cilo: AlignmentCiloRow, scope: CourseScope): string[] {
-  return scope === "GENERAL_EDUCATION"
-    ? cilo.cilo_institutional_outcome_mappings.map((mapping) => mapping.institutional_outcome_id)
-    : cilo.cilo_mappings.map((mapping) => mapping.plo_id);
-}
 
 type FreshnessMapping = {
   ciloId: string;
@@ -143,7 +114,7 @@ function freshnessMappingsForScope(rows: AlignmentCiloRow[], scope: CourseScope)
         cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
           ciloId: cilo.id,
           targetId: mapping.institutional_outcome_id,
-          manifestation: null,
+          manifestation: mapping.manifestation ?? null,
         }))
       )
     : rows.flatMap((cilo) =>
@@ -182,40 +153,33 @@ function freshnessTokenOf(
   );
 }
 
-function stableSnapshot(rows: AlignmentCiloRow[], scope: CourseScope): AlignmentSnapshot {
-  return rows
-    .map((cilo) => ({
-      ciloId: cilo.id,
-      targetIds: [...targetIdsForScope(cilo, scope)].sort(),
-    }))
-    .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
+function catalogError(scope: CourseScope): string {
+  return scope === "GENERAL_EDUCATION"
+    ? "Submit manifestations only for active Institutional Outcomes."
+    : "Submit manifestations only for active Program Learning Outcomes of this Course's Program.";
 }
 
-function mappingPairs(snapshot: AlignmentSnapshot): Set<string> {
-  return new Set(
-    snapshot.flatMap((item) => item.targetIds.map((targetId) => `${item.ciloId}:${targetId}`))
-  );
+function completeError(scope: CourseScope): string {
+  return scope === "GENERAL_EDUCATION"
+    ? "Map every active CILO to at least one Institutional Outcome before committing."
+    : "Complete every required CILO-to-PLO pair before committing.";
 }
 
-function newlyMappedTargetIds(before: AlignmentSnapshot, after: AlignmentSnapshot): string[] {
-  const beforePairs = mappingPairs(before);
-  return [
-    ...new Set(
-      after.flatMap((item) =>
-        item.targetIds.filter((targetId) => !beforePairs.has(`${item.ciloId}:${targetId}`))
-      )
-    ),
-  ];
+function nullManifestationError(scope: CourseScope): string {
+  return scope === "GENERAL_EDUCATION"
+    ? "Every mapped Institutional Outcome needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation."
+    : "Every required CILO-to-PLO pair needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation.";
 }
 
 // Each check is a distinct acceptance rule: coverage, uniqueness, catalog validity,
 // manifestation enum, and the commit completeness gate.
 // fallow-ignore-next-line complexity
-function validateProgramSpecificState(
+function validateManifestationState(
   rows: AlignmentCiloRow[],
   catalogIds: string[],
   items: ManifestationSnapshot,
-  requireComplete: boolean
+  requireComplete: boolean,
+  scope: CourseScope
 ): { ok: true; state: ManifestationSnapshot } | { ok: false; error: string } {
   const validCiloIds = new Set(rows.map((cilo) => cilo.id));
   if (
@@ -228,33 +192,34 @@ function validateProgramSpecificState(
   const validTargetIds = new Set(catalogIds);
   let submittedPairCount = 0;
   for (const item of items) {
-    if (new Set(item.mappings.map((mapping) => mapping.ploId)).size !== item.mappings.length) {
-      return { ok: false, error: "Submit each CILO-to-PLO pair exactly once." };
+    if (new Set(item.mappings.map((mapping) => mapping.targetId)).size !== item.mappings.length) {
+      return { ok: false, error: "Submit each CILO-to-target pair exactly once." };
     }
-    if (item.mappings.some((mapping) => !validTargetIds.has(mapping.ploId))) {
-      return {
-        ok: false,
-        error:
-          "Submit manifestations only for active Program Learning Outcomes of this Course's Program.",
-      };
+    if (item.mappings.some((mapping) => !validTargetIds.has(mapping.targetId))) {
+      return { ok: false, error: catalogError(scope) };
     }
     if (item.mappings.some((mapping) => mapping.manifestation === null)) {
-      return {
-        ok: false,
-        error: "Every required CILO-to-PLO pair needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation.",
-      };
+      return { ok: false, error: nullManifestationError(scope) };
     }
     submittedPairCount += item.mappings.length;
   }
-  if (requireComplete && submittedPairCount !== validCiloIds.size * validTargetIds.size) {
-    return { ok: false, error: "Complete every required CILO-to-PLO pair before committing." };
+  if (requireComplete) {
+    if (scope === "GENERAL_EDUCATION") {
+      if (items.some((item) => item.mappings.length === 0)) {
+        return { ok: false, error: completeError(scope) };
+      }
+    } else if (submittedPairCount !== validCiloIds.size * validTargetIds.size) {
+      return { ok: false, error: completeError(scope) };
+    }
   }
   return {
     ok: true,
     state: items
       .map((item) => ({
         ciloId: item.ciloId,
-        mappings: [...item.mappings].sort((left, right) => left.ploId.localeCompare(right.ploId)),
+        mappings: [...item.mappings].sort((left, right) =>
+          left.targetId.localeCompare(right.targetId)
+        ),
       }))
       .sort((left, right) => left.ciloId.localeCompare(right.ciloId)),
   };
@@ -262,18 +227,28 @@ function validateProgramSpecificState(
 
 function existingManifestationState(
   rows: AlignmentCiloRow[],
-  activeTargetIds: Set<string>
+  activeTargetIds: Set<string>,
+  scope: CourseScope
 ): ManifestationSnapshot {
   return rows
     .map((cilo) => ({
       ciloId: cilo.id,
-      mappings: cilo.cilo_mappings
-        .filter((mapping) => activeTargetIds.has(mapping.plo_id))
-        .map((mapping) => ({
-          ploId: mapping.plo_id,
-          manifestation: mapping.manifestation ?? null,
-        }))
-        .sort((left, right) => left.ploId.localeCompare(right.ploId)),
+      mappings:
+        scope === "GENERAL_EDUCATION"
+          ? cilo.cilo_institutional_outcome_mappings
+              .filter((mapping) => activeTargetIds.has(mapping.institutional_outcome_id))
+              .map((mapping) => ({
+                targetId: mapping.institutional_outcome_id,
+                manifestation: mapping.manifestation ?? null,
+              }))
+              .sort((left, right) => left.targetId.localeCompare(right.targetId))
+          : cilo.cilo_mappings
+              .filter((mapping) => activeTargetIds.has(mapping.plo_id))
+              .map((mapping) => ({
+                targetId: mapping.plo_id,
+                manifestation: mapping.manifestation ?? null,
+              }))
+              .sort((left, right) => left.targetId.localeCompare(right.targetId)),
     }))
     .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
 }
@@ -285,27 +260,27 @@ function manifestationDiff(
   const beforePairs = new Map<string, CILOMappingManifestation | null>();
   for (const item of before) {
     for (const mapping of item.mappings) {
-      beforePairs.set(`${item.ciloId}:${mapping.ploId}`, mapping.manifestation);
+      beforePairs.set(`${item.ciloId}:${mapping.targetId}`, mapping.manifestation);
     }
   }
   const additions: ManifestationDiff["additions"] = [];
   const updates: ManifestationDiff["updates"] = [];
   for (const item of after) {
     for (const mapping of item.mappings) {
-      const key = `${item.ciloId}:${mapping.ploId}`;
+      const key = `${item.ciloId}:${mapping.targetId}`;
       const existing = beforePairs.get(key);
       if (existing === undefined) {
         if (mapping.manifestation !== null) {
           additions.push({
             ciloId: item.ciloId,
-            ploId: mapping.ploId,
+            targetId: mapping.targetId,
             manifestation: mapping.manifestation,
           });
         }
       } else if (existing !== mapping.manifestation && mapping.manifestation !== null) {
         updates.push({
           ciloId: item.ciloId,
-          ploId: mapping.ploId,
+          targetId: mapping.targetId,
           from: existing,
           to: mapping.manifestation,
         });
@@ -314,8 +289,8 @@ function manifestationDiff(
     }
   }
   const removals: ManifestationDiff["removals"] = [...beforePairs.keys()].map((key) => {
-    const [ciloId, ploId] = key.split(":");
-    return { ciloId, ploId };
+    const [ciloId, targetId] = key.split(":");
+    return { ciloId, targetId };
   });
   return { additions, updates, removals };
 }
@@ -323,13 +298,45 @@ function manifestationDiff(
 async function applyManifestationDiff(
   tx: Prisma.TransactionClient,
   diff: ManifestationDiff,
-  userId: string
+  userId: string,
+  scope: CourseScope
 ): Promise<void> {
+  if (scope === "GENERAL_EDUCATION") {
+    if (diff.additions.length > 0) {
+      await tx.cILOInstitutionalOutcomeMapping.createMany({
+        data: diff.additions.map((item) => ({
+          cilo_id: item.ciloId,
+          institutional_outcome_id: item.targetId,
+          manifestation: item.manifestation,
+          created_by: userId,
+          updated_by: userId,
+        })),
+      });
+    }
+    for (const update of diff.updates) {
+      await tx.cILOInstitutionalOutcomeMapping.updateMany({
+        where: { cilo_id: update.ciloId, institutional_outcome_id: update.targetId },
+        data: { manifestation: update.to, updated_by: userId, updated_at: new Date() },
+      });
+    }
+    if (diff.removals.length > 0) {
+      await tx.cILOInstitutionalOutcomeMapping.deleteMany({
+        where: {
+          OR: diff.removals.map((item) => ({
+            cilo_id: item.ciloId,
+            institutional_outcome_id: item.targetId,
+          })),
+        },
+      });
+    }
+    return;
+  }
+
   if (diff.additions.length > 0) {
     await tx.cILOMapping.createMany({
       data: diff.additions.map((item) => ({
         cilo_id: item.ciloId,
-        plo_id: item.ploId,
+        plo_id: item.targetId,
         manifestation: item.manifestation,
         created_by: userId,
         updated_by: userId,
@@ -338,38 +345,52 @@ async function applyManifestationDiff(
   }
   for (const update of diff.updates) {
     await tx.cILOMapping.updateMany({
-      where: { cilo_id: update.ciloId, plo_id: update.ploId },
+      where: { cilo_id: update.ciloId, plo_id: update.targetId },
       data: { manifestation: update.to, updated_by: userId, updated_at: new Date() },
     });
   }
   if (diff.removals.length > 0) {
     await tx.cILOMapping.deleteMany({
-      where: { OR: diff.removals.map((item) => ({ cilo_id: item.ciloId, plo_id: item.ploId })) },
+      where: {
+        OR: diff.removals.map((item) => ({ cilo_id: item.ciloId, plo_id: item.targetId })),
+      },
     });
   }
 }
 
-function postWriteMappingsForProgramSpecific(
+function postWriteMappings(
   after: ManifestationSnapshot,
   rows: AlignmentCiloRow[],
-  activeTargetIds: Set<string>
+  activeTargetIds: Set<string>,
+  scope: CourseScope
 ): FreshnessMapping[] {
   const written = after.flatMap((item) =>
     item.mappings.map((mapping) => ({
       ciloId: item.ciloId,
-      targetId: mapping.ploId,
+      targetId: mapping.targetId,
       manifestation: mapping.manifestation,
     }))
   );
-  const preserved = rows.flatMap((cilo) =>
-    cilo.cilo_mappings
-      .filter((mapping) => !activeTargetIds.has(mapping.plo_id))
-      .map((mapping) => ({
-        ciloId: cilo.id,
-        targetId: mapping.plo_id,
-        manifestation: mapping.manifestation ?? null,
-      }))
-  );
+  const preserved =
+    scope === "GENERAL_EDUCATION"
+      ? rows.flatMap((cilo) =>
+          cilo.cilo_institutional_outcome_mappings
+            .filter((mapping) => !activeTargetIds.has(mapping.institutional_outcome_id))
+            .map((mapping) => ({
+              ciloId: cilo.id,
+              targetId: mapping.institutional_outcome_id,
+              manifestation: mapping.manifestation ?? null,
+            }))
+        )
+      : rows.flatMap((cilo) =>
+          cilo.cilo_mappings
+            .filter((mapping) => !activeTargetIds.has(mapping.plo_id))
+            .map((mapping) => ({
+              ciloId: cilo.id,
+              targetId: mapping.plo_id,
+              manifestation: mapping.manifestation ?? null,
+            }))
+        );
   return [...written, ...preserved];
 }
 
@@ -450,6 +471,7 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
           cilo_institutional_outcome_mappings: {
             select: {
               institutional_outcome_id: true,
+              manifestation: true,
               institutional_outcome: {
                 select: { id: true, code: true, description: true, is_active: true },
               },
@@ -487,21 +509,6 @@ async function readValidTargets(db: Prisma.TransactionClient | typeof prisma, co
       });
 }
 
-async function countValidAddedTargets(
-  db: Prisma.TransactionClient | typeof prisma,
-  course: AlignmentCourse,
-  targetIds: string[]
-): Promise<number> {
-  if (targetIds.length === 0) return 0;
-  return courseScopeOf(course) === "GENERAL_EDUCATION"
-    ? db.institutionalOutcome.count({
-        where: { id: { in: targetIds }, is_active: true },
-      })
-    : db.pLO.count({
-        where: { id: { in: targetIds }, program_id: course.program_id!, is_active: true },
-      });
-}
-
 function unavailableTargetsFor(course: AlignmentCourse, validTargetIds: Set<string>) {
   const scope = courseScopeOf(course);
   const mappedTargets = course.cilos.flatMap((cilo) =>
@@ -518,6 +525,34 @@ function unavailableTargetsFor(course: AlignmentCourse, validTargetIds: Set<stri
           { id: target.id, code: target.code, description: target.description },
         ] as const
     );
+}
+
+function alignmentReadiness(
+  cilos: CourseAlignmentCilo[],
+  scope: CourseScope,
+  validTargetIds: Set<string>,
+  catalogSize: number
+): CourseAlignment["readiness"] {
+  if (cilos.length === 0) return "missing-cilos";
+  if (scope === "GENERAL_EDUCATION") {
+    return cilos.every((cilo) =>
+      cilo.mappings.some(
+        (mapping) => mapping.manifestation !== null && validTargetIds.has(mapping.targetId)
+      )
+    )
+      ? "ready"
+      : "incomplete-mapping";
+  }
+  if (catalogSize === 0) return "incomplete-mapping";
+  return cilos.every((cilo) =>
+    [...validTargetIds].every((targetId) =>
+      cilo.mappings.some(
+        (mapping) => mapping.targetId === targetId && mapping.manifestation !== null
+      )
+    )
+  )
+    ? "ready"
+    : "incomplete-mapping";
 }
 
 export async function readCourseAlignment(
@@ -543,28 +578,20 @@ export async function readCourseAlignment(
   const targets = await readValidTargets(prisma, course);
   const validTargetIds = new Set(targets.map((target) => target.id));
   const unavailableTargets = unavailableTargetsFor(course, validTargetIds);
-  const cilos: CourseAlignmentCilo[] = course.cilos.map((cilo) =>
-    scope === "GENERAL_EDUCATION"
-      ? {
-          id: cilo.id,
-          description: cilo.description,
-          targetIds: targetIdsForScope(cilo, scope),
-        }
-      : {
-          id: cilo.id,
-          description: cilo.description,
-          mappings: cilo.cilo_mappings.map((mapping) => ({
-            ploId: mapping.plo_id,
+  const cilos: CourseAlignmentCilo[] = course.cilos.map((cilo) => ({
+    id: cilo.id,
+    description: cilo.description,
+    mappings:
+      scope === "GENERAL_EDUCATION"
+        ? cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
+            targetId: mapping.institutional_outcome_id,
+            manifestation: mapping.manifestation ?? null,
+          }))
+        : cilo.cilo_mappings.map((mapping) => ({
+            targetId: mapping.plo_id,
             manifestation: mapping.manifestation ?? null,
           })),
-        }
-  );
-  const hasActiveTarget = new Map(
-    course.cilos.map((cilo) => [
-      cilo.id,
-      targetIdsForScope(cilo, scope).some((targetId) => validTargetIds.has(targetId)),
-    ])
-  );
+  }));
   return {
     success: true,
     data: {
@@ -582,15 +609,22 @@ export async function readCourseAlignment(
       unavailableTargets: [...new Map(unavailableTargets).values()].sort((left, right) =>
         left.code.localeCompare(right.code)
       ),
-      readiness:
-        cilos.length === 0
-          ? "missing-cilos"
-          : cilos.every((cilo) => hasActiveTarget.get(cilo.id))
-            ? "ready"
-            : "incomplete-mapping",
+      readiness: alignmentReadiness(cilos, scope, validTargetIds, targets.length),
       freshnessToken: freshnessTokenOf(course.cilos, scope, targets.map((target) => target.id)),
     },
   };
+}
+
+function desiredAsSnapshot(
+  desired: ManifestationDraft
+): ManifestationSnapshot {
+  return desired.map((item) => ({
+    ciloId: item.ciloId,
+    mappings: (item.mappings ?? []).map((mapping) => ({
+      targetId: mapping.targetId,
+      manifestation: mapping.manifestation,
+    })),
+  }));
 }
 
 // One guarded orchestration: auth, availability, freshness, scope-specific diff, signature.
@@ -598,10 +632,7 @@ export async function readCourseAlignment(
 // fallow-ignore-next-line complexity
 export async function prepareCourseAlignmentWrite(input: {
   courseId: string;
-  desired: Array<
-    | { ciloId: string; targetIds: string[] }
-    | { ciloId: string; mappings: Array<{ ploId: string; manifestation: CILOMappingManifestation }> }
-  >;
+  desired: ManifestationDraft;
   freshnessToken: string;
 }): Promise<ServiceResult<CourseAlignmentReview>> {
   if (!courseIdSchema.safeParse(input.courseId).success) {
@@ -629,81 +660,23 @@ export async function prepareCourseAlignmentWrite(input: {
       error: "Course alignment changed. Reload and review the latest mappings.",
     };
   }
-
-  if (scope === "GENERAL_EDUCATION") {
-    if (input.desired.some((item) => !("targetIds" in item))) {
-      return { success: false, error: "Submit a complete alignment for every active CILO." };
-    }
-    const desired = input.desired as Array<{ ciloId: string; targetIds: string[] }>;
-    const before = stableSnapshot(course.cilos, scope);
-    const validCiloIds = new Set(before.map((item) => item.ciloId));
-    if (
-      desired.length !== validCiloIds.size ||
-      new Set(desired.map((item) => item.ciloId)).size !== desired.length ||
-      desired.some((item) => !validCiloIds.has(item.ciloId))
-    ) {
-      return { success: false, error: "Submit a complete alignment for every active CILO." };
-    }
-
-    const after = desired
-      .map((item) => ({ ciloId: item.ciloId, targetIds: [...new Set(item.targetIds)].sort() }))
-      .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
-    const beforePairs = mappingPairs(before);
-    const addedTargetIds = newlyMappedTargetIds(before, after);
-    const validTargetCount = await countValidAddedTargets(prisma, course, addedTargetIds);
-    if (validTargetCount !== addedTargetIds.length) {
-      return {
-        success: false,
-        error: "Institutional Outcome availability changed. Reload and review the latest mappings.",
-      };
-    }
-    const afterPairs = mappingPairs(after);
-    const additions = [...afterPairs]
-      .filter((pair) => !beforePairs.has(pair))
-      .map((pair) => {
-        const [ciloId, targetId] = pair.split(":");
-        return { ciloId, targetId };
-      });
-    const removals = [...beforePairs]
-      .filter((pair) => !afterPairs.has(pair))
-      .map((pair) => {
-        const [ciloId, targetId] = pair.split(":");
-        return { ciloId, targetId };
-      });
-    const unsigned = {
-      scope: "GENERAL_EDUCATION" as const,
-      courseId: input.courseId,
-      before,
-      after,
-      additions,
-      removals,
-      freshnessToken: currentToken,
-    };
-    return {
-      success: true,
-      data: { ...unsigned, signature: signReview(unsigned, session.userId) },
-    };
+  if (input.desired.some((item) => !Array.isArray(item.mappings))) {
+    return { success: false, error: "Manifestations are required for every CILO-to-target pair." };
   }
-
-  if (input.desired.some((item) => !("mappings" in item))) {
-    return {
-      success: false,
-      error: "Manifestations are required for every CILO-to-PLO pair.",
-    };
-  }
-  const validated = validateProgramSpecificState(
+  const validated = validateManifestationState(
     course.cilos,
     catalogIds,
-    input.desired as ManifestationSnapshot,
-    true
+    desiredAsSnapshot(input.desired),
+    true,
+    scope
   );
   if (!validated.ok) {
     return { success: false, error: validated.error };
   }
-  const before = existingManifestationState(course.cilos, new Set(catalogIds));
+  const before = existingManifestationState(course.cilos, new Set(catalogIds), scope);
   const diff = manifestationDiff(before, validated.state);
   const unsigned = {
-    scope: "PROGRAM_SPECIFIC" as const,
+    scope,
     courseId: input.courseId,
     before,
     after: validated.state,
@@ -750,6 +723,12 @@ export async function commitCourseAlignmentWrite(
           return { success: false, error: SAFE_ACCESS_ERROR };
         }
         const scope = courseScopeOf(course);
+        if (review.scope !== scope) {
+          return {
+            success: false,
+            error: "Course alignment changed after review. Reload and review the latest mappings.",
+          };
+        }
         const targets = await readValidTargets(tx, course);
         const catalogIds = targets.map((target) => target.id);
         if (freshnessTokenOf(course.cilos, scope, catalogIds) !== review.freshnessToken) {
@@ -758,102 +737,17 @@ export async function commitCourseAlignmentWrite(
             error: "Course alignment changed after review. Reload and review the latest mappings.",
           };
         }
-
-        if (review.scope === "GENERAL_EDUCATION") {
-          if (scope !== "GENERAL_EDUCATION") {
-            return {
-              success: false,
-              error:
-                "Course alignment changed after review. Reload and review the latest mappings.",
-            };
-          }
-          const before = stableSnapshot(course.cilos, scope);
-          if (JSON.stringify(before) !== JSON.stringify(review.before)) {
-            return {
-              success: false,
-              error:
-                "Course alignment changed after review. Reload and review the latest mappings.",
-            };
-          }
-          const addedTargetIds = newlyMappedTargetIds(review.before, review.after);
-          const validTargetCount = await countValidAddedTargets(tx, course, addedTargetIds);
-          if (validTargetCount !== addedTargetIds.length) {
-            return {
-              success: false,
-              error:
-                "Institutional Outcome availability changed. Reload and review the latest catalog.",
-            };
-          }
-          const beforePairs = mappingPairs(review.before);
-          const afterPairs = mappingPairs(review.after);
-          const additions = [...afterPairs]
-            .filter((pair) => !beforePairs.has(pair))
-            .map((pair) => {
-              const [ciloId, targetId] = pair.split(":");
-              return { ciloId, targetId };
-            });
-          const removals = [...beforePairs]
-            .filter((pair) => !afterPairs.has(pair))
-            .map((pair) => {
-              const [ciloId, targetId] = pair.split(":");
-              return { ciloId, targetId };
-            });
-          if (removals.length > 0) {
-            await tx.cILOInstitutionalOutcomeMapping.deleteMany({
-              where: {
-                OR: removals.map((item) => ({
-                  cilo_id: item.ciloId,
-                  institutional_outcome_id: item.targetId,
-                })),
-              },
-            });
-          }
-          if (additions.length > 0) {
-            await tx.cILOInstitutionalOutcomeMapping.createMany({
-              data: additions.map((item) => ({
-                cilo_id: item.ciloId,
-                institutional_outcome_id: item.targetId,
-                created_by: session.userId,
-                updated_by: session.userId,
-              })),
-            });
-          }
-          const postWriteMappings: FreshnessMapping[] = review.after.flatMap((item) =>
-            item.targetIds.map((targetId) => ({
-              ciloId: item.ciloId,
-              targetId,
-              manifestation: null,
-            }))
-          );
-          return {
-            success: true,
-            data: {
-              changed: additions.length + removals.length,
-              freshnessToken: freshnessTokenValue(
-                review.after.map((item) => item.ciloId),
-                catalogIds,
-                postWriteMappings
-              ),
-            },
-          };
-        }
-
-        if (scope !== "PROGRAM_SPECIFIC") {
-          return {
-            success: false,
-            error: "Course alignment changed after review. Reload and review the latest mappings.",
-          };
-        }
-        const validated = validateProgramSpecificState(
+        const validated = validateManifestationState(
           course.cilos,
           catalogIds,
           review.after,
-          true
+          true,
+          scope
         );
         if (!validated.ok) {
           return { success: false, error: validated.error };
         }
-        const before = existingManifestationState(course.cilos, new Set(catalogIds));
+        const before = existingManifestationState(course.cilos, new Set(catalogIds), scope);
         if (JSON.stringify(before) !== JSON.stringify(review.before)) {
           return {
             success: false,
@@ -861,7 +755,7 @@ export async function commitCourseAlignmentWrite(
           };
         }
         const diff = manifestationDiff(before, validated.state);
-        await applyManifestationDiff(tx, diff, session.userId);
+        await applyManifestationDiff(tx, diff, session.userId, scope);
         return {
           success: true,
           data: {
@@ -869,11 +763,7 @@ export async function commitCourseAlignmentWrite(
             freshnessToken: freshnessTokenValue(
               validated.state.map((item) => item.ciloId),
               catalogIds,
-              postWriteMappingsForProgramSpecific(
-                validated.state,
-                course.cilos,
-                new Set(catalogIds)
-              )
+              postWriteMappings(validated.state, course.cilos, new Set(catalogIds), scope)
             ),
           },
         };
@@ -913,12 +803,6 @@ export async function saveDraftCourseAlignment(input: {
   if (!course || courseIsUnavailable(course)) {
     return { success: false, error: SAFE_ACCESS_ERROR };
   }
-  if (courseScopeOf(course) !== "PROGRAM_SPECIFIC") {
-    return {
-      success: false,
-      error: "Draft saves are available only for Program-specific Course alignments.",
-    };
-  }
   try {
     return await prisma.$transaction(
       async (tx) => {
@@ -937,12 +821,6 @@ export async function saveDraftCourseAlignment(input: {
           return { success: false, error: SAFE_ACCESS_ERROR };
         }
         const scope = courseScopeOf(course);
-        if (scope !== "PROGRAM_SPECIFIC") {
-          return {
-            success: false,
-            error: "Draft saves are available only for Program-specific Course alignments.",
-          };
-        }
         const targets = await readValidTargets(tx, course);
         const catalogIds = targets.map((target) => target.id);
         if (freshnessTokenOf(course.cilos, scope, catalogIds) !== input.freshnessToken) {
@@ -951,18 +829,19 @@ export async function saveDraftCourseAlignment(input: {
             error: "Course alignment changed. Reload and review the latest mappings.",
           };
         }
-        const validated = validateProgramSpecificState(
+        const validated = validateManifestationState(
           course.cilos,
           catalogIds,
-          input.cells,
-          false
+          desiredAsSnapshot(input.cells),
+          false,
+          scope
         );
         if (!validated.ok) {
           return { success: false, error: validated.error };
         }
-        const before = existingManifestationState(course.cilos, new Set(catalogIds));
+        const before = existingManifestationState(course.cilos, new Set(catalogIds), scope);
         const diff = manifestationDiff(before, validated.state);
-        await applyManifestationDiff(tx, diff, session.userId);
+        await applyManifestationDiff(tx, diff, session.userId, scope);
         return {
           success: true,
           data: {
@@ -970,11 +849,7 @@ export async function saveDraftCourseAlignment(input: {
             freshnessToken: freshnessTokenValue(
               validated.state.map((item) => item.ciloId),
               catalogIds,
-              postWriteMappingsForProgramSpecific(
-                validated.state,
-                course.cilos,
-                new Set(catalogIds)
-              )
+              postWriteMappings(validated.state, course.cilos, new Set(catalogIds), scope)
             ),
           },
         };

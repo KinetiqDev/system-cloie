@@ -87,6 +87,7 @@ describe("selected Program Outcome routes", () => {
                   description: "Communicate clearly",
                   kind: "ILO",
                   is_active: true,
+                  manifestation: "LEARNING",
                 },
               ],
               manifestations: [],

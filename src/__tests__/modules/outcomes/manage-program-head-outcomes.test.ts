@@ -233,6 +233,7 @@ describe("manage-program-head-outcomes", () => {
             cilo_institutional_outcome_mappings: [
               {
                 id: "ilo-mapping-1",
+                manifestation: "LEARNING",
                 institutional_outcome: {
                   id: "ilo-1",
                   code: "ILO-1",
@@ -270,6 +271,7 @@ describe("manage-program-head-outcomes", () => {
                   description: "Communicate clearly",
                   kind: "ILO",
                   is_active: true,
+                  manifestation: "LEARNING",
                 },
               ],
               manifestations: [],

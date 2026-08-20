@@ -54,13 +54,14 @@ model InstitutionalOutcome {
 }
 
 model CILOInstitutionalOutcomeMapping {
-  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cilo_id                  String               @db.Uuid
-  institutional_outcome_id String               @db.Uuid
-  created_by               String               @db.Uuid
-  updated_by               String               @db.Uuid
-  created_at               DateTime             @default(now())
-  updated_at               DateTime             @updatedAt
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cilo_id                  String                     @db.Uuid
+  institutional_outcome_id String                     @db.Uuid
+  manifestation            CILOMappingManifestation?
+  created_by               String                     @db.Uuid
+  updated_by               String                     @db.Uuid
+  created_at               DateTime                   @default(now())
+  updated_at               DateTime                   @updatedAt
 
   cilo                  CILO                  @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
   institutional_outcome InstitutionalOutcome  @relation(fields: [institutional_outcome_id], references: [id], onDelete: Restrict)

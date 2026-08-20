@@ -27,9 +27,20 @@ function validReview() {
   return {
     scope: "GENERAL_EDUCATION" as const,
     courseId: COURSE_ID,
-    before: [{ ciloId: CILO_ID, targetIds: [] as string[] }],
-    after: [{ ciloId: CILO_ID, targetIds: [TARGET_ID] }],
-    additions: [{ ciloId: CILO_ID, targetId: TARGET_ID }],
+    before: [{ ciloId: CILO_ID, mappings: [] as Array<{ targetId: string; manifestation: null }> }],
+    after: [
+      {
+        ciloId: CILO_ID,
+        mappings: [{ targetId: TARGET_ID, manifestation: "LEARNING" as const }],
+      },
+    ],
+    additions: [{ ciloId: CILO_ID, targetId: TARGET_ID, manifestation: "LEARNING" as const }],
+    updates: [] as Array<{
+      ciloId: string;
+      targetId: string;
+      from: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+      to: "LEARNING" | "PRACTICE" | "OPPORTUNITY";
+    }>,
     removals: [] as Array<{ ciloId: string; targetId: string }>,
     freshnessToken: "fresh",
     signature: "a".repeat(64),
@@ -39,7 +50,7 @@ function validReview() {
 function validPspDraft() {
   return {
     courseId: COURSE_ID,
-    cells: [{ ciloId: CILO_ID, mappings: [{ ploId: TARGET_ID, manifestation: "LEARNING" }] }],
+    cells: [{ ciloId: CILO_ID, mappings: [{ targetId: TARGET_ID, manifestation: "LEARNING" }] }],
     freshnessToken: "fresh",
   };
 }
@@ -126,7 +137,7 @@ describe("Course alignment actions", () => {
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
           after: [
-            { ciloId: CILO_ID, mappings: [{ ploId: TARGET_ID, manifestation: "L" }] },
+            { ciloId: CILO_ID, mappings: [{ targetId: TARGET_ID, manifestation: "L" }] },
           ],
           additions: [],
           updates: [],
@@ -164,13 +175,23 @@ describe("Course alignment actions", () => {
     await expect(
       prepareCourseAlignmentAction({
         courseId: COURSE_ID,
-        desired: [{ ciloId: CILO_ID, targetIds: [TARGET_ID] }],
+        desired: [
+          {
+            ciloId: CILO_ID,
+            mappings: [{ targetId: TARGET_ID, manifestation: "LEARNING" }],
+          },
+        ],
         freshnessToken: "fresh",
       })
     ).resolves.toMatchObject({ success: true });
     expect(prepareWriteMock).toHaveBeenCalledWith({
       courseId: COURSE_ID,
-      desired: [{ ciloId: CILO_ID, targetIds: [TARGET_ID] }],
+      desired: [
+        {
+          ciloId: CILO_ID,
+          mappings: [{ targetId: TARGET_ID, manifestation: "LEARNING" }],
+        },
+      ],
       freshnessToken: "fresh",
     });
   });
@@ -186,7 +207,7 @@ describe("Course alignment actions", () => {
         desired: [
           {
             ciloId: CILO_ID,
-            mappings: [{ ploId: TARGET_ID, manifestation: "OPPORTUNITY" }],
+            mappings: [{ targetId: TARGET_ID, manifestation: "OPPORTUNITY" }],
           },
         ],
         freshnessToken: "fresh",
@@ -197,7 +218,7 @@ describe("Course alignment actions", () => {
       desired: [
         {
           ciloId: CILO_ID,
-          mappings: [{ ploId: TARGET_ID, manifestation: "OPPORTUNITY" }],
+          mappings: [{ targetId: TARGET_ID, manifestation: "OPPORTUNITY" }],
         },
       ],
       freshnessToken: "fresh",
@@ -228,7 +249,7 @@ describe("Course alignment actions", () => {
           desired: [
             {
               ciloId: CILO_ID,
-              mappings: [{ ploId: TARGET_ID, manifestation }],
+              mappings: [{ targetId: TARGET_ID, manifestation }],
             },
           ],
           freshnessToken: "fresh",
@@ -237,7 +258,7 @@ describe("Course alignment actions", () => {
       await expect(
         saveDraftCourseAlignmentAction({
           courseId: COURSE_ID,
-          cells: [{ ciloId: CILO_ID, mappings: [{ ploId: TARGET_ID, manifestation }] }],
+          cells: [{ ciloId: CILO_ID, mappings: [{ targetId: TARGET_ID, manifestation }] }],
           freshnessToken: "fresh",
         })
       ).resolves.toMatchObject({ success: false });
