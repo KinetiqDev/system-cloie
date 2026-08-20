@@ -471,7 +471,7 @@ export function FacultyCilosCourseList({
                     render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
                   >
                     <ArrowRightLeft className="size-4" />
-                    Align Course
+                    Map CILOs
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

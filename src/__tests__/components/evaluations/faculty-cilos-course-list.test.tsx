@@ -163,7 +163,7 @@ describe("FacultyCilosCourseList", () => {
     const trigger = screen.getByRole("button", { name: "Actions for GESTECH" });
     fireEvent.click(trigger);
 
-    const alignLink = await screen.findByText("Align Course");
+    const alignLink = await screen.findByText("Map CILOs");
     expect(alignLink).toHaveAttribute("href", "/faculty/cilos/course-ge/alignment");
   });
 });
