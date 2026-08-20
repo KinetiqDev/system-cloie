@@ -132,6 +132,9 @@ export default async function SelectedProgramOutcomeMappingPage({
                                 title={target.description}
                               >
                                 {target.code}
+                                {target.manifestation
+                                  ? ` · ${manifestationLabel(target.manifestation)}`
+                                  : ""}
                                 {!target.is_active && " (archived)"}
                               </Badge>
                             ))}

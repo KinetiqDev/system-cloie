@@ -148,6 +148,7 @@ describe("Prisma schema structure", () => {
 
     expect(model).toContain("cilo_id");
     expect(model).toContain("institutional_outcome_id");
+    expect(model).toContain("manifestation");
     expect(model).toContain("created_by");
     expect(model).toContain("updated_by");
     expect(model).toContain("created_at");

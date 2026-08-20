@@ -59,7 +59,8 @@ async function openModal() {
     success: true,
     cilos: [{ id: "cilo-1", description: "Apply core concepts" }],
   });
-  fireEvent.click(screen.getByRole("button", { name: "View" }));
+  fireEvent.click(screen.getByRole("button", { name: "Actions for CS101" }));
+  fireEvent.click(await screen.findByRole("menuitem", { name: "View CILOs" }));
   await screen.findByRole("dialog");
   await waitFor(() => expect(loadCilosAction).toHaveBeenCalledWith("course-1"));
   expect(screen.getByDisplayValue("Apply core concepts")).toBeInTheDocument();
@@ -132,7 +133,7 @@ describe("FacultyCilosCourseList", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("links General Education courses to the alignment workspace", () => {
+  it("links General Education courses to the alignment workspace", async () => {
     render(
       <FacultyCilosCourseList
         courses={[
@@ -158,9 +159,11 @@ describe("FacultyCilosCourseList", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Align" })).toHaveAttribute(
-      "href",
-      "/faculty/cilos/course-ge/alignment"
-    );
+    // DropdownMenuContent renders via Portal only after the trigger opens it.
+    const trigger = screen.getByRole("button", { name: "Actions for GESTECH" });
+    fireEvent.click(trigger);
+
+    const alignLink = await screen.findByText("Map CILOs");
+    expect(alignLink).toHaveAttribute("href", "/faculty/cilos/course-ge/alignment");
   });
 });

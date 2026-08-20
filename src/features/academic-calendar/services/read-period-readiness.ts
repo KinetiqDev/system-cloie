@@ -92,6 +92,7 @@ type ReadinessCilo = {
     plo: { id: string; program_id: string | null; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
+    manifestation: CILOMappingManifestation | null;
     institutional_outcome: { id: string; is_active: boolean };
   }>;
 };
@@ -117,6 +118,7 @@ type ContextSource = {
         plo: { id: string; program_id: string | null; is_active: boolean };
       }>;
       cilo_institutional_outcome_mappings: Array<{
+        manifestation: CILOMappingManifestation | null;
         institutional_outcome: { id: string; is_active: boolean };
       }>;
     }>;
@@ -164,7 +166,10 @@ const contextInclude = {
             },
           },
           cilo_institutional_outcome_mappings: {
-            select: { institutional_outcome: { select: { id: true, is_active: true } } },
+            select: {
+              manifestation: true,
+              institutional_outcome: { select: { id: true, is_active: true } },
+            },
           },
         },
       },
@@ -190,10 +195,12 @@ function typedMappedTargets(
 ): ReadinessTarget[] {
   const mappings =
     courseScope === "GENERAL_EDUCATION"
-      ? cilo.cilo_institutional_outcome_mappings.map(({ institutional_outcome }) => ({
-          id: institutional_outcome.id,
-          is_active: institutional_outcome.is_active,
-        }))
+      ? cilo.cilo_institutional_outcome_mappings
+          .filter(({ manifestation }) => manifestation !== null)
+          .map(({ institutional_outcome }) => ({
+            id: institutional_outcome.id,
+            is_active: institutional_outcome.is_active,
+          }))
       : cilo.cilo_mappings
           .filter(
             ({ manifestation, plo }) =>
@@ -413,7 +420,10 @@ async function calculateLiveTotals(periodId: string): Promise<ProgramReadinessTo
                 },
               },
               cilo_institutional_outcome_mappings: {
-                select: { institutional_outcome: { select: { id: true, is_active: true } } },
+                select: {
+                  manifestation: true,
+                  institutional_outcome: { select: { id: true, is_active: true } },
+                },
               },
             },
           },

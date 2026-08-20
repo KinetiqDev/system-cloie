@@ -771,7 +771,7 @@ describe("publishCourseBoundEvaluation", () => {
           id: "cilo-1",
           cilo_mappings: [],
           cilo_institutional_outcome_mappings: [
-            { institutional_outcome: { is_active: false } },
+            { manifestation: "LEARNING", institutional_outcome: { is_active: false } },
           ],
         },
       ]);
@@ -806,7 +806,7 @@ describe("publishCourseBoundEvaluation", () => {
           id: "cilo-1",
           cilo_mappings: [],
           cilo_institutional_outcome_mappings: [
-            { institutional_outcome: { is_active: true } },
+            { manifestation: "LEARNING", institutional_outcome: { is_active: true } },
           ],
         },
       ]);
@@ -1104,7 +1104,7 @@ describe("publishCourseBoundEvaluation", () => {
           id: "cilo-1",
           cilo_mappings: [],
           cilo_institutional_outcome_mappings: [
-            { institutional_outcome: { is_active: true } },
+            { manifestation: "LEARNING", institutional_outcome: { is_active: true } },
           ],
         },
         {
@@ -1112,7 +1112,7 @@ describe("publishCourseBoundEvaluation", () => {
           id: "cilo-2",
           cilo_mappings: [],
           cilo_institutional_outcome_mappings: [
-            { institutional_outcome: { is_active: true } },
+            { manifestation: "LEARNING", institutional_outcome: { is_active: true } },
           ],
         },
       ]);

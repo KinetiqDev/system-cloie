@@ -5,7 +5,7 @@ import type { CILOMappingManifestation, CourseScope } from "@prisma/client";
  *
  * A CILO is aligned only through the typed relation its Course scope owns:
  * - General Education CILOs require at least one active Institutional Outcome
- *   mapping ("at-least-one" rule, unchanged).
+ *   mapping with a non-null manifestation ("at-least-one" rule).
  * - Program-specific CILOs require a non-null manifestation for EVERY active
  *   Program Learning Outcome owned by the Course's owning Academic Program.
  *   A Program with zero active PLOs alongside active CILOs is incomplete, not
@@ -29,6 +29,7 @@ type CiloAlignmentRow = {
     plo: { id: string; program_id: string | null; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
+    manifestation: CILOMappingManifestation | null;
     institutional_outcome: { is_active: boolean };
   }>;
 };
@@ -41,7 +42,8 @@ export function ciloIsAligned(
 ): boolean {
   if (courseScope === "GENERAL_EDUCATION") {
     return cilo.cilo_institutional_outcome_mappings.some(
-      ({ institutional_outcome }) => institutional_outcome.is_active
+      ({ institutional_outcome, manifestation }) =>
+        institutional_outcome.is_active && manifestation !== null
     );
   }
   return hasExhaustivePloCoverage(

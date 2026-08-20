@@ -6,9 +6,10 @@ context: |
   learning-outcomes monitoring, analytics, and reporting system for
   Assumption College of Davao.
 
-  It manages Graduate Outcomes (GOs), Course Intended Learning Outcomes
-  (CILOs), evaluation instruments, controlled deployments, stakeholder
-  responses, attainment analytics, qualitative summaries, and evidence reports.
+  It manages Program Learning Outcomes (PLOs), Institutional Learning Outcomes
+  (ILOs), Course Intended Learning Outcomes (CILOs), evaluation instruments,
+  controlled deployments, stakeholder responses, attainment analytics, qualitative
+  summaries, and evidence reports.
 
   System CLOIE does not replace an LMS, SIS, grading system, or institutional
   accreditation platform.
@@ -39,13 +40,15 @@ context: |
   - ORM: Prisma 6.x
   - Authentication: Supabase Auth with Google OAuth and SSR cookies
   - Charts: Recharts 3.x composed through shadcn/ui chart primitives
-  - Qualitative processing: winkNLP, stopword, and the existing word-cloud component
+  - Qualitative processing: winkNLP, stopword, the existing word-cloud component,
+    and the OpenAI-compatible server-side interpretation boundary
   - Unit/integration testing: Vitest and Testing Library
-  - E2E testing target: Playwright
+  - Static analysis: Fallow 2.54.3 through the project-local CLI
   - Deployment: Vercel and Supabase
 
   Do not install Radix UI packages.
   Do not install another charting library.
+  Playwright is a planned E2E target, not an installed dependency or CI gate yet.
   TanStack Query is not a default dependency. Add it only when a design
   establishes a concrete need for client-owned asynchronous server state.
 
@@ -102,9 +105,58 @@ context: |
     unless an approved change intentionally replaces this invariant.
   - Authorization must be enforced server-side.
   - Role-owned routes and program/course scope checks must remain explicit.
-  - Never rely on hidden, disabled, or client-filtered UI as authorization.
+  - Program Heads act within their Authorized Program set; Selected Program context
+    is an operation context, not an account attribute.
+  - CourseAssignmentMembership rows are the authoritative course roster source for
+    publication and course-bound evaluation scope.
+  - User.name is one opaque canonical account name; do not parse it into first-name
+    or last-name components. Google-derived naming applies only at creation or the
+    First OAuth link; later callbacks preserve the stored name.
   - Preserve account-state handling for onboarding, deferred enrollment,
     inactive accounts, rejected external accounts, and complete accounts.
+  - Dedicated demo authentication and data are a separate security boundary from
+    primary Production; never target primary Production with demo reset or bypass
+    behavior.
+
+  ## Analytics and AI boundary
+  - Deterministic aggregate analytics remains the authoritative evidence surface.
+  - AI-assisted interpretation is supplementary and server-side only: authorize
+    evidence before processing, de-identify and bound the qualitative corpus,
+    validate aggregate-derived output, return no raw qualitative text to the
+    browser, persist no AI result or response text, and keep production enablement
+    as a separate governance decision.
+
+  ## Database test safety
+  - Never run database integration tests against shared hosted Supabase.
+  - Database invariant tests require RUN_DATABASE_INTEGRATION_TESTS=1 and a
+    disposable test database.
+
+  ## Static analysis
+  - Fallow full-project reports are read-only and informational; the CI gate checks
+    only new baseline-unmatched findings in changed files.
+  - Trace findings before deleting or refactoring. Treat Next.js entry points,
+    route handlers, Server Actions, generated Supabase types, shadcn/ui inventory,
+    dynamic consumers, and CONTEXT.md files as protected categories.
+  - Fallow mutation and baseline refresh are human-gated; begin fixes with dry-run
+    evidence and review the resulting diff.
+  - Enforced Fallow boundaries are limited to the configured ui-primitives/shared
+    and shared/types seams; add a new boundary only through a focused proposal.
+
+  ## User-facing verification
+  - Significant UI changes must preserve desktop and mobile behavior, keyboard
+    access, accessibility states, and responsive touch targets.
+  - Verify the affected workflow in the running application when practical; tests
+    and builds do not replace behavioral UI verification.
+
+  ## Canonical outcomes vocabulary
+  - Use Institutional Learning Outcome (ILO), Program Learning Outcome (PLO), and
+    Course Intended Learning Outcome (CILO) as canonical terms.
+  - The legacy Graduate Outcome term is retired. Persisted GO codes and legacy
+    GRADUATE_OUTCOME snapshot values are historical data, not user-facing terms.
+  - Typed mappings require a manifestation; manifestations are LEARNING, PRACTICE,
+    or OPPORTUNITY and carry no numeric weight.
+  - Publication alignment is a server-side gate, and outcome readiness follows the
+    typed rules in the Outcomes CONTEXT.md.
 
   ## PWA
   - The metadata manifest and installable shell exist.
@@ -117,7 +169,7 @@ context: |
   - Unit/integration tests: pnpm test
   - Focused test: pnpm vitest run <path>
   - Production build and typecheck: pnpm build
-  - E2E after Playwright setup: pnpm playwright test
+  - E2E target: Playwright after the dependency and CI workflow are added
 
   ## Commit Convention
   Conventional Commits:

@@ -16,8 +16,56 @@ type ManifestationAlignmentContentProps = {
   alignment: CourseAlignment;
   draft: ManifestationDraftState;
   disabled: boolean;
-  onChangeCell: (ciloId: string, ploId: string, manifestation: CILOMappingManifestation | null) => void;
+  onChangeCell: (
+    ciloId: string,
+    targetId: string,
+    manifestation: CILOMappingManifestation | null
+  ) => void;
 };
+
+type TargetCopy = {
+  shortNoun: string;
+  header: string;
+  caption: string;
+  incompleteMessage: string;
+  emptyTitle: string;
+  emptyDescription: string;
+  archivedTitle: string;
+  archivedDescription: string;
+  archivedLabel: string;
+};
+
+function targetCopy(scope: CourseAlignment["course"]["scope"]): TargetCopy {
+  if (scope === "GENERAL_EDUCATION") {
+    return {
+      shortNoun: "ILO",
+      header: "CILO / ILO",
+      caption: "CILO to Institutional Outcome manifestation matrix.",
+      incompleteMessage:
+        "Choose Learning, Practice, or Opportunity for at least one Institutional Outcome per CILO before reviewing this alignment.",
+      emptyTitle: "No Institutional Outcomes have been defined yet.",
+      emptyDescription:
+        "The Secretary must create an active Institutional Outcome before Course alignment can be completed.",
+      archivedTitle: "Archived Institutional Outcomes",
+      archivedDescription:
+        "Historical manifestations on archived Institutional Outcomes are read-only and do not count toward completeness.",
+      archivedLabel: "Archived Institutional Outcome manifestations, read-only",
+    };
+  }
+  return {
+    shortNoun: "PLO",
+    header: "CILO / PLO",
+    caption: "CILO to Program Learning Outcome manifestation matrix.",
+    incompleteMessage:
+      "Choose Learning, Practice, or Opportunity for all PLOs before reviewing this alignment.",
+    emptyTitle: "No Program Learning Outcomes have been defined for this program.",
+    emptyDescription: "A Program Head must create PLOs before Course alignment can be completed.",
+    archivedTitle: "Archived Program Learning Outcomes",
+    archivedDescription:
+      "Historical manifestations on archived PLOs are read-only and do not count toward completeness.",
+    archivedLabel: "Archived Program Learning Outcome manifestations, read-only",
+  };
+}
 
 function manifestLegend() {
   return (
@@ -30,9 +78,7 @@ function manifestLegend() {
           >
             {option.letter}
           </span>
-          <span>
-            {option.letter} {option.label}
-          </span>
+          <span>{option.label}</span>
         </li>
       ))}
     </ul>
@@ -40,10 +86,10 @@ function manifestLegend() {
 }
 
 /**
- * Program-specific Course alignment surfaces: a desktop manifestation matrix
- * (`hidden md:block`) and mobile CILO cards (`md:hidden`), both driving the same
- * draft state through `onChangeCell`. Also renders the progress counter, the
- * persistent legend, and the explicit no-PLO empty state.
+ * Course alignment matrix: a desktop table (`hidden md:block`) and mobile CILO
+ * cards (`md:hidden`), both driving the same draft state through `onChangeCell`.
+ * Copy follows Course scope so Program-specific columns are PLOs and General
+ * Education columns are Institutional Outcomes.
  */
 export function ManifestationAlignmentContent({
   alignment,
@@ -52,13 +98,16 @@ export function ManifestationAlignmentContent({
   onChangeCell,
 }: ManifestationAlignmentContentProps) {
   const { cilos, targets } = alignment;
+  const copy = targetCopy(alignment.course.scope);
   const totalPairs = cilos.length * targets.length;
   const classifiedPairs = cilos.reduce(
     (total, cilo) => total + targets.filter((target) => draft[cilo.id]?.[target.id]).length,
     0
   );
   const remaining = totalPairs - classifiedPairs;
-  const incompleteMessage = "Choose Learning, Practice, or Opportunity for all PLOs before reviewing this alignment.";
+  const coveredCilos = cilos.filter((cilo) =>
+    targets.some((target) => draft[cilo.id]?.[target.id])
+  ).length;
 
   if (targets.length === 0) {
     return (
@@ -68,14 +117,11 @@ export function ManifestationAlignmentContent({
             <EmptyMedia variant="icon">
               <Target className="h-6 w-6" />
             </EmptyMedia>
-            <EmptyTitle>No Program Learning Outcomes have been defined for this program.</EmptyTitle>
-            <EmptyDescription>
-              A Program Head must create PLOs before Course alignment can be completed.
-            </EmptyDescription>
+            <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
+            <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
           </EmptyHeader>
         </Empty>
-        {/* Archived PLO historical manifestations stay visible even when the active catalog is empty. */}
-        <ArchivedManifestationRows alignment={alignment} />
+        <ArchivedManifestationRows alignment={alignment} copy={copy} />
       </>
     );
   }
@@ -88,41 +134,47 @@ export function ManifestationAlignmentContent({
           aria-live="polite"
         >
           <span className="text-foreground font-medium">
-            {classifiedPairs} of {totalPairs} relationships classified
+            {alignment.course.scope === "GENERAL_EDUCATION"
+              ? `${coveredCilos} of ${cilos.length} CILOs covered`
+              : `${classifiedPairs} of ${totalPairs} relationships classified`}
           </span>
-          <span>
-            {remaining} remaining
-          </span>
+          {alignment.course.scope === "PROGRAM_SPECIFIC" && <span>{remaining} remaining</span>}
         </p>
-        {remaining > 0 && (
+        {((alignment.course.scope === "PROGRAM_SPECIFIC" && remaining > 0) ||
+          (alignment.course.scope === "GENERAL_EDUCATION" && coveredCilos < cilos.length)) && (
           <p className="text-muted-foreground text-body-sm" aria-live="polite">
-            {incompleteMessage}
+            {copy.incompleteMessage}
           </p>
         )}
       </div>
       {manifestLegend()}
 
-      {/* Desktop matrix */}
       <div className="hidden md:block" data-testid="manifestation-matrix">
         <div className="overflow-x-auto">
           <table className="w-full caption-bottom text-sm">
-            <caption className="sr-only">
-              CILO to Program Learning Outcome manifestation matrix.
-            </caption>
+            <caption className="sr-only">{copy.caption}</caption>
             <thead>
               <tr className="border-b">
-                <th scope="col" className="text-muted-foreground h-10 px-3 text-left font-medium">
-                  CILO / PLO
+                <th
+                  scope="col"
+                  className="text-muted-foreground sticky left-0 z-10 h-10 bg-background px-3 text-left font-medium"
+                >
+                  {copy.header}
                 </th>
-                {targets.map((target, ploIndex) => (
+                {targets.map((target, targetIndex) => (
                   <th
                     key={target.id}
                     scope="col"
-                    aria-label={`PLO ${ploIndex + 1}: ${target.code}, ${target.description}`}
-                    className="text-muted-foreground min-w-32 px-3 pt-1 pb-2 text-left align-bottom font-medium"
+                    aria-label={`${copy.shortNoun} ${targetIndex + 1}: ${target.code}, ${target.description}`}
+                    className="min-w-40 px-3 pt-2 pb-2 text-left align-top font-medium"
                   >
-                    <span className="block">PLO {ploIndex + 1}</span>
-                    <span className="text-xs">{target.code}</span>
+                    <span className="block">
+                      {copy.shortNoun} {targetIndex + 1}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">{target.code}</span>
+                    <span className="mt-1 block text-xs leading-snug break-words font-normal text-muted-foreground">
+                      {target.description}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -132,23 +184,20 @@ export function ManifestationAlignmentContent({
                 <tr key={cilo.id} className="border-b">
                   <th
                     scope="row"
-                    className="max-w-56 px-3 py-3 text-left align-top font-medium"
+                    className="sticky left-0 z-10 max-w-56 bg-background px-3 py-3 text-left align-top font-medium"
                   >
                     <span className="text-foreground">CILO {ciloIndex + 1}</span>
                     <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
                       {cilo.description}
                     </span>
                   </th>
-                  {targets.map((target, ploIndex) => {
+                  {targets.map((target, targetIndex) => {
                     const value = draft[cilo.id]?.[target.id] ?? null;
                     const unanswered = value === null;
                     return (
                       <td
                         key={target.id}
-                        className={cn(
-                          "px-3 py-2",
-                          unanswered ? "bg-muted/40" : "bg-background"
-                        )}
+                        className={cn("px-3 py-2", unanswered ? "bg-muted/40" : "bg-background")}
                       >
                         <div
                           className={cn(
@@ -158,12 +207,11 @@ export function ManifestationAlignmentContent({
                               : "border-border bg-surface-input"
                           )}
                         >
-                          {unanswered ? (
-                            <span className="sr-only">Unanswered</span>
-                          ) : null}
+                          {unanswered ? <span className="sr-only">Unanswered</span> : null}
                           <ManifestationPicker
                             ciloIndex={ciloIndex + 1}
-                            ploIndex={ploIndex + 1}
+                            targetIndex={targetIndex + 1}
+                            targetNoun={copy.shortNoun}
                             value={value}
                             disabled={disabled}
                             onChange={(next) => onChangeCell(cilo.id, target.id, next)}
@@ -179,7 +227,6 @@ export function ManifestationAlignmentContent({
         </div>
       </div>
 
-      {/* Mobile CILO cards */}
       <div className="flex flex-col gap-4 md:hidden" data-testid="manifestation-cards">
         {cilos.map((cilo, ciloIndex) => (
           <Card key={cilo.id}>
@@ -188,7 +235,7 @@ export function ManifestationAlignmentContent({
               <CardDescription>{cilo.description}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              {targets.map((target, ploIndex) => {
+              {targets.map((target, targetIndex) => {
                 const value = draft[cilo.id]?.[target.id] ?? null;
                 const unanswered = value === null;
                 return (
@@ -202,7 +249,9 @@ export function ManifestationAlignmentContent({
                     )}
                   >
                     <p className="flex flex-wrap items-baseline gap-x-1.5">
-                      <span className="font-medium">PLO {ploIndex + 1}</span>
+                      <span className="text-label-lg font-medium">
+                        {copy.shortNoun} {targetIndex + 1}
+                      </span>
                       <span className="text-muted-foreground text-body-sm">{target.code}</span>
                     </p>
                     <p className="text-muted-foreground text-body-sm">{target.description}</p>
@@ -211,7 +260,8 @@ export function ManifestationAlignmentContent({
                     )}
                     <ManifestationPicker
                       ciloIndex={ciloIndex + 1}
-                      ploIndex={ploIndex + 1}
+                      targetIndex={targetIndex + 1}
+                      targetNoun={copy.shortNoun}
                       value={value}
                       disabled={disabled}
                       onChange={(next) => onChangeCell(cilo.id, target.id, next)}
@@ -225,16 +275,17 @@ export function ManifestationAlignmentContent({
         ))}
       </div>
 
-      {/* Archived PLO historical manifestations, read-only */}
-      <ArchivedManifestationRows alignment={alignment} />
+      <ArchivedManifestationRows alignment={alignment} copy={copy} />
     </div>
   );
 }
 
 const ArchivedManifestationRows = memo(function ArchivedManifestationRows({
   alignment,
+  copy,
 }: {
   alignment: CourseAlignment;
+  copy: TargetCopy;
 }) {
   const activeTargetIds = useMemo(
     () => new Set(alignment.targets.map((target) => target.id)),
@@ -247,12 +298,12 @@ const ArchivedManifestationRows = memo(function ArchivedManifestationRows({
   const rows = useMemo(
     () =>
       alignment.cilos.flatMap((cilo, ciloIndex) =>
-        ("mappings" in cilo ? cilo.mappings : [])
-          .filter((mapping) => !activeTargetIds.has(mapping.ploId))
+        cilo.mappings
+          .filter((mapping) => !activeTargetIds.has(mapping.targetId))
           .map((mapping) => ({
             ciloId: cilo.id,
             ciloIndex: ciloIndex + 1,
-            ploId: mapping.ploId,
+            targetId: mapping.targetId,
             manifestation: mapping.manifestation,
           }))
       ),
@@ -263,19 +314,16 @@ const ArchivedManifestationRows = memo(function ArchivedManifestationRows({
     <div
       className="rounded-xl border border-dashed border-border bg-muted/30 p-4"
       data-testid="archived-manifestation-rows"
-      aria-label="Archived Program Learning Outcome manifestations, read-only"
+      aria-label={copy.archivedLabel}
     >
-      <p className="font-medium">Archived Program Learning Outcomes</p>
-      <p className="text-muted-foreground text-body-sm">
-        Historical manifestations on archived PLOs are read-only and do not count toward
-        completeness.
-      </p>
+      <p className="font-medium">{copy.archivedTitle}</p>
+      <p className="text-muted-foreground text-body-sm">{copy.archivedDescription}</p>
       <ul className="mt-3 flex flex-col gap-2">
         {rows.map((row) => {
-          const target = archivedTargetById.get(row.ploId);
-          const code = target?.code ?? row.ploId;
+          const target = archivedTargetById.get(row.targetId);
+          const code = target?.code ?? row.targetId;
           return (
-            <li key={`${row.ciloId}:${row.ploId}`} className="flex flex-wrap items-center gap-2">
+            <li key={`${row.ciloId}:${row.targetId}`} className="flex flex-wrap items-center gap-2">
               <span className="text-body-sm font-medium">CILO {row.ciloIndex}</span>
               <span className="text-body-sm">{code}</span>
               <Badge variant="outline" className="text-muted-foreground">

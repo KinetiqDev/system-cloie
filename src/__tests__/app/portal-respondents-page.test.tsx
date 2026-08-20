@@ -31,18 +31,16 @@ interface MockPortalShellProps {
   cards: RoleCardConfig[];
   session?: { email: string; isComplete: boolean } | null;
   backLink?: { label: string; href: string };
-  crossLink?: { label: string; href: string };
 }
 
 vi.mock("@/features/portals", () => ({
-  PortalShell: ({ title, subtitle, cards, session, backLink, crossLink }: MockPortalShellProps) => (
+  PortalShell: ({ title, subtitle, cards, session, backLink }: MockPortalShellProps) => (
     <div data-testid="portal-shell">
       <h1>{title}</h1>
       <p>{subtitle}</p>
       {session && <p>Signed in as {session.email}</p>}
       <span data-testid="card-count">{cards.length}</span>
       {backLink && <a href={backLink.href}>{backLink.label}</a>}
-      {crossLink && <a href={crossLink.href}>{crossLink.label}</a>}
     </div>
   ),
 }));
@@ -60,7 +58,6 @@ describe("RespondentPortalPage", () => {
 
     expect(screen.getByText("Welcome to System CLOIE")).toBeInTheDocument();
     expect(screen.getByTestId("card-count").textContent).toBe("3");
-    expect(screen.getByText(/Go to Staff Portal/)).toBeInTheDocument();
     expect(screen.getByText(/Back to portal selection/)).toBeInTheDocument();
   });
 

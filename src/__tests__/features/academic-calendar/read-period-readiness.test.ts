@@ -64,7 +64,7 @@ function activePlos(ids: string[]) {
 }
 
 function activeIloMapping(id = "ilo-1") {
-  return { institutional_outcome: { id, is_active: true } };
+  return { manifestation: "LEARNING" as const, institutional_outcome: { id, is_active: true } };
 }
 
 const ILO_CATALOG = [
@@ -504,7 +504,10 @@ describe("readPeriodReadiness", () => {
               is_active: true,
               cilo_mappings: [],
               cilo_institutional_outcome_mappings: [
-                { institutional_outcome: { id: "ilo-2", is_active: false } },
+                {
+                  manifestation: "LEARNING",
+                  institutional_outcome: { id: "ilo-2", is_active: false },
+                },
               ],
             },
           ],

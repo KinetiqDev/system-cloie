@@ -17,7 +17,7 @@ A course-level learning outcome that belongs to a Course and is stable across as
 _Avoid_: Assignment-specific CILO, faculty-owned CILO
 
 **Manifestation**:
-The way a CILO contributes to a PLO, carried by every CILO-to-PLO mapping: `LEARNING` (displayed `L`), `PRACTICE` (displayed `P`), or `OPPORTUNITY` (displayed `O`). Manifestations carry no numeric value or weight and feed no attainment calculation.
+The way a CILO contributes to a PLO or Institutional Outcome, carried by every typed mapping: `LEARNING` (displayed `L`), `PRACTICE` (displayed `P`), or `OPPORTUNITY` (displayed `O`). Manifestations carry no numeric value or weight and feed no attainment calculation.
 _Avoid_: Numeric or weighted manifestation, missing manifestation on a mapping
 
 **General Education Course**:
@@ -29,8 +29,12 @@ A Course owned by one Academic Program; its CILOs align only to PLOs of that own
 _Avoid_: General Education course, cross-program course
 
 **CILO-to-PLO mapping**:
-An alignment row between one CILO and one PLO in the Course's owning Academic Program; every such relationship carries exactly one manifestation. General Education CILOs instead map to the Institutional Outcome catalog; wrong-layer writes are rejected.
+An alignment row between one CILO and one PLO in the Course's owning Academic Program; every such relationship carries exactly one manifestation. Wrong-layer writes are rejected.
 _Avoid_: CILO-to-GO, unqualified mapping, dual-layer mapping
+
+**CILO-to-ILO mapping**:
+An alignment row between one General Education CILO and one Institutional Outcome; every such relationship carries exactly one manifestation. The mapping set is Course-level and shared across assignments.
+_Avoid_: Per-program GE mapping, checkbox-only GE mapping, missing manifestation
 
 **Shared General Education mapping**:
 The Course-level CILO-to-ILO mapping set that applies automatically to every active Course Assignment context using that General Education Course; it is never duplicated per Program or per assignment.
@@ -53,7 +57,7 @@ Actor and timestamp records for new or changed typed mapping rows; legacy rows w
 _Avoid_: Anonymous write, inferred actor
 
 **Outcome readiness**:
-The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one valid active Institutional Outcome target. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active PLO of the Course's owning Academic Program; a Program with zero active PLOs alongside active CILOs is incomplete, not ready.
+The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one active Institutional Outcome mapping with a non-null manifestation. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active PLO of the Course's owning Academic Program; a Program with zero active PLOs alongside active CILOs is incomplete, not ready.
 _Avoid_: PLO-only readiness, per-assignment readiness, CILO count as readiness, vacuous readiness with zero active PLOs
 
 **Completed-period readiness snapshot**:
@@ -61,7 +65,7 @@ An immutable, versioned record of readiness written when an Academic Period comp
 _Avoid_: Live readiness read, mutable snapshot, relabeled legacy snapshot
 
 **Publication alignment gate**:
-The server-side rule that rejects new Course-bound evaluation publication while any active CILO of the locked Course fails the typed alignment rule (exhaustive manifestation coverage for Program-specific Courses, at-least-one active Institutional Outcome for General Education), with a direct repair path to Course alignment.
+The server-side rule that rejects new Course-bound evaluation publication while any active CILO of the locked Course fails the typed alignment rule (exhaustive manifestation coverage for Program-specific Courses, at-least-one active Institutional Outcome with a manifestation for General Education), with a direct repair path to Course alignment.
 _Avoid_: Publish-with-gaps, alignment warning only
 
 **Faculty mapping responsibility**:

@@ -24,8 +24,10 @@ export function manifestationLabel(value: CILOMappingManifestation | null | unde
 type ManifestationPickerProps = {
   /** 1-based CILO position, used in the accessible names. */
   ciloIndex: number;
-  /** 1-based PLO position, used in the accessible names. */
-  ploIndex: number;
+  /** 1-based target position, used in the accessible names. */
+  targetIndex: number;
+  /** Short target noun in accessible names, e.g. PLO or ILO. */
+  targetNoun?: string;
   value: CILOMappingManifestation | null;
   disabled?: boolean;
   onChange: (value: CILOMappingManifestation | null) => void;
@@ -41,20 +43,21 @@ type ManifestationPickerProps = {
  */
 export function ManifestationPicker({
   ciloIndex,
-  ploIndex,
+  targetIndex,
+  targetNoun = "PLO",
   value,
   disabled = false,
   onChange,
   variant = "compact",
 }: ManifestationPickerProps) {
   const optionName = (label: string) =>
-    `CILO ${ciloIndex}, PLO ${ploIndex}, manifestation: ${label}`;
-  const clearName = `Clear CILO ${ciloIndex}, PLO ${ploIndex} manifestation`;
+    `CILO ${ciloIndex}, ${targetNoun} ${targetIndex}, manifestation: ${label}`;
+  const clearName = `Clear CILO ${ciloIndex}, ${targetNoun} ${targetIndex} manifestation`;
 
   return (
     <div
       role="group"
-      aria-label={`CILO ${ciloIndex}, PLO ${ploIndex}, manifestation`}
+      aria-label={`CILO ${ciloIndex}, ${targetNoun} ${targetIndex}, manifestation`}
       className={cn(
         "flex min-w-0 items-center gap-1",
         variant === "full" && "flex-wrap gap-1.5"
@@ -75,11 +78,11 @@ export function ManifestationPicker({
             onClick={() => onChange(selected ? null : option.value)}
             className={cn(
               "min-w-9",
-              variant === "full" && "flex-1 px-2.5",
+              variant === "full" && "min-h-11 flex-1 min-w-0 px-2.5 text-label-lg text-primary-foreground",
               !selected && "text-muted-foreground"
             )}
           >
-            {variant === "compact" ? option.letter : `${option.label} (${option.letter})`}
+            {option.letter}
           </Button>
         );
       })}
@@ -92,7 +95,10 @@ export function ManifestationPicker({
           title={clearName}
           disabled={disabled}
           onClick={() => onChange(null)}
-          className="text-muted-foreground hover:text-foreground"
+          className={cn(
+            "text-muted-foreground hover:text-foreground",
+            variant === "full" && "min-h-11 min-w-11"
+          )}
         >
           <X aria-hidden="true" />
         </Button>

@@ -98,6 +98,8 @@ export async function seedOutcomes({
   const geCilos = ciloMap.get("GESTECH") ?? [];
   for (const cilo of geCilos) {
     const ilo = iloMap.get(`ILO${Math.min(cilo.order, 5)}`)!;
+    const manifestation =
+      cilo.order === 1 ? "LEARNING" : cilo.order === 2 ? "PRACTICE" : "OPPORTUNITY";
     const existing = await prisma.cILOInstitutionalOutcomeMapping.findFirst({
       where: { cilo_id: cilo.id, institutional_outcome_id: ilo.id },
     });
@@ -107,9 +109,15 @@ export async function seedOutcomes({
         data: {
           cilo_id: cilo.id,
           institutional_outcome_id: ilo.id,
+          manifestation,
           created_by: actor,
           updated_by: actor,
         },
+      });
+    } else if (existing.manifestation === null) {
+      await prisma.cILOInstitutionalOutcomeMapping.update({
+        where: { id: existing.id },
+        data: { manifestation, updated_at: new Date() },
       });
     }
   }
