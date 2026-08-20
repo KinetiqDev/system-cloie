@@ -1,19 +1,29 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { notFound, redirect } from "next/navigation";
+import { GeneralEducationAnalyticsWorkspace } from "@/features/analytics/components/general-education-analytics-workspace";
+import { getGeneralEducationAnalytics } from "@/features/analytics/services/general-education-analytics";
+import {
+  buildGeneralEducationAnalyticsQueryString,
+  parseGeneralEducationAnalyticsSearchParams,
+  rawGeneralEducationAnalyticsSearchParamsToQueryString,
+} from "@/features/analytics/services/general-education-analytics-state";
 
-export default function GenEdCoordinatorAnalyticsPage() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="font-heading text-text-primary text-2xl font-black">Analytics</h1>
-        <p className="text-text-secondary text-sm">General Education analytics across programs.</p>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Analytics</CardTitle>
-          <CardDescription>Evidence analytics for General Education courses.</CardDescription>
-        </CardHeader>
-        <CardContent className="text-text-secondary text-sm">Analytics coming in the next slice.</CardContent>
-      </Card>
-    </div>
-  );
+export const metadata = { title: "Analytics | Gen Ed Coordinator | System CLOIE" };
+
+const BASE_PATH = "/gen-ed-coordinator/analytics";
+
+export default async function GenEdCoordinatorAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const raw = await searchParams;
+  const filters = parseGeneralEducationAnalyticsSearchParams(raw);
+  const rawQuery = rawGeneralEducationAnalyticsSearchParamsToQueryString(raw);
+  const canonicalQuery = buildGeneralEducationAnalyticsQueryString(filters);
+  if (rawQuery !== canonicalQuery) {
+    redirect(canonicalQuery ? `${BASE_PATH}?${canonicalQuery}` : BASE_PATH);
+  }
+  const data = await getGeneralEducationAnalytics(filters);
+  if (!data) notFound();
+  return <GeneralEducationAnalyticsWorkspace data={data} filters={filters} />;
 }
