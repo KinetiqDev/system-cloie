@@ -5,6 +5,10 @@ import {
   confirmRosterResolutionSchema,
   previewCourseRosterSchema,
 } from "@/features/course-assignments/schemas/course-assignment";
+import {
+  COURSE_ROSTER_MAX_ROWS,
+  parseCourseRosterCsv,
+} from "@/features/course-assignments/services/course-roster-csv";
 
 const assignmentId = "11111111-1111-4111-8111-111111111111";
 const userIdA = "44444444-4444-4444-8444-444444444444";
@@ -132,6 +136,74 @@ describe("confirmRosterResolutionSchema", () => {
         { sourceIndex: 2, submittedName: "Maria Santos", status: "VALID" },
         { sourceIndex: 3, submittedName: "a".repeat(201), status: "INVALID_NAME" },
       ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts confirming every row parsed from a 100-student CSV", () => {
+    const names = Array.from(
+      { length: COURSE_ROSTER_MAX_ROWS },
+      (_, index) => `Student ${index + 1}`
+    );
+    const parsed = parseCourseRosterCsv(`name\n${names.join("\n")}\n`);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.rows[0]?.sourceIndex).toBe(2);
+    expect(parsed.rows[parsed.rows.length - 1]?.sourceIndex).toBe(COURSE_ROSTER_MAX_ROWS + 1);
+    const rows = parsed.rows.map((row, index) => ({
+      sourceIndex: row.sourceIndex,
+      studentUserId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    }));
+    const result = confirmRosterResolutionSchema.safeParse({
+      ...valid,
+      rows,
+      skippedIndexes: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts skipping the final physical lines of a 100-student CSV", () => {
+    const names = Array.from(
+      { length: COURSE_ROSTER_MAX_ROWS },
+      (_, index) => `Student ${index + 1}`
+    );
+    const parsed = parseCourseRosterCsv(`name\n${names.join("\n")}\n`);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.rows).toHaveLength(COURSE_ROSTER_MAX_ROWS);
+    expect(parsed.rows[parsed.rows.length - 1]?.sourceIndex).toBe(COURSE_ROSTER_MAX_ROWS + 1);
+    const skipped = [COURSE_ROSTER_MAX_ROWS, COURSE_ROSTER_MAX_ROWS + 1];
+    const rows = parsed.rows
+      .filter((row) => !skipped.includes(row.sourceIndex))
+      .map((row, index) => ({
+        sourceIndex: row.sourceIndex,
+        studentUserId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      }));
+    const result = confirmRosterResolutionSchema.safeParse({
+      ...valid,
+      rows,
+      skippedIndexes: skipped,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts parsed indexes shifted past the header by a blank line", () => {
+    const names = Array.from(
+      { length: COURSE_ROSTER_MAX_ROWS },
+      (_, index) => `Student ${index + 1}`
+    );
+    const parsed = parseCourseRosterCsv(`name\n\n${names.join("\n")}\n  \n`);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.rows[parsed.rows.length - 1]?.sourceIndex).toBe(COURSE_ROSTER_MAX_ROWS + 2);
+    const rows = parsed.rows.map((row, index) => ({
+      sourceIndex: row.sourceIndex,
+      studentUserId: `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    }));
+    const result = confirmRosterResolutionSchema.safeParse({
+      ...valid,
+      rows,
+      skippedIndexes: [],
     });
     expect(result.success).toBe(true);
   });
