@@ -87,3 +87,8 @@ _Avoid_: Dean outcome editing, PLO-only gap labels, roster or response data in o
 **ILO-to-PLO crosswalk**:
 An explicitly deferred mapping or attainment propagation between Institutional Outcomes and Program Learning Outcomes; no reporting or attainment semantics exist for it yet.
 _Avoid_: ILO-to-PLO mapping, automatic crosswalk, attainment rollup
+
+## Deferred catalog ownership conflict (issue #477)
+
+The Institutional Learning Outcome catalog ownership and write-authority conflict (ADR 0005 / `introduce-institutional-learning-outcomes` documenting Secretary ownership vs `secretary-outcome-access-removal` and live server denial) is recorded as **deferred** by the `add-general-education-coordinator` change. This slice adds no ILO catalog mutation path and no `GEN_ED_COORDINATOR` ILO writes. A separate approved OpenSpec change must reconcile the sources before any ILO catalog editor is implemented.
+_Avoid_: Coordinator ILO catalog editor, Secretary ILO write assumption in this change

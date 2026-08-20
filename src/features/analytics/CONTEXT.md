@@ -2,6 +2,23 @@
 
 Analytics defines how System CLOIE presents stakeholder-evaluation evidence for monitoring and continuous quality improvement without treating ratings as individual mastery or grades.
 
+## General Education Coordinator evidence (approved scope, issue #477)
+
+**General Education evidence (first release, approved)**:
+Course-bound General Education evidence only — submitted `Response.status == SUBMITTED` for Course-bound evaluations where `CourseAssignment.Course.course_scope == GENERAL_EDUCATION`, aggregated across Programs. Central Deployments are excluded from the first Coordinator analytics release. Program-specific Course-bound evidence is excluded from the Coordinator read path.
+_Avoid_: Central Deployment as General Education evidence, Program-specific evidence in Coordinator analytics
+
+**Coordinator analytics scope**:
+Cross-Program (not selected-Program) read path gated by the shared college-wide `GEN_ED_COORDINATOR` role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes evidence outside that authorized scope. The current Program-PLO selected-Program evidence (Course-bound + Program-scoped Central Deployments via CILO-to-PLO mappings) is unchanged for non-Coordinator contexts.
+_Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-PLO attainment rollup
+
+**Coordinator analytics boundaries (for issue #477 approval)**:
+The first release supports academic-period filtering, overview counts and means, Course breakdowns, comparable trends, and aggregate qualitative feedback. Means retain server precision; rating counts remain distinct from submitted response counts; rating categories derive from the instrument structure snapshot. Response-rate denominator is in-scope `EvaluationAssignment` opportunities; zero opportunities reports unavailable rather than `0%`. Payloads are aggregate-only and request-scoped: no raw comments, response rows, respondent IDs, account emails, roster data, or shared cache entry. Authorization is rechecked per request before querying private evidence.
+_Avoid_: Raw qualitative text in browser payload, shared cache across Coordinator requests
+
+**Deferred**: ILO attainment, ILO-to-PLO crosswalk, and Central Deployment General Education analytics are not part of this change. ILO catalog ownership and write authority remain deferred and this slice adds no ILO catalog mutation path.
+_Avoid_: ILO analytics assumption, Coordinator ILO catalog editor
+
 ## Evidence language
 
 **Analytics evidence**:

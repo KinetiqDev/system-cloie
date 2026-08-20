@@ -2,6 +2,32 @@
 
 Course Catalog and Assignments define the subjects offered by the institution, when they are scheduled in the curriculum, and how they are assigned to faculty members.
 
+## General Education assignment stewardship (approved scope, issue #477)
+
+**General Education CourseAssignments**:
+Shared institutional Courses where `course.course_scope == GENERAL_EDUCATION`. Every CourseAssignment still carries the operational `program_id` as the class context, regardless of Course scope.
+_Avoid_: Deriving Course scope from nullable program_id, Program-owned General Education Course
+
+**General Education assignment authority — approved matrix (server-enforced)**:
+Secretary: read-only for General Education (Program-specific mutation unchanged). Dean: retains current all-program General Education and Program-specific mutation. `GEN_ED_COORDINATOR`: college-wide read and mutation for General Education assignments only (every list read, Course picker, curriculum option read, faculty search allowlist, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it). Program Head: read-only for General Education within the Authorized Program set where visibility is gated by `CourseAssignment.program_id` in the Authorized Program set (General Education Courses have no owning `Course.program_id`; the assignment's operational program is the class context). Faculty: no assignment mutation. This contract requires the shared college-wide Coordinator scope approval and the breaking transfer recorded in `openspec/config.yaml` and the `add-general-education-coordinator` change; the services in this slice MUST NOT implement the transfer until that approval is recorded.
+_Avoid_: Client-provided course_scope, Secretary General Education mutation after the transfer, Coordinator Program-specific mutation
+
+**Coordinator assignment UX mode**:
+`general-education` — a concrete Coordinator mode that reuses the assignment shell with Course scope fixed to General Education, allows any active target Program, and performs cross-Program Faculty search. Roster management and on-behalf evaluation publication are not granted to the Coordinator.
+_Avoid_: Roster management by Coordinator, generic permission-configured component framework
+
+**Coordinator scope model**:
+All Coordinators share the single college-wide General Education scope (`course.course_scope == GENERAL_EDUCATION`). No portfolio assignment table exists in this change; a partitioned scope requires a separate approved OpenSpec capability.
+_Avoid_: Coordinator portfolio assignment, fake General Education Program
+
+**Curriculum provenance (advisory, unchanged in this slice)**:
+An optional published `CurriculumCourse` link where `CourseAssignment.course_id == CurriculumCourse.course_id` and `CourseAssignment.program_id == CurriculumVersion.program_id`. `CourseAssignment` remains the operational class record and roster/evaluation authority.
+_Avoid_: Required curriculum link, curriculum as roster authority
+
+**Deferred**: ILO catalog ownership and write authority remain unresolved and are recorded as deferred. This change adds no ILO catalog mutation path.
+_Avoid_: Coordinator ILO catalog editor, Secretary ILO write assumption
+
+
 ## Language
 
 **Course**:
