@@ -1543,8 +1543,10 @@ function QuestionCard({
       {/* Prompt Input */}
       <div className="space-y-2">
         <Label className="text-sm">Question title</Label>
-        <Input
+        <Textarea
           placeholder="Enter question"
+          rows={1}
+          className="resize-none"
           value={question.prompt}
           onChange={(e) => onUpdate(sectionKey, question.key, { prompt: e.target.value })}
         />
