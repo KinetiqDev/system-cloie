@@ -41,7 +41,7 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-text-primary text-2xl font-black">Analytics</h1>
+        <h1 className="text-heading-lg">Analytics</h1>
         <p className="text-text-secondary text-sm">
           General Education evidence — Course-bound, submitted only, across Programs.
           {scope.periodLabel ? <span> · {scope.periodLabel}</span> : null}
@@ -78,7 +78,7 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
         </Empty>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Submitted Responses", value: String(kpi.submittedResponseCount) },
           { label: "Opportunities", value: String(kpi.evaluationOpportunityCount) },

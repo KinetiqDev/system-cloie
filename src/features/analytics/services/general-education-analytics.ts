@@ -233,6 +233,7 @@ export async function getGeneralEducationAnalytics(
             select: {
               course_bound: {
                 select: {
+                  term_instance_id: true,
                   course_assignment: { select: { course: { select: { id: true, code: true, title: true } } } },
                   instrument: { select: { id: true, version_number: true, template: { select: { name: true } }, structure_snapshot: true } },
                 },
@@ -270,10 +271,10 @@ export async function getGeneralEducationAnalytics(
 
   const periodLabel = buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm);
 
-  // ponytail: loose casts bridge two row shapes (trends needs term ids, breakdowns need course info); unify when Prisma selection is typed end-to-end
+  // ponytail: loose casts bridge row shapes until Prisma selections are typed end-to-end
   const anyRatingRows = ratingRows as unknown as GeRatingRow[];
   const courseBreakdowns = buildCourseBreakdowns(anyRatingRows, responseRows as unknown as Parameters<typeof buildCourseBreakdowns>[1]);
-  const trends = await buildTrends(anyRatingRows as unknown as Parameters<typeof buildTrends>[0], ratingRows as unknown as Array<{ id: string; assignment: { course_bound: { term_instance_id?: string | null } | null } }>, periodInstances);
+  const trends = await buildTrends(anyRatingRows as unknown as Parameters<typeof buildTrends>[0], responseRows as unknown as Parameters<typeof buildTrends>[1], periodInstances);
   const feedback = buildFeedback(qualitativeRows, evaluationOpportunityCount, submittedResponseCount);
 
   return {
