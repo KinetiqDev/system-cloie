@@ -24,10 +24,6 @@ type Props = {
 };
 
 const BASE_PATH = "/gen-ed-coordinator/analytics";
-function buildHref(filters: Props["filters"]): string {
-  const q = buildGeneralEducationAnalyticsQueryString(filters);
-  return q ? `${BASE_PATH}?${q}` : BASE_PATH;
-}
 function resetHref(): string {
   return BASE_PATH;
 }

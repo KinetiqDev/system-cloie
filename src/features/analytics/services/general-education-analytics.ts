@@ -61,17 +61,6 @@ function buildGeneralEducationCourseScope() {
   return { course: { course_scope: "GENERAL_EDUCATION" as const } };
 }
 
-function buildGeOpportunityScope(termInstanceWhere: Record<string, unknown>) {
-  return {
-    course_bound: {
-      course_assignment: buildGeneralEducationCourseScope(),
-      ...(Object.keys(termInstanceWhere).length > 0 ? { term_instance_id: termInstanceWhere.id ?? undefined } : {}),
-      // schoolYear/semester filter via term_instance relation cannot be pushed into EvaluationAssignment directly
-      // when term_instance_id is not specified; handled by collecting term instance IDs first.
-    },
-  } as Record<string, unknown>;
-}
-
 function buildInstancePeriodLabel(instance: TermInstanceSummary): string {
   const semesterLabel = SEMESTER_LABELS[instance.semester] ?? instance.semester;
   const termLabel = instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null;
