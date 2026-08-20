@@ -5,7 +5,7 @@ Identity and Access defines how people enter CLOIE, claim or use account roles, 
 ## General Education Coordinator (approved scope, issue #477)
 
 **General Education Coordinator (`GEN_ED_COORDINATOR`)**:
-A pre-provisioned, single-role CLOIE account for college-wide General Education CourseAssignment stewardship after the approved transfer. It requires an eligible `acd.edu.ph` / `acdeducation.com` institutional email and SHALL NOT require `program_id`. Self-service role claim SHALL reject `GEN_ED_COORDINATOR`. No assignment/portfolios table exists in this change.
+A pre-provisioned, single-role System CLOIE account for college-wide General Education CourseAssignment stewardship after the approved transfer. It requires an eligible `acd.edu.ph` / `acdeducation.com` institutional email and SHALL NOT require `program_id`. Self-service role claim SHALL reject `GEN_ED_COORDINATOR`. No assignment/portfolios table exists in this change.
 _Avoid_: Self-service Coordinator claim, Coordinator with program_id, multi-role Coordinator
 
 **Coordinator scope model — shared college-wide**:
