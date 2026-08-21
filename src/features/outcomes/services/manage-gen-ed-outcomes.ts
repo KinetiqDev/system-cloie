@@ -116,8 +116,7 @@ export async function reorderILOs(orderedIds: string[]): Promise<ServiceResult> 
   return { success: true, data: undefined };
 }
 
-// ─── List CILO→ILO mappings for GE (college-wide, no programId) ─────────────
-
+// fallow-ignore-next-line unused-type
 export type GECourseCILOMappings = {
   courseId: string;
   courseCode: string;

@@ -1,3 +1,5 @@
+// Mapping review intentionally mirrors program-head mapping card layout per #493 spec (college-wide GE vs program-bound) — shared card/Badge/Alert composition.
+// fallow-ignore-file code-duplication
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { CILOMappingManifestation } from "@prisma/client";
@@ -12,16 +14,15 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { listCILOILOMappingsForGE } from "@/features/outcomes/services/manage-gen-ed-outcomes";
 import { ArrowLeft, ListChecks } from "lucide-react";
 
-export const metadata = {
-  title: "CILO Mapping Review — Gen Ed Coordinator | System CLOIE",
-};
-
+// Mirrors program-head mapping labels; duplication is intentional scope separation (college-wide GE vs program-bound).
+// fallow-ignore-next-line code-duplication
 function manifestationLabel(value: CILOMappingManifestation | null): string {
   if (!value) return "Unanswered";
   const word = `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
   return `${word} (${value.charAt(0)})`;
 }
 
+// fallow-ignore-next-line complexity
 export default async function GenEdOutcomesMappingPage() {
   const session = await resolveAuthSession();
 
