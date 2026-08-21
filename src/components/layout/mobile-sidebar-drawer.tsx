@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ import {
   getMainNavByRoles,
   getDeanActiveItem,
   getDeepestMatchingNavItem,
+  getDashboardHref,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
 import { NavigationRow } from "./navigation-row";
@@ -144,7 +146,12 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
           )}
         >
           <div className="border-sidebar-border flex min-h-16 shrink-0 items-center justify-between border-b px-5">
-            <div className="flex items-center gap-3">
+            <Link
+              href={getDashboardHref(roles, pathname)}
+              onClick={() => close(false)}
+              aria-label="System CLOIE — Dashboard"
+              className="focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center gap-3 rounded-md transition-opacity hover:opacity-80"
+            >
               <Image
                 src="/logos/cloie-logo.png"
                 alt="System CLOIE Logo"
@@ -153,7 +160,7 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
                 className="border-border h-7 w-auto rounded border bg-white p-0.5"
               />
               <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
-            </div>
+            </Link>
             <button
               type="button"
               onClick={() => close()}

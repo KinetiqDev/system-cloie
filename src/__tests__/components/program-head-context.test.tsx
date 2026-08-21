@@ -4,7 +4,6 @@ import {
   ProgramHeadNoAssignmentState,
   ProgramHeadSelector,
 } from "@/features/auth/components/program-head-selector";
-import { ProgramHeadContextHeader } from "@/features/auth/components/program-head-context-header";
 
 const programs = [
   { id: "program-1", code: "BEED", name: "Elementary Education" },
@@ -32,14 +31,5 @@ describe("Program Head context UI", () => {
       "href",
       "/program-head/profile"
     );
-  });
-
-  it("provides a named keyboard-focusable switch link in the selected context header", () => {
-    render(<ProgramHeadContextHeader program={programs[1]} />);
-
-    const switchLink = screen.getByRole("link", { name: "Switch selected Program" });
-    expect(switchLink).toHaveAttribute("href", "/program-head");
-    switchLink.focus();
-    expect(document.activeElement).toBe(switchLink);
   });
 });

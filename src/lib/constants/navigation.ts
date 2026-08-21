@@ -290,6 +290,15 @@ export function getMobileNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY
   }
 }
 
+/**
+ * Respective dashboard entry point for the highest-precedence role.
+ * Program Heads get their current program's dashboard when one is active.
+ */
+export function getDashboardHref(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_PATH): string {
+  const nav = getMainNavByRoles(roles, pathname);
+  return (nav.find((item) => item.name === "Dashboard") ?? nav[0]).href;
+}
+
 export function getDeanNavGroups(): NavGroup[] {
   return DEAN_NAV_GROUPS;
 }
