@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { BarChart3, BookOpen, Library, UsersRound } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -69,7 +70,12 @@ export function GenEdDashboardContent({ data }: { data: GenEdDashboardData }) {
         <Card>
           <CardHeader>
             <CardDescription className="text-label-sm tracking-wider uppercase">Scope</CardDescription>
-            <CardTitle className="text-heading-md">College-Wide</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-heading-md">College-Wide</CardTitle>
+              <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-semibold">
+                General Education
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent className="text-text-secondary flex items-center gap-2 text-xs">
             <Library className="size-4" aria-hidden="true" />
