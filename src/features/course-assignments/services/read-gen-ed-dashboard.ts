@@ -25,6 +25,11 @@ export async function getGenEdDashboard(): Promise<GenEdDashboardData> {
     throw new GenEdDashboardUnauthorizedError("General Education Coordinator access required.");
   }
 
+  // Dashboard KPIs are scoped to active GE courses only (course.is_active) to avoid
+  // contradictory "no-courses" empty state when assignments exist for archived courses.
+  // The assignment list (listCourseAssignments) intentionally retains inactive courses
+  // for visibility — see its test "never filters assignments by course is_active".
+  // This divergence is deliberate: dashboard = operational active scope, list = management view.
   const [activeAssignments, geCourses, activeGeAssignmentsByProgram] = await Promise.all([
     prisma.courseAssignment.count({
       where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION", is_active: true } },
