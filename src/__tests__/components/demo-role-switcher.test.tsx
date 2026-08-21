@@ -38,7 +38,7 @@ describe("DemoRoleSwitcher", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /demo/i }));
 
-    expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(7);
+    expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(8);
     expect(screen.getByText("College Dean")).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("textbox", { name: "Search roles" }), {
@@ -147,7 +147,7 @@ describe("DemoRoleSwitcher", () => {
   });
 
   it("keeps the dedicated presentation catalog distinct from the broader seed catalog", () => {
-    expect(DEDICATED_DEMO_USERS).toHaveLength(7);
+    expect(DEDICATED_DEMO_USERS).toHaveLength(8);
     expect(DEDICATED_DEMO_USERS.map((user) => user.label)).toEqual([
       "Secretary",
       "College Dean",
@@ -156,6 +156,7 @@ describe("DemoRoleSwitcher", () => {
       "Student",
       "Alumni",
       "Industry Partner",
+      "Gen Ed Coordinator",
     ]);
   });
 });

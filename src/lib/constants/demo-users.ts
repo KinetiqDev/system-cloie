@@ -100,4 +100,5 @@ export const DEDICATED_DEMO_USERS = [
     label: "Industry Partner",
     role: SystemRole.INDUSTRY_PARTNER,
   },
+  { email: "demo-gened@cloie.test", label: "Gen Ed Coordinator", role: SystemRole.GEN_ED_COORDINATOR },
 ] as const;
