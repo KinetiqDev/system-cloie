@@ -216,6 +216,8 @@ const INDUSTRY_PARTNER_MOBILE_NAV: NavItem[] = [
 
 const GEN_ED_COORDINATOR_NAV: NavItem[] = [
   { name: "Dashboard", href: "/gen-ed-coordinator/dashboard", icon: LayoutDashboard },
+  { name: "Outcomes", href: "/gen-ed-coordinator/outcomes", icon: Layers3 },
+  { name: "Courses", href: "/gen-ed-coordinator/courses", icon: BookOpen },
   { name: "Course Assignments", href: "/gen-ed-coordinator/course-assignments", icon: UsersRound },
   { name: "Analytics", href: "/gen-ed-coordinator/analytics", icon: BarChart3 },
   { name: "Profile", href: "/gen-ed-coordinator/profile", icon: UserCircle },

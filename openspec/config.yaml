@@ -129,7 +129,7 @@ context: |
     FACULTY: read-only for own assignments; assignment mutation denied for every Faculty account.
   - Coordinator scope model: shared college-wide. Multiple Coordinators share the same `course.course_scope == GENERAL_EDUCATION` predicate. Separate portfolios require a new OpenSpec capability and assignment model.
   - First analytics release: Course-bound General Education evidence only (`course.course_scope == GENERAL_EDUCATION`, submitted Course-bound responses). Central Deployments are excluded from Coordinator analytics. ILO attainment and ILO-to-PLO crosswalks are not part of this change.
-  - Deferred: Institutional Learning Outcome catalog ownership and write authority. The ILO ownership/write conflict (ADR 0005 / `introduce-institutional-learning-outcomes` vs `secretary-outcome-access-removal` and live denial) is recorded as deferred. This change adds no ILO catalog mutation path; current denial behavior is preserved.
+  - Institutional Outcome catalog: `GEN_ED_COORDINATOR` college-wide owns ILO (`code @unique`, `order`, `is_active`, CRUD/reorder/archive/restore; `SECRETARY` has no access — `/secretary/learning-outcomes/**` redirects to `/secretary/dashboard`). Ownership reconciles ADR 0005 and `secretary-outcome-access-removal` via ADR 0018 (Issue #490, `transfer-ilo-catalog-to-gen-ed-coordinator`). `GEN_ED_COORDINATOR college-wide owns ILO`.
 
   ## Analytics and AI boundary
   - Deterministic aggregate analytics remains the authoritative evidence surface.
