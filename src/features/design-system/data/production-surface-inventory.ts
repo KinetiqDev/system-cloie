@@ -2089,6 +2089,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/outcomes/components/gen-ed-outcomes-page.tsx",
+    disposition: "task",
+    taskId: 12,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/outcomes/components/ilo-form-dialog.tsx",
+    disposition: "task",
+    taskId: 12,
+    category: "feature_component",
+  },
+  {
     path: "src/features/academic-structure/components/secretary-programs-list.tsx",
     disposition: "task",
     taskId: 14,
