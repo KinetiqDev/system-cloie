@@ -102,15 +102,15 @@ export function CourseAssignmentsPageShell({
   };
 
   return (
-    <div className="container mx-auto space-y-6 py-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
-          <p className="text-muted-foreground mt-1">{pageDescription}</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-heading-lg">{pageTitle}</h1>
+          <p className="text-body-sm text-text-secondary">{pageDescription}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus aria-hidden="true" className="size-4" />
             Assign Faculty
           </Button>
         </div>
