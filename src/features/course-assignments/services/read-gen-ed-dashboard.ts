@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
+// Intentionally exported for consumers to distinguish coordinator auth failure (mirrors DeanReadModelUnauthorizedError).
+// fallow-ignore-next-line unused-export
 export class GenEdDashboardUnauthorizedError extends Error {
   constructor(message = "General Education Coordinator access required.") {
     super(message);
@@ -25,12 +27,12 @@ export async function getGenEdDashboard(): Promise<GenEdDashboardData> {
 
   const [activeAssignments, geCourses, activeGeAssignmentsByProgram] = await Promise.all([
     prisma.courseAssignment.count({
-      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } },
+      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION", is_active: true } },
     }),
     prisma.course.count({ where: { course_scope: "GENERAL_EDUCATION", is_active: true } }),
     prisma.courseAssignment.groupBy({
       by: ["program_id"],
-      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } },
+      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION", is_active: true } },
       _count: true,
     }),
   ]);

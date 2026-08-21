@@ -45,11 +45,13 @@ describe("getGenEdDashboard", () => {
     prismaMock.course.count.mockResolvedValue(3);
     prismaMock.courseAssignment.groupBy.mockResolvedValue([{ program_id: "p1", _count: 2 } as unknown as Awaited<ReturnType<typeof prismaMock.courseAssignment.groupBy>>[number]]);
     const r = await getGenEdDashboard();
-    expect(prismaMock.courseAssignment.count).toHaveBeenCalledWith({ where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } } });
+    expect(prismaMock.courseAssignment.count).toHaveBeenCalledWith({
+      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION", is_active: true } },
+    });
     expect(prismaMock.course.count).toHaveBeenCalledWith({ where: { course_scope: "GENERAL_EDUCATION", is_active: true } });
     expect(prismaMock.courseAssignment.groupBy).toHaveBeenCalledWith({
       by: ["program_id"],
-      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } },
+      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION", is_active: true } },
       _count: true,
     });
     expect(r.activeAssignments).toBe(5);
