@@ -1,8 +1,8 @@
 # DESIGN.md — System CLOIE
 
-> **Status:** Approved unified light/dark design specification  
-> **Repository status:** Light, Dark, and System are implemented on `main`; Dark/System selection is gated in primary Production behind the server-owned `CLOIE_APPEARANCE_ENABLED` release control (ADR 0010).  
-> **Reviewed against `main`:** 2026-08-08
+> **Status:** Approved unified light/dark design specification
+> Light, Dark, and System are implemented on `main`; Dark/System selection is gated in primary Production behind the server-owned `CLOIE_APPEARANCE_ENABLED` release control (ADR 0010).
+> **Reviewed against `main`:** 2026-08-21
 
 ## 1. Authority and Scope
 
@@ -11,7 +11,7 @@ This file defines System CLOIE's visual language, theme behavior, page patterns,
 | Subject                                        | Source of truth                              |
 | ---------------------------------------------- | -------------------------------------------- |
 | Architecture, stack, binding engineering rules | `openspec/config.yaml`                       |
-| Product workflows and requirements             | `docs/cloie-prd.md`, `docs/cloie-srs.md`     |
+| Product workflows and requirements             | `openspec/specs/`                            |
 | Domain terms and invariants                    | `CONTEXT-MAP.md`, feature `CONTEXT.md`, ADRs |
 | Visual and interaction behavior                | `docs/design.md`                             |
 | Numerical design values                        | `src/styles/tokens.css`                      |
@@ -25,7 +25,7 @@ Surface conflicts explicitly. This file does not define product scope, authoriza
 
 ---
 
-## 2. Implementing-Agent Quick Start
+## 2. Agent Workflow
 
 Before changing UI:
 
@@ -37,7 +37,20 @@ Before changing UI:
 6. Verify light, dark, desktop, mobile, keyboard, contrast, and reduced motion.
 7. Run focused tests, `pnpm lint`, and `pnpm build`.
 
-If dark mode is not yet implemented, follow this approved specification but do not improvise component-local palettes.
+A change is done when every step above holds:
+
+- [ ] Correct role, domain, and page type
+- [ ] Relevant context and current implementation inspected
+- [ ] Existing shell and primitives reused
+- [ ] Semantic tokens only
+- [ ] Correct light/dark hierarchy
+- [ ] Required component and system states covered
+- [ ] Desktop and mobile verified
+- [ ] Keyboard, focus, contrast, touch, and reduced motion verified
+- [ ] Status/chart meaning is not color-only
+- [ ] No forbidden pattern (§14)
+- [ ] Focused tests, `pnpm lint`, and `pnpm build` pass
+- [ ] Result is recognizably System CLOIE
 
 ---
 
@@ -49,7 +62,6 @@ If dark mode is not yet implemented, follow this approved specification but do n
 - **Respondent roles:** `STUDENT`, `ALUMNI`, `INDUSTRY_PARTNER`
 - **Production identity:** one active account role; dev/demo role switching is environment-only
 - **Character:** institutional, trustworthy, calm, precise, professional, orderly, analytical, restrained
-- **Avoid:** playful, trendy, decorative, noisy, gamified, highly saturated, legacy-portal-like, neon, or cyberpunk styling
 
 ### Experience Principles
 
@@ -62,9 +74,9 @@ If dark mode is not yet implemented, follow this approved specification but do n
 
 ---
 
-## 4. Unified Theme Architecture
+## 4. Theme Architecture
 
-### 4.1 Theme Model and Status
+### 4.1 Model and Status
 
 System CLOIE has **Light**, **Dark**, and **System** appearance settings. Themes change resolved token values, not component structure, hierarchy, semantics, content, navigation, or responsive behavior.
 
@@ -76,7 +88,7 @@ System CLOIE has **Light**, **Dark**, and **System** appearance settings. Themes
 | Dark       | Approved | Implemented, gated in primary Production |
 | System     | Approved | Implemented, gated in primary Production |
 
-Dark and System are shipped in the repository. In primary Production they activate only when the server-only `CLOIE_APPEARANCE_ENABLED` release setting is exactly `"true"` (see ADR 0010 and `docs/runbooks/appearance-production-activation.md`); development and the dedicated demo deployment render them directly.
+In primary Production, Dark and System activate only when the server-only `CLOIE_APPEARANCE_ENABLED` release setting is exactly `"true"` (ADR 0010, `docs/runbooks/appearance-production-activation.md`). Development and the dedicated demo deployment render them directly.
 
 ### 4.2 Brand Roles
 
@@ -90,7 +102,7 @@ Dark and System are shipped in the repository. In primary Production they activa
 
 **ACD cyan and neutral secondary actions are separate roles.**
 
-### 4.3 Theme Invariants
+### 4.3 Invariants
 
 Unchanged across themes:
 
@@ -130,11 +142,9 @@ Theme-adaptive:
 
 ### 5.1 Ownership and Layers
 
-- `tokens.css` owns numerical values.
-- `globals.css` maps them to Tailwind/shadcn semantics.
-- `design.md` defines meaning and usage.
-
-Components MUST use semantic classes such as `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `ring-ring`, and `bg-primary`.
+- `tokens.css` owns numerical values — this file defines roles and usage, never competing hex values.
+- `globals.css` maps values to Tailwind/shadcn semantics.
+- Components MUST use semantic classes such as `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `ring-ring`, and `bg-primary`.
 
 Token layers:
 
@@ -142,104 +152,49 @@ Token layers:
 2. **Semantic UI:** background, card, muted, input, popover, border, foreground, primary, secondary, accent, link, ring, selected
 3. **Status/visualization:** success, warning, danger, information, chart 1–5
 
-### 5.2 Core Light–Dark Mapping
+### 5.2 Surface and Text Roles
 
-| Role                |                   Light |                  Dark |
-| ------------------- | ----------------------: | --------------------: |
-| Background          |               `#F8FAFC` |             `#0B1120` |
-| Surface/card        |               `#FFFFFF` |             `#111827` |
-| Surface alternate   |               `#F1F5F9` |             `#172033` |
-| Surface muted       |               `#E2E8F0` |             `#1E293B` |
-| Surface hover       |               `#F1F5F9` |             `#273449` |
-| Input               |               `#FFFFFF` |             `#0F172A` |
-| Popover             |               `#FFFFFF` |             `#172033` |
-| Scrim               | `rgba(15, 23, 42, 0.5)` | `rgba(2, 6, 23, 0.6)` |
-| Border              |               `#E2E8F0` |             `#334155` |
-| Border strong       |               `#CBD5E1` |             `#475569` |
-| Text primary        |               `#0F172A` |             `#F8FAFC` |
-| Text secondary      |               `#334155` |             `#CBD5E1` |
-| Text muted          |               `#64748B` |             `#94A3B8` |
-| Text disabled       |               `#94A3B8` |             `#64748B` |
-| Primary             |               `#2563EB` |             `#2563EB` |
-| Link                |               `#1D4ED8` |             `#60A5FA` |
-| Focus ring          |               `#0284C7` |             `#38BDF8` |
-| Selected background |               `#EFF6FF` |             `#172554` |
-| Selected foreground |               `#1E40AF` |             `#BFDBFE` |
-| Neutral secondary   |               `#F1F5F9` |             `#1E293B` |
-| Secondary hover     |               `#E2E8F0` |             `#273449` |
+Each role resolves per theme in `tokens.css`; the pairing across themes is part of the token contract:
 
-### 5.3 Brand and Interactive Families
+background, card, surface-alternate, surface-muted, surface-hover, input, popover, scrim, border, border-strong, text-primary, text-secondary, text-muted, text-disabled, primary, link, focus-ring, selected-background/foreground, secondary-background/hover.
+
+### 5.3 Brand Families
 
 #### Institutional navy
 
-| Role            |     Value |
-| --------------- | --------: |
-| Reference       | `#221D60` |
-| Dark surface    | `#1E1B4B` |
-| Dark border     | `#3730A3` |
-| Dark foreground | `#C7D2FE` |
-
-Use only for formal report/institutional framing.
+Formal report and institutional framing only — never routine actions, ordinary cards, or decoration.
 
 #### Operational primary
 
-| Role           | Light/shared |      Dark |
-| -------------- | -----------: | --------: |
-| Primary        |    `#2563EB` | `#2563EB` |
-| Hover          |    `#1D4ED8` | `#1D4ED8` |
-| Active         |    `#1E40AF` | `#1E40AF` |
-| Soft/selected  |    `#EFF6FF` | `#172554` |
-| Highlight/link |    `#1D4ED8` | `#60A5FA` |
-| On primary     |    `#FFFFFF` | `#FFFFFF` |
+CTAs, links, active navigation, selection, progress. Hover/active deepen within the same family; soft/selected uses the family's tinted surface. Never a status color.
 
 #### ACD cyan accent
 
-| Role      |     Light |      Dark |
-| --------- | --------: | --------: |
-| Accent    | `#0369A1` | `#0369A1` |
-| Hover     | `#075985` | `#0E7490` |
-| Active    | `#0C4A6E` | `#075985` |
-| Soft      | `#F0F9FF` | `#082F49` |
-| Border    | `#BAE6FD` | `#0E7490` |
-| Highlight | `#25AAE1` | `#38BDF8` |
-| On accent | `#FFFFFF` | `#FFFFFF` |
-
-Use for category badges, analytics accents, chart 2, and a separately named specialized action—not the default `secondary` button.
+Category badges, analytics accents, chart 2, and one separately named specialized action. It is not the default `secondary` button and not a second primary.
 
 #### Neutral secondary action
 
-| Role       |     Light |      Dark |
-| ---------- | --------: | --------: |
-| Background | `#F1F5F9` | `#1E293B` |
-| Hover      | `#E2E8F0` | `#273449` |
-| Border     | `#CBD5E1` | `#475569` |
-| Foreground | `#0F172A` | `#F8FAFC` |
+Secondary buttons and neutral controls. Remains neutral in both themes; distinct from ACD cyan.
 
-### 5.4 Semantic Status Tokens
+### 5.4 Status Tokens
 
-| Status      | Light main / soft     | Dark main / soft      | Meaning             |
-| ----------- | --------------------- | --------------------- | ------------------- |
-| Success     | `#047857` / `#ECFDF5` | `#34D399` / `#052E2B` | completed, valid    |
-| Warning     | `#B45309` / `#FFFBEB` | `#FBBF24` / `#451A03` | attention required  |
-| Danger      | `#B91C1C` / `#FEF2F2` | `#F87171` / `#450A0A` | error, destructive  |
-| Information | `#4F46E5` / `#EEF2FF` | `#A5B4FC` / `#1E1B4B` | neutral information |
+| Status      | Meaning              | Usage                                                        |
+| ----------- | -------------------- | ------------------------------------------------------------ |
+| Success     | completed, valid     | confirmation without replacing selection                     |
+| Warning     | attention required   | soft surfaces for alerts and badges                          |
+| Danger      | error, destructive   | soft danger for routine controls; filled reserved for confirmed destructive action |
+| Information | neutral information  | indigo; separate from links, focus, primary, and cyan        |
 
-Use soft surfaces for alerts and badges. Filled danger is reserved for the confirmed destructive action. Information is indigo and separate from links, focus, primary, and cyan.
+Use soft surfaces for alerts and badges. Every status pairs color with text, icon, shape, or pattern.
 
 ### 5.5 Data Visualization
 
-| Series  |     Light |      Dark |
-| ------- | --------: | --------: |
-| Chart 1 | `#2563EB` | `#60A5FA` |
-| Chart 2 | `#0369A1` | `#22D3EE` |
-| Chart 3 | `#047857` | `#34D399` |
-| Chart 4 | `#7C3AED` | `#A78BFA` |
-| Chart 5 | `#C2410C` | `#FB923C` |
+Five categorical chart series (`--chart-1` … `--chart-5`), theme-resolved in `tokens.css`.
 
 - Chart colors are categorical, not semantic.
-- Use visible legends, direct labels where practical, and marker/line/pattern distinction.
+- Use visible legends, direct labels where practical, and marker/line/pattern distinction beyond five categories.
 - Provide a text summary of the key insight.
-- Do not use glow, decorative chart animation, or another chart library.
+- No glow, decorative chart animation, or additional chart library.
 
 ### 5.6 Semantic Mappings
 
@@ -285,7 +240,7 @@ Exact sizes live in `globals.css`.
 - 4/8 px rhythm; prefer `gap-*` over `space-*`.
 - Standard component gap: 16 px; section gap: 24 px.
 - Admin pages: medium density; respondent/onboarding: low density.
-- Mobile targets: at least 44 × 44 px. Interactive controls (buttons, inputs, selects, switches, checkboxes, radio items, menu rows) carry `pointer-coarse:` overrides that expand them to ≥44 px on touch devices; fine-pointer (desktop) sizes stay dense.
+- Touch targets: interactive controls carry `pointer-coarse:` overrides expanding them to ≥44 × 44 px on touch devices; fine-pointer sizes stay dense.
 
 | Context         | Layout                                              |
 | --------------- | --------------------------------------------------- |
@@ -375,7 +330,6 @@ Rules:
 - Routine destructive controls use soft danger; filled danger is confirmation-only.
 - Async actions disable duplicate submission and show loading.
 - Keep existing size names in `button.tsx`.
-- Remove or retokenize hardcoded `cta-success`.
 
 ### 8.3 Form Controls
 
@@ -433,7 +387,6 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Use Dialog on desktop and Drawer on mobile where established.
 - Use `AlertDialog` for destructive confirmation.
 - Overlays use semantic surface, border, and scrim tokens; strong shadows are overlay-only.
-- No dark-mode glow.
 
 ### 8.9 Data Visualization
 
@@ -467,7 +420,7 @@ Tailwind defaults: `sm` 640, `md` 768, `lg` 1024, `xl` 1280.
 
 - **Desktop:** expanded navigation, full chart/table density, multi-column cards, dialogs.
 - **Tablet:** Dean icon rail, two-column cards, reduced chart density.
-- **Mobile:** respondent bottom nav; admin hamburger/drawer; single-column forms; contained horizontal tables; `pb-safe`; ≥44 px targets.
+- **Mobile:** respondent bottom nav; admin hamburger/drawer; single-column forms; contained horizontal tables; `pb-safe`; touch targets per §6.2.
 
 Appearance must not alter breakpoints, density, information hierarchy, navigation mode, or responsive substitution.
 
@@ -481,7 +434,7 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 - Async: preserve width, prevent duplicates, communicate loading and result.
 - Motion: 150–300 ms; animate opacity/transform, not layout dimensions.
 - No decorative loops or blocked input; honor reduced motion.
-- Resolve theme before first paint; avoid long page fades, flashes, and dark-mode glow.
+- Resolve theme before first paint; avoid long page fades and flashes.
 
 ---
 
@@ -494,7 +447,7 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 - Overlays trap and restore focus appropriately.
 - Never communicate status or chart series by color alone.
 - Errors state cause and recovery.
-- Mobile targets are ≥44 × 44 px and do not rely on hover.
+- Touch targets meet the §6.2 minimum and do not rely on hover.
 - Charts use legends, labels, marker/line distinction, tooltips, and text summaries.
 - Honor `prefers-reduced-motion`; loading remains understandable without animation.
 
@@ -512,7 +465,7 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 
 ---
 
-## 14. Allowed and Forbidden Patterns
+## 14. Allowed, Forbidden, and Exceptions
 
 ### Allowed
 
@@ -543,49 +496,13 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 
 Existing semantic `dark:` selectors may remain only when resolving semantic variables/opacity, not an independent raw palette.
 
-Exceptions must be documented, scoped, and tokenized when reusable. Example: institutional navy is valid for formal report cards, not ordinary cards.
+### Exceptions
+
+Exceptions must be documented, scoped, and tokenized when reusable. Institutional navy on formal report cards is the canonical example; ordinary cards do not qualify. Raw-color exceptions are allowlisted in `src/features/design-system/data/raw-color-allowlist.ts`.
 
 ---
 
-## 15. Implementation Status and Known Gaps
-
-All previously tracked gaps were resolved during the unified design-system migration (`openspec/changes/migrate-unified-design-system/`), verified by the appearance readiness gate (#270):
-
-- Legacy gold and light-only values: replaced by approved Light values and `.dark` overrides in `tokens.css`.
-- Appearance provider/selector: added with persistence, OS detection, and first-paint resolution.
-- `accent` and `ring`: separated from legacy info blue; indigo `information` introduced.
-- `bg-surface-hover`: defined as a semantic hover token.
-- Manifest/layout metadata: reconciled with approved theme strategy (theme-neutral values).
-- Hardcoded `cta-success`: removed with its sole caller.
-- Hardcoded chart palettes: migrated to theme `--chart-*` roles with hatch/pattern distinction beyond five categories.
-- Toast hardcoded colors: tokenized with an `information` kind.
-- `text-display-sm`: migrated to the approved type scale.
-- `CardAction`: exported from `card.tsx`.
-- Token comment reference: points to `docs/design.md`.
-- Light-only raw surfaces: audited and replaced with semantic classes (raw-color audit passes; exceptions are allowlisted in `src/features/design-system/data/raw-color-allowlist.ts`).
-
-New exceptions must be documented, scoped, and tokenized when reusable. Example: institutional navy is valid for formal report cards, not ordinary cards.
-
----
-
-## 16. Agent Review Checklist
-
-- [ ] Correct role, domain, and page type
-- [ ] Relevant context and current implementation inspected
-- [ ] Existing shell and primitives reused
-- [ ] Semantic tokens only
-- [ ] Correct light/dark hierarchy
-- [ ] Required component and system states covered
-- [ ] Desktop and mobile verified
-- [ ] Keyboard, focus, contrast, touch, and reduced motion verified
-- [ ] Status/chart meaning is not color-only
-- [ ] No forbidden pattern
-- [ ] Focused tests, `pnpm lint`, and `pnpm build` pass
-- [ ] Result is recognizably System CLOIE
-
----
-
-## 17. Visual References
+## 15. Visual References
 
 Store companion boards at:
 
