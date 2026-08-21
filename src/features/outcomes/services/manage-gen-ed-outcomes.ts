@@ -1,8 +1,10 @@
+import type { CILOMappingManifestation } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import type { ServiceResult } from "@/lib/utils/service-result";
 import type { CreateILOInput, UpdateILOInput } from "../schemas/ilo";
+import { ciloIsAligned } from "./classify-course-alignment";
 import { commitOutcomeWrite, prepareOutcomeWrite } from "./manage-outcome-writes";
 
 function failure(error: string): ServiceResult<never> {
@@ -112,4 +114,95 @@ export async function reorderILOs(orderedIds: string[]): Promise<ServiceResult> 
   const result = await writeGenEdOutcome({ kind: "ILO", action: "reorder", orderedIds });
   if (!result.success) return result;
   return { success: true, data: undefined };
+}
+
+// ─── List CILO→ILO mappings for GE (college-wide, no programId) ─────────────
+
+export type GECourseCILOMappings = {
+  courseId: string;
+  courseCode: string;
+  courseTitle: string;
+  courseScope: "GENERAL_EDUCATION";
+  cilos: Array<{
+    id: string;
+    description: string;
+    readiness: "ready" | "incomplete-mapping";
+    mappedTargets: Array<{
+      id: string;
+      mappingId: string;
+      code: string;
+      description: string;
+      is_active: boolean;
+      manifestation: CILOMappingManifestation | null;
+    }>;
+  }>;
+};
+
+export async function listCILOILOMappingsForGE(): Promise<ServiceResult<GECourseCILOMappings[]>> {
+  const session = await resolveAuthSession();
+  if (!session || session.activeRole !== ROLES.GEN_ED_COORDINATOR) {
+    return failure("You do not have permission to view CILO mappings.");
+  }
+
+  const courses = await prisma.course.findMany({
+    where: { is_active: true, course_scope: "GENERAL_EDUCATION", cilos: { some: { is_active: true } } },
+    select: {
+      id: true,
+      code: true,
+      title: true,
+      cilos: {
+        where: { is_active: true },
+        select: {
+          id: true,
+          description: true,
+          cilo_institutional_outcome_mappings: {
+            select: {
+              id: true,
+              manifestation: true,
+              institutional_outcome: {
+                select: { id: true, code: true, description: true, is_active: true },
+              },
+            },
+          },
+        },
+        orderBy: { created_at: "asc" },
+      },
+    },
+    orderBy: { code: "asc" },
+  });
+
+  const result: GECourseCILOMappings[] = courses.map((course) => ({
+    courseId: course.id,
+    courseCode: course.code,
+    courseTitle: course.title,
+    courseScope: "GENERAL_EDUCATION" as const,
+    cilos: course.cilos.map((cilo) => ({
+      id: cilo.id,
+      description: cilo.description,
+      mappedTargets: cilo.cilo_institutional_outcome_mappings.map((m) => ({
+        id: m.institutional_outcome.id,
+        mappingId: m.id,
+        code: m.institutional_outcome.code,
+        description: m.institutional_outcome.description,
+        is_active: m.institutional_outcome.is_active,
+        manifestation: m.manifestation ?? null,
+      })),
+      readiness: ciloIsAligned(
+        {
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: cilo.cilo_institutional_outcome_mappings.map((m) => ({
+            manifestation: m.manifestation ?? null,
+            institutional_outcome: { is_active: m.institutional_outcome.is_active },
+          })),
+        },
+        "GENERAL_EDUCATION",
+        null,
+        []
+      )
+        ? "ready"
+        : "incomplete-mapping",
+    })),
+  }));
+
+  return { success: true, data: result };
 }
