@@ -16,8 +16,8 @@ _Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-PLO attai
 The first release supports academic-period filtering, overview counts and means, Course breakdowns, comparable trends, and aggregate qualitative feedback. Means retain server precision; rating counts remain distinct from submitted response counts; rating categories derive from the instrument structure snapshot. Response-rate denominator is in-scope `EvaluationAssignment` opportunities; zero opportunities reports unavailable rather than `0%`. Payloads are aggregate-only and request-scoped: no raw comments, response rows, respondent IDs, account emails, roster data, or shared cache entry. Authorization is rechecked per request before querying private evidence.
 _Avoid_: Raw qualitative text in browser payload, shared cache across Coordinator requests
 
-**Deferred**: ILO attainment, ILO-to-PLO crosswalk, and Central Deployment General Education analytics are not part of this change. ILO catalog ownership and write authority remain deferred and this slice adds no ILO catalog mutation path.
-_Avoid_: ILO analytics assumption, Coordinator ILO catalog editor
+**Deferred**: ILO attainment, ILO-to-PLO crosswalk, and Central Deployment General Education analytics are not part of this change. ILO catalog ownership is `GEN_ED_COORDINATOR` college-wide via the subsequent approved change `transfer-ilo-catalog-to-gen-ed-coordinator` (ADR 0018); that change — not this one — owns the `GEN_ED_COORDINATOR` ILO CRUD/reorder/archive/restore surface.
+_Avoid_: ILO analytics assumption, Coordinator ILO catalog editor in this change
 
 ## Evidence language
 
