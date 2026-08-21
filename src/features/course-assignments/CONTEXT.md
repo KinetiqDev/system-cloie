@@ -24,8 +24,8 @@ _Avoid_: Coordinator portfolio assignment, fake General Education Program
 An optional published `CurriculumCourse` link where `CourseAssignment.course_id == CurriculumCourse.course_id` and `CourseAssignment.program_id == CurriculumVersion.program_id`. `CourseAssignment` remains the operational class record and roster/evaluation authority.
 _Avoid_: Required curriculum link, curriculum as roster authority
 
-**Deferred**: ILO catalog ownership and write authority remain unresolved and are recorded as deferred. This change adds no ILO catalog mutation path.
-_Avoid_: Coordinator ILO catalog editor, Secretary ILO write assumption
+**Resolved** (transfer-ilo-catalog-to-gen-ed-coordinator / ADR 0018): Institutional Learning Outcome catalog ownership is `GEN_ED_COORDINATOR` college-wide (CRUD/reorder/archive/restore; `SECRETARY` no access, `/secretary/learning-outcomes/**` redirects). Course Catalog and Assignments adds no ILO catalog mutation path.
+_Avoid_: Secretary ILO write, Coordinator Program-specific ILO scope
 
 
 ## Language
