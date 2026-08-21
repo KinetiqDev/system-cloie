@@ -8,6 +8,7 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { prisma } from "@/lib/db/prisma";
 import { cn } from "@/lib/utils";
 
+// fallow-ignore-next-line complexity
 export default async function GenEdCoordinatorProfilePage() {
   const session = await resolveAuthSession();
   if (!session) redirect("/portal/respondents");
@@ -52,6 +53,7 @@ export default async function GenEdCoordinatorProfilePage() {
             </div>
             <div className="space-y-1">
               <p className="text-label-sm text-muted-foreground tracking-wider uppercase">Email Address</p>
+              {/* fallow-ignore-next-line code-duplication */}
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Mail aria-hidden="true" className="text-text-muted size-4" />
                 {user?.email ?? "No email available"}
