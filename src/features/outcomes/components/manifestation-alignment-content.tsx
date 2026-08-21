@@ -45,7 +45,7 @@ function targetCopy(scope: CourseAlignment["course"]["scope"]): TargetCopy {
         "Choose Learning, Practice, or Opportunity for at least one Institutional Outcome per CILO before reviewing this alignment.",
       emptyTitle: "No Institutional Outcomes have been defined yet.",
       emptyDescription:
-        "The Secretary must create an active Institutional Outcome before Course alignment can be completed.",
+        "The General Education Coordinator must create an active Institutional Outcome before Course alignment can be completed.",
       archivedTitle: "Archived Institutional Outcomes",
       archivedDescription:
         "Historical manifestations on archived Institutional Outcomes are read-only and do not count toward completeness.",

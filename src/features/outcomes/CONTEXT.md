@@ -5,7 +5,7 @@ Outcomes defines the institutional, program, and course learning outcome layers,
 ## Language
 
 **Institutional Learning Outcome (ILO)**:
-A college-wide learning outcome in the shared Institutional Outcome catalog, owned by the Secretary and applicable to every Academic Program. It has a stable unique code, statement, display order, active/archive state, and timestamps.
+A college-wide learning outcome in the shared Institutional Outcome catalog, owned by the General Education Coordinator (college-wide) and applicable to every Academic Program. It has a stable unique code, statement, display order, active/archive state, and timestamps.
 _Avoid_: Program Learning Outcome, college-level PLO
 
 **Program Learning Outcome (PLO)**:
@@ -72,9 +72,9 @@ _Avoid_: Publish-with-gaps, alignment warning only
 Faculty is the primary operational mapper for both typed relations, authorized by an active Course Assignment owned by the current Faculty member in an active Academic Period; affiliation alone is insufficient.
 _Avoid_: Program-wide faculty mapping, role-only mapping access
 
-**Secretary outcome stewardship**:
-The Secretary owns the Institutional Outcome catalog and holds college-wide correction authority for both typed mapping relations and for CILO and PLO administration, using exact before/after review, explicit confirmation, freshness recheck, and atomic save.
-_Avoid_: Secretary as PLO owner, unconfirmed administrative write
+**General Education Coordinator outcome stewardship**:
+The General Education Coordinator college-wide owns the Institutional Learning Outcome catalog (college-wide `code @unique`, `order`, `is_active`) and holds correction authority for institutional outcomes (create, edit, reorder, archive, restore) via exact before/after review, explicit confirmation, freshness recheck, and atomic save. The Secretary has no ILO access; `/secretary/learning-outcomes/**` redirects to `/secretary/dashboard`. `GEN_ED_COORDINATOR college-wide owns ILO`.
+_Avoid_: Secretary as ILO owner, unconfirmed administrative write, Secretary ILO write
 
 **Program Head read-only mapping review**:
 Program Heads retain PLO ownership but may only inspect valid typed mappings and readiness gaps for their assigned Program; they cannot create or remove mapping rows through the UI or crafted server requests.
@@ -88,7 +88,7 @@ _Avoid_: Dean outcome editing, PLO-only gap labels, roster or response data in o
 An explicitly deferred mapping or attainment propagation between Institutional Outcomes and Program Learning Outcomes; no reporting or attainment semantics exist for it yet.
 _Avoid_: ILO-to-PLO mapping, automatic crosswalk, attainment rollup
 
-## Deferred catalog ownership conflict (issue #477)
+## Institutional Learning Outcome catalog ownership (resolved, ADR 0018, issue #490)
 
-The Institutional Learning Outcome catalog ownership and write-authority conflict (ADR 0005 / `introduce-institutional-learning-outcomes` documenting Secretary ownership vs `secretary-outcome-access-removal` and live server denial) is recorded as **deferred** by the `add-general-education-coordinator` change. This slice adds no ILO catalog mutation path and no `GEN_ED_COORDINATOR` ILO writes. A separate approved OpenSpec change must reconcile the sources before any ILO catalog editor is implemented.
-_Avoid_: Coordinator ILO catalog editor, Secretary ILO write assumption in this change
+The Institutional Learning Outcome catalog ownership and write-authority conflict (ADR 0005 / `introduce-institutional-learning-outcomes` documenting Secretary ownership vs `secretary-outcome-access-removal` and live server denial) is **resolved** by `transfer-ilo-catalog-to-gen-ed-coordinator` and ADR 0018: `GEN_ED_COORDINATOR college-wide owns ILO` (CRUD, reorder, archive, restore; college-wide `order`, `code @unique`). The Secretary has no ILO access and `SECRETARY_NAV` retains no Learning Outcomes entry. Earlier deferred notes (`openspec/config.yaml:132`, deferred section here) are superseded.
+_Avoid_: Secretary ILO ownership, Coordinator ILO catalog editor deferred assumption

@@ -7,7 +7,7 @@
 - [Course Catalog and Assignments](./src/features/course-assignments/CONTEXT.md) - defines courses, class sections, teaching assignments, and evaluation scopes.
 - [Academic Structure](./src/features/academic-structure/CONTEXT.md) - defines academic programs and majors offered by the college.
 - [Curriculum](./src/features/curriculum/CONTEXT.md) - documents how Courses are placed (year level, semester, term) within an academic Program across revisions of the program's curriculum.
-- [Outcomes](./src/features/outcomes/CONTEXT.md) - defines the college-wide Institutional Learning Outcome catalog, Program-owned Program Learning Outcomes, Course-level CILOs, typed alignment relations, readiness semantics, and role responsibilities.
+- [Outcomes](./src/features/outcomes/CONTEXT.md) - defines the college-wide Institutional Learning Outcome catalog (GEN_ED_COORDINATOR owns ILO), Program-owned Program Learning Outcomes, Course-level CILOs, typed alignment relations, readiness semantics, and role responsibilities.
 - [Analytics](./src/features/analytics/CONTEXT.md) - defines submitted-response evidence, source-aware analytics terminology, Program PLO evidence boundaries, and bounded AI-assisted interpretation.
 - [Design System](./src/features/design-system/CONTEXT.md) - defines root semantic tokens, unified appearance preferences (Light, Dark, System), protected visual showcase, and production-surface inventory.
 
