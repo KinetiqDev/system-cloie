@@ -1,3 +1,11 @@
+<!-- Agent vertical slice skills — must be invoked per slice
+- 1 Foundation      → /frontend-design /shadcn /web-design-guidelines /next-best-practices
+- 2 ILO Catalog     → /frontend-design /shadcn /web-design-guidelines /next-best-practices /tdd
+- 3 GE Courses      → /frontend-design /shadcn /web-design-guidelines /next-best-practices /tdd
+- 4 ILO Mapping     → /frontend-design /shadcn /web-design-guidelines /next-best-practices /tdd
+- 5 Hardening       → /next-best-practices /web-design-guidelines /tdd
+Sync: GH issues 490-494 updated to match current design stack (removed ui-ux-pro-max, added shadcn + web-design-guidelines).
+-->
 ## 1. Documentation + Navigation Scaffolding
 
 - [ ] 1.1 Record ADR `docs/adr/XXXX-transfer-ilo-ownership-to-gen-ed-coordinator.md` reconciling ADR 0005 and `introduce-institutional-learning-outcomes` Secretary ownership vs `secretary-outcome-access-removal` + deferred `config.yaml:132` → `GEN_ED_COORDINATOR` as sole ILO encoder; note Secretary redirect preserved.
