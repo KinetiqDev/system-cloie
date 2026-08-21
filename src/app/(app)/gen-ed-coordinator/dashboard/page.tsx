@@ -1,110 +1,132 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { BarChart3, BookOpen, Library, UsersRound } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { prisma } from "@/lib/db/prisma";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
+import {
+  getGenEdDashboard,
+  type GenEdDashboardData,
+} from "@/features/course-assignments/services/read-gen-ed-dashboard";
+import { GenEdDashboardLoading } from "@/features/course-assignments/components/gen-ed-dashboard-loading";
 
-export default async function GenEdCoordinatorDashboardPage() {
-  const [activeAssignments, geCourses, activeGeAssignmentsByProgram] = await Promise.all([
-    prisma.courseAssignment.count({
-      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } },
-    }),
-    prisma.course.count({ where: { course_scope: "GENERAL_EDUCATION" } }),
-    prisma.courseAssignment.groupBy({
-      by: ["program_id"],
-      where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } },
-      _count: true,
-    }),
-  ]);
+export const metadata = {
+  title: "Dashboard — Gen Ed Coordinator | System CLOIE",
+};
 
-  const programsWithAssignments = activeGeAssignmentsByProgram.length;
-  const unassignedCoursesNote =
-    geCourses === 0
-      ? "No General Education courses in catalog."
-      : activeAssignments === 0
-        ? "No active General Education assignments yet."
-        : null;
+export default function GenEdCoordinatorDashboardPage() {
+  const dashboardPromise = getGenEdDashboard();
+  void dashboardPromise.catch(() => undefined);
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-heading text-text-primary text-2xl font-black">Gen Ed Coordinator Dashboard</h1>
-          <p className="text-text-secondary text-sm">
-            Coordinate General Education course assignments across all active programs.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/gen-ed-coordinator/course-assignments" className={cn(buttonVariants({ size: "sm" }))}>
-            <UsersRound aria-hidden="true" className="size-4" />
-            Manage assignments
-          </Link>
-          <Link
-            href="/gen-ed-coordinator/analytics"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            <BarChart3 aria-hidden="true" className="size-4" />
-            View analytics
-          </Link>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageIntro />
+      <Suspense fallback={<GenEdDashboardLoading />}>
+        <GenEdDashboardDetails dashboardPromise={dashboardPromise} />
+      </Suspense>
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+async function GenEdDashboardDetails({
+  dashboardPromise,
+}: {
+  dashboardPromise: Promise<GenEdDashboardData>;
+}) {
+  const data = await dashboardPromise;
+  return <GenEdDashboardContent data={data} />;
+}
+
+export function GenEdDashboardContent({ data }: { data: GenEdDashboardData }) {
+  const { activeAssignments, geCourses, programsWithAssignments, emptyReason } = data;
+
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardDescription className="text-xs font-semibold tracking-wider uppercase">
+            <CardDescription className="text-label-sm tracking-wider uppercase">
               Active GE Assignments
             </CardDescription>
-            <CardTitle className="text-2xl font-bold">{activeAssignments.toLocaleString()}</CardTitle>
+            <CardTitle className="text-heading-xl tabular-nums">{activeAssignments.toLocaleString()}</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground flex items-center gap-2 text-xs">
+          <CardContent className="text-text-secondary flex items-center gap-2 text-xs">
             <UsersRound className="size-4" aria-hidden="true" />
             Across {programsWithAssignments.toLocaleString()} program(s)
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription className="text-xs font-semibold tracking-wider uppercase">
-              GE Courses
-            </CardDescription>
-            <CardTitle className="text-2xl font-bold">{geCourses.toLocaleString()}</CardTitle>
+            <CardDescription className="text-label-sm tracking-wider uppercase">GE Courses</CardDescription>
+            <CardTitle className="text-heading-xl tabular-nums">{geCourses.toLocaleString()}</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground flex items-center gap-2 text-xs">
+          <CardContent className="text-text-secondary flex items-center gap-2 text-xs">
             <BookOpen className="size-4" aria-hidden="true" />
-            course_scope = GENERAL_EDUCATION
+            General Education catalog
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription className="text-xs font-semibold tracking-wider uppercase">
-              Scope
-            </CardDescription>
-            <CardTitle className="text-lg font-bold">College-Wide</CardTitle>
+            <CardDescription className="text-label-sm tracking-wider uppercase">Scope</CardDescription>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-heading-md">College-Wide</CardTitle>
+              <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-semibold">
+                General Education
+              </Badge>
+            </div>
           </CardHeader>
-          <CardContent className="text-muted-foreground flex items-center gap-2 text-xs">
+          <CardContent className="text-text-secondary flex items-center gap-2 text-xs">
             <Library className="size-4" aria-hidden="true" />
             All active programs
           </CardContent>
         </Card>
       </div>
 
-      {unassignedCoursesNote ? (
-        <Card className="border-dashed">
-          <CardContent className="text-text-secondary py-6 text-sm">{unassignedCoursesNote}</CardContent>
-        </Card>
+      {emptyReason === "no-courses" ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <BookOpen aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>No General Education courses in catalog</EmptyTitle>
+            <EmptyDescription>
+              The catalog has no active courses with General Education scope. Courses are managed by the catalog administrator.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : null}
+      {emptyReason === "no-assignments" ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <UsersRound aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>No active General Education assignments yet</EmptyTitle>
+            <EmptyDescription>
+              General Education courses exist but are not assigned. Create the first assignment to get started.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Link href="/gen-ed-coordinator/course-assignments" className={cn(buttonVariants({ size: "sm" }))}>
+              <UsersRound aria-hidden="true" className="size-4" />
+              Assign faculty
+            </Link>
+          </EmptyContent>
+        </Empty>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">General Education Assignments</CardTitle>
+            <CardTitle className="text-title-md">General Education Assignments</CardTitle>
             <CardDescription>Create and manage GE course assignments across programs</CardDescription>
           </CardHeader>
           <CardContent className="text-sm">
             <p className="text-text-secondary">
-              Every GE course is shared college-wide. Assignments carry the class program context and are scoped
-              by <code className="bg-muted rounded px-1 py-0.5">course.course_scope == GENERAL_EDUCATION</code>.
+              Every GE course is shared college-wide. Assignments carry the class program context and are scoped to General
+              Education.
             </p>
             <Link
               href="/gen-ed-coordinator/course-assignments"
@@ -116,7 +138,7 @@ export default async function GenEdCoordinatorDashboardPage() {
         </Card>
         <Card className="border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">General Education Analytics</CardTitle>
+            <CardTitle className="text-title-md">General Education Analytics</CardTitle>
             <CardDescription>Aggregate Course-bound evidence across programs</CardDescription>
           </CardHeader>
           <CardContent className="text-sm">
@@ -131,6 +153,32 @@ export default async function GenEdCoordinatorDashboardPage() {
             </Link>
           </CardContent>
         </Card>
+      </div>
+    </>
+  );
+}
+
+function PageIntro() {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-heading-lg">Gen Ed Coordinator Dashboard</h1>
+        <p className="text-body-sm text-text-secondary max-w-2xl">
+          Coordinate General Education course assignments across all active programs.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Link href="/gen-ed-coordinator/course-assignments" className={cn(buttonVariants({ size: "sm" }))}>
+          <UsersRound aria-hidden="true" className="size-4" />
+          Manage assignments
+        </Link>
+        <Link
+          href="/gen-ed-coordinator/analytics"
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          <BarChart3 aria-hidden="true" className="size-4" />
+          View analytics
+        </Link>
       </div>
     </div>
   );

@@ -278,7 +278,7 @@ export function CourseAssignmentsTable({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -373,7 +373,9 @@ export function CourseAssignmentsTable({
                           }
                         />
                         <DropdownMenuContent align="end">
-                          {(mode === "all-program" || !isGeneralEducation) && (
+                          {(mode === "all-program" ||
+                            mode === "general-education" ||
+                            !isGeneralEducation) && (
                             <DropdownMenuItem
                               onClick={() => setEditAssignment(assignment)}
                               disabled={processingId === assignment.id}

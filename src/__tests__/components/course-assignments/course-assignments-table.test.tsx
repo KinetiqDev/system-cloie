@@ -418,4 +418,23 @@ describe("CourseAssignmentsTable", () => {
     });
     expect(onPageChange).not.toHaveBeenCalled();
   });
+
+  it("allows Edit for General Education rows in general-education mode without roster link and wraps table in overflow-x-auto", () => {
+    const geAssignment = createAssignment({
+      id: "ge-coord-1",
+      courseCode: "GE101",
+      courseTitle: "General Education",
+      courseScope: CourseScope.GENERAL_EDUCATION,
+    });
+
+    const { container } = renderTable({ assignments: [geAssignment], mode: "general-education" });
+
+    expect(screen.getByText("GE")).toBeInTheDocument();
+    expect(screen.getByText(/roster managed by program/i)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /open roster/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/open actions for GE101/i)).toBeInTheDocument();
+    openRowActions("GE101");
+    expect(screen.getByRole("menuitem", { name: /edit/i })).toBeInTheDocument();
+    expect(container.querySelector("div.overflow-x-auto")).not.toBeNull();
+  });
 });

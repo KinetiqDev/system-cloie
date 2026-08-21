@@ -112,10 +112,12 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
 
 function Select({ label, name, value, options, blankLabel }: { label: string; name: string; value: string; options: Array<{ value: string; label: string }>; blankLabel: string }) {
   if (options.length === 0) return null;
+  // Native select keeps the GET form working without JS (progressive enhancement).
+  // Keep h-11 for 44px touch target; shadcn Select would need hidden inputs for form submission.
   return (
     <label className="flex min-w-0 flex-col gap-1.5 text-sm font-medium">
       {label}
-      <select name={name} defaultValue={value} className="h-11 rounded-lg border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <select name={name} defaultValue={value} className="h-11 rounded-lg border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11">
         <option value="">{blankLabel}</option>
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -142,7 +144,7 @@ function CourseBreakdownSection({ rows }: { rows: GeneralEducationAnalyticsDTO["
                 <ChartPatternDefs chartId={chartId} categoryCount={data.length} />
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} interval={0} angle={-20} textAnchor="end" height={60} tick={{ fontSize: 12 }} />
-                <YAxis domain={[0, 5]} tickCount={6} tickLine={false} axisLine={false} />
+                <YAxis domain={[0, "auto"]} tickLine={false} axisLine={false} />
                 <Tooltip formatter={(_value, _name, item) => { const o = (item?.payload as { value: number | null } | undefined)?.value; return [o == null ? "N/A" : o.toFixed(2), "Mean"]; }} contentStyle={{ borderRadius: "8px", border: "1px solid var(--color-border)", backgroundColor: "var(--color-surface)", fontSize: "13px" }} />
                 <Bar dataKey="chartValue" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                   {chartData.map((e, i) => <Cell key={e.label} fill={e.value === null ? "var(--muted)" : chartFill(chartId, i)} />)}
@@ -159,7 +161,7 @@ function CourseBreakdownSection({ rows }: { rows: GeneralEducationAnalyticsDTO["
         </>
       ) : null}
       <details>
-        <summary className="text-text-secondary cursor-pointer text-sm font-medium">View exact values</summary>
+        <summary className="text-text-secondary flex cursor-pointer items-center text-sm font-medium pointer-coarse:min-h-11">View exact values</summary>
         <div className="border-border mt-3 overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader><TableRow><TableHead>Course</TableHead><TableHead>Mean</TableHead><TableHead className="text-right">Ratings</TableHead><TableHead className="text-right">Responses</TableHead><TableHead>Scale</TableHead><TableHead>Instrument</TableHead></TableRow></TableHeader>
@@ -243,7 +245,7 @@ function TrendsSection({ trends }: { trends: GeneralEducationAnalyticsDTO["trend
 function TrendsTable({ periods, breaks }: { periods: GeneralEducationAnalyticsDTO["trends"]["periods"]; breaks: GeneralEducationAnalyticsDTO["trends"]["breaks"] }) {
   return (
     <details>
-      <summary className="text-text-secondary cursor-pointer text-sm font-medium">View exact values</summary>
+      <summary className="text-text-secondary flex cursor-pointer items-center text-sm font-medium pointer-coarse:min-h-11">View exact values</summary>
       <div className="border-border mt-3 overflow-x-auto rounded-lg border">
         <Table>
           <TableHeader><TableRow><TableHead>Period</TableHead><TableHead className="text-right">Mean</TableHead><TableHead className="text-right">Ratings</TableHead><TableHead className="text-right">Responses</TableHead><TableHead>Comparable</TableHead></TableRow></TableHeader>
