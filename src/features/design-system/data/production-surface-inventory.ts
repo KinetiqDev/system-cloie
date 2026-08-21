@@ -2077,6 +2077,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/academic-structure/components/gen-ed-courses-catalog.tsx",
+    disposition: "task",
+    taskId: 12,
+    category: "feature_component",
+  },
+  {
     path: "src/features/academic-structure/components/program-head-courses-catalog.tsx",
     disposition: "task",
     taskId: 14,
