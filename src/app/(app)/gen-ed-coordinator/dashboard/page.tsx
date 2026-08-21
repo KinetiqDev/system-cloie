@@ -95,6 +95,11 @@ export function GenEdDashboardContent({ data }: { data: GenEdDashboardData }) {
               The catalog has no courses with General Education scope yet. Courses are managed in the course catalog.
             </EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            <Link href="/gen-ed-coordinator/course-assignments" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+              View assignments
+            </Link>
+          </EmptyContent>
         </Empty>
       ) : null}
       {emptyReason === "no-assignments" ? (

@@ -12,7 +12,7 @@ Run typechecking regularly, single test files regularly, and the full test suite
 
 ## Verification gate
 
-Before review, run every verification command the repo defines (`pnpm test`, `pnpm lint`, `pnpm build` — take the full list from `AGENTS.md` and `package.json` scripts). Fix failures and rerun until the gate is green: every command exits clean.
+Before review, run the non-destructive verification gate: `pnpm test`, `pnpm lint`, `pnpm build` (the full list from `AGENTS.md` and `package.json` scripts that is safe to run locally). Do **not** run `pnpm test:db`, `pnpm supabase:push`, `pnpm supabase:push:dry-run`, `pnpm supabase:migration:diff`, `pnpm demo:reset`, or any destructive DB/migration command unless the user explicitly requests it with a disposable test database (`RUN_DATABASE_INTEGRATION_TESTS=1` + isolated DB). Fix failures and rerun until the gate is green: every command exits clean.
 
 ## Review
 
