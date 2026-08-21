@@ -25,11 +25,17 @@ export type OutcomeWriteInput =
     }
   | { kind: "PLO"; action: "archive" | "restore"; programId: string; id: string }
   | { kind: "PLO"; action: "reorder"; programId: string; orderedIds: string[] }
+  | { kind: "ILO"; action: "create"; code: string; description: string }
+  | { kind: "ILO"; action: "update"; id: string; code: string; description: string }
+  | { kind: "ILO"; action: "archive" | "restore"; id: string }
+  | { kind: "ILO"; action: "reorder"; orderedIds: string[] }
   | { kind: "CILO"; action: "create"; courseId: string; description: string }
   | { kind: "CILO"; action: "update"; id: string; description: string }
   | { kind: "CILO"; action: "archive" | "restore"; id: string };
 
 type PLOWriteInput = Extract<OutcomeWriteInput, { kind: "PLO" }>;
+
+type ILOWriteInput = Extract<OutcomeWriteInput, { kind: "ILO" }>;
 
 type CiloWriteInput = Extract<OutcomeWriteInput, { kind: "CILO" }>;
 
@@ -69,6 +75,10 @@ function reviewIsValid(review: OutcomeWriteReview, userId: string): boolean {
 
 function failure(error: string): ServiceResult<never> {
   return { success: false, error };
+}
+
+async function scopeAllowsILO(input: ILOWriteInput, role: WriterRole): Promise<boolean> {
+  return role === ROLES.GEN_ED_COORDINATOR;
 }
 
 async function scopeAllowsPLO(
@@ -119,6 +129,8 @@ async function scopeAllows(
   switch (input.kind) {
     case "PLO":
       return scopeAllowsPLO(input, role, db);
+    case "ILO":
+      return scopeAllowsILO(input, role);
     case "CILO":
       return scopeAllowsCilo(input, userId, role, db);
   }
@@ -153,6 +165,26 @@ async function readPLOState(
   });
 }
 
+async function readILOState(
+  input: ILOWriteInput,
+  db: Prisma.TransactionClient | typeof prisma
+): Promise<ReviewValue> {
+  if (input.action === "create")
+    return db.institutionalOutcome.findMany({
+      select: { code: true, description: true, order: true, is_active: true },
+      orderBy: { order: "asc" },
+    });
+  if (input.action === "reorder")
+    return db.institutionalOutcome.findMany({
+      select: { id: true, order: true },
+      orderBy: { order: "asc" },
+    });
+  return db.institutionalOutcome.findUnique({
+    where: { id: input.id },
+    select: { id: true, code: true, description: true, order: true, is_active: true },
+  });
+}
+
 async function readCiloState(
   input: CiloWriteInput,
   db: Prisma.TransactionClient | typeof prisma
@@ -176,6 +208,8 @@ async function readState(
   switch (input.kind) {
     case "PLO":
       return readPLOState(input, db);
+    case "ILO":
+      return readILOState(input, db);
     case "CILO":
       return readCiloState(input, db);
   }
@@ -191,6 +225,33 @@ function nextPLOState(input: PLOWriteInput, before: ReviewValue): ReviewValue {
         description: input.description.trim(),
         order: existing.length,
         program_id: input.programId,
+        is_active: true,
+      },
+    ];
+  }
+  if (input.action === "reorder") return input.orderedIds.map((id, order) => ({ id, order }));
+  if (!before) return null;
+  const record = before as Record<string, unknown>;
+  if (input.action === "archive" || input.action === "restore")
+    return { ...record, is_active: input.action === "restore" };
+  if (input.action === "update")
+    return {
+      ...record,
+      code: input.code.trim().toUpperCase(),
+      description: input.description.trim(),
+    };
+  return record;
+}
+
+function nextILOState(input: ILOWriteInput, before: ReviewValue): ReviewValue {
+  if (input.action === "create") {
+    const existing = before as Array<Record<string, unknown>>;
+    return [
+      ...existing,
+      {
+        code: input.code.trim().toUpperCase(),
+        description: input.description.trim(),
+        order: existing.length,
         is_active: true,
       },
     ];
@@ -232,6 +293,8 @@ function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string
   switch (input.kind) {
     case "PLO":
       return nextPLOState(input, before);
+    case "ILO":
+      return nextILOState(input, before);
     case "CILO":
       return nextCiloState(input, before, userId);
   }
@@ -242,11 +305,11 @@ export async function prepareOutcomeWrite(
 ): Promise<ServiceResult<OutcomeWriteReview>> {
   const session = await resolveAuthSession();
   const role = session?.activeRole;
-  if (
-    !session ||
-    (role !== ROLES.PROGRAM_HEAD && role !== ROLES.FACULTY)
-  )
-    return failure("You do not have permission to modify this outcome.");
+  const allowed =
+    (role === ROLES.PROGRAM_HEAD && input.kind === "PLO") ||
+    (role === ROLES.GEN_ED_COORDINATOR && input.kind === "ILO") ||
+    (role === ROLES.FACULTY && input.kind === "CILO");
+  if (!session || !allowed) return failure("You do not have permission to modify this outcome.");
   if (role === ROLES.PROGRAM_HEAD && input.kind === "PLO") {
     const contextResult = await resolveProgramHeadContext(input.programId);
     if (!contextResult.success || !(await scopeAllows(input, session.userId, role)))
@@ -264,6 +327,54 @@ export async function prepareOutcomeWrite(
     freshnessToken: token(before),
   };
   return { success: true, data: { ...unsigned, signature: signReview(unsigned, session.userId) } };
+}
+
+async function writeILO(
+  tx: Prisma.TransactionClient,
+  input: ILOWriteInput,
+  current: ReviewValue
+): Promise<ServiceResult<{ id?: string }>> {
+  if (input.action === "create") {
+    return {
+      success: true,
+      data: {
+        id: (
+          await tx.institutionalOutcome.create({
+            data: {
+              code: input.code.trim().toUpperCase(),
+              description: input.description.trim(),
+              order: (current as unknown[]).length,
+            },
+          })
+        ).id,
+      },
+    };
+  }
+  if (input.action === "reorder") {
+    const ilos = current as Array<{ id: string; order: number }>;
+    if (
+      new Set(input.orderedIds).size !== input.orderedIds.length ||
+      ilos.length !== input.orderedIds.length ||
+      ilos.some((ilo) => !input.orderedIds.includes(ilo.id))
+    )
+      return failure("Institutional Outcomes must be a complete unique college-wide order.");
+    await Promise.all(
+      input.orderedIds.map((id, order) =>
+        tx.institutionalOutcome.update({ where: { id }, data: { order } })
+      )
+    );
+    return { success: true, data: {} };
+  }
+  const data =
+    input.action === "update"
+      ? { code: input.code.trim().toUpperCase(), description: input.description.trim() }
+      : { is_active: input.action === "restore" };
+  return {
+    success: true,
+    data: {
+      id: (await tx.institutionalOutcome.update({ where: { id: input.id }, data })).id,
+    },
+  };
 }
 
 async function writePLO(
@@ -387,6 +498,8 @@ function writeReviewedOutcome(
   switch (input.kind) {
     case "PLO":
       return writePLO(tx, input, current);
+    case "ILO":
+      return writeILO(tx, input, current);
     case "CILO":
       return writeCilo(tx, input, userId);
   }
@@ -430,6 +543,9 @@ export async function commitOutcomeWrite(
     );
   } catch (error) {
     if (isUniqueConstraintError(error)) {
+      if (review.input.kind === "ILO") {
+        return failure("Institutional Outcome code already exists.");
+      }
       return failure("Program Learning Outcome code already exists.");
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
