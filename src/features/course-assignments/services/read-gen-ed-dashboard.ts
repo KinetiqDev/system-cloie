@@ -27,7 +27,7 @@ export async function getGenEdDashboard(): Promise<GenEdDashboardData> {
     prisma.courseAssignment.count({
       where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } },
     }),
-    prisma.course.count({ where: { course_scope: "GENERAL_EDUCATION" } }),
+    prisma.course.count({ where: { course_scope: "GENERAL_EDUCATION", is_active: true } }),
     prisma.courseAssignment.groupBy({
       by: ["program_id"],
       where: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } },
