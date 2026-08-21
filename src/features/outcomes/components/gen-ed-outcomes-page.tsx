@@ -166,6 +166,7 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
   const [reorderError, setReorderError] = useState<string | null>(null);
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reorderGenerationRef = useRef(0);
+  const latestOrderedIdsRef = useRef<string[] | null>(null);
 
   useEffect(
     () => () => {
@@ -201,6 +202,7 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
       const newIndex = orderedILOs.findIndex((g) => g.id === over.id);
       const reordered = arrayMove(orderedILOs, oldIndex, newIndex);
       const generation = ++reorderGenerationRef.current;
+      latestOrderedIdsRef.current = reordered.map((g) => g.id);
       setOrderedILOs(reordered);
       // fallow-ignore-next-line code-duplication
       setReorderError(null);
@@ -209,19 +211,54 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
       reorderTimerRef.current = setTimeout(() => {
         // fallow-ignore-next-line complexity
         startTransition(async () => {
-          try {
-            // fallow-ignore-next-line code-duplication
-            const result = await reorderILOsAction(reordered.map((g) => g.id));
-            if (!result.success && reorderGenerationRef.current === generation) {
+          const orderedIdsAtDispatch = latestOrderedIdsRef.current ?? reordered.map((g) => g.id);
+          // fallow-ignore-next-line complexity
+          async function attempt(ids: string[], retries = 1): Promise<void> {
+            try {
+              // fallow-ignore-next-line code-duplication
+              const result = await reorderILOsAction(ids);
+              if (result.success) {
+                if (reorderGenerationRef.current === generation) router.refresh();
+                else {
+                  // A newer drag was queued while this save was in flight: save the latest order.
+                  const latest = latestOrderedIdsRef.current;
+                  if (latest) {
+                    const r2 = await reorderILOsAction(latest);
+                    if (!r2.success) {
+                      setReorderError(r2.error);
+                    }
+                    router.refresh();
+                  }
+                }
+                return;
+              }
+              if (reorderGenerationRef.current !== generation) {
+                // Superseded by newer drag: save latest instead of showing stale error.
+                const latest = latestOrderedIdsRef.current;
+                if (latest) {
+                  const r2 = await reorderILOsAction(latest);
+                  if (!r2.success) setReorderError(r2.error);
+                  router.refresh();
+                }
+                return;
+              }
+              const isStale = result.error.includes("Outcome changed");
+              if (isStale && retries > 0) {
+                router.refresh();
+                await new Promise((r) => setTimeout(r, 250));
+                if (reorderGenerationRef.current !== generation) return;
+                const latest = latestOrderedIdsRef.current ?? ids;
+                return attempt(latest, retries - 1);
+              }
               setReorderError(result.error);
               router.refresh();
-            }
-          } catch {
-            if (reorderGenerationRef.current === generation) {
+            } catch {
+              if (reorderGenerationRef.current !== generation) return;
               setReorderError("Institutional Outcome order could not be saved.");
               router.refresh();
             }
           }
+          await attempt(orderedIdsAtDispatch);
         });
       }, 600);
     },
@@ -312,6 +349,7 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{reorderError}</AlertDescription>
         </Alert>
+      // fallow-ignore-next-line code-duplication
       )}
       {/* fallow-ignore-next-line code-duplication */}
       {orderedILOs.length === 0 ? (
@@ -322,7 +360,7 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
             </EmptyMedia>
             <EmptyTitle>No Institutional Learning Outcomes yet</EmptyTitle>
             <EmptyDescription>
-              Add your first Institutional Learning Outcome to the college-wide catalog.
+              Add your first Institutional Learning Outcome to the college-wide catalog — college-wide.
             </EmptyDescription>
           </EmptyHeader>
           <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
