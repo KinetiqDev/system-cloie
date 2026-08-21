@@ -27,6 +27,7 @@ export const allUsers = [
   { id: U.STU_BSHM_G, email: "student-bshm-grad@cloie.test", name: "Grace Aquino", role: SystemRole.STUDENT },
   { id: U.ALU_BSBA, email: "alumni-bsba@cloie.test", name: "Miguel Ong", role: SystemRole.ALUMNI },
   { id: U.IND_BSHM, email: "industry-bshm@cloie.test", name: "Karen Sy", role: SystemRole.INDUSTRY_PARTNER },
+  { id: U.GENED, email: "demo-gened@cloie.test", name: "Gen Ed Coordinator", role: SystemRole.GEN_ED_COORDINATOR },
 ] as const;
 
 export const studentDefinitions = [
