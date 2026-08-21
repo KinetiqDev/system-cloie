@@ -267,6 +267,17 @@ function EditUserDialogBody({
         setSection((result.data.activeEnrollment?.section as StudentSection) ?? null);
       } else if (result.data.role === SystemRole.FACULTY) {
         setProgramId(result.data.faculty?.primaryProgramId ?? "");
+        // Clear state that belongs to other role slices so stale IDs do not leak across user switches
+        setMajorId(null);
+        setYearLevel(null);
+        setSection(null);
+        setGraduationYear("");
+        setVerificationStatus(null);
+        setCompanyName("");
+        setPosition("");
+        setProgramHeadProgramIds([]);
+        setConfirmationToken(null);
+        setConfirmationSummary(null);
       } else if (result.data.role === SystemRole.PROGRAM_HEAD) {
         setProgramHeadProgramIds(
           (result.data.programHead?.assignments ?? []).map((assignment) => assignment.programId)

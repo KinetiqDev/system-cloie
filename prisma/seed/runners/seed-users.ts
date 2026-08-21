@@ -69,8 +69,8 @@ export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" |
     const programId = pMap.get(affiliation.program)!.id;
     await prisma.facultyProgramAffiliation.upsert({
       where: { faculty_id_program_id: { faculty_id: affiliation.facultyId, program_id: programId } },
-      update: { is_active: true },
-      create: { faculty_id: affiliation.facultyId, program_id: programId, is_active: true },
+      update: { is_active: true, is_primary: true },
+      create: { faculty_id: affiliation.facultyId, program_id: programId, is_active: true, is_primary: true },
     });
   }
 
