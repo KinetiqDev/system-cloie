@@ -22,6 +22,7 @@ import {
 
 type ActionResult = { success: true } | { success: false; error: string };
 
+// fallow-ignore-next-line code-duplication
 function parseWithSchema<T>(
   schema: ZodType<T>,
   value: unknown
