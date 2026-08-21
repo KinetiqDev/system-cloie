@@ -5,6 +5,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AddCiloForm } from "./add-cilo-form";
 import { addCilosToCourseAction } from "@/lib/actions/faculty-cilo-actions";
 
+export const metadata = {
+  title: "Add CILOs | Faculty | CLOIE",
+};
+
 export default async function FacultyAddCiloPage() {
   const session = await resolveAuthSession();
 
@@ -16,7 +20,7 @@ export default async function FacultyAddCiloPage() {
 
   if (!result.success) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
         <h1 className="text-heading-lg">Add New CILO</h1>
         <Alert variant="destructive">
           <AlertDescription>{result.error}</AlertDescription>
@@ -28,7 +32,6 @@ export default async function FacultyAddCiloPage() {
   return (
     <AddCiloForm
       courses={JSON.parse(JSON.stringify(result.data.courses))}
-      programs={result.data.programs}
       addAction={addCilosToCourseAction}
     />
   );
