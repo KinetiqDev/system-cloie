@@ -225,14 +225,14 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
 
       const added = ciloList.length;
       setAddedCounts((prev) => ({ ...prev, [course.id]: (prev[course.id] ?? 0) + added }));
-      setSuccessMessage(
-        added > 0
-          ? `${added} ${added === 1 ? "CILO" : "CILOs"} saved to ${course.code}.`
-          : `CILO changes saved for ${course.code}.`
-      );
-      setCiloList([]);
-      setCiloText("");
       if (selectedCourseRef.current?.id === course.id) {
+        setSuccessMessage(
+          added > 0
+            ? `${added} ${added === 1 ? "CILO" : "CILOs"} saved to ${course.code}.`
+            : `CILO changes saved for ${course.code}.`
+        );
+        setCiloList([]);
+        setCiloText("");
         loadExistingCilos(course.id);
       }
     });

@@ -226,16 +226,22 @@ describe("AddCiloForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
 
-    // Switch courses while the save is still pending.
+    // Switch courses while the save is still pending and start a new draft.
     await selectCourse("GE101");
+    fireEvent.change(screen.getByLabelText("CILO Description"), {
+      target: { value: "Critical thinking" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     resolve({ success: true });
     await waitFor(() => expect(saveActionMock).toHaveBeenCalledTimes(1));
 
-    // CS101's load on selection plus GE101's load on selection only — the
-    // pending save must not trigger a reload of the deselected course.
+    // The pending save must not reload the deselected course nor clear the
+    // draft (which now contains the entry for the currently selected course).
     expect(loadCilosActionMock).toHaveBeenCalledTimes(2);
     expect(loadCilosActionMock).toHaveBeenLastCalledWith("course-2");
+    expect(screen.getByText("Critical thinking")).toBeInTheDocument();
+    expect(screen.getByText("CILOs to Add (2)")).toBeInTheDocument();
   });
 
   it("disables the full-set save when existing CILOs fail to load", async () => {
