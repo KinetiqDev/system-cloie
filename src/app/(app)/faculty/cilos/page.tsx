@@ -14,6 +14,7 @@ interface FacultyCilosPageProps {
   searchParams: Promise<{ term?: string }>;
 }
 
+// fallow-ignore-next-line complexity
 export default async function FacultyCilosPage({ searchParams }: FacultyCilosPageProps) {
   const session = await resolveAuthSession();
   const { term: termInstanceId } = await searchParams;

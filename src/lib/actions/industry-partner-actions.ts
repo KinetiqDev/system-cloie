@@ -6,6 +6,47 @@ import { createClient } from "@/lib/supabase/server";
 import { industryPartnerProfileSchema, type IndustryPartnerProfileInput } from "@/lib/schemas/industry-partner-profile";
 import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
 
+function resolveProgramIds(data: IndustryPartnerProfileInput): string[] {
+  if (Array.isArray(data.program_ids) && data.program_ids.length > 0) {
+    return data.program_ids as string[];
+  }
+  if (data.program_id) return [data.program_id as string];
+  return [];
+}
+
+async function verifyProgramsExistAndActive(
+  programIds: string[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (programIds.length === 0) return { ok: true };
+  const programs = await prisma.program.findMany({
+    where: { id: { in: programIds } },
+    select: { id: true, is_active: true },
+  });
+  const byId = new Map(programs.map((p) => [p.id, p] as const));
+  for (const pid of programIds) {
+    const prog = byId.get(pid);
+    if (!prog) {
+      return {
+        ok: false,
+        error:
+          programIds.length === 1
+            ? "The selected program does not exist."
+            : "One of the selected programs does not exist.",
+      };
+    }
+    if (!prog.is_active) {
+      return {
+        ok: false,
+        error:
+          programIds.length === 1
+            ? "The selected program is archived or inactive."
+            : "One of the selected programs is archived or inactive.",
+      };
+    }
+  }
+  return { ok: true };
+}
+
 export async function createIndustryPartnerProfile(data: IndustryPartnerProfileInput) {
   try {
     const supabase = await createClient();
@@ -20,30 +61,12 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
 
     // Client-injected identity fields are stripped by Zod.
     const validatedData = industryPartnerProfileSchema.parse(data);
-    const programIds: string[] = (() => {
-      if (Array.isArray(validatedData.program_ids) && validatedData.program_ids.length > 0) {
-        return validatedData.program_ids as string[];
-      }
-      if (validatedData.program_id) return [validatedData.program_id as string];
-      return [];
-    })();
+    const programIds = resolveProgramIds(validatedData);
 
     // Verify each program exists and is active
-    if (programIds.length > 0) {
-      const programs = await prisma.program.findMany({
-        where: { id: { in: programIds } },
-        select: { id: true, is_active: true },
-      });
-      const byId = new Map(programs.map((p) => [p.id, p] as const));
-      for (const pid of programIds) {
-        const prog = byId.get(pid);
-        if (!prog) {
-          return { success: false, error: programIds.length === 1 ? "The selected program does not exist." : "One of the selected programs does not exist." };
-        }
-        if (!prog.is_active) {
-          return { success: false, error: programIds.length === 1 ? "The selected program is archived or inactive." : "One of the selected programs is archived or inactive." };
-        }
-      }
+    const verification = await verifyProgramsExistAndActive(programIds);
+    if (!verification.ok) {
+      return { success: false, error: verification.error };
     }
 
     const domainUser = await resolveAuthenticatedDomainUser({

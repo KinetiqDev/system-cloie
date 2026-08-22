@@ -120,7 +120,7 @@ export function TermInstancePicker({
 /**
  * Picker specifically for semester and term selection (for creating new term instances).
  */
-export interface SemesterTermValue {
+interface SemesterTermValue {
   semester: AcademicSemester | null;
   term: AcademicTerm | null;
 }
