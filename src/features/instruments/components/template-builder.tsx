@@ -1735,16 +1735,9 @@ function LikertDescriptorsEditor({
       <div className="flex items-end gap-2">
         {descriptors.map((descriptor, idx) => (
           <div key={descriptor.value} className="flex-1 space-y-2 text-center">
-            {/* Radio circle visual */}
             <div className="flex justify-center">
-              <div className="relative">
-                {/* Connecting line */}
-                {idx < descriptors.length - 1 && (
-                  <div className="bg-border absolute top-1/2 left-full h-px w-full" />
-                )}
-                <div className="border-primary/40 bg-card text-link flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-semibold">
-                  {descriptor.value}
-                </div>
+              <div className="border-primary/40 bg-card text-link flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-semibold">
+                {descriptor.value}
               </div>
             </div>
             {/* Editable label */}
