@@ -1,4 +1,4 @@
-import { CourseScope } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type { CreateCourseInput, UpdateCourseInput } from "../schemas/course";
 
@@ -261,4 +261,67 @@ export async function deleteCourse(id: string): Promise<ServiceResult> {
   }
 
   return { success: true, data: undefined };
+}
+
+// ---------------------------------------------------------------------------
+// Read: edit payload
+// ---------------------------------------------------------------------------
+
+export type CourseEditDefaults = {
+  default_year_level: YearLevel | null;
+  default_semester: AcademicSemester | null;
+  default_term: AcademicTerm | null;
+};
+
+export type CourseEditData = {
+  defaults: CourseEditDefaults;
+  programs: { id: string; code: string; name: string }[];
+  majors: { id: string; name: string; program_id: string; program_code: string }[];
+};
+
+export async function getCourseEditData(courseId: string): Promise<CourseEditData | null> {
+  const [course, programs, majors] = await Promise.all([
+    prisma.course.findUnique({
+      where: { id: courseId },
+      select: {
+        default_year_level: true,
+        default_semester: true,
+        default_term: true,
+      },
+    }),
+    prisma.program.findMany({
+      where: { is_active: true },
+      select: { id: true, code: true, name: true },
+      orderBy: { code: "asc" },
+    }),
+    prisma.major.findMany({
+      where: { is_active: true },
+      select: {
+        id: true,
+        name: true,
+        program_id: true,
+        program: { select: { code: true } },
+      },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  if (!course) {
+    return null;
+  }
+
+  return {
+    defaults: {
+      default_year_level: course.default_year_level,
+      default_semester: course.default_semester,
+      default_term: course.default_term,
+    },
+    programs,
+    majors: majors.map((m) => ({
+      id: m.id,
+      name: m.name,
+      program_id: m.program_id,
+      program_code: m.program.code,
+    })),
+  };
 }

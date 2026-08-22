@@ -1,11 +1,34 @@
-import { describe, expect, test } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, test, vi } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ManagementCoursesList } from "@/features/academic-structure/components/management-courses-list";
 import type {
   ManagementCourseSummaryItem,
   ManagementCoursesKPI,
   ProgramFilterOption,
 } from "@/features/academic-structure/services/list-management-courses-summary";
+import { updateCourseAction } from "@/lib/actions/management-foundation-actions";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn(), push: vi.fn() }),
+}));
+
+vi.mock("@/lib/actions/management-foundation-actions", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/actions/management-foundation-actions")>();
+  return {
+    ...actual,
+    getCourseEditDataAction: vi.fn().mockResolvedValue({
+      defaults: {
+        default_year_level: null,
+        default_semester: null,
+        default_term: null,
+      },
+      programs: [],
+      majors: [],
+    }),
+    updateCourseAction: vi.fn().mockResolvedValue({ success: true }),
+  };
+});
 
 const mockCourses: ManagementCourseSummaryItem[] = [
   {
@@ -155,7 +178,7 @@ describe("ManagementCoursesList", () => {
     expect(screen.getAllByText("5").length).toBeGreaterThan(0);
   });
 
-  test("shows Edit link with correct basePath for Secretary", async () => {
+  test("opens the edit modal for Secretary", async () => {
     const { container } = render(
       <ManagementCoursesList
         courses={mockCourses}
@@ -172,8 +195,19 @@ describe("ManagementCoursesList", () => {
     expect(trigger).toBeTruthy();
     fireEvent.click(trigger);
 
-    const editLink = await screen.findByText("Edit");
-    expect(editLink).toHaveAttribute("href", "/secretary/courses/course-1/edit");
+    const editItem = await screen.findByText("Edit");
+    fireEvent.click(editItem);
+
+    // Dialog should open with the course edit form
+    expect(await screen.findByText("Edit Course")).toBeInTheDocument();
+    const updateButton = await screen.findByText("Update Course");
+    expect(updateButton).toBeInTheDocument();
+
+    // Footer submit targets the form and calls the update action
+    fireEvent.click(updateButton);
+    await waitFor(() => {
+      expect(updateCourseAction).toHaveBeenCalled();
+    });
   });
 
   test("shows Edit link with correct basePath for Dean", async () => {

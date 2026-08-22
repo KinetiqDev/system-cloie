@@ -1171,16 +1171,10 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/secretary/courses/[id]/edit/loading.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/secretary/courses/[id]/edit/page.tsx",
-    disposition: "task",
-    taskId: 14,
+    disposition: "redirect",
     category: "route",
+    notes: "Secretary course editing moved to a modal on the course catalog; redirects to the catalog",
   },
   {
     path: "src/app/(app)/secretary/courses/loading.tsx",
@@ -2050,6 +2044,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/academic-calendar/components/term-instance-picker.tsx",
     disposition: "task",
     taskId: 13,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/academic-structure/components/course-edit-dialog.tsx",
+    disposition: "task",
+    taskId: 14,
     category: "feature_component",
   },
   {

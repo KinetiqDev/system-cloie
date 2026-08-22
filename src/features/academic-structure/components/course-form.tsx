@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -49,6 +49,10 @@ type CourseFormProps = {
   };
   submitLabel?: string;
   onSuccess?: () => void;
+  /** Optional form id so an external submit button can target it. */
+  formId?: string;
+  /** Reports the form's pending state to a parent (e.g. a dialog footer button). */
+  onPendingChange?: (pending: boolean) => void;
 };
 
 export function CourseForm({
@@ -58,6 +62,8 @@ export function CourseForm({
   defaultValues,
   submitLabel = "Save Course",
   onSuccess,
+  formId,
+  onPendingChange,
 }: CourseFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
@@ -80,6 +86,10 @@ export function CourseForm({
   );
 
   const isSummer = semester === AcademicSemester.SUMMER;
+
+  useEffect(() => {
+    onPendingChange?.(isPending);
+  }, [isPending, onPendingChange]);
 
   const filteredMajors = useMemo(() => {
     if (!programId) {
@@ -119,7 +129,7 @@ export function CourseForm({
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="space-y-4">
+    <form ref={formRef} action={handleSubmit} className="space-y-4" id={formId}>
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
       <input type="hidden" name="course_scope" value={scope} />
       <input type="hidden" name="program_id" value={programId} />
@@ -336,9 +346,11 @@ export function CourseForm({
         </div>
       </div>
 
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving..." : submitLabel}
-      </Button>
+      {formId ? null : (
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Saving..." : submitLabel}
+        </Button>
+      )}
     </form>
   );
 }
