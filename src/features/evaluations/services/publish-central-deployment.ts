@@ -48,16 +48,24 @@ export function validatePublishPloBindings(input: {
 }):
   | { success: true; snapshotRows: CentralDeploymentPloSnapshotRow[] }
   | { success: false; error: string } {
+  // Template keys may contain any nonempty string, so the question identity
+  // must be a structurally encoded tuple — never a separator join.
+  const encodeQuestionKey = (sectionKey: string, itemKey: string) =>
+    JSON.stringify([sectionKey, itemKey]);
+
   const questions = listTemplateLikertQuestions(input.structure);
   const questionMap = new Map(
-    questions.map((question) => [`${question.sectionKey}:${question.itemKey}`, question])
+    questions.map((question) => [
+      encodeQuestionKey(question.sectionKey, question.itemKey),
+      question,
+    ])
   );
   const ploMap = new Map(input.livePlos.map((plo) => [plo.id, plo]));
   const boundQuestionKeys = new Set<string>();
   const snapshotRows: CentralDeploymentPloSnapshotRow[] = [];
 
   for (const binding of input.bindings) {
-    const questionKey = `${binding.section_key}:${binding.item_key}`;
+    const questionKey = encodeQuestionKey(binding.section_key, binding.item_key);
     const question = questionMap.get(questionKey);
     const plo = binding.plo_id ? ploMap.get(binding.plo_id) : undefined;
 
@@ -89,7 +97,7 @@ export function validatePublishPloBindings(input: {
   }
 
   const missingQuestionKeys = questions.filter(
-    (question) => !boundQuestionKeys.has(`${question.sectionKey}:${question.itemKey}`)
+    (question) => !boundQuestionKeys.has(encodeQuestionKey(question.sectionKey, question.itemKey))
   );
 
   if (missingQuestionKeys.length > 0) {

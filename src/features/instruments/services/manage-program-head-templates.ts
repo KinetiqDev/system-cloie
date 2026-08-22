@@ -42,9 +42,14 @@ export function normalizePloQuestionBindings(input: {
 }):
   | { success: true; bindings: ProgramHeadPloBindingItem[]; missingQuestionKeys: string[] }
   | { success: false; error: string } {
+  // Template keys may contain any nonempty string, so the question identity
+  // must be a structurally encoded tuple — never a separator join.
+  const encodeQuestionKey = (sectionKey: string, itemKey: string) =>
+    JSON.stringify([sectionKey, itemKey]);
+
   const questionMap = new Map(
     listTemplateLikertQuestions(input.structure).map((question) => [
-      `${question.sectionKey}:${question.itemKey}`,
+      encodeQuestionKey(question.sectionKey, question.itemKey),
       question,
     ])
   );
@@ -54,7 +59,7 @@ export function normalizePloQuestionBindings(input: {
   const normalized: ProgramHeadPloBindingItem[] = [];
 
   for (const binding of input.bindings) {
-    const questionKey = `${binding.sectionKey}:${binding.itemKey}`;
+    const questionKey = encodeQuestionKey(binding.sectionKey, binding.itemKey);
     const question = questionMap.get(questionKey);
     const plo = ploMap.get(binding.ploId);
 

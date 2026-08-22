@@ -999,6 +999,40 @@ describe("normalizePloQuestionBindings", () => {
     });
   });
 
+  it("treats keys containing separators as distinct questions, not collisions", () => {
+    const trickyStructure = [
+      {
+        key: "a",
+        title: "Tricky",
+        order: 0,
+        questions: [
+          { key: "b:c", prompt: "Joined key question", type: "likert" as const, order: 0, required: true },
+          { key: "q-1", prompt: "Plain key question", type: "likert" as const, order: 1, required: true },
+        ],
+      },
+      {
+        key: "a:b",
+        title: "Joined section",
+        order: 1,
+        questions: [
+          { key: "c", prompt: "Other join direction", type: "likert" as const, order: 0, required: true },
+        ],
+      },
+    ];
+
+    const result = normalizePloQuestionBindings({
+      bindings: [{ ploId: "plo-1", sectionKey: "a:b", itemKey: "c" }],
+      structure: trickyStructure,
+      plos,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.bindings[0]?.questionPromptSnapshot).toBe("Other join direction");
+      expect(JSON.parse(result.missingQuestionKeys[0]!)).toEqual(["a", "b:c"]);
+    }
+  });
+
   it("snapshots PLO code/description and question prompt, and reports unbound Likert questions", () => {
     const result = normalizePloQuestionBindings({
       bindings: [
@@ -1029,7 +1063,7 @@ describe("normalizePloQuestionBindings", () => {
           sectionKey: "sec-1",
         },
       ],
-      missingQuestionKeys: ["sec-1:q-2"],
+      missingQuestionKeys: [JSON.stringify(["sec-1", "q-2"])],
     });
   });
 });
