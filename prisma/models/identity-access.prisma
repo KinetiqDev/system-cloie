@@ -36,36 +36,36 @@ model User {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
-  roles                                 UserRole[]
-  student_profile                       StudentAcademicProfile?
-  deployed_evaluations                  CourseBoundEvaluation[]          @relation("CourseBoundEvaluationDeployer")
-  evaluation_assignments                EvaluationAssignment[]
-  responses                             Response[]
-  created_cilos                         CILO[]
-  faculty_program_affiliations          FacultyProgramAffiliation[]
-  program_head_assignments              ProgramHeadAssignment[]
-  created_external_invites              ExternalStakeholderInvite[]      @relation("ExternalInviteCreator")
-  industry_partner_profile              IndustryPartnerProfile?
-  industry_partner_program_affiliations IndustryPartnerProgramAffiliation[]
-  alumni_profile                        AlumniProfile?
-  faculty_owned_templates               InstrumentTemplate[]             @relation("FacultyOwnedInstrumentTemplates")
-  archived_school_years                 SchoolYear[]                     @relation("ArchivedSchoolYears")
-  active_semester_school_years          SchoolYear[]                     @relation("ActiveSemesterActivator")
-  enrollments                           StudentEnrollment[]
-  created_enrollments                   StudentEnrollment[]              @relation("EnrollmentCreator")
-  course_assignments                    CourseAssignment[]               @relation("faculty")
-  created_assignments                   CourseAssignment[]               @relation("AssignmentAssigner")
-  published_curriculum_versions         CurriculumVersion[]              @relation("CurriculumVersionPublisher")
-  course_assignment_memberships         CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipStudent")
-  created_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipCreator")
-  updated_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipUpdater")
-  removed_course_assignment_memberships CourseAssignmentMembership[]     @relation("CourseAssignmentMembershipRemover")
-  course_bound_evaluation_exclusions    CourseBoundEvaluationExclusion[] @relation("CourseBoundEvaluationExclusionActor")
-  exclusion_reversals                   CourseBoundEvaluationExclusion[] @relation("CourseBoundEvaluationExclusionReverser")
-  created_cilo_institutional_outcome_mappings   CILOInstitutionalOutcomeMapping[] @relation("CILOInstitutionalOutcomeMappingCreator")
-  updated_cilo_institutional_outcome_mappings   CILOInstitutionalOutcomeMapping[] @relation("CILOInstitutionalOutcomeMappingUpdater")
-  created_cilo_mappings                         CILOMapping[]                     @relation("CILOMappingCreator")
-  updated_cilo_mappings                         CILOMapping[]                     @relation("CILOMappingUpdater")
+  roles                                       UserRole[]
+  student_profile                             StudentAcademicProfile?
+  deployed_evaluations                        CourseBoundEvaluation[]             @relation("CourseBoundEvaluationDeployer")
+  evaluation_assignments                      EvaluationAssignment[]
+  responses                                   Response[]
+  created_cilos                               CILO[]
+  faculty_program_affiliations                FacultyProgramAffiliation[]
+  program_head_assignments                    ProgramHeadAssignment[]
+  created_external_invites                    ExternalStakeholderInvite[]         @relation("ExternalInviteCreator")
+  industry_partner_profile                    IndustryPartnerProfile?
+  industry_partner_program_affiliations       IndustryPartnerProgramAffiliation[]
+  alumni_profile                              AlumniProfile?
+  faculty_owned_templates                     InstrumentTemplate[]                @relation("FacultyOwnedInstrumentTemplates")
+  archived_school_years                       SchoolYear[]                        @relation("ArchivedSchoolYears")
+  active_semester_school_years                SchoolYear[]                        @relation("ActiveSemesterActivator")
+  enrollments                                 StudentEnrollment[]
+  created_enrollments                         StudentEnrollment[]                 @relation("EnrollmentCreator")
+  course_assignments                          CourseAssignment[]                  @relation("faculty")
+  created_assignments                         CourseAssignment[]                  @relation("AssignmentAssigner")
+  published_curriculum_versions               CurriculumVersion[]                 @relation("CurriculumVersionPublisher")
+  course_assignment_memberships               CourseAssignmentMembership[]        @relation("CourseAssignmentMembershipStudent")
+  created_course_assignment_memberships       CourseAssignmentMembership[]        @relation("CourseAssignmentMembershipCreator")
+  updated_course_assignment_memberships       CourseAssignmentMembership[]        @relation("CourseAssignmentMembershipUpdater")
+  removed_course_assignment_memberships       CourseAssignmentMembership[]        @relation("CourseAssignmentMembershipRemover")
+  course_bound_evaluation_exclusions          CourseBoundEvaluationExclusion[]    @relation("CourseBoundEvaluationExclusionActor")
+  exclusion_reversals                         CourseBoundEvaluationExclusion[]    @relation("CourseBoundEvaluationExclusionReverser")
+  created_cilo_institutional_outcome_mappings CILOInstitutionalOutcomeMapping[]   @relation("CILOInstitutionalOutcomeMappingCreator")
+  updated_cilo_institutional_outcome_mappings CILOInstitutionalOutcomeMapping[]   @relation("CILOInstitutionalOutcomeMappingUpdater")
+  created_cilo_mappings                       CILOMapping[]                       @relation("CILOMappingCreator")
+  updated_cilo_mappings                       CILOMapping[]                       @relation("CILOMappingUpdater")
 
   @@map("users")
 }
@@ -82,12 +82,12 @@ model UserRole {
 }
 
 model StudentAcademicProfile {
-  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id           String   @unique @db.Uuid
-  program_id        String   @db.Uuid
-  major_id          String?  @db.Uuid
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @unique @db.Uuid
+  program_id String   @db.Uuid
+  major_id   String?  @db.Uuid
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   // Phase 9: academic_year, year_level, section removed - now in StudentEnrollment ledger
   // Program and major remain the static academic profile affiliation
@@ -118,10 +118,10 @@ model IndustryPartnerProfile {
 }
 
 model IndustryPartnerProgramAffiliation {
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  industry_partner_id   String   @db.Uuid
-  program_id            String   @db.Uuid
-  created_at            DateTime @default(now())
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  industry_partner_id String   @db.Uuid
+  program_id          String   @db.Uuid
+  created_at          DateTime @default(now())
 
   industryPartner User    @relation(fields: [industry_partner_id], references: [id], onDelete: Cascade)
   program         Program @relation(fields: [program_id], references: [id], onDelete: Restrict)

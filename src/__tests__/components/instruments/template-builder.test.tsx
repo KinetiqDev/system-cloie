@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
@@ -81,6 +81,25 @@ describe("TemplateBuilder", () => {
     pushMock.mockClear();
     dndCapture.handlers.clear();
     sortableCapture.contexts.clear();
+    // PloMultiSelect chooses Popover vs Drawer via useMediaQuery; jsdom has no
+    // matchMedia, so stub a desktop viewport (matches: true) by default.
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   test("renders without facultyConfig on admin-style pages", () => {
@@ -654,5 +673,519 @@ describe("TemplateBuilder", () => {
     );
 
     expect(keyboardTarget).toEqual({ x: 0, y: 20 });
+  });
+
+  test("binds PLOs to a program-wide likert question and persists them on save", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+    const ploOptions = [
+      { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
+      { id: "plo-2", code: "PLO-2", description: "Demonstrate professional skills" },
+    ];
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        ploOptions={ploOptions}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByText("PLO Binding")).toBeInTheDocument();
+    expect(screen.getByText("Select PLOs…")).toBeInTheDocument();
+    expect(screen.getByText(/must be bound to at least one PLO before publishing/i)).toBeInTheDocument();
+
+    // The trigger button is labelled by the "PLO Binding" label
+    const trigger = screen.getByRole("button", { name: "PLO Binding" });
+    fireEvent.click(trigger);
+    const checkbox = await screen.findByRole("checkbox", { name: /PLO-1: Apply discipline knowledge/ });
+    fireEvent.click(checkbox);
+    fireEvent.click(trigger); // close the picker
+
+    // Chip appears; warning clears
+    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+    expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
+    expect(screen.queryByText(/must be bound to at least one PLO before publishing/i)).not.toBeInTheDocument();
+
+    // Save payload carries the binding keyed to the likert question
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const formData = onSave.mock.calls[0][0] as FormData;
+    expect(formData.get("program_question_plo_bindings")).toBe(
+      JSON.stringify([{ itemKey: "question-1", ploId: "plo-1", sectionKey: "section-1" }])
+    );
+
+    // Clear action empties the selection
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    fireEvent.click(trigger);
+    expect(screen.queryByText("PLO-1")).not.toBeInTheDocument();
+    expect(screen.getByText("Select PLOs…")).toBeInTheDocument();
+  });
+
+  test("loads existing PLO bindings as removable chips on edit", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
+        initialPloBindings={[
+          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
+        ]}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+    expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const formData = onSave.mock.calls[0][0] as FormData;
+    expect(formData.get("program_question_plo_bindings")).toBe(
+      JSON.stringify([{ itemKey: "question-1", ploId: "plo-1", sectionKey: "section-1" }])
+    );
+
+    // Chip removal drops the binding from the next save
+    fireEvent.click(screen.getByRole("button", { name: "Remove PLO-1" }));
+    expect(screen.queryByText("PLO-1")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect((onSave.mock.calls[1][0] as FormData).get("program_question_plo_bindings")).toBe("[]");
+  });
+
+  test("drops PLO bindings when a likert question becomes guided open-ended", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
+        initialPloBindings={[
+          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
+        ]}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+
+    // Switch the question type to guided open-ended
+    fireEvent.click(screen.getByRole("combobox", { name: "Question type" }));
+    const guidedOption = await screen.findByRole("option", { name: "Guided Open-Ended" });
+    fireEvent.mouseMove(guidedOption);
+    fireEvent.click(guidedOption);
+
+    // Binding UI and chips disappear for the non-likert question
+    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("PLO-1")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect((onSave.mock.calls[0][0] as FormData).get("program_question_plo_bindings")).toBe("[]");
+  });
+
+  test("drops PLO bindings when the bound question is deleted", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
+        initialPloBindings={[
+          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
+        ]}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+                {
+                  key: "question-2",
+                  prompt: "Rate your skills",
+                  type: "likert",
+                  order: 1,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    // Delete the bound question (first question card's delete action)
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+    expect(screen.queryByText("PLO-1")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect((onSave.mock.calls[0][0] as FormData).get("program_question_plo_bindings")).toBe("[]");
+  });
+
+  test("renders archived PLO bindings as removable archived chips", () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
+        initialPloBindings={[
+          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
+          {
+            ploId: "plo-archived",
+            itemKey: "question-1",
+            sectionKey: "section-1",
+            ploCodeSnapshot: "PLO-OLD",
+            ploDescriptionSnapshot: "Retired outcome",
+          },
+        ]}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    // Active chip renders normally; archived chip is visible with a label.
+    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+    expect(screen.getByText("PLO-OLD")).toBeInTheDocument();
+    expect(screen.getByText("Archived")).toBeInTheDocument();
+
+    // Removing the archived chip keeps the active selection.
+    fireEvent.click(screen.getByRole("button", { name: "Remove PLO-OLD" }));
+    expect(screen.queryByText("PLO-OLD")).not.toBeInTheDocument();
+    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+  });
+
+  test("hides PLO binding UI in course-bound and faculty modes", () => {
+    const facultyConfig = {
+      courseContexts: [],
+      initialBindings: [],
+      loadManagedCilosAction: vi.fn().mockResolvedValue({
+        success: true,
+        data: { hasSavedCilos: false, items: [] },
+      }),
+      validatePublishReadinessAction: vi.fn().mockResolvedValue({
+        success: true,
+        data: { id: "template-1" },
+      }),
+    };
+
+    const { unmount } = render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        initialData={{
+          id: "template-1",
+          name: "Course Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        initialData={{
+          id: "template-1",
+          name: "Faculty Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={facultyConfig}
+      />
+    );
+
+    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("Select PLOs…")).not.toBeInTheDocument();
+  });
+
+  test("renders the PLO picker as a mobile drawer with search and close action", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: false, // mobile viewport
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    );
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        ploOptions={[
+          { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
+          { id: "plo-2", code: "PLO-2", description: "Demonstrate professional skills" },
+        ]}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    // Drawer trigger (labelled "PLO Binding") opens the mobile surface
+    fireEvent.click(screen.getByRole("button", { name: "PLO Binding" }));
+    expect(await screen.findByRole("heading", { name: "PLO Binding" })).toBeInTheDocument();
+
+    // Search narrows the checkbox list
+    fireEvent.change(screen.getByPlaceholderText(/search plos/i), {
+      target: { value: "skills" },
+    });
+    expect(screen.getByRole("checkbox", { name: /PLO-2: Demonstrate professional skills/ })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /PLO-1: Apply discipline knowledge/ })).not.toBeInTheDocument();
+
+    // Selecting inside the drawer shows a chip after closing
+    fireEvent.click(screen.getByRole("checkbox", { name: /PLO-2: Demonstrate professional skills/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Close PLO binding" }));
+    expect(screen.getByText("PLO-2")).toBeInTheDocument();
+    expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
   });
 });

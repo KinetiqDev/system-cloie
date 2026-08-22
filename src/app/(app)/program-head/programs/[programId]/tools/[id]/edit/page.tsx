@@ -12,7 +12,7 @@ export default async function EditSelectedProgramToolPage({
   const result = await getProgramHeadTemplate(programId, id);
   if (!result.success) notFound();
 
-  const { template, program } = result.data;
+  const { template, program, ploOptions } = result.data;
 
   return (
     <ProgramHeadTemplateBuilder
@@ -27,6 +27,8 @@ export default async function EditSelectedProgramToolPage({
         is_faculty_accessible: template.is_faculty_accessible,
         structure: template.structure as TemplateStructure,
       }}
+      ploOptions={ploOptions}
+      initialPloBindings={template.ploBindings}
       programLabel={`${program.code} — ${program.name}`}
     />
   );

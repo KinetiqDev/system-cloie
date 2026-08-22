@@ -1,6 +1,6 @@
 ---
 name: orchestrate-slices
-description: Coordinate a parent GitHub tracker through its vertical slices — dispatch under a hard two-worktree ceiling, supervise workers, serialize merges, verify the assembled OpenSpec change.
+description: Coordinate a parent GitHub tracker through its vertical slices — dispatch under a hard two-worktree ceiling, supervise workers, serialize merges, verify the assembled change against the parent issue's spec.
 argument-hint: "<parent-issue> [agent-kind]"
 disable-model-invocation: true
 ---
@@ -44,8 +44,7 @@ READY slices beyond the ceiling stay queued. A slot frees only after its PR is c
 
 Use each system for one kind of truth:
 
-- **OpenSpec** — requirements, design, capability specs, implementation tasks, final verification.
-- **GitHub** — parent and child issues, blocker relationships, PR state, CI/reviews, merged/completed state.
+- **GitHub** — the parent issue's spec (requirements, design, acceptance criteria), parent and child issues, blocker relationships, PR state, CI/reviews, merged/completed state.
 - **Herdr** — live worktrees, live workers, worker lifecycle state, worker communication.
 
 Do not substitute agent prose for durable GitHub state.
@@ -81,11 +80,11 @@ Done when: parent, repo, root, `$BASE` and `$BASE_SHA`, and worker kind are know
 
 Read the parent issue and every child issue. Prefer GitHub-native structure (sub-issues, blocked-by relationships); fall back to parent task-list references or `## Blocked by` sections in child bodies only when necessary.
 
-Read the OpenSpec change the tracker points at — at minimum `openspec/changes/<change>/proposal.md`, `design.md`, `specs/`, and `tasks.md`.
+The parent issue is the spec — read it in full, including its acceptance criteria and task breakdown.
 
-The ticket graph controls execution order; OpenSpec controls what the assembled change must accomplish.
+The ticket graph controls execution order; the parent issue's spec controls what the assembled change must accomplish.
 
-Done when: every child and its blockers are recorded, and the OpenSpec change is read.
+Done when: every child and its blockers are recorded, and the parent issue's spec is read.
 
 ## 3. Reconstruct runtime state
 
@@ -138,7 +137,7 @@ Done when: capacity is computed from the current worktree list.
 
 ## 6. Select the next wave
 
-READY means eligible, not parallel-safe. Before selecting two slices together, check their scopes, OpenSpec tasks, expected files/modules, and shared contracts against these high-contention surfaces:
+READY means eligible, not parallel-safe. Before selecting two slices together, check their scopes, the parent issue's task list, expected files/modules, and shared contracts against these high-contention surfaces:
 
 - Prisma models and Supabase migrations
 - shared database invariants
@@ -233,21 +232,15 @@ Done when: one of the three exits is taken.
 
 Implementation is complete only when every child is DONE, every slice PR is merged, no live slice worker remains, and no slice worktree remains needing recovery.
 
-Then run:
-
-```text
-/openspec-verify-change <change>
-```
-
-**Passes** — confirm the parent's acceptance criteria, close the parent only when satisfied, and report: merged slices, merged PRs, final integration SHA, OpenSpec verification result, and any intentionally deferred work.
+Verify the assembled change against the parent issue's acceptance criteria: every criterion met, and the repository verification commands (`pnpm test`, `pnpm lint`, `pnpm build`) green at the integration head.
 
 **Fails** — do not patch application code from the orchestrator. Determine whether the failure is an incomplete existing slice, a cross-slice integration defect, a missing requirement, or a new follow-up slice; create or propose the smallest appropriate follow-up work item. Do not close the parent.
 
-Done when: the parent change is merged into the integration branch, final OpenSpec verification passes, and the report is delivered.
+Done when: the parent change is merged into the integration branch, final verification against the parent issue's acceptance criteria passes, and the report is delivered.
 
 ## Failure behavior
 
 - **Herdr unavailable** — stop orchestration; never launch unmanaged background workers.
 - **GitHub unavailable** — stop state-changing orchestration actions; never guess tracker or PR state.
 - **Worker crashes** — recover its existing worktree via WORKTREES.md; never create a new one.
-- **User decision required** — pause only the affected slices unless the decision changes the shared OpenSpec contract; other independent workers continue.
+- **User decision required** — pause only the affected slices unless the decision changes the shared parent-spec contract; other independent workers continue.

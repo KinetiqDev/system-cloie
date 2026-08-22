@@ -33,6 +33,16 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
     return { success: false, error: "Invalid template structure." };
   }
 
+  const rawPloBindings = formData.get("program_question_plo_bindings");
+  let programQuestionPloBindings: unknown = [];
+
+  try {
+    programQuestionPloBindings =
+      typeof rawPloBindings === "string" ? JSON.parse(rawPloBindings) : [];
+  } catch {
+    return { success: false, error: "Invalid PLO question bindings." };
+  }
+
   const parsed = createProgramHeadTemplateSchema.safeParse({
     name: formData.get("name"),
     programId: formData.get("programId"),
@@ -40,6 +50,7 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
     structure,
+    program_question_plo_bindings: programQuestionPloBindings,
   });
 
   if (!parsed.success) {
@@ -69,6 +80,16 @@ export async function updateProgramHeadTemplateAction(formData: FormData): Promi
     return { success: false, error: "Invalid template structure." };
   }
 
+  const rawPloBindings = formData.get("program_question_plo_bindings");
+  let programQuestionPloBindings: unknown = [];
+
+  try {
+    programQuestionPloBindings =
+      typeof rawPloBindings === "string" ? JSON.parse(rawPloBindings) : [];
+  } catch {
+    return { success: false, error: "Invalid PLO question bindings." };
+  }
+
   const parsed = updateProgramHeadTemplateSchema.safeParse({
     id: formData.get("id"),
     programId: formData.get("programId"),
@@ -77,6 +98,7 @@ export async function updateProgramHeadTemplateAction(formData: FormData): Promi
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
     structure,
+    program_question_plo_bindings: programQuestionPloBindings,
   });
 
   if (!parsed.success) {

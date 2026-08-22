@@ -30,6 +30,7 @@ model InstrumentTemplate {
   bound_major                     Major?                                  @relation("BoundInstrumentTemplateMajor", fields: [bound_major_id], references: [id], onDelete: SetNull)
   versions                        InstrumentVersion[]
   template_cilo_question_bindings InstrumentTemplateCiloQuestionBinding[]
+  template_plo_question_bindings  InstrumentTemplatePloQuestionBinding[]
 
   @@map("instrument_templates")
 }
@@ -68,4 +69,23 @@ model InstrumentTemplateCiloQuestionBinding {
   @@unique([template_id, cilo_id], map: "itcqb_template_cilo_key")
   @@unique([template_id, section_key, item_key], map: "itcqb_template_question_key")
   @@map("instrument_template_cilo_question_bindings")
+}
+
+model InstrumentTemplatePloQuestionBinding {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  template_id              String   @db.Uuid
+  plo_id                   String?  @db.Uuid
+  plo_code_snapshot        String
+  plo_description_snapshot String
+  section_key              String
+  item_key                 String
+  question_prompt_snapshot String
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  template InstrumentTemplate @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  plo      PLO?               @relation(fields: [plo_id], references: [id], onDelete: SetNull)
+
+  @@unique([template_id, plo_id, section_key, item_key], map: "itpqb_template_plo_question_key")
+  @@map("instrument_template_plo_question_bindings")
 }

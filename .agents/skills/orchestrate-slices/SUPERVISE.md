@@ -128,7 +128,7 @@ MERGE_READY revoked.
 origin/<base> advanced to <base-sha> and your PR head does not contain it.
 
 Rebase this slice onto the current origin/<base>. Resolve conflicts according to
-the accepted OpenSpec design and current integration behavior. Then rerun the
+the parent issue's spec and current integration behavior. Then rerun the
 required tests, pnpm test, pnpm lint, pnpm build, and /code-review when the
 rebase materially changed implementation. Push with --force-with-lease if
 history changed, wait for fresh CI and review results, and report a new:

@@ -122,7 +122,7 @@ Reconstruct current state from:
 - git status/log/diff
 - GitHub issue
 - existing PR
-- OpenSpec artifacts
+- parent issue spec
 - CI/review state
 
 Continue:

@@ -14,8 +14,10 @@ model PLO {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  program       Program       @relation(fields: [program_id], references: [id], onDelete: Restrict)
-  cilo_mappings CILOMapping[]
+  program                      Program                                @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  cilo_mappings                CILOMapping[]
+  template_question_bindings   InstrumentTemplatePloQuestionBinding[]
+  central_deployment_snapshots CentralDeploymentPloSnapshot[]
 
   @@unique([program_id, code])
   @@map("gos")
@@ -30,15 +32,16 @@ model CILO {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  course                                 Course                                  @relation(fields: [course_id], references: [id], onDelete: Cascade)
-  author                                 User                                    @relation(fields: [created_by], references: [id], onDelete: Restrict)
-  cilo_mappings                          CILOMapping[]
-  cilo_institutional_outcome_mappings    CILOInstitutionalOutcomeMapping[]
-  question_bindings                      CourseBoundCiloQuestionBinding[]
-  template_question_bindings             InstrumentTemplateCiloQuestionBinding[]
+  course                              Course                                  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+  author                              User                                    @relation(fields: [created_by], references: [id], onDelete: Restrict)
+  cilo_mappings                       CILOMapping[]
+  cilo_institutional_outcome_mappings CILOInstitutionalOutcomeMapping[]
+  question_bindings                   CourseBoundCiloQuestionBinding[]
+  template_question_bindings          InstrumentTemplateCiloQuestionBinding[]
 
   @@map("cilos")
 }
+
 model InstitutionalOutcome {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String   @unique
@@ -54,19 +57,19 @@ model InstitutionalOutcome {
 }
 
 model CILOInstitutionalOutcomeMapping {
-  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cilo_id                  String                     @db.Uuid
-  institutional_outcome_id String                     @db.Uuid
+  id                       String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cilo_id                  String                    @db.Uuid
+  institutional_outcome_id String                    @db.Uuid
   manifestation            CILOMappingManifestation?
-  created_by               String                     @db.Uuid
-  updated_by               String                     @db.Uuid
-  created_at               DateTime                   @default(now())
-  updated_at               DateTime                   @updatedAt
+  created_by               String                    @db.Uuid
+  updated_by               String                    @db.Uuid
+  created_at               DateTime                  @default(now())
+  updated_at               DateTime                  @updatedAt
 
-  cilo                  CILO                  @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
-  institutional_outcome InstitutionalOutcome  @relation(fields: [institutional_outcome_id], references: [id], onDelete: Restrict)
-  creator               User                  @relation("CILOInstitutionalOutcomeMappingCreator", fields: [created_by], references: [id], onDelete: Restrict)
-  updater               User                  @relation("CILOInstitutionalOutcomeMappingUpdater", fields: [updated_by], references: [id], onDelete: Restrict)
+  cilo                  CILO                 @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
+  institutional_outcome InstitutionalOutcome @relation(fields: [institutional_outcome_id], references: [id], onDelete: Restrict)
+  creator               User                 @relation("CILOInstitutionalOutcomeMappingCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  updater               User                 @relation("CILOInstitutionalOutcomeMappingUpdater", fields: [updated_by], references: [id], onDelete: Restrict)
 
   @@unique([cilo_id, institutional_outcome_id])
   @@index([cilo_id])
@@ -75,19 +78,19 @@ model CILOInstitutionalOutcomeMapping {
 }
 
 model CILOMapping {
-  id            String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cilo_id       String                     @db.Uuid
-  plo_id        String                     @map("go_id") @db.Uuid
+  id            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cilo_id       String                    @db.Uuid
+  plo_id        String                    @map("go_id") @db.Uuid
   manifestation CILOMappingManifestation?
-  created_by    String?                    @db.Uuid
-  updated_by    String?                    @db.Uuid
-  created_at    DateTime                   @default(now())
+  created_by    String?                   @db.Uuid
+  updated_by    String?                   @db.Uuid
+  created_at    DateTime                  @default(now())
   updated_at    DateTime?
 
-  cilo     CILO   @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
-  plo      PLO    @relation(fields: [plo_id], references: [id], onDelete: Cascade)
-  creator  User?  @relation("CILOMappingCreator", fields: [created_by], references: [id], onDelete: SetNull)
-  updater  User?  @relation("CILOMappingUpdater", fields: [updated_by], references: [id], onDelete: SetNull)
+  cilo    CILO  @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
+  plo     PLO   @relation(fields: [plo_id], references: [id], onDelete: Cascade)
+  creator User? @relation("CILOMappingCreator", fields: [created_by], references: [id], onDelete: SetNull)
+  updater User? @relation("CILOMappingUpdater", fields: [updated_by], references: [id], onDelete: SetNull)
 
   @@unique([cilo_id, plo_id])
   @@index([created_by])
