@@ -22,7 +22,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus } from "lucide-react";
+import { GripVertical, Plus, SearchIcon, XIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +35,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
@@ -43,6 +57,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -67,6 +82,8 @@ import type {
   LikertDescriptor,
   EvaluationTemplateType,
   TemplateCiloQuestionBinding,
+  ProgramPloOption,
+  TemplatePloQuestionBinding,
 } from "../types";
 import { DEFAULT_LIKERT_5_DESCRIPTORS } from "../types";
 
@@ -116,6 +133,13 @@ export interface TemplateBuilderProps {
     structure: TemplateStructure
   ) => Promise<ActionResult<{ id: string }>>;
   onPublish?: () => void;
+  /**
+   * Server-prepared active PLOs (canonical order) offered to Program-wide
+   * templates. Absent in faculty/COURSE_BOUND mode.
+   */
+  ploOptions?: ProgramPloOption[];
+  /** Existing Program-wide question–PLO bindings loaded for this template. */
+  initialPloBindings?: TemplatePloQuestionBinding[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -333,6 +357,8 @@ export function TemplateBuilder({
   isInstitutionalBaseline = false,
   onSaveAsCopy,
   onPublish,
+  ploOptions,
+  initialPloBindings,
 }: TemplateBuilderProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -366,6 +392,15 @@ export function TemplateBuilder({
       ])
     )
   );
+  const [ploQuestionBindings, setPloQuestionBindings] = useState<Record<string, string[]>>(() => {
+    const map: Record<string, string[]> = {};
+    for (const binding of initialPloBindings ?? []) {
+      const key = encodeBindingKey(binding.sectionKey, binding.itemKey);
+      if (!map[key]) map[key] = [];
+      map[key].push(binding.ploId);
+    }
+    return map;
+  });
   const [loadedCilos, setLoadedCilos] = useState<Array<{ description: string; id: string }>>([]);
   const [isLoadingCilos, setIsLoadingCilos] = useState(false);
 
@@ -378,6 +413,9 @@ export function TemplateBuilder({
 
   const facultyMode = Boolean(facultyConfig);
   const effectiveTemplateType: EvaluationTemplateType = facultyMode ? "COURSE_BOUND" : templateType;
+  /** PLO question bindings are a Program-wide template concern only. */
+  const programWideMode = !facultyMode && effectiveTemplateType === "PROGRAM_WIDE";
+  const programPloOptions = ploOptions ?? [];
   const facultyCourseContexts = facultyConfig?.courseContexts ?? EMPTY_FACULTY_COURSE_CONTEXTS;
   const loadManagedCilosAction = facultyConfig?.loadManagedCilosAction;
   const selectedCourseContext =
@@ -493,7 +531,19 @@ export function TemplateBuilder({
   }, []);
 
   const removeSection = useCallback((key: string) => {
-    setSections((prev) => normalizeTemplateStructure(prev.filter((s) => s.key !== key)));
+    setSections((prev) => {
+      const removed = prev.find((s) => s.key === key);
+      if (removed) {
+        setPloQuestionBindings((current) => {
+          const next = { ...current };
+          for (const question of removed.questions) {
+            delete next[encodeBindingKey(key, question.key)];
+          }
+          return next;
+        });
+      }
+      return normalizeTemplateStructure(prev.filter((s) => s.key !== key));
+    });
   }, []);
 
   const updateSection = useCallback(
@@ -518,6 +568,11 @@ export function TemplateBuilder({
   }, []);
 
   const removeQuestion = useCallback((sectionKey: string, questionKey: string) => {
+    setPloQuestionBindings((current) => {
+      const next = { ...current };
+      delete next[encodeBindingKey(sectionKey, questionKey)];
+      return next;
+    });
     setSections((prev) =>
       normalizeTemplateStructure(
         prev.map((s) => {
@@ -545,6 +600,11 @@ export function TemplateBuilder({
 
   const changeQuestionType = useCallback(
     (sectionKey: string, questionKey: string, newType: QuestionType) => {
+      setPloQuestionBindings((current) => {
+        const next = { ...current };
+        delete next[encodeBindingKey(sectionKey, questionKey)];
+        return next;
+      });
       setSections((prev) =>
         prev.map((s) => {
           if (s.key !== sectionKey) return s;
@@ -764,6 +824,23 @@ export function TemplateBuilder({
     );
     formData.set("structure", JSON.stringify(normalizeTemplateStructure(sections)));
 
+    if (programWideMode) {
+      // Derived from the live structure: deleting a question or switching it
+      // to open-ended automatically drops its bindings.
+      const ploBindings: TemplatePloQuestionBinding[] = [];
+      for (const section of normalizeTemplateStructure(sections)) {
+        for (const question of section.questions) {
+          if (question.type !== "likert") continue;
+          for (const ploId of ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []) {
+            if (ploId) {
+              ploBindings.push({ itemKey: question.key, ploId, sectionKey: section.key });
+            }
+          }
+        }
+      }
+      formData.set("program_question_plo_bindings", JSON.stringify(ploBindings));
+    }
+
     if (facultyMode) {
       formData.set("bound_course_id", boundCourseId);
       formData.set("bound_major_id", boundMajorId);
@@ -792,6 +869,8 @@ export function TemplateBuilder({
     facultyMode,
     isFacultyAccessible,
     name,
+    ploQuestionBindings,
+    programWideMode,
     sections,
     templateId,
   ]);
@@ -958,6 +1037,9 @@ export function TemplateBuilder({
                 setTemplateType(nextType);
                 if (nextType !== "COURSE_BOUND") {
                   setIsFacultyAccessible(false);
+                }
+                if (nextType !== "PROGRAM_WIDE") {
+                  setPloQuestionBindings({});
                 }
               }}
             >
@@ -1177,6 +1259,15 @@ export function TemplateBuilder({
                 [questionKey]: ciloId,
               }))
             }
+            ploOptions={programPloOptions}
+            ploQuestionBindings={ploQuestionBindings}
+            programWideMode={programWideMode}
+            onPloBindingsChange={(questionKey, ploIds) =>
+              setPloQuestionBindings((current) => ({
+                ...current,
+                [questionKey]: ploIds,
+              }))
+            }
             selectedCiloIds={selectedCiloIds}
             canRemove={sections.length > 1}
           />
@@ -1296,6 +1387,9 @@ interface SectionCardProps {
   ciloOptions: Array<{ description: string; id: string }>;
   ciloQuestionBindings: Record<string, string>;
   selectedCiloLabels: Map<string, string>;
+  ploOptions: ProgramPloOption[];
+  ploQuestionBindings: Record<string, string[]>;
+  programWideMode: boolean;
   section: TemplateSection;
   sectionIndex: number;
   sortableId: string;
@@ -1322,6 +1416,7 @@ interface SectionCardProps {
   ) => void;
   onAddSuggestedResponse: (sectionKey: string, questionKey: string, response: string) => void;
   onCiloBindingChange: (questionKey: string, ciloId: string) => void;
+  onPloBindingsChange: (questionKey: string, ploIds: string[]) => void;
   onRemoveSuggestedResponse: (sectionKey: string, questionKey: string, index: number) => void;
   selectedCiloIds: Set<string>;
   canRemove: boolean;
@@ -1331,6 +1426,9 @@ function SectionCard({
   ciloOptions,
   ciloQuestionBindings,
   selectedCiloLabels,
+  ploOptions,
+  ploQuestionBindings,
+  programWideMode,
   section,
   sectionIndex,
   sortableId,
@@ -1345,6 +1443,7 @@ function SectionCard({
   onUpdateLikertDescriptor,
   onAddSuggestedResponse,
   onCiloBindingChange,
+  onPloBindingsChange,
   onRemoveSuggestedResponse,
   selectedCiloIds,
   canRemove,
@@ -1446,6 +1545,10 @@ function SectionCard({
                 selectedCiloId={
                   ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
                 }
+                ploOptions={ploOptions}
+                selectedPloIds={ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []}
+                programWideMode={programWideMode}
+                onPloBindingsChange={onPloBindingsChange}
                 canRemove={section.questions.length > 1}
               />
             ))}
@@ -1489,7 +1592,11 @@ interface QuestionCardProps {
   ) => void;
   onAddSuggestedResponse: (sectionKey: string, questionKey: string, response: string) => void;
   onCiloBindingChange: (questionKey: string, ciloId: string) => void;
+  onPloBindingsChange: (questionKey: string, ploIds: string[]) => void;
   onRemoveSuggestedResponse: (sectionKey: string, questionKey: string, index: number) => void;
+  ploOptions: ProgramPloOption[];
+  selectedPloIds: string[];
+  programWideMode: boolean;
   selectedCiloLabel?: string;
   selectedCiloId: string;
   selectedCiloIds: Set<string>;
@@ -1511,7 +1618,11 @@ function QuestionCard({
   onUpdateLikertDescriptor,
   onAddSuggestedResponse,
   onCiloBindingChange,
+  onPloBindingsChange,
   onRemoveSuggestedResponse,
+  ploOptions,
+  selectedPloIds,
+  programWideMode,
   selectedCiloLabel,
   selectedCiloId,
   selectedCiloIds,
@@ -1548,7 +1659,7 @@ function QuestionCard({
             value={question.type}
             onValueChange={(value) => onChangeType(sectionKey, question.key, value as QuestionType)}
           >
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger className="w-full sm:w-48" aria-label="Question type">
               <SelectValue>{formatQuestionTypeLabel(question.type)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -1623,6 +1734,28 @@ function QuestionCard({
                   })}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+          {programWideMode && (
+            <div className="space-y-2">
+              <span id={`plo-binding-label-${question.key}`} className="text-sm font-medium">
+                PLO Binding
+              </span>
+              <PloMultiSelect
+                options={ploOptions}
+                selectedIds={selectedPloIds}
+                questionKey={question.key}
+                labelId={`plo-binding-label-${question.key}`}
+                onChange={(ploIds) =>
+                  onPloBindingsChange(encodeBindingKey(sectionKey, question.key), ploIds)
+                }
+              />
+              {selectedPloIds.length === 0 && (
+                <p role="status" className="text-muted-foreground text-xs">
+                  Not bound to a PLO yet. Drafts save without bindings, but this Likert
+                  question must be bound to at least one PLO before publishing.
+                </p>
+              )}
             </div>
           )}
         </>
@@ -1777,6 +1910,228 @@ function LikertDescriptorsEditor({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── PLO Multi-Select ────────────────────────────────────────────────────────
+
+interface PloMultiSelectProps {
+  options: ProgramPloOption[];
+  selectedIds: string[];
+  questionKey: string;
+  labelId: string;
+  onChange: (ploIds: string[]) => void;
+}
+
+/**
+ * Likert question PLO multi-select for Program-wide templates. Desktop shows a
+ * searchable popover; mobile shows a bottom drawer surface. Selection is
+ * keyboard-accessible (real checkboxes), chips are individually removable,
+ * and a Clear action empties the selection.
+ */
+export function PloMultiSelect({
+  options,
+  selectedIds,
+  questionKey,
+  labelId,
+  onChange,
+}: PloMultiSelectProps) {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [query, setQuery] = useState("");
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const searchInputId = `plo-search-${questionKey}`;
+  const listboxId = `plo-listbox-${questionKey}`;
+
+  const filteredOptions = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return options;
+    return options.filter(
+      (plo) =>
+        plo.code.toLowerCase().includes(normalizedQuery) ||
+        plo.description.toLowerCase().includes(normalizedQuery)
+    );
+  }, [options, query]);
+
+  const toggle = useCallback(
+    (ploId: string) => {
+      onChange(
+        selectedSet.has(ploId)
+          ? selectedIds.filter((id) => id !== ploId)
+          : [...selectedIds, ploId]
+      );
+    },
+    [onChange, selectedIds, selectedSet]
+  );
+
+  // Removing a chip unmounts its remove button; return focus to the trigger so
+  // keyboard users are not left with focus on the document body.
+  const removeChip = useCallback(
+    (ploId: string) => {
+      toggle(ploId);
+      document.getElementById(`plo-binding-${questionKey}`)?.focus();
+    },
+    [questionKey, toggle]
+  );
+
+  const selectedPlos = useMemo(
+    () =>
+      selectedIds
+        .map((id) => options.find((plo) => plo.id === id))
+        .filter((plo): plo is ProgramPloOption => Boolean(plo)),
+    [options, selectedIds]
+  );
+
+  const trigger = (
+    <Button
+      id={`plo-binding-${questionKey}`}
+      type="button"
+      variant="outline"
+      className="w-full justify-between text-left font-normal"
+      aria-labelledby={labelId}
+      aria-controls={listboxId}
+      aria-haspopup="listbox"
+    >
+      <span className="min-w-0 flex-1 truncate">
+        {selectedIds.length === 0
+          ? "Select PLOs…"
+          : `${selectedIds.length} PLO${selectedIds.length === 1 ? "" : "s"} selected`}
+      </span>
+      <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
+    </Button>
+  );
+
+  const searchField = (
+    <div className="space-y-1 px-1">
+      <Input
+        id={searchInputId}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search PLOs by code or description…"
+        aria-label="Search PLOs"
+      />
+    </div>
+  );
+  const optionList = (
+    <div
+      id={listboxId}
+      role="listbox"
+      aria-label="Program Learning Outcomes"
+      className="max-h-56 overflow-y-auto"
+    >
+      {options.length === 0 ? (
+        <p className="text-muted-foreground px-3 py-4 text-center text-sm">
+          No active PLOs available for this program.
+        </p>
+      ) : filteredOptions.length === 0 ? (
+        <p className="text-muted-foreground px-3 py-4 text-center text-sm">
+          No PLOs match your search.
+        </p>
+      ) : (
+        <ul className="space-y-0.5">
+          {filteredOptions.map((plo) => {
+            const isSelected = selectedSet.has(plo.id);
+            return (
+              <li key={plo.id} className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+                <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggle(plo.id)}
+                    className="mt-0.5 size-4 shrink-0 accent-primary"
+                    aria-label={`${plo.code}: ${plo.description}`}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="text-sm font-semibold">{plo.code}</span>
+                    <span className="text-muted-foreground ml-2 text-sm">{plo.description}</span>
+                  </span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+
+  const footer = (
+    <div className="flex items-center justify-between border-t border-border pt-2">
+      <span className="text-muted-foreground text-xs">{selectedIds.length} selected</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={selectedIds.length === 0}
+        onClick={() => onChange([])}
+      >
+        Clear
+      </Button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2">
+      {isDesktop ? (
+        <Popover>
+          <PopoverTrigger render={trigger} />
+          <PopoverContent className="w-96" align="start">
+            {searchField}
+            {optionList}
+            {footer}
+          </PopoverContent>
+        </Popover>
+      ) : (
+        <Drawer>
+          <DrawerTrigger render={trigger} />
+          <DrawerContent className="max-h-[85dvh]">
+            <DrawerHeader className="flex items-start justify-between gap-4 text-left">
+              <div className="min-w-0 space-y-1">
+                <DrawerTitle>PLO Binding</DrawerTitle>
+                <DrawerDescription>
+                  Choose one or more active Program Learning Outcomes this Likert question covers.
+                </DrawerDescription>
+              </div>
+              <DrawerClose
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Close PLO binding"
+                  />
+                }
+              >
+                <XIcon aria-hidden="true" />
+              </DrawerClose>
+            </DrawerHeader>
+            <div className="space-y-3 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+              {searchField}
+              {optionList}
+              {footer}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
+
+      {selectedPlos.length > 0 && (
+        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Selected PLOs">
+          {selectedPlos.map((plo) => (
+            <li
+              key={plo.id}
+              className="bg-muted text-foreground inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs font-medium"
+            >
+              <span className="font-semibold">{plo.code}</span>
+              <button
+                type="button"
+                onClick={() => removeChip(plo.id)}
+                className="text-muted-foreground hover:text-danger focus-visible:ring-ring rounded-sm p-0.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
+                aria-label={`Remove ${plo.code}`}
+              >
+                <XIcon className="size-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
