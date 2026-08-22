@@ -9,6 +9,7 @@ const {
   findManyExternalInviteMock,
   findManyUserMock,
   findManyIndustryPartnerMock,
+  findManyIndustryAffiliationMock,
   listStudentsForClassMock,
   membershipFindManyMock,
   resolveAuthSessionMock,
@@ -19,6 +20,7 @@ const {
   findManyExternalInviteMock: vi.fn(),
   findManyUserMock: vi.fn(),
   findManyIndustryPartnerMock: vi.fn(),
+  findManyIndustryAffiliationMock: vi.fn(),
   listStudentsForClassMock: vi.fn(),
   membershipFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
@@ -42,6 +44,9 @@ vi.mock("@/lib/db/prisma", () => ({
     industryPartnerProfile: {
       findMany: findManyIndustryPartnerMock,
     },
+    industryPartnerProgramAffiliation: {
+      findMany: findManyIndustryAffiliationMock,
+    },
     courseAssignmentMembership: {
       findMany: membershipFindManyMock,
     },
@@ -62,6 +67,8 @@ vi.mock("@/features/enrollments/services/list-students-for-class", () => ({
 describe("previewCentralDeploymentRespondents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    findManyIndustryPartnerMock.mockResolvedValue([]);
+    findManyIndustryAffiliationMock.mockResolvedValue([]);
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
       data: {
@@ -301,16 +308,14 @@ describe("previewCentralDeploymentRespondents", () => {
         expect(result.data[0]).not.toHaveProperty("lastName");
       }
 
-      expect(findManyIndustryPartnerMock).toHaveBeenCalledWith({
-        where: { program_id: "program-1" },
-        include: {
-          user: {
-            select: { id: true, email: true, name: true },
-          },
-          program: { select: { code: true } },
-        },
-        orderBy: { user: { name: "asc" } },
-      });
+      expect(findManyIndustryPartnerMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { program_id: "program-1" },
+          include: expect.objectContaining({
+            user: { select: { id: true, email: true, name: true } },
+          }),
+        })
+      );
     });
   });
 });

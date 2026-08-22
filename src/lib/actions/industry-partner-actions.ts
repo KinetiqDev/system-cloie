@@ -6,6 +6,47 @@ import { createClient } from "@/lib/supabase/server";
 import { industryPartnerProfileSchema, type IndustryPartnerProfileInput } from "@/lib/schemas/industry-partner-profile";
 import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
 
+function resolveProgramIds(data: IndustryPartnerProfileInput): string[] {
+  if (Array.isArray(data.program_ids) && data.program_ids.length > 0) {
+    return data.program_ids as string[];
+  }
+  if (data.program_id) return [data.program_id as string];
+  return [];
+}
+
+async function verifyProgramsExistAndActive(
+  programIds: string[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (programIds.length === 0) return { ok: true };
+  const programs = await prisma.program.findMany({
+    where: { id: { in: programIds } },
+    select: { id: true, is_active: true },
+  });
+  const byId = new Map(programs.map((p) => [p.id, p] as const));
+  for (const pid of programIds) {
+    const prog = byId.get(pid);
+    if (!prog) {
+      return {
+        ok: false,
+        error:
+          programIds.length === 1
+            ? "The selected program does not exist."
+            : "One of the selected programs does not exist.",
+      };
+    }
+    if (!prog.is_active) {
+      return {
+        ok: false,
+        error:
+          programIds.length === 1
+            ? "The selected program is archived or inactive."
+            : "One of the selected programs is archived or inactive.",
+      };
+    }
+  }
+  return { ok: true };
+}
+
 export async function createIndustryPartnerProfile(data: IndustryPartnerProfileInput) {
   try {
     const supabase = await createClient();
@@ -20,20 +61,12 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
 
     // Client-injected identity fields are stripped by Zod.
     const validatedData = industryPartnerProfileSchema.parse(data);
+    const programIds = resolveProgramIds(validatedData);
 
-    // Verify program exists and is active (if provided)
-    if (validatedData.program_id) {
-      const program = await prisma.program.findUnique({
-        where: { id: validatedData.program_id },
-      });
-
-      if (!program) {
-        return { success: false, error: "The selected program does not exist." };
-      }
-
-      if (!program.is_active) {
-        return { success: false, error: "The selected program is archived or inactive." };
-      }
+    // Verify each program exists and is active
+    const verification = await verifyProgramsExistAndActive(programIds);
+    if (!verification.ok) {
+      return { success: false, error: verification.error };
     }
 
     const domainUser = await resolveAuthenticatedDomainUser({
@@ -56,7 +89,6 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
     }
 
     // Preserve account-state and external verification gates on direct Server Action calls.
-    // Matches profileGate INACTIVE / REJECTED_EXTERNAL_ACCOUNT.
     if (!domainUser.is_active) {
       return { success: false, error: "Your CLOIE account is currently inactive." };
     }
@@ -81,20 +113,34 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
         });
       }
 
+      const legacyProgramId = programIds[0] ?? null;
       await tx.industryPartnerProfile.upsert({
         where: { user_id: domainUser.id },
         update: {
           company_name: validatedData.company_name,
           position: validatedData.position || null,
-          program_id: validatedData.program_id || null,
+          program_id: legacyProgramId,
         },
         create: {
           user_id: domainUser.id,
           company_name: validatedData.company_name,
           position: validatedData.position || null,
-          program_id: validatedData.program_id || null,
+          program_id: legacyProgramId,
         },
       });
+      // Sync multi-affiliation join table
+      await tx.industryPartnerProgramAffiliation.deleteMany({
+        where: { industry_partner_id: domainUser.id },
+      });
+      if (programIds.length > 0) {
+        await tx.industryPartnerProgramAffiliation.createMany({
+          data: programIds.map((program_id) => ({
+            industry_partner_id: domainUser.id,
+            program_id,
+          })),
+          skipDuplicates: true,
+        });
+      }
     });
 
     return { success: true };

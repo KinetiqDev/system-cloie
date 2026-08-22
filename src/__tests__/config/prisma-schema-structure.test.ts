@@ -63,6 +63,7 @@ const expectedModels = [
   "FacultyProgramAffiliation",
   "PLO",
   "IndustryPartnerProfile",
+  "IndustryPartnerProgramAffiliation",
   "InstitutionalOutcome",
   "InstrumentTemplate",
   "InstrumentTemplateCiloQuestionBinding",

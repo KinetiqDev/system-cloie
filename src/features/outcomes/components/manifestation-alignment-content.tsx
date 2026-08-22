@@ -168,10 +168,7 @@ export function ManifestationAlignmentContent({
                     aria-label={`${copy.shortNoun} ${targetIndex + 1}: ${target.code}, ${target.description}`}
                     className="min-w-40 px-3 pt-2 pb-2 text-left align-top font-medium"
                   >
-                    <span className="block">
-                      {copy.shortNoun} {targetIndex + 1}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">{target.code}</span>
+                    <span className="block">{target.code}</span>
                     <span className="mt-1 block text-xs leading-snug break-words font-normal text-muted-foreground">
                       {target.description}
                     </span>
@@ -248,12 +245,7 @@ export function ManifestationAlignmentContent({
                         : "border-border bg-surface-input"
                     )}
                   >
-                    <p className="flex flex-wrap items-baseline gap-x-1.5">
-                      <span className="text-label-lg font-medium">
-                        {copy.shortNoun} {targetIndex + 1}
-                      </span>
-                      <span className="text-muted-foreground text-body-sm">{target.code}</span>
-                    </p>
+                    <p className="text-label-lg font-medium">{target.code}</p>
                     <p className="text-muted-foreground text-body-sm">{target.description}</p>
                     {unanswered && (
                       <p className="text-muted-foreground text-body-sm">Unanswered</p>

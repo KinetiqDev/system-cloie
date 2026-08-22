@@ -3,7 +3,10 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { listFacultyCoursesWithCilos } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AddCiloForm } from "./add-cilo-form";
-import { addCilosToCourseAction } from "@/lib/actions/faculty-cilo-actions";
+import {
+  loadCilosForCourseAction,
+  saveCilosForCourseAction,
+} from "@/lib/actions/faculty-cilo-actions";
 
 export const metadata = {
   title: "Add CILOs | Faculty | CLOIE",
@@ -32,7 +35,8 @@ export default async function FacultyAddCiloPage() {
   return (
     <AddCiloForm
       courses={JSON.parse(JSON.stringify(result.data.courses))}
-      addAction={addCilosToCourseAction}
+      saveAction={saveCilosForCourseAction}
+      loadCilosAction={loadCilosForCourseAction}
     />
   );
 }

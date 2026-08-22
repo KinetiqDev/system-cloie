@@ -215,91 +215,33 @@ describe("manage-program-head-outcomes", () => {
     );
   });
 
-  it("includes assigned General Education courses with Institutional Outcome mappings", async () => {
+  it("excludes General Education courses from program mapping review", async () => {
     const selectedProgramId = "program-2";
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: selectedProgramId }]);
     ploFindManyMock.mockResolvedValue([]);
-    courseFindManyMock.mockResolvedValue([
-      {
-        id: "course-ge",
-        code: "GE101",
-        title: "General Education",
-        course_scope: "GENERAL_EDUCATION",
-        cilos: [
-          {
-            id: "cilo-ge",
-            description: "Communicate effectively",
-            cilo_mappings: [],
-            cilo_institutional_outcome_mappings: [
-              {
-                id: "ilo-mapping-1",
-                manifestation: "LEARNING",
-                institutional_outcome: {
-                  id: "ilo-1",
-                  code: "ILO-1",
-                  description: "Communicate clearly",
-                  is_active: true,
-                },
-              },
-            ],
-          },
-        ],
-      },
-    ]);
+    courseFindManyMock.mockResolvedValue([]);
 
     const result = await listCILOMappingsForProgram(selectedProgramId);
 
-    expect(result).toEqual({
-      success: true,
-      data: [
-        {
-          courseId: "course-ge",
-          courseCode: "GE101",
-          courseTitle: "General Education",
-          courseScope: "GENERAL_EDUCATION",
-          plos: [],
-          archivedPlos: [],
-          cilos: [
-            {
-              id: "cilo-ge",
-              description: "Communicate effectively",
-              mappedTargets: [
-                {
-                  mappingId: "ilo-mapping-1",
-                  id: "ilo-1",
-                  code: "ILO-1",
-                  description: "Communicate clearly",
-                  kind: "ILO",
-                  is_active: true,
-                  manifestation: "LEARNING",
-                },
-              ],
-              manifestations: [],
-              archivedManifestations: [],
-              readiness: "ready",
-            },
-          ],
-        },
-      ],
-    });
+    expect(result).toEqual({ success: true, data: [] });
     expect(courseFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          OR: expect.arrayContaining([
-            expect.objectContaining({
-              course_scope: "GENERAL_EDUCATION",
-              course_assignments: {
-                some: {
-                  program_id: selectedProgramId,
-                  is_active: true,
-                  term_instance: { status: "ACTIVE" },
-                },
-              },
-            }),
-          ]),
+          is_active: true,
+          program_id: selectedProgramId,
+          course_assignments: {
+            some: {
+              program_id: selectedProgramId,
+              is_active: true,
+              term_instance: { status: "ACTIVE" },
+            },
+          },
         }),
       })
     );
+    // Ensure no GENERAL_EDUCATION clause leaks into the query
+    const where = courseFindManyMock.mock.calls[0][0].where;
+    expect(where.OR).toBeUndefined();
   });
 
   it("lists every active PLO with per-pair manifestations and exhaustive readiness per CILO", async () => {
@@ -417,18 +359,14 @@ describe("manage-program-head-outcomes", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           is_active: true,
-          OR: expect.arrayContaining([
-            expect.objectContaining({
+          program_id: selectedProgramId,
+          course_assignments: {
+            some: {
               program_id: selectedProgramId,
-              course_assignments: {
-                some: {
-                  program_id: selectedProgramId,
-                  is_active: true,
-                  term_instance: { status: "ACTIVE" },
-                },
-              },
-            }),
-          ]),
+              is_active: true,
+              term_instance: { status: "ACTIVE" },
+            },
+          },
         }),
       })
     );
@@ -437,7 +375,6 @@ describe("manage-program-head-outcomes", () => {
       select: { id: true, code: true, description: true },
       orderBy: [{ order: "asc" }, { code: "asc" }],
     });
-    expect(result.data[0].courseScope).toBe("PROGRAM_SPECIFIC");
     expect(result.data[0].plos).toEqual([
       { id: "go-1", code: "PLO-1", description: "Analyze problems" },
       { id: "go-2", code: "PLO-2", description: "Design solutions" },
@@ -449,7 +386,6 @@ describe("manage-program-head-outcomes", () => {
       {
         id: "cilo-aligned",
         description: "Design a solution",
-        mappedTargets: [],
         manifestations: [
           { ploId: "go-1", manifestation: "LEARNING" },
           { ploId: "go-2", manifestation: "PRACTICE" },
@@ -460,7 +396,7 @@ describe("manage-program-head-outcomes", () => {
       {
         id: "cilo-legacy",
         description: "Legacy classification",
-        mappedTargets: [],
+        
         manifestations: [
           { ploId: "go-1", manifestation: null },
           { ploId: "go-2", manifestation: null },
@@ -471,7 +407,7 @@ describe("manage-program-head-outcomes", () => {
       {
         id: "cilo-partial",
         description: "One pair classified",
-        mappedTargets: [],
+        
         manifestations: [
           { ploId: "go-1", manifestation: "OPPORTUNITY" },
           { ploId: "go-2", manifestation: null },
@@ -482,7 +418,7 @@ describe("manage-program-head-outcomes", () => {
       {
         id: "cilo-gap",
         description: "No target yet",
-        mappedTargets: [],
+        
         manifestations: [
           { ploId: "go-1", manifestation: null },
           { ploId: "go-2", manifestation: null },
@@ -493,7 +429,7 @@ describe("manage-program-head-outcomes", () => {
       {
         id: "cilo-archived-target",
         description: "Only archived target",
-        mappedTargets: [],
+        
         manifestations: [
           { ploId: "go-1", manifestation: null },
           { ploId: "go-2", manifestation: null },
@@ -534,14 +470,13 @@ describe("manage-program-head-outcomes", () => {
           courseId: "course-ps",
           courseCode: "CS101",
           courseTitle: "Introduction to Computing",
-          courseScope: "PROGRAM_SPECIFIC",
           plos: [],
           archivedPlos: [],
           cilos: [
             {
               id: "cilo-1",
               description: "Design a solution",
-              mappedTargets: [],
+              
               manifestations: [],
               archivedManifestations: [],
               readiness: "incomplete-mapping",

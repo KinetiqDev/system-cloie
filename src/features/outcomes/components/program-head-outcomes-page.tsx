@@ -34,10 +34,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deletePLOAction, reorderPLOsAction, restorePLOAction } from "@/lib/actions/program-head-outcome-actions";
+import { showToast } from "@/components/ui/toast";
 import { PLOFormDialog } from "./plo-form-dialog";
 import type { ProgramPLOItem } from "../services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
+import { cn } from "@/lib/utils";
 
 type ProgramHeadOutcomesPageProps = {
   plos: ProgramPLOItem[];
@@ -62,86 +65,86 @@ function SortablePLORow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 10 : undefined,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-card border-border flex items-start gap-3 rounded-xl border p-4 shadow-sm transition-shadow ${
-        isDragging ? "opacity-90 shadow-lg" : "hover:shadow-md"
-      }`}
+      className={cn(
+        "bg-card border-border flex items-start gap-2 rounded-xl border p-4 shadow-sm",
+        "motion-safe:transition-shadow motion-safe:duration-200",
+        isDragging ? "relative z-10 opacity-90 shadow-lg" : "motion-safe:hover:shadow-md"
+      )}
     >
-      {/* Drag Handle */}
       <button
-        className="text-muted-foreground hover:text-foreground mt-0.5 inline-flex min-h-11 min-w-11 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+        type="button"
+        className="text-muted-foreground hover:text-foreground inline-flex size-8 shrink-0 cursor-grab touch-manipulation touch-none items-center justify-center pointer-coarse:size-11 active:cursor-grabbing"
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="size-4" aria-hidden="true" />
       </button>
 
-      {/* Content */}
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="default" className="shrink-0 font-semibold">
-            {plo.code}
-          </Badge>
-          {!plo.is_active && (
-            <Badge variant="outline" className="text-muted-foreground shrink-0">
-              Archived
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Badge variant="default" className="shrink-0 font-semibold">
+              {plo.code}
             </Badge>
-          )}
-          {plo._count.cilo_mappings > 0 ? (
-            <Badge variant="success" className="shrink-0">
-              {plo._count.cilo_mappings} {plo._count.cilo_mappings === 1 ? "CILO" : "CILOs"} mapped
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-muted-foreground shrink-0">
-              No mappings
-            </Badge>
-          )}
+            {!plo.is_active && (
+              <Badge variant="outline" className="text-muted-foreground shrink-0">
+                Archived
+              </Badge>
+            )}
+            {plo._count.cilo_mappings > 0 ? (
+              <Badge variant="success" className="shrink-0">
+                {plo._count.cilo_mappings} {plo._count.cilo_mappings === 1 ? "CILO" : "CILOs"} mapped
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground shrink-0">
+                No mappings
+              </Badge>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Edit ${plo.code}`}
+              title="Edit"
+              onClick={() => onEdit(plo)}
+            >
+              <Edit className="size-4" aria-hidden="true" />
+            </Button>
+            {plo.is_active ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-destructive"
+                aria-label={`Archive ${plo.code}`}
+                title="Delete"
+                onClick={() => onDelete(plo)}
+              >
+                <Trash2 className="size-4" aria-hidden="true" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Restore ${plo.code}`}
+                title="Restore"
+                onClick={() => onRestore(plo)}
+              >
+                <RotateCcw className="size-4" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
         </div>
-        <p className="text-body-md text-muted-foreground leading-relaxed">{plo.description}</p>
-      </div>
-
-      {/* Actions */}
-      <div className="flex shrink-0 items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="min-h-11 min-w-11"
-          aria-label={`Edit ${plo.code}`}
-          title="Edit"
-          onClick={() => onEdit(plo)}
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-        {plo.is_active ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-destructive min-h-11 min-w-11"
-            aria-label={`Archive ${plo.code}`}
-            title="Delete"
-            onClick={() => onDelete(plo)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="min-h-11 min-w-11"
-            aria-label={`Restore ${plo.code}`}
-            title="Restore"
-            onClick={() => onRestore(plo)}
-          >
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-        )}
+        <p className="text-body-md text-muted-foreground mt-2 text-pretty break-words leading-relaxed">
+          {plo.description}
+        </p>
       </div>
     </div>
   );
@@ -179,7 +182,14 @@ export function ProgramHeadOutcomesPage({
 
   const totalPLOs = orderedPLOs.length;
   const withMappings = orderedPLOs.filter((plo) => plo._count.cilo_mappings > 0).length;
-
+  const unmappedCount = totalPLOs - withMappings;
+  const mappingStats = [
+    { label: "Total PLOs", value: totalPLOs, valueClassName: "text-foreground" },
+    { label: "Mapped to CILOs", value: withMappings, valueClassName: "text-success" },
+    ...(unmappedCount > 0
+      ? [{ label: "Unmapped", value: unmappedCount, valueClassName: "text-muted-foreground" }]
+      : []),
+  ];
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -228,10 +238,12 @@ export function ProgramHeadOutcomesPage({
 
       if (!result.success) {
         setDeleteError(result.error);
+        showToast(result.error, "error");
         return;
       }
 
       setDeletingPLO(null);
+      showToast("Program Learning Outcome archived.", "success");
       router.refresh();
     });
   }
@@ -243,71 +255,66 @@ export function ProgramHeadOutcomesPage({
 
       if (!result.success) {
         setRestoreError(result.error);
+        showToast(result.error, "error");
         return;
       }
 
       setRestoringPLO(null);
+      showToast("Program Learning Outcome restored.", "success");
       router.refresh();
     });
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-heading text-text-primary text-3xl font-bold tracking-tight lg:text-4xl">
-            Program Learning Outcomes
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">{program.name}</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-heading-xl text-foreground text-pretty">Program Learning Outcomes</h1>
+          <p className="text-body-sm text-muted-foreground mt-1">{program.name}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button
             render={<Link href={buildProgramHeadOutcomeMappingPath(program.id)} />}
             variant="outline"
-            size="sm"
-            className="gap-2"
+            className="w-full justify-center sm:w-auto"
           >
-            <ListChecks className="h-4 w-4" />
+            <ListChecks className="size-4" aria-hidden="true" />
             CILO Mappings
           </Button>
-          <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
+          <Button onClick={() => setCreateDialogOpen(true)} className="w-full justify-center sm:w-auto">
+            <Plus className="size-4" aria-hidden="true" />
             Add PLO
           </Button>
         </div>
       </div>
 
-      {/* Inline Stats */}
       {totalPLOs > 0 && (
-        <div className="border-border bg-muted mb-6 flex items-center gap-6 rounded-lg border px-5 py-3">
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-heading text-text-primary text-2xl font-bold">{totalPLOs}</span>
-            <span className="text-muted-foreground text-sm">Total PLOs</span>
+        <div className="flex flex-col gap-2">
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-4",
+              mappingStats.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"
+            )}
+          >
+            {mappingStats.map((stat) => (
+              <Card key={stat.label} size="sm">
+                <CardHeader>
+                  <CardTitle className="text-title-sm">{stat.label}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className={cn("font-heading text-heading-xl tabular-nums", stat.valueClassName)}>
+                    {stat.value}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <div className="bg-border h-5 w-px" />
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-heading text-success text-2xl font-bold">{withMappings}</span>
-            <span className="text-muted-foreground text-sm">Mapped to CILOs</span>
-          </div>
-          {totalPLOs - withMappings > 0 && (
-            <>
-              <div className="bg-border h-5 w-px" />
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-heading text-muted-foreground text-2xl font-bold">
-                  {totalPLOs - withMappings}
-                </span>
-                <span className="text-muted-foreground text-sm">Unmapped</span>
-              </div>
-            </>
-          )}
-          <p className="text-muted-foreground ml-auto hidden text-xs sm:block">Drag rows to reorder</p>
+          <p className="text-caption text-muted-foreground">Drag rows to reorder</p>
         </div>
       )}
 
-      {/* PLO List */}
       {reorderError && (
-        <Alert variant="destructive" className="mb-4">
+        <Alert variant="destructive">
           <AlertDescription>{reorderError}</AlertDescription>
         </Alert>
       )}
@@ -315,7 +322,7 @@ export function ProgramHeadOutcomesPage({
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <ListChecks className="h-6 w-6" />
+              <ListChecks className="size-6" aria-hidden="true" />
             </EmptyMedia>
             <EmptyTitle>No Program Learning Outcomes yet</EmptyTitle>
             <EmptyDescription>
@@ -323,7 +330,7 @@ export function ProgramHeadOutcomesPage({
             </EmptyDescription>
           </EmptyHeader>
           <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
+            <Plus className="size-4" aria-hidden="true" />
             Add PLO
           </Button>
         </Empty>
@@ -333,7 +340,7 @@ export function ProgramHeadOutcomesPage({
             items={orderedPLOs.map((g) => g.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-2">
+            <div className="flex flex-col gap-3">
               {orderedPLOs.map((plo) => (
                 <SortablePLORow
                   key={plo.id}
@@ -354,7 +361,6 @@ export function ProgramHeadOutcomesPage({
         </DndContext>
       )}
 
-      {/* Create Dialog */}
       <PLOFormDialog
         mode="create"
         programId={program.id}
@@ -362,7 +368,6 @@ export function ProgramHeadOutcomesPage({
         onOpenChange={setCreateDialogOpen}
       />
 
-      {/* Edit Dialog */}
       {editingPLO && (
         <PLOFormDialog
           mode="edit"
@@ -375,7 +380,6 @@ export function ProgramHeadOutcomesPage({
         />
       )}
 
-      {/* Archive Confirmation Dialog */}
       <AlertDialog
         open={!!deletingPLO}
         onOpenChange={(open) => {
@@ -390,7 +394,7 @@ export function ProgramHeadOutcomesPage({
             <AlertDialogTitle>Archive Program Learning Outcome</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to archive{" "}
-              <strong className="text-text-primary">{deletingPLO?.code}</strong>? This action cannot
+              <strong className="text-foreground">{deletingPLO?.code}</strong>? This action cannot
               be undone from this screen.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -413,13 +417,12 @@ export function ProgramHeadOutcomesPage({
               loading={isPending}
               onClick={() => deletingPLO && handleDelete(deletingPLO)}
             >
-              {isPending ? "Archiving..." : "Archive"}
+              {isPending ? "Archiving…" : "Archive"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Restore Confirmation Dialog */}
       <AlertDialog
         open={!!restoringPLO}
         onOpenChange={(open) => {
@@ -433,7 +436,7 @@ export function ProgramHeadOutcomesPage({
           <AlertDialogHeader>
             <AlertDialogTitle>Restore Program Learning Outcome</AlertDialogTitle>
             <AlertDialogDescription>
-              Restore <strong className="text-text-primary">{restoringPLO?.code}</strong> to the
+              Restore <strong className="text-foreground">{restoringPLO?.code}</strong> to the
               active catalog? It becomes available for Course alignment again.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -452,7 +455,7 @@ export function ProgramHeadOutcomesPage({
               Cancel
             </AlertDialogCancel>
             <Button loading={isPending} onClick={() => restoringPLO && handleRestore(restoringPLO)}>
-              {isPending ? "Restoring..." : "Restore"}
+              {isPending ? "Restoring…" : "Restore"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -38,7 +38,7 @@ async function countProgramDependencies(
   db: typeof prisma | Prisma.TransactionClient,
   programId: string
 ): Promise<ProgramDependencyCounts> {
-  const [majors, courses, plos, studentProfiles, enrollments, alumniProfiles, courseAssignments, facultyAffiliations, programHeadAssignments, evaluationTargets, centralDeployments, templatesByProgram, templatesByBoundProgram, stakeholderInvites, industryPartnerProfiles] = await Promise.all([
+  const [majors, courses, plos, studentProfiles, enrollments, alumniProfiles, courseAssignments, facultyAffiliations, programHeadAssignments, evaluationTargets, centralDeployments, templatesByProgram, templatesByBoundProgram, stakeholderInvites, industryPartnerProfiles, industryPartnerAffs] = await Promise.all([
     db.major.count({ where: { program_id: programId } }),
     db.course.count({ where: { program_id: programId } }),
     db.pLO.count({ where: { program_id: programId } }),
@@ -54,6 +54,7 @@ async function countProgramDependencies(
     db.instrumentTemplate.count({ where: { bound_program_id: programId } }),
     db.externalStakeholderInvite.count({ where: { program_id: programId } }),
     db.industryPartnerProfile.count({ where: { program_id: programId } }),
+    db.industryPartnerProgramAffiliation.count({ where: { program_id: programId } }),
   ]);
 
   const overlappingTemplates = await db.instrumentTemplate.count({
@@ -69,7 +70,7 @@ async function countProgramDependencies(
       centralDeployments,
       instrumentTemplates: templatesByProgram + templatesByBoundProgram - overlappingTemplates,
     },
-    externalLinks: { stakeholderInvites, industryPartnerProfiles },
+    externalLinks: { stakeholderInvites, industryPartnerProfiles: industryPartnerProfiles + industryPartnerAffs },
   };
 }
 

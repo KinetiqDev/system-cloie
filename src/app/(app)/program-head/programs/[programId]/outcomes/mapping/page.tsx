@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ListChecks } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ListChecks } from "lucide-react";
 import { notFound } from "next/navigation";
 import type { CILOMappingManifestation } from "@prisma/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -39,7 +39,7 @@ export default async function SelectedProgramOutcomeMappingPage({
 
   return (
     <div>
-      <div className="mb-10">
+      <div className="mb-8">
         <Button
           render={<Link href={buildProgramHeadOutcomesPath(programId)} />}
           variant="ghost"
@@ -48,7 +48,7 @@ export default async function SelectedProgramOutcomeMappingPage({
           <ArrowLeft className="h-4 w-4" />
           Back to Program Learning Outcomes
         </Button>
-        <h1 className="font-heading text-text-primary mb-2 text-4xl font-bold tracking-tight lg:text-5xl">
+        <h1 className="font-heading text-text-primary mb-2 text-3xl font-bold tracking-tight lg:text-4xl">
           CILO Mapping Review
         </h1>
         <p className="text-body-md text-text-muted">
@@ -83,75 +83,17 @@ export default async function SelectedProgramOutcomeMappingPage({
             <Card key={course.courseId}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                  <Badge variant="default" className="text-label-sm">
+                  <Badge variant="secondary" className="text-label-sm">
                     {course.courseCode}
                   </Badge>
                   <span>{course.courseTitle}</span>
-                  {course.courseScope === "GENERAL_EDUCATION" && (
-                    <Badge variant="secondary" className="text-label-sm">
-                      Shared General Education
-                    </Badge>
-                  )}
                 </CardTitle>
                 <CardDescription>
                   {course.cilos.length} {course.cilos.length === 1 ? "CILO" : "CILOs"} defined
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {course.courseScope === "GENERAL_EDUCATION" ? (
-                  <div className="space-y-4">
-                    {course.cilos.map((cilo, index) => (
-                      <div
-                        key={cilo.id}
-                        className="border-border rounded-lg border p-4"
-                        aria-label={`CILO ${index + 1}`}
-                      >
-                        <div className="mb-2 flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <span className="text-text-muted text-caption font-semibold tracking-wider uppercase">
-                              CILO {index + 1}
-                            </span>
-                            <p className="text-body-md text-text-primary mt-1">
-                              {cilo.description}
-                            </p>
-                          </div>
-                          <Badge
-                            variant={cilo.readiness === "ready" ? "default" : "outline"}
-                            className="text-label-sm"
-                          >
-                            {cilo.readiness === "ready" ? "Aligned" : "Needs mapping"}
-                          </Badge>
-                        </div>
-                        {cilo.mappedTargets.length > 0 ? (
-                          <div className="flex flex-wrap items-center gap-2">
-                            {cilo.mappedTargets.map((target) => (
-                              <Badge
-                                key={target.mappingId}
-                                variant="secondary"
-                                className="text-label-sm max-w-40 truncate"
-                                title={target.description}
-                              >
-                                {target.code}
-                                {target.manifestation
-                                  ? ` · ${manifestationLabel(target.manifestation)}`
-                                  : ""}
-                                {!target.is_active && " (archived)"}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : (
-                          <Alert>
-                            <AlertDescription>
-                              No mapped outcome. Faculty can align this CILO to Institutional
-                              Outcomes through Course alignment.
-                            </AlertDescription>
-                          </Alert>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
+                <div className="space-y-4">
                     {course.plos.length === 0 && (
                       <Alert>
                         <AlertDescription>
@@ -243,9 +185,14 @@ export default async function SelectedProgramOutcomeMappingPage({
                               CILO {index + 1}
                             </span>
                             <Badge
-                              variant={cilo.readiness === "ready" ? "default" : "outline"}
-                              className="text-label-sm"
+                              variant={cilo.readiness === "ready" ? "success" : "warning"}
+                              className="text-label-sm gap-1"
                             >
+                              {cilo.readiness === "ready" ? (
+                                <CheckCircle2 aria-hidden className="size-3.5" />
+                              ) : (
+                                <AlertTriangle aria-hidden className="size-3.5" />
+                              )}
                               {cilo.readiness === "ready" ? "Aligned" : "Needs mapping"}
                             </Badge>
                           </div>
@@ -321,8 +268,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                         </ul>
                       </div>
                     )}
-                  </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           ))}

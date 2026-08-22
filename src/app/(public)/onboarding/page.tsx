@@ -84,6 +84,10 @@ export default async function OnboardingPage({
   }
 
   if (intent === "student" && step === "form") {
+    const nStudForm = (user.email ?? "").trim().toLowerCase();
+    if (!nStudForm.endsWith("@acd.edu.ph") && !nStudForm.endsWith("@acdeducation.com")) {
+      redirect("/portal/respondents");
+    }
     const yearLevels = Object.values(YearLevel);
     const activeTermId = await getActiveTermId();
     const hasActiveTerm = !!activeTermId;
@@ -102,6 +106,10 @@ export default async function OnboardingPage({
   }
 
   if (intent === "student") {
+    const nStud = (user.email ?? "").trim().toLowerCase();
+    if (!nStud.endsWith("@acd.edu.ph") && !nStud.endsWith("@acdeducation.com")) {
+      redirect("/portal/respondents");
+    }
     return (
       <div className="mx-auto w-full max-w-lg">
         <Card className="border-border overflow-hidden shadow-sm">
@@ -148,5 +156,5 @@ export default async function OnboardingPage({
     );
   }
 
-  redirect("/onboarding?intent=student");
+  redirect("/portal/respondents");
 }

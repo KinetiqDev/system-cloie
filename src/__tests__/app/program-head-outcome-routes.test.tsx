@@ -69,46 +69,9 @@ describe("selected Program Outcome routes", () => {
       success: true,
       data: [
         {
-          courseId: "course-ge",
-          courseCode: "GE101",
-          courseTitle: "Purposive Communication",
-          courseScope: "GENERAL_EDUCATION",
-          plos: [],
-          archivedPlos: [],
-          cilos: [
-            {
-              id: "cilo-ge",
-              description: "Communicate effectively",
-              mappedTargets: [
-                {
-                  id: "ilo-1",
-                  mappingId: "ilo-mapping-1",
-                  code: "ILO-1",
-                  description: "Communicate clearly",
-                  kind: "ILO",
-                  is_active: true,
-                  manifestation: "LEARNING",
-                },
-              ],
-              manifestations: [],
-              archivedManifestations: [],
-              readiness: "ready",
-            },
-            {
-              id: "cilo-ge-gap",
-              description: "Apply ethical reasoning",
-              mappedTargets: [],
-              manifestations: [],
-              archivedManifestations: [],
-              readiness: "incomplete-mapping",
-            },
-          ],
-        },
-        {
           courseId: "course-ps",
           courseCode: "CS101",
           courseTitle: "Introduction to Computing",
-          courseScope: "PROGRAM_SPECIFIC",
           plos: [
             { id: "plo-1", code: "PLO-1", description: "Analyze problems" },
             { id: "plo-2", code: "PLO-2", description: "Design solutions" },
@@ -120,7 +83,6 @@ describe("selected Program Outcome routes", () => {
             {
               id: "cilo-complete",
               description: "Design a solution",
-              mappedTargets: [],
               manifestations: [
                 { ploId: "plo-1", manifestation: "LEARNING" },
                 { ploId: "plo-2", manifestation: "PRACTICE" },
@@ -131,7 +93,6 @@ describe("selected Program Outcome routes", () => {
             {
               id: "cilo-gap",
               description: "Evaluate outcomes",
-              mappedTargets: [],
               manifestations: [
                 { ploId: "plo-1", manifestation: null },
                 { ploId: "plo-2", manifestation: null },
@@ -154,8 +115,8 @@ describe("selected Program Outcome routes", () => {
     expect(listMappingsMock).toHaveBeenCalledWith(PROGRAM_ID);
     expect(listGOsMock).not.toHaveBeenCalled();
     expect(html).toContain("CILO Mapping Review");
-    expect(html).toContain("Shared General Education");
-    expect(html).toContain("ILO-1");
+    expect(html).not.toContain("Shared General Education");
+    expect(html).not.toContain("ILO-1");
     expect(html).toContain("PLO-1");
     expect(html).toContain("PLO-2");
     expect(html).toContain("Analyze problems");
@@ -165,12 +126,11 @@ describe("selected Program Outcome routes", () => {
     expect(html).toContain("Unanswered");
     expect(html).toContain("Aligned");
     expect(html).toContain("Needs mapping");
+    expect(html).toContain("bg-success-soft");
+    expect(html).toContain("bg-warning-soft");
     expect(html).toContain("PLO-9");
     expect(html).toContain("Archived Program Learning Outcomes");
     expect(html).toContain("Opportunity (O)");
-    expect(html).toContain(
-      "Faculty can align this CILO to Institutional Outcomes through Course alignment."
-    );
     expect(html).toContain("This review is read-only.");
     expect(html).not.toContain("Secretary");
     expect(html).not.toContain("<button");

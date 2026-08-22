@@ -113,29 +113,54 @@ async function previewAlumni(
   }));
 }
 
-// ─── Industry Partner Preview ─────────────────────────────────────────────────
-
 async function previewIndustryPartners(
   programId: string
 ): Promise<PreviewCentralDeploymentRespondent[]> {
-  const profiles = await prisma.industryPartnerProfile.findMany({
-    where: { program_id: programId },
-    include: {
-      user: {
-        select: { id: true, email: true, name: true },
+  const [legacyProfiles, affiliatedIds] = await Promise.all([
+    prisma.industryPartnerProfile.findMany({
+      where: { program_id: programId },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+        program: { select: { code: true } },
       },
-      program: { select: { code: true } },
-    },
-    orderBy: { user: { name: "asc" } },
-  });
+    }),
+    prisma.industryPartnerProgramAffiliation.findMany({
+      where: { program_id: programId },
+      include: {
+        industryPartner: { select: { id: true, email: true, name: true } },
+        program: { select: { code: true } },
+      },
+    }),
+  ]);
 
-  return profiles.map((p) => ({
-    email: p.user.email,
-    majorName: null,
-    name: p.user.name,
-    programCode: p.program?.code ?? null,
-    stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
-    userId: p.user.id,
-    yearLevel: null,
-  }));
+  const seen = new Set<string>();
+  const respondents: PreviewCentralDeploymentRespondent[] = [];
+  for (const p of legacyProfiles) {
+    if (seen.has(p.user.id)) continue;
+    seen.add(p.user.id);
+    respondents.push({
+      email: p.user.email,
+      majorName: null,
+      name: p.user.name,
+      programCode: p.program?.code ?? null,
+      stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
+      userId: p.user.id,
+      yearLevel: null,
+    });
+  }
+  for (const a of affiliatedIds) {
+    if (seen.has(a.industryPartner.id)) continue;
+    seen.add(a.industryPartner.id);
+    respondents.push({
+      email: a.industryPartner.email,
+      majorName: null,
+      name: a.industryPartner.name,
+      programCode: a.program?.code ?? null,
+      stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
+      userId: a.industryPartner.id,
+      yearLevel: null,
+    });
+  }
+  respondents.sort((a, b) => a.name.localeCompare(b.name));
+  return respondents;
 }

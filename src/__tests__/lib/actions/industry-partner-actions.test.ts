@@ -19,6 +19,10 @@ vi.mock("@/lib/db/prisma", () => ({
     industryPartnerProfile: {
       upsert: vi.fn(),
     },
+    industryPartnerProgramAffiliation: {
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
+    },
     userRole: {
       findUnique: vi.fn(),
       create: vi.fn(),
@@ -26,6 +30,7 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     program: {
       findUnique: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
     },
   },
 }));
@@ -40,6 +45,8 @@ vi.mock("@/features/auth/services/resolve-authenticated-domain-user", () => ({
 
 const validPayload = {
   company_name: "Test Corp",
+  position: "Manager",
+  program_id: "550e8400-e29b-41d4-a716-446655440000",
 };
 
 describe("Industry Partner Actions", () => {
@@ -71,6 +78,11 @@ describe("Industry Partner Actions", () => {
       id: "550e8400-e29b-41d4-a716-446655440000",
       is_active: true,
     });
+    (prisma.program.findMany as any).mockImplementation(async (args: any) => {
+      const ids: string[] = args?.where?.id?.in ?? [];
+      if (ids.length === 0) return [];
+      return ids.map((id) => ({ id, is_active: true }));
+    });
   });
 
   it("should fail if user is not authenticated", async () => {
@@ -90,6 +102,21 @@ describe("Industry Partner Actions", () => {
 
     const result = await createIndustryPartnerProfile({
       company_name: "A",
+    } as any);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBeDefined();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("should fail validation when position or affiliated program is missing", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-user-123", email: "test@example.com" } },
+      error: null,
+    });
+
+    const result = await createIndustryPartnerProfile({
+      company_name: "Test Corp",
     } as any);
 
     expect(result.success).toBe(false);
@@ -117,14 +144,14 @@ describe("Industry Partner Actions", () => {
       where: { user_id: "user-123" },
       update: {
         company_name: "Test Corp",
-        position: null,
-        program_id: null,
+        position: "Manager",
+        program_id: "550e8400-e29b-41d4-a716-446655440000",
       },
       create: {
         user_id: "user-123",
         company_name: "Test Corp",
-        position: null,
-        program_id: null,
+        position: "Manager",
+        program_id: "550e8400-e29b-41d4-a716-446655440000",
       },
     });
     expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
@@ -214,10 +241,11 @@ describe("Industry Partner Actions", () => {
       data: { user: { id: "auth-user-123", email: "test@example.com" } },
       error: null,
     });
-    (prisma.program.findUnique as any).mockResolvedValue(null);
+    (prisma.program.findMany as any).mockResolvedValue([]);
 
     const result = await createIndustryPartnerProfile({
       company_name: "Test Corp",
+      position: "Manager",
       program_id: "550e8400-e29b-41d4-a716-446655440000",
     });
 
@@ -230,13 +258,13 @@ describe("Industry Partner Actions", () => {
       data: { user: { id: "auth-user-123", email: "test@example.com" } },
       error: null,
     });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: false,
-    });
+    (prisma.program.findMany as any).mockResolvedValue([
+      { id: "550e8400-e29b-41d4-a716-446655440000", is_active: false },
+    ]);
 
     const result = await createIndustryPartnerProfile({
       company_name: "Test Corp",
+      position: "Manager",
       program_id: "550e8400-e29b-41d4-a716-446655440000",
     });
 

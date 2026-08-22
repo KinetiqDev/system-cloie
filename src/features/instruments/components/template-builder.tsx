@@ -34,6 +34,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -221,7 +229,6 @@ export const filteredContainerCollisionDetection: CollisionDetection = (args) =>
  * candidates to the active container before the geometry pass keeps sections
  * moving among sections and questions within their own section.
  */
-// fallow-ignore-next-line
 export const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event, args) => {
   const { context } = args;
   const active = context.active;
@@ -314,6 +321,7 @@ function formatQuestionTypeLabel(type: QuestionType): string {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+// fallow-ignore-next-line complexity
 export function TemplateBuilder({
   facultyConfig,
   initialData,
@@ -984,44 +992,55 @@ export function TemplateBuilder({
             )}
           </div>
           {!facultyMode && effectiveTemplateType !== "COURSE_BOUND" && (
-            <p className="text-muted-foreground text-xs">
-              Faculty access is available only for course-bound templates.
-            </p>
+            <p className="text-muted-foreground text-xs">Faculty access is available only for course-bound templates.</p>
           )}
           {facultyMode && (
             <div className="border-border space-y-2 rounded-lg border p-4">
               <Label htmlFor="faculty-course-context">Course</Label>
-              <Select
-                value={boundCourseId}
-                disabled={facultyCourseContexts.length === 0}
+              <Combobox
+                items={facultyCourseContexts}
+                value={selectedCourseContext}
                 onValueChange={(value) => {
-                  const context = facultyCourseContexts.find(
-                    (candidate) => candidate.courseId === value
-                  );
-                  setBoundCourseId(value ?? "");
-                  setBoundProgramId(context?.programId ?? "");
-                  setBoundMajorId(context?.majorId ?? "");
+                  const next = value as FacultyCourseContext | null;
+                  setBoundCourseId(next?.courseId ?? "");
+                  setBoundProgramId(next?.programId ?? "");
+                  setBoundMajorId(next?.majorId ?? "");
                   setCiloQuestionBindings({});
                 }}
+                filter={(ctx: FacultyCourseContext, query: string) =>
+                  !query ||
+                  [ctx.courseCode, ctx.courseTitle, ctx.scopeLabel, ctx.programCode, ctx.programName, ctx.majorName]
+                    .filter((v): v is string => Boolean(v))
+                    .some((v) => v.toLowerCase().includes(query.toLowerCase()))
+                }
+                itemToStringLabel={formatCourseContextLabel}
+                itemToStringValue={(ctx: FacultyCourseContext) => ctx.courseId}
+                autoHighlight
               >
-                <SelectTrigger id="faculty-course-context">
-                  <SelectValue placeholder="Select a course">
-                    {selectedCourseContext
-                      ? formatCourseContextLabel(selectedCourseContext)
-                      : undefined}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {facultyCourseContexts.map((context) => (
-                    <SelectItem
-                      key={`${context.programId}-${context.courseId}-${context.majorId ?? "shared"}`}
-                      value={context.courseId}
-                    >
-                      {formatCourseContextLabel(context)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <ComboboxInput
+                  id="faculty-course-context"
+                  className="w-full"
+                  placeholder={facultyCourseContexts.length === 0 ? "No courses available" : "Search by code or title..."}
+                  disabled={facultyCourseContexts.length === 0}
+                />
+                <ComboboxContent>
+                  <ComboboxEmpty>No courses match your search.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(ctx) => (
+                      <ComboboxItem
+                        key={`${ctx.programId}-${ctx.courseId}-${ctx.majorId ?? "shared"}`}
+                        value={ctx}
+                        className="items-start py-2"
+                      >
+                        <span className="flex min-w-0 flex-col gap-0.5 py-0.5 text-left">
+                          <span className="text-sm leading-snug">{formatCourseContextLabel(ctx)}</span>
+                          <span className="text-caption text-muted-foreground">{ctx.programName}</span>
+                        </span>
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
               <p className="text-muted-foreground text-xs">
                 {isLoadingCilos
                   ? "Loading saved CILOs..."
@@ -1067,7 +1086,7 @@ export function TemplateBuilder({
                 ? "Picked up a section. Use the arrow keys to move it among sections, press space or enter to drop, or press escape to cancel."
                 : "Picked up a question. Use the arrow keys to move it within the current section, press space or enter to drop, or press escape to cancel.";
             },
-            // fallow-ignore-next-line
+            // fallow-ignore-next-line complexity
             onDragOver({ active, over }) {
               if (!over) return;
 
@@ -1097,7 +1116,7 @@ export function TemplateBuilder({
 
               return;
             },
-            // fallow-ignore-next-line
+            // fallow-ignore-next-line complexity
             onDragEnd({ active, over }) {
               const activeItem = sortableMap.get(active.id);
               const overItem = over ? sortableMap.get(over.id) : undefined;
@@ -1477,7 +1496,7 @@ interface QuestionCardProps {
   canRemove: boolean;
 }
 
-// fallow-ignore-next-line
+// fallow-ignore-next-line complexity
 function QuestionCard({
   ciloOptions,
   sectionKey,
@@ -1643,22 +1662,30 @@ function QuestionCard({
           )}
 
           {/* Add response input */}
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add a predefined response…"
-              value={newResponse}
-              onChange={(e) => setNewResponse(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  onAddSuggestedResponse(sectionKey, question.key, newResponse);
-                  setNewResponse("");
-                }
-              }}
-            />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Label htmlFor={`predefined-response-${question.key}`} className="sr-only">
+              Add a predefined response
+            </Label>
+            <div className="min-w-0 flex-1">
+              <Textarea
+                id={`predefined-response-${question.key}`}
+                rows={2}
+                placeholder="Add a predefined response…"
+                value={newResponse}
+                onChange={(e) => setNewResponse(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    onAddSuggestedResponse(sectionKey, question.key, newResponse);
+                    setNewResponse("");
+                  }
+                }}
+              />
+            </div>
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto sm:shrink-0"
               onClick={() => {
                 onAddSuggestedResponse(sectionKey, question.key, newResponse);
                 setNewResponse("");
@@ -1735,16 +1762,9 @@ function LikertDescriptorsEditor({
       <div className="flex items-end gap-2">
         {descriptors.map((descriptor, idx) => (
           <div key={descriptor.value} className="flex-1 space-y-2 text-center">
-            {/* Radio circle visual */}
             <div className="flex justify-center">
-              <div className="relative">
-                {/* Connecting line */}
-                {idx < descriptors.length - 1 && (
-                  <div className="bg-border absolute top-1/2 left-full h-px w-full" />
-                )}
-                <div className="border-primary/40 bg-card text-link flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-semibold">
-                  {descriptor.value}
-                </div>
+              <div className="border-primary/40 bg-card text-link flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-semibold">
+                {descriptor.value}
               </div>
             </div>
             {/* Editable label */}

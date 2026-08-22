@@ -46,6 +46,7 @@ model User {
   program_head_assignments              ProgramHeadAssignment[]
   created_external_invites              ExternalStakeholderInvite[]      @relation("ExternalInviteCreator")
   industry_partner_profile              IndustryPartnerProfile?
+  industry_partner_program_affiliations IndustryPartnerProgramAffiliation[]
   alumni_profile                        AlumniProfile?
   faculty_owned_templates               InstrumentTemplate[]             @relation("FacultyOwnedInstrumentTemplates")
   archived_school_years                 SchoolYear[]                     @relation("ArchivedSchoolYears")
@@ -103,6 +104,8 @@ model IndustryPartnerProfile {
   user_id             String             @unique @db.Uuid
   company_name        String
   position            String?
+  // ponytail: legacy single FK; ceiling is one program. Upgrade path is
+  // IndustryPartnerProgramAffiliation (multi). Keep synced to first affiliation for counts.
   program_id          String?            @db.Uuid
   verification_status VerificationStatus @default(PENDING)
   created_at          DateTime           @default(now())
@@ -112,6 +115,20 @@ model IndustryPartnerProfile {
   program Program? @relation(fields: [program_id], references: [id], onDelete: Restrict)
 
   @@map("industry_partner_profiles")
+}
+
+model IndustryPartnerProgramAffiliation {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  industry_partner_id   String   @db.Uuid
+  program_id            String   @db.Uuid
+  created_at            DateTime @default(now())
+
+  industryPartner User    @relation(fields: [industry_partner_id], references: [id], onDelete: Cascade)
+  program         Program @relation(fields: [program_id], references: [id], onDelete: Restrict)
+
+  @@unique([industry_partner_id, program_id])
+  @@index([program_id])
+  @@map("industry_partner_program_affiliations")
 }
 
 model AlumniProfile {

@@ -19,6 +19,7 @@ model Program {
   instrument_templates         InstrumentTemplate[]
   bound_instrument_templates   InstrumentTemplate[]          @relation("BoundInstrumentTemplateProgram")
   industry_partner_profiles    IndustryPartnerProfile[]
+  industry_partner_program_affiliations IndustryPartnerProgramAffiliation[]
   alumni_profiles              AlumniProfile[]
   student_enrollments          StudentEnrollment[]
   course_assignments           CourseAssignment[]

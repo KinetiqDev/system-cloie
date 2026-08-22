@@ -80,9 +80,15 @@ function resolveProgramLabel(user: PrismaUserPageRow): string {
     return phCodes.join(", ");
   }
 
-  // Industry partner profile
-  if (user.industry_partner_profile?.program) {
-    return user.industry_partner_profile.program.code;
+  const ipAffCodes = user.industry_partner_program_affiliations.map((a) => a.program.code);
+  const legacyIpCode = user.industry_partner_profile?.program?.code;
+  // The program filter matches the legacy profile field too, so a partner whose
+  // canonical affiliations changed can match a filter their label would hide.
+  if (legacyIpCode && !ipAffCodes.includes(legacyIpCode)) {
+    ipAffCodes.push(legacyIpCode);
+  }
+  if (ipAffCodes.length > 0) {
+    return ipAffCodes.join(", ");
   }
 
   return "—";
@@ -132,6 +138,9 @@ const pageSelect = {
   industry_partner_profile: {
     select: { program: { select: { code: true } } },
   },
+  industry_partner_program_affiliations: {
+    select: { program: { select: { code: true } } },
+  },
 } satisfies Prisma.UserSelect;
 
 type PrismaUserPageRow = Prisma.UserGetPayload<{ select: typeof pageSelect }>;
@@ -152,6 +161,11 @@ function buildWhere(query: SecretaryUsersListQuery): Prisma.UserWhereInput {
             },
           },
           { industry_partner_profile: { program: { code: query.program } } },
+          {
+            industry_partner_program_affiliations: {
+              some: { program: { code: query.program } },
+            },
+          },
         ],
       }
     : {};
