@@ -228,9 +228,7 @@ describe("TemplateBuilder", () => {
       expect(screen.getByText(/saved cilo\(s\) available for binding/i)).toBeInTheDocument();
     });
     expect(screen.getByText("CILO Binding")).toBeInTheDocument();
-    expect(
-      screen.getByText("IT401 - Capstone 1 (BSIT - Shared Program Course)")
-    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("IT401 - Capstone 1 (BSIT - Shared Program Course)")).toBeInTheDocument();
     expect(screen.getByText("CILO 1: Apply project planning principles")).toBeInTheDocument();
     expect(screen.queryByText("program-1")).not.toBeInTheDocument();
     expect(screen.queryByText("course-1")).not.toBeInTheDocument();
