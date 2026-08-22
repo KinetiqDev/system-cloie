@@ -22,7 +22,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, SearchIcon, XIcon } from "lucide-react";
+import { ArrowLeft, GripVertical, Plus, SearchIcon, XIcon } from "lucide-react";
+import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -992,6 +993,14 @@ export function TemplateBuilder({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+      <Link
+        href={toolsHref}
+        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-ring focus-visible:ring-3 focus-visible:outline-none"
+      >
+        <ArrowLeft className="size-4" />
+        Back to Tools
+      </Link>
+
       {/* Header */}
       <div className="space-y-1">
         <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
@@ -2042,7 +2051,7 @@ function PloMultiSelect({
       id={listboxId}
       role="listbox"
       aria-label="Program Learning Outcomes"
-      className="max-h-56 overflow-y-auto"
+      className="h-64 overflow-y-auto"
     >
       {options.length === 0 ? (
         <p className="text-muted-foreground px-3 py-4 text-center text-sm">
@@ -2099,17 +2108,19 @@ function PloMultiSelect({
       {isDesktop ? (
         <Popover>
           <PopoverTrigger render={trigger} />
-          <PopoverContent className="w-96" align="start">
-            {searchField}
-            {optionList}
-            {footer}
+          <PopoverContent className="w-96 p-0" align="start">
+            <div className="flex h-[24rem] flex-col overflow-hidden">
+              <div className="shrink-0 px-1 pt-2">{searchField}</div>
+              <div className="min-h-0 flex-1 overflow-hidden px-1">{optionList}</div>
+              <div className="shrink-0 border-t border-border px-3 py-2">{footer}</div>
+            </div>
           </PopoverContent>
         </Popover>
       ) : (
         <Drawer>
           <DrawerTrigger render={trigger} />
-          <DrawerContent className="max-h-[85dvh]">
-            <DrawerHeader className="flex items-start justify-between gap-4 text-left">
+          <DrawerContent className="flex h-[85dvh] max-h-[85dvh] flex-col overflow-hidden">
+            <DrawerHeader className="flex shrink-0 items-start justify-between gap-4 text-left">
               <div className="min-w-0 space-y-1">
                 <DrawerTitle>PLO Binding</DrawerTitle>
                 <DrawerDescription>
@@ -2128,10 +2139,10 @@ function PloMultiSelect({
                 <XIcon aria-hidden="true" />
               </DrawerClose>
             </DrawerHeader>
-            <div className="space-y-3 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-              {searchField}
-              {optionList}
-              {footer}
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+              <div className="shrink-0">{searchField}</div>
+              <div className="min-h-0 flex-1 overflow-hidden">{optionList}</div>
+              <div className="shrink-0">{footer}</div>
             </div>
           </DrawerContent>
         </Drawer>
