@@ -82,15 +82,15 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
         <Button 
           onClick={() => setIsDialogOpen(true)}
           variant="outline"
-          className="w-full shadow-sm"
+          className="w-full min-w-0 shadow-sm whitespace-normal text-wrap break-words text-center [&_img]:shrink-0"
         >
           <img
               src="/logos/google-logo.svg" 
               alt="" 
-              className="h-4 w-auto mr-2" 
+              className="h-4 w-auto shrink-0" 
               aria-hidden="true" 
           />
-          {`Continue as ${config.title}`}
+          <span className="min-w-0 text-center leading-tight">{`Continue as ${config.title}`}</span>
         </Button>
       </div>
       <LegalAcknowledgementDialog

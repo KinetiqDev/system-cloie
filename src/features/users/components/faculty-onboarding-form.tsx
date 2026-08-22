@@ -187,22 +187,23 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
         <CardFooter className="flex flex-col gap-3 px-6 pt-2 pb-8 sm:px-8">
           <Button
             type="submit"
-            className="w-full gap-2 py-6 text-base font-semibold"
+            size="lg"
+            className="w-full font-semibold"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Finalizing..." : "Submit and Continue"}
-            {!isSubmitting && <ArrowRight className="size-5" />}
+            {!isSubmitting && <ArrowRight className="size-4" data-icon="inline-end" />}
           </Button>
 
           <Button
             type="button"
             variant="ghost"
-            className="text-text-muted hover:text-text-primary w-full gap-2"
+            className="text-text-muted hover:text-text-primary w-full"
             onClick={async () => {
               await resetIncompleteRoleClaim();
             }}
           >
-            <ArrowLeft className="size-4" />
+            <ArrowLeft className="size-4" data-icon="inline-start" />
             Not your role? Go back to role selection
           </Button>
         </CardFooter>

@@ -134,12 +134,12 @@ export default async function OnboardingPage({
 
             <Button
               render={<Link href="?intent=student&step=form" />}
-              className="w-full gap-2 py-6 text-base font-semibold"
+              size="lg"
+              className="w-full font-semibold"
             >
               Continue Setup
-              <ArrowRight className="size-5" />
+              <ArrowRight className="size-4" data-icon="inline-end" />
             </Button>
-
             <form action={resetIncompleteRoleClaim} className="flex w-full justify-center">
               <Button
                 type="submit"
