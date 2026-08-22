@@ -21,8 +21,8 @@ cd project-cloie
 pnpm install
 
 # 2. Environment variables
-cp .env.example .env.local
-# Edit .env.local with your credentials.
+cp .env.example .env
+# Edit .env with your credentials.
 # See .env.example for the full variable reference.
 # The essentials: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 # `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`,
@@ -291,7 +291,7 @@ Uses the glossary in `src/features/<domain>/CONTEXT.md` and design tokens from `
 
 ## Environment Variables
 
-Required in `.env.local` (see `.env.example` for complete set):
+Required in `.env` (see `.env.example` for complete set):
 
 ```bash
 # Supabase (client)

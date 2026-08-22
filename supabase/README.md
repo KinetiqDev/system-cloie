@@ -4,7 +4,7 @@ This repo uses a single hosted Supabase project on the free tier.
 
 ## One-time setup
 
-1. Copy `.env.example` to `.env.local`.
+1. Copy `.env.example` to `.env`.
 2. Fill the app client variables: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 3. Fill the Prisma connection variables too: `DATABASE_URL` for the pooled runtime connection and `DIRECT_URL` for direct migration diff access.
 4. Fill the CLI workflow variables: `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, and `SUPABASE_DB_PASSWORD`.

@@ -105,7 +105,7 @@ This project uses **shadcn/ui** with the **"base-nova"** style. The underlying h
 | `pnpm test` | Vitest (unit/integration) |
 | `pnpm build` | Full build + Next.js typecheck |
 | `pnpm vitest run <path>` | Single test file |
-| `pnpm db:seed` | Seed database (loads `.env.local`) |
+| `pnpm db:seed` | Seed database (loads `.env`) |
 | `pnpm supabase:types` | Regenerate Supabase TS types |
 
 ---

@@ -42,22 +42,22 @@ From the JSON result, retain the workspace ID, root pane ID, worktree path, and 
 Copy the canonical environment:
 
 ```bash
-SOURCE_ENV="$ROOT/.env.local"
+SOURCE_ENV="$ROOT/.env"
 WORKTREE="<returned-worktree-path>"
 
-test -f "$SOURCE_ENV" || { echo "Missing canonical .env.local: $SOURCE_ENV" >&2; exit 1; }
+test -f "$SOURCE_ENV" || { echo "Missing canonical .env: $SOURCE_ENV" >&2; exit 1; }
 test -d "$WORKTREE" || { echo "Missing worktree: $WORKTREE" >&2; exit 1; }
 
-install -m 600 "$SOURCE_ENV" "$WORKTREE/.env.local"
+install -m 600 "$SOURCE_ENV" "$WORKTREE/.env"
 ```
 
-Treat `.env.local` contents as secret: never print, prompt with, log, or commit them.
+Treat `.env` contents as secret: never print, prompt with, log, or commit them.
 
 Verify Git ignores it:
 
 ```bash
-git -C "$WORKTREE" check-ignore -q .env.local || {
-  echo ".env.local is not ignored by Git; refusing worker launch." >&2
+git -C "$WORKTREE" check-ignore -q .env || {
+  echo ".env is not ignored by Git; refusing worker launch." >&2
   exit 1
 }
 ```
@@ -73,12 +73,12 @@ No silent fallback to a lockfile-mutating install. If the lockfile is inconsiste
 ## 4. Bootstrap sanity check
 
 ```bash
-test -f "$WORKTREE/.env.local"
+test -f "$WORKTREE/.env"
 test -d "$WORKTREE/node_modules"
 git -C "$WORKTREE" status --short
 ```
 
-`.env.local` must not appear in Git status. This establishes a runnable development worktree only — `/ship-slice` owns `pnpm test`, `pnpm lint`, and `pnpm build`.
+`.env` must not appear in Git status. This establishes a runnable development worktree only — `/ship-slice` owns `pnpm test`, `pnpm lint`, and `pnpm build`.
 
 ## 5. Bootstrap failure
 
@@ -104,11 +104,11 @@ git -C "$WORKTREE" log --oneline -10
 Inspect GitHub issue and PR state. Verify:
 
 ```bash
-test -f "$WORKTREE/.env.local"
+test -f "$WORKTREE/.env"
 test -d "$WORKTREE/node_modules"
 ```
 
-If `.env.local` is missing, copy it as in step 3. Do not overwrite an existing `.env.local` during ordinary recovery. If dependencies are absent, run the frozen install again.
+If `.env` is missing, copy it as in step 3. Do not overwrite an existing `.env` during ordinary recovery. If dependencies are absent, run the frozen install again.
 
 Restart the worker in the existing workspace's root pane (or another available shell pane in that workspace) and prompt:
 

@@ -125,12 +125,12 @@ Require: the checked-out branch is the assigned slice branch (never `$BASE`), th
 Verify bootstrap:
 
 ```bash
-test -f .env.local
+test -f .env
 test -d node_modules
-git check-ignore -q .env.local
+git check-ignore -q .env
 ```
 
-Treat `.env.local` as secret: keep it out of prompts, logs, and commits.
+Treat `.env` as secret: keep it out of prompts, logs, and commits.
 
 If bootstrap is incomplete, report:
 
