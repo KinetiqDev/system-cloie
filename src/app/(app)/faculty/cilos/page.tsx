@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import { listFacultyCoursesWithCilos } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 import { listSchoolYears } from "@/features/academic-calendar/services/list-school-years";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -21,9 +22,14 @@ export default async function FacultyCilosPage({ searchParams }: FacultyCilosPag
     redirect("/portal/respondents");
   }
 
+  // When no term is explicitly chosen, default the filter to the current
+  // active academic context so faculty see the period they are working in.
+  const activeTermId = await getActiveTermId();
+  const effectiveTermInstanceId = termInstanceId || activeTermId || undefined;
+
   // Fetch courses (optionally filtered by term) and term instances
   const [coursesResult, schoolYearsResult] = await Promise.all([
-    listFacultyCoursesWithCilos(termInstanceId),
+    listFacultyCoursesWithCilos(effectiveTermInstanceId),
     listSchoolYears(),
   ]);
 
@@ -45,7 +51,7 @@ export default async function FacultyCilosPage({ searchParams }: FacultyCilosPag
     <FacultyCilosCourseList
       courses={JSON.parse(JSON.stringify(coursesResult.data.courses))}
       termInstances={termInstances}
-      selectedTermId={termInstanceId}
+      selectedTermId={effectiveTermInstanceId}
       loadCilosAction={loadCilosForCourseAction}
       saveCilosAction={saveCilosForCourseAction}
     />

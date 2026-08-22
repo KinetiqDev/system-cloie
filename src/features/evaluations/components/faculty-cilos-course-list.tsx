@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -239,10 +240,10 @@ function ViewEditCilosModal({
                     <span className="bg-primary/10 text-link mt-1 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                       {index + 1}
                     </span>
-                    <Input
+                    <Textarea
                       value={cilo.description}
                       onChange={(e) => handleUpdateCilo(cilo.id, e.target.value)}
-                      className="flex-1 text-sm"
+                      className="min-h-12 min-w-0 flex-1 text-sm"
                     />
                     <Button
                       variant="ghost"
@@ -259,19 +260,14 @@ function ViewEditCilosModal({
             )}
 
             {/* Add new CILO */}
-            <div className="flex gap-2">
-              <Input
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <Textarea
                 placeholder="Type a new CILO description..."
                 value={newCiloText}
                 onChange={(e) => setNewCiloText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddCilo();
-                  }
-                }}
+                className="max-h-56 min-w-0"
               />
-              <Button variant="outline" onClick={handleAddCilo}>
+              <Button variant="outline" onClick={handleAddCilo} className="shrink-0">
                 Add
               </Button>
             </div>
@@ -330,8 +326,6 @@ export function FacultyCilosCourseList({
       result = result.filter((c) => c.courseScope === "PROGRAM_SPECIFIC" && !c.majorId);
     } else if (typeFilter === "general_education") {
       result = result.filter((c) => c.courseScope === "GENERAL_EDUCATION");
-    } else if (typeFilter === "major_specific") {
-      result = result.filter((c) => c.majorId !== null);
     }
 
     if (searchTerm.trim()) {
@@ -377,7 +371,7 @@ export function FacultyCilosCourseList({
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="w-72 shrink-0">
+        <div className="min-w-72 shrink-0">
           <TermInstancePicker
             termInstances={termInstances}
             value={selectedTermId ?? ""}
@@ -395,16 +389,13 @@ export function FacultyCilosCourseList({
                 ? "All Course Types"
                 : typeFilter === "program_specific"
                   ? "Program-Specific"
-                  : typeFilter === "general_education"
-                    ? "General Education"
-                    : "Major-Specific"}
+                  : "General Education"}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">All Course Types</SelectItem>
             <SelectItem value="program_specific">Program-Specific</SelectItem>
             <SelectItem value="general_education">General Education</SelectItem>
-            <SelectItem value="major_specific">Major-Specific</SelectItem>
           </SelectContent>
         </Select>
         </div>

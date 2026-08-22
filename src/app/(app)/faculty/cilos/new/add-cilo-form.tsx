@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Plus, Trash2 } from "lucide-react";
 
@@ -44,10 +44,15 @@ import type { FacultyCourseWithCiloCount } from "@/features/evaluations/services
 
 type AddCiloFormProps = {
   courses: FacultyCourseWithCiloCount[];
-  addAction: (
+  saveAction: (
     courseId: string,
-    descriptions: string[]
+    cilos: Array<{ id?: string; description: string }>
   ) => Promise<{ success: boolean; error?: string }>;
+  loadCilosAction: (courseId: string) => Promise<{
+    success: boolean;
+    cilos?: Array<{ id: string; description: string }>;
+    error?: string;
+  }>;
 };
 
 const courseLabel = (course: FacultyCourseWithCiloCount) => `${course.code} — ${course.title}`;
@@ -77,7 +82,7 @@ function MapCilosButton({
 // ---------------------------------------------------------------------------
 
 // fallow-ignore-next-line complexity
-export function AddCiloForm({ courses, addAction }: AddCiloFormProps) {
+export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const [selectedCourse, setSelectedCourse] = useState<FacultyCourseWithCiloCount | null>(null);
@@ -88,6 +93,33 @@ export function AddCiloForm({ courses, addAction }: AddCiloFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ course?: string; cilos?: string }>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // CILOs already on file for the selected course, loaded on selection.
+  const [existingCilos, setExistingCilos] = useState<Array<{ id: string; description: string }>>([]);
+  const [existingCilosLoading, setExistingCilosLoading] = useState(false);
+  const [existingCilosError, setExistingCilosError] = useState<string | null>(null);
+  const loadSeqRef = useRef(0);
+
+  const loadExistingCilos = (courseId: string) => {
+    const seq = ++loadSeqRef.current;
+    setExistingCilosLoading(true);
+    setExistingCilosError(null);
+    void loadCilosAction(courseId)
+      .then((result) => {
+        if (seq !== loadSeqRef.current) return;
+        if (result.success) {
+          setExistingCilos(result.cilos ?? []);
+        } else {
+          setExistingCilosError(result.error ?? "Could not load existing CILOs.");
+        }
+      })
+      .catch(() => {
+        if (seq !== loadSeqRef.current) return;
+        setExistingCilosError("Could not load existing CILOs.");
+      })
+      .finally(() => {
+        if (seq === loadSeqRef.current) setExistingCilosLoading(false);
+      });
+  };
 
   const countOnFile = (course: FacultyCourseWithCiloCount) =>
     course.ciloCount + (addedCounts[course.id] ?? 0);
@@ -145,14 +177,24 @@ export function AddCiloForm({ courses, addAction }: AddCiloFormProps) {
     setCiloList((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleUpdateExisting = (id: string, description: string) => {
+    setExistingCilos((prev) =>
+      prev.map((cilo) => (cilo.id === id ? { ...cilo, description } : cilo))
+    );
+  };
+
+  const handleRemoveExisting = (id: string) => {
+    setExistingCilos((prev) => prev.filter((cilo) => cilo.id !== id));
+  };
+
   const handleSave = () => {
     const nextErrors: { course?: string; cilos?: string } = {};
     const course = selectedCourse;
-    if (!course || ciloList.length === 0) {
+    if (!course || (ciloList.length === 0 && existingCilos.length === 0)) {
       if (!course) {
         nextErrors.course = "Please select a course.";
       }
-      if (ciloList.length === 0) {
+      if (ciloList.length === 0 && existingCilos.length === 0) {
         nextErrors.cilos = "Please add at least one CILO.";
       }
       setFieldErrors(nextErrors);
@@ -163,19 +205,31 @@ export function AddCiloForm({ courses, addAction }: AddCiloFormProps) {
     setFormError(null);
     setSuccessMessage(null);
 
+    // Full-set commit: edits and removals of existing CILOs plus new ones.
+    // The save action archives rows missing from this payload.
+    const payload: Array<{ id?: string; description: string }> = [
+      ...existingCilos.map((cilo) => ({ id: cilo.id, description: cilo.description })),
+      ...ciloList.map((description) => ({ description })),
+    ];
+
     startTransition(async () => {
-      const result = await addAction(course.id, ciloList);
+      const result = await saveAction(course.id, payload);
 
       if (!result.success) {
         setFormError(result.error ?? "Failed to save CILOs.");
         return;
       }
 
-      const count = ciloList.length;
-      setAddedCounts((prev) => ({ ...prev, [course.id]: (prev[course.id] ?? 0) + count }));
-      setSuccessMessage(`${count} ${count === 1 ? "CILO" : "CILOs"} saved to ${course.code}.`);
+      const added = ciloList.length;
+      setAddedCounts((prev) => ({ ...prev, [course.id]: (prev[course.id] ?? 0) + added }));
+      setSuccessMessage(
+        added > 0
+          ? `${added} ${added === 1 ? "CILO" : "CILOs"} saved to ${course.code}.`
+          : `CILO changes saved for ${course.code}.`
+      );
       setCiloList([]);
       setCiloText("");
+      loadExistingCilos(course.id);
     });
   };
 
@@ -218,6 +272,16 @@ export function AddCiloForm({ courses, addAction }: AddCiloFormProps) {
                   onValueChange={(value) => {
                     setSelectedCourse(value);
                     setFieldErrors((current) => ({ ...current, course: undefined }));
+                    if (value) {
+                      setExistingCilos([]);
+                      loadExistingCilos(value.id);
+                    } else {
+                      // Invalidate any in-flight load and clear the panel.
+                      loadSeqRef.current += 1;
+                      setExistingCilos([]);
+                      setExistingCilosError(null);
+                      setExistingCilosLoading(false);
+                    }
                   }}
                   items={courses}
                   filter={(course, query) =>
@@ -296,6 +360,53 @@ export function AddCiloForm({ courses, addAction }: AddCiloFormProps) {
               </div>
             )}
           </FieldGroup>
+
+          {/* Existing CILOs (read-only) */}
+          {selectedCourse && (
+            <div className="flex flex-col gap-2">
+              <Label>
+                Existing CILOs{!existingCilosLoading ? ` (${existingCilos.length})` : ""}
+              </Label>
+              {existingCilosLoading ? (
+                <p role="status" className="text-muted-foreground text-sm">
+                  Loading existing CILOs...
+                </p>
+              ) : existingCilosError ? (
+                <p className="text-muted-foreground text-sm">{existingCilosError}</p>
+              ) : existingCilos.length === 0 ? (
+                <p className="text-muted-foreground border-border rounded-lg border border-dashed py-4 text-center text-sm">
+                  No CILOs on file for this course yet.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {existingCilos.map((cilo, index) => (
+                    <li
+                      key={cilo.id}
+                      className="border-border bg-surface flex items-start gap-3 rounded-lg border p-3"
+                    >
+                      <span className="bg-primary/10 text-link flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums">
+                        {index + 1}
+                      </span>
+                      <Textarea
+                        value={cilo.description}
+                        onChange={(e) => handleUpdateExisting(cilo.id, e.target.value)}
+                        className="min-h-12 min-w-0 flex-1 text-sm"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Remove CILO ${index + 1}`}
+                        className="text-destructive hover:bg-destructive/10 min-h-11 min-w-11 shrink-0"
+                        onClick={() => handleRemoveExisting(cilo.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* CILO details */}
           <FieldGroup className="gap-4">

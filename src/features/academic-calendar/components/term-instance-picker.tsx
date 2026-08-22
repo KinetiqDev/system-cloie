@@ -74,7 +74,7 @@ export function TermInstancePicker({
         onValueChange={(val) => onChange(val ?? "")}
         disabled={disabled}
       >
-        <SelectTrigger id={pickerId}>
+        <SelectTrigger id={pickerId} className="w-full">
           <SelectValue placeholder={placeholder}>
             {value
               ? (() => {

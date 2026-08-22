@@ -8,11 +8,15 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
-const addActionMock = vi.fn<
-  (
-    courseId: string,
-    descriptions: string[]
-  ) => Promise<{ success: boolean; error?: string }>
+const saveActionMock = vi.fn<
+  (courseId: string, cilos: Array<{ id?: string; description: string }>) => Promise<{ success: boolean; error?: string }>
+>();
+const loadCilosActionMock = vi.fn<
+  (courseId: string) => Promise<{
+    success: boolean;
+    cilos?: Array<{ id: string; description: string }>;
+    error?: string;
+  }>
 >();
 
 const courses: FacultyCourseWithCiloCount[] = [
@@ -47,7 +51,9 @@ const courses: FacultyCourseWithCiloCount[] = [
 ];
 
 function renderForm() {
-  return render(<AddCiloForm courses={courses} addAction={addActionMock} />);
+  return render(
+    <AddCiloForm courses={courses} saveAction={saveActionMock} loadCilosAction={loadCilosActionMock} />
+  );
 }
 
 async function selectCourse(query: string) {
@@ -61,7 +67,8 @@ async function selectCourse(query: string) {
 describe("AddCiloForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    addActionMock.mockResolvedValue({ success: true });
+    saveActionMock.mockResolvedValue({ success: true });
+    loadCilosActionMock.mockResolvedValue({ success: true, cilos: [] });
   });
 
   it("adds and removes CILO entries before saving", () => {
@@ -113,7 +120,7 @@ describe("AddCiloForm", () => {
     const course = screen.getByRole("combobox", { name: "Course" });
     expect(course).toHaveAttribute("aria-invalid", "true");
     expect(course).toHaveAttribute("aria-describedby", "cilo-course-error");
-    expect(addActionMock).not.toHaveBeenCalled();
+    expect(saveActionMock).not.toHaveBeenCalled();
   });
 
   it("saves to the selected course and links to its alignment workspace", async () => {
@@ -129,7 +136,9 @@ describe("AddCiloForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
 
     await waitFor(() =>
-      expect(addActionMock).toHaveBeenCalledWith("course-1", ["Design instruction"])
+      expect(saveActionMock).toHaveBeenCalledWith("course-1", [
+        { description: "Design instruction" },
+      ])
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "1 CILO saved to CS101."
@@ -153,7 +162,7 @@ describe("AddCiloForm", () => {
   });
 
   it("surfaces a failed save without resetting the list", async () => {
-    addActionMock.mockResolvedValue({ success: false, error: "Failed to save CILOs." });
+    saveActionMock.mockResolvedValue({ success: false, error: "Failed to save CILOs." });
     renderForm();
 
     fireEvent.change(screen.getByLabelText("CILO Description"), {
@@ -166,5 +175,56 @@ describe("AddCiloForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save CILOs.");
     expect(screen.getByText("CILOs to Add (1)")).toBeInTheDocument();
+  });
+
+  it("lets faculty edit and remove existing CILOs before saving", async () => {
+    loadCilosActionMock.mockResolvedValue({
+      success: true,
+      cilos: [
+        { id: "cilo-1", description: "Apply core computing concepts" },
+        { id: "cilo-2", description: "Build maintainable software" },
+      ],
+    });
+    renderForm();
+
+    await selectCourse("CS101");
+    await screen.findByText("Existing CILOs (2)");
+
+    fireEvent.change(screen.getByDisplayValue("Apply core computing concepts"), {
+      target: { value: "Apply core computing concepts critically" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Remove CILO 2" }));
+    expect(screen.queryByDisplayValue("Build maintainable software")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("CILO Description"), {
+      target: { value: "Design instruction" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
+
+    await waitFor(() =>
+      expect(saveActionMock).toHaveBeenCalledWith("course-1", [
+        { id: "cilo-1", description: "Apply core computing concepts critically" },
+        { description: "Design instruction" },
+      ])
+    );
+  });
+
+  it("loads and shows existing CILOs for the selected course", async () => {
+    loadCilosActionMock.mockResolvedValue({
+      success: true,
+      cilos: [
+        { id: "cilo-1", description: "Apply core computing concepts" },
+        { id: "cilo-2", description: "Build maintainable software" },
+      ],
+    });
+    renderForm();
+
+    await selectCourse("CS101");
+
+    await waitFor(() => expect(loadCilosActionMock).toHaveBeenCalledWith("course-1"));
+    expect(screen.getByText("Existing CILOs (2)")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Apply core computing concepts")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Build maintainable software")).toBeInTheDocument();
   });
 });
