@@ -35,6 +35,27 @@ export type TemplateCiloQuestionBinding = {
   sectionKey: string;
 };
 
+/**
+ * An active Program Learning Outcome offered to a Program-wide template
+ * editor. The list is server-prepared in canonical PLO order.
+ */
+export type ProgramPloOption = {
+  id: string;
+  code: string;
+  description: string;
+};
+
+/**
+ * A draft Program-wide question–PLO binding. Serialized as
+ * `program_question_plo_bindings` in template FormData and persisted by the
+ * Program Head template services.
+ */
+export type TemplatePloQuestionBinding = {
+  ploId: string;
+  itemKey: string;
+  sectionKey: string;
+};
+
 export type TemplateLikertQuestionOption = {
   itemKey: string;
   prompt: string;
