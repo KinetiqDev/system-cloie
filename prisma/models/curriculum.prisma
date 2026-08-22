@@ -7,17 +7,17 @@ enum CurriculumVersionStatus {
 }
 
 model CurriculumVersion {
-  id                            String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  program_id                    String                   @db.Uuid
-  major_id                      String?                  @db.Uuid
+  id                            String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  program_id                    String                  @db.Uuid
+  major_id                      String?                 @db.Uuid
   code                          String
   name                          String?
-  status                        CurriculumVersionStatus  @default(DRAFT)
-  effective_from_school_year_id String?                  @db.Uuid
+  status                        CurriculumVersionStatus @default(DRAFT)
+  effective_from_school_year_id String?                 @db.Uuid
   published_at                  DateTime?
-  published_by                  String?                  @db.Uuid
-  created_at                    DateTime                 @default(now())
-  updated_at                    DateTime                 @updatedAt
+  published_by                  String?                 @db.Uuid
+  created_at                    DateTime                @default(now())
+  updated_at                    DateTime                @updatedAt
 
   program             Program            @relation(fields: [program_id], references: [id], onDelete: Restrict)
   major               Major?             @relation(fields: [major_id, program_id], references: [id, program_id], onDelete: Restrict)
@@ -42,8 +42,8 @@ model CurriculumCourse {
   created_at            DateTime         @default(now())
   updated_at            DateTime         @updatedAt
 
-  curriculum_version CurriculumVersion @relation(fields: [curriculum_version_id], references: [id], onDelete: Cascade)
-  course             Course            @relation(fields: [course_id], references: [id], onDelete: Restrict)
+  curriculum_version CurriculumVersion  @relation(fields: [curriculum_version_id], references: [id], onDelete: Cascade)
+  course             Course             @relation(fields: [course_id], references: [id], onDelete: Restrict)
   course_assignments CourseAssignment[]
 
   @@index([curriculum_version_id, course_id])

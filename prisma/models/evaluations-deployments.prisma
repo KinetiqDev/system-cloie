@@ -38,11 +38,11 @@ model CourseBoundEvaluation {
   published_at          DateTime?
   created_at            DateTime         @default(now())
   updated_at            DateTime         @updatedAt
-  term_instance_id String @db.Uuid
+  term_instance_id      String           @db.Uuid
 
-  course_assignment_id String @unique @db.Uuid
-  deployed_by String? @db.Uuid
-  deployer    User?   @relation("CourseBoundEvaluationDeployer", fields: [deployed_by], references: [id], onDelete: SetNull)
+  course_assignment_id String  @unique @db.Uuid
+  deployed_by          String? @db.Uuid
+  deployer             User?   @relation("CourseBoundEvaluationDeployer", fields: [deployed_by], references: [id], onDelete: SetNull)
 
   instrument             InstrumentVersion                @relation(fields: [instrument_version_id], references: [id], onDelete: Restrict)
   term_instance          AcademicTermInstance             @relation(fields: [term_instance_id], references: [id], onDelete: Restrict)
@@ -133,17 +133,36 @@ model CentralDeployment {
   created_at            DateTime          @default(now())
   updated_at            DateTime          @updatedAt
 
-
   term_instance_id String               @db.Uuid
   term_instance    AcademicTermInstance @relation(fields: [term_instance_id], references: [id], onDelete: Restrict)
 
-  instrument  InstrumentVersion      @relation(fields: [instrument_version_id], references: [id], onDelete: Restrict)
-  program     Program?               @relation(fields: [program_id], references: [id], onDelete: Restrict)
-  major       Major?                 @relation(fields: [major_id], references: [id], onDelete: SetNull)
-  assignments EvaluationAssignment[] @relation("CentralDeployments")
+  instrument    InstrumentVersion              @relation(fields: [instrument_version_id], references: [id], onDelete: Restrict)
+  program       Program?                       @relation(fields: [program_id], references: [id], onDelete: Restrict)
+  major         Major?                         @relation(fields: [major_id], references: [id], onDelete: SetNull)
+  assignments   EvaluationAssignment[]         @relation("CentralDeployments")
+  plo_snapshots CentralDeploymentPloSnapshot[]
 
   @@index([term_instance_id])
   @@map("central_deployments")
+}
+
+model CentralDeploymentPloSnapshot {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  central_deployment_id    String   @db.Uuid
+  plo_id                   String?  @db.Uuid
+  plo_code_snapshot        String
+  plo_description_snapshot String
+  section_key              String
+  item_key                 String
+  question_prompt_snapshot String
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  central_deployment CentralDeployment @relation(fields: [central_deployment_id], references: [id], onDelete: Cascade)
+  plo                PLO?              @relation(fields: [plo_id], references: [id], onDelete: SetNull)
+
+  @@unique([central_deployment_id, plo_id, section_key, item_key], map: "cdps_deployment_plo_question_key")
+  @@map("central_deployment_plo_snapshots")
 }
 
 model EvaluationAssignment {
