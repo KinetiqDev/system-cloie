@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import { ProgramHeadOutcomesPage } from "@/features/outcomes/components/program-head-outcomes-page";
 import { deletePLOAction, reorderPLOsAction, restorePLOAction } from "@/lib/actions/program-head-outcome-actions";
 import type { ProgramPLOItem } from "@/features/outcomes/services/manage-program-head-outcomes";
+import { showToast } from "@/components/ui/toast";
 
 const routerRefreshMock = vi.hoisted(() => vi.fn());
 
@@ -40,9 +41,12 @@ vi.mock("@/lib/actions/program-head-outcome-actions", () => ({
   restorePLOAction: vi.fn(),
 }));
 
+vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
+
 const deletePLOActionMock = vi.mocked(deletePLOAction);
 const reorderPLOsActionMock = vi.mocked(reorderPLOsAction);
 const restorePLOActionMock = vi.mocked(restorePLOAction);
+const showToastMock = vi.mocked(showToast);
 
 function makePLO(overrides: Partial<ProgramPLOItem> = {}): ProgramPLOItem {
   return {
@@ -114,6 +118,7 @@ describe("ProgramHeadOutcomesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Archive" }));
 
     await waitFor(() => expect(deletePLOActionMock).toHaveBeenCalledWith("program-1", "go-1"));
+    expect(showToastMock).toHaveBeenCalledWith("Program Learning Outcome archived.", "success");
   });
 
   it("keeps the dialog open and shows the error when archiving fails", async () => {
@@ -130,6 +135,10 @@ describe("ProgramHeadOutcomesPage", () => {
       "You do not have permission to delete this Program Learning Outcome."
     );
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      "You do not have permission to delete this Program Learning Outcome.",
+      "error"
+    );
   });
 
   it("offers Restore instead of Archive for archived PLOs", () => {
@@ -160,6 +169,7 @@ describe("ProgramHeadOutcomesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
 
     await waitFor(() => expect(restorePLOActionMock).toHaveBeenCalledWith("program-1", "go-1"));
+    expect(showToastMock).toHaveBeenCalledWith("Program Learning Outcome restored.", "success");
   });
 
   it("keeps the dialog open and shows the error when restoring fails", async () => {
@@ -178,6 +188,10 @@ describe("ProgramHeadOutcomesPage", () => {
       "You do not have permission to restore this Program Learning Outcome."
     );
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      "You do not have permission to restore this Program Learning Outcome.",
+      "error"
+    );
   });
 
   it("persists a drag reorder after the save debounce", async () => {

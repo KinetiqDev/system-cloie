@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
+import { showToast } from "@/components/ui/toast";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
   createPLOSchema,
@@ -64,8 +65,10 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
       const result = await createPLOAction(formData);
       if (!result.success) {
         setError("root", { message: result.error });
+        showToast(result.error, "error");
         return;
       }
+      showToast("Program Learning Outcome created successfully.", "success");
       reset();
       onClose();
       router.refresh();
@@ -151,8 +154,10 @@ function EditForm({
       const result = await updatePLOAction(formData);
       if (!result.success) {
         setError("root", { message: result.error });
+        showToast(result.error, "error");
         return;
       }
+      showToast("Program Learning Outcome updated successfully.", "success");
       reset();
       onClose();
       router.refresh();

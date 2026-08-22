@@ -35,6 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { deletePLOAction, reorderPLOsAction, restorePLOAction } from "@/lib/actions/program-head-outcome-actions";
+import { showToast } from "@/components/ui/toast";
 import { PLOFormDialog } from "./plo-form-dialog";
 import type { ProgramPLOItem } from "../services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
@@ -228,10 +229,12 @@ export function ProgramHeadOutcomesPage({
 
       if (!result.success) {
         setDeleteError(result.error);
+        showToast(result.error, "error");
         return;
       }
 
       setDeletingPLO(null);
+      showToast("Program Learning Outcome archived.", "success");
       router.refresh();
     });
   }
@@ -243,10 +246,12 @@ export function ProgramHeadOutcomesPage({
 
       if (!result.success) {
         setRestoreError(result.error);
+        showToast(result.error, "error");
         return;
       }
 
       setRestoringPLO(null);
+      showToast("Program Learning Outcome restored.", "success");
       router.refresh();
     });
   }

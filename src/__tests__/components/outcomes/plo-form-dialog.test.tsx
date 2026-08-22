@@ -4,10 +4,13 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import { PLOFormDialog } from "@/features/outcomes/components/plo-form-dialog";
 import { createPLOAction, updatePLOAction } from "@/lib/actions/program-head-outcome-actions";
 import type { ProgramPLOItem } from "@/features/outcomes/services/manage-program-head-outcomes";
+import { showToast } from "@/components/ui/toast";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
+
+vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
 
 vi.mock("@/lib/actions/program-head-outcome-actions", () => ({
   createPLOAction: vi.fn(),
@@ -18,6 +21,7 @@ vi.mock("@/lib/actions/program-head-outcome-actions", () => ({
 
 const createPLOActionMock = vi.mocked(createPLOAction);
 const updatePLOActionMock = vi.mocked(updatePLOAction);
+const showToastMock = vi.mocked(showToast);
 
 function makePLO(overrides: Partial<ProgramPLOItem> = {}): ProgramPLOItem {
   return {
@@ -94,6 +98,10 @@ describe("PLOFormDialog", () => {
       id: null,
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(showToastMock).toHaveBeenCalledWith(
+      "Program Learning Outcome created successfully.",
+      "success"
+    );
   });
 
   it("surfaces a server error and keeps the dialog open", async () => {
@@ -119,6 +127,10 @@ describe("PLOFormDialog", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Program Learning Outcome code already exists.");
     expect(onOpenChange).not.toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith(
+      "Program Learning Outcome code already exists.",
+      "error"
+    );
   });
 
   it("prefills the edit form and submits an update", async () => {
@@ -151,6 +163,10 @@ describe("PLOFormDialog", () => {
       id: "11111111-1111-4111-8111-111111111112",
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(showToastMock).toHaveBeenCalledWith(
+      "Program Learning Outcome updated successfully.",
+      "success"
+    );
   });
 
   it("announces the pending action state on the submit button", async () => {
