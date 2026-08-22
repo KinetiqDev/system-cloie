@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import type { CILOMappingManifestation, CourseScope } from "@prisma/client";
+import type { CILOMappingManifestation } from "@prisma/client";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type { CreatePLOInput, UpdatePLOInput } from "../schemas/plo";
 
@@ -167,21 +167,10 @@ export async function reorderPLOs(programId: string, orderedIds: string[]): Prom
 
 // ─── List CILO Mappings for Program ──────────────────────────────────────────
 
-type ProgramMappedTarget = {
-  id: string;
-  mappingId: string;
-  code: string;
-  description: string;
-  kind: "PLO" | "ILO";
-  is_active: boolean;
-  manifestation: CILOMappingManifestation | null;
-};
-
 export type CourseCILOMappings = {
   courseId: string;
   courseCode: string;
   courseTitle: string;
-  courseScope: CourseScope;
   /** Every active PLO of the owning Program; the column catalog for PROGRAM_SPECIFIC courses. */
   plos: Array<{ id: string; code: string; description: string }>;
   /** Archived owning-Program PLOs that still carry historical mapping rows in this Course. */
@@ -190,8 +179,6 @@ export type CourseCILOMappings = {
     id: string;
     description: string;
     readiness: "ready" | "incomplete-mapping";
-    /** Mapped Institutional Outcomes, populated for GENERAL_EDUCATION courses only. */
-    mappedTargets: ProgramMappedTarget[];
     /** One entry per active PLO for PROGRAM_SPECIFIC courses; null means unanswered. */
     manifestations: Array<{ ploId: string; manifestation: CILOMappingManifestation | null }>;
     /** Historical manifestation per archived PLO row for PROGRAM_SPECIFIC courses. */
@@ -217,39 +204,25 @@ export async function listCILOMappingsForProgram(
       select: { id: true, code: true, description: true },
       orderBy: [{ order: "asc" }, { code: "asc" }],
     }),
-    // Find all courses within this program that have CILOs
+    // Find all program-specific courses within this program that have CILOs
+    // and are actively assigned to the program this term.
     prisma.course.findMany({
     where: {
       is_active: true,
       cilos: { some: { is_active: true } },
-      OR: [
-        {
+      program_id: selectedProgramId,
+      course_assignments: {
+        some: {
           program_id: selectedProgramId,
-          course_assignments: {
-            some: {
-              program_id: selectedProgramId,
-              is_active: true,
-              term_instance: { status: "ACTIVE" },
-            },
-          },
+          is_active: true,
+          term_instance: { status: "ACTIVE" },
         },
-        {
-          course_scope: "GENERAL_EDUCATION",
-          course_assignments: {
-            some: {
-              program_id: selectedProgramId,
-              is_active: true,
-              term_instance: { status: "ACTIVE" },
-            },
-          },
-        },
-      ],
+      },
     },
     select: {
       id: true,
       code: true,
       title: true,
-      course_scope: true,
       cilos: {
         where: { is_active: true },
         select: {
@@ -271,20 +244,6 @@ export async function listCILOMappingsForProgram(
               },
             },
           },
-          cilo_institutional_outcome_mappings: {
-            select: {
-              id: true,
-              manifestation: true,
-              institutional_outcome: {
-                select: {
-                  id: true,
-                  code: true,
-                  description: true,
-                  is_active: true,
-                },
-              },
-            },
-          },
         },
         orderBy: { created_at: "asc" },
       },
@@ -294,79 +253,40 @@ export async function listCILOMappingsForProgram(
   ]);
 
   const result: CourseCILOMappings[] = courses.map((course) => {
-    const courseScope =
-      course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROGRAM_SPECIFIC";
     // Archived owning-Program PLOs that still carry historical mapping rows in this Course.
     // They stay visible read-only; they never enter the active completeness requirement.
-    const archivedPlos =
-      courseScope === "PROGRAM_SPECIFIC"
-        ? [
-            ...new Map(
-              course.cilos.flatMap((cilo) =>
-                cilo.cilo_mappings
-                  .filter((mapping) => !mapping.plo.is_active)
-                  .map(
-                    (mapping) =>
-                      [
-                        mapping.plo.id,
-                        {
-                          id: mapping.plo.id,
-                          code: mapping.plo.code,
-                          description: mapping.plo.description,
-                        },
-                      ] as const
-                  )
-              )
-            ).values(),
-          ].sort((left, right) => left.code.localeCompare(right.code))
-        : [];
+    const archivedPlos = [
+      ...new Map(
+        course.cilos.flatMap((cilo) =>
+          cilo.cilo_mappings
+            .filter((mapping) => !mapping.plo.is_active)
+            .map(
+              (mapping) =>
+                [
+                  mapping.plo.id,
+                  {
+                    id: mapping.plo.id,
+                    code: mapping.plo.code,
+                    description: mapping.plo.description,
+                  },
+                ] as const
+            )
+        )
+      ).values(),
+    ].sort((left, right) => left.code.localeCompare(right.code));
     return {
       courseId: course.id,
       courseCode: course.code,
       courseTitle: course.title,
-      courseScope,
-      plos: courseScope === "PROGRAM_SPECIFIC" ? activePlos : [],
+      plos: activePlos,
       archivedPlos,
       cilos: course.cilos.map((cilo) => {
-        if (courseScope === "GENERAL_EDUCATION") {
-          return {
-            id: cilo.id,
-            description: cilo.description,
-            mappedTargets: cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
-              id: mapping.institutional_outcome.id,
-              mappingId: mapping.id,
-              code: mapping.institutional_outcome.code,
-              description: mapping.institutional_outcome.description,
-              kind: "ILO" as const,
-              is_active: mapping.institutional_outcome.is_active,
-              manifestation: mapping.manifestation ?? null,
-            })),
-            manifestations: [],
-            archivedManifestations: [],
-            readiness: ciloIsAligned(
-              {
-                cilo_mappings: [],
-                cilo_institutional_outcome_mappings:
-                  cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
-                    manifestation: mapping.manifestation ?? null,
-                    institutional_outcome: { is_active: mapping.institutional_outcome.is_active },
-                  })),
-              },
-              courseScope,
-              null,
-              []
-            )
-              ? "ready"
-              : "incomplete-mapping",
-          };
-        }
         const manifestationByPloid = new Map(
           cilo.cilo_mappings.map((mapping) => [mapping.plo.id, mapping.manifestation])
         );
         return {
           id: cilo.id,
           description: cilo.description,
-          mappedTargets: [],
           manifestations: activePlos.map((plo) => ({
             ploId: plo.id,
             manifestation: manifestationByPloid.get(plo.id) ?? null,
@@ -389,7 +309,7 @@ export async function listCILOMappingsForProgram(
               })),
               cilo_institutional_outcome_mappings: [],
             },
-            courseScope,
+            "PROGRAM_SPECIFIC",
             selectedProgramId,
             activePlos.map((plo) => plo.id)
           )
