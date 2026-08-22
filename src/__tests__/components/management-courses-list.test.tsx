@@ -18,7 +18,14 @@ vi.mock("@/lib/actions/management-foundation-actions", async (importOriginal) =>
   return {
     ...actual,
     getCourseEditDataAction: vi.fn().mockResolvedValue({
-      defaults: {
+      course: {
+        id: "course-1",
+        code: "GE101",
+        title: "Introduction to General Education",
+        description: "A foundational course",
+        course_scope: "GENERAL_EDUCATION",
+        program_id: null,
+        major_id: null,
         default_year_level: null,
         default_semester: null,
         default_term: null,

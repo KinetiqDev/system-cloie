@@ -90,7 +90,8 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
         <DialogHeader className="px-5 pt-5 pr-12 pb-1">
           <DialogTitle>Edit Course</DialogTitle>
           <DialogDescription>
-            Update details for {displayCourse?.code} – {displayCourse?.title}.
+            Update details for {data?.course.code ?? displayCourse?.code} –{" "}
+            {data?.course.title ?? displayCourse?.title}.
           </DialogDescription>
         </DialogHeader>
 
@@ -120,22 +121,22 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
             </Alert>
           )}
 
-          {status === "ready" && displayCourse && data && (
+          {status === "ready" && data && (
             <CourseForm
               action={updateCourseAction}
               programs={data.programs}
               majors={data.majors}
               defaultValues={{
-                id: displayCourse.id,
-                code: displayCourse.code,
-                title: displayCourse.title,
-                description: displayCourse.description,
-                course_scope: displayCourse.courseScope,
-                program_id: displayCourse.programId,
-                major_id: displayCourse.majorId,
-                default_year_level: data.defaults.default_year_level,
-                default_semester: data.defaults.default_semester,
-                default_term: data.defaults.default_term,
+                id: data.course.id,
+                code: data.course.code,
+                title: data.course.title,
+                description: data.course.description,
+                course_scope: data.course.course_scope,
+                program_id: data.course.program_id,
+                major_id: data.course.major_id,
+                default_year_level: data.course.default_year_level,
+                default_semester: data.course.default_semester,
+                default_term: data.course.default_term,
               }}
               submitLabel="Update Course"
               formId="course-edit-form"

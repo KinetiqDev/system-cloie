@@ -267,14 +267,19 @@ export async function deleteCourse(id: string): Promise<ServiceResult> {
 // Read: edit payload
 // ---------------------------------------------------------------------------
 
-export type CourseEditDefaults = {
-  default_year_level: YearLevel | null;
-  default_semester: AcademicSemester | null;
-  default_term: AcademicTerm | null;
-};
-
 export type CourseEditData = {
-  defaults: CourseEditDefaults;
+  course: {
+    id: string;
+    code: string;
+    title: string;
+    description: string | null;
+    course_scope: CourseScope;
+    program_id: string | null;
+    major_id: string | null;
+    default_year_level: YearLevel | null;
+    default_semester: AcademicSemester | null;
+    default_term: AcademicTerm | null;
+  };
   programs: { id: string; code: string; name: string }[];
   majors: { id: string; name: string; program_id: string; program_code: string }[];
 };
@@ -284,6 +289,13 @@ export async function getCourseEditData(courseId: string): Promise<CourseEditDat
     prisma.course.findUnique({
       where: { id: courseId },
       select: {
+        id: true,
+        code: true,
+        title: true,
+        description: true,
+        course_scope: true,
+        program_id: true,
+        major_id: true,
         default_year_level: true,
         default_semester: true,
         default_term: true,
@@ -311,11 +323,7 @@ export async function getCourseEditData(courseId: string): Promise<CourseEditDat
   }
 
   return {
-    defaults: {
-      default_year_level: course.default_year_level,
-      default_semester: course.default_semester,
-      default_term: course.default_term,
-    },
+    course,
     programs,
     majors: majors.map((m) => ({
       id: m.id,
