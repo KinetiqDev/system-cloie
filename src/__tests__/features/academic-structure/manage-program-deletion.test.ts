@@ -25,6 +25,7 @@ const { counts, prismaMock } = vi.hoisted(() => {
   instrumentTemplate: { count: vi.fn() },
   externalStakeholderInvite: { count: vi.fn() },
   industryPartnerProfile: { count: vi.fn() },
+  industryPartnerProgramAffiliation: { count: vi.fn() },
   };
   return {
     counts,

@@ -21,6 +21,9 @@ vi.mock("@/components/ui/card", () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  CardDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 vi.mock("@/components/ui/label", () => ({
   Label: ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => (
@@ -35,9 +38,8 @@ vi.mock("@/components/ui/button", () => ({
     <button {...props}>{children}</button>
   ),
 }));
-vi.mock("@/components/ui/alert", () => ({
-  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+vi.mock("@/components/ui/separator", () => ({
+  Separator: () => <hr />,
 }));
 vi.mock("@/components/ui/select", () => ({
   Select: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -98,12 +100,12 @@ describe("role onboarding account identity", () => {
     expect(input).not.toHaveAttribute("name");
   });
 
-  it("labels the industry partner no-program selection as None", () => {
+  it("labels the industry partner empty program state without leaking sentinel values", () => {
     render(
       <IndustryPartnerOnboardingForm email="partner@example.com" name={accountName} programs={[]} />
     );
 
-    expect(screen.getByText("None")).toBeInTheDocument();
+    expect(screen.getByText("No programs available.")).toBeInTheDocument();
     expect(screen.queryByText("__none")).not.toBeInTheDocument();
   });
 });

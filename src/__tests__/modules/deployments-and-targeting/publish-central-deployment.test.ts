@@ -23,6 +23,7 @@ const {
   resolveProgramHeadContextMock,
   revalidateProgramHeadAssignmentMock,
   studentEnrollmentFindManyMock,
+  industryPartnerProgramAffiliationFindManyMock,
 } = vi.hoisted(() => ({
   assignmentCreateManyMock: vi.fn(),
   centralDeploymentCreateMock: vi.fn(),
@@ -42,6 +43,7 @@ const {
   resolveProgramHeadContextMock: vi.fn(),
   revalidateProgramHeadAssignmentMock: vi.fn(),
   studentEnrollmentFindManyMock: vi.fn(),
+  industryPartnerProgramAffiliationFindManyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -120,6 +122,7 @@ function setupTransaction() {
       evaluationAssignment: { createMany: assignmentCreateManyMock },
       externalStakeholderInvite: { findMany: externalStakeholderInviteFindManyMock },
       industryPartnerProfile: { findMany: industryPartnerProfileFindManyMock },
+      industryPartnerProgramAffiliation: { findMany: industryPartnerProgramAffiliationFindManyMock },
       studentAcademicProfile: { findMany: studentAcademicProfileFindManyMock },
       user: { findMany: txUserFindManyMock },
       userRole: { findMany: userRoleFindManyMock },
@@ -163,6 +166,7 @@ function mockTermInstance() {
 describe("publishCentralDeployment", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    industryPartnerProgramAffiliationFindManyMock.mockResolvedValue([]);
     setupTransaction();
     studentEnrollmentFindManyMock.mockImplementation(async () => {
       const latest = listStudentsForClassMock.mock.results.at(-1)?.value;

@@ -1284,6 +1284,42 @@ export type Database = {
           },
         ]
       }
+      industry_partner_program_affiliations: {
+        Row: {
+          created_at: string
+          id: string
+          industry_partner_id: string
+          program_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          industry_partner_id: string
+          program_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          industry_partner_id?: string
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "industry_partner_program_affiliations_industry_partner_id_fkey"
+            columns: ["industry_partner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "industry_partner_program_affiliations_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institutional_outcomes: {
         Row: {
           code: string

@@ -260,11 +260,11 @@ export async function publishCentralDeployment(
           });
           eligibleRespondentIds = users.map((user) => user.id);
         } else if (input.target_stakeholder === "INDUSTRY_PARTNER") {
-          const profiles = await tx.industryPartnerProfile.findMany({
-            where: { program_id: programId },
-            select: { user_id: true },
-          });
-          eligibleRespondentIds = profiles.map((profile) => profile.user_id);
+          const [legacyProfiles, affs] = await Promise.all([
+            tx.industryPartnerProfile.findMany({ where: { program_id: programId }, select: { user_id: true } }),
+            tx.industryPartnerProgramAffiliation.findMany({ where: { program_id: programId }, select: { industry_partner_id: true } }),
+          ]);
+          eligibleRespondentIds = [...new Set([...legacyProfiles.map((p) => p.user_id), ...affs.map((a) => a.industry_partner_id)])];
         }
         const eligible = new Set(eligibleRespondentIds);
         respondentIds = [...new Set(input.respondent_ids)].filter((id) => eligible.has(id));
@@ -294,13 +294,11 @@ export async function publishCentralDeployment(
           respondentIds = [...new Set(users.map((u) => u.id))];
         }
       } else if (input.target_stakeholder === "INDUSTRY_PARTNER") {
-        // Find users with INDUSTRY_PARTNER role and matching program
-        const industryProfiles = await tx.industryPartnerProfile.findMany({
-          where: { program_id: programId },
-          select: { user_id: true },
-        });
-
-        respondentIds = [...new Set(industryProfiles.map((p) => p.user_id))];
+        const [legacyProfiles, affs] = await Promise.all([
+          tx.industryPartnerProfile.findMany({ where: { program_id: programId }, select: { user_id: true } }),
+          tx.industryPartnerProgramAffiliation.findMany({ where: { program_id: programId }, select: { industry_partner_id: true } }),
+        ]);
+        respondentIds = [...new Set([...legacyProfiles.map((p) => p.user_id), ...affs.map((a) => a.industry_partner_id)])];
       }
 
       if (respondentIds.length > 0) {
