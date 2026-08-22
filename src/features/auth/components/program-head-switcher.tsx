@@ -37,8 +37,12 @@ export function ProgramHeadSwitcher({ programs }: { programs: ProgramHeadProgram
   }
 
   // Preserve the current child page so switching context does not drop the
-  // user onto the other Program's dashboard.
+  // user onto the other Program's dashboard — but only when the child path
+  // contains no resource-scoped segments (UUIDs), which belong to the current
+  // Program and would 404 under the destination.
   const childPath = pathname.match(/^\/program-head\/programs\/[^/]+(\/.*)?$/)?.[1] ?? "";
+  const hasResourceSegment = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/|$)/i.test(childPath);
+  const safeChildPath = hasResourceSegment ? "" : childPath;
 
   return (
     <DropdownMenu>
@@ -76,8 +80,8 @@ export function ProgramHeadSwitcher({ programs }: { programs: ProgramHeadProgram
             render={
               <Link
                 href={
-                  childPath
-                    ? buildProgramHeadProgramPath(program.id, childPath)
+                  safeChildPath
+                    ? buildProgramHeadProgramPath(program.id, safeChildPath)
                     : buildProgramHeadDashboardPath(program.id)
                 }
               />

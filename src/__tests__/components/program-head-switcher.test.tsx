@@ -87,4 +87,23 @@ describe("ProgramHeadSwitcher", () => {
       "/program-head/programs/program-1/dashboard"
     );
   });
+
+  it("drops resource-scoped child paths to the destination dashboard", async () => {
+    pathnameMock.mockReturnValue(
+      "/program-head/programs/program-2/course-rosters/139ce45e-dbb6-4764-a472-30a32b53dff9"
+    );
+    render(<ProgramHeadSwitcher programs={programs} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Switch Program/ }));
+    await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
+
+    expect(screen.getByRole("menuitem", { name: /BEED/ })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/dashboard"
+    );
+    expect(screen.getByRole("menuitem", { name: /BSHM/ })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-3/dashboard"
+    );
+  });
 });
