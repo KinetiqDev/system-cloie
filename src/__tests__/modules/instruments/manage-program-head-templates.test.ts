@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EvaluationTemplateType } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
+import { normalizePloQuestionBindings } from "@/features/instruments/services/manage-program-head-templates";
 
 const {
   instrumentTemplateFindManyMock,
@@ -18,6 +19,9 @@ const {
   transactionMock,
   resolveProgramHeadContextMock,
   revalidateProgramHeadAssignmentMock,
+  templatePloBindingDeleteManyMock,
+  templatePloBindingCreateManyMock,
+  ploFindManyMock,
 } = vi.hoisted(() => ({
   instrumentTemplateFindManyMock: vi.fn(),
   instrumentTemplateFindUniqueMock: vi.fn(),
@@ -33,6 +37,9 @@ const {
   transactionMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
   revalidateProgramHeadAssignmentMock: vi.fn(),
+  templatePloBindingDeleteManyMock: vi.fn(),
+  templatePloBindingCreateManyMock: vi.fn(),
+  ploFindManyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -51,6 +58,9 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     program: {
       findUnique: programFindUniqueMock,
+    },
+    pLO: {
+      findMany: ploFindManyMock,
     },
     programHeadAssignment: {
       findMany: programHeadAssignmentFindManyMock,
@@ -334,6 +344,10 @@ describe("manage-program-head-templates", () => {
           findFirst: instrumentVersionFindFirstMock.mockResolvedValue({ id: "ver-1" }),
           update: instrumentVersionUpdateMock.mockResolvedValue({ id: "ver-1" }),
         },
+        instrumentTemplatePloQuestionBinding: {
+          deleteMany: templatePloBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: templatePloBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        },
       })
     );
 
@@ -407,6 +421,10 @@ describe("manage-program-head-templates", () => {
         },
         instrumentVersion: {
           create: instrumentVersionCreateMock.mockResolvedValue({ id: "ver-3" }),
+        },
+        instrumentTemplatePloQuestionBinding: {
+          deleteMany: templatePloBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: templatePloBindingCreateManyMock.mockResolvedValue({ count: 0 }),
         },
       })
     );
@@ -525,6 +543,10 @@ describe("manage-program-head-templates", () => {
             id: "ver-1",
           }),
         },
+        instrumentTemplatePloQuestionBinding: {
+          deleteMany: templatePloBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: templatePloBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        },
       };
       return fn(tx);
     });
@@ -620,8 +642,11 @@ describe("manage-program-head-templates", () => {
       name: "Original Template",
       description: "Original description",
       structure: VALID_STRUCTURE,
+      template_type: "PROGRAM_WIDE",
       is_faculty_accessible: false,
       program_id: PROGRAM_ID,
+      faculty_owner_id: null,
+      template_plo_question_bindings: [],
     });
 
     const createdDuplicate = { id: "dup-1" };
@@ -651,6 +676,57 @@ describe("manage-program-head-templates", () => {
     expect(createCall.data.name).toBe("Original Template (Copy)");
     expect(createCall.data.program_id).toBe(PROGRAM_ID);
     expect(createCall.data.structure).toEqual(VALID_STRUCTURE);
+  });
+
+  it("drops question–PLO bindings when duplicating an institutional baseline", async () => {
+    programFindUniqueMock.mockResolvedValue({
+      id: PROGRAM_ID,
+      code: "BSIT",
+    });
+
+    instrumentTemplateFindUniqueMock.mockResolvedValue({
+      name: "Baseline Exit Survey",
+      description: null,
+      structure: VALID_STRUCTURE,
+      template_type: "PROGRAM_WIDE",
+      is_faculty_accessible: false,
+      program_id: null,
+      faculty_owner_id: null,
+      template_plo_question_bindings: [
+        {
+          plo_id: "plo-baseline-1",
+          plo_code_snapshot: "BSIT-GO1",
+          plo_description_snapshot: "Snapshot desc",
+          section_key: "sec-1",
+          item_key: "q-1",
+          question_prompt_snapshot: "Prompt",
+        },
+      ],
+    });
+
+    transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        instrumentTemplate: {
+          create: instrumentTemplateCreateMock.mockResolvedValue({ id: "dup-baseline" }),
+        },
+        instrumentVersion: {
+          create: instrumentVersionCreateMock.mockResolvedValue({ id: "ver-dup-baseline" }),
+        },
+        instrumentTemplatePloQuestionBinding: {
+          createMany: templatePloBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        },
+      };
+      return fn(tx);
+    });
+
+    const result = await duplicateTemplate(PROGRAM_ID, "baseline-1");
+
+    expect(result).toEqual({
+      success: true,
+      data: { id: "dup-baseline" },
+    });
+    // Baseline PLOs are not this program's PLOs — the copy must start unbound.
+    expect(templatePloBindingCreateManyMock).not.toHaveBeenCalled();
   });
 
   // ─── toggleTemplateActive ──────────────────────────────────────────
@@ -849,6 +925,111 @@ describe("manage-program-head-templates", () => {
     expect(result).toEqual({
       success: false,
       error: "Program Head authentication is required.",
+    });
+  });
+});
+
+// ─── normalizePloQuestionBindings (pure) ─────────────────────────────────────
+
+describe("normalizePloQuestionBindings", () => {
+  const structure = [
+    {
+      key: "sec-1",
+      title: "Outcomes",
+      order: 0,
+      questions: [
+        { key: "q-1", prompt: "Prepared me for employment", type: "likert" as const, order: 0, required: true },
+        { key: "q-2", prompt: "Recommend the program", type: "likert" as const, order: 1, required: true },
+      ],
+    },
+    {
+      key: "sec-2",
+      title: "Open",
+      order: 1,
+      questions: [
+        { key: "q-3", prompt: "Any comments?", type: "guided_open_ended" as const, order: 0, required: false },
+      ],
+    },
+  ];
+
+  const plos = [
+    { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
+    { id: "plo-2", code: "BSIT-GO2", description: "Apply technical skills" },
+  ];
+
+  it("rejects bindings that target non-Likert questions", () => {
+    const result = normalizePloQuestionBindings({
+      bindings: [{ ploId: "plo-1", sectionKey: "sec-2", itemKey: "q-3" }],
+      structure,
+      plos,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "PLOs can only be assigned to Likert questions.",
+    });
+  });
+
+  it("rejects bindings to unknown or inactive PLOs", () => {
+    const result = normalizePloQuestionBindings({
+      bindings: [{ ploId: "plo-ghost", sectionKey: "sec-1", itemKey: "q-1" }],
+      structure,
+      plos,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "One or more selected PLOs are invalid or no longer active.",
+    });
+  });
+
+  it("rejects duplicate (question, PLO) pairs", () => {
+    const result = normalizePloQuestionBindings({
+      bindings: [
+        { ploId: "plo-1", sectionKey: "sec-1", itemKey: "q-1" },
+        { ploId: "plo-1", sectionKey: "sec-1", itemKey: "q-1" },
+      ],
+      structure,
+      plos,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Each Likert question can only be assigned to a PLO once.",
+    });
+  });
+
+  it("snapshots PLO code/description and question prompt, and reports unbound Likert questions", () => {
+    const result = normalizePloQuestionBindings({
+      bindings: [
+        { ploId: "plo-1", sectionKey: "sec-1", itemKey: "q-1" },
+        { ploId: "plo-2", sectionKey: "sec-1", itemKey: "q-1" },
+      ],
+      structure,
+      plos,
+    });
+
+    expect(result).toEqual({
+      success: true,
+      bindings: [
+        {
+          ploCodeSnapshot: "BSIT-GO1",
+          ploDescriptionSnapshot: "Communicate effectively",
+          ploId: "plo-1",
+          itemKey: "q-1",
+          questionPromptSnapshot: "Prepared me for employment",
+          sectionKey: "sec-1",
+        },
+        {
+          ploCodeSnapshot: "BSIT-GO2",
+          ploDescriptionSnapshot: "Apply technical skills",
+          ploId: "plo-2",
+          itemKey: "q-1",
+          questionPromptSnapshot: "Prepared me for employment",
+          sectionKey: "sec-1",
+        },
+      ],
+      missingQuestionKeys: ["sec-1:q-2"],
     });
   });
 });
