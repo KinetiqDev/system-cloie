@@ -80,12 +80,13 @@ function resolveProgramLabel(user: PrismaUserPageRow): string {
     return phCodes.join(", ");
   }
 
-  if (user.industry_partner_profile?.program) {
-    return user.industry_partner_profile.program.code;
-  }
   const ipAffCodes = user.industry_partner_program_affiliations.map((a) => a.program.code);
   if (ipAffCodes.length > 0) {
     return ipAffCodes.join(", ");
+  }
+
+  if (user.industry_partner_profile?.program) {
+    return user.industry_partner_profile.program.code;
   }
 
   return "—";

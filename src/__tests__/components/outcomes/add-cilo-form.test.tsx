@@ -132,6 +132,7 @@ describe("AddCiloForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await selectCourse("CS101");
+    await screen.findByText("Existing CILOs (0)");
 
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
 
@@ -170,6 +171,7 @@ describe("AddCiloForm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     await selectCourse("CS101");
+    await screen.findByText("Existing CILOs (0)");
 
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
 
@@ -208,6 +210,22 @@ describe("AddCiloForm", () => {
         { description: "Design instruction" },
       ])
     );
+  });
+
+  it("disables the full-set save when existing CILOs fail to load", async () => {
+    loadCilosActionMock.mockResolvedValue({
+      success: false,
+      error: "Could not load existing CILOs.",
+    });
+    renderForm();
+
+    await selectCourse("CS101");
+    await screen.findByText("Could not load existing CILOs.");
+
+    const saveButton = screen.getByRole("button", { name: "Save CILOs" });
+    expect(saveButton).toBeDisabled();
+    fireEvent.click(saveButton);
+    expect(saveActionMock).not.toHaveBeenCalled();
   });
 
   it("loads and shows existing CILOs for the selected course", async () => {

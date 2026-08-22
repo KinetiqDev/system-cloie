@@ -482,7 +482,12 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
 
       {/* Commit bar stays reachable while long CILO lists scroll */}
       <div className="bg-card sticky bottom-0 flex justify-end pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <Button onClick={handleSave} loading={isPending} className="w-full sm:w-auto sm:min-w-48">
+        <Button
+          onClick={handleSave}
+          loading={isPending}
+          disabled={existingCilosLoading || !!existingCilosError}
+          className="w-full sm:w-auto sm:min-w-48"
+        >
           Save CILOs
         </Button>
       </div>
