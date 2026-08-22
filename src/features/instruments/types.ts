@@ -54,6 +54,8 @@ export type TemplatePloQuestionBinding = {
   ploId: string;
   itemKey: string;
   sectionKey: string;
+  ploCodeSnapshot?: string;
+  ploDescriptionSnapshot?: string;
 };
 
 export type TemplateLikertQuestionOption = {

@@ -956,6 +956,8 @@ export async function getProgramHeadTemplate(programId: string, id: string): Pro
             ploId: binding.plo_id!,
             itemKey: binding.item_key,
             sectionKey: binding.section_key,
+            ploCodeSnapshot: binding.plo_code_snapshot,
+            ploDescriptionSnapshot: binding.plo_description_snapshot,
           })),
       },
       ploOptions: plos,

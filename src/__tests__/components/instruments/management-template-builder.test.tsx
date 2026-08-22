@@ -15,8 +15,10 @@ vi.mock("next/navigation", () => ({
 describe("ManagementTemplateBuilder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // The shared TemplateBuilder renders the PLO picker for PROGRAM_WIDE
-    // templates; jsdom has no matchMedia, so stub a desktop viewport.
+    // The shared TemplateBuilder renders the PLO picker only for
+    // program-owned templates; baseline templates skip the picker.
+    // PLO picker uses useMediaQuery; stub a desktop viewport.
+    // Stub retained for safety if the PLO picker path is reached.
     vi.stubGlobal(
       "matchMedia",
       vi.fn((query: string) => ({

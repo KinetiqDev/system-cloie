@@ -401,6 +401,21 @@ export function TemplateBuilder({
     }
     return map;
   });
+
+  /** Archived PLOs bound to questions: rendered as removable archived chips. */
+  const archivedPloLookup = useMemo(() => {
+    const lookup = new Map<string, ProgramPloOption>();
+    const activeIds = new Set((ploOptions ?? []).map((plo) => plo.id));
+    for (const binding of initialPloBindings ?? []) {
+      if (activeIds.has(binding.ploId)) continue;
+      lookup.set(binding.ploId, {
+        id: binding.ploId,
+        code: binding.ploCodeSnapshot ?? "Archived PLO",
+        description: binding.ploDescriptionSnapshot ?? "",
+      });
+    }
+    return lookup;
+  }, [initialPloBindings, ploOptions]);
   const [loadedCilos, setLoadedCilos] = useState<Array<{ description: string; id: string }>>([]);
   const [isLoadingCilos, setIsLoadingCilos] = useState(false);
 
@@ -413,8 +428,9 @@ export function TemplateBuilder({
 
   const facultyMode = Boolean(facultyConfig);
   const effectiveTemplateType: EvaluationTemplateType = facultyMode ? "COURSE_BOUND" : templateType;
-  /** PLO question bindings are a Program-wide template concern only. */
-  const programWideMode = !facultyMode && effectiveTemplateType === "PROGRAM_WIDE";
+  /** PLO question bindings are a Program-owned template concern only. */
+  const programWideMode =
+    !facultyMode && effectiveTemplateType === "PROGRAM_WIDE" && !isInstitutionalBaseline;
   const programPloOptions = ploOptions ?? [];
   const facultyCourseContexts = facultyConfig?.courseContexts ?? EMPTY_FACULTY_COURSE_CONTEXTS;
   const loadManagedCilosAction = facultyConfig?.loadManagedCilosAction;
@@ -1262,6 +1278,7 @@ export function TemplateBuilder({
             ploOptions={programPloOptions}
             ploQuestionBindings={ploQuestionBindings}
             programWideMode={programWideMode}
+            archivedPloLookup={archivedPloLookup}
             onPloBindingsChange={(questionKey, ploIds) =>
               setPloQuestionBindings((current) => ({
                 ...current,
@@ -1315,7 +1332,7 @@ export function TemplateBuilder({
           </Button>
         )}
         <Button onClick={handleSave} loading={isPending}>
-          {isInstitutionalBaseline ? "Save as Program Copy" : "Save Template"}
+          {isInstitutionalBaseline && onSaveAsCopy ? "Save as Program Copy" : "Save Template"}
         </Button>
       </div>
 
@@ -1390,6 +1407,7 @@ interface SectionCardProps {
   ploOptions: ProgramPloOption[];
   ploQuestionBindings: Record<string, string[]>;
   programWideMode: boolean;
+  archivedPloLookup: Map<string, ProgramPloOption>;
   section: TemplateSection;
   sectionIndex: number;
   sortableId: string;
@@ -1429,6 +1447,7 @@ function SectionCard({
   ploOptions,
   ploQuestionBindings,
   programWideMode,
+  archivedPloLookup,
   section,
   sectionIndex,
   sortableId,
@@ -1548,6 +1567,7 @@ function SectionCard({
                 ploOptions={ploOptions}
                 selectedPloIds={ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []}
                 programWideMode={programWideMode}
+                archivedPloLookup={archivedPloLookup}
                 onPloBindingsChange={onPloBindingsChange}
                 canRemove={section.questions.length > 1}
               />
@@ -1597,6 +1617,7 @@ interface QuestionCardProps {
   ploOptions: ProgramPloOption[];
   selectedPloIds: string[];
   programWideMode: boolean;
+  archivedPloLookup: Map<string, ProgramPloOption>;
   selectedCiloLabel?: string;
   selectedCiloId: string;
   selectedCiloIds: Set<string>;
@@ -1623,6 +1644,7 @@ function QuestionCard({
   ploOptions,
   selectedPloIds,
   programWideMode,
+  archivedPloLookup,
   selectedCiloLabel,
   selectedCiloId,
   selectedCiloIds,
@@ -1746,6 +1768,7 @@ function QuestionCard({
                 selectedIds={selectedPloIds}
                 questionKey={question.key}
                 labelId={`plo-binding-label-${question.key}`}
+                archivedPloLookup={archivedPloLookup}
                 onChange={(ploIds) =>
                   onPloBindingsChange(encodeBindingKey(sectionKey, question.key), ploIds)
                 }
@@ -1921,6 +1944,7 @@ interface PloMultiSelectProps {
   selectedIds: string[];
   questionKey: string;
   labelId: string;
+  archivedPloLookup: Map<string, ProgramPloOption>;
   onChange: (ploIds: string[]) => void;
 }
 
@@ -1935,6 +1959,7 @@ function PloMultiSelect({
   selectedIds,
   questionKey,
   labelId,
+  archivedPloLookup,
   onChange,
 }: PloMultiSelectProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -1977,9 +2002,9 @@ function PloMultiSelect({
   const selectedPlos = useMemo(
     () =>
       selectedIds
-        .map((id) => options.find((plo) => plo.id === id))
+        .map((id) => options.find((plo) => plo.id === id) ?? archivedPloLookup.get(id))
         .filter((plo): plo is ProgramPloOption => Boolean(plo)),
-    [options, selectedIds]
+    [archivedPloLookup, options, selectedIds]
   );
 
   const trigger = (
@@ -2114,22 +2139,26 @@ function PloMultiSelect({
 
       {selectedPlos.length > 0 && (
         <ul className="flex flex-wrap items-center gap-1.5" aria-label="Selected PLOs">
-          {selectedPlos.map((plo) => (
-            <li
-              key={plo.id}
-              className="bg-muted text-foreground inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs font-medium"
-            >
-              <span className="font-semibold">{plo.code}</span>
-              <button
-                type="button"
-                onClick={() => removeChip(plo.id)}
-                className="text-muted-foreground hover:text-danger focus-visible:ring-ring rounded-sm p-0.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
-                aria-label={`Remove ${plo.code}`}
+          {selectedPlos.map((plo) => {
+            const isArchived = archivedPloLookup.has(plo.id);
+            return (
+              <li
+                key={plo.id}
+                className={`${isArchived ? "border-destructive/40 bg-destructive/10" : "bg-muted"} text-foreground inline-flex items-center gap-1 rounded-sm border px-2 py-1 text-xs font-medium`}
               >
-                <XIcon className="size-3" />
-              </button>
-            </li>
-          ))}
+                <span className="font-semibold">{plo.code}</span>
+                {isArchived && <span className="text-destructive">Archived</span>}
+                <button
+                  type="button"
+                  onClick={() => removeChip(plo.id)}
+                  className="text-muted-foreground hover:text-danger focus-visible:ring-ring rounded-sm p-0.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
+                  aria-label={`Remove ${plo.code}`}
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

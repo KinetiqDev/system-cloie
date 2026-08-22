@@ -951,6 +951,68 @@ describe("TemplateBuilder", () => {
     expect((onSave.mock.calls[0][0] as FormData).get("program_question_plo_bindings")).toBe("[]");
   });
 
+  test("renders archived PLO bindings as removable archived chips", () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
+        initialPloBindings={[
+          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
+          {
+            ploId: "plo-archived",
+            itemKey: "question-1",
+            sectionKey: "section-1",
+            ploCodeSnapshot: "PLO-OLD",
+            ploDescriptionSnapshot: "Retired outcome",
+          },
+        ]}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    // Active chip renders normally; archived chip is visible with a label.
+    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+    expect(screen.getByText("PLO-OLD")).toBeInTheDocument();
+    expect(screen.getByText("Archived")).toBeInTheDocument();
+
+    // Removing the archived chip keeps the active selection.
+    fireEvent.click(screen.getByRole("button", { name: "Remove PLO-OLD" }));
+    expect(screen.queryByText("PLO-OLD")).not.toBeInTheDocument();
+    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+  });
+
   test("hides PLO binding UI in course-bound and faculty modes", () => {
     const facultyConfig = {
       courseContexts: [],
