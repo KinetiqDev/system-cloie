@@ -110,6 +110,12 @@ export const updateCourseSchema = z
   .object({
     id: z.string().uuid(),
     ...courseFields,
+    // Optimistic concurrency token: ISO timestamp of the loaded snapshot.
+    // Absent (legacy callers) -> unconditional update.
+    updated_at: z.preprocess(
+      (value) => (value === "" || value == null ? undefined : value),
+      z.string().datetime().optional()
+    ),
   })
   .superRefine(validateSemesterTerm)
   .superRefine(validateCourseRelationships);

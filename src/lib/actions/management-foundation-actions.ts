@@ -133,6 +133,7 @@ export async function updateCourseAction(formData: FormData): Promise<ActionResu
     default_year_level: formData.get("default_year_level"),
     default_semester: formData.get("default_semester"),
     default_term: formData.get("default_term"),
+    updated_at: formData.get("updated_at"),
   });
 
   if (!parsed.success) {

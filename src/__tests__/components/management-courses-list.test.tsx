@@ -29,6 +29,7 @@ vi.mock("@/lib/actions/management-foundation-actions", async (importOriginal) =>
         default_year_level: null,
         default_semester: null,
         default_term: null,
+        updated_at: new Date("2026-01-01T00:00:00.000Z"),
       },
       programs: [],
       majors: [],

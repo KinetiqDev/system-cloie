@@ -158,20 +158,47 @@ export async function updateCourse(
     return scopeContext;
   }
 
+  const data = {
+    code: input.code,
+    title: input.title,
+    description: input.description ?? null,
+    course_scope: input.course_scope,
+    default_year_level: input.default_year_level ?? null,
+    default_semester: input.default_semester ?? null,
+    default_term: input.default_term ?? null,
+    ...scopeContext.data,
+  };
+
   try {
-    const course = await prisma.course.update({
-      where: { id: input.id },
-      data: {
-        code: input.code,
-        title: input.title,
-        description: input.description ?? null,
-        course_scope: input.course_scope,
-        default_year_level: input.default_year_level ?? null,
-        default_semester: input.default_semester ?? null,
-        default_term: input.default_term ?? null,
-        ...scopeContext.data,
-      },
-    });
+    if (input.updated_at) {
+      // Optimistic concurrency: write only when the loaded snapshot is still
+      // current, so an intervening update is not silently overwritten.
+      const result = await prisma.course.updateMany({
+        where: { id: input.id, updated_at: new Date(input.updated_at) },
+        data,
+      });
+
+      if (result.count === 0) {
+        const exists = await prisma.course.findUnique({
+          where: { id: input.id },
+          select: { id: true },
+        });
+
+        if (!exists) {
+          return { success: false, error: "Course not found." };
+        }
+
+        return {
+          success: false,
+          error:
+            "This course was updated by someone else. Reopen the edit dialog to load the latest details before saving.",
+        };
+      }
+
+      return { success: true, data: { id: input.id } };
+    }
+
+    const course = await prisma.course.update({ where: { id: input.id }, data });
 
     return { success: true, data: { id: course.id } };
   } catch (error) {
@@ -279,6 +306,7 @@ export type CourseEditData = {
     default_year_level: YearLevel | null;
     default_semester: AcademicSemester | null;
     default_term: AcademicTerm | null;
+    updated_at: Date;
   };
   programs: { id: string; code: string; name: string }[];
   majors: { id: string; name: string; program_id: string; program_code: string }[];
@@ -299,6 +327,7 @@ export async function getCourseEditData(courseId: string): Promise<CourseEditDat
         default_year_level: true,
         default_semester: true,
         default_term: true,
+        updated_at: true,
       },
     }),
     prisma.program.findMany({

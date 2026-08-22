@@ -46,6 +46,8 @@ type CourseFormProps = {
     default_year_level?: YearLevel | null;
     default_semester?: AcademicSemester | null;
     default_term?: AcademicTerm | null;
+    /** Optimistic concurrency token carried to the update action. */
+    updated_at?: string;
   };
   submitLabel?: string;
   onSuccess?: () => void;
@@ -131,6 +133,9 @@ export function CourseForm({
   return (
     <form ref={formRef} action={handleSubmit} className="space-y-4" id={formId}>
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
+      {defaultValues?.updated_at && (
+        <input type="hidden" name="updated_at" value={defaultValues.updated_at} />
+      )}
       <input type="hidden" name="course_scope" value={scope} />
       <input type="hidden" name="program_id" value={programId} />
       <input type="hidden" name="major_id" value={majorId} />

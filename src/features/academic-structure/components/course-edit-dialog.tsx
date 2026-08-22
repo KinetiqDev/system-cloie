@@ -137,6 +137,7 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
                 default_year_level: data.course.default_year_level,
                 default_semester: data.course.default_semester,
                 default_term: data.course.default_term,
+                updated_at: data.course.updated_at.toISOString(),
               }}
               submitLabel="Update Course"
               formId="course-edit-form"
