@@ -152,7 +152,9 @@ export {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
+  // fallow-ignore-next-line unused-export
   InputGroupText,
   InputGroupInput,
+  // fallow-ignore-next-line unused-export
   InputGroupTextarea,
 }

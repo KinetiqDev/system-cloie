@@ -1870,6 +1870,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/combobox.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes: "New searchable combobox primitive for the CILO course picker; public shadcn inventory",
+  },
+  {
     path: "src/components/ui/dialog.tsx",
     disposition: "task",
     taskId: 6,
@@ -1898,6 +1904,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 4,
     category: "ui_primitive",
+  },
+  {
+    path: "src/components/ui/input-group.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes: "New input group primitive for the CILO course picker; public shadcn inventory",
   },
   {
     path: "src/components/ui/input.tsx",

@@ -76,6 +76,7 @@ function MapCilosButton({
 // Component
 // ---------------------------------------------------------------------------
 
+// fallow-ignore-next-line complexity
 export function AddCiloForm({ courses, addAction }: AddCiloFormProps) {
   const [isPending, startTransition] = useTransition();
 

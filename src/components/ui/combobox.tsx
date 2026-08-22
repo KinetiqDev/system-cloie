@@ -286,15 +286,25 @@ export {
   ComboboxContent,
   ComboboxList,
   ComboboxItem,
+  // fallow-ignore-next-line unused-export
   ComboboxGroup,
+  // fallow-ignore-next-line unused-export
   ComboboxLabel,
+  // fallow-ignore-next-line unused-export
   ComboboxCollection,
   ComboboxEmpty,
+  // fallow-ignore-next-line unused-export
   ComboboxSeparator,
+  // fallow-ignore-next-line unused-export
   ComboboxChips,
+  // fallow-ignore-next-line unused-export
   ComboboxChip,
+  // fallow-ignore-next-line unused-export
   ComboboxChipsInput,
+  // fallow-ignore-next-line unused-export
   ComboboxTrigger,
+  // fallow-ignore-next-line unused-export
   ComboboxValue,
+  // fallow-ignore-next-line unused-export
   useComboboxAnchor,
 }
