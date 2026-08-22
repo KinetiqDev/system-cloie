@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
@@ -13,6 +14,7 @@ import {
   getMainNavByRoles,
   getSecondaryNavByRoles,
   getDeepestMatchingNavItem,
+  getDashboardHref,
   getDeanActiveItem,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
@@ -45,7 +47,11 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
   return (
     <aside className="border-sidebar-border bg-sidebar fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r lg:flex">
       <div className="border-sidebar-border flex h-16 shrink-0 items-center border-b px-6">
-        <div className="flex items-center gap-3">
+        <Link
+          href={getDashboardHref(roles, pathname)}
+          aria-label="System CLOIE — Dashboard"
+          className="focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center gap-3 rounded-md transition-opacity hover:opacity-80"
+        >
           <Image
             src="/logos/cloie-logo.png"
             alt="System CLOIE Logo"
@@ -54,7 +60,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
             className={LOGO_CLASS_NAME}
           />
           <span className="text-title-lg text-link font-bold tracking-tight">System CLOIE</span>
-        </div>
+        </Link>
       </div>
 
       <div className="flex flex-1 flex-col overflow-y-auto px-4 py-6">
@@ -162,8 +168,14 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
   return (
     <aside className="border-sidebar-border bg-sidebar fixed inset-y-0 left-0 z-50 hidden w-16 flex-col border-r md:flex lg:w-64">
       <div className="border-sidebar-border flex h-16 shrink-0 items-center justify-center border-b px-3 lg:justify-start lg:px-6">
-        <Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={486} height={513} className={LOGO_CLASS_NAME} />
-        <span className="text-title-lg text-link ml-3 hidden font-bold tracking-tight lg:inline">System CLOIE</span>
+        <Link
+          href={dashboard.href}
+          aria-label="System CLOIE — Dashboard"
+          className="focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center gap-3 rounded-md transition-opacity hover:opacity-80"
+        >
+          <Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={486} height={513} className={LOGO_CLASS_NAME} />
+          <span className="text-title-lg text-link ml-3 hidden font-bold tracking-tight lg:inline">System CLOIE</span>
+        </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6 lg:px-4" aria-label="Dean navigation">
         {renderLink(dashboard, true)}

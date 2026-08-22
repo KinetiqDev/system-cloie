@@ -86,6 +86,22 @@ global.ResizeObserver = class {
   disconnect() {}
 };
 
+// The dialog shell chooses Dialog vs Drawer via useMediaQuery; jsdom has no
+// matchMedia, so stub it to always report the desktop viewport.
+vi.stubGlobal(
+  "matchMedia",
+  vi.fn((query: string) => ({
+    matches: true,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }))
+);
+
 describe("EditUserDialog", () => {
   const mockOnClose = vi.fn();
   const mockOnUserUpdated = vi.fn();
@@ -333,7 +349,7 @@ describe("EditUserDialog", () => {
 
     expect(screen.getByLabelText(/primary program affiliation/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/additional active affiliations remain unchanged/i)
+      screen.getByText(/other program affiliations stay unchanged/i)
     ).toBeInTheDocument();
   });
 
@@ -434,7 +450,7 @@ describe("EditUserDialog", () => {
     expect(screen.getByLabelText(/affiliated program \(optional\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/verification status/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/verification status/i)).toHaveTextContent("Pending");
-    expect(screen.getByText(/limited dashboard access remains/i)).toBeInTheDocument();
+    expect(screen.getByText(/limited dashboard access until reviewed/i)).toBeInTheDocument();
   });
 
   it("requires explicit verification for a legacy Industry Partner", async () => {
@@ -511,7 +527,7 @@ describe("EditUserDialog", () => {
       />
     );
     await waitFor(() => expect(screen.getByDisplayValue("Deferred Student")).toBeInTheDocument());
-    expect(screen.getByText(/does not have an active term enrollment/i)).toBeInTheDocument();
+    expect(screen.getByText(/active enrollment in the current term/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Year Level")).toBeDisabled();
     expect(screen.getByLabelText("Section")).toBeDisabled();
   });
@@ -629,9 +645,9 @@ describe("EditUserDialog", () => {
     fireEvent.click(screen.getByLabelText(/primary program affiliation/i));
     fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
-    await waitFor(() => expect(screen.getByRole("button", { name: /go back/i })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: /keep editing/i })).toBeInTheDocument());
     await waitFor(() => expect(screen.getByRole("button", { name: /confirm and save/i })).toBeEnabled());
-    fireEvent.click(screen.getByRole("button", { name: /go back/i }));
+    fireEvent.click(screen.getByRole("button", { name: /keep editing/i }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
       expect(screen.getByLabelText(/primary program affiliation/i)).toBeInTheDocument();
@@ -821,7 +837,7 @@ describe("EditUserDialog", () => {
     expect(screen.getByLabelText(/graduation year/i)).toHaveValue(2020);
     expect(screen.getByLabelText(/verification status/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/limited dashboard access remains with a review notice/i)
+      screen.getByText(/limited dashboard access until reviewed/i)
     ).toBeInTheDocument();
   });
 
@@ -880,6 +896,6 @@ describe("EditUserDialog", () => {
     );
     expect(screen.getByText("Information Technology")).toBeInTheDocument();
     expect(screen.getByText("Information Systems, Information Technology")).toBeInTheDocument();
-    expect(screen.getByText(/assignment set is replaced by the selected set/i)).toBeInTheDocument();
+    expect(screen.getByText(/replaces the current assignment set/i)).toBeInTheDocument();
   });
 });

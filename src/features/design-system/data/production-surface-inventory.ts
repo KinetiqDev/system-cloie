@@ -1171,16 +1171,10 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/secretary/courses/[id]/edit/loading.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/secretary/courses/[id]/edit/page.tsx",
-    disposition: "task",
-    taskId: 14,
+    disposition: "redirect",
     category: "route",
+    notes: "Secretary course editing moved to a modal on the course catalog; redirects to the catalog",
   },
   {
     path: "src/app/(app)/secretary/courses/loading.tsx",
@@ -1876,6 +1870,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/combobox.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes: "New searchable combobox primitive for the CILO course picker; public shadcn inventory",
+  },
+  {
     path: "src/components/ui/dialog.tsx",
     disposition: "task",
     taskId: 6,
@@ -1904,6 +1904,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 4,
     category: "ui_primitive",
+  },
+  {
+    path: "src/components/ui/input-group.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes: "New input group primitive for the CILO course picker; public shadcn inventory",
   },
   {
     path: "src/components/ui/input.tsx",
@@ -2050,6 +2056,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/academic-calendar/components/term-instance-picker.tsx",
     disposition: "task",
     taskId: 13,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/academic-structure/components/course-edit-dialog.tsx",
+    disposition: "task",
+    taskId: 14,
     category: "feature_component",
   },
   {
@@ -2335,13 +2347,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/auth/components/program-head-context-header.tsx",
+    path: "src/features/auth/components/program-head-selector.tsx",
     disposition: "task",
     taskId: 18,
     category: "feature_component",
   },
   {
-    path: "src/features/auth/components/program-head-selector.tsx",
+    path: "src/features/auth/components/program-head-switcher.tsx",
     disposition: "task",
     taskId: 18,
     category: "feature_component",

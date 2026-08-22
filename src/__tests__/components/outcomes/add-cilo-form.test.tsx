@@ -46,10 +46,16 @@ const courses: FacultyCourseWithCiloCount[] = [
   },
 ];
 
-const programs = [{ id: "program-1", code: "BSCS", name: "BS Computer Science" }];
-
 function renderForm() {
-  return render(<AddCiloForm courses={courses} programs={programs} addAction={addActionMock} />);
+  return render(<AddCiloForm courses={courses} addAction={addActionMock} />);
+}
+
+async function selectCourse(query: string) {
+  const input = screen.getByRole("combobox", { name: "Course" });
+  fireEvent.change(input, { target: { value: query } });
+  fireEvent.keyDown(input, { key: "ArrowDown" });
+  const option = await screen.findByRole("option", { name: new RegExp(query) });
+  fireEvent.click(option);
 }
 
 describe("AddCiloForm", () => {
@@ -73,7 +79,7 @@ describe("AddCiloForm", () => {
     expect(screen.queryByText("CILOs to Add (1)")).not.toBeInTheDocument();
   });
 
-  it("shows both field errors on empty save and clears them when corrected", () => {
+  it("shows both field errors on empty save and clears them when corrected", async () => {
     renderForm();
 
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
@@ -90,9 +96,7 @@ describe("AddCiloForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.queryByText("Please add at least one CILO.")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Course" }));
-    fireEvent.mouseMove(screen.getByRole("option", { name: /CS101/ }));
-    fireEvent.click(screen.getByRole("option", { name: /CS101/ }));
+    await selectCourse("CS101");
     expect(screen.queryByText("Please select a course.")).not.toBeInTheDocument();
   });
 
@@ -112,32 +116,40 @@ describe("AddCiloForm", () => {
     expect(addActionMock).not.toHaveBeenCalled();
   });
 
-  it("saves the selected course and CILO list and shows confirmation", async () => {
+  it("saves to the selected course and links to its alignment workspace", async () => {
     renderForm();
 
     fireEvent.change(screen.getByLabelText("CILO Description"), {
       target: { value: "Design instruction" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
-    fireEvent.change(screen.getByLabelText("CILO Description"), {
-      target: { value: "Assess learning" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Course" }));
-    const courseOption = await screen.findByRole("option", { name: /CS101/ });
-    fireEvent.mouseMove(courseOption);
-    fireEvent.click(courseOption);
+    await selectCourse("CS101");
 
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
 
     await waitFor(() =>
-      expect(addActionMock).toHaveBeenCalledWith("course-1", [
-        "Design instruction",
-        "Assess learning",
-      ])
+      expect(addActionMock).toHaveBeenCalledWith("course-1", ["Design instruction"])
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent("CILOs added successfully!");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "1 CILO saved to CS101."
+    );
+    // Course stays selected so faculty can keep adding to the same course.
+    expect(screen.getByRole("combobox", { name: "Course" })).toHaveValue("CS101 — Intro to Computing");
+
+    const mapLink = screen.getAllByRole("link", { name: /Map CILOs to PLOs/ });
+    expect(mapLink.length).toBeGreaterThan(0);
+    for (const link of mapLink) {
+      expect(link).toHaveAttribute("href", "/faculty/cilos/course-1/alignment");
+    }
+  });
+
+  it("names Institutional Learning Outcomes as the mapping target for General Education courses", async () => {
+    renderForm();
+    await selectCourse("GE101");
+
+    expect(screen.getAllByRole("link", { name: /Map CILOs to ILOs/ }).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Aligns to Institutional Learning Outcomes/)).toBeInTheDocument();
   });
 
   it("surfaces a failed save without resetting the list", async () => {
@@ -148,11 +160,7 @@ describe("AddCiloForm", () => {
       target: { value: "Design instruction" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
-
-    fireEvent.click(screen.getByRole("combobox", { name: "Course" }));
-    const courseOption = await screen.findByRole("option", { name: /CS101/ });
-    fireEvent.mouseMove(courseOption);
-    fireEvent.click(courseOption);
+    await selectCourse("CS101");
 
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
 

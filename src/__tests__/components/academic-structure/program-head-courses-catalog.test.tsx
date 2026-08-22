@@ -47,10 +47,11 @@ describe("Program Head Courses catalog", () => {
     await waitFor(() => expect(createActionMock).toHaveBeenCalled());
     const formData = createActionMock.mock.calls[0]?.[0] as FormData;
     expect(formData.get("programId")).toBe(programId);
+    expect(formData.get("course_type")).toBe("program-wide");
     expect(screen.getByText("Secondary Education")).toBeInTheDocument();
   });
 
-  it("requires a major before submitting a Major-Specific Course", async () => {
+  it("submits a Major-Specific Course with the selected major", async () => {
     const { ProgramHeadCoursesCatalog } = await import(
       "@/features/academic-structure/components/program-head-courses-catalog"
     );
@@ -72,17 +73,19 @@ describe("Program Head Courses catalog", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Add Course" }));
     await waitFor(() => expect(screen.getByText("Add New Course")).toBeInTheDocument());
-    fireEvent.click(screen.getByLabelText("Course Scope"));
-    const majorSpecific = await screen.findByRole("option", { name: "Major-Specific" });
-    fireEvent.focus(majorSpecific);
-    fireEvent.keyDown(majorSpecific, { key: "Enter" });
-    fireEvent.keyUp(majorSpecific, { key: "Enter" });
+    fireEvent.click(screen.getByLabelText(/^Major\b/));
+    const englishOption = await screen.findByRole("option", { name: "English" });
+    fireEvent.focus(englishOption);
+    fireEvent.keyDown(englishOption, { key: "Enter" });
+    fireEvent.keyUp(englishOption, { key: "Enter" });
     fireEvent.change(screen.getByLabelText("Course Code"), { target: { value: "BSED-101" } });
     fireEvent.change(screen.getByLabelText("Course Title"), { target: { value: "Foundations" } });
     fireEvent.click(screen.getByRole("button", { name: "Create Course" }));
 
-    expect(await screen.findByText("Select a major for a major-specific course.")).toBeInTheDocument();
-    expect(createActionMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(createActionMock).toHaveBeenCalled());
+    const formData = createActionMock.mock.calls[0]?.[0] as FormData;
+    expect(formData.get("course_type")).toBe("major-specific");
+    expect(formData.get("major_id")).toBe("22222222-2222-4222-8222-222222222222");
   });
 
   it("renders status filter and schedule columns without scope tabs", async () => {

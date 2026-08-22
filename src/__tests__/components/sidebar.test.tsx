@@ -67,7 +67,7 @@ describe("Program Head desktop navigation", () => {
 
       render(<Sidebar roles={[ROLES.PROGRAM_HEAD]} />);
 
-      expect(screen.getAllByRole("link")).toHaveLength(9);
+      expect(screen.getAllByRole("link")).toHaveLength(10);
       expect(screen.getAllByRole("link", { name: "Dashboard" })[0]).toHaveAttribute(
         "href",
         "/program-head"
@@ -75,6 +75,17 @@ describe("Program Head desktop navigation", () => {
       expect(consoleError).not.toHaveBeenCalled();
     }
   );
+
+  it("points the brand block at the respective dashboard", () => {
+    pathnameMock.mockReturnValue("/program-head/programs/program-2/tools/new");
+
+    render(<Sidebar roles={[ROLES.PROGRAM_HEAD]} />);
+
+    expect(screen.getByRole("link", { name: "System CLOIE — Dashboard" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-2/dashboard"
+    );
+  });
 
   it("applies semantic sidebar roles to active and inactive rows", () => {
     render(<Sidebar roles={[ROLES.PROGRAM_HEAD]} />);

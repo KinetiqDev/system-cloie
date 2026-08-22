@@ -114,90 +114,6 @@ function StatCard({
   );
 }
 
-function MajorSelect({
-  majors,
-  defaultValue,
-  onChange,
-}: {
-  majors: Array<{ id: string; name: string; program_id: string }>;
-  defaultValue?: string;
-  onChange: (value: string) => void;
-}) {
-  const [value, setValue] = useState(defaultValue ?? "");
-
-  return (
-    <Select
-      name="major_id"
-      value={value}
-      onValueChange={(v) => {
-        const nextValue = v ?? "";
-        setValue(nextValue);
-        onChange(nextValue);
-      }}
-    >
-      <SelectTrigger id="major_id">
-        <SelectValue>
-          {value ? (majors.find((m) => m.id === value)?.name ?? "Select major") : "Select major"}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {majors.map((major) => (
-          <SelectItem key={major.id} value={major.id}>
-            {major.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
-type CourseMajor = { id: string; name: string; program_id: string };
-
-function CourseScopeFields({
-  majors,
-  scopeType,
-  course,
-  onScopeTypeChange,
-  onMajorChange,
-}: {
-  majors: CourseMajor[];
-  scopeType: "program-wide" | "major-specific";
-  course?: ProgramHeadCourseItem;
-  onScopeTypeChange: (value: "program-wide" | "major-specific") => void;
-  onMajorChange: (value: string) => void;
-}) {
-  return (
-    <>
-      <div className="space-y-2">
-        <Label htmlFor="scope-type">Course Scope</Label>
-        <input type="hidden" name="course_type" value={scopeType} />
-        <Select value={scopeType} onValueChange={(value) => onScopeTypeChange(value as typeof scopeType)}>
-          <SelectTrigger id="scope-type">
-            <SelectValue>
-              {scopeType === "program-wide" ? "Program-Wide" : "Major-Specific"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="program-wide">Program-Wide</SelectItem>
-            {majors.length > 0 && <SelectItem value="major-specific">Major-Specific</SelectItem>}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {scopeType === "major-specific" && majors.length > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="major_id">Major</Label>
-          <MajorSelect
-            majors={majors}
-            defaultValue={course?.major_id ?? undefined}
-            onChange={onMajorChange}
-          />
-        </div>
-      )}
-    </>
-  );
-}
-
 // Render-only branching is covered through the parent dialog workflow; keep this field group cohesive.
 // fallow-ignore-next-line complexity
 function CourseScheduleFields({
@@ -329,18 +245,16 @@ type CourseAction =
   | typeof updateProgramHeadCourseAction;
 
 function getInitialCourseFormValues(course?: ProgramHeadCourseItem): {
-  scopeType: "program-wide" | "major-specific";
   majorId: string;
   yearLevel: YearLevel | "";
   semester: AcademicSemester | "";
   term: AcademicTerm | "";
 } {
   if (!course) {
-    return { scopeType: "program-wide" as const, majorId: "", yearLevel: "", semester: "", term: "" };
+    return { majorId: "", yearLevel: "", semester: "", term: "" };
   }
 
   return {
-    scopeType: course.major_id ? ("major-specific" as const) : ("program-wide" as const),
     majorId: course.major_id ?? "",
     yearLevel: course.default_year_level ?? "",
     semester: course.default_semester ?? "",
@@ -351,7 +265,6 @@ function getInitialCourseFormValues(course?: ProgramHeadCourseItem): {
 function submitCourseForm({
   formData,
   programId,
-  scopeType,
   majorId,
   yearLevel,
   semester,
@@ -363,7 +276,6 @@ function submitCourseForm({
 }: {
   formData: FormData;
   programId: string;
-  scopeType: "program-wide" | "major-specific";
   majorId: string;
   yearLevel: YearLevel | "";
   semester: AcademicSemester | "";
@@ -373,17 +285,16 @@ function submitCourseForm({
   setError: (error: string | null) => void;
   onSuccess: () => void;
 }) {
+  const courseType = majorId ? "major-specific" : "program-wide";
+
   formData.set("course_scope", CourseScope.PROGRAM_SPECIFIC);
   formData.set("programId", programId);
-  formData.set("course_type", scopeType);
+  formData.set("course_type", courseType);
 
-  if (scopeType === "program-wide") {
-    formData.delete("major_id");
-  } else if (!majorId) {
-    setError("Select a major for a major-specific course.");
-    return;
-  } else {
+  if (majorId) {
     formData.set("major_id", majorId);
+  } else {
+    formData.delete("major_id");
   }
 
   formData.set("default_year_level", yearLevel);
@@ -419,7 +330,6 @@ function CourseFormDialog({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const initialValues = getInitialCourseFormValues(course);
-  const [scopeType, setScopeType] = useState<"program-wide" | "major-specific">(initialValues.scopeType);
   const [majorId, setMajorId] = useState(initialValues.majorId);
   const [yearLevel, setYearLevel] = useState<YearLevel | "">(initialValues.yearLevel);
   const [semester, setSemester] = useState<AcademicSemester | "">(initialValues.semester);
@@ -430,7 +340,6 @@ function CourseFormDialog({
     submitCourseForm({
       formData,
       programId,
-      scopeType,
       majorId,
       yearLevel,
       semester,
@@ -453,13 +362,28 @@ function CourseFormDialog({
           {mode === "edit" && course && <input type="hidden" name="id" value={course.id} />}
           <CourseDialogStatus error={error} />
 
-          <CourseScopeFields
-            majors={majors}
-            scopeType={scopeType}
-            course={course}
-            onScopeTypeChange={setScopeType}
-            onMajorChange={setMajorId}
-          />
+          {majors.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="major_id">
+                Major <span className="text-text-muted text-xs font-normal">(optional)</span>
+              </Label>
+              <Select value={majorId} onValueChange={(value) => setMajorId(value ?? "")}>
+                <SelectTrigger id="major_id">
+                  <SelectValue placeholder="None — Program-Wide">
+                    {majorId
+                      ? (majors.find((m) => m.id === majorId)?.name ?? "Select major")
+                      : "None — Program-Wide"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None — Program-Wide</SelectItem>
+                  {majors.map((major) => (
+                    <SelectItem key={major.id} value={major.id}>{major.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="code">Course Code</Label>

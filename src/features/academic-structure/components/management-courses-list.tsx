@@ -54,6 +54,7 @@ import {
   deleteCourseAction,
 } from "@/lib/actions/management-foundation-actions";
 import { getCourseScopeBadgeClass } from "@/features/academic-structure/lib/course-visuals";
+import { CourseEditDialog } from "@/features/academic-structure/components/course-edit-dialog";
 
 import type {
   ManagementCourseSummaryItem,
@@ -90,6 +91,8 @@ export function ManagementCoursesList({
   basePath = "/secretary/courses",
 }: ManagementCoursesListProps) {
   const showEvaluationCount = !basePath.startsWith("/dean/");
+  // Secretary edits in place via modal; dean keeps the dedicated edit page.
+  const editInModal = basePath === "/secretary/courses";
   // ---- Filter state -------------------------------------------------------
   const [scopeFilter, setScopeFilter] = useState<string>("__all__");
   const [programFilter, setProgramFilter] = useState<string>("__all__");
@@ -98,6 +101,7 @@ export function ManagementCoursesList({
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [courseToDelete, setCourseToDelete] = useState<{ id: string; code: string } | null>(null);
+  const [courseToEdit, setCourseToEdit] = useState<ManagementCourseSummaryItem | null>(null);
 
   // ---- Derived: majors for selected program --------------------------------
   const selectedProgram = programs.find((p) => p.id === programFilter);
@@ -380,9 +384,17 @@ export function ManagementCoursesList({
                         <span className="sr-only">Actions</span>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem render={<Link href={`${basePath}/${course.id}/edit`} />}>
-                          Edit
-                        </DropdownMenuItem>
+                        {editInModal ? (
+                          <DropdownMenuItem onClick={() => setCourseToEdit(course)}>
+                            Edit
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            render={<Link href={`${basePath}/${course.id}/edit`} />}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           disabled={isPending}
@@ -423,6 +435,18 @@ export function ManagementCoursesList({
         {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length} course
         {filteredCourses.length !== 1 ? "s" : ""}
       </p>
+
+      {editInModal && (
+        <CourseEditDialog
+          open={!!courseToEdit}
+          onOpenChange={(open) => {
+            if (!open) {
+              setCourseToEdit(null);
+            }
+          }}
+          course={courseToEdit}
+        />
+      )}
 
       <AlertDialog open={!!courseToDelete} onOpenChange={() => setCourseToDelete(null)}>
         <AlertDialogContent>

@@ -30,6 +30,14 @@ vi.mock("@/features/design-system/services/resolve-appearance-availability", () 
   resolveAppearanceAvailability: resolveAppearanceAvailabilityMock,
 }));
 
+const { resolveProgramHeadEntryMock } = vi.hoisted(() => ({
+  resolveProgramHeadEntryMock: vi.fn(),
+}));
+
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadEntry: resolveProgramHeadEntryMock,
+}));
+
 vi.mock("@/components/layout/app-shell", () => ({
   AppShell: ({
     children,
@@ -37,12 +45,14 @@ vi.mock("@/components/layout/app-shell", () => ({
     demoEnabled,
     demoUsers,
     appearanceEnabled,
+    programHeadPrograms,
   }: {
     children: React.ReactNode;
     user?: { name?: string | null; email?: string | null } | undefined;
     demoEnabled?: boolean;
     demoUsers?: readonly { email: string }[];
     appearanceEnabled?: boolean;
+    programHeadPrograms?: readonly { code: string }[];
   }) => (
     <div
       data-demo-enabled={String(demoEnabled)}
@@ -50,6 +60,7 @@ vi.mock("@/components/layout/app-shell", () => ({
       data-appearance-enabled={String(appearanceEnabled)}
       data-user-name={user?.name ?? ""}
       data-user-present={user ? "true" : "false"}
+      data-program-head-programs={programHeadPrograms?.length ?? 0}
     >
       {children}
     </div>
@@ -69,6 +80,7 @@ function deferred<T>() {
 
 describe("AuthenticatedAppShell", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     resolveAppearanceAvailabilityMock.mockReturnValue(false);
   });
 
@@ -140,6 +152,50 @@ describe("AuthenticatedAppShell", () => {
       "data-appearance-enabled",
       "true"
     );
+  });
+
+  it("forwards Program assignments to the shell for an active Program Head", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      email: "ph@example.com",
+      name: "Program Head",
+      roles: [ROLES.PROGRAM_HEAD],
+      activeRole: ROLES.PROGRAM_HEAD,
+    });
+    getDemoAuthConfigMock.mockReturnValue(null);
+    resolveProgramHeadEntryMock.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "user-1",
+        authorizedPrograms: [
+          { id: "program-1", code: "BEED", name: "Elementary Education" },
+          { id: "program-2", code: "BSED", name: "Secondary Education" },
+        ],
+      },
+    });
+
+    render(await AuthenticatedAppShell({ children: <div>Protected sentinel</div> }));
+
+    expect(screen.getByText("Protected sentinel").parentElement).toHaveAttribute(
+      "data-program-head-programs",
+      "2"
+    );
+  });
+
+  it("does not resolve Program assignments for other active roles", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      email: "faculty@example.com",
+      roles: [ROLES.FACULTY],
+      activeRole: ROLES.FACULTY,
+    });
+    getDemoAuthConfigMock.mockReturnValue(null);
+
+    render(await AuthenticatedAppShell({ children: <div>Protected sentinel</div> }));
+
+    expect(screen.getByText("Protected sentinel").parentElement).toHaveAttribute(
+      "data-program-head-programs",
+      "0"
+    );
+    expect(resolveProgramHeadEntryMock).not.toHaveBeenCalled();
   });
 
   it("passes a false demo capability when dedicated-demo configuration is invalid", async () => {

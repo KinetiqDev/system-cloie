@@ -1,24 +1,21 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import SelectedProgramLayout from "@/app/(app)/program-head/programs/[programId]/layout";
 
-const { notFoundMock, resolveContextMock, headerMock } = vi.hoisted(() => ({
+const { notFoundMock, resolveContextMock } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),
   resolveContextMock: vi.fn(),
-  headerMock: vi.fn(({ program }: { program: { code: string } }) => <div>{program.code}</div>),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveContextMock,
 }));
-vi.mock("@/features/auth/components/program-head-context-header", () => ({
-  ProgramHeadContextHeader: headerMock,
-}));
 
 describe("selected Program layout", () => {
-  it("passes the route Program to the server resolver and renders the selected context", async () => {
+  it("passes the route Program to the server resolver and renders the selected content", async () => {
     resolveContextMock.mockResolvedValue({
       success: true,
       data: {
@@ -27,30 +24,25 @@ describe("selected Program layout", () => {
         userId: "user-1",
       },
     });
-    const Layout = (await import("@/app/(app)/program-head/programs/[programId]/layout")).default;
 
-    const result = await Layout({
+    const result = await SelectedProgramLayout({
       params: Promise.resolve({ programId: "program-2" }),
       children: <div>Selected content</div>,
     });
 
     expect(resolveContextMock).toHaveBeenCalledWith("program-2");
     render(result);
-    expect(headerMock).toHaveBeenCalledWith(
-      expect.objectContaining({ program: expect.objectContaining({ code: "BSED" }) }),
-      undefined
-    );
-    expect(result).toBeDefined();
+    expect(screen.getByText("Selected content")).toBeInTheDocument();
   });
 
   it("does not render selected content when the server rejects the route Program", async () => {
-    headerMock.mockClear();
     resolveContextMock.mockResolvedValue({ success: false, error: "Program unavailable" });
-    const Layout = (await import("@/app/(app)/program-head/programs/[programId]/layout")).default;
 
     await expect(
-      Layout({ params: Promise.resolve({ programId: "unassigned" }), children: <div /> })
+      SelectedProgramLayout({
+        params: Promise.resolve({ programId: "unassigned" }),
+        children: <div />,
+      })
     ).rejects.toThrow("NOT_FOUND");
-    expect(headerMock).not.toHaveBeenCalled();
   });
 });

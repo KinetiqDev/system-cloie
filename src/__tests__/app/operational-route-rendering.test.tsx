@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import SecretaryDashboardLoading from "@/app/(app)/secretary/dashboard/loading";
 import SecretaryCoursesLoading from "@/app/(app)/secretary/courses/loading";
 import SecretaryCourseNewLoading from "@/app/(app)/secretary/courses/new/loading";
-import SecretaryCourseEditLoading from "@/app/(app)/secretary/courses/[id]/edit/loading";
 import SecretaryProgramsLoading from "@/app/(app)/secretary/programs/loading";
 import SecretaryProgramEditLoading from "@/app/(app)/secretary/programs/[id]/edit/loading";
 import SecretaryUsersLoading from "@/app/(app)/secretary/users/loading";
@@ -77,7 +76,6 @@ import DeanError from "@/app/(app)/dean/error";
 const loadingRoutes = [
   [SecretaryDashboardLoading, "Loading dashboard"],
   [SecretaryCoursesLoading, "Loading records"],
-  [SecretaryCourseEditLoading, "Loading form"],
   [SecretaryProgramsLoading, "Loading records"],
   [SecretaryProgramEditLoading, "Loading form"],
   [SecretaryCourseNewLoading, "Loading form"],

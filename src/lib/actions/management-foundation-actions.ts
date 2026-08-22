@@ -12,9 +12,11 @@ import {
 import {
   createCourse,
   deleteCourse,
+  getCourseEditData,
   toggleCourseActive,
   updateCourse,
 } from "@/features/academic-structure/services/manage-courses";
+import type { CourseEditData } from "@/features/academic-structure/services/manage-courses";
 import {
   assignRoleSchema,
   createExternalInviteDraftSchema,
@@ -131,6 +133,7 @@ export async function updateCourseAction(formData: FormData): Promise<ActionResu
     default_year_level: formData.get("default_year_level"),
     default_semester: formData.get("default_semester"),
     default_term: formData.get("default_term"),
+    updated_at: formData.get("updated_at"),
   });
 
   if (!parsed.success) {
@@ -188,6 +191,21 @@ export async function deleteCourseAction(id: string): Promise<ActionResult> {
 
   revalidateAdminFoundation();
   return { success: true };
+}
+
+export async function getCourseEditDataAction(
+  courseId: string
+): Promise<CourseEditData | null> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return null;
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return null;
+  }
+
+  return getCourseEditData(courseId);
 }
 
 export async function toggleUserActiveAction(
