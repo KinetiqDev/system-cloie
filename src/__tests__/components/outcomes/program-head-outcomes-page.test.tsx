@@ -102,9 +102,16 @@ describe("ProgramHeadOutcomesPage", () => {
 
     expect(screen.getByText("Total PLOs")).toBeInTheDocument();
     expect(screen.getByText("Mapped to CILOs")).toBeInTheDocument();
+    expect(screen.getByText("Unmapped")).toBeInTheDocument();
     expect(screen.getByText("3 CILOs mapped")).toBeInTheDocument();
     expect(screen.getByText("No mappings")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "CILO Mappings" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/outcomes/mapping"
+    );
+    expect(screen.getByText("Drag rows to reorder")).toBeInTheDocument();
   });
+
 
   it("archives a PLO only through the confirmation dialog", async () => {
     render(<ProgramHeadOutcomesPage plos={[makePLO()]} program={program} />);
