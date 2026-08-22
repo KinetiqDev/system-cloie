@@ -1930,7 +1930,7 @@ interface PloMultiSelectProps {
  * keyboard-accessible (real checkboxes), chips are individually removable,
  * and a Clear action empties the selection.
  */
-export function PloMultiSelect({
+function PloMultiSelect({
   options,
   selectedIds,
   questionKey,

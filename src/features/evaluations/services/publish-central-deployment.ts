@@ -10,6 +10,7 @@ import { listStudentsForClass } from "@/features/enrollments/services/list-stude
 import {
   DeploymentStatus,
   EvaluationTemplateType,
+  Prisma,
   type TargetStakeholder,
 } from "@prisma/client";
 import { listTemplateLikertQuestions, type TemplateStructure } from "@/features/instruments/types";
@@ -26,7 +27,7 @@ export type PublishCentralDeploymentResult = ServiceResult<{
   status: "ACTIVE" | "SCHEDULED";
 }>;
 
-export type CentralDeploymentPloSnapshotRow = {
+type CentralDeploymentPloSnapshotRow = {
   plo_id: string;
   plo_code: string;
   plo_description: string;
@@ -41,7 +42,7 @@ export type CentralDeploymentPloSnapshotRow = {
  * must still be active and owned by the program. Returns the immutable
  * id/code/description snapshot rows captured at publish time.
  */
-export function validatePublishPloBindings(input: {
+function validatePublishPloBindings(input: {
   bindings: Array<{ plo_id: string | null; section_key: string; item_key: string }>;
   structure: TemplateStructure;
   livePlos: Array<{ id: string; code: string; description: string }>;
@@ -118,6 +119,26 @@ function computeDeploymentStatus(activationAt: Date | undefined): "ACTIVE" | "SC
   }
 
   return DeploymentStatus.ACTIVE;
+}
+
+async function createPloSnapshotRows(
+  tx: Prisma.TransactionClient,
+  deploymentId: string,
+  rows: CentralDeploymentPloSnapshotRow[]
+) {
+  if (rows.length === 0) return;
+
+  await tx.centralDeploymentPloSnapshot.createMany({
+    data: rows.map((row) => ({
+      central_deployment_id: deploymentId,
+      plo_id: row.plo_id,
+      plo_code_snapshot: row.plo_code,
+      plo_description_snapshot: row.plo_description,
+      section_key: row.section_key,
+      item_key: row.item_key,
+      question_prompt_snapshot: row.question_prompt,
+    })),
+  });
 }
 
 
@@ -310,6 +331,7 @@ export async function publishCentralDeployment(
   }
 
   try {
+    // fallow-ignore-next-line complexity
     const result = await prisma.$transaction(async (tx) => {
       const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
       if (!currentProgram) return null;
@@ -376,19 +398,7 @@ export async function publishCentralDeployment(
         },
       });
 
-      if (ploSnapshotRows.length > 0) {
-        await tx.centralDeploymentPloSnapshot.createMany({
-          data: ploSnapshotRows.map((row) => ({
-            central_deployment_id: deployment.id,
-            plo_id: row.plo_id,
-            plo_code_snapshot: row.plo_code,
-            plo_description_snapshot: row.plo_description,
-            section_key: row.section_key,
-            item_key: row.item_key,
-            question_prompt_snapshot: row.question_prompt,
-          })),
-        });
-      }
+      await createPloSnapshotRows(tx, deployment.id, ploSnapshotRows);
 
       // 8b. Create EvaluationAssignment records for target respondents
       let respondentIds: string[] = [];

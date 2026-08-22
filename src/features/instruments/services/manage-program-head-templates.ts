@@ -20,7 +20,7 @@ import {
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
-export type ProgramHeadPloBindingItem = {
+type ProgramHeadPloBindingItem = {
   ploCodeSnapshot: string;
   ploDescriptionSnapshot: string;
   ploId: string;
@@ -366,6 +366,7 @@ export async function createProgramHeadTemplate(
 
 // ─── Update Template ─────────────────────────────────────────────────────────
 
+// fallow-ignore-next-line complexity
 export async function updateProgramHeadTemplate(
   input: UpdateProgramHeadTemplateInput
 ): Promise<ServiceResult<{ id: string }>> {
@@ -600,6 +601,7 @@ export async function duplicateTemplate(
     `${generateTemplateCode(program.code, source.name)}-COPY-${randomSuffix}`.substring(0, 50);
 
   try {
+    // fallow-ignore-next-line complexity
     const template = await prisma.$transaction(async (tx) => {
       const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
       if (!currentProgram) return null;

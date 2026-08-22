@@ -196,7 +196,7 @@ export const saveFacultyTemplateDraftSchema = z.object({
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────
 
-export type ProgramPloQuestionBindingInput = z.infer<typeof ploQuestionBindingSchema>;
+type ProgramPloQuestionBindingInput = z.infer<typeof ploQuestionBindingSchema>;
 export type CreateProgramHeadTemplateInput = {
   programId: string;
   name: string;
