@@ -148,6 +148,60 @@ export type Database = {
           },
         ]
       }
+      central_deployment_plo_snapshots: {
+        Row: {
+          central_deployment_id: string
+          created_at: string
+          id: string
+          item_key: string
+          plo_code_snapshot: string
+          plo_description_snapshot: string
+          plo_id: string | null
+          question_prompt_snapshot: string
+          section_key: string
+          updated_at: string
+        }
+        Insert: {
+          central_deployment_id: string
+          created_at?: string
+          id?: string
+          item_key: string
+          plo_code_snapshot: string
+          plo_description_snapshot: string
+          plo_id?: string | null
+          question_prompt_snapshot: string
+          section_key: string
+          updated_at: string
+        }
+        Update: {
+          central_deployment_id?: string
+          created_at?: string
+          id?: string
+          item_key?: string
+          plo_code_snapshot?: string
+          plo_description_snapshot?: string
+          plo_id?: string | null
+          question_prompt_snapshot?: string
+          section_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "central_deployment_plo_snapshots_central_deployment_id_fkey"
+            columns: ["central_deployment_id"]
+            isOneToOne: false
+            referencedRelation: "central_deployments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "central_deployment_plo_snapshots_plo_id_fkey"
+            columns: ["plo_id"]
+            isOneToOne: false
+            referencedRelation: "gos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       central_deployments: {
         Row: {
           activation_at: string | null
@@ -1394,6 +1448,60 @@ export type Database = {
           },
           {
             foreignKeyName: "instrument_template_cilo_question_bindings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "instrument_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instrument_template_plo_question_bindings: {
+        Row: {
+          created_at: string
+          id: string
+          item_key: string
+          plo_code_snapshot: string
+          plo_description_snapshot: string
+          plo_id: string | null
+          question_prompt_snapshot: string
+          section_key: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_key: string
+          plo_code_snapshot: string
+          plo_description_snapshot: string
+          plo_id?: string | null
+          question_prompt_snapshot: string
+          section_key: string
+          template_id: string
+          updated_at: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_key?: string
+          plo_code_snapshot?: string
+          plo_description_snapshot?: string
+          plo_id?: string | null
+          question_prompt_snapshot?: string
+          section_key?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instrument_template_plo_question_bindings_plo_id_fkey"
+            columns: ["plo_id"]
+            isOneToOne: false
+            referencedRelation: "gos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instrument_template_plo_question_bindings_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "instrument_templates"
