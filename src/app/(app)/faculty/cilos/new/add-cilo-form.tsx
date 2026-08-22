@@ -98,6 +98,9 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
   const [existingCilosLoading, setExistingCilosLoading] = useState(false);
   const [existingCilosError, setExistingCilosError] = useState<string | null>(null);
   const loadSeqRef = useRef(0);
+  // Latest selected course for async callbacks (post-save reload must only
+  // refresh the course that is still selected).
+  const selectedCourseRef = useRef<FacultyCourseWithCiloCount | null>(null);
 
   const loadExistingCilos = (courseId: string) => {
     const seq = ++loadSeqRef.current;
@@ -229,7 +232,9 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
       );
       setCiloList([]);
       setCiloText("");
-      loadExistingCilos(course.id);
+      if (selectedCourseRef.current?.id === course.id) {
+        loadExistingCilos(course.id);
+      }
     });
   };
 
@@ -270,6 +275,7 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
                 <Combobox
                   value={selectedCourse}
                   onValueChange={(value) => {
+                    selectedCourseRef.current = value;
                     setSelectedCourse(value);
                     setFieldErrors((current) => ({ ...current, course: undefined }));
                     if (value) {

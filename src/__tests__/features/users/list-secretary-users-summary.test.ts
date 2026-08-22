@@ -228,6 +228,35 @@ describe("listSecretaryUsersSummary", () => {
     });
   });
 
+  it("appends the legacy profile program to the label when it is not among canonical affiliations", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      {
+        id: "user-5",
+        name: "Mixed Corp",
+        email: "mixed@example.com",
+        is_active: true,
+        roles: [{ role: SystemRole.INDUSTRY_PARTNER }],
+        student_profile: null,
+        faculty_program_affiliations: [],
+        program_head_assignments: [],
+        industry_partner_profile: { program: { code: "BSCE" } },
+        industry_partner_program_affiliations: [{ program: { code: "BSIT" } }],
+      },
+    ] as never);
+
+    const result = await listSecretaryUsersSummary({
+      page: 1,
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: { users: [{ id: "user-5", programLabel: "BSIT, BSCE" }] },
+    });
+  });
+
   it("falls back to the legacy industry partner profile program when no affiliations exist", async () => {
     const { prisma } = await import("@/lib/db/prisma");
     vi.mocked(prisma.user.findMany).mockResolvedValue([

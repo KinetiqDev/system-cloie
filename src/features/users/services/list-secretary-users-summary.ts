@@ -81,12 +81,14 @@ function resolveProgramLabel(user: PrismaUserPageRow): string {
   }
 
   const ipAffCodes = user.industry_partner_program_affiliations.map((a) => a.program.code);
+  const legacyIpCode = user.industry_partner_profile?.program?.code;
+  // The program filter matches the legacy profile field too, so a partner whose
+  // canonical affiliations changed can match a filter their label would hide.
+  if (legacyIpCode && !ipAffCodes.includes(legacyIpCode)) {
+    ipAffCodes.push(legacyIpCode);
+  }
   if (ipAffCodes.length > 0) {
     return ipAffCodes.join(", ");
-  }
-
-  if (user.industry_partner_profile?.program) {
-    return user.industry_partner_profile.program.code;
   }
 
   return "—";

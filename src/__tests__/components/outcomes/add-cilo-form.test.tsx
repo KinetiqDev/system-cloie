@@ -212,6 +212,32 @@ describe("AddCiloForm", () => {
     );
   });
 
+  it("skips the post-save CILO reload when the course changed mid-save", async () => {
+    const { promise, resolve } = Promise.withResolvers<{ success: boolean }>();
+    saveActionMock.mockReturnValue(promise);
+    renderForm();
+
+    await selectCourse("CS101");
+    await screen.findByText("Existing CILOs (0)");
+
+    fireEvent.change(screen.getByLabelText("CILO Description"), {
+      target: { value: "Design instruction" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
+
+    // Switch courses while the save is still pending.
+    await selectCourse("GE101");
+
+    resolve({ success: true });
+    await waitFor(() => expect(saveActionMock).toHaveBeenCalledTimes(1));
+
+    // CS101's load on selection plus GE101's load on selection only — the
+    // pending save must not trigger a reload of the deselected course.
+    expect(loadCilosActionMock).toHaveBeenCalledTimes(2);
+    expect(loadCilosActionMock).toHaveBeenLastCalledWith("course-2");
+  });
+
   it("disables the full-set save when existing CILOs fail to load", async () => {
     loadCilosActionMock.mockResolvedValue({
       success: false,
