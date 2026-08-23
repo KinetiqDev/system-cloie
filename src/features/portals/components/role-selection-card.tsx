@@ -82,7 +82,7 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
         <Button 
           onClick={() => setIsDialogOpen(true)}
           variant="outline"
-          className="w-full min-w-0 shadow-sm whitespace-normal text-wrap break-words text-center [&_img]:shrink-0"
+          className="h-auto min-h-8 w-full min-w-0 py-1.5 shadow-sm whitespace-normal text-wrap break-words text-center [&_img]:shrink-0"
         >
           <img
               src="/logos/google-logo.svg" 
