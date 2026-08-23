@@ -128,6 +128,17 @@ export function buildProgramHeadAnalyticsPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "analytics");
 }
 
+export function buildProgramHeadResponsesProgramWideResponsePath(
+  programId: string,
+  deploymentId: string,
+  responseId: string
+): string {
+  return buildProgramHeadProgramPath(
+    programId,
+    `responses/program-wide/${encodeURIComponent(deploymentId)}/responses/${encodeURIComponent(responseId)}`
+  );
+}
+
 export function buildProgramHeadReportsPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "reports");
 }

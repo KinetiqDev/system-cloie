@@ -18,7 +18,7 @@ import type { OutcomeItemRatingRow } from "./cilo";
  * pool only compatible-scale ratings, while `ratingCount` counts every valid
  * contributing rating.
  */
-type PloMetric = {
+export type PloMetric = {
   ploId: string;
   ploCode: string;
   ploDescription: string;
