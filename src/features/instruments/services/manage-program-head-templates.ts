@@ -191,7 +191,7 @@ function slugify(text: string): string {
     .replace(/^-|-$/g, "");
 }
 
-function generateTemplateCode(programCode: string, templateName: string): string {
+export function generateTemplateCode(programCode: string, templateName: string): string {
   const slug = slugify(templateName).toUpperCase().replace(/-/g, "_");
   return `${programCode}_${slug}`.substring(0, 50);
 }
@@ -356,7 +356,7 @@ export async function createProgramHeadTemplate(
     if (isUniqueConstraintError(error)) {
       return {
         success: false,
-        error: `A template with code "${code}" already exists. Try a different name.`,
+        error: `A template named "${input.name}" already exists for this program. Try a different name.`,
       };
     }
 
