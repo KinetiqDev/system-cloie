@@ -10,6 +10,7 @@ import { buildParticipationSummary } from "@/features/analytics/aggregators/part
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
 import { getSnapshotSectionItems, isSnapshotSection } from "@/features/analytics/services/snapshot-structure";
 import { loadRespondentIdentityContexts } from "./respondent-context";
+import { buildQualitativeSummary } from "./qualitative-summary";
 import { buildPeriodLabel } from "./period-label";
 import type { ProgramHeadCentralEvaluationDetail, ProgramHeadCentralQuestionResult, ProgramHeadRespondentRow, ProgramWidePloBinding } from "../types";
 
@@ -169,14 +170,7 @@ export async function getProgramHeadCentralEvaluationDetail(
   );
   const evaluationMean = scaleGroups.length === 1 ? scaleGroups[0].metric.mean : null;
 
-  const qualitativeAnswers = submittedResponses.flatMap((response) =>
-    response.qual_items.filter((item) => item.text_content.trim().length > 0)
-  );
-  const qualitativeRespondentIds = new Set(
-    submittedResponses
-      .filter((response) => response.qual_items.some((item) => item.text_content.trim().length > 0))
-      .map((response) => response.respondent_id)
-  );
+  const qualitative = buildQualitativeSummary(submittedResponses, snapshotItems);
 
   const identityContexts = await loadRespondentIdentityContexts(
     submittedRespondentIds,
@@ -228,12 +222,13 @@ export async function getProgramHeadCentralEvaluationDetail(
       completionRate: participation.completionRate,
       evaluationMean,
       evaluationScaleCount: scaleGroups.length,
-      qualitativeAnswerCount: qualitativeAnswers.length,
-      qualitativeRespondentCount: qualitativeRespondentIds.size,
+      qualitativeAnswerCount: qualitative.answerCount,
+      qualitativeRespondentCount: qualitative.respondentCount,
     },
     participation,
     ploResults,
     questionResults,
+    qualitative,
     respondents,
   };
 }

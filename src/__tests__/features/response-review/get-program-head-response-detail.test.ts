@@ -155,11 +155,20 @@ describe("getProgramHeadResponseDetail", () => {
     responseFindFirstMock.mockResolvedValue(null);
 
     await expect(getProgramHeadResponseDetail("prog-beed", "nonexistent")).resolves.toBeNull();
+    // Program scope is enforced in the where clause itself: a guessed or
+    // cross-Program response ID can never resolve because the assignment
+    // must belong to the selected Program (§29, §57).
     expect(responseFindFirstMock).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           id: "nonexistent",
           status: "SUBMITTED",
+          assignment: {
+            OR: [
+              { course_bound: { course_assignment: { program_id: "prog-beed" } } },
+              { central_deployment: { program_id: "prog-beed" } },
+            ],
+          },
         }),
       })
     );

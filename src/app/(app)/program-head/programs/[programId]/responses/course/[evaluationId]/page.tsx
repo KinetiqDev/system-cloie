@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { CourseEvaluationDetail } from "@/features/response-review/components/course-evaluation-detail";
 import { getProgramHeadCourseEvaluationDetail } from "@/features/response-review/services/get-program-head-course-evaluation-detail";
-import { buildProgramHeadResponsesCourseResponsePath } from "@/lib/constants/program-head-routes";
+import {
+  buildProgramHeadAnalyticsPath,
+  buildProgramHeadResponsesCourseResponsePath,
+} from "@/lib/constants/program-head-routes";
 
 export default async function CourseEvaluationDetailPage({
   params,
@@ -18,6 +21,7 @@ export default async function CourseEvaluationDetailPage({
   return (
     <CourseEvaluationDetail
       detail={detail}
+      analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
       responseHref={(responseId: string) =>
         buildProgramHeadResponsesCourseResponsePath(programId, evaluationId, responseId)
       }

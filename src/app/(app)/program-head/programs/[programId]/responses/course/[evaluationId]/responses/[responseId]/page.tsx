@@ -4,7 +4,10 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
-import { buildProgramHeadResponsesCourseDetailPath } from "@/lib/constants/program-head-routes";
+import {
+  buildProgramHeadAnalyticsPath,
+  buildProgramHeadResponsesCourseDetailPath,
+} from "@/lib/constants/program-head-routes";
 
 export default async function CourseResponseDetailPage({
   params,
@@ -30,6 +33,7 @@ export default async function CourseResponseDetailPage({
       <ResponseDetail
         response={response}
         evaluationHref={buildProgramHeadResponsesCourseDetailPath(programId, evaluationId)}
+        analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
       />
     </div>
   );

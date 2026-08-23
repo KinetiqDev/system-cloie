@@ -11,6 +11,7 @@ import type {
   QuestionMetric,
 } from "@/features/analytics/aggregators/types";
 import type { PloMetric } from "@/features/analytics/aggregators/plo";
+import type { WordCloudToken } from "@/features/analytics/types";
 
 // ---------------------------------------------------------------------------
 // Program Head identified response review (spec §25–§27, §31, §40)
@@ -121,19 +122,35 @@ export type ProgramHeadSubmittedResponseDetail = {
     alumniContext?: RespondentAlumniContext;
     industryContext?: RespondentIndustryContext;
   };
-  evaluation: {
-    id: string;
-    type: "COURSE_BOUND" | "PROGRAM_WIDE";
-    title: string;
-    context: CourseBoundResponseContext | ProgramWideResponseContext;
-  };
+  evaluation:
+    | {
+        id: string;
+        type: "COURSE_BOUND";
+        title: string;
+        context: CourseBoundResponseContext;
+      }
+    | {
+        id: string;
+        type: "PROGRAM_WIDE";
+        title: string;
+        context: ProgramWideResponseContext;
+      };
   quantitativeMean: number | null;
   sections: SubmittedResponseSection[];
 };
 
+/** Qualitative evidence summary for an evaluation detail (§25.3, §26). */
+export type QualitativeSummary = {
+  answerCount: number;
+  respondentCount: number;
+  /** Non-empty answers grouped by prompt, ordered by count descending. */
+  prompts: Array<{ prompt: string; answerCount: number }>;
+  /** Weighted top terms from the submitted qualitative texts (§20.5). */
+  topTerms: WordCloudToken[];
+};
+
 /** One identified submitted respondent row (§25.5, §26). */
-export type ProgramHeadRespondentRow = {
-  responseId: string;
+export type ProgramHeadRespondentRow = {  responseId: string;
   name: string;
   stakeholder: TargetStakeholder;
   majorLabel: string | null;
@@ -174,6 +191,7 @@ export type ProgramHeadCourseEvaluationDetail = {
   participation: ParticipationSummary;
   ciloResults: CiloMetric[];
   questionResults: QuestionMetric[];
+  qualitative: QualitativeSummary;
   respondents: ProgramHeadRespondentRow[];
 };
 
@@ -210,5 +228,6 @@ export type ProgramHeadCentralEvaluationDetail = {
   /** Direct PLO results grouped by `plo_id ?? plo_code_snapshot` (§26). */
   ploResults: PloMetric[];
   questionResults: ProgramHeadCentralQuestionResult[];
+  qualitative: QualitativeSummary;
   respondents: ProgramHeadRespondentRow[];
 };

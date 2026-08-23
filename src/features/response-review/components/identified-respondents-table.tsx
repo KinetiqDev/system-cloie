@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatMean } from "./format";
 import type { ProgramHeadRespondentRow } from "../types";
 
 type IdentifiedRespondentsTableProps = {
@@ -14,10 +15,6 @@ type IdentifiedRespondentsTableProps = {
   /** Build the response-detail path for one submitted response. */
   responseHref: (responseId: string) => string;
 };
-
-function formatMean(value: number | null): string {
-  return value === null ? "N/A" : value.toFixed(2);
-}
 
 export function IdentifiedRespondentsTable({
   respondents,
@@ -64,7 +61,7 @@ export function IdentifiedRespondentsTable({
                 <TableCell>{row.yearLevel ?? "—"}</TableCell>
                 <TableCell>{row.section ?? "—"}</TableCell>
                 <TableCell>{row.submittedAt.toLocaleString()}</TableCell>
-                <TableCell className="text-right">{formatMean(row.quantitativeMean)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatMean(row.quantitativeMean)}</TableCell>
               </TableRow>
             ))
           )}

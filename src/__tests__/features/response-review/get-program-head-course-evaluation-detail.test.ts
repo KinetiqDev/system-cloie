@@ -234,6 +234,11 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     expect(result!.summary.qualitativeAnswerCount).toBe(1);
     expect(result!.summary.qualitativeRespondentCount).toBe(1);
     expect(result!.summary.ciloCount).toBe(1);
+    // Qualitative summary (§25.3)
+    expect(result!.qualitative.answerCount).toBe(1);
+    expect(result!.qualitative.respondentCount).toBe(1);
+    expect(result!.qualitative.prompts).toEqual([{ prompt: "Remarks", answerCount: 1 }]);
+    expect(result!.qualitative.topTerms.length).toBeGreaterThan(0);
   });
 
   it("never fetches IN_PROGRESS response bodies", async () => {

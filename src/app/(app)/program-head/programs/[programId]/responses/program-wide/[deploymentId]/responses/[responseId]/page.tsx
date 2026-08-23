@@ -4,7 +4,10 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
-import { buildProgramHeadResponsesProgramWideDetailPath } from "@/lib/constants/program-head-routes";
+import {
+  buildProgramHeadAnalyticsPath,
+  buildProgramHeadResponsesProgramWideDetailPath,
+} from "@/lib/constants/program-head-routes";
 
 export default async function CentralResponseDetailPage({
   params,
@@ -32,6 +35,7 @@ export default async function CentralResponseDetailPage({
       <ResponseDetail
         response={response}
         evaluationHref={buildProgramHeadResponsesProgramWideDetailPath(programId, deploymentId)}
+        analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
       />
     </div>
   );

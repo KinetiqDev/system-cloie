@@ -9,6 +9,7 @@ import { buildParticipationSummary } from "@/features/analytics/aggregators/part
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
 import { getSnapshotSectionItems, isSnapshotSection } from "@/features/analytics/services/snapshot-structure";
 import { loadCiloMappings } from "./cilo-mappings";
+import { buildQualitativeSummary } from "./qualitative-summary";
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
 import type { ProgramHeadCourseEvaluationDetail, ProgramHeadRespondentRow } from "../types";
@@ -149,14 +150,7 @@ export async function getProgramHeadCourseEvaluationDetail(
   );
   const evaluationMean = scaleGroups.length === 1 ? scaleGroups[0].metric.mean : null;
 
-  const qualitativeAnswers = submittedResponses.flatMap((response) =>
-    response.qual_items.filter((item) => item.text_content.trim().length > 0)
-  );
-  const qualitativeRespondentIds = new Set(
-    submittedResponses
-      .filter((response) => response.qual_items.some((item) => item.text_content.trim().length > 0))
-      .map((response) => response.respondent_id)
-  );
+  const qualitative = buildQualitativeSummary(submittedResponses, snapshotItems);
 
   const identityContexts = await loadRespondentIdentityContexts(
     submittedRespondentIds,
@@ -212,12 +206,13 @@ export async function getProgramHeadCourseEvaluationDetail(
       evaluationMean,
       evaluationScaleCount: scaleGroups.length,
       ciloCount: ciloResults.length,
-      qualitativeAnswerCount: qualitativeAnswers.length,
-      qualitativeRespondentCount: qualitativeRespondentIds.size,
+      qualitativeAnswerCount: qualitative.answerCount,
+      qualitativeRespondentCount: qualitative.respondentCount,
     },
     participation,
     ciloResults,
     questionResults,
+    qualitative,
     respondents,
   };
 }

@@ -1,24 +1,18 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type {
-  CourseBoundResponseContext,
-  ProgramHeadSubmittedResponseDetail,
-  ProgramWideResponseContext,
-  QuantitativeSubmittedAnswer,
-} from "../types";
+import { formatMean } from "./format";
+import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
 
 type ResponseDetailProps = {
   response: ProgramHeadSubmittedResponseDetail;
   /** Link back to the evaluation detail page this response belongs to. */
   evaluationHref: string;
+  /** Link to the Analytics tab for upward trace (§27.6). */
+  analyticsHref: string;
 };
 
-function formatMean(value: number | null): string {
-  return value === null ? "N/A" : value.toFixed(2);
-}
-
-export function ResponseDetail({ response, evaluationHref }: ResponseDetailProps) {
+export function ResponseDetail({ response, evaluationHref, analyticsHref }: ResponseDetailProps) {
   const { respondent, evaluation } = response;
 
   return (
@@ -41,23 +35,31 @@ export function ResponseDetail({ response, evaluationHref }: ResponseDetailProps
           </p>
           <p>
             <span className="text-text-muted">Response mean: </span>
-            <span className="font-semibold">{formatMean(response.quantitativeMean)}</span>
+            <span className="font-semibold tabular-nums">{formatMean(response.quantitativeMean)}</span>
           </p>
           {evaluation.type === "COURSE_BOUND" ? (
-            <CourseBoundContext context={evaluation.context as CourseBoundResponseContext} />
+            <CourseBoundContext context={evaluation.context} />
           ) : (
-            <ProgramWideContext context={evaluation.context as ProgramWideResponseContext} />
+            <ProgramWideContext context={evaluation.context} />
           )}
         </CardContent>
       </Card>
 
       {/* Upward trace (§27.6) */}
-      <Link
-        href={evaluationHref}
-        className="text-link text-sm underline-offset-4 hover:underline"
-      >
-        View evaluation results
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={evaluationHref}
+          className="text-link text-sm underline-offset-4 hover:underline"
+        >
+          View evaluation results
+        </Link>
+        <Link
+          href={analyticsHref}
+          className="text-link text-sm underline-offset-4 hover:underline"
+        >
+          Open Analytics
+        </Link>
+      </div>
 
       {/* Per-section answers (§27.4–§27.5) */}
       <section className="space-y-3">
@@ -89,14 +91,14 @@ function QuantitativeAnswerCard({ item }: { item: QuantitativeSubmittedAnswer })
     <div className="space-y-1">
       <p className="text-sm font-semibold">{item.prompt}</p>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-lg font-bold">{item.rating}</span>
+        <span className="text-lg font-bold tabular-nums">{item.rating}</span>
         {item.scaleLabel && <span className="text-text-muted text-sm">({item.scaleLabel})</span>}
         {binding.type === "CILO" && (
           <Badge variant="outline" className="border-info/30 bg-info-soft text-info">
             CILO: {binding.ciloLabel}
             {binding.ploMappings.length > 0 && (
               <span className="text-text-muted ml-1">
-                → {binding.ploMappings.map((m) => m.ploCode).join(", ")}
+                → {binding.ploMappings.map((m) => `${m.ploCode} (${m.manifestation})`).join(", ")}
               </span>
             )}
           </Badge>
@@ -125,7 +127,7 @@ function QualitativeAnswerCard({ item }: { item: { promptKey: string; prompt: st
   );
 }
 
-function CourseBoundContext({ context }: { context: CourseBoundResponseContext }) {
+function CourseBoundContext({ context }: { context: { courseCode: string; courseTitle: string; facultyName: string | null; periodLabel: string } }) {
   return (
     <>
       <p>
@@ -146,7 +148,7 @@ function CourseBoundContext({ context }: { context: CourseBoundResponseContext }
   );
 }
 
-function ProgramWideContext({ context }: { context: ProgramWideResponseContext }) {
+function ProgramWideContext({ context }: { context: { stakeholder: string; targetProgramLabel: string | null; periodLabel: string } }) {
   return (
     <>
       <p>

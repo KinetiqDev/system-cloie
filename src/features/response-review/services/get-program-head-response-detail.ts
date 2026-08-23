@@ -75,17 +75,29 @@ type CentralEvalShape = {
   plo_snapshots: PloSnapshotShape[];
 };
 
-type EvaluationProjection = {
-  type: "COURSE_BOUND" | "PROGRAM_WIDE";
-  id: string;
-  title: string;
-  context: CourseBoundResponseContext | ProgramWideResponseContext;
-  snapshot: unknown;
-  bindings: CourseBoundCiloBinding[];
-  stakeholder: TargetStakeholder;
-  termInstanceId: string;
-  ploSnapshots: PloSnapshotShape[];
-};
+type EvaluationProjection =
+  | {
+      type: "COURSE_BOUND";
+      id: string;
+      title: string;
+      context: CourseBoundResponseContext;
+      snapshot: unknown;
+      bindings: CourseBoundCiloBinding[];
+      stakeholder: TargetStakeholder;
+      termInstanceId: string;
+      ploSnapshots: PloSnapshotShape[];
+    }
+  | {
+      type: "PROGRAM_WIDE";
+      id: string;
+      title: string;
+      context: ProgramWideResponseContext;
+      snapshot: unknown;
+      bindings: CourseBoundCiloBinding[];
+      stakeholder: TargetStakeholder;
+      termInstanceId: string;
+      ploSnapshots: PloSnapshotShape[];
+    };
 
 export async function getProgramHeadResponseDetail(
   programId: string,
@@ -264,12 +276,20 @@ export async function getProgramHeadResponseDetail(
       stakeholder: evaluation.stakeholder,
       ...identityFragment(identityContexts.get(response.respondent.id), evaluation.stakeholder),
     },
-    evaluation: {
-      id: evaluation.id,
-      type: evaluation.type,
-      title: evaluation.title,
-      context: evaluation.context,
-    },
+    evaluation:
+      evaluation.type === "COURSE_BOUND"
+        ? {
+            id: evaluation.id,
+            type: "COURSE_BOUND",
+            title: evaluation.title,
+            context: evaluation.context,
+          }
+        : {
+            id: evaluation.id,
+            type: "PROGRAM_WIDE",
+            title: evaluation.title,
+            context: evaluation.context,
+          },
     quantitativeMean,
     sections,
   };
