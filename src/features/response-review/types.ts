@@ -52,20 +52,20 @@ export type QuantitativeSubmittedAnswer = {
   binding: SubmittedAnswerBinding;
 };
 
-export type QualitativeSubmittedAnswer = {
+type QualitativeSubmittedAnswer = {
   kind: "qualitative";
   promptKey: string;
   prompt: string;
   text: string;
 };
 
-export type SubmittedResponseSection = {
+type SubmittedResponseSection = {
   key: string;
   title: string;
   items: Array<QuantitativeSubmittedAnswer | QualitativeSubmittedAnswer>;
 };
 
-export type RespondentStudentContext = {
+type RespondentStudentContext = {
   programId: string;
   programLabel: string;
   majorId: string | null;
@@ -74,13 +74,13 @@ export type RespondentStudentContext = {
   section: StudentSection | null;
 };
 
-export type RespondentAlumniContext = {
+type RespondentAlumniContext = {
   programLabel: string | null;
   majorLabel: string | null;
   graduationYear: number;
 };
 
-export type RespondentIndustryContext = {
+type RespondentIndustryContext = {
   companyName: string;
   position: string | null;
 };
