@@ -7,6 +7,7 @@ import {
   resolveProgramHeadContext,
 } from "@/features/auth/services/resolve-program-head-context";
 import {
+  generateTemplateCode,
   normalizePloQuestionBindings,
   syncTemplatePloBindings,
 } from "./manage-program-head-templates";
@@ -23,9 +24,26 @@ interface CreateBaselineCopyInput {
   ploBindings: Array<{ ploId: string; itemKey: string; sectionKey: string }>;
 }
 
-function generateProgramTemplateCode(programCode: string, baseCode: string): string {
-  // Generate code like "BSIT-CILO-EVAL" from program code + original code
-  return `${programCode}-${baseCode}`;
+/**
+ * Resolves a globally-unique template code derived from the copy's name. The
+ * bare name-derived code is preferred; when it is already taken (two different
+ * names can slugify to the same code), a numeric suffix is appended.
+ */
+async function resolveAvailableTemplateCode(
+  programCode: string,
+  templateName: string
+): Promise<string> {
+  const baseCode = generateTemplateCode(programCode, templateName);
+  let candidate = baseCode;
+  for (let attempt = 2; ; attempt++) {
+    const existing = await prisma.instrumentTemplate.findUnique({
+      where: { code: candidate },
+      select: { id: true },
+    });
+    if (!existing) return candidate;
+    const suffix = `_${attempt}`;
+    candidate = `${baseCode.slice(0, 50 - suffix.length)}${suffix}`;
+  }
 }
 
 export async function createBaselineCopy(
@@ -45,7 +63,6 @@ export async function createBaselineCopy(
     where: { id: input.baselineId },
     select: {
       id: true,
-      code: true,
       name: true,
       description: true,
       template_type: true,
@@ -78,7 +95,24 @@ export async function createBaselineCopy(
     return { success: false, error: "Assigned program not found." };
   }
 
-  const code = generateProgramTemplateCode(program.code, baseline.code);
+  // Reject a same-name copy before generating a code: code uniqueness was
+  // previously derived from the source baseline (program code + baseline code),
+  // so a second copy of the same baseline always collided regardless of the
+  // name the user entered. The code now derives from the user's name, and a
+  // duplicate name within the program is reported plainly.
+  const nameConflict = await prisma.instrumentTemplate.findFirst({
+    where: { program_id: programId, name: input.customName },
+    select: { id: true },
+  });
+
+  if (nameConflict) {
+    return {
+      success: false,
+      error: `A template named "${input.customName}" already exists for this program. Try a different name.`,
+    };
+  }
+
+  const code = await resolveAvailableTemplateCode(program.code, input.customName);
 
   // Validate question–PLO bindings against the program's active PLO catalog.
   // Empty bindings are allowed: drafts copy without bindings, and full Likert
@@ -144,7 +178,7 @@ export async function createBaselineCopy(
     if (isUniqueConstraintError(error)) {
       return {
         success: false,
-        error: `A template with code "${code}" already exists. Try a different name.`,
+        error: `A template named "${input.customName}" already exists for this program. Try a different name.`,
       };
     }
 

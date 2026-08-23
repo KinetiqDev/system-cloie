@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { contextMock, assignmentMock, transactionMock, templateCreateMock, versionCreateMock, programMock, ploFindManyMock, bindingDeleteManyMock, bindingCreateManyMock } = vi.hoisted(() => ({
+const { contextMock, assignmentMock, transactionMock, templateCreateMock, versionCreateMock, programMock, ploFindManyMock, bindingDeleteManyMock, bindingCreateManyMock, templateFindUniqueMock, templateFindFirstMock } = vi.hoisted(() => ({
   contextMock: vi.fn(),
   assignmentMock: vi.fn(),
   transactionMock: vi.fn(),
@@ -10,7 +10,21 @@ const { contextMock, assignmentMock, transactionMock, templateCreateMock, versio
   ploFindManyMock: vi.fn(),
   bindingDeleteManyMock: vi.fn(),
   bindingCreateManyMock: vi.fn(),
+  templateFindUniqueMock: vi.fn(),
+  templateFindFirstMock: vi.fn(),
 }));
+
+const BASELINE_ROW = {
+  id: "baseline-1",
+  code: "CENTRAL",
+  name: "Central",
+  description: null,
+  template_type: "PROGRAM_WIDE",
+  is_faculty_accessible: false,
+  structure: [],
+  faculty_owner_id: null,
+  program_id: null,
+};
 
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: contextMock,
@@ -18,17 +32,11 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 }));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    instrumentTemplate: { findUnique: vi.fn().mockResolvedValue({
-      id: "baseline-1",
-      code: "CENTRAL",
-      name: "Central",
-      description: null,
-      template_type: "PROGRAM_WIDE",
-      is_faculty_accessible: false,
-      structure: [],
-      faculty_owner_id: null,
-      program_id: null,
-    }) },
+    instrumentTemplate: {
+      // Baseline lookup is by id; code-collision lookup is by code.
+      findUnique: templateFindUniqueMock,
+      findFirst: templateFindFirstMock,
+    },
     program: { findUnique: programMock },
     pLO: { findMany: ploFindManyMock },
     $transaction: transactionMock,
@@ -51,6 +59,10 @@ describe("createBaselineCopy", () => {
     });
     assignmentMock.mockResolvedValue({ id: "program-2", code: "BSED", name: "BSED" });
     programMock.mockResolvedValue({ code: "BSED" });
+    templateFindUniqueMock.mockImplementation(({ where }: { where: { id?: string; code?: string } }) =>
+      where.id ? Promise.resolve(BASELINE_ROW) : Promise.resolve(null)
+    );
+    templateFindFirstMock.mockResolvedValue(null);
     transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
       callback({
         instrumentTemplate: { create: templateCreateMock.mockResolvedValue({ id: "copy-1" }) },
@@ -108,6 +120,7 @@ describe("createBaselineCopy", () => {
     expect(result).toEqual({ success: true, data: { id: "copy-1" } });
     expect(templateCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
+        code: "BSED_BSED_COPY",
         program_id: "program-2",
         source_template_id: "baseline-1",
         structure: reorderedStructure,
@@ -240,5 +253,66 @@ describe("createBaselineCopy", () => {
       error: "PLOs can only be assigned to Likert questions.",
     });
     expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("allows a second copy of the same baseline when the name differs", async () => {
+    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
+    const result = await createBaselineCopy({
+      programId: "program-2",
+      baselineId: "baseline-1",
+      customName: "BSED Copy 2",
+      structure: [],
+      ploBindings: [],
+    });
+
+    expect(result).toEqual({ success: true, data: { id: "copy-1" } });
+    expect(templateCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        code: "BSED_BSED_COPY_2",
+      }),
+    });
+  });
+
+  it("rejects a name that already exists in the program with a plain message", async () => {
+    templateFindFirstMock.mockResolvedValue({ id: "existing-copy" });
+
+    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
+    const result = await createBaselineCopy({
+      programId: "program-2",
+      baselineId: "baseline-1",
+      customName: "BSED Copy",
+      structure: [],
+      ploBindings: [],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'A template named "BSED Copy" already exists for this program. Try a different name.',
+    });
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("suffixes the code when the name-derived code is already taken", async () => {
+    templateFindUniqueMock.mockImplementation(({ where }: { where: { id?: string; code?: string } }) => {
+      if (where.id) return Promise.resolve(BASELINE_ROW);
+      // The first candidate is taken; the suffixed one is free.
+      return Promise.resolve(where.code === "BSED_BSED_COPY" ? { id: "taken" } : null);
+    });
+
+    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
+    const result = await createBaselineCopy({
+      programId: "program-2",
+      baselineId: "baseline-1",
+      customName: "BSED Copy",
+      structure: [],
+      ploBindings: [],
+    });
+
+    expect(result).toEqual({ success: true, data: { id: "copy-1" } });
+    expect(templateCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        code: "BSED_BSED_COPY_2",
+      }),
+    });
   });
 });
