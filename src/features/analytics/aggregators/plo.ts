@@ -31,6 +31,11 @@ export type PloMetric = {
 
   /** Distinct submitted responses behind the valid ratings. */
   responseCount: number;
+  /** Distinct evaluations/deployments behind the valid ratings (§13.8 details). */
+  evaluationCount: number;
+
+  /** Distinct bound questions behind the valid ratings (§13.8 details). */
+  questionCount: number;
 
   /** One metric per compatible scale identity; length 1 mirrors `mean`. */
   scaleGroups: QuantitativeMetric[];
@@ -56,6 +61,8 @@ type PloAggregate = {
   responseIds: Set<string>;
   excludedRatingCount: number;
   cilos: Map<string, string>;
+  evaluationIds: Set<string>;
+  questionKeys: Set<string>;
 };
 
 /** One rating reaching one PLO through one binding row. */
@@ -78,6 +85,8 @@ function getOrCreateAggregate(
       responseIds: new Set(),
       excludedRatingCount: 0,
       cilos: new Map(),
+      evaluationIds: new Set(),
+      questionKeys: new Set(),
     };
     aggregates.set(binding.ploId, aggregate);
   }
@@ -89,7 +98,9 @@ function accumulate(
   value: number,
   responseId: string,
   scale: ScaleIdentity | null,
-  cilo: { id: string; label: string } | null
+  cilo: { id: string; label: string } | null,
+  questionKey: string,
+  evaluationId?: string
 ): void {
   if (cilo) {
     aggregate.cilos.set(cilo.id, cilo.label);
@@ -106,6 +117,10 @@ function accumulate(
   }
   group.ratings.push({ value, responseId });
   aggregate.responseIds.add(responseId);
+  aggregate.questionKeys.add(questionKey);
+  if (evaluationId) {
+    aggregate.evaluationIds.add(evaluationId);
+  }
 }
 
 function finalize(aggregates: Map<string, PloAggregate>): PloMetric[] {
@@ -122,6 +137,8 @@ function finalize(aggregates: Map<string, PloAggregate>): PloMetric[] {
         mean: scaleGroups.length === 1 ? scaleGroups[0].mean : null,
         ratingCount,
         responseCount: aggregate.responseIds.size,
+        evaluationCount: aggregate.evaluationIds.size,
+        questionCount: aggregate.questionKeys.size,
         scaleGroups,
         spansMultipleScales: scaleGroups.length > 1,
         excludedRatingCount: aggregate.excludedRatingCount,
@@ -163,7 +180,7 @@ export function buildCourseDerivedPloMetrics(rows: OutcomeItemRatingRow[]): PloM
         ploCode: mapping.ploCode,
         ploDescription: mapping.ploDescription,
       });
-      accumulate(aggregate, row.ratingValue, row.responseId, row.scale, cilo);
+      accumulate(aggregate, row.ratingValue, row.responseId, row.scale, cilo, `${row.sectionKey}:${row.itemKey}`, row.evaluationId);
     }
   }
 
@@ -172,6 +189,8 @@ export function buildCourseDerivedPloMetrics(rows: OutcomeItemRatingRow[]): PloM
 
 /** One program-wide rating with its deployment's snapshot PLO bindings (§5.9). */
 export type CentralPloRatingRow = {
+  /** Evaluation/deployment identity of the rating when the caller carries it. */
+  evaluationId?: string;
   sectionKey: string;
   itemKey: string;
   ratingValue: number;
@@ -203,7 +222,7 @@ export function buildProgramWidePloMetrics(rows: CentralPloRatingRow[]): PloMetr
       }
       seenPlos.add(binding.ploId);
       const aggregate = getOrCreateAggregate(aggregates, binding);
-      accumulate(aggregate, row.ratingValue, row.responseId, row.scale, null);
+      accumulate(aggregate, row.ratingValue, row.responseId, row.scale, null, `${row.sectionKey}:${row.itemKey}`, row.evaluationId);
     }
   }
 

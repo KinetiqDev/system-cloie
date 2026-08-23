@@ -28,6 +28,7 @@ export type OutcomeItemRatingRow = {
   responseId: string;
   scale: ScaleIdentity | null;
   cilo: { id: string; label: string; description: string } | null;
+  evaluationId?: string;
   ploMappings: CiloPloMapping[];
 };
 
