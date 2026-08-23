@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getProgramHeadOutcomes } from "@/features/analytics/services/get-program-head-analytics";
 import {
   aggregateOutcomeEvidence,
-  resolveSnapshotItemScale,
   type OutcomeEvidenceRow,
 } from "@/features/analytics/services/program-head-analytics-aggregators";
+import { resolveSnapshotItemScale } from "@/features/analytics/aggregators/scale-identity";
 
 const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
   resolveProgramHeadContextMock: vi.fn(),

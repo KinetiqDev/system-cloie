@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getProgramHeadTrends } from "@/features/analytics/services/get-program-head-analytics";
 import {
-  buildScaleIdentities,
   buildTrendSeries,
-  describeScale,
-  extractDistinctScales,
   fingerprintsEqual,
   type TrendComparabilityFingerprint,
   type TrendSeriesPeriodInput,
 } from "@/features/analytics/services/program-head-analytics-aggregators";
+import {
+  buildScaleIdentities,
+  describeScale,
+  extractDistinctScales,
+} from "@/features/analytics/aggregators/scale-identity";
 
 const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
   resolveProgramHeadContextMock: vi.fn(),
