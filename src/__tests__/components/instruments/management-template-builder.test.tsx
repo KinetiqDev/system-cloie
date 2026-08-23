@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ManagementTemplateBuilder } from "@/features/instruments/components/management-template-builder";
 
@@ -15,6 +15,27 @@ vi.mock("next/navigation", () => ({
 describe("ManagementTemplateBuilder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The shared TemplateBuilder renders the PLO picker only for
+    // program-owned templates; baseline templates skip the picker.
+    // PLO picker uses useMediaQuery; stub a desktop viewport.
+    // Stub retained for safety if the PLO picker path is reached.
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }))
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   test("renders template builder for Secretary with secretary/instruments redirect", () => {

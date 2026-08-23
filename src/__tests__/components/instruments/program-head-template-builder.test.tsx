@@ -80,13 +80,14 @@ describe("ProgramHeadTemplateBuilder", () => {
     );
 
     const structure = initialData().structure;
-    await templateBuilderProps!.onSaveAsCopy!(TEMPLATE_ID, "BSIT copy", structure);
+    await templateBuilderProps!.onSaveAsCopy!(TEMPLATE_ID, "BSIT copy", structure, []);
 
     expect(createBaselineCopyActionMock).toHaveBeenCalledWith(
       PROGRAM_ID,
       TEMPLATE_ID,
       "BSIT copy",
-      structure
+      structure,
+      []
     );
     expect(createProgramHeadTemplateActionMock).not.toHaveBeenCalled();
     expect(updateProgramHeadTemplateActionMock).not.toHaveBeenCalled();

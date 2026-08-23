@@ -113,6 +113,20 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
     });
   });
 
+  it("redirects faculty role resets to the staff portal", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-123",
+      email: "faculty@acd.edu.ph",
+      profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
+    });
+
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/portal/staff`);
+
+    expect(deleteManyUserRoleMock).toHaveBeenCalledWith({
+      where: { user_id: "user-123" },
+    });
+  });
+
   it("does not delete user roles when profile status is complete and redirects to /portal", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",

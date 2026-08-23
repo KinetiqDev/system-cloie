@@ -35,6 +35,22 @@ _Avoid_: CILO-to-GO, unqualified mapping, dual-layer mapping
 **CILO-to-ILO mapping**:
 An alignment row between one General Education CILO and one Institutional Outcome; every such relationship carries exactly one manifestation. The mapping set is Course-level and shared across assignments.
 _Avoid_: Per-program GE mapping, checkbox-only GE mapping, missing manifestation
+**Program evaluation question–PLO binding**:
+An unweighted relationship declaring that a Likert question in a Program-wide evaluation covers one or more active Program Learning Outcomes owned by the evaluation's Program. It is distinct from CILO-to-PLO mapping and carries no manifestation, priority, percentage, or attainment aggregation rule.
+_Avoid_: CILO-to-PLO mapping, weighted PLO question, PLO manifestation
+
+**Program-wide evaluation**:
+An evaluation template and deployment scoped to an Academic Program rather than to a Course Assignment; its question–PLO bindings are program-owned configuration and are not CILO alignment rows.
+_Avoid_: Course-bound evaluation, program-wide CILO mapping
+
+**PLO binding snapshot**:
+The immutable PLO identity and descriptive snapshot captured when a Program-wide evaluation is published, preserving the deployment's historical interpretation after later PLO catalog changes.
+_Avoid_: Live PLO lookup, mutable deployment binding
+
+**Unweighted PLO coverage**:
+The intentionally unspecified future analytics relationship in which a question may cover multiple PLOs and a PLO may be covered by multiple questions, without implying question weights, priority, evidence multiplication, or aggregation behavior.
+_Avoid_: Equal-weight attainment, weighted coverage, attainment formula
+
 
 **Shared General Education mapping**:
 The Course-level CILO-to-ILO mapping set that applies automatically to every active Course Assignment context using that General Education Course; it is never duplicated per Program or per assignment.

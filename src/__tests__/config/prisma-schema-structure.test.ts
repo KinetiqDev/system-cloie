@@ -49,6 +49,7 @@ const expectedModels = [
   "CILOInstitutionalOutcomeMapping",
   "CILOMapping",
   "CentralDeployment",
+  "CentralDeploymentPloSnapshot",
   "Course",
   "CourseAssignment",
   "CourseAssignmentMembership",
@@ -67,6 +68,7 @@ const expectedModels = [
   "InstitutionalOutcome",
   "InstrumentTemplate",
   "InstrumentTemplateCiloQuestionBinding",
+  "InstrumentTemplatePloQuestionBinding",
   "InstrumentVersion",
   "Major",
   "Program",
@@ -80,7 +82,6 @@ const expectedModels = [
   "User",
   "UserRole",
 ];
-
 describe("Prisma schema structure", () => {
   it("keeps model and enum definitions out of the schema entrypoint", () => {
     const source = readFileSync(prismaEntrypoint, "utf8");

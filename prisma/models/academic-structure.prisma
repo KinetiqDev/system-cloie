@@ -7,23 +7,23 @@ model Program {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  majors                       Major[]
-  courses                      Course[]
-  student_profiles             StudentAcademicProfile[]
-  plos                         PLO[]
-  faculty_program_affiliations FacultyProgramAffiliation[]
-  program_head_assignments     ProgramHeadAssignment[]
-  course_bound_targets         CourseBoundEvaluationTarget[]
-  central_deployments          CentralDeployment[]
-  external_stakeholder_invites ExternalStakeholderInvite[]
-  instrument_templates         InstrumentTemplate[]
-  bound_instrument_templates   InstrumentTemplate[]          @relation("BoundInstrumentTemplateProgram")
-  industry_partner_profiles    IndustryPartnerProfile[]
+  majors                                Major[]
+  courses                               Course[]
+  student_profiles                      StudentAcademicProfile[]
+  plos                                  PLO[]
+  faculty_program_affiliations          FacultyProgramAffiliation[]
+  program_head_assignments              ProgramHeadAssignment[]
+  course_bound_targets                  CourseBoundEvaluationTarget[]
+  central_deployments                   CentralDeployment[]
+  external_stakeholder_invites          ExternalStakeholderInvite[]
+  instrument_templates                  InstrumentTemplate[]
+  bound_instrument_templates            InstrumentTemplate[]                @relation("BoundInstrumentTemplateProgram")
+  industry_partner_profiles             IndustryPartnerProfile[]
   industry_partner_program_affiliations IndustryPartnerProgramAffiliation[]
-  alumni_profiles              AlumniProfile[]
-  student_enrollments          StudentEnrollment[]
-  course_assignments           CourseAssignment[]
-  curriculum_versions          CurriculumVersion[]
+  alumni_profiles                       AlumniProfile[]
+  student_enrollments                   StudentEnrollment[]
+  course_assignments                    CourseAssignment[]
+  curriculum_versions                   CurriculumVersion[]
 
   @@map("programs")
 }

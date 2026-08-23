@@ -29,12 +29,12 @@ For every user-facing change:
 
 Before implementation, design, planning, or investigation, orient through:
 
-1. `**openspec/config.yaml**` — canonical architecture, stack, engineering rules, and workflow contract.
+1. `**openspec/config.yaml**` — canonical architecture, stack, and engineering rules.
 2. `**CONTEXT-MAP.md**` — domain-context index.
 3. `**src/features/<domain>/CONTEXT.md**` — domain terminology, rules, and invariants.
 4. `**docs/adr/**` — architectural decisions.
 
-- Relevant OpenSpec artifacts, GitHub issues, implementation, and tests.
+- Relevant GitHub issues, implementation, and tests.
 - **When sources conflict, surface the conflict. Do not silently choose or invent behavior.**
 - `openspec/config.yaml` rules are binding.
 - cloie-prd.md and cloie-srs.mdare deprecated. They are outdated.
@@ -77,16 +77,15 @@ Before editing:
 2. Inspect relevant existing code and tests.
 3. Load the applicable project skill instructions.
 
-If working from an OpenSpec change or GitHub issue, treat its approved requirements and acceptance criteria as binding.
+If working from a GitHub issue, treat its approved requirements and acceptance criteria as binding; a parent issue is its spec.
 During implementation:
 
 - Keep one workflow in control.
-- Use OpenSpec artifacts for structured changes when applicable.
 - Use GitHub issues as bounded implementation units/vertical slices.
 - Prefer targeted investigation before broad codebase changes.
 - Do not duplicate detailed skill procedures in this file; follow the applicable `SKILL.md`.
-For large or uncertain work, use the repository's OpenSpec and planning skills. For implementation, review, debugging, UI, Supabase, or testing work, use the narrowest applicable project skill.
-Project skills live under `.agents/skills/` and OpenSpec skills under `.omp/skills/`; those directories are authoritative.
+For large or uncertain work, use the repository's planning skills. For implementation, review, debugging, UI, Supabase, or testing work, use the narrowest applicable project skill.
+Project skills live under `.agents/skills/`; that directory is authoritative.
 
 ---
 

@@ -6,6 +6,10 @@ import {
   revalidateProgramHeadAssignment,
   resolveProgramHeadContext,
 } from "@/features/auth/services/resolve-program-head-context";
+import {
+  normalizePloQuestionBindings,
+  syncTemplatePloBindings,
+} from "./manage-program-head-templates";
 import type { TemplateStructure } from "../types";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
@@ -16,6 +20,7 @@ interface CreateBaselineCopyInput {
   baselineId: string;
   customName: string;
   structure: TemplateStructure;
+  ploBindings: Array<{ ploId: string; itemKey: string; sectionKey: string }>;
 }
 
 function generateProgramTemplateCode(programCode: string, baseCode: string): string {
@@ -75,6 +80,27 @@ export async function createBaselineCopy(
 
   const code = generateProgramTemplateCode(program.code, baseline.code);
 
+  // Validate question–PLO bindings against the program's active PLO catalog.
+  // Empty bindings are allowed: drafts copy without bindings, and full Likert
+  // coverage is enforced at publication.
+  const activePlos =
+    input.ploBindings.length > 0
+      ? await prisma.pLO.findMany({
+          where: { program_id: programId, is_active: true },
+          select: { id: true, code: true, description: true },
+        })
+      : [];
+
+  const bindingValidation = normalizePloQuestionBindings({
+    bindings: input.ploBindings,
+    structure: input.structure,
+    plos: activePlos,
+  });
+
+  if (!bindingValidation.success) {
+    return bindingValidation;
+  }
+
   try {
     const template = await prisma.$transaction(async (tx) => {
       const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
@@ -105,6 +131,9 @@ export async function createBaselineCopy(
           is_active: true,
         },
       });
+
+      // The program-owned copy owns the PLO bindings made on the baseline.
+      await syncTemplatePloBindings(tx, createdTemplate.id, bindingValidation.bindings);
 
       return createdTemplate;
     });

@@ -79,4 +79,21 @@ describe("RespondentPortalPage", () => {
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
   });
+
+  it("renders portal with session banner when gate is ROLE_SELECTION_REQUIRED", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-123",
+      email: "test@acd.edu.ph",
+      activeRole: null,
+      roles: [],
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
+    });
+
+    const page = await RespondentPortalPage();
+    render(page);
+
+    expect(screen.getByText("Welcome to System CLOIE")).toBeInTheDocument();
+    expect(screen.getByText(/Signed in as test@acd.edu.ph/)).toBeInTheDocument();
+    expect(screen.getByTestId("card-count").textContent).toBe("3");
+  });
 });

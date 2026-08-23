@@ -1,6 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { ManagementTemplateBuilder } from "@/features/instruments/components/management-template-builder";
 import { updateAdminTemplateAction } from "@/lib/actions/admin-template-actions";
 import { getBaselineTemplate } from "@/features/instruments/services/manage-instruments";
@@ -23,15 +21,6 @@ export default async function SecretaryEditTemplatePage({
 
   return (
     <div className="space-y-6">
-      {/* Back link */}
-      <Link
-        href="/secretary/instruments"
-        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
-      >
-        <ArrowLeft className="size-4" />
-        Back to Tools
-      </Link>
-
       <ManagementTemplateBuilder
         initialData={{
           id: template.id,

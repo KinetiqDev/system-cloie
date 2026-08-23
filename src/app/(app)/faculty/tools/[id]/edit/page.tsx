@@ -1,6 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { TemplateBuilder } from "@/features/instruments/components/template-builder";
 import {
   listFacultyCourseContextsAction,
@@ -37,15 +35,6 @@ export default async function FacultyEditTemplatePage({ params }: FacultyEditTem
 
   return (
     <div className="space-y-6">
-      {/* Back link */}
-      <Link
-        href="/faculty/tools"
-        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline"
-      >
-        <ArrowLeft className="size-4" />
-        Back to Tools
-      </Link>
-
       <TemplateBuilder
         initialData={{
           id: template.id,

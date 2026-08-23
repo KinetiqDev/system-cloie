@@ -12,7 +12,7 @@ export const metadata = {
 export default async function StaffPortalPage() {
   const session = await resolveAuthSession();
 
-  if (session) {
+  if (session && session.profileGate.status !== "ROLE_SELECTION_REQUIRED") {
     redirect(
       resolvePostLoginDestination({
         requestedPath: "/dashboard",
@@ -28,7 +28,7 @@ export default async function StaffPortalPage() {
       title="ACD Staff & Faculty Portal"
       subtitle="Select your role to manage and configure the system."
       cards={ROLE_CARDS_STAFF}
-      session={null}
+      session={session ? { email: session.email ?? "", isComplete: false } : null}
       backLink={{
         label: "Back to portal selection",
         href: "/",

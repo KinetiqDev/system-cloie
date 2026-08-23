@@ -12,7 +12,7 @@ export const metadata = {
 export default async function RespondentPortalPage() {
   const session = await resolveAuthSession();
 
-  if (session) {
+  if (session && session.profileGate.status !== "ROLE_SELECTION_REQUIRED") {
     redirect(
       resolvePostLoginDestination({
         requestedPath: "/dashboard",
@@ -28,7 +28,7 @@ export default async function RespondentPortalPage() {
       title="Welcome to System CLOIE"
       subtitle="Select your role to access your personalized dashboard and tools."
       cards={ROLE_CARDS_RESPONDENT}
-      session={null}
+      session={session ? { email: session.email ?? "", isComplete: false } : null}
       backLink={{
         label: "Back to portal selection",
         href: "/",

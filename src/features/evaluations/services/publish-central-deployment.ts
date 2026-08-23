@@ -10,8 +10,10 @@ import { listStudentsForClass } from "@/features/enrollments/services/list-stude
 import {
   DeploymentStatus,
   EvaluationTemplateType,
+  Prisma,
   type TargetStakeholder,
 } from "@prisma/client";
+import { listTemplateLikertQuestions, type TemplateStructure } from "@/features/instruments/types";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
@@ -25,6 +27,90 @@ export type PublishCentralDeploymentResult = ServiceResult<{
   status: "ACTIVE" | "SCHEDULED";
 }>;
 
+type CentralDeploymentPloSnapshotRow = {
+  plo_id: string;
+  plo_code: string;
+  plo_description: string;
+  section_key: string;
+  item_key: string;
+  question_prompt: string;
+};
+
+/**
+ * Validates a Program-wide template's question–PLO bindings for publication:
+ * every Likert question must be bound to at least one PLO and every bound PLO
+ * must still be active and owned by the program. Returns the immutable
+ * id/code/description snapshot rows captured at publish time.
+ */
+function validatePublishPloBindings(input: {
+  bindings: Array<{ plo_id: string | null; section_key: string; item_key: string }>;
+  structure: TemplateStructure;
+  livePlos: Array<{ id: string; code: string; description: string }>;
+}):
+  | { success: true; snapshotRows: CentralDeploymentPloSnapshotRow[] }
+  | { success: false; error: string } {
+  // Template keys may contain any nonempty string, so the question identity
+  // must be a structurally encoded tuple — never a separator join.
+  const encodeQuestionKey = (sectionKey: string, itemKey: string) =>
+    JSON.stringify([sectionKey, itemKey]);
+
+  const questions = listTemplateLikertQuestions(input.structure);
+  const questionMap = new Map(
+    questions.map((question) => [
+      encodeQuestionKey(question.sectionKey, question.itemKey),
+      question,
+    ])
+  );
+  const ploMap = new Map(input.livePlos.map((plo) => [plo.id, plo]));
+  const boundQuestionKeys = new Set<string>();
+  const snapshotRows: CentralDeploymentPloSnapshotRow[] = [];
+
+  for (const binding of input.bindings) {
+    const questionKey = encodeQuestionKey(binding.section_key, binding.item_key);
+    const question = questionMap.get(questionKey);
+    const plo = binding.plo_id ? ploMap.get(binding.plo_id) : undefined;
+
+    if (!question) {
+      return {
+        success: false,
+        error:
+          "One or more question–PLO bindings no longer match the template structure.",
+      };
+    }
+
+    if (!plo) {
+      return {
+        success: false,
+        error:
+          "One or more bound PLOs are archived or no longer available. Update the template before publishing.",
+      };
+    }
+
+    boundQuestionKeys.add(questionKey);
+    snapshotRows.push({
+      plo_id: plo.id,
+      plo_code: plo.code,
+      plo_description: plo.description,
+      section_key: binding.section_key,
+      item_key: binding.item_key,
+      question_prompt: question.prompt,
+    });
+  }
+
+  const missingQuestionKeys = questions.filter(
+    (question) => !boundQuestionKeys.has(encodeQuestionKey(question.sectionKey, question.itemKey))
+  );
+
+  if (missingQuestionKeys.length > 0) {
+    return {
+      success: false,
+      error: "Every Likert question must be assigned to at least one PLO before publishing.",
+    };
+  }
+
+  return { success: true, snapshotRows };
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function computeDeploymentStatus(activationAt: Date | undefined): "ACTIVE" | "SCHEDULED" {
@@ -33,6 +119,26 @@ function computeDeploymentStatus(activationAt: Date | undefined): "ACTIVE" | "SC
   }
 
   return DeploymentStatus.ACTIVE;
+}
+
+async function createPloSnapshotRows(
+  tx: Prisma.TransactionClient,
+  deploymentId: string,
+  rows: CentralDeploymentPloSnapshotRow[]
+) {
+  if (rows.length === 0) return;
+
+  await tx.centralDeploymentPloSnapshot.createMany({
+    data: rows.map((row) => ({
+      central_deployment_id: deploymentId,
+      plo_id: row.plo_id,
+      plo_code_snapshot: row.plo_code,
+      plo_description_snapshot: row.plo_description,
+      section_key: row.section_key,
+      item_key: row.item_key,
+      question_prompt_snapshot: row.question_prompt,
+    })),
+  });
 }
 
 
@@ -79,7 +185,14 @@ export async function publishCentralDeployment(
       OR: [{ program_id: programId }, { program_id: null }],
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
     },
-    select: { id: true, name: true, program_id: true, template_type: true },
+    select: {
+      id: true,
+      name: true,
+      program_id: true,
+      template_type: true,
+      structure: true,
+      template_plo_question_bindings: true,
+    },
   });
 
   if (!template) {
@@ -103,6 +216,46 @@ export async function publishCentralDeployment(
     return {
       success: false,
       error: "No active instrument version found for this template.",
+    };
+  }
+
+  // 4b. Validate question–PLO bindings: every Likert question must be bound to
+  // at least one active program PLO; snapshot id/code/description for the deployment.
+  if (!Array.isArray(template.structure)) {
+    return { success: false, error: "Template structure is invalid." };
+  }
+  const structure = template.structure as unknown as TemplateStructure;
+  const bindings = template.template_plo_question_bindings;
+  let ploSnapshotRows: CentralDeploymentPloSnapshotRow[] = [];
+  if (bindings.length > 0) {
+    const livePlos = await prisma.pLO.findMany({
+      where: {
+        program_id: programId,
+        id: {
+          in: bindings
+            .map((binding) => binding.plo_id)
+            .filter((ploId): ploId is string => Boolean(ploId)),
+        },
+        is_active: true,
+      },
+      select: { id: true, code: true, description: true },
+    });
+
+    const ploValidation = validatePublishPloBindings({
+      bindings,
+      structure,
+      livePlos,
+    });
+
+    if (!ploValidation.success) {
+      return { success: false, error: ploValidation.error };
+    }
+
+    ploSnapshotRows = ploValidation.snapshotRows;
+  } else if (listTemplateLikertQuestions(structure).length > 0) {
+    return {
+      success: false,
+      error: "Every Likert question must be assigned to at least one PLO before publishing.",
     };
   }
 
@@ -178,6 +331,7 @@ export async function publishCentralDeployment(
   }
 
   try {
+    // fallow-ignore-next-line complexity
     const result = await prisma.$transaction(async (tx) => {
       const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
       if (!currentProgram) return null;
@@ -243,6 +397,8 @@ export async function publishCentralDeployment(
           status,
         },
       });
+
+      await createPloSnapshotRows(tx, deployment.id, ploSnapshotRows);
 
       // 8b. Create EvaluationAssignment records for target respondents
       let respondentIds: string[] = [];

@@ -46,7 +46,11 @@ export function ManagementTemplateBuilder(props: ManagementTemplateBuilderProps)
 
   return (
     <>
-      <TemplateBuilder {...props} onSaveResult={handleSaveResult} />
+      <TemplateBuilder
+        {...props}
+        isInstitutionalBaseline={props.isInstitutionalBaseline ?? true}
+        onSaveResult={handleSaveResult}
+      />
 
       {/* Success Modal */}
       <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>

@@ -60,7 +60,7 @@ If stale:
 git rebase "origin/$BASE"
 ```
 
-Resolve conflicts by, in order: current OpenSpec artifacts, current integration-branch behavior, this slice's acceptance criteria, repository domain and architecture conventions. Never blindly take `ours` or `theirs`.
+Resolve conflicts by, in order: the parent issue's spec, current integration-branch behavior, this slice's acceptance criteria, repository domain and architecture conventions. Never blindly take `ours` or `theirs`.
 
 After any meaningful rebase or conflict resolution, rerun `pnpm test`, `pnpm lint`, `pnpm build`, and rerun `/code-review` when implementation materially changed.
 
@@ -72,7 +72,7 @@ Push rewritten history with `git push --force-with-lease`; never bare `--force`.
 gh issue view <N>
 ```
 
-Resolve the parent tracker, acceptance criteria, declared blockers, referenced OpenSpec change, required skills, and any deliberately deferred behavior.
+Resolve the parent tracker, acceptance criteria, declared blockers, required skills, and any deliberately deferred behavior.
 
 If this issue itself has implementation sub-issues, it is a tracker, not a slice — stop and direct the caller to `/orchestrate-slices`.
 
@@ -84,21 +84,11 @@ BLOCKED: issue #<N> depends on open issue #<blocker>
 
 Stop; do not bypass the dependency graph.
 
-Read the OpenSpec change:
-
-```text
-openspec/changes/<change>/
-├── proposal.md
-├── design.md
-├── specs/
-└── tasks.md
-```
-
-`specs/` is the behavioral contract, `design.md` the intended technical direction, `tasks.md` implementation guidance, and the ticket's acceptance criteria this slice's exact delivery boundary.
+The parent issue is the spec; this ticket's acceptance criteria are this slice's exact delivery boundary.
 
 Map every acceptance criterion to an implementation surface and a verification method. Name anything deliberately deferred and the ticket that owns it; do not absorb another slice merely because touching it would be convenient.
 
-Done when: scope, blockers, and OpenSpec artifacts are understood; every acceptance criterion has an implementation and verification path; deferred work is owned elsewhere.
+Done when: scope and blockers are understood; every acceptance criterion has an implementation and verification path; deferred work is owned elsewhere.
 
 ## 2. Verify the worktree and branch
 
@@ -154,7 +144,7 @@ Done when: exactly one dedicated slice branch is checked out in a runnable workt
 
 ## 3. Read repository guidance
 
-Follow the repo reference chain before editing: `CONTEXT-MAP.md` → feature `CONTEXT.md` → `docs/adr/` → OpenSpec artifacts. Invoke ticket-required skills before work in their domain (e.g. `/supabase`, `/supabase-postgres-best-practices`, `/tdd`, `/next-best-practices`, `/shadcn`). For database work, follow both Supabase skills when the repository requires them.
+Follow the repo reference chain before editing: `CONTEXT-MAP.md` → feature `CONTEXT.md` → `docs/adr/`. Invoke ticket-required skills before work in their domain (e.g. `/supabase`, `/supabase-postgres-best-practices`, `/tdd`, `/next-best-practices`, `/shadcn`). For database work, follow both Supabase skills when the repository requires them.
 
 Reuse the project's existing architecture and vocabulary; a second convention beside an established one needs a specification-level reason.
 
