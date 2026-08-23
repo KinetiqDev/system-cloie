@@ -106,13 +106,22 @@ describe("participation summary", () => {
     const rows = [
       ...participationRows(EVALUATIONS.e1),
       ...participationRows(CENTRAL_EVALUATIONS.alumni),
+      ...participationRows(CENTRAL_EVALUATIONS.industry),
     ];
     const summary = buildParticipationSummary(rows);
-    expect(summary.stakeholders.map((entry) => entry.stakeholder)).toEqual(["STUDENT", "ALUMNI"]);
+    expect(summary.stakeholders.map((entry) => entry.stakeholder)).toEqual([
+      "STUDENT",
+      "ALUMNI",
+      "INDUSTRY_PARTNER",
+    ]);
     const student = summary.stakeholders[0];
     const alumni = summary.stakeholders[1];
+    const industry = summary.stakeholders[2];
     expect(student.assigned).toBe(4);
-    expect(alumni.assigned).toBe(2);
+    expect(alumni.assigned).toBe(1);
+    expect(industry.assigned).toBe(1);
+    expect(industry.submitted).toBe(1);
+    expect(industry.completionRate).toBe(1);
     expect(summary.stakeholders.reduce((sum, entry) => sum + entry.assigned, 0)).toBe(summary.assigned);
     expect(summary.stakeholders.reduce((sum, entry) => sum + entry.submitted, 0)).toBe(summary.submitted);
   });
@@ -135,10 +144,12 @@ describe("question metrics", () => {
     const questions = buildQuestionMetrics(ciloRows("e1"));
     const qA = questions.find((question) => question.itemKey === "q-cilo-a")!;
     expect(qA.binding).toEqual({ type: "CILO", ciloId: "cilo-a", ciloLabel: "CILO 1" });
-    expect(qA.quantitative.mean).toBeCloseTo(4.5, 12);
-    expect(qA.quantitative.ratingCount).toBe(2);
-    expect(qA.quantitative.responseCount).toBe(2);
-    expect(qA.quantitative.distribution).toEqual([
+    expect(qA.scaleGroups).toHaveLength(1);
+    const qAMetric = qA.quantitative!;
+    expect(qAMetric.mean).toBeCloseTo(4.5, 12);
+    expect(qAMetric.ratingCount).toBe(2);
+    expect(qAMetric.responseCount).toBe(2);
+    expect(qAMetric.distribution).toEqual([
       { value: 1, label: "Not Achieved", count: 0, percentage: 0 },
       { value: 2, label: "Slightly Achieved", count: 0, percentage: 0 },
       { value: 3, label: "Moderately Achieved", count: 0, percentage: 0 },
@@ -327,6 +338,50 @@ describe("program-wide PLO metrics", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Cross-version scale separation and duplicate prevention (§9, §54)
+// ---------------------------------------------------------------------------
+
+describe("question metrics across incompatible instrument versions", () => {
+  it("reports one scale group per instrument version instead of merging", () => {
+    const qA = buildQuestionMetrics(ciloRows("e1", "e2")).find(
+      (question) => question.itemKey === "q-cilo-a"
+    )!;
+    // e1 rates on the 1–5 attainment scale, e2 on the incompatible 1–4 scale.
+    expect(qA.scaleGroups).toHaveLength(2);
+    expect(qA.quantitative).toBeNull();
+    const scale5 = qA.scaleGroups.find((group) => group.scale?.max === 5)!;
+    const scale4 = qA.scaleGroups.find((group) => group.scale?.max === 4)!;
+    expect(scale5.mean).toBeCloseTo(4.5, 12);
+    expect(scale5.ratingCount).toBe(2);
+    expect(scale4.mean).toBeCloseTo(2, 12);
+    expect(scale4.ratingCount).toBe(1);
+  });
+});
+
+describe("duplicate contribution prevention", () => {
+  it("counts a rating once per PLO when binding arrays repeat a ploId", () => {
+    const duplicated = ciloRows("e1").map((row) =>
+      row.ploMappings.length > 0
+        ? { ...row, ploMappings: [...row.ploMappings, ...row.ploMappings] }
+        : row
+    );
+    const clean = buildCourseDerivedPloMetrics(ciloRows("e1"));
+    const dirty = buildCourseDerivedPloMetrics(duplicated);
+    expect(dirty.map((metric) => metric.ratingCount)).toEqual(clean.map((metric) => metric.ratingCount));
+  });
+
+  it("counts a central rating once per PLO when snapshot bindings repeat a ploId", () => {
+    const dirtyRows = centralPloRows().map((row) => ({
+      ...row,
+      ploBindings: [...row.ploBindings, ...row.ploBindings],
+    }));
+    const clean = buildProgramWidePloMetrics(centralPloRows());
+    const dirty = buildProgramWidePloMetrics(dirtyRows);
+    expect(dirty.map((metric) => metric.ratingCount)).toEqual(clean.map((metric) => metric.ratingCount));
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Mathematical reconciliation (§55)
 // ---------------------------------------------------------------------------
 
@@ -339,16 +394,18 @@ describe("reconciliation invariants", () => {
     ...buildCourseDerivedPloMetrics(ciloRows("e1", "e2")),
     ...buildProgramWidePloMetrics(centralPloRows()),
   ].flatMap((metric) => metric.scaleGroups);
+  const allQuestionGroups = allQuestionMetrics.flatMap((question) => question.scaleGroups);
+  const everyMetric = [...allQuestionGroups, ...allCiloGroups, ...allPloGroups];
 
   it("every distribution sums to its ratingCount", () => {
-    for (const metric of [...allQuestionMetrics.map((question) => question.quantitative), ...allCiloGroups, ...allPloGroups]) {
+    for (const metric of everyMetric) {
       const sum = metric.distribution.reduce((total, entry) => total + entry.count, 0);
       expect(sum).toBe(metric.ratingCount);
     }
   });
 
   it("every weighted distribution mean equals the displayed mean within tolerance", () => {
-    for (const metric of [...allQuestionMetrics.map((question) => question.quantitative), ...allCiloGroups, ...allPloGroups]) {
+    for (const metric of everyMetric) {
       if (metric.ratingCount === 0) {
         expect(metric.mean).toBeNull();
         continue;
@@ -358,7 +415,7 @@ describe("reconciliation invariants", () => {
   });
 
   it("distribution percentages sum to 1 whenever ratings exist", () => {
-    for (const metric of [...allQuestionMetrics.map((question) => question.quantitative), ...allCiloGroups, ...allPloGroups]) {
+    for (const metric of everyMetric) {
       if (metric.ratingCount === 0) continue;
       const percentageSum = metric.distribution.reduce((total, entry) => total + entry.percentage, 0);
       expect(percentageSum).toBeCloseTo(1, 12);
@@ -395,6 +452,7 @@ describe("reconciliation invariants", () => {
       ...participationRows(CENTRAL_EVALUATIONS.centralStudent),
       ...participationRows(CENTRAL_EVALUATIONS.alumni),
     ]);
+    expect(summary.respondents).toEqual({ total: 5, complete: 3, partial: 1, notStarted: 1 });
     expect(summary.respondents.complete + summary.respondents.partial + summary.respondents.notStarted).toBe(
       summary.respondents.total
     );

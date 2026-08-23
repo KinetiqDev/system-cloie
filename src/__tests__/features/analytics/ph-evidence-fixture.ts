@@ -1,4 +1,5 @@
-import type { LikertDescriptor } from "@/features/analytics/aggregators/scale-identity";
+import { TargetStakeholder } from "@prisma/client";
+import type { ScaleDescriptor } from "@/features/analytics/aggregators/scale-identity";
 import type { OutcomeItemRatingRow } from "@/features/analytics/aggregators/cilo";
 import type { CentralPloRatingRow } from "@/features/analytics/aggregators/plo";
 import type { ParticipationRow } from "@/features/analytics/aggregators/participation";
@@ -67,7 +68,7 @@ export const COURSE_ASSIGNMENTS = {
 // -- Scales -----------------------------------------------------------------
 
 /** 1–5 attainment scale used by course evaluation version 1. */
-export const SCALE5: LikertDescriptor[] = [
+export const SCALE5: ScaleDescriptor[] = [
   { value: 1, label: "Not Achieved" },
   { value: 2, label: "Slightly Achieved" },
   { value: 3, label: "Moderately Achieved" },
@@ -79,7 +80,7 @@ export const SCALE5: LikertDescriptor[] = [
  * 1–4 scale with different labels and range: incompatible with SCALE5 under
  * §9 (numeric ranges alone do not define compatibility).
  */
-export const SCALE4: LikertDescriptor[] = [
+export const SCALE4: ScaleDescriptor[] = [
   { value: 1, label: "Poor" },
   { value: 2, label: "Fair" },
   { value: 3, label: "Satisfactory" },
@@ -91,7 +92,7 @@ export const SCALE4: LikertDescriptor[] = [
  * it is also incompatible with SCALE5 (§9 explicitly rejects range-only
  * compatibility).
  */
-export const AGREEMENT5: LikertDescriptor[] = [
+export const AGREEMENT5: ScaleDescriptor[] = [
   { value: 1, label: "Strongly Disagree" },
   { value: 2, label: "Disagree" },
   { value: 3, label: "Neutral" },
@@ -99,7 +100,7 @@ export const AGREEMENT5: LikertDescriptor[] = [
   { value: 5, label: "Strongly Agree" },
 ];
 
-function likertSection(key: string, title: string, descriptors: LikertDescriptor[], items: Array<{ key: string; prompt: string }>) {
+function likertSection(key: string, title: string, descriptors: ScaleDescriptor[], items: Array<{ key: string; prompt: string }>) {
   return [
     {
       key,
@@ -141,9 +142,13 @@ export const SNAPSHOTS = {
     { key: "q-plo-single", prompt: "The program built strong foundations." },
     { key: "q-plo-multi", prompt: "The program prepared me for further study." },
   ]),
-  /** Alumni instrument on the 1–4 scale (includes an out-of-scale case). */
+  /** Alumni instrument on the 1–4 scale. */
   alumni: likertSection("alumni-items", "Alumni Feedback", SCALE4, [
     { key: "q-alumni-prep", prompt: "My studies prepared me for work." },
+  ]),
+  /** Industry instrument on the 1–4 scale. */
+  industry: likertSection("industry-items", "Industry Feedback", SCALE4, [
+    { key: "q-industry-value", prompt: "Graduates deliver professional value." },
   ]),
 } as const;
 
@@ -198,7 +203,7 @@ type CourseEvaluationSeed = {
   term: keyof typeof TERMS;
   courseAssignment: keyof typeof COURSE_ASSIGNMENTS;
   snapshot: keyof typeof SNAPSHOTS;
-  assignments: AssignmentSeed[];
+  assignments: readonly AssignmentSeed[];
 };
 
 export const EVALUATIONS = {
@@ -271,7 +276,7 @@ export const CENTRAL_EVALUATIONS = {
     ],
   },
 
-  /** Alumni evaluation with one out-of-scale submitted value (5 on 1–4). */
+  /** Alumni evaluation, period 2. Submitted: alum1 with q-alumni-prep=3. */
   alumni: {
     id: "cd-alumni",
     name: "Alumni Evaluation AY26 Second",
@@ -281,32 +286,50 @@ export const CENTRAL_EVALUATIONS = {
     snapshot: "alumni",
     assignments: [
       { respondent: "alum1", response: { status: "SUBMITTED", ratings: { "alumni-items": { "q-alumni-prep": 3 } } } },
-      { respondent: "ind1" },
+    ],
+  },
+
+  /** Industry Partner evaluation, period 2. Submitted: ind1 rating 4. */
+  industry: {
+    id: "cd-industry",
+    name: "Industry Evaluation AY26 Second",
+    program: "beed",
+    term: "ti2",
+    stakeholder: "INDUSTRY_PARTNER",
+    snapshot: "industry",
+    assignments: [
+      { respondent: "ind1", response: { status: "SUBMITTED", ratings: { "industry-items": { "q-industry-value": 4 } } } },
     ],
   },
 } as const;
 
+/** Central deployment seed shape; stakeholder drives attribution. */
+type CentralEvaluationSeed = {
+  id: string;
+  name: string;
+  program: string;
+  term: string;
+  stakeholder: TargetStakeholder;
+  snapshot: keyof typeof SNAPSHOTS;
+  assignments: readonly AssignmentSeed[];
+};
+
+type AnyEvaluation = CourseEvaluationSeed | CentralEvaluationSeed;
+
 // -- Row builders ------------------------------------------------------------
 
-function assignmentStakeholder(evaluation: { stakeholder?: string }): "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER" {
-  return (evaluation.stakeholder as "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER") ?? "STUDENT";
+function assignmentStakeholder(evaluation: AnyEvaluation): TargetStakeholder {
+  return "stakeholder" in evaluation ? evaluation.stakeholder : TargetStakeholder.STUDENT;
 }
 
 /** All in-scope assignment rows of one evaluation seed for participation. */
-export function participationRows(
-  evaluation: CourseEvaluationSeed | (typeof CENTRAL_EVALUATIONS.centralStudent | typeof CENTRAL_EVALUATIONS.alumni)
-): ParticipationRow[] {
+export function participationRows(evaluation: AnyEvaluation): ParticipationRow[] {
   return evaluation.assignments.map((assignment) => ({
     respondentId: USERS[assignment.respondent].id,
     stakeholder: assignmentStakeholder(evaluation),
     responseStatus: assignment.response?.status ?? null,
   }));
 }
-
-type AnyEvaluation =
-  | CourseEvaluationSeed
-  | typeof CENTRAL_EVALUATIONS.centralStudent
-  | typeof CENTRAL_EVALUATIONS.alumni;
 
 function evaluationEntries(evaluation: AnyEvaluation) {
   const snapshot = SNAPSHOTS[evaluation.snapshot];
@@ -328,7 +351,8 @@ function evaluationEntries(evaluation: AnyEvaluation) {
   });
 }
 
-const CB_CILO_BY_ITEM: Record<string, keyof typeof CILOS> = {
+/** Course-bound items bound to a CILO; anything else is an unbound GENERAL item. */
+const CB_CILO_BY_ITEM: Record<string, "a" | "b"> = {
   "q-cilo-a": "a",
   "q-cilo-a2": "a",
   "q-cilo-b": "b",
