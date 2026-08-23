@@ -85,11 +85,25 @@ export function buildProgramHeadResponsesUrl(programId: string, state: ProgramHe
   return query ? `${path}?${query}` : path;
 }
 
-export function buildProgramHeadResponsesTabUrl(programId: string, tab: ResponsesTab, current: ProgramHeadResponsesFilterState): string {
+export function buildProgramHeadResponsesTabUrl(
+  programId: string,
+  tab: ResponsesTab,
+  current: ProgramHeadResponsesFilterState
+): string {
+  if (tab === current.tab) {
+    return buildProgramHeadResponsesUrl(programId, current);
+  }
   return buildProgramHeadResponsesUrl(programId, {
-    tab, page: 1, q: current.q, schoolYearId: current.schoolYearId, semester: current.semester,
-    termInstanceId: current.termInstanceId, majorId: current.majorId, yearLevel: current.yearLevel,
-    status: current.status, completion: current.completion,
+    tab,
+    page: 1,
+    q: current.q,
+    schoolYearId: current.schoolYearId,
+    semester: current.semester,
+    termInstanceId: current.termInstanceId,
+    majorId: current.majorId,
+    yearLevel: current.yearLevel,
+    status: current.status,
+    completion: current.completion,
   });
 }
 

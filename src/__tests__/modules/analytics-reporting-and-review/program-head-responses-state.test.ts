@@ -51,4 +51,18 @@ describe("Program Head Responses URL state", () => {
     expect(buildProgramHeadResponsesTabUrl("program-1", "program-wide", state)).not.toContain("courseId");
     expect(buildProgramHeadResponsesTabUrl("program-1", "program-wide", state)).not.toContain("facultyId");
   });
+
+  it("keeps the active tab's full query unchanged on re-click", () => {
+    const state = parseProgramHeadResponsesSearchParams({
+      tab: "course",
+      page: "2",
+      q: "capstone",
+      courseId: "00000000-0000-0000-0000-000000000002",
+      section: StudentSection.MORNING,
+    });
+    expect(buildProgramHeadResponsesTabUrl("program-1", "course", state)).toBe(
+      buildProgramHeadResponsesPageUrl("program-1", state, state.page)
+    );
+    expect(buildProgramHeadResponsesTabUrl("program-1", "course", state)).toContain("section=MORNING");
+  });
 });
