@@ -173,5 +173,10 @@ export async function resetIncompleteRoleClaim() {
     });
   }
 
-  redirect("/portal/respondents");
+  // Route back to the portal matching the role being onboarded:
+  // staff roles (faculty) → /portal/staff; respondent roles → /portal/respondents.
+  const isStaffClaim =
+    session && "intent" in session.profileGate && session.profileGate.intent === "faculty";
+
+  redirect(isStaffClaim ? "/portal/staff" : "/portal/respondents");
 }

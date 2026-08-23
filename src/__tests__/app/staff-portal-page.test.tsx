@@ -80,4 +80,21 @@ describe("StaffPortalPage", () => {
       profileGate: { status: "COMPLETE" },
     });
   });
+
+  it("renders portal with session banner when gate is ROLE_SELECTION_REQUIRED", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-123",
+      email: "staff@acd.edu.ph",
+      activeRole: null,
+      roles: [],
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
+    });
+
+    const page = await StaffPortalPage();
+    render(page);
+
+    expect(screen.getByText("ACD Staff & Faculty Portal")).toBeInTheDocument();
+    expect(screen.getByText(/Signed in as staff@acd.edu.ph/)).toBeInTheDocument();
+    expect(screen.getByTestId("card-count").textContent).toBe("5");
+  });
 });
