@@ -23,6 +23,7 @@
     "verify:dedicated-demo-auth-boundary": "tsx scripts/verify-dedicated-demo-auth-boundary.ts",
     "verify:demo-target-isolation": "tsx scripts/validate-demo-target-isolation.ts",
     "demo:reset": "tsx scripts/reset-demo-database.ts",
+    "seed:baseline": "tsx scripts/seed-baseline-database.ts",
     "curriculum:generate-baseline": "tsx scripts/generate-baseline-curricula.ts",
     "academic:backfill-active-state": "tsx scripts/backfill-school-year-active-state.ts",
     "test:db": "vitest run --no-file-parallelism src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts src/__tests__/features/academic-calendar/read-period-readiness-totals-parity.test.ts src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts src/__tests__/features/academic-calendar/school-year-active-constraint.test.ts",
