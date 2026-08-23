@@ -6,7 +6,7 @@ import { getProgramHeadResponseDetail } from "@/features/response-review/service
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
 import {
   buildProgramHeadAnalyticsPath,
-  buildProgramHeadResponsesCourseDetailPath,
+  buildProgramHeadResponsesCourseEvaluationPath,
 } from "@/lib/constants/program-head-routes";
 
 export default async function CourseResponseDetailPage({
@@ -24,7 +24,7 @@ export default async function CourseResponseDetailPage({
   return (
     <div className="space-y-6">
       <Button
-        render={<Link href={buildProgramHeadResponsesCourseDetailPath(programId, evaluationId)} />}
+        render={<Link href={buildProgramHeadResponsesCourseEvaluationPath(programId, evaluationId)} />}
         size="sm"
         variant="ghost"
       >
@@ -32,7 +32,7 @@ export default async function CourseResponseDetailPage({
       </Button>
       <ResponseDetail
         response={response}
-        evaluationHref={buildProgramHeadResponsesCourseDetailPath(programId, evaluationId)}
+        evaluationHref={buildProgramHeadResponsesCourseEvaluationPath(programId, evaluationId)}
         analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
       />
     </div>

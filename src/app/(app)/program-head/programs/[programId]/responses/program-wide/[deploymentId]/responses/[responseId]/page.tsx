@@ -6,7 +6,7 @@ import { getProgramHeadResponseDetail } from "@/features/response-review/service
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
 import {
   buildProgramHeadAnalyticsPath,
-  buildProgramHeadResponsesProgramWideDetailPath,
+  buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
 
 export default async function CentralResponseDetailPage({
@@ -25,7 +25,7 @@ export default async function CentralResponseDetailPage({
     <div className="space-y-6">
       <Button
         render={
-          <Link href={buildProgramHeadResponsesProgramWideDetailPath(programId, deploymentId)} />
+          <Link href={buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId)} />
         }
         size="sm"
         variant="ghost"
@@ -34,7 +34,7 @@ export default async function CentralResponseDetailPage({
       </Button>
       <ResponseDetail
         response={response}
-        evaluationHref={buildProgramHeadResponsesProgramWideDetailPath(programId, deploymentId)}
+        evaluationHref={buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId)}
         analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
       />
     </div>
