@@ -147,14 +147,16 @@ export function buildCiloMetrics(rows: OutcomeItemRatingRow[]): CiloMetric[] {
 
 type QuestionAggregate = {
   row: OutcomeItemRatingRow;
-  ratings: QuantitativeRating[];
+  entries: Array<{ rating: QuantitativeRating; scale: ScaleIdentity | null }>;
 };
 
 /**
  * Build canonical per-question metrics with explicit bindings. Unbound items
- * report binding type GENERAL rather than null (§39). One question resolves
- * to exactly one snapshot scale entry, so its metric never spans scales;
- * out-of-scale ratings are excluded from the metric like every other surface.
+ * report binding type GENERAL rather than null (§39). One instrument-version
+ * item resolves to exactly one snapshot scale entry, but evaluations on
+ * different versions may share an item key; each compatible group is then
+ * reported separately with no combined mean (§9). Out-of-scale ratings are
+ * excluded from the metric like every other surface.
  */
 export function buildQuestionMetrics(rows: OutcomeItemRatingRow[]): QuestionMetric[] {
   const byQuestion = new Map<string, QuestionAggregate>();
@@ -163,25 +165,30 @@ export function buildQuestionMetrics(rows: OutcomeItemRatingRow[]): QuestionMetr
     const questionKey = `${row.sectionKey}::${row.itemKey}`;
     let aggregate = byQuestion.get(questionKey);
     if (!aggregate) {
-      aggregate = { row, ratings: [] };
+      aggregate = { row, entries: [] };
       byQuestion.set(questionKey, aggregate);
     }
     if (validRating(row)) {
-      aggregate.ratings.push(toRating(row));
+      aggregate.entries.push({ rating: toRating(row), scale: row.scale });
     }
   }
 
   return [...byQuestion.values()]
-    .map(({ row, ratings }) => {
+    .map(({ row, entries }) => {
       const binding: QuestionBinding = row.cilo
         ? { type: "CILO", ciloId: row.cilo.id, ciloLabel: row.cilo.label }
         : { type: "GENERAL" };
+      const scaleGroups = groupRatingsByScale(entries).map((group) => group.metric);
+      scaleGroups.sort((left, right) =>
+        (left.scale?.key ?? "").localeCompare(right.scale?.key ?? "")
+      );
       return {
         sectionKey: row.sectionKey,
         itemKey: row.itemKey,
         prompt: row.prompt,
         binding,
-        quantitative: buildQuantitativeMetric(ratings, row.scale),
+        quantitative: scaleGroups.length === 1 ? scaleGroups[0] : null,
+        scaleGroups,
       };
     })
     .sort(

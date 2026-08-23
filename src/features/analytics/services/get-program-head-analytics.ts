@@ -307,7 +307,9 @@ export async function getProgramHeadAnalytics(
       },
     }),
   ]);
-
+  // Course-bound assignments carry no target_stakeholder column; STUDENT is
+  // their canonical stakeholder (course-bound student evidence, §8). The
+  // overview KPI reads only assigned/submitted totals.
   const participationSummary = buildParticipationSummary(
     participation.map((row) => ({
       respondentId: row.respondent_id,

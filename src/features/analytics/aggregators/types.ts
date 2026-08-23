@@ -116,6 +116,8 @@ export type CiloMetric = {
 
   mappings: CiloPloMapping[];
 
+  contributingQuestions: CiloContributingQuestion[];
+
   /**
    * How-calculated metadata for traceability UI (§41): derived from the same
    * aggregated inputs, never a separate data source.
@@ -132,8 +134,10 @@ export type QuestionBinding =
   | { type: "GENERAL" };
 
 /**
- * Canonical per-question metric (spec §39). One question draws from exactly
- * one snapshot scale entry, so its metric never spans scales.
+ * Canonical per-question metric (spec §39). One instrument-version item
+ * resolves to exactly one snapshot scale entry; when evaluations on
+ * different instrument versions share an item key, each compatible group is
+ * reported separately (§9) and `quantitative` mirrors the single-group case.
  */
 export type QuestionMetric = {
   sectionKey: string;
@@ -142,7 +146,11 @@ export type QuestionMetric = {
 
   binding: QuestionBinding;
 
-  quantitative: QuantitativeMetric;
+  /** Mean of the single compatible scale group; null when groups are mixed. */
+  quantitative: QuantitativeMetric | null;
+
+  /** One entry per compatible scale identity; length 1 mirrors `quantitative`. */
+  scaleGroups: QuantitativeMetric[];
 };
 
 /**

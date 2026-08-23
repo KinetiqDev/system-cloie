@@ -150,7 +150,14 @@ export function buildCourseDerivedPloMetrics(rows: OutcomeItemRatingRow[]): PloM
       continue;
     }
     const cilo = { id: row.cilo.id, label: row.cilo.label };
+    // One rating contributes once per PLO even if a caller passes duplicate
+    // mapping rows (§54 duplicate contribution prevention).
+    const seenPlos = new Set<string>();
     for (const mapping of row.ploMappings) {
+      if (seenPlos.has(mapping.ploId)) {
+        continue;
+      }
+      seenPlos.add(mapping.ploId);
       const aggregate = getOrCreateAggregate(aggregates, {
         ploId: mapping.ploId,
         ploCode: mapping.ploCode,
@@ -187,7 +194,14 @@ export function buildProgramWidePloMetrics(rows: CentralPloRatingRow[]): PloMetr
     if (row.ploBindings.length === 0) {
       continue;
     }
+    // One rating contributes once per PLO even if a caller passes duplicate
+    // snapshot rows (§54 duplicate contribution prevention).
+    const seenPlos = new Set<string>();
     for (const binding of row.ploBindings) {
+      if (seenPlos.has(binding.ploId)) {
+        continue;
+      }
+      seenPlos.add(binding.ploId);
       const aggregate = getOrCreateAggregate(aggregates, binding);
       accumulate(aggregate, row.ratingValue, row.responseId, row.scale, null);
     }

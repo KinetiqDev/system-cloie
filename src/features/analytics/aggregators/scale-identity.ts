@@ -27,7 +27,6 @@ export type ScaleIdentity = {
  * min/max/per-value labels, so metrics may pool; different keys mean
  * incompatible scales that must stay in separate groups.
  */
-/** Canonical identity key of one sorted descriptor set (see ScaleIdentity.key). */
 function canonicalScaleKey(descriptors: ScaleDescriptor[]): string {
   return JSON.stringify([...descriptors].sort((left, right) => left.value - right.value));
 }
@@ -89,6 +88,9 @@ function sectionScales(section: SnapshotSection): ScaleDescriptor[][] {
   return scales;
 }
 
+// Deliberately narrower than rawSectionItemCandidates: distinct-scale
+// extraction never reads the legacy quantitative_items format, matching the
+// locked behavior this module absorbed from program-head-analytics-aggregators.
 function rawSnapshotItems(section: SnapshotSection): Array<Record<string, unknown>> {
   const raw = section as unknown as Record<string, unknown>;
   if (Array.isArray(raw.items)) {
