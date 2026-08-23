@@ -1266,7 +1266,7 @@ export type Database = {
           description: string
           id?: string
           is_active?: boolean
-          order: number
+          order?: number
           program_id: string
           updated_at: string
         }
