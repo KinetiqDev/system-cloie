@@ -167,29 +167,7 @@ export async function getProgramHeadResponseDetail(
     return null;
   }
 
-  const evaluation: EvaluationProjection = response.assignment.course_bound
-    ? {
-        type: "COURSE_BOUND",
-        id: response.assignment.course_bound.id,
-        title: response.assignment.course_bound.deployment_name,
-        context: buildCourseBoundContext(response.assignment.course_bound),
-        snapshot: response.assignment.course_bound.instrument.structure_snapshot,
-        bindings: response.assignment.course_bound.cilo_question_bindings,
-        stakeholder: TargetStakeholder.STUDENT,
-        termInstanceId: response.assignment.course_bound.course_assignment.term_instance.id,
-        ploSnapshots: [],
-      }
-    : {
-        type: "PROGRAM_WIDE",
-        id: response.assignment.central_deployment!.id,
-        title: response.assignment.central_deployment!.deployment_name,
-        context: buildProgramWideContext(response.assignment.central_deployment!),
-        snapshot: response.assignment.central_deployment!.instrument.structure_snapshot,
-        bindings: [],
-        stakeholder: response.assignment.central_deployment!.target_stakeholder,
-        termInstanceId: response.assignment.central_deployment!.term_instance.id,
-        ploSnapshots: response.assignment.central_deployment!.plo_snapshots,
-      };
+  const evaluation = projectEvaluation(response);
 
   const [identityContexts, ciloMappings] = await Promise.all([
     loadRespondentIdentityContexts(
@@ -202,70 +180,8 @@ export async function getProgramHeadResponseDetail(
       : Promise.resolve(new Map<string, CiloPloMapping[]>()),
   ]);
 
-  const sections = (
-    Array.isArray(evaluation.snapshot) ? evaluation.snapshot : []
-  )
-    .filter(isSnapshotSection)
-    .map((section) => {
-      const items = getSnapshotSectionItems(section);
-      const entries = items.map((item) => {
-        if (item.kind === "quantitative") {
-          const entry = response.quant_items.find(
-            (candidate) =>
-              candidate.section_key === section.key && candidate.item_key === item.key
-          );
-          if (!entry) {
-            return null;
-          }
-          const scale = resolveItemScaleIdentity(evaluation.snapshot, section.key, item.key);
-          return {
-            kind: "quantitative" as const,
-            itemKey: item.key,
-            prompt: item.prompt,
-            rating: entry.rating_value,
-            scaleLabel: scaleLabelFor(scale, entry.rating_value),
-            binding: resolveCourseBoundBinding(evaluation, entry, ciloMappings),
-          };
-        }
-        const entry = response.qual_items.find(
-          (candidate) =>
-            candidate.section_key === section.key && candidate.prompt_key === item.key
-        );
-        if (!entry || entry.text_content.trim().length === 0) {
-          return null;
-        }
-        return {
-          kind: "qualitative" as const,
-          promptKey: item.key,
-          prompt: item.prompt,
-          text: entry.text_content,
-        };
-      });
-
-      return {
-        key: section.key,
-        title: section.title,
-        items: entries.filter(
-          (entry): entry is NonNullable<typeof entry> => entry !== null
-        ),
-      };
-    })
-    .filter((section) => section.items.length > 0);
-
-  const validRatings: number[] = [];
-  for (const section of sections) {
-    for (const item of section.items) {
-      if (item.kind !== "quantitative") {
-        continue;
-      }
-      const scale = resolveItemScaleIdentity(evaluation.snapshot, section.key, item.itemKey);
-      if (scale && scale.descriptors.some((descriptor) => descriptor.value === item.rating)) {
-        validRatings.push(item.rating);
-      }
-    }
-  }
-  const quantitativeMean =
-    validRatings.length === 0 ? null : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length;
+  const sections = buildResponseSections(response, evaluation, ciloMappings);
+  const quantitativeMean = responseMeanOf(sections, evaluation.snapshot);
 
   return {
     responseId: response.id,
@@ -409,4 +325,122 @@ function identityFragment(
     };
   }
   return {};
+}
+
+function projectEvaluation(
+  response: {
+    assignment: { course_bound: CourseBoundEvalShape | null; central_deployment: CentralEvalShape | null };
+  }
+): EvaluationProjection {
+  if (response.assignment.course_bound) {
+    const courseBound = response.assignment.course_bound;
+    return {
+      type: "COURSE_BOUND",
+      id: courseBound.id,
+      title: courseBound.deployment_name,
+      context: buildCourseBoundContext(courseBound),
+      snapshot: courseBound.instrument.structure_snapshot,
+      bindings: courseBound.cilo_question_bindings,
+      stakeholder: TargetStakeholder.STUDENT,
+      termInstanceId: courseBound.course_assignment.term_instance.id,
+      ploSnapshots: [],
+    };
+  }
+  const deployment = response.assignment.central_deployment!;
+  return {
+    type: "PROGRAM_WIDE",
+    id: deployment.id,
+    title: deployment.deployment_name,
+    context: buildProgramWideContext(deployment),
+    snapshot: deployment.instrument.structure_snapshot,
+    bindings: [],
+    stakeholder: deployment.target_stakeholder,
+    termInstanceId: deployment.term_instance.id,
+    ploSnapshots: deployment.plo_snapshots,
+  };
+}
+
+function buildResponseSections(
+  response: {
+    quant_items: Array<{
+      cilo_question_binding_id: string | null;
+      section_key: string;
+      item_key: string;
+      rating_value: number;
+    }>;
+    qual_items: Array<{ section_key: string; prompt_key: string; text_content: string }>;
+  },
+  evaluation: EvaluationProjection,
+  ciloMappings: Map<string, CiloPloMapping[]>
+): ProgramHeadSubmittedResponseDetail["sections"][number][] {
+  return (
+    Array.isArray(evaluation.snapshot) ? evaluation.snapshot : []
+  )
+    .filter(isSnapshotSection)
+    .map((section) => {
+      const items = getSnapshotSectionItems(section);
+      const entries = items.map((item) => {
+        if (item.kind === "quantitative") {
+          const entry = response.quant_items.find(
+            (candidate) =>
+              candidate.section_key === section.key && candidate.item_key === item.key
+          );
+          if (!entry) {
+            return null;
+          }
+          const scale = resolveItemScaleIdentity(evaluation.snapshot, section.key, item.key);
+          return {
+            kind: "quantitative" as const,
+            itemKey: item.key,
+            prompt: item.prompt,
+            rating: entry.rating_value,
+            scaleLabel: scaleLabelFor(scale, entry.rating_value),
+            binding: resolveCourseBoundBinding(evaluation, entry, ciloMappings),
+          };
+        }
+        const entry = response.qual_items.find(
+          (candidate) =>
+            candidate.section_key === section.key && candidate.prompt_key === item.key
+        );
+        if (!entry || entry.text_content.trim().length === 0) {
+          return null;
+        }
+        return {
+          kind: "qualitative" as const,
+          promptKey: item.key,
+          prompt: item.prompt,
+          text: entry.text_content,
+        };
+      });
+
+      return {
+        key: section.key,
+        title: section.title,
+        items: entries.filter(
+          (entry): entry is NonNullable<typeof entry> => entry !== null
+        ),
+      };
+    })
+    .filter((section) => section.items.length > 0);
+}
+
+function responseMeanOf(
+  sections: ProgramHeadSubmittedResponseDetail["sections"][number][],
+  snapshot: unknown
+): number | null {
+  const validRatings: number[] = [];
+  for (const section of sections) {
+    for (const item of section.items) {
+      if (item.kind !== "quantitative") {
+        continue;
+      }
+      const scale = resolveItemScaleIdentity(snapshot, section.key, item.itemKey);
+      if (scale && scale.descriptors.some((descriptor) => descriptor.value === item.rating)) {
+        validRatings.push(item.rating);
+      }
+    }
+  }
+  return validRatings.length === 0
+    ? null
+    : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length;
 }
