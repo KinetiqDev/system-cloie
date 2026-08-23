@@ -1,118 +1,156 @@
 import { notFound } from "next/navigation";
-import { BarChart3, ClipboardList, Clock, FileCheck, Gauge, Layers } from "lucide-react";
+import { BarChart3, ClipboardList, MessagesSquare, Target } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
-import { StakeholderMeanComparison } from "@/features/analytics/components/stakeholder-mean-comparison";
-import { QualitativeWordCloud } from "@/features/analytics/components/qualitative-word-cloud";
-import { buildProgramHeadAnalyticsPath } from "@/lib/constants/program-head-routes";
+import { parseAnalyticsSearchParams } from "@/features/analytics/services/program-head-analytics-state";
+import { buildProgramHeadCourseAssignmentsPath } from "@/lib/constants/program-head-routes";
+import { ProgramHeadDashboardKpiGrid } from "@/features/analytics/components/program-head-dashboard-kpis";
+import { ProgramHeadStakeholderProgress } from "@/features/analytics/components/program-head-stakeholder-progress";
+import { ProgramHeadPloSummary } from "@/features/analytics/components/program-head-plo-summary";
+import { ProgramHeadNeedsAttention } from "@/features/analytics/components/program-head-needs-attention";
+import { ProgramHeadQualitativePulse } from "@/features/analytics/components/program-head-qualitative-pulse";
 import { cn } from "@/lib/utils";
 
 export default async function SelectedProgramDashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ programId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { programId } = await params;
-  const dashboard = await getProgramHeadDashboard(programId);
-
+  const [{ programId }, rawSearchParams] = await Promise.all([params, searchParams]);
+  // Period filters share the Analytics URL contract; missing filters default
+  // to the active academic period inside the service (spec §13.1).
+  const analyticsFilters = parseAnalyticsSearchParams(rawSearchParams);
+  const periodFilters = Object.fromEntries(
+    Object.entries({
+      schoolYearId: analyticsFilters.schoolYearId,
+      semester: analyticsFilters.semester,
+      termInstanceId: analyticsFilters.termInstanceId,
+    }).filter(([, value]) => value !== undefined)
+  );
+  const dashboard = await getProgramHeadDashboard(programId, periodFilters);
   if (!dashboard) {
     notFound();
   }
 
-  const kpiCards = [
-    {
-      label: "Submitted Responses",
-      value: dashboard.kpi.submittedResponseCount,
-      icon: <FileCheck aria-hidden="true" />,
-    },
-    {
-      label: "Evaluation Opportunities",
-      value: dashboard.kpi.evaluationOpportunityCount,
-      icon: <ClipboardList aria-hidden="true" />,
-    },
-    {
-      label: "Rating Count",
-      value: dashboard.kpi.ratingCount,
-      icon: <BarChart3 aria-hidden="true" />,
-    },
-    {
-      label: "Mean Rating",
-      value: dashboard.kpi.meanRating === null ? "—" : dashboard.kpi.meanRating.toFixed(2),
-      icon: <Gauge aria-hidden="true" />,
-    },
-    {
-      label: "Pending Responses",
-      value: dashboard.kpi.pendingResponses,
-      icon: <Clock aria-hidden="true" />,
-    },
-    {
-      label: "Active Deployments",
-      value: dashboard.kpi.activeDeployments,
-      icon: <Layers aria-hidden="true" />,
-    },
-  ];
-
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <h1 className="text-heading-lg">Dashboard</h1>
           <p className="text-body-md text-text-secondary">
             <span className="text-link font-semibold">
               {dashboard.programCode} — {dashboard.programLabel}
-            </span>{" "}
-            · Program overview and evaluation insights
+            </span>
+            {dashboard.periodLabel ? <span> · {dashboard.periodLabel}</span> : null}
+            · Operational summary of this evaluation cycle
           </p>
         </div>
-        <Link
-          href={buildProgramHeadAnalyticsPath(programId)}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          <BarChart3 aria-hidden="true" className="size-4" />
-          View full Analytics
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={dashboard.links.responses}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            View Responses
+          </Link>
+          <Link
+            href={dashboard.links.analyticsOutcomes}
+            className={cn(buttonVariants({ variant: "default", size: "sm" }))}
+          >
+            <BarChart3 aria-hidden="true" className="size-4" />
+            Open Analytics
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
-        {kpiCards.map((kpi) => (
-          <KPICard key={kpi.label} label={kpi.label} value={kpi.value} icon={kpi.icon} />
-        ))}
-      </div>
+      <ProgramHeadDashboardKpiGrid
+        participation={dashboard.participation}
+        pendingResponses={dashboard.pendingResponses}
+        activeEvaluations={dashboard.activeEvaluations}
+        sourceMeans={dashboard.sourceMeans}
+        responsesActiveHref={dashboard.links.responsesActive}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <StakeholderMeanComparison data={dashboard.stakeholderMeans} />
-        <QualitativeWordCloud
-          title="Qualitative Response Insights"
-          tokens={dashboard.wordCloudTokens}
-          responseCount={dashboard.qualitativeItemCount}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <ProgramHeadStakeholderProgress
+          participation={dashboard.participation}
+          stakeholdersHref={dashboard.links.analyticsStakeholders}
         />
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-bold">Quick actions</CardTitle>
+            <CardDescription>Common Program Head workflows.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+            <QuickAction
+              href={dashboard.links.responses}
+              icon={<MessagesSquare aria-hidden="true" className="size-4" />}
+              title="View Responses"
+              description="Inspect evaluations and submitted answers"
+            />
+            <QuickAction
+              href={dashboard.links.analyticsOutcomes}
+              icon={<BarChart3 aria-hidden="true" className="size-4" />}
+              title="Explore Analytics"
+              description="Trace PLO, course and stakeholder evidence"
+            />
+            <QuickAction
+              href={buildProgramHeadCourseAssignmentsPath(programId)}
+              icon={<ClipboardList aria-hidden="true" className="size-4" />}
+              title="Course Assignments"
+              description="Manage classes, faculty and sections"
+            />
+            <QuickAction
+              href={dashboard.links.analyticsOutcomes}
+              icon={<Target aria-hidden="true" className="size-4" />}
+              title="Learning Outcomes evidence"
+              description="Compare PLO results across sources"
+            />
+          </CardContent>
+        </Card>
       </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <ProgramHeadPloSummary
+          sources={dashboard.ploSources}
+          ploCatalog={dashboard.ploCatalog}
+          outcomesHref={dashboard.links.analyticsOutcomes}
+        />
+        <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
+      </div>
+
+      <ProgramHeadQualitativePulse
+        pulse={dashboard.qualitative}
+        feedbackHref={dashboard.links.analyticsFeedback}
+      />
     </div>
   );
 }
 
-function KPICard({
-  label,
-  value,
+function QuickAction({
+  href,
   icon,
+  title,
+  description,
 }: {
-  label: string;
-  value: number | string;
+  href: string;
   icon: React.ReactNode;
+  title: string;
+  description: string;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardDescription className="text-xs font-semibold tracking-wider uppercase">{label}</CardDescription>
-          <span className="text-muted-foreground [&_svg]:size-5">{icon}</span>
-        </div>
-        <CardTitle className="text-2xl font-bold">
-          {typeof value === "number" ? value.toLocaleString() : value}
-        </CardTitle>
-      </CardHeader>
-    </Card>
+    <Link
+      href={href}
+      className="focus-visible:ring-ring hover:border-primary/40 flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:outline-none"
+    >
+      <span className="text-muted-foreground mt-0.5">{icon}</span>
+      <span>
+        <span className="block text-xs font-bold">{title}</span>
+        <span className="text-muted-foreground block text-[11px]">{description}</span>
+      </span>
+    </Link>
   );
 }
