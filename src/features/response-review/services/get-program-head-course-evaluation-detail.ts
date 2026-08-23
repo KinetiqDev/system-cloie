@@ -210,11 +210,10 @@ function buildCourseRatingRows(
   const meanByResponse = new Map<string, number | null>();
   for (const response of submittedResponses) {
     submittedRespondentIds.push(response.respondent_id);
-    const validRatings: number[] = [];
-    for (const item of response.quant_items) {
+    const validRatings = response.quant_items.flatMap((item) => {
       const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
-      if (!scale || !scale.descriptors.some((descriptor) => descriptor.value === item.rating_value)) {
-        continue;
+      if (!scale || !scale.descriptors.some((d) => d.value === item.rating_value)) {
+        return [];
       }
       const binding = bindingByQuestionKey.get(`${item.section_key}|${item.item_key}`);
       ratingRows.push({
@@ -225,19 +224,15 @@ function buildCourseRatingRows(
         responseId: response.id,
         scale,
         cilo: binding
-          ? {
-              id: binding.cilo_id ?? `binding-${item.section_key}-${item.item_key}`,
-              label: binding.cilo_description_snapshot,
-              description: binding.cilo_description_snapshot,
-            }
+          ? { id: binding.cilo_id ?? `binding-${item.section_key}-${item.item_key}`, label: binding.cilo_description_snapshot, description: binding.cilo_description_snapshot }
           : null,
         ploMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
       });
-      validRatings.push(item.rating_value);
-    }
+      return [item.rating_value];
+    });
     meanByResponse.set(
       response.id,
-      validRatings.length === 0 ? null : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length
+      validRatings.length === 0 ? null : validRatings.reduce((sum, v) => sum + v, 0) / validRatings.length
     );
   }
   return { ratingRows, meanByResponse, submittedRespondentIds };

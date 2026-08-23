@@ -76,41 +76,10 @@ export async function getProgramHeadCentralEvaluationDetail(
   ]);
 
   const snapshot = deployment.instrument.structure_snapshot;
-  const snapshotItems = new Map<string, { prompt: string }>();
-  for (const section of Array.isArray(snapshot) ? snapshot.filter(isSnapshotSection) : []) {
-    for (const item of getSnapshotSectionItems(section)) {
-      snapshotItems.set(`${section.key}|${item.key}`, { prompt: item.prompt });
-    }
-  }
-
-  // Build lookup: section_key|item_key → plo snapshot bindings
-  const ploByQuestionKey = new Map<string, CentralPloRatingRow["ploBindings"]>();
-  const ploDisplayByQuestionKey = new Map<string, ProgramWidePloBinding[]>();
-  for (const snapshotBinding of deployment.plo_snapshots) {
-    const key = `${snapshotBinding.section_key}|${snapshotBinding.item_key}`;
-    const entry = {
-      ploId: snapshotBinding.plo_id ?? snapshotBinding.plo_code_snapshot,
-      ploCode: snapshotBinding.plo_code_snapshot,
-      ploDescription: snapshotBinding.plo_description_snapshot,
-    };
-    const group = ploByQuestionKey.get(key);
-    if (group) {
-      group.push(entry);
-    } else {
-      ploByQuestionKey.set(key, [entry]);
-    }
-    const displayEntry: ProgramWidePloBinding = {
-      key: snapshotBinding.plo_id ?? snapshotBinding.plo_code_snapshot,
-      code: snapshotBinding.plo_code_snapshot,
-      description: snapshotBinding.plo_description_snapshot,
-    };
-    const displayGroup = ploDisplayByQuestionKey.get(key);
-    if (displayGroup) {
-      displayGroup.push(displayEntry);
-    } else {
-      ploDisplayByQuestionKey.set(key, [displayEntry]);
-    }
-  }
+  const { snapshotItems, ploByQuestionKey, ploDisplayByQuestionKey } = buildCentralIndexes(
+    snapshot,
+    deployment.plo_snapshots
+  );
 
   const { ratingRows, centralPloRows, meanByResponse, submittedRespondentIds } = buildCentralRatingRows(
     submittedResponses,
@@ -249,4 +218,34 @@ function buildCentralRatingRows(
   }
 
   return { ratingRows, centralPloRows, meanByResponse, submittedRespondentIds };
+}
+
+function buildCentralIndexes(
+  snapshot: unknown,
+  ploSnapshots: Array<{
+    plo_id: string | null;
+    plo_code_snapshot: string;
+    plo_description_snapshot: string;
+    section_key: string;
+    item_key: string;
+  }>
+): { snapshotItems: Map<string, { prompt: string }>; ploByQuestionKey: Map<string, CentralPloRatingRow["ploBindings"]>; ploDisplayByQuestionKey: Map<string, ProgramWidePloBinding[]> } {
+  const snapshotItems = new Map<string, { prompt: string }>();
+  for (const section of Array.isArray(snapshot) ? snapshot.filter(isSnapshotSection) : []) {
+    for (const item of getSnapshotSectionItems(section)) {
+      snapshotItems.set(`${section.key}|${item.key}`, { prompt: item.prompt });
+    }
+  }
+  const ploByQuestionKey = new Map<string, CentralPloRatingRow["ploBindings"]>();
+  const ploDisplayByQuestionKey = new Map<string, ProgramWidePloBinding[]>();
+  for (const sb of ploSnapshots) {
+    const key = `${sb.section_key}|${sb.item_key}`;
+    const entry = { ploId: sb.plo_id ?? sb.plo_code_snapshot, ploCode: sb.plo_code_snapshot, ploDescription: sb.plo_description_snapshot };
+    const group = ploByQuestionKey.get(key);
+    if (group) { group.push(entry); } else { ploByQuestionKey.set(key, [entry]); }
+    const displayEntry: ProgramWidePloBinding = { key: sb.plo_id ?? sb.plo_code_snapshot, code: sb.plo_code_snapshot, description: sb.plo_description_snapshot };
+    const displayGroup = ploDisplayByQuestionKey.get(key);
+    if (displayGroup) { displayGroup.push(displayEntry); } else { ploDisplayByQuestionKey.set(key, [displayEntry]); }
+  }
+  return { snapshotItems, ploByQuestionKey, ploDisplayByQuestionKey };
 }
