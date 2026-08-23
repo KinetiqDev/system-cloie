@@ -400,10 +400,9 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
       return;
     }
 
-    // Primary: event-based toast (works when ToastProvider stays mounted).
-    // Secondary: query-param toast survives a full-page redirect race.
-    showToast("User created successfully.", "success");
-    router.push("/secretary/users?toast=User%20created%20successfully.&toastType=success");
+    // Query-param toast: consumed by ToastProvider on arrival; the users page
+    // carries it through its canonicalization redirect.
+    router.push(`/secretary/users?toast=${encodeURIComponent("User created successfully.")}&toastType=success`);
   };
   return (
     <Card className="border-border shadow-sm">

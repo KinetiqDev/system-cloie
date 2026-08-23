@@ -9,6 +9,33 @@ import {
   serializeSecretaryUsersListQuery,
 } from "@/features/users/schemas/secretary-users-list";
 
+/**
+ * Transient client-consumed query params (toast feedback) that are not list
+ * filters: keep them out of the canonical-form comparison and carry them
+ * across canonicalization redirects so the client ToastProvider can consume
+ * them on arrival.
+ */
+const TRANSIENT_QUERY_KEYS = ["toast", "toastType"] as const;
+
+function pickTransientParams(raw: Record<string, string | string[] | undefined>): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const key of TRANSIENT_QUERY_KEYS) {
+    const value = raw[key];
+    if (typeof value === "string" && value.length > 0) {
+      params.set(key, value);
+    }
+  }
+  return params;
+}
+
+function usersListHref(canonicalQuery: string, transientParams: URLSearchParams): string {
+  const base = canonicalQuery ? `/secretary/users?${canonicalQuery}` : "/secretary/users";
+  if (transientParams.size === 0) {
+    return base;
+  }
+  return `${base}${canonicalQuery ? "&" : "?"}${transientParams.toString()}`;
+}
+
 export default async function SecretaryUsersPage({
   searchParams,
 }: {
@@ -20,18 +47,22 @@ export default async function SecretaryUsersPage({
   }
 
   const rawParams = await searchParams;
+  const transientParams = pickTransientParams(rawParams);
+  const listRawParams: Record<string, string | string[] | undefined> = { ...rawParams };
+  for (const key of TRANSIENT_QUERY_KEYS) {
+    delete listRawParams[key];
+  }
+
   const query = parseSecretaryUsersListQuery(rawParams);
   const canonicalQuery = serializeSecretaryUsersListQuery(query);
-  if (rawSecretaryUsersSearchParamsToQueryString(rawParams) !== canonicalQuery) {
-    redirect(canonicalQuery ? `/secretary/users?${canonicalQuery}` : "/secretary/users");
+  if (rawSecretaryUsersSearchParamsToQueryString(listRawParams) !== canonicalQuery) {
+    redirect(usersListHref(canonicalQuery, transientParams));
   }
 
   const result = await listSecretaryUsersSummary(query);
   if (!result.success) {
     if ("canonicalQuery" in result) {
-      redirect(
-        result.canonicalQuery ? `/secretary/users?${result.canonicalQuery}` : "/secretary/users"
-      );
+      redirect(usersListHref(result.canonicalQuery ?? "", transientParams));
     }
     redirect("/unauthorized");
   }
@@ -39,7 +70,7 @@ export default async function SecretaryUsersPage({
 
   if (page !== query.page) {
     const canonicalPageQuery = serializeSecretaryUsersListQuery({ ...query, page });
-    redirect(canonicalPageQuery ? `/secretary/users?${canonicalPageQuery}` : "/secretary/users");
+    redirect(usersListHref(canonicalPageQuery, transientParams));
   }
 
   return (

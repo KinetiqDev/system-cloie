@@ -73,12 +73,33 @@ describe("Secretary Users route", () => {
     [{ sort: "firstName" }, "/secretary/users"],
     [{ sort: "lastName" }, "/secretary/users"],
     [{ sort: "lastName", dir: "desc" }, "/secretary/users?sort=name&dir=desc"],
+    // Transient toast params are carried across canonicalization redirects.
+    [
+      { sort: "lastName", toast: "Failed", toastType: "error" },
+      "/secretary/users?toast=Failed&toastType=error",
+    ],
+    [
+      { page: ["2", "3"], toast: "Saved", toastType: "success" },
+      "/secretary/users?page=2&toast=Saved&toastType=success",
+    ],
   ])("redirects non-canonical list URLs %#", async (rawParams, expectedPath) => {
     const Page = await loadPage();
     await expect(Page({ searchParams: Promise.resolve(rawParams) })).rejects.toThrow(
       `${REDIRECT_ERROR}:${expectedPath}`
     );
     expect(listSummaryMock).not.toHaveBeenCalled();
+  });
+
+  it("renders when only transient toast params are present", async () => {
+    const Page = await loadPage();
+    await Page({
+      searchParams: Promise.resolve({
+        toast: "User created successfully.",
+        toastType: "success",
+      }),
+    });
+
+    expect(listSummaryMock).toHaveBeenCalledTimes(1);
   });
 
   it("passes canonical server list state to the read service", async () => {
