@@ -7,11 +7,15 @@ const {
   getCourseBoundReviewDetailMock,
   getCourseBoundResponseReviewMock,
   resolveProgramHeadContextMock,
+  resolveLegacyCourseEvaluationMock,
+  resolveLegacyCourseResponseMock,
 } = vi.hoisted(() => ({
   getCourseBoundResponseReviewMock: vi.fn(),
   getCourseBoundReviewDetailMock: vi.fn(),
   listCourseBoundReviewItemsMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
+  resolveLegacyCourseEvaluationMock: vi.fn(),
+  resolveLegacyCourseResponseMock: vi.fn(),
 }));
 
 vi.mock("next/link", () => ({
@@ -47,6 +51,10 @@ vi.mock("@/features/analytics/services/get-course-bound-response-review", () => 
 
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
+}));
+vi.mock("@/features/analytics/services/resolve-legacy-cilo-review-redirect", () => ({
+  resolveLegacyCourseEvaluation: resolveLegacyCourseEvaluationMock,
+  resolveLegacyCourseResponse: resolveLegacyCourseResponseMock,
 }));
 
 vi.mock("@/features/analytics/components/published-course-bound-list", () => ({
@@ -186,83 +194,32 @@ describe("reviewer course-bound pages", () => {
     ).toBeInTheDocument();
   });
 
-  it("redirects the static Program Head review route to entry", async () => {
-    const ProgramHeadListPage = (await import("../../app/(app)/program-head/cilo-reviews/page"))
-      .default;
-
-    await expect(Promise.resolve().then(() => ProgramHeadListPage())).rejects.toThrow(
-      "NEXT_REDIRECT:/program-head"
+  it("redirects the selected Program review route to Responses", async () => {
+    const ProgramHeadListPage = (await import("../../app/(app)/program-head/programs/[programId]/cilo-reviews/page")).default;
+    await expect(ProgramHeadListPage({ params: Promise.resolve({ programId: "program-1" }) })).rejects.toThrow(
+      "NEXT_REDIRECT:/program-head/programs/program-1/responses"
     );
-    expect(listCourseBoundReviewItemsMock).not.toHaveBeenCalled();
   });
 
-  it("renders the selected Program review list", async () => {
-    const ProgramHeadListPage = (
-      await import("../../app/(app)/program-head/programs/[programId]/cilo-reviews/page")
-    ).default;
-
-    const page = await ProgramHeadListPage({
-      params: Promise.resolve({ programId: "program-1" }),
-    });
-
-    render(page);
-
-    expect(resolveProgramHeadContextMock).toHaveBeenCalledWith("program-1");
-    expect(listCourseBoundReviewItemsMock).toHaveBeenCalledWith("program-1");
-    expect(screen.getByText("Published list: Course-bound Reviews")).toBeInTheDocument();
-  });
-
-  it("preserves selected Program paths through review detail and response routes", async () => {
-    const ProgramHeadDetailPage = (
-      await import("../../app/(app)/program-head/programs/[programId]/cilo-reviews/[evaluationId]/page")
-    ).default;
-    const detailPage = await ProgramHeadDetailPage({
-      params: Promise.resolve({ evaluationId: "eval-1", programId: "program-1" }),
-    });
-
-    render(detailPage);
-
-    expect(getCourseBoundReviewDetailMock).toHaveBeenCalledWith("eval-1", "program-1");
-    expect(
-      screen.getByText("Tabs base path: /program-head/programs/program-1/cilo-reviews/eval-1")
-    ).toBeInTheDocument();
-
-    const ProgramHeadResponsePage = (
-      await import("../../app/(app)/program-head/programs/[programId]/cilo-reviews/[evaluationId]/responses/[responseId]/page")
-    ).default;
-    const responsePage = await ProgramHeadResponsePage({
-      params: Promise.resolve({
-        evaluationId: "eval-1",
-        programId: "program-1",
-        responseId: "response-1",
-      }),
-    });
-
-    render(responsePage);
-
-    expect(getCourseBoundResponseReviewMock).toHaveBeenCalledWith("response-1", "program-1");
-    expect(screen.getByText(/Response detail:/)).toBeInTheDocument();
-  });
-
-  it("returns 404 for deferred Dean review surfaces", async () => {
-    const DeanListPage = (await import("../../app/(app)/dean/cilo-reviews/page")).default;
-    const DeanDetailPage = (await import("../../app/(app)/dean/cilo-reviews/[evaluationId]/page"))
-      .default;
-
-    await expect(DeanListPage()).rejects.toThrow("NEXT_NOT_FOUND");
-    await expect(
-      DeanDetailPage({ params: Promise.resolve({ evaluationId: "eval-1" }) })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
-  });
-
-  it("redirects the static Program Head response route to entry", async () => {
-    const ProgramHeadResponsePage = (
-      await import("../../app/(app)/program-head/cilo-reviews/[evaluationId]/responses/[responseId]/page")
-    ).default;
-
-    await expect(Promise.resolve().then(() => ProgramHeadResponsePage())).rejects.toThrow(
-      "NEXT_REDIRECT:/program-head"
+  it("redirects resolvable selected Program evaluation routes to canonical Responses", async () => {
+    resolveLegacyCourseEvaluationMock.mockResolvedValueOnce("eval-1");
+    const ProgramHeadDetailPage = (await import("../../app/(app)/program-head/programs/[programId]/cilo-reviews/[evaluationId]/page")).default;
+    await expect(ProgramHeadDetailPage({ params: Promise.resolve({ evaluationId: "eval-1", programId: "program-1" }) })).rejects.toThrow(
+      "NEXT_REDIRECT:/program-head/programs/program-1/responses/course/eval-1"
     );
-    expect(getCourseBoundResponseReviewMock).not.toHaveBeenCalled();
+
+    resolveLegacyCourseResponseMock.mockResolvedValueOnce("response-1");
+    const ProgramHeadResponsePage = (await import("../../app/(app)/program-head/programs/[programId]/cilo-reviews/[evaluationId]/responses/[responseId]/page")).default;
+    await expect(ProgramHeadResponsePage({ params: Promise.resolve({ evaluationId: "eval-1", programId: "program-1", responseId: "response-1" }) })).rejects.toThrow(
+      "NEXT_REDIRECT:/program-head/programs/program-1/responses/course/eval-1/responses/response-1"
+    );
+  });
+
+  it("falls back to the Responses landing for unresolved legacy resources", async () => {
+    resolveLegacyCourseEvaluationMock.mockResolvedValueOnce(null);
+    const ProgramHeadDetailPage = (await import("../../app/(app)/program-head/programs/[programId]/cilo-reviews/[evaluationId]/page")).default;
+    await expect(ProgramHeadDetailPage({ params: Promise.resolve({ evaluationId: "eval-2", programId: "program-1" }) })).rejects.toThrow(
+      "NEXT_REDIRECT:/program-head/programs/program-1/responses"
+    );
   });
 });
