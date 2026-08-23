@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { buildProgramHeadCiloReviewDetailPath } from "@/lib/constants/program-head-routes";
+import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadFeedbackDTO } from "@/features/analytics/program-head-analytics-types";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 
@@ -213,7 +213,7 @@ function FeedbackEvidenceLinks({
           {evaluations.map((evaluation) => (
             <li key={evaluation.evaluationId}>
               <Link
-                href={buildProgramHeadCiloReviewDetailPath(programId, evaluation.evaluationId)}
+                href={buildProgramHeadResponsesCourseEvaluationPath(programId, evaluation.evaluationId)}
                 className={cn(
                   "text-link underline underline-offset-3 hover:text-foreground",
                   "pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"

@@ -951,6 +951,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/page.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/program-head/programs/[programId]/course-assignments/loading.tsx",
     disposition: "task",
     taskId: 14,
@@ -2218,6 +2230,24 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/stakeholder-mean-pie-chart.tsx",
     disposition: "task",
     taskId: 9,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/analytics/components/program-head-responses-filters.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/analytics/components/program-head-responses-landing.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/analytics/components/program-head-responses-pagination.tsx",
+    disposition: "task",
+    taskId: 14,
     category: "feature_component",
   },
   {

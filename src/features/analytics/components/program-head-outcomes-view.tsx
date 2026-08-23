@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { buildProgramHeadCiloReviewDetailPath } from "@/lib/constants/program-head-routes";
+import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadPLODetail } from "./program-head-plo-detail";
 import { ProgramHeadOutcomeRankingChart } from "./program-head-outcome-ranking-chart";
@@ -204,7 +204,7 @@ function OutcomesExactValueTable({
                         {outcome.evidenceEvaluations.map((evaluation) => (
                           <li key={evaluation.evaluationId}>
                             <Link
-                              href={buildProgramHeadCiloReviewDetailPath(
+                              href={buildProgramHeadResponsesCourseEvaluationPath(
                                 programId,
                                 evaluation.evaluationId
                               )}

@@ -92,6 +92,7 @@ describe("navigation helpers", () => {
       "/program-head/programs/program-2/course-assignments",
       "/program-head/programs/program-2/outcomes",
       "/program-head/programs/program-2/tools",
+      "/program-head/programs/program-2/responses",
       "/program-head/programs/program-2/analytics",
       "/program-head/programs/program-2/reports",
       "/program-head/profile",
@@ -100,6 +101,7 @@ describe("navigation helpers", () => {
 
   it("returns Program Head management navigation to entry when no context is selected", () => {
     expect(getProgramHeadNav("/program-head/profile").map((item) => item.href)).toEqual([
+      "/program-head",
       "/program-head",
       "/program-head",
       "/program-head",

@@ -147,11 +147,11 @@ describe("ProgramHeadOutcomesView", () => {
 
     expect(screen.getByRole("link", { name: "CILO Evaluation" })).toHaveAttribute(
       "href",
-      "/program-head/programs/program-bsed/cilo-reviews/eval-1"
+      "/program-head/programs/program-bsed/responses/course/eval-1"
     );
     expect(screen.getByRole("link", { name: "CILO Evaluation 2" })).toHaveAttribute(
       "href",
-      "/program-head/programs/program-bsed/cilo-reviews/eval-2"
+      "/program-head/programs/program-bsed/responses/course/eval-2"
     );
   });
 

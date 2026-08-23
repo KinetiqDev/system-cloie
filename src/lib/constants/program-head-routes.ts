@@ -63,6 +63,55 @@ export function buildProgramHeadNewCiloEvaluationPath(programId: string): string
   return buildProgramHeadProgramPath(programId, "cilo-evaluations/new");
 }
 
+export function buildProgramHeadResponsesPath(
+  programId: string,
+  tab?: "course" | "program-wide"
+): string {
+  const path = buildProgramHeadProgramPath(programId, "responses");
+  return tab && tab !== "course" ? `${path}?tab=${tab}` : path;
+}
+
+export function buildProgramHeadResponsesCourseEvaluationPath(
+  programId: string,
+  evaluationId: string
+): string {
+  return buildProgramHeadProgramPath(
+    programId,
+    `responses/course/${encodeURIComponent(evaluationId)}`
+  );
+}
+
+export function buildProgramHeadResponsesCourseResponsePath(
+  programId: string,
+  evaluationId: string,
+  responseId: string
+): string {
+  return buildProgramHeadProgramPath(
+    programId,
+    `responses/course/${encodeURIComponent(evaluationId)}/responses/${encodeURIComponent(responseId)}`
+  );
+}
+export function buildProgramHeadResponsesProgramWideDeploymentPath(
+  programId: string,
+  deploymentId: string
+): string {
+  return buildProgramHeadProgramPath(
+    programId,
+    `responses/program-wide/${encodeURIComponent(deploymentId)}`
+  );
+}
+
+export function buildProgramHeadResponsesProgramWideResponsePath(
+  programId: string,
+  deploymentId: string,
+  responseId: string
+): string {
+  return buildProgramHeadProgramPath(
+    programId,
+    `responses/program-wide/${encodeURIComponent(deploymentId)}/responses/${encodeURIComponent(responseId)}`
+  );
+}
+
 export function buildProgramHeadCiloReviewsPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "cilo-reviews");
 }

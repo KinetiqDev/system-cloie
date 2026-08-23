@@ -104,6 +104,12 @@ const PROGRAM_HEAD_NAV: NavItem[] = [
   },
   { name: "Tools", href: "/program-head/tools", icon: FileText, programHeadChildPath: "tools" },
   {
+    name: "Responses",
+    href: "/program-head/responses",
+    icon: ClipboardList,
+    programHeadChildPath: "responses",
+  },
+  {
     name: "Analytics",
     href: "/program-head/analytics",
     icon: BarChart3,

@@ -67,7 +67,7 @@ describe("Program Head desktop navigation", () => {
 
       render(<Sidebar roles={[ROLES.PROGRAM_HEAD]} />);
 
-      expect(screen.getAllByRole("link")).toHaveLength(10);
+      expect(screen.getAllByRole("link")).toHaveLength(11);
       expect(screen.getAllByRole("link", { name: "Dashboard" })[0]).toHaveAttribute(
         "href",
         "/program-head"

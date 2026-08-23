@@ -10,7 +10,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
-import { buildProgramHeadCiloReviewDetailPath } from "@/lib/constants/program-head-routes";
+import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type {
   ProgramHeadBreakdownRowDTO,
   ProgramHeadBreakdownsDTO,
@@ -47,7 +47,7 @@ function courseRowToDatum(
     ...breakdownRowToDatum(row),
     context: row.instrumentContext,
     links: row.evidenceEvaluations.map((evaluation) => ({
-      href: buildProgramHeadCiloReviewDetailPath(programId, evaluation.evaluationId),
+      href: buildProgramHeadResponsesCourseEvaluationPath(programId, evaluation.evaluationId),
       label: evaluation.deploymentName,
     })),
   };
