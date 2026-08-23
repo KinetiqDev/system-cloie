@@ -64,7 +64,7 @@ describe("Program Head Tools action freshness", () => {
 
   it("revalidates the selected Tools path after a baseline copy", async () => {
     const { createBaselineCopyAction } = await import("@/lib/actions/program-head-baseline-actions");
-    await createBaselineCopyAction(PROGRAM_ID, "baseline-1", "Copy", []);
+    await createBaselineCopyAction(PROGRAM_ID, "baseline-1", "Copy", [], []);
 
     expect(revalidatePathMock).toHaveBeenCalledWith(
       `/program-head/programs/${PROGRAM_ID}/tools`

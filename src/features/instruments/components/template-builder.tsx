@@ -131,7 +131,8 @@ export interface TemplateBuilderProps {
   onSaveAsCopy?: (
     baselineId: string,
     customName: string,
-    structure: TemplateStructure
+    structure: TemplateStructure,
+    ploBindings: TemplatePloQuestionBinding[]
   ) => Promise<ActionResult<{ id: string }>>;
   onPublish?: () => void;
   /**
@@ -429,9 +430,13 @@ export function TemplateBuilder({
 
   const facultyMode = Boolean(facultyConfig);
   const effectiveTemplateType: EvaluationTemplateType = facultyMode ? "COURSE_BOUND" : templateType;
-  /** PLO question bindings are a Program-owned template concern only. */
+  /** PLO question bindings are a Program-owned template concern only.
+   *  Program heads editing an institutional baseline may bind PLOs before
+   *  saving a program-owned copy (`onSaveAsCopy` marks that flow). */
   const programWideMode =
-    !facultyMode && effectiveTemplateType === "PROGRAM_WIDE" && !isInstitutionalBaseline;
+    !facultyMode &&
+    effectiveTemplateType === "PROGRAM_WIDE" &&
+    (!isInstitutionalBaseline || Boolean(onSaveAsCopy));
   const programPloOptions = ploOptions ?? [];
   const facultyCourseContexts = facultyConfig?.courseContexts ?? EMPTY_FACULTY_COURSE_CONTEXTS;
   const loadManagedCilosAction = facultyConfig?.loadManagedCilosAction;
@@ -911,7 +916,23 @@ export function TemplateBuilder({
     if (!templateId || !onSaveAsCopy) return;
 
     setIsCopyPending(true);
-    const result = await onSaveAsCopy(templateId, copyName, normalizeTemplateStructure(sections));
+    const structure = normalizeTemplateStructure(sections);
+    const ploBindings: TemplatePloQuestionBinding[] = [];
+    if (programWideMode) {
+      // Derived from the live structure: deleting a question or switching it
+      // to open-ended automatically drops its bindings.
+      for (const section of structure) {
+        for (const question of section.questions) {
+          if (question.type !== "likert") continue;
+          for (const ploId of ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []) {
+            if (ploId) {
+              ploBindings.push({ itemKey: question.key, ploId, sectionKey: section.key });
+            }
+          }
+        }
+      }
+    }
+    const result = await onSaveAsCopy(templateId, copyName, structure, ploBindings);
     setIsCopyPending(false);
     setCopyNameDialogOpen(false);
 
@@ -924,7 +945,7 @@ export function TemplateBuilder({
     showToast("Template saved as program copy successfully.", "success");
     onSaveResult?.({ success: true, id: result.data!.id });
     router.push(toolsHref ?? "/");
-  }, [templateId, onSaveAsCopy, copyName, sections, toolsHref, router, onSaveResult]);
+  }, [templateId, onSaveAsCopy, copyName, sections, toolsHref, router, onSaveResult, programWideMode, ploQuestionBindings]);
 
   const handleSave = useCallback(() => {
     // If editing an institutional baseline, show copy name dialog

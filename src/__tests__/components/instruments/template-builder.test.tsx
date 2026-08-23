@@ -1113,6 +1113,131 @@ describe("TemplateBuilder", () => {
     expect(screen.queryByText("Select PLOs…")).not.toBeInTheDocument();
   });
 
+  test("shows the PLO picker when program heads copy an institutional baseline", async () => {
+    const onSaveAsCopy = vi.fn().mockResolvedValue({ success: true, data: { id: "copy-1" } });
+    const ploOptions = [
+      { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
+    ];
+
+    const { unmount } = render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        isInstitutionalBaseline
+        onSaveAsCopy={onSaveAsCopy}
+        onSave={vi.fn()}
+        ploOptions={ploOptions}
+        initialData={{
+          id: "baseline-1",
+          name: "Institutional Baseline",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+                {
+                  key: "question-2",
+                  prompt: "Comment",
+                  type: "guided_open_ended",
+                  order: 1,
+                  required: false,
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    // Likert question gets the picker; the guided-open-ended question does not.
+    expect(screen.getAllByText("PLO Binding")).toHaveLength(1);
+
+    // Select a PLO, then save via the copy dialog.
+    const trigger = screen.getByRole("button", { name: "PLO Binding" });
+    fireEvent.click(trigger);
+    fireEvent.click(
+      await screen.findByRole("checkbox", { name: /PLO-1: Apply discipline knowledge/ })
+    );
+    fireEvent.click(trigger); // close the picker
+
+    fireEvent.click(screen.getByRole("button", { name: /save as program copy/i }));
+    fireEvent.click(screen.getByRole("button", { name: /create copy/i }));
+    await waitFor(() => expect(onSaveAsCopy).toHaveBeenCalledTimes(1));
+    expect(onSaveAsCopy).toHaveBeenCalledWith(
+      "baseline-1",
+      "Institutional Baseline",
+      expect.any(Array),
+      [{ itemKey: "question-1", ploId: "plo-1", sectionKey: "section-1" }]
+    );
+
+    unmount();
+
+    // Course-bound baselines stay gated: no PLO picker even with onSaveAsCopy.
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        isInstitutionalBaseline
+        onSaveAsCopy={onSaveAsCopy}
+        onSave={vi.fn()}
+        ploOptions={ploOptions}
+        initialData={{
+          id: "baseline-2",
+          name: "Course Baseline",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("Select PLOs…")).not.toBeInTheDocument();
+  });
+
   test("renders the PLO picker as a mobile drawer with search and close action", async () => {
     vi.stubGlobal(
       "matchMedia",

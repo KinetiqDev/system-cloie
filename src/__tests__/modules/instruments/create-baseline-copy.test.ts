@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { contextMock, assignmentMock, transactionMock, templateCreateMock, versionCreateMock, programMock } = vi.hoisted(() => ({
+const { contextMock, assignmentMock, transactionMock, templateCreateMock, versionCreateMock, programMock, ploFindManyMock, bindingDeleteManyMock, bindingCreateManyMock } = vi.hoisted(() => ({
   contextMock: vi.fn(),
   assignmentMock: vi.fn(),
   transactionMock: vi.fn(),
   templateCreateMock: vi.fn(),
   versionCreateMock: vi.fn(),
   programMock: vi.fn(),
+  ploFindManyMock: vi.fn(),
+  bindingDeleteManyMock: vi.fn(),
+  bindingCreateManyMock: vi.fn(),
 }));
 
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
@@ -27,6 +30,7 @@ vi.mock("@/lib/db/prisma", () => ({
       program_id: null,
     }) },
     program: { findUnique: programMock },
+    pLO: { findMany: ploFindManyMock },
     $transaction: transactionMock,
   },
 }));
@@ -51,6 +55,10 @@ describe("createBaselineCopy", () => {
       callback({
         instrumentTemplate: { create: templateCreateMock.mockResolvedValue({ id: "copy-1" }) },
         instrumentVersion: { create: versionCreateMock.mockResolvedValue({ id: "version-1" }) },
+        instrumentTemplatePloQuestionBinding: {
+          deleteMany: bindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: bindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        },
       })
     );
   });
@@ -94,6 +102,7 @@ describe("createBaselineCopy", () => {
       baselineId: "baseline-1",
       customName: "BSED Copy",
       structure: reorderedStructure,
+      ploBindings: [],
     });
 
     expect(result).toEqual({ success: true, data: { id: "copy-1" } });
@@ -117,9 +126,119 @@ describe("createBaselineCopy", () => {
   it("does not create a copy when the selected context is rejected", async () => {
     contextMock.mockResolvedValue({ success: false, error: "Selected Program is not assigned." });
     const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
-    const result = await createBaselineCopy({ programId: "program-3", baselineId: "baseline-1", customName: "Copy", structure: [] });
+    const result = await createBaselineCopy({ programId: "program-3", baselineId: "baseline-1", customName: "Copy", structure: [], ploBindings: [] });
 
     expect(result.success).toBe(false);
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("persists PLO bindings as snapshots on the copied template", async () => {
+    ploFindManyMock.mockResolvedValue([
+      { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
+    ]);
+    const structure = [
+      {
+        key: "section-b",
+        title: "Section B",
+        description: undefined,
+        order: 0,
+        questions: [
+          { key: "question-b", prompt: "Question B", type: "likert" as const, order: 0, required: true },
+          { key: "question-a", prompt: "Question A", type: "likert" as const, order: 1, required: true },
+        ],
+      },
+    ];
+
+    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
+    const result = await createBaselineCopy({
+      programId: "program-2",
+      baselineId: "baseline-1",
+      customName: "BSED Copy",
+      structure,
+      ploBindings: [{ ploId: "plo-1", itemKey: "question-b", sectionKey: "section-b" }],
+    });
+
+    expect(result).toEqual({ success: true, data: { id: "copy-1" } });
+    expect(bindingDeleteManyMock).toHaveBeenCalledWith({
+      where: { template_id: "copy-1" },
+    });
+    expect(bindingCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          plo_id: "plo-1",
+          plo_code_snapshot: "PLO-1",
+          plo_description_snapshot: "Apply discipline knowledge",
+          section_key: "section-b",
+          item_key: "question-b",
+          question_prompt_snapshot: "Question B",
+        }),
+      ],
+    });
+  });
+
+  it("rejects invalid PLO IDs in the baseline copy bindings", async () => {
+    ploFindManyMock.mockResolvedValue([
+      { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
+    ]);
+    const structure = [
+      {
+        key: "section-1",
+        title: "Section 1",
+        description: undefined,
+        order: 0,
+        questions: [
+          { key: "question-1", prompt: "Rate", type: "likert" as const, order: 0, required: true },
+        ],
+      },
+    ];
+
+    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
+    const result = await createBaselineCopy({
+      programId: "program-2",
+      baselineId: "baseline-1",
+      customName: "Copy",
+      structure,
+      ploBindings: [{ ploId: "plo-999", itemKey: "question-1", sectionKey: "section-1" }],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result).toEqual({
+      success: false,
+      error: "One or more selected PLOs are invalid or no longer active.",
+    });
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects bindings that target a non-Likert question", async () => {
+    ploFindManyMock.mockResolvedValue([
+      { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
+    ]);
+    const structure = [
+      {
+        key: "section-1",
+        title: "Section 1",
+        description: undefined,
+        order: 0,
+        questions: [
+          { key: "question-1", prompt: "Comment", type: "guided_open_ended" as const, order: 0, required: false },
+        ],
+      },
+    ];
+
+    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
+    const result = await createBaselineCopy({
+      programId: "program-2",
+      baselineId: "baseline-1",
+      customName: "Copy",
+      structure,
+      ploBindings: [{ ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" }],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result).toEqual({
+      success: false,
+      error: "PLOs can only be assigned to Likert questions.",
+    });
     expect(transactionMock).not.toHaveBeenCalled();
   });
 });

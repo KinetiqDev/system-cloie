@@ -129,7 +129,7 @@ async function validateProgramPloBindingsForProgram(input: {
   });
 }
 
-async function syncTemplatePloBindings(
+export async function syncTemplatePloBindings(
   tx: Prisma.TransactionClient,
   templateId: string,
   bindings: ProgramHeadPloBindingItem[]
