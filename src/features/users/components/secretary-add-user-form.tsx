@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/ui/toast";
 import {
   useForm,
   Controller,
@@ -393,13 +394,16 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
     const result = await createAction(formData);
 
     if (!result.success) {
-      setGlobalError(result.error);
+      const msg = result.error || "Failed to create user.";
+      setGlobalError(msg);
+      showToast(msg, "error");
       return;
     }
 
-    router.push("/secretary/users");
+    // Query-param toast: consumed by ToastProvider on arrival; the users page
+    // carries it through its canonicalization redirect.
+    router.push(`/secretary/users?toast=${encodeURIComponent("User created successfully.")}&toastType=success`);
   };
-
   return (
     <Card className="border-border shadow-sm">
       <form onSubmit={handleSubmit(onSubmit)}>
