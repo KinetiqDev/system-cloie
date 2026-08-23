@@ -7,7 +7,7 @@ import { buildCiloMetrics, buildQuestionMetrics, type OutcomeItemRatingRow } fro
 import type { CiloPloMapping } from "@/features/analytics/aggregators/types";
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
-import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
+import { resolveItemScaleIdentity, type ScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
 import { getSnapshotSectionItems, isSnapshotSection } from "@/features/analytics/services/snapshot-structure";
 import { loadCiloMappings } from "./cilo-mappings";
 import { buildQualitativeSummary } from "./qualitative-summary";
@@ -215,19 +215,9 @@ function buildCourseRatingRows(
       if (!scale || !scale.descriptors.some((d) => d.value === item.rating_value)) {
         return [];
       }
-      const binding = bindingByQuestionKey.get(`${item.section_key}|${item.item_key}`);
-      ratingRows.push({
-        sectionKey: item.section_key,
-        itemKey: item.item_key,
-        prompt: snapshotItems.get(`${item.section_key}|${item.item_key}`)?.prompt ?? item.item_key,
-        ratingValue: item.rating_value,
-        responseId: response.id,
-        scale,
-        cilo: binding
-          ? { id: binding.cilo_id ?? `binding-${item.section_key}-${item.item_key}`, label: binding.cilo_description_snapshot, description: binding.cilo_description_snapshot }
-          : null,
-        ploMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
-      });
+      ratingRows.push(
+        toCourseRatingRow(item, scale, response.id, snapshotItems, bindingByQuestionKey, ciloMappings)
+      );
       return [item.rating_value];
     });
     meanByResponse.set(
@@ -236,4 +226,27 @@ function buildCourseRatingRows(
     );
   }
   return { ratingRows, meanByResponse, submittedRespondentIds };
+}
+
+function toCourseRatingRow(
+  item: { section_key: string; item_key: string; rating_value: number },
+  scale: ScaleIdentity,
+  responseId: string,
+  snapshotItems: Map<string, { prompt: string }>,
+  bindingByQuestionKey: Map<string, { cilo_id: string | null; cilo_description_snapshot: string }>,
+  ciloMappings: Map<string, CiloPloMapping[]>
+): OutcomeItemRatingRow {
+  const binding = bindingByQuestionKey.get(`${item.section_key}|${item.item_key}`);
+  return {
+    sectionKey: item.section_key,
+    itemKey: item.item_key,
+    prompt: snapshotItems.get(`${item.section_key}|${item.item_key}`)?.prompt ?? item.item_key,
+    ratingValue: item.rating_value,
+    responseId,
+    scale,
+    cilo: binding
+      ? { id: binding.cilo_id ?? `binding-${item.section_key}-${item.item_key}`, label: binding.cilo_description_snapshot, description: binding.cilo_description_snapshot }
+      : null,
+    ploMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
+  };
 }
