@@ -2,10 +2,10 @@ import { AcademicSemester, DeploymentStatus, StudentSection, TargetStakeholder, 
 import { z } from "zod";
 import { buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes";
 
-export const RESPONSE_TABS = ["course", "program-wide"] as const;
-export type ResponsesTab = (typeof RESPONSE_TABS)[number];
-export const RESPONSE_COMPLETION_FILTERS = ["zero", "partial", "complete"] as const;
-export type ResponseCompletionFilter = (typeof RESPONSE_COMPLETION_FILTERS)[number];
+const RESPONSE_TABS = ["course", "program-wide"] as const;
+type ResponsesTab = (typeof RESPONSE_TABS)[number];
+const RESPONSE_COMPLETION_FILTERS = ["zero", "partial", "complete"] as const;
+type ResponseCompletionFilter = (typeof RESPONSE_COMPLETION_FILTERS)[number];
 
 export type ProgramHeadResponsesFilterState = {
   tab: ResponsesTab;

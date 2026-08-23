@@ -101,16 +101,6 @@ export function buildProgramHeadResponsesProgramWideDeploymentPath(
   );
 }
 
-export function buildProgramHeadResponsesProgramWideResponsePath(
-  programId: string,
-  deploymentId: string,
-  responseId: string
-): string {
-  return buildProgramHeadProgramPath(
-    programId,
-    `responses/program-wide/${encodeURIComponent(deploymentId)}/responses/${encodeURIComponent(responseId)}`
-  );
-}
 
 export function buildProgramHeadCiloReviewsPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "cilo-reviews");

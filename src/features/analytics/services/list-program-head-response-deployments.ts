@@ -10,7 +10,7 @@ const TERM_LABELS: Record<string, string> = { FIRST_TERM: "1st Term", SECOND_TER
 const NON_DRAFT_STATUSES: DeploymentStatus[] = ["SCHEDULED", "ACTIVE", "CLOSED", "ARCHIVED"];
 
 type ResponseStats = { assigned: number; submitted: number; mean: number | null };
-export type ResponseDeploymentRow = {
+type ResponseDeploymentRow = {
   id: string;
   title: string;
   period: string;
@@ -182,4 +182,4 @@ export async function listProgramHeadResponseDeployments(programId: string, filt
   return { total, page: filters.page, pageSize: DEFAULT_TABLE_PAGE_SIZE, options, items: rows.map((row) => { const value = stats.get(row.id); return { id: row.id, title: row.deployment_name ?? row.instrument.template.name, period: periodLabel(row.term_instance), status: row.status, assigned: value?.assigned ?? 0, submitted: value?.submitted ?? 0, mean: value?.mean ?? null, stakeholder: row.target_stakeholder, target: [row.major?.name, row.year_level?.replace("_", " ")].filter(Boolean).join(" · ") || "All eligible respondents" }; }) };
 }
 
-export const responseDeploymentStatuses = NON_DRAFT_STATUSES;
+const responseDeploymentStatuses = NON_DRAFT_STATUSES;
