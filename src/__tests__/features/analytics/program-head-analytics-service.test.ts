@@ -6,8 +6,7 @@ const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     academicTermInstance: { findMany: vi.fn() },
     schoolYear: { findUnique: vi.fn() },
-    response: { count: vi.fn() },
-    evaluationAssignment: { count: vi.fn() },
+    evaluationAssignment: { findMany: vi.fn() },
     quantitativeResponseItem: { aggregate: vi.fn() },
   },
 }));
@@ -30,14 +29,46 @@ const bsedContext = {
 };
 const defaultFilters = { tab: "overview" as const };
 
+type AssignmentRow = {
+  respondent_id: string;
+  central_deployment: { target_stakeholder: string } | null;
+  response: { status: string } | null;
+};
+
+function assignmentRows(opts: {
+  submitted?: number;
+  inProgress?: number;
+  unstarted?: number;
+}): AssignmentRow[] {
+  const rows: AssignmentRow[] = [];
+  let index = 0;
+  const push = (status: string | null, stakeholder: string | null = "STUDENT") => {
+    index += 1;
+    rows.push({
+      respondent_id: `respondent-${index}`,
+      central_deployment: stakeholder ? { target_stakeholder: stakeholder } : null,
+      response: status ? { status } : null,
+    });
+  };
+  for (let i = 0; i < (opts.submitted ?? 0); i += 1) push("SUBMITTED");
+  for (let i = 0; i < (opts.inProgress ?? 0); i += 1) push("IN_PROGRESS");
+  for (let i = 0; i < (opts.unstarted ?? 0); i += 1) push(null);
+  return rows;
+}
+
 function mockQueryResults(opts: {
   submittedCount?: number;
   opportunityCount?: number;
   ratingSum?: number | null;
   ratingCount?: number;
 }) {
-  prismaMock.response.count.mockResolvedValue(opts.submittedCount ?? 0);
-  prismaMock.evaluationAssignment.count.mockResolvedValue(opts.opportunityCount ?? 0);
+  const submitted = opts.submittedCount ?? 0;
+  const assigned = opts.opportunityCount ?? 0;
+  // Unsubmitted assignments are reported as not started; the overview KPI
+  // only consumes assigned and submitted totals.
+  prismaMock.evaluationAssignment.findMany.mockResolvedValue(
+    assignmentRows({ submitted, unstarted: Math.max(assigned - submitted, 0) })
+  );
   prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
     _sum: { rating_value: opts.ratingSum ?? null },
     _count: { rating_value: opts.ratingCount ?? 0 },
@@ -69,8 +100,7 @@ describe("getProgramHeadAnalytics", () => {
 
     expect(result).toBeNull();
     expect(resolveProgramHeadContextMock).toHaveBeenCalledWith("program-bsed");
-    expect(prismaMock.response.count).not.toHaveBeenCalled();
-    expect(prismaMock.evaluationAssignment.count).not.toHaveBeenCalled();
+    expect(prismaMock.evaluationAssignment.findMany).not.toHaveBeenCalled();
     expect(prismaMock.quantitativeResponseItem.aggregate).not.toHaveBeenCalled();
   });
 
@@ -90,17 +120,9 @@ describe("getProgramHeadAnalytics", () => {
   it("scopes all queries to the selected Program only", async () => {
     await getProgramHeadAnalytics("program-bsed", defaultFilters);
 
-    // Response count query scopes to program-bsed
-    const responseCountCall = prismaMock.response.count.mock.calls[0][0];
-    expect(responseCountCall.where).toHaveProperty("status", "SUBMITTED");
-    const responseOr = responseCountCall.where.OR;
-    expect(responseOr).toHaveLength(2);
-    expect(responseOr[0].assignment.central_deployment.program_id).toBe("program-bsed");
-    expect(responseOr[1].assignment.course_bound.course_assignment.program_id).toBe("program-bsed");
-
-    // Assignment count query scopes to program-bsed
-    const assignmentCountCall = prismaMock.evaluationAssignment.count.mock.calls[0][0];
-    const assignmentOr = assignmentCountCall.where.OR;
+    // Participation rows scope to program-bsed
+    const participationCall = prismaMock.evaluationAssignment.findMany.mock.calls[0][0];
+    const assignmentOr = participationCall.where.OR;
     expect(assignmentOr).toHaveLength(2);
     expect(assignmentOr[0].central_deployment.program_id).toBe("program-bsed");
     expect(assignmentOr[1].course_bound.course_assignment.program_id).toBe("program-bsed");
@@ -113,21 +135,25 @@ describe("getProgramHeadAnalytics", () => {
     expect(aggregateOr[1].assignment.course_bound.course_assignment.program_id).toBe("program-bsed");
   });
 
-  // ── Submitted-only semantics ─────────────────────────────────────────────
+  // ── Submitted semantics through shared participation aggregator ─────────
 
-  it("counts only SUBMITTED responses in the submitted count", async () => {
-    await getProgramHeadAnalytics("program-bsed", defaultFilters);
+  it("derives the submitted count from per-assignment response statuses", async () => {
+    prismaMock.evaluationAssignment.findMany.mockResolvedValue(
+      assignmentRows({ submitted: 7, inProgress: 2, unstarted: 4 })
+    );
 
-    const responseCountCall = prismaMock.response.count.mock.calls[0][0];
-    expect(responseCountCall.where.status).toBe("SUBMITTED");
+    const result = await getProgramHeadAnalytics("program-bsed", defaultFilters);
+
+    expect(result!.kpi.submittedResponseCount).toBe(7);
+    expect(result!.kpi.evaluationOpportunityCount).toBe(13);
   });
 
   it("counts ALL assignments for the opportunity denominator regardless of status", async () => {
     await getProgramHeadAnalytics("program-bsed", defaultFilters);
 
-    const assignmentCountCall = prismaMock.evaluationAssignment.count.mock.calls[0][0];
+    const participationCall = prismaMock.evaluationAssignment.findMany.mock.calls[0][0];
     // Should NOT have a response status filter
-    expect(assignmentCountCall.where).not.toHaveProperty("response");
+    expect(participationCall.where).not.toHaveProperty("response");
   });
 
   // ── Response rate semantics ──────────────────────────────────────────────
@@ -252,11 +278,15 @@ describe("getProgramHeadAnalytics", () => {
 
     await getProgramHeadAnalytics("program-bsed", { tab: "overview", termInstanceId: termId });
 
-    const responseWhere = prismaMock.response.count.mock.calls[0][0].where;
-    expect(responseWhere.OR[0].assignment.central_deployment.term_instance_id).toEqual({ in: [termId] });
-    expect(responseWhere.OR[1].assignment.course_bound.term_instance_id).toEqual({ in: [termId] });
+    const aggregateWhere = prismaMock.quantitativeResponseItem.aggregate.mock.calls[0][0].where;
+    expect(aggregateWhere.response.OR[0].assignment.central_deployment.term_instance_id).toEqual({
+      in: [termId],
+    });
+    expect(aggregateWhere.response.OR[1].assignment.course_bound.term_instance_id).toEqual({
+      in: [termId],
+    });
 
-    const assignmentWhere = prismaMock.evaluationAssignment.count.mock.calls[0][0].where;
+    const assignmentWhere = prismaMock.evaluationAssignment.findMany.mock.calls[0][0].where;
     expect(assignmentWhere.OR[0].central_deployment.term_instance_id).toEqual({ in: [termId] });
     expect(assignmentWhere.OR[1].course_bound.term_instance_id).toEqual({ in: [termId] });
   });
@@ -288,7 +318,7 @@ describe("getProgramHeadAnalytics", () => {
       },
     });
     expect(result!.scope.periodLabel).toBe("School Year 2025-2026");
-    expect(prismaMock.response.count.mock.calls[0][0].where.OR[0].assignment.central_deployment)
+    expect(prismaMock.evaluationAssignment.findMany.mock.calls[0][0].where.OR[0].central_deployment)
       .toMatchObject({ term_instance_id: { in: [termId] } });
   });
 
@@ -375,16 +405,12 @@ describe("getProgramHeadAnalytics", () => {
 
   // ── Query parallelism ────────────────────────────────────────────────────
 
-  it("starts all three queries before any one resolves", async () => {
+  it("starts both queries before any one resolves", async () => {
     const callOrder: string[] = [];
 
-    prismaMock.response.count.mockImplementation(async () => {
-      callOrder.push("response.count");
-      return 5;
-    });
-    prismaMock.evaluationAssignment.count.mockImplementation(async () => {
-      callOrder.push("assignment.count");
-      return 10;
+    prismaMock.evaluationAssignment.findMany.mockImplementation(async () => {
+      callOrder.push("assignment.findMany");
+      return [];
     });
     prismaMock.quantitativeResponseItem.aggregate.mockImplementation(async () => {
       callOrder.push("aggregate");
@@ -393,10 +419,9 @@ describe("getProgramHeadAnalytics", () => {
 
     await getProgramHeadAnalytics("program-bsed", defaultFilters);
 
-    // All three should have been called (Promise.all)
-    expect(callOrder).toHaveLength(3);
-    expect(callOrder).toContain("response.count");
-    expect(callOrder).toContain("assignment.count");
+    // Both should have been called (Promise.all)
+    expect(callOrder).toHaveLength(2);
+    expect(callOrder).toContain("assignment.findMany");
     expect(callOrder).toContain("aggregate");
   });
 });

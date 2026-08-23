@@ -1,5 +1,5 @@
 import type { AcademicSemester, Prisma } from "@prisma/client";
-import { ResponseStatus } from "@prisma/client";
+import { ResponseStatus, TargetStakeholder } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import {
@@ -9,11 +9,8 @@ import {
   buildInstrumentBreakdownRows,
   buildProgramHeadOverviewKpi,
   buildProgramHeadOutcomeDtos,
-  buildScaleIdentities,
   buildStakeholderBuckets,
   buildTrendSeries,
-  describeScales,
-  extractDistinctScales,
   majorAttributionOf,
   semesterOrder,
   termOrder,
@@ -22,9 +19,15 @@ import {
   type BreakdownRatingRow,
   type BreakdownResponseRow,
   type OutcomeEvidenceRow,
-  type ScaleDescriptor,
   type TrendSeriesPeriodInput,
 } from "./program-head-analytics-aggregators";
+import {
+  buildScaleIdentities,
+  describeScales,
+  extractDistinctScales,
+  type ScaleDescriptor,
+} from "../aggregators/scale-identity";
+import { buildParticipationSummary } from "../aggregators/participation";
 import {
   FEEDBACK_SOURCE_LABELS,
   buildRedactedWordCloudTokens,
@@ -281,15 +284,17 @@ export async function getProgramHeadAnalytics(
   // regardless of response status.
   const programOpportunityScope = buildProgramOpportunityScope(selectedProgram.id, termInstanceWhere);
 
-  const [submittedResponseCount, evaluationOpportunityCount, ratingAggregate] = await Promise.all([
-    prisma.response.count({
-      where: {
-        status: ResponseStatus.SUBMITTED,
-        ...programResponseScope,
-      },
-    }),
-    prisma.evaluationAssignment.count({
+  // One row per in-scope EvaluationAssignment: the canonical participation
+  // denominator (resolved §5.12) with its response status. Submitted and
+  // opportunity counts flow through the shared participation aggregator.
+  const [participation, ratingAggregate] = await Promise.all([
+    prisma.evaluationAssignment.findMany({
       where: programOpportunityScope,
+      select: {
+        respondent_id: true,
+        central_deployment: { select: { target_stakeholder: true } },
+        response: { select: { status: true } },
+      },
     }),
     prisma.quantitativeResponseItem.aggregate({
       _sum: { rating_value: true },
@@ -302,17 +307,26 @@ export async function getProgramHeadAnalytics(
       },
     }),
   ]);
+  // Course-bound assignments carry no target_stakeholder column; STUDENT is
+  // their canonical stakeholder (course-bound student evidence, §8). The
+  // overview KPI reads only assigned/submitted totals.
+  const participationSummary = buildParticipationSummary(
+    participation.map((row) => ({
+      respondentId: row.respondent_id,
+      stakeholder: row.central_deployment?.target_stakeholder ?? TargetStakeholder.STUDENT,
+      responseStatus: row.response?.status ?? null,
+    }))
+  );
 
   const ratingCount = ratingAggregate._count.rating_value;
   const ratingSum = ratingAggregate._sum.rating_value ?? 0;
 
   const kpi = buildProgramHeadOverviewKpi({
-    submittedResponseCount,
-    evaluationOpportunityCount,
+    submittedResponseCount: participationSummary.submitted,
+    evaluationOpportunityCount: participationSummary.assigned,
     ratingCount,
     ratingSum,
   });
-
   const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const periodLabel = buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm);
   const scope: ProgramHeadAnalyticsScopeSummary = {
@@ -322,9 +336,9 @@ export async function getProgramHeadAnalytics(
   };
 
   const emptyReason: OverviewEmptyReason =
-    evaluationOpportunityCount === 0
+    participationSummary.assigned === 0
       ? "no-assignments"
-      : submittedResponseCount === 0
+      : participationSummary.submitted === 0
         ? "no-submissions"
         : null;
 

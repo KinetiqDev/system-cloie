@@ -10,13 +10,15 @@ import {
 import {
   buildProgramHeadOverviewKpi,
   buildTrendSeries,
-  extractDistinctScales,
-  buildScaleIdentities,
-  describeScales,
   semesterOrder,
   termOrder,
   type TrendSeriesPeriodInput,
 } from "./program-head-analytics-aggregators";
+import {
+  buildScaleIdentities,
+  describeScales,
+  extractDistinctScales,
+} from "../aggregators/scale-identity";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import type { GeneralEducationAnalyticsFilterState } from "./general-education-analytics-state";
 import type {
