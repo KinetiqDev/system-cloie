@@ -425,10 +425,11 @@ function buildResponseSections(
 }
 
 function responseMeanOf(
-  sections: ProgramHeadSubmittedResponseDetail["sections"][number][],
+  sections: ProgramHeadSubmittedResponseDetail["sections"],
   snapshot: unknown
 ): number | null {
   const validRatings: number[] = [];
+  const scaleKeys = new Set<string>();
   for (const section of sections) {
     for (const item of section.items) {
       if (item.kind !== "quantitative") {
@@ -436,11 +437,13 @@ function responseMeanOf(
       }
       const scale = resolveItemScaleIdentity(snapshot, section.key, item.itemKey);
       if (scale && scale.descriptors.some((descriptor) => descriptor.value === item.rating)) {
+        scaleKeys.add(scale.key);
         validRatings.push(item.rating);
       }
     }
   }
-  return validRatings.length === 0
-    ? null
-    : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length;
+  if (validRatings.length === 0 || scaleKeys.size > 1) {
+    return null;
+  }
+  return validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length;
 }

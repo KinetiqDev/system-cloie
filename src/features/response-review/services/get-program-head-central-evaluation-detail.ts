@@ -184,12 +184,13 @@ function buildCentralRatingRows(
 
   for (const response of submittedResponses) {
     submittedRespondentIds.push(response.respondent_id);
-    const validRatings: number[] = [];
-    for (const item of response.quant_items) {
+    const scaleKeys = new Set<string>();
+    const validRatings = response.quant_items.flatMap((item) => {
       const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
-      if (!scale || !scale.descriptors.some((descriptor) => descriptor.value === item.rating_value)) {
-        continue;
+      if (!scale || !scale.descriptors.some((d) => d.value === item.rating_value)) {
+        return [];
       }
+      scaleKeys.add(scale.key);
       const ploBindings = ploByQuestionKey.get(`${item.section_key}|${item.item_key}`) ?? [];
       ratingRows.push({
         sectionKey: item.section_key,
@@ -209,11 +210,13 @@ function buildCentralRatingRows(
         scale,
         ploBindings,
       });
-      validRatings.push(item.rating_value);
-    }
+      return [item.rating_value];
+    });
     meanByResponse.set(
       response.id,
-      validRatings.length === 0 ? null : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length
+      validRatings.length === 0 || scaleKeys.size > 1
+        ? null
+        : validRatings.reduce((sum, v) => sum + v, 0) / validRatings.length
     );
   }
 

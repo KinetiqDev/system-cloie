@@ -239,6 +239,67 @@ describe("getProgramHeadResponseDetail", () => {
     );
   });
 
+  it("returns null quantitativeMean when the response spans incompatible scales", async () => {
+    responseFindFirstMock.mockResolvedValue({
+      id: "response-mixed",
+      submitted_at: new Date("2026-01-04T08:00:00.000Z"),
+      respondent: { id: "user-s1", name: "Juan dela Cruz" },
+      assignment: {
+        course_bound: {
+          ...MOCK_EVALUATION_SHAPE,
+          instrument: {
+            structure_snapshot: [
+              {
+                key: "teaching",
+                title: "Teaching",
+                items: [
+                  {
+                    key: "clarity",
+                    kind: "quantitative",
+                    prompt: "Clarity",
+                    likertDescriptors: [
+                      { value: 1, label: "Not Achieved" },
+                      { value: 2, label: "Slightly Achieved" },
+                      { value: 3, label: "Moderately Achieved" },
+                      { value: 4, label: "Mostly Achieved" },
+                      { value: 5, label: "Fully Achieved" },
+                    ],
+                  },
+                  {
+                    key: "agreement",
+                    kind: "quantitative",
+                    prompt: "Agreement",
+                    likertDescriptors: [
+                      { value: 1, label: "Strongly Disagree" },
+                      { value: 2, label: "Disagree" },
+                      { value: 3, label: "Neutral" },
+                      { value: 4, label: "Agree" },
+                      { value: 5, label: "Strongly Agree" },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        central_deployment: null,
+      },
+      quant_items: [
+        { cilo_question_binding_id: null, section_key: "teaching", item_key: "clarity", rating_value: 4 },
+        { cilo_question_binding_id: null, section_key: "teaching", item_key: "agreement", rating_value: 4 },
+      ],
+      qual_items: [],
+    });
+
+    const result = await getProgramHeadResponseDetail("prog-beed", "response-mixed");
+
+    expect(result).not.toBeNull();
+    // Same numeric range but different labels ⇒ incompatible scales (§9):
+    // no combined response mean may be computed.
+    expect(result!.quantitativeMean).toBeNull();
+    expect(result!.sections[0].items).toHaveLength(2);
+  });
+
   it("returns alumni context for a central alumni response", async () => {
     responseFindFirstMock.mockResolvedValue({
       id: "response-alum",

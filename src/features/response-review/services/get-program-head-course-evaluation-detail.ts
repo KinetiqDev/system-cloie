@@ -210,11 +210,13 @@ function buildCourseRatingRows(
   const meanByResponse = new Map<string, number | null>();
   for (const response of submittedResponses) {
     submittedRespondentIds.push(response.respondent_id);
+    const scaleKeys = new Set<string>();
     const validRatings = response.quant_items.flatMap((item) => {
       const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
       if (!scale || !scale.descriptors.some((d) => d.value === item.rating_value)) {
         return [];
       }
+      scaleKeys.add(scale.key);
       ratingRows.push(
         toCourseRatingRow(item, scale, response.id, snapshotItems, bindingByQuestionKey, ciloMappings)
       );
@@ -222,7 +224,9 @@ function buildCourseRatingRows(
     });
     meanByResponse.set(
       response.id,
-      validRatings.length === 0 ? null : validRatings.reduce((sum, v) => sum + v, 0) / validRatings.length
+      validRatings.length === 0 || scaleKeys.size > 1
+        ? null
+        : validRatings.reduce((sum, v) => sum + v, 0) / validRatings.length
     );
   }
   return { ratingRows, meanByResponse, submittedRespondentIds };
