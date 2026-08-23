@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Manrope, Inter } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/ui/toast";
@@ -70,6 +71,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <ToastProvider />
         </Suspense>
+        <SpeedInsights />
       </body>
     </html>
   );
