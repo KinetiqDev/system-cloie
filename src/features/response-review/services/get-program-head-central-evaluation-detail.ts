@@ -112,46 +112,12 @@ export async function getProgramHeadCentralEvaluationDetail(
     }
   }
 
-  // Build outcome rows and central PLO rows
-  const ratingRows: OutcomeItemRatingRow[] = [];
-  const centralPloRows: CentralPloRatingRow[] = [];
-  const submittedRespondentIds: string[] = [];
-  const meanByResponse = new Map<string, number | null>();
-
-  for (const response of submittedResponses) {
-    submittedRespondentIds.push(response.respondent_id);
-    const validRatings: number[] = [];
-    for (const item of response.quant_items) {
-      const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
-      if (!scale || !scale.descriptors.some((descriptor) => descriptor.value === item.rating_value)) {
-        continue;
-      }
-      const ploBindings = ploByQuestionKey.get(`${item.section_key}|${item.item_key}`) ?? [];
-      ratingRows.push({
-        sectionKey: item.section_key,
-        itemKey: item.item_key,
-        prompt: snapshotItems.get(`${item.section_key}|${item.item_key}`)?.prompt ?? item.item_key,
-        ratingValue: item.rating_value,
-        responseId: response.id,
-        scale,
-        cilo: null,
-        ploMappings: [],
-      });
-      centralPloRows.push({
-        sectionKey: item.section_key,
-        itemKey: item.item_key,
-        ratingValue: item.rating_value,
-        responseId: response.id,
-        scale,
-        ploBindings,
-      });
-      validRatings.push(item.rating_value);
-    }
-    meanByResponse.set(
-      response.id,
-      validRatings.length === 0 ? null : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length
-    );
-  }
+  const { ratingRows, centralPloRows, meanByResponse, submittedRespondentIds } = buildCentralRatingRows(
+    submittedResponses,
+    snapshot,
+    snapshotItems,
+    ploByQuestionKey
+  );
 
   const ploResults = buildProgramWidePloMetrics(centralPloRows);
   const questionResultsBase = buildQuestionMetrics(ratingRows);
@@ -231,4 +197,56 @@ export async function getProgramHeadCentralEvaluationDetail(
     qualitative,
     respondents,
   };
+}
+function buildCentralRatingRows(
+  submittedResponses: Array<{
+    id: string;
+    respondent_id: string;
+    quant_items: Array<{ section_key: string; item_key: string; rating_value: number }>;
+  }>,
+  snapshot: unknown,
+  snapshotItems: Map<string, { prompt: string }>,
+  ploByQuestionKey: Map<string, CentralPloRatingRow["ploBindings"]>
+): { ratingRows: OutcomeItemRatingRow[]; centralPloRows: CentralPloRatingRow[]; meanByResponse: Map<string, number | null>; submittedRespondentIds: string[] } {
+  const ratingRows: OutcomeItemRatingRow[] = [];
+  const centralPloRows: CentralPloRatingRow[] = [];
+  const submittedRespondentIds: string[] = [];
+  const meanByResponse = new Map<string, number | null>();
+
+  for (const response of submittedResponses) {
+    submittedRespondentIds.push(response.respondent_id);
+    const validRatings: number[] = [];
+    for (const item of response.quant_items) {
+      const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
+      if (!scale || !scale.descriptors.some((descriptor) => descriptor.value === item.rating_value)) {
+        continue;
+      }
+      const ploBindings = ploByQuestionKey.get(`${item.section_key}|${item.item_key}`) ?? [];
+      ratingRows.push({
+        sectionKey: item.section_key,
+        itemKey: item.item_key,
+        prompt: snapshotItems.get(`${item.section_key}|${item.item_key}`)?.prompt ?? item.item_key,
+        ratingValue: item.rating_value,
+        responseId: response.id,
+        scale,
+        cilo: null,
+        ploMappings: [],
+      });
+      centralPloRows.push({
+        sectionKey: item.section_key,
+        itemKey: item.item_key,
+        ratingValue: item.rating_value,
+        responseId: response.id,
+        scale,
+        ploBindings,
+      });
+      validRatings.push(item.rating_value);
+    }
+    meanByResponse.set(
+      response.id,
+      validRatings.length === 0 ? null : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length
+    );
+  }
+
+  return { ratingRows, centralPloRows, meanByResponse, submittedRespondentIds };
 }

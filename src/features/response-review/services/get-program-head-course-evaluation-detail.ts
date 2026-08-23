@@ -4,6 +4,7 @@ import { resolveProgramHeadContext } from "@/features/auth/services/resolve-prog
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 import { buildCiloMetrics, buildQuestionMetrics, type OutcomeItemRatingRow } from "@/features/analytics/aggregators/cilo";
+import type { CiloPloMapping } from "@/features/analytics/aggregators/types";
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
@@ -103,41 +104,13 @@ export async function getProgramHeadCourseEvaluationDetail(
     .filter((ciloId): ciloId is string => ciloId !== null);
   const ciloMappings = await loadCiloMappings(ciloIds);
 
-  const ratingRows: OutcomeItemRatingRow[] = [];
-  const submittedRespondentIds: string[] = [];
-  const meanByResponse = new Map<string, number | null>();
-  for (const response of submittedResponses) {
-    submittedRespondentIds.push(response.respondent_id);
-    const validRatings: number[] = [];
-    for (const item of response.quant_items) {
-      const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
-      if (!scale || !scale.descriptors.some((descriptor) => descriptor.value === item.rating_value)) {
-        continue;
-      }
-      const binding = bindingByQuestionKey.get(`${item.section_key}|${item.item_key}`);
-      ratingRows.push({
-        sectionKey: item.section_key,
-        itemKey: item.item_key,
-        prompt: snapshotItems.get(`${item.section_key}|${item.item_key}`)?.prompt ?? item.item_key,
-        ratingValue: item.rating_value,
-        responseId: response.id,
-        scale,
-        cilo: binding
-          ? {
-              id: binding.cilo_id ?? `binding-${item.section_key}-${item.item_key}`,
-              label: binding.cilo_description_snapshot,
-              description: binding.cilo_description_snapshot,
-            }
-          : null,
-        ploMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
-      });
-      validRatings.push(item.rating_value);
-    }
-    meanByResponse.set(
-      response.id,
-      validRatings.length === 0 ? null : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length
-    );
-  }
+  const { ratingRows, meanByResponse, submittedRespondentIds } = buildCourseRatingRows(
+    submittedResponses,
+    snapshot,
+    snapshotItems,
+    bindingByQuestionKey,
+    ciloMappings
+  );
 
   const ciloResults = buildCiloMetrics(ratingRows);
   const questionResults = buildQuestionMetrics(ratingRows);
@@ -215,4 +188,57 @@ export async function getProgramHeadCourseEvaluationDetail(
     qualitative,
     respondents,
   };
+}
+
+type SubmittedResponseWithItems = {
+  id: string;
+  submitted_at: Date | null;
+  respondent_id: string;
+  quant_items: Array<{ section_key: string; item_key: string; rating_value: number }>;
+  qual_items: Array<{ section_key: string; prompt_key: string; text_content: string }>;
+};
+
+function buildCourseRatingRows(
+  submittedResponses: SubmittedResponseWithItems[],
+  snapshot: unknown,
+  snapshotItems: Map<string, { prompt: string }>,
+  bindingByQuestionKey: Map<string, { cilo_id: string | null; cilo_description_snapshot: string }>,
+  ciloMappings: Map<string, CiloPloMapping[]>
+): { ratingRows: OutcomeItemRatingRow[]; meanByResponse: Map<string, number | null>; submittedRespondentIds: string[] } {
+  const ratingRows: OutcomeItemRatingRow[] = [];
+  const submittedRespondentIds: string[] = [];
+  const meanByResponse = new Map<string, number | null>();
+  for (const response of submittedResponses) {
+    submittedRespondentIds.push(response.respondent_id);
+    const validRatings: number[] = [];
+    for (const item of response.quant_items) {
+      const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
+      if (!scale || !scale.descriptors.some((descriptor) => descriptor.value === item.rating_value)) {
+        continue;
+      }
+      const binding = bindingByQuestionKey.get(`${item.section_key}|${item.item_key}`);
+      ratingRows.push({
+        sectionKey: item.section_key,
+        itemKey: item.item_key,
+        prompt: snapshotItems.get(`${item.section_key}|${item.item_key}`)?.prompt ?? item.item_key,
+        ratingValue: item.rating_value,
+        responseId: response.id,
+        scale,
+        cilo: binding
+          ? {
+              id: binding.cilo_id ?? `binding-${item.section_key}-${item.item_key}`,
+              label: binding.cilo_description_snapshot,
+              description: binding.cilo_description_snapshot,
+            }
+          : null,
+        ploMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
+      });
+      validRatings.push(item.rating_value);
+    }
+    meanByResponse.set(
+      response.id,
+      validRatings.length === 0 ? null : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length
+    );
+  }
+  return { ratingRows, meanByResponse, submittedRespondentIds };
 }
