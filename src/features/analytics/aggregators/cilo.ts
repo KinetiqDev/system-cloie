@@ -1,5 +1,5 @@
 import { describeScale, ratingBelongsToScale, type ScaleIdentity } from "./scale-identity";
-import { buildQuantitativeMetric, groupRatingsByScale, type QuantitativeRating } from "./quantitative";
+import { groupRatingsByScale, type QuantitativeRating } from "./quantitative";
 import type {
   CiloContributingQuestion,
   CiloMetric,
