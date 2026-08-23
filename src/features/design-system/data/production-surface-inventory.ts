@@ -939,6 +939,46 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/course/[evaluationId]/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/course/[evaluationId]/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/course/[evaluationId]/responses/[responseId]/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/course/[evaluationId]/responses/[responseId]/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/program-wide/[deploymentId]/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/program-wide/[deploymentId]/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/program-wide/[deploymentId]/responses/[responseId]/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/responses/program-wide/[deploymentId]/responses/[responseId]/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
     path: "src/app/(app)/program-head/programs/[programId]/cilo-reviews/loading.tsx",
     disposition: "task",
     taskId: 14,
@@ -2140,6 +2180,26 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/anonymized-response-detail.tsx",
     disposition: "task",
     taskId: 10,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/central-evaluation-detail.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/course-evaluation-detail.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/identified-respondents-table.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/response-detail.tsx",
+    disposition: "already_compliant",
     category: "feature_component",
   },
   {
