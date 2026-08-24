@@ -25,7 +25,7 @@ The academic period used to scope course assignments: a regular-semester academi
 _Avoid_: Summer term, calendar period
 
 **Active academic period**:
-The current semester or term used by CLOIE for live academic work.
+Exactly the AcademicTermInstance whose status is ACTIVE — at most one exists at any time (partial unique index `one_active_academic_period`). Activation additionally requires the School Year to be active, with `active_semester` matching the period's semester. Legacy "active term" phrasing (`setActiveTermInstance`, `getActiveTermId`, the "Set Active Term" dialog) denotes the same concept.
 _Avoid_: Upcoming period, historical period
 
 **Canonical term (structural term)**:
@@ -35,6 +35,9 @@ _Avoid_: Optional term, ad-hoc term
 **Legacy non-canonical term**:
 An AcademicTermInstance outside the canonical 5-term set, created by pre-canonical manual CRUD. Remains queryable and date-mutable but cannot be recreated once deleted.
 _Avoid_: Structural term
+
+**Canonical term backfill**:
+Idempotent service creating only the missing canonical five terms (status PLANNED) on pre-canonical School Years, so every School Year has the canonical structure while legacy non-canonical rows remain untouched.
 
 **Active School Year**:
 The single School Year flagged `is_active = true`, carrying the `active_semester` used for live academic work. At most one exists at any time (partial unique index `one_active_school_year`).
@@ -55,6 +58,12 @@ _Avoid_: Current semester without the active-year qualifier
 **Term lifecycle transition**:
 The Secretary-controlled status change of an AcademicTermInstance (PLANNED→ACTIVE|CANCELLED, ACTIVE→COMPLETED|CANCELLED). Terminal states are immutable; `end_date` is informational and never gates a transition.
 _Avoid_: Term editing, status editing
+
+**Term rollover**:
+Secretary-gated operation copying the source term's active student enrollments into a target term. Year level carries unchanged within a School Year and promotes (1st→2nd→3rd→4th→graduating) across School Years. Graduating students, missing data, and duplicates surface as GRADUATING / MISSING_DATA / DUPLICATE exceptions; idempotent via skipDuplicates. Created enrollments carry source ROLLOVER.
+
+**Period readiness snapshot**:
+Immutable per-period record of outcome readiness, persisted atomically inside the transaction promoting a period ACTIVE→COMPLETED. A DB trigger forbids UPDATE/DELETE; reads branch on its schema version — version 1 keeps the legacy at-least-one-target semantics, version 2 carries typed payloads under the exhaustive manifestation rule.
 
 **Structural calendar view**:
 The fixed Secretary UI rendering School Year → Semester → Term with per-state lifecycle buttons. There are no Add/Delete Term affordances; the 5 canonical terms are enforced by construction.

@@ -201,7 +201,7 @@ describe("Dean Course Assignments route", () => {
   });
 });
 
-describe("Secretary Course Assignments route cross-role denial", () => {
+describe("Secretary Course Assignments route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     loadPageDataMock.mockResolvedValue({
@@ -212,7 +212,7 @@ describe("Secretary Course Assignments route cross-role denial", () => {
     });
   });
 
-  it("redirects Dean users to /unauthorized on the Secretary route", async () => {
+  it("redirects non-Secretary active roles to /unauthorized", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "dean-1",
       email: "dean@example.com",
@@ -230,26 +230,7 @@ describe("Secretary Course Assignments route cross-role denial", () => {
     ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
   });
 
-  it("uses active role instead of another role in the session", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      userId: "secretary-1",
-      email: "secretary@example.com",
-      roles: [ROLES.SECRETARY, ROLES.FACULTY],
-      activeRole: ROLES.FACULTY,
-      profileGate: { status: "COMPLETE" },
-    });
-
-    const SecretaryCourseAssignmentsPage = (
-      await import("../../app/(app)/secretary/course-assignments/page")
-    ).default;
-
-    await expect(
-      SecretaryCourseAssignmentsPage({ searchParams: Promise.resolve({}) })
-    ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
-    expect(loadPageDataMock).not.toHaveBeenCalled();
-  });
-
-  it("renders the authorized initial Secretary page from the server loader", async () => {
+  it("renders a read-only list for the authorized Secretary", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "secretary-1",
       email: "secretary@example.com",
@@ -258,7 +239,7 @@ describe("Secretary Course Assignments route cross-role denial", () => {
       profileGate: { status: "COMPLETE" },
     });
     loadListPageMock.mockResolvedValueOnce({
-      state: { page: 1, filters: { isActive: true } },
+      state: { page: 1, filters: {} },
       initialFilters: {
         termInstanceId: null,
         courseId: null,
@@ -270,33 +251,7 @@ describe("Secretary Course Assignments route cross-role denial", () => {
         courseScope: null,
         searchQuery: "",
       },
-      result: {
-        success: true,
-        data: {
-          items: [
-            {
-              id: "assignment-secretary",
-              termInstanceId: "term-1",
-              facultyId: "faculty-1",
-              courseId: "course-1",
-              programId: "program-1",
-              yearLevel: "FIRST_YEAR",
-              section: "MORNING",
-              assignedBy: null,
-              isActive: true,
-              createdAt: new Date("2026-01-01"),
-              updatedAt: new Date("2026-01-01"),
-              courseCode: "CS101",
-              courseTitle: "Intro to Computing",
-              courseScope: "PROGRAM_SPECIFIC",
-              facultyName: "Secretary Faculty",
-            },
-          ],
-          total: 1,
-          page: 0,
-          pageSize: 20,
-        },
-      },
+      result: { success: true, data: { items: [], total: 0, page: 0, pageSize: 20 } },
     });
 
     const SecretaryCourseAssignmentsPage = (
@@ -311,8 +266,8 @@ describe("Secretary Course Assignments route cross-role denial", () => {
       rawSearchParams: {},
       role: "all-program",
     });
-    expect(page.props.initialData.items[0].courseCode).toBe("CS101");
-    expect(page.props.initialPage).toBe(1);
+    expect(page.props.canManageAssignments).toBe(false);
     expect(page.props.initialError).toBeNull();
   });
 });
+

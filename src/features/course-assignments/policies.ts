@@ -116,13 +116,10 @@ export function canManageCourseAssignment(
 
   switch (session.activeRole) {
     case ROLES.SECRETARY:
-      if (isGeneralEducation) {
-        return {
-          allowed: false,
-          reason: "Secretary cannot manage General Education assignments.",
-        };
-      }
-      return { allowed: true };
+      return {
+        allowed: false,
+        reason: "Secretary cannot manage course assignments.",
+      };
     case ROLES.DEAN:
       return { allowed: true };
     case ROLES.GEN_ED_COORDINATOR:

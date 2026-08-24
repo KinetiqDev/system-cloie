@@ -82,21 +82,167 @@ interface CourseAssignmentsTableProps {
   onAssignmentUpdated?: () => void;
   onAssignFaculty?: () => void;
   selectedProgramId?: string;
+  /** False replaces row mutation menus with a read-only marker. */
+  canManageAssignments?: boolean;
+}
+
+interface CourseAssignmentsRowProps {
+  assignment: CourseAssignmentItem;
+  mode: CourseAssignmentsTableMode;
+  canManageAssignments: boolean;
+  selectedProgramId?: string;
+  processingId: string | null;
+  onEdit: (assignment: CourseAssignmentItem) => void;
+  onOpenConfirm: (
+    type: "deactivate" | "delete",
+    assignment: CourseAssignmentItem
+  ) => void;
+  onActivate: (assignmentId: string) => void;
+}
+
+function RosterCell({
+  assignment,
+  mode,
+  selectedProgramId,
+}: {
+  assignment: CourseAssignmentItem;
+  mode: CourseAssignmentsTableMode;
+  selectedProgramId?: string;
+}) {
+  const isCoordinator = mode === "general-education";
+  if (isCoordinator) {
+    return <span className="text-muted-foreground px-2 text-xs">Roster managed by Program</span>;
+  }
+  if (mode === "all-program" || (mode === "program-head" && selectedProgramId)) {
+    return (
+      <Link
+        href={
+          mode === "all-program"
+            ? `/course-rosters/${assignment.id}`
+            : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id)
+        }
+        className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+      >
+        Open roster
+      </Link>
+    );
+  }
+  return (
+    <span className="text-muted-foreground px-2 text-sm">Roster available in next phase</span>
+  );
+}
+
+function CourseAssignmentsRow({
+  assignment,
+  mode,
+  canManageAssignments,
+  selectedProgramId,
+  processingId,
+  onEdit,
+  onOpenConfirm,
+  onActivate,
+}: CourseAssignmentsRowProps) {
+  const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
+  const isCoordinator = mode === "general-education";
+  const isReadOnly = isGeneralEducation && mode === "program-head";
+  const busy = processingId === assignment.id;
+  const readOnlyReason =
+    !canManageAssignments
+      ? "View only"
+      : isReadOnly
+        ? "Managed by General Education Coordinator"
+        : isCoordinator && !isGeneralEducation
+          ? "Program-specific"
+          : null;
+  const scopeLabel = isGeneralEducation ? "GE" : "Program-specific";
+
+  return (
+    <TableRow data-readonly={readOnlyReason !== null || undefined}>
+      <TableCell>
+        <RosterCell assignment={assignment} mode={mode} selectedProgramId={selectedProgramId} />
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{assignment.courseCode}</span>
+        </div>
+        <div className="text-muted-foreground text-sm">{assignment.courseTitle}</div>
+      </TableCell>
+      <TableCell>
+        <Badge variant={isGeneralEducation ? "secondary" : "outline"} className="px-1.5 py-0">
+          {scopeLabel}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <div>{assignment.facultyName}</div>
+        <div className="text-muted-foreground text-sm">{assignment.facultyEmail}</div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">{assignment.programCode}</Badge>
+      </TableCell>
+      <TableCell>{getYearLevelDisplay(assignment.yearLevel)}</TableCell>
+      <TableCell>{getSectionLabel(assignment.section)}</TableCell>
+      <TableCell>{assignment.termLabel}</TableCell>
+      <TableCell>
+        <Badge variant={assignment.isActive ? "success" : "outline"}>
+          {assignment.isActive ? "Active" : "Inactive"}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        {readOnlyReason ? (
+          <span className="text-muted-foreground text-xs">{readOnlyReason}</span>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Open actions for ${assignment.courseCode}`}>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {(mode === "all-program" || mode === "general-education" || !isGeneralEducation) && (
+                <DropdownMenuItem onClick={() => onEdit(assignment)} disabled={busy}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {assignment.isActive ? (
+                <DropdownMenuItem onClick={() => onOpenConfirm("deactivate", assignment)} disabled={busy}>
+                  <Power className="text-warning mr-2 h-4 w-4" />
+                  Deactivate
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => onActivate(assignment.id)} disabled={busy}>
+                  <Power className="text-success mr-2 h-4 w-4" />
+                  Activate
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => onOpenConfirm("delete", assignment)} disabled={busy} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </TableCell>
+    </TableRow>
+  );
 }
 
 export function CourseAssignmentsTable({
   assignments,
   total,
   page,
+  mode = "program-head",
   pageSize = DEFAULT_TABLE_PAGE_SIZE,
   loading = false,
-  mode = "program-head",
   availableCourses = [],
   availablePrograms = [],
   onPageChange,
   onAssignmentUpdated,
   onAssignFaculty,
   selectedProgramId,
+  canManageAssignments = true,
 }: CourseAssignmentsTableProps) {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -295,127 +441,21 @@ export function CourseAssignmentsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assignments.map((assignment) => {
-              const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
-              const isCoordinator = mode === "general-education";
-              const isReadOnly = isGeneralEducation && mode === "program-head";
-
-              return (
-                <TableRow key={assignment.id} data-readonly={isReadOnly || undefined}>
-                  <TableCell>
-                    {isCoordinator ? (
-                      <span className="text-muted-foreground px-2 text-xs">
-                        Roster managed by Program
-                      </span>
-                    ) : mode === "all-program" || (mode === "program-head" && selectedProgramId) ? (
-                      <Link
-                        href={
-                          mode === "all-program"
-                            ? `/course-rosters/${assignment.id}`
-                            : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id)
-                        }
-                        className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
-                      >
-                        Open roster
-                      </Link>
-                    ) : (
-                      <span className="text-muted-foreground px-2 text-sm">Roster available in next phase</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{assignment.courseCode}</span>
-                    </div>
-                    <div className="text-muted-foreground text-sm">{assignment.courseTitle}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={isGeneralEducation ? "secondary" : "outline"}
-                      className="px-1.5 py-0"
-                    >
-                      {isGeneralEducation ? "GE" : "Program-specific"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div>{assignment.facultyName}</div>
-                    <div className="text-muted-foreground text-sm">{assignment.facultyEmail}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{assignment.programCode}</Badge>
-                  </TableCell>
-                  <TableCell>{getYearLevelDisplay(assignment.yearLevel)}</TableCell>
-                  <TableCell>{getSectionLabel(assignment.section)}</TableCell>
-                  <TableCell>{assignment.termLabel}</TableCell>
-                  <TableCell>
-                    <Badge variant={assignment.isActive ? "success" : "outline"}>
-                      {assignment.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {isReadOnly ? (
-                      <span className="text-muted-foreground text-xs">
-                        Managed by General Education Coordinator
-                      </span>
-                    ) : isCoordinator && !isGeneralEducation ? (
-                      <span className="text-muted-foreground text-xs">Program-specific</span>
-                    ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              aria-label={`Open actions for ${assignment.courseCode}`}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          }
-                        />
-                        <DropdownMenuContent align="end">
-                          {(mode === "all-program" ||
-                            mode === "general-education" ||
-                            !isGeneralEducation) && (
-                            <DropdownMenuItem
-                              onClick={() => setEditAssignment(assignment)}
-                              disabled={processingId === assignment.id}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          {assignment.isActive ? (
-                            <DropdownMenuItem
-                              onClick={() => openConfirmDialog("deactivate", assignment)}
-                              disabled={processingId === assignment.id}
-                            >
-                              <Power className="text-warning mr-2 h-4 w-4" />
-                              Deactivate
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() => handleActivate(assignment.id)}
-                              disabled={processingId === assignment.id}
-                            >
-                              <Power className="text-success mr-2 h-4 w-4" />
-                              Activate
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => void openDeleteDialog(assignment)}
-                            disabled={processingId === assignment.id}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {assignments.map((assignment) => (
+              <CourseAssignmentsRow
+                key={assignment.id}
+                assignment={assignment}
+                mode={mode}
+                canManageAssignments={canManageAssignments}
+                selectedProgramId={selectedProgramId}
+                processingId={processingId}
+                onEdit={setEditAssignment}
+                onOpenConfirm={(type, target) =>
+                  type === "delete" ? void openDeleteDialog(target) : openConfirmDialog(type, target)
+                }
+                onActivate={handleActivate}
+              />
+            ))}
           </TableBody>
         </Table>
       </div>

@@ -9,7 +9,7 @@ Course-bound General Education evidence only — submitted `Response.status == S
 _Avoid_: Central Deployment as General Education evidence, Program-specific evidence in Coordinator analytics
 
 **Coordinator analytics scope**:
-Cross-Program (not selected-Program) read path gated by the shared college-wide `GEN_ED_COORDINATOR` role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes evidence outside that authorized scope. The current Program-PLO selected-Program evidence (Course-bound + Program-scoped Central Deployments via CILO-to-PLO mappings) is unchanged for non-Coordinator contexts.
+Cross-Program (not selected-Program) read path gated by the shared college-wide `GEN_ED_COORDINATOR` role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes evidence outside that authorized scope. The current Program-PLO selected-Program evidence (Course-bound evidence through CILO question bindings plus current CILOMapping rows; Program-scoped Central Deployments through published CentralDeploymentPloSnapshot bindings resolved by section:item key) is unchanged for non-Coordinator contexts.
 _Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-PLO attainment rollup
 
 **Coordinator analytics boundaries (for issue #477 approval)**:
@@ -45,6 +45,18 @@ _Avoid_: Student evidence when the central/course-bound distinction matters
 Evidence from a Central Deployment targeting `STUDENT`, such as a program-wide or exit instrument. It is distinct from Course-bound student evidence.
 _Avoid_: Course evaluation evidence
 
+**Evidence-source labels**:
+The canonical four-bucket evidence-source vocabulary shared by dashboard cards: `COURSE_STUDENT`, `CENTRAL_STUDENT`, `ALUMNI`, and `INDUSTRY_PARTNER`. Sources are never pooled merely because their rating scales match.
+_Avoid_: Pooling sources by rating-scale compatibility
+
+**Source-separation disclosure**:
+The Stakeholders-view notice that evidence sources use different instruments and respondent populations, so sources are kept separate and never combined into one construct.
+_Avoid_: Cross-source mean combination
+
+**Qualitative pulse**:
+The dashboard card of aggregate qualitative evidence — respondent, answer, and evaluation counts plus per-source counts — with identifier-redacted word-cloud tokens capped at `QUALITATIVE_TOKEN_CAP = 60`. Raw comments never leave the Responses data.
+_Avoid_: Raw comment text on the dashboard
+
 ## Outcome evidence
 
 **Program PLO evidence**:
@@ -55,8 +67,28 @@ _Avoid_: Universal outcome attainment, ILO-to-PLO evidence
 The grouping of historical Course-bound ratings by the selected Program's current CILO-to-PLO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.
 _Avoid_: Publication-time PLO result, immutable historical mapping result
 
+**Current-mapping disclosure**:
+The user-facing notice that historical ratings group by the Program's current CILO-to-PLO mappings because publication-time mapping snapshots are not yet available, so later mapping edits reinterpret history. The same notice is forwarded into AI limitations.
+_Avoid_: Publication-time mapping guarantee
+
+**Many-to-many disclosure**:
+Shown when a CILO maps to more than one selected-Program PLO. Each rating contributes once per mapped PLO, so outcome rows are not additive across PLOs.
+_Avoid_: Summing ratings across PLO rows
+
+**Spans multiple scales**:
+A flag set when a pooled mean would combine ratings from more than one instrument-version scale identity. Scales stay reported separately rather than merged.
+_Avoid_: Single blended mean across scale identities
+
+**Excluded rating count**:
+Ratings dropped from a valid aggregate because scale resolution failed or the rating value fell outside the scale.
+_Avoid_: Treating excluded ratings as valid aggregate input
+
 ## AI-assisted interpretation
 
 **AI-assisted interpretation**:
-A supplementary, bounded interpretation of authorized Analytics evidence that does not replace deterministic metrics or the Program Head's human CQI judgment. In development and testing, it may process de-identified submitted qualitative responses server-side through a deliberately configured provider endpoint and engineering-configured corpus threshold; raw qualitative text is never returned to the analytics browser surface or persisted as an AI result. Production enablement remains a separate governance decision.
+A supplementary, bounded interpretation of authorized Analytics evidence that does not replace deterministic metrics or the Program Head's human CQI judgment. In development and testing, the provider receives a bounded aggregate packet of server-computed means, distributions, counts, source labels, trend summaries, limitations, and identifier-redacted word-frequency tokens only — response rows and raw comment text never cross the boundary; rows are capped and the serialized packet is budgeted. Raw qualitative text is never returned to the analytics browser surface or persisted as an AI result. Production enablement remains a separate governance decision.
 _Avoid_: AI decision, automatic CQI plan, AI grading, chatbot
+
+**AI evidence packet**:
+The bounded aggregate projection sent to the OpenAI-compatible provider — capped rows, clamped strings, rounded aggregates, and character-budgeted serialization. It contains no raw comments or respondent identifiers.
+_Avoid_: Raw response content in provider requests

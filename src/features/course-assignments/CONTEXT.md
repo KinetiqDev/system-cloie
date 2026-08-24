@@ -8,9 +8,9 @@ Course Catalog and Assignments define the subjects offered by the institution, w
 Shared institutional Courses where `course.course_scope == GENERAL_EDUCATION`. Every CourseAssignment still carries the operational `program_id` as the class context, regardless of Course scope.
 _Avoid_: Deriving Course scope from nullable program_id, Program-owned General Education Course
 
-**General Education assignment authority — approved matrix (server-enforced)**:
-Secretary: read-only for General Education (Program-specific mutation unchanged). Dean: retains current all-program General Education and Program-specific mutation. `GEN_ED_COORDINATOR`: college-wide read and mutation for General Education assignments only (every list read, Course picker, curriculum option read, faculty search allowlist, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it). Program Head: read-only for General Education within the Authorized Program set where visibility is gated by `CourseAssignment.program_id` in the Authorized Program set (General Education Courses have no owning `Course.program_id`; the assignment's operational program is the class context). Faculty: no assignment mutation. This contract requires the shared college-wide Coordinator scope approval and the breaking transfer recorded in `openspec/config.yaml` and the `add-general-education-coordinator` change; the services in this slice MUST NOT implement the transfer until that approval is recorded.
-_Avoid_: Client-provided course_scope, Secretary General Education mutation after the transfer, Coordinator Program-specific mutation
+**Course assignment authority — approved matrix (server-enforced)**:
+Secretary: no Course assignment mutation; read-only visibility only. `GEN_ED_COORDINATOR`: college-wide stewardship — read and mutation — of General Education assignments only (every list read, Course picker, curriculum option read, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it; faculty search is role-allowlist gated instead — `searchFacultyPool` has no `course_scope` predicate, so the Coordinator searches the whole active Faculty pool cross-program). Program Head: stewardship of Program-specific assignments within the Authorized Program set; read-only for General Education. Dean: retains all-program mutation for General Education and Program-specific assignments.
+_Avoid_: Client-provided course_scope, Secretary assignment mutation, Coordinator Program-specific mutation
 
 **Coordinator assignment UX mode**:
 `general-education` — a concrete Coordinator mode that reuses the assignment shell with Course scope fixed to General Education, allows any active target Program, and performs cross-Program Faculty search. Roster management and on-behalf evaluation publication are not granted to the Coordinator.
@@ -39,7 +39,7 @@ A Course owned by one academic program. Its course assignments are created for t
 _Avoid_: Department subject, program offering
 
 **General Education Course**:
-A shared institutional Course that is not owned by a single academic program. Secretary or Dean users steward General Education course assignments; Program Heads may view General Education assignments for their program but do not manage them.
+A shared institutional Course that is not owned by a single academic program. The General Education Coordinator stewards General Education course assignments college-wide; Deans retain all-program authority over them; Program Heads and Secretaries are read-only.
 _Avoid_: Shared program course, merged course
 
 **Catalog default**:
@@ -62,6 +62,10 @@ _Avoid_: Term enrollment, duplicate class assignment
 A preview-first partial-success operation that reconciles at most 100 official Student-name rows against assignment-scoped eligible accounts before creating or restoring Course-assignment memberships. Every source row remains independent, names are lookup inputs rather than identity, unresolved rows require explicit resolution or skip, and confirmed writes use `User.id` with current server revalidation.
 _Avoid_: Atomic roster replacement, database error report
 
+**Course roster confirmation outcome**:
+The per-row result of a roster import or reconciliation write, one of exactly twelve values: `CREATED`, `RESTORED`, `ALREADY_ACTIVE`, `ACCOUNT_INACTIVE`, `PROFILE_INCOMPLETE`, `NO_ACTIVE_TERM_PLACEMENT`, `PROGRAM_MISMATCH`, `OUT_OF_SCOPE`, `OTHER_SECTION_CONFLICT`, `READ_ONLY`, `UNEXPECTED_FAILURE`, and `UNPROCESSED`.
+_Avoid_: Roster eligibility reason, generic success/failure
+
 **Roster name resolution**:
 The authorized discovery and human-reconciliation step that compares one uploaded name with a bounded Course-assignment candidate population. Exact, suggested, ambiguous, and no-match states describe discovery evidence only; confirmed `User.id` identifies the Student.
 _Avoid_: Name identity, automatic fuzzy match, normalized Student name
@@ -81,6 +85,10 @@ _Avoid_: Faculty dashboard roster widget, all-program roster page
 **Course roster detail**:
 The shared, server-authorized, paginated, and searchable view of Students in one Course-assignment roster. Invalid and unauthorized Course-assignment URLs are indistinguishable as not found. It shows name, email, program, major, year level, section, membership-added date, and inactive-account status. It distinguishes roster membership count from evaluation-eligible count. An authorized, default-off filter exposes removed memberships, removal time, and removal actor without including them in active counts or evaluation eligibility. Inactive assignments, completed academic periods, and published Course-bound evaluations are read-only and show a lifecycle-specific banner instead of write controls. Faculty reach it from My Course Rosters; Secretary, Dean, and Program Head reach it from an authorized Course assignment row.
 _Avoid_: Separate administrator roster page, all-program student list
+
+**RosterState**:
+The lifecycle state behind the roster page's read-only banners: `ACTIVE`, `INACTIVE_ASSIGNMENT`, `INACTIVE_ACADEMIC_PERIOD`, or `PUBLISHED_EVALUATION_LOCK`.
+_Avoid_: Free-text banner reason, client-side roster state
 
 **Faculty roster management**:
 Faculty management of Course-assignment memberships for an active Course assignment they own. It permits scoped Student search, preview-first name-roster reconciliation, and soft removal after confirmation that states its roster-only and future-evaluation effect; it does not permit changing Student profiles or term placement.
@@ -107,28 +115,40 @@ A Student whose active Course-assignment membership no longer has an eligible ac
 _Avoid_: Automatically removed Student, eligible evaluation recipient
 
 **Roster eligibility reason**:
-The exact safe business reason a roster manager sees when a selected account cannot join a Course-assignment roster or a Student cannot receive a Course-bound evaluation: unknown or out-of-scope account, non-Student account, account inactive, profile incomplete, no active term placement, program mismatch, or membership conflict. It never includes internal identifiers, private account metadata, or technical failure detail.
+The exact safe business reason a roster manager sees when a selected account cannot join a Course-assignment roster or a Student cannot receive a Course-bound evaluation, drawn from exactly six values: `UNKNOWN_ACCOUNT`, `NON_STUDENT_ACCOUNT`, `ACCOUNT_INACTIVE`, `PROFILE_INCOMPLETE`, `NO_ACTIVE_TERM_PLACEMENT`, and `PROGRAM_MISMATCH`. Out-of-scope and other-section-conflict results are course roster confirmation outcomes, not eligibility reasons. It never includes internal identifiers, private account metadata, or technical failure detail.
 _Avoid_: Raw account state, server error explanation
 
 **Secretary course assignment operations**:
-All-program stewardship of Course assignments by a Secretary, including General Education and Program-specific assignments across every academic program.
-_Avoid_: Program Head impersonation, per-program Secretary mode
+All-program read visibility of Course assignments for a Secretary. The Secretary holds no Course assignment mutation: General Education stewardship belongs to the Coordinator and Program-specific stewardship to the owning program's Program Head.
+_Avoid_: Secretary stewardship, all-program Secretary mutations
 
 **Dean course assignment operations**:
-All-program stewardship of Course assignments by a Dean, reusing the same operational rules as Secretary course assignment operations for General Education and Program-specific assignments.
+All-program stewardship of Course assignments by a Dean: General Education and Program-specific mutation across every academic program.
 _Avoid_: Separate Dean assignment model, analytics-only Dean mode
 
 **All-program Course assignment manager**:
-A Secretary or Dean user who can manage General Education and Program-specific Course assignments across every academic program through the same operational rules.
-_Avoid_: Secretary mode, Dean mode, role impersonation
+A Dean user with all-program Course assignment scope across every academic program, managing both General Education and Program-specific assignments.
+_Avoid_: Secretary manager mode, role impersonation
+
+**Course assignment list mode** (`CourseAssignmentListRole`):
+The role-scoped mode of the Course assignment list: `all-program` for the Dean, `program-head` for the Program Head, and `general-education` for the Coordinator.
+_Avoid_: Free-form list filter, role-agnostic assignment list
+
+**GenEd dashboard**:
+The Coordinator dashboard whose KPIs are scoped to active General Education courses only — a deliberate divergence from the management list, which retains inactive courses for visibility.
+_Avoid_: Dashboard mirroring the management list, all-course KPI scope
 
 **Role-owned route**:
-A dashboard URL owned by one role even when the underlying operation capability is shared with another role. Secretary and Dean Course assignment routes remain separate role-owned routes.
+A dashboard URL owned by one role even when the underlying operation capability is shared with another role. Dean, Coordinator, Program Head, and Secretary Course assignment routes remain separate role-owned routes; the Secretary route is a read-only view.
 _Avoid_: Role impersonation route, shared dashboard route
 
 **Faculty affiliation**:
 A faculty member's active relationship to one or more academic programs. Affiliation is displayed as assignment context, but it does not prevent a Program Head from assigning a faculty member from another program to one of the Program Head's program-specific Courses.
 _Avoid_: Faculty scope, assignment permission
+
+**Faculty search pool**:
+The cross-program, active-Faculty name/email search allowlisted for Secretary, Dean, GEN_ED_COORDINATOR, and Program Head, returning affiliation hints with the results.
+_Avoid_: Course-scoped faculty search, all-user directory
 
 **Class section**:
 A predefined shift (Morning, Afternoon, Evening) during which a course assignment is taught.
@@ -143,5 +163,5 @@ A recorded decision in a dedicated record not to create an evaluation assignment
 _Avoid_: Roster removal, unrecorded recipient omission
 
 **Merged class**:
-A class composed of students from different academic programs taught together, represented in CLOIE as separate course assignments (one per program).
+A class composed of students from different academic programs taught together, represented in System CLOIE as separate course assignments (one per program).
 _Avoid_: Combined class, mixed assignment

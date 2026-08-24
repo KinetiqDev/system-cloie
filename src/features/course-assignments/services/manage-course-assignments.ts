@@ -692,7 +692,6 @@ export async function bulkCreateCourseAssignments(
   const authSession = await resolveAuthSession();
 
   const allowedRoles: SystemRole[] = [
-    ROLES.SECRETARY,
     ROLES.DEAN,
     ROLES.PROGRAM_HEAD,
     ROLES.GEN_ED_COORDINATOR,

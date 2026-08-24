@@ -1221,6 +1221,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 15,
     category: "route",
+    notes: "read-only secretary view after ADR 0019; mutation affordances hidden via canManageAssignments=false",
   },
   {
     path: "src/app/(app)/secretary/courses/[id]/edit/page.tsx",

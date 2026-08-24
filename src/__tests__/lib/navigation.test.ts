@@ -23,7 +23,7 @@ describe("navigation helpers", () => {
     });
   });
 
-  it("secretary navigation includes course assignments", () => {
+  it("includes read-only Course Assignments in Secretary navigation", () => {
     const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
     expect(secretaryNav.map((item) => item.href)).toContain("/secretary/course-assignments");
     expect(secretaryNav.find((item) => item.href === "/secretary/course-assignments")?.name).toBe(

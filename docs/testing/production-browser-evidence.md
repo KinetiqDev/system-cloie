@@ -47,7 +47,7 @@ Use a fresh browser context for each role. Clear site data or sign out before ch
 
 | Role | Account state | Representative route |
 | --- | --- | --- |
-| Secretary | active, complete | `/secretary/course-assignments` |
+| Secretary | active, complete | `/secretary/dashboard` |
 | College Dean | active, complete | `/dean/dashboard` |
 | Faculty Member | active, complete, active program affiliation | `/faculty/dashboard` |
 
