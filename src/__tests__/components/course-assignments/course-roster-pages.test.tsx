@@ -259,6 +259,18 @@ describe("course roster pages", () => {
     expect(screen.getByRole("searchbox", { name: "Search assignments" })).toHaveValue("");
   });
 
+  it("syncs the history checkbox from server-driven navigation (Clear filters)", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, includeHistory: true }} view="list" />
+    );
+    const historyCheckbox = screen.getByRole("checkbox", { name: /include inactive/i });
+    expect(historyCheckbox).toBeChecked();
+
+    // The clear-filters navigation returns the server to history-less results.
+    rerender(<CourseRosterDiscoveryPage data={discovery} view="list" />);
+    expect(screen.getByRole("checkbox", { name: /include inactive/i })).not.toBeChecked();
+  });
+
   it("preserves Card in paginated links and instant filter navigation", () => {
     render(
       <CourseRosterDiscoveryPage

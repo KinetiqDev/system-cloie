@@ -23,10 +23,6 @@ function makeItem(overrides: Partial<PublishedDeploymentItem> = {}): PublishedDe
 
 const NOOP_MENU = () => <></>;
 
-function matchText(text: string) {
-  return (content: string) => content === text;
-}
-
 describe("PublishedDeploymentsCollection", () => {
   beforeAll(() => {
     Object.defineProperty(window, "matchMedia", {

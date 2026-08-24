@@ -28,6 +28,13 @@ export function CourseRosterDiscoveryFilters({
   const [includeHistory, setIncludeHistory] = useState(initialHistory);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Server-driven history changes (e.g. the Clear filters link) reset the
+  // checkbox. A pending navigation is skipped so an in-flight response never
+  // clobbers a toggle the user just made.
+  if (!pending && includeHistory !== initialHistory) {
+    setIncludeHistory(initialHistory);
+  }
+
   // Server-side search changes (e.g. the Clear filters link) reset the draft,
   // but never overwrite an in-progress keystroke.
   useEffect(() => {

@@ -54,7 +54,7 @@ describe("TemplateCollection", () => {
     render(
       <TemplateCollection
         view="list"
-        sections={[{ items: [makeItem(), makeItem({ id: "t2", name: "Course Tool", templateType: "COURSE_BOUND", origin: "faculty-copy", originLabel: "My copy", versionCount: 1 })] , renderFooterActions: () => null }]}
+        sections={[{ items: [makeItem(), makeItem({ id: "t2", name: "Course Tool", templateType: "COURSE_BOUND", origin: "faculty-copy", originLabel: "My copy", versionCount: 1 })] , renderFooterActions: () => <button>Edit</button> }]}
         empty={<p>Empty</p>}
       />
     );
@@ -64,6 +64,8 @@ describe("TemplateCollection", () => {
     expect(table.getByRole("columnheader", { name: "Source" })).toBeInTheDocument();
     expect(table.getByText("Course Tool")).toBeInTheDocument();
     expect(table.getByText("My copy")).toBeInTheDocument();
+    // List view keeps the same role actions as card view.
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
   });
 
   test("renders section headings and omits empty sections", () => {
@@ -109,6 +111,25 @@ describe("TemplateCollection", () => {
       />
     );
 
+    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
+  });
+
+  test("renders footer actions and overflow menu together in list view", () => {
+    render(
+      <TemplateCollection
+        view="list"
+        sections={[
+          {
+            items: [makeItem()],
+            renderFooterActions: () => <button>Edit</button>,
+            renderOverflowMenu: () => <button>Delete</button>,
+          },
+        ]}
+        empty={<p>Empty</p>}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
   });
 });

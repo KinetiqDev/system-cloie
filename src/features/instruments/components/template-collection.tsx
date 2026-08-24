@@ -125,6 +125,7 @@ export function TemplateCollection({ view, sections, empty }: TemplateCollection
           ) : (
             <TemplateTable
               items={section.items}
+              renderFooterActions={section.renderFooterActions}
               renderOverflowMenu={section.renderOverflowMenu}
               sectionHeading={section.heading}
             />
@@ -192,15 +193,17 @@ function TemplateCard({
 
 function TemplateTable({
   items,
+  renderFooterActions,
   renderOverflowMenu,
   sectionHeading,
 }: {
   items: TemplateCollectionItem[];
+  renderFooterActions: (item: TemplateCollectionItem) => ReactNode;
   renderOverflowMenu?: (item: TemplateCollectionItem) => ReactNode;
   sectionHeading?: string;
 }) {
   return (
-    <div className="bg-card rounded-lg border">
+    <div className="bg-card overflow-x-auto rounded-lg border">
       <Table aria-label={sectionHeading ?? "Evaluation templates"} className="min-w-[44rem]">
         <TableHeader>
           <TableRow>
@@ -209,7 +212,7 @@ function TemplateTable({
             <TableHead>Status</TableHead>
             <TableHead>Source</TableHead>
             <TableHead>Versions</TableHead>
-            <TableHead className="w-16"></TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -240,7 +243,8 @@ function TemplateTable({
                 {item.versionCount !== undefined ? item.versionCount : "—"}
               </TableCell>
               <TableCell>
-                <div className="flex justify-end">
+                <div className="flex items-center justify-end gap-2">
+                  {renderFooterActions(item)}
                   {renderOverflowMenu && <OverflowMenu>{renderOverflowMenu(item)}</OverflowMenu>}
                 </div>
               </TableCell>
