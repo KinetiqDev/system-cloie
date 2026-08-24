@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
-import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
+import {
+  STAKEHOLDER_EVIDENCE_SOURCE,
+  buildAnalyticsUrl,
+} from "@/features/analytics/services/program-head-analytics-state";
 import {
   buildProgramHeadResponsesPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
@@ -55,13 +58,9 @@ export default async function CentralResponseDetailPage({
         evaluationHref={buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId)}
         analyticsHref={buildAnalyticsUrl(programId, {
           tab: "outcomes",
-          evidenceSource:
-            stakeholder === "STUDENT"
-              ? "PROGRAM_WIDE_STUDENT"
-              : stakeholder === "ALUMNI"
-                ? "ALUMNI"
-                : "INDUSTRY",
+          evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[stakeholder],
           stakeholder,
+          termInstanceId: response.evaluation.context.termInstanceId,
         })}
         programId={programId}
       />

@@ -94,6 +94,9 @@ export type CourseBoundResponseContext = {
   section: StudentSection | null;
   majorLabel: string | null;
   periodLabel: string;
+
+  /** Academic term instance behind the response (§12 upward navigation). */
+  termInstanceId: string;
 };
 
 /** Publication-time context for a program-wide response (§27.2–§27.3). */
@@ -104,6 +107,9 @@ export type ProgramWideResponseContext = {
   targetYearLevel: YearLevel | null;
   instrumentVersion: number;
   periodLabel: string;
+
+  /** Academic term instance behind the response (§12 upward navigation). */
+  termInstanceId: string;
 };
 
 /**

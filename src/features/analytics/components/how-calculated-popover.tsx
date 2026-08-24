@@ -40,7 +40,7 @@ export function HowCalculatedPopover({
           <button
             type="button"
             aria-label={`How calculated: ${label}`}
-            className="text-muted-foreground hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors pointer-coarse:size-9 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="text-muted-foreground hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors pointer-coarse:size-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <Info aria-hidden="true" className="size-4" />
           </button>

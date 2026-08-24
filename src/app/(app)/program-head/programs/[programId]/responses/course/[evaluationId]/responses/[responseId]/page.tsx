@@ -19,7 +19,7 @@ export default async function CourseResponseDetailPage({
   const { programId, evaluationId, responseId } = await params;
   const response = await getProgramHeadResponseDetail(programId, responseId);
 
-  if (!response || response.evaluation.id !== evaluationId) {
+  if (!response || response.evaluation.id !== evaluationId || response.evaluation.type !== "COURSE_BOUND") {
     notFound();
   }
 
@@ -41,7 +41,11 @@ export default async function CourseResponseDetailPage({
       <ResponseDetail
         response={response}
         evaluationHref={buildProgramHeadResponsesCourseEvaluationPath(programId, evaluationId)}
-        analyticsHref={buildAnalyticsUrl(programId, { tab: "outcomes", evidenceSource: "COURSE" })}
+        analyticsHref={buildAnalyticsUrl(programId, {
+          tab: "outcomes",
+          evidenceSource: "COURSE",
+          termInstanceId: response.evaluation.context.termInstanceId,
+        })}
         programId={programId}
       />
     </div>

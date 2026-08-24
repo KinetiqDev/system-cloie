@@ -165,6 +165,19 @@ export function describeScale(descriptors: ScaleDescriptor[]): string {
     : `${values.length}-point (${values.join(", ")})`;
 }
 
+/**
+ * Readable label of a metric's single compatible scale group; undefined when
+ * the metric spans incompatible scales or no scale resolved. Metrics with
+ * one group report its scale; mixed groups never collapse into one label.
+ */
+export function describeSingleScaleGroup(
+  scaleGroups: Array<{ scale: ScaleIdentity | null }>
+): string | undefined {
+  if (scaleGroups.length !== 1) return undefined;
+  const scale = scaleGroups[0].scale;
+  return scale ? describeScale(scale.descriptors) : undefined;
+}
+
 /** Readable scale context for a period; null when no quantitative evidence exists. */
 export function describeScales(scales: ScaleDescriptor[][]): string | null {
   const descriptions = dedupeScales(scales).map(describeScale);

@@ -221,6 +221,7 @@ function buildCourseBoundContext(evaluation: CourseBoundEvalShape): CourseBoundR
     section: ca.section,
     majorLabel: ca.course.major?.name ?? null,
     periodLabel: buildPeriodLabel(ca.term_instance),
+    termInstanceId: ca.term_instance.id,
   };
 }
 
@@ -232,6 +233,7 @@ function buildProgramWideContext(deployment: CentralEvalShape): ProgramWideRespo
     targetYearLevel: deployment.year_level,
     instrumentVersion: deployment.instrument.version_number,
     periodLabel: buildPeriodLabel(deployment.term_instance),
+    termInstanceId: deployment.term_instance.id,
   };
 }
 

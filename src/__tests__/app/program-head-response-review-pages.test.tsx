@@ -151,7 +151,12 @@ describe("program head identified response-review pages", () => {
 
   it("renders the course response detail page with identified respondent name", async () => {
     getProgramHeadResponseDetailMock.mockResolvedValue({
-      evaluation: { id: "eval-1", title: "Post-Term CILO Evaluation" },
+      evaluation: {
+        id: "eval-1",
+        title: "Post-Term CILO Evaluation",
+        type: "COURSE_BOUND",
+        context: { termInstanceId: "term-1" },
+      },
       respondent: { name: "Juan dela Cruz" },
     });
     const Page = (
@@ -185,7 +190,12 @@ describe("program head identified response-review pages", () => {
 
   it("renders the program-wide response detail page with identified respondent name", async () => {
     getProgramHeadResponseDetailMock.mockResolvedValue({
-      evaluation: { id: "central-1", title: "Exit Survey", type: "PROGRAM_WIDE", context: { stakeholder: "ALUMNI" } },
+      evaluation: {
+        id: "central-1",
+        title: "Exit Survey",
+        type: "PROGRAM_WIDE",
+        context: { stakeholder: "ALUMNI", termInstanceId: "term-1" },
+      },
       respondent: { name: "Maria Gomez" },
     });
     const Page = (

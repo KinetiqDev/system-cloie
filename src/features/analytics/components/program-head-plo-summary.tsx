@@ -11,6 +11,7 @@ import {
   type DashboardSourceKey,
 } from "@/features/analytics/program-head-dashboard-labels";
 import type {
+  DashboardPeriodFilters,
   DashboardPloSummaryRow,
   PloCatalogEntry,
 } from "@/features/analytics/services/get-program-head-dashboard";
@@ -67,7 +68,7 @@ export function ProgramHeadPloSummary({
   sources: Record<DashboardSourceKey, DashboardPloSummaryRow[]>;
   ploCatalog: PloCatalogEntry[];
   programId: string;
-  periodFilters: { schoolYearId?: string; semester?: string; termInstanceId?: string };
+  periodFilters: DashboardPeriodFilters;
 }) {
   const [sourceKey, setSourceKey] = useState<DashboardSourceKey>("COURSE_STUDENT");
   const rows = mergeCatalogRows(sourceKey, ploCatalog, sources[sourceKey] ?? []);

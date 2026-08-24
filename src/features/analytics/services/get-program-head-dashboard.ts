@@ -20,7 +20,7 @@ import {
 import { FEEDBACK_SOURCE_LABELS, buildRedactedWordCloudTokens } from "./qualitative-analytics";
 import { buildParticipationSummary, type ParticipationRow } from "../aggregators/participation";
 import { groupRatingsByScale } from "../aggregators/quantitative";
-import { describeScale, resolveItemScaleIdentity, type ScaleIdentity } from "../aggregators/scale-identity";
+import { describeSingleScaleGroup, describeScale, resolveItemScaleIdentity, type ScaleIdentity } from "../aggregators/scale-identity";
 import {
   buildCourseDerivedPloMetrics,
   buildProgramWidePloMetrics,
@@ -130,7 +130,7 @@ type DashboardScope = {
 };
 
 /** Period filters shared with the Analytics URL state (§12 upward navigation). */
-type DashboardPeriodFilters = Pick<
+export type DashboardPeriodFilters = Pick<
   AnalyticsFilterState,
   "schoolYearId" | "semester" | "termInstanceId"
 >;
@@ -273,7 +273,7 @@ export function toDashboardPloRows(
       responseCount: metric.responseCount,
       evaluationCount: metric.evaluationCount,
       questionCount: metric.contributingCilos.length,
-      scaleLabel: singleScaleLabel(metric),
+      scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
       explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.contributingCilos.length} contributing CILO(s); unbound and general items are excluded.`,
       evidenceHref: evidenceHrefFor(metric.ploId),
     },
@@ -284,13 +284,6 @@ export function toDashboardPloRows(
 function singleScaleMax(metric: PloMetric): number | null {
   if (metric.scaleGroups.length !== 1) return null;
   return metric.scaleGroups[0].scale?.max ?? null;
-}
-
-/** Human-readable label of the single compatible scale; null when mixed or unresolved. */
-function singleScaleLabel(metric: PloMetric): string | undefined {
-  if (metric.scaleGroups.length !== 1) return undefined;
-  const scale = metric.scaleGroups[0].scale;
-  return scale ? describeScale(scale.descriptors) : undefined;
 }
 
 /** Project program-wide PLO metrics into the compact summary row shape (§13.8). */
@@ -315,7 +308,7 @@ export function toCentralDashboardPloRows(
       responseCount: metric.responseCount,
       evaluationCount: metric.evaluationCount,
       questionCount: metric.questionCount,
-      scaleLabel: singleScaleLabel(metric),
+      scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
       explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s); unbound items are excluded.`,
       evidenceHref: evidenceHrefFor(metric.ploId),
     },

@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { HowCalculatedPopover } from "@/features/analytics/components/how-calculated-popover";
 import { describeScale } from "@/features/analytics/aggregators/scale-identity";
+import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics/aggregators/types";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
 import type { ProgramHeadCourseEvaluationDetail } from "../types";
@@ -163,15 +164,7 @@ export function CourseEvaluationDetail({
               ) : (
                 questionResults.map((question) => {
                   const quantitative = question.quantitative;
-                  const evidence = {
-                    ratingCount: quantitative?.ratingCount ?? 0,
-                    responseCount: quantitative?.responseCount ?? 0,
-                    scaleLabel: quantitative?.scale ? describeScale(quantitative.scale.descriptors) : undefined,
-                    explanation:
-                      quantitative === null
-                        ? "No valid ratings for this question in the submitted responses."
-                        : `Mean of ${quantitative.ratingCount} valid ratings for this question from submitted responses.`,
-                  };
+                  const evidence = questionEvidence(question);
                   return (
                     <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
                       <TableCell>{question.itemKey}</TableCell>
@@ -274,6 +267,19 @@ export function CourseEvaluationDetail({
   );
 }
 
+function questionEvidence(question: Pick<QuestionMetric, "quantitative">): MetricEvidenceSummary {
+  const quantitative = question.quantitative;
+  return {
+    ratingCount: quantitative?.ratingCount ?? 0,
+    responseCount: quantitative?.responseCount ?? 0,
+    scaleLabel: quantitative?.scale ? describeScale(quantitative.scale.descriptors) : undefined,
+    explanation:
+      quantitative === null
+        ? "No valid ratings for this question in the submitted responses."
+        : `Mean of ${quantitative.ratingCount} valid ratings for this question from submitted responses.`,
+  };
+}
+
 function SummaryStat({
   label,
   value,
@@ -281,7 +287,7 @@ function SummaryStat({
 }: {
   label: string;
   value: string;
-  evidence?: { explanation: string; scaleLabel?: string; ratingCount?: number; responseCount?: number; assignmentCount?: number };
+  evidence?: MetricEvidenceSummary;
 }) {
   return (
     <div className="border-border rounded-xl border p-4">

@@ -12,6 +12,20 @@ export const ANALYTICS_TAB_LABELS: Record<AnalyticsTab, string> = {
 };
 type AnalyticsEvidenceSource = "COURSE" | "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY";
 type AnalyticsStakeholder = "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
+
+/**
+ * Central-deployment target stakeholder → analytics evidence-source value
+ * (§15 coupling). Program-wide student evidence reports under its own
+ * source, distinct from course-bound student evidence.
+ */
+export const STAKEHOLDER_EVIDENCE_SOURCE: Record<
+  AnalyticsStakeholder,
+  Exclude<AnalyticsEvidenceSource, "COURSE">
+> = {
+  STUDENT: "PROGRAM_WIDE_STUDENT",
+  ALUMNI: "ALUMNI",
+  INDUSTRY_PARTNER: "INDUSTRY",
+};
 export type AnalyticsFilterState = {
   tab: AnalyticsTab; schoolYearId?: string; semester?: string; termInstanceId?: string;
   evidenceSource?: AnalyticsEvidenceSource; stakeholder?: AnalyticsStakeholder; majorId?: string; yearLevel?: string;

@@ -2,8 +2,10 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatMean } from "./format";
-import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
-import type { TargetStakeholder } from "@prisma/client";
+import {
+  STAKEHOLDER_EVIDENCE_SOURCE,
+  buildAnalyticsUrl,
+} from "@/features/analytics/services/program-head-analytics-state";
 import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
 
 type ResponseDetailProps = {
@@ -16,21 +18,19 @@ type ResponseDetailProps = {
   programId: string;
 };
 
-const STAKEHOLDER_SOURCE: Record<TargetStakeholder, "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY"> = {
-  STUDENT: "PROGRAM_WIDE_STUDENT",
-  ALUMNI: "ALUMNI",
-  INDUSTRY_PARTNER: "INDUSTRY",
-};
-
 export function ResponseDetail({ response, evaluationHref, analyticsHref, programId }: ResponseDetailProps) {
   const { respondent, evaluation } = response;
 
   const outcomeScope =
     evaluation.type === "COURSE_BOUND"
-      ? ({ evidenceSource: "COURSE" as const })
+      ? ({
+          evidenceSource: "COURSE" as const,
+          termInstanceId: evaluation.context.termInstanceId,
+        })
       : ({
-          evidenceSource: STAKEHOLDER_SOURCE[evaluation.context.stakeholder],
+          evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[evaluation.context.stakeholder],
           stakeholder: evaluation.context.stakeholder,
+          termInstanceId: evaluation.context.termInstanceId,
         });
 
   const outcomeHref = (ploId: string): string =>

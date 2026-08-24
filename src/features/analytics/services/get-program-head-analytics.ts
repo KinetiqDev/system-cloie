@@ -23,14 +23,14 @@ import {
 } from "./program-head-analytics-aggregators";
 import {
   buildScaleIdentities,
-  describeScale,
   describeScales,
+  describeSingleScaleGroup,
   extractDistinctScales,
   resolveItemScaleIdentity,
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
 import { buildParticipationSummary } from "../aggregators/participation";
-import { buildProgramWidePloMetrics, type CentralPloRatingRow, type PloMetric } from "../aggregators/plo";
+import { buildProgramWidePloMetrics, type CentralPloRatingRow } from "../aggregators/plo";
 import {
   FEEDBACK_SOURCE_LABELS,
   buildRedactedWordCloudTokens,
@@ -940,20 +940,13 @@ async function buildProgramWideOutcomeDtos(
           responseCount: metric.responseCount,
           evaluationCount: metric.evaluationCount,
           questionCount: metric.questionCount,
-          scaleLabel: singleProgramWideScaleLabel(metric),
+          scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
           explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Program Learning Outcome; unbound items are excluded.`,
         },
       });
     }
   }
   return dtos;
-}
-
-/** Human-readable label of the single compatible scale; null when mixed or unresolved. */
-function singleProgramWideScaleLabel(metric: PloMetric): string | undefined {
-  if (metric.scaleGroups.length !== 1) return undefined;
-  const scale = metric.scaleGroups[0].scale;
-  return scale ? describeScale(scale.descriptors) : undefined;
 }
 
 /**
