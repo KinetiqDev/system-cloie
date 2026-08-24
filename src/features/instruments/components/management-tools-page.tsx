@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -14,22 +14,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { showToast } from "@/components/ui/toast";
 import {
   toggleAdminTemplateActiveAction,
   duplicateAdminTemplateAction,
   deleteAdminTemplateAction,
 } from "@/lib/actions/admin-template-actions";
-import { showToast } from "@/components/ui/toast";
+import { TemplateCollection, type TemplateCollectionItem } from "./template-collection";
+import { ToolsViewSelector, type ToolsViewMode } from "./tools-view-selector";
+import { updateToolsUrl } from "./evaluation-tools-tabs";
 
 type TemplateActions = {
   onToggleActive: (
@@ -65,7 +64,24 @@ type ManagementToolsPageProps = {
   templates: TemplateItem[];
   basePath?: string;
   actions?: TemplateActions;
+  initialView?: ToolsViewMode;
 };
+
+function toTemplateItem(template: TemplateItem): TemplateCollectionItem {
+  return {
+    id: template.id,
+    code: template.code,
+    name: template.name,
+    description: template.description,
+    templateType: template.template_type,
+    statusLabel: template.is_active ? "Active" : "Inactive",
+    statusActive: template.is_active,
+    origin: "institutional",
+    originLabel: "Institutional baseline",
+    facultyAccessible: template.is_faculty_accessible,
+    versionCount: template._count.versions,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -75,21 +91,40 @@ export function ManagementToolsPage({
   templates,
   basePath = "/secretary/instruments",
   actions = DEFAULT_ACTIONS,
+  initialView = "card",
 }: ManagementToolsPageProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [deleteTarget, setDeleteTarget] = useState<TemplateItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+    code: string;
+  } | null>(null);
+  const [view, setView] = useState<ToolsViewMode>(initialView);
+
+  function selectView(nextView: ToolsViewMode) {
+    setView(nextView);
+    updateToolsUrl({ view: nextView });
+  }
 
   function handleToggleActive(id: string, currentActive: boolean) {
     startTransition(async () => {
-      await actions.onToggleActive(id, !currentActive);
+      const result = await actions.onToggleActive(id, !currentActive);
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
       router.refresh();
     });
   }
 
   function handleDuplicate(id: string) {
     startTransition(async () => {
-      await actions.onDuplicate(id);
+      const result = await actions.onDuplicate(id);
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
       router.refresh();
     });
   }
@@ -112,7 +147,7 @@ export function ManagementToolsPage({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <h1 className="font-heading text-text-primary text-2xl font-black">Evaluation Tools</h1>
+          <h1 className="text-heading-xl text-text-primary">Evaluation Tools</h1>
           <p className="text-muted-foreground text-sm">
             Manage institutional baseline evaluation templates. These templates can be adopted by
             program heads for their programs.
@@ -124,100 +159,75 @@ export function ManagementToolsPage({
         </Button>
       </div>
 
-      {/* Templates Grid */}
-      {templates.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground text-sm">
-              No baseline templates yet. Click &quot;Create Template&quot; to build your first
-              evaluation tool.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((template) => (
-            <Card key={template.id} className="relative">
-              <CardHeader>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 space-y-1">
-                      <CardTitle className="line-clamp-2 text-base font-bold">
-                        {template.name}
-                      </CardTitle>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Badge variant={template.is_active ? "success" : "outline"}>
-                        {template.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors">
-                          <MoreVertical className="size-4" />
-                          <span className="sr-only">Actions</span>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            render={<Link href={`${basePath}/${template.id}/edit`} />}
-                          >
-                            <Pencil className="mr-2 size-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={isPending}
-                            onClick={() => handleDuplicate(template.id)}
-                          >
-                            <Copy className="mr-2 size-4" />
-                            Duplicate
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            disabled={isPending}
-                            onClick={() => handleToggleActive(template.id, template.is_active)}
-                          >
-                            {template.is_active ? "Deactivate" : "Activate"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={isPending}
-                            onClick={() => setDeleteTarget(template)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 size-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {template.description && (
-                  <p className="text-muted-foreground line-clamp-2 text-sm">
-                    {template.description}
-                  </p>
-                )}
-                <div className="text-muted-foreground flex items-center justify-between text-xs">
-                  <span>Institutional baseline</span>
-                  <span>
-                    {template._count.versions} version
-                    {template._count.versions !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="w-fit text-xs">
-                    {template.template_type === "COURSE_BOUND" ? "Course-bound" : "Program-wide"}
-                  </Badge>
-                  {template.is_faculty_accessible && (
-                    <Badge variant="outline" className="text-xs">
-                      Faculty Access
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Toolbar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-muted-foreground text-sm" aria-live="polite">
+          {templates.length} template{templates.length !== 1 ? "s" : ""}
+        </p>
+        <ToolsViewSelector label="Templates" value={view} onValueChange={selectView} />
+      </div>
+
+      {/* Templates Collection */}
+      <TemplateCollection
+        view={view}
+        sections={[
+          {
+            items: templates.map(toTemplateItem),
+            renderFooterActions: (item) => (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={<Link href={`${basePath}/${item.id}/edit`} />}
+                >
+                  <Pencil className="size-3.5" data-icon="inline-start" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() => handleDuplicate(item.id)}
+                >
+                  <Copy className="size-3.5" data-icon="inline-start" />
+                  Duplicate
+                </Button>
+              </>
+            ),
+            renderOverflowMenu: (item) => (
+              <>
+                <DropdownMenuItem
+                  disabled={isPending}
+                  onClick={() => handleToggleActive(item.id, item.statusActive)}
+                >
+                  {item.statusActive ? "Deactivate" : "Activate"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={isPending}
+                  onClick={() =>
+                    setDeleteTarget({ id: item.id, name: item.name, code: item.code ?? "" })
+                  }
+                  variant="destructive"
+                >
+                  <Trash2 className="size-4" />
+                  Delete
+                </DropdownMenuItem>
+              </>
+            ),
+          },
+        ]}
+        empty={
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground text-sm">
+                No baseline templates yet. Click &quot;Create Template&quot; to build your first
+                evaluation tool.
+              </p>
+            </CardContent>
+          </Card>
+        }
+      />
 
       {/* Delete Confirmation AlertDialog */}
       {deleteTarget && (

@@ -193,7 +193,7 @@ describe("course roster pages", () => {
     expect(screen.queryByText(/Ada Lovelace|ada@example.com/)).not.toBeInTheDocument();
   });
 
-  it("switches views with replace navigation, preserves scope, resets page, and ignores deselection", () => {
+  it("switches views instantly without a server round trip, preserves scope, and syncs the URL", () => {
     const { rerender } = render(
       <CourseRosterDiscoveryPage
         data={{ ...discovery, search: "CS", includeHistory: true, page: 4 }}
@@ -201,12 +201,19 @@ describe("course roster pages", () => {
       />
     );
 
+    // Same-view click is a no-op.
     fireEvent.click(screen.getByRole("button", { name: "List view" }));
     expect(replaceMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("");
+
+    // Card switch is instant: no router navigation, URL synced via history.
     fireEvent.click(screen.getByRole("button", { name: "Card view" }));
-    expect(replaceMock).toHaveBeenCalledWith(
-      "/faculty/course-rosters?search=CS&history=1&view=card"
-    );
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?search=CS&history=1&view=card");
+    expect(
+      screen.getByRole("button", { name: "Card view" })
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("table", { name: "Course assignments" })).not.toBeInTheDocument();
 
     replaceMock.mockClear();
     rerender(
@@ -216,7 +223,129 @@ describe("course roster pages", () => {
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "List view" }));
-    expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?search=CS&history=1");
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?search=CS&history=1");
+  });
+
+  it("adopts server-driven view changes from navigation (sidebar links, deep links)", () => {
+    const { rerender } = render(<CourseRosterDiscoveryPage data={discovery} view="card" />);
+
+    expect(screen.getByRole("button", { name: "Card view" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    // The default /faculty/course-rosters URL carries no view param.
+    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />);
+    expect(screen.getByRole("button", { name: "List view" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
+  it("clears a stale search draft when the server search changes (Clear filters)", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
+    );
+    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+    expect(searchbox).toHaveValue("CS");
+
+    // Typing updates the draft; leaving the field discards the pending edit
+    // and re-adopts the server value.
+    searchbox.focus();
+    fireEvent.change(searchbox, { target: { value: "CS1" } });
+    expect(searchbox).toHaveValue("CS1");
+    act(() => {
+      searchbox.blur();
+    });
+    expect(searchbox).toHaveValue("CS");
+
+    // The clear-filters navigation returns the server to an empty search.
+    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
+    expect(screen.getByRole("searchbox", { name: "Search assignments" })).toHaveValue("");
+  });
+
+  it("syncs the history checkbox from server-driven navigation (Clear filters)", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, includeHistory: true }} view="list" />
+    );
+    const historyCheckbox = screen.getByRole("checkbox", { name: /include inactive/i });
+    expect(historyCheckbox).toBeChecked();
+
+    // The clear-filters navigation returns the server to history-less results.
+    rerender(<CourseRosterDiscoveryPage data={discovery} view="list" />);
+    expect(screen.getByRole("checkbox", { name: /include inactive/i })).not.toBeChecked();
+  });
+
+  it("adopts a server-driven search change once the focused input blurs", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
+    );
+    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+    searchbox.focus();
+    fireEvent.change(searchbox, { target: { value: "CS1" } });
+    expect(searchbox).toHaveValue("CS1");
+
+    // A server-driven change lands while the input is still focused (e.g.
+    // browser back/forward): the in-progress keystroke is preserved.
+    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
+    expect(searchbox).toHaveValue("CS1");
+
+    // Blurring adopts the server value; the stale draft is never re-navigated.
+    act(() => {
+      searchbox.blur();
+    });
+    expect(searchbox).toHaveValue("");
+  });
+
+  it("cancels a pending debounce when a server-driven search change lands mid-typing", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
+    );
+    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+    vi.useFakeTimers();
+    try {
+      searchbox.focus();
+      fireEvent.change(searchbox, { target: { value: "CS1" } });
+
+      // A server-driven change lands inside the debounce window; the stale
+      // draft must not be re-navigated.
+      rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(replaceMock).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a live draft when the server echoes the navigated search", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
+    );
+    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+    vi.useFakeTimers();
+    try {
+      searchbox.focus();
+      fireEvent.change(searchbox, { target: { value: "CS1" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(replaceMock).toHaveBeenCalledTimes(1);
+
+      // The response echoes the search we just navigated; typing more keeps
+      // the draft live and the next debounce still fires.
+      rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "CS1" }} view="list" />);
+      fireEvent.change(searchbox, { target: { value: "CS1x" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(replaceMock).toHaveBeenCalledTimes(2);
+      expect(replaceMock).toHaveBeenLastCalledWith("/faculty/course-rosters?search=CS1x");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("preserves Card in paginated links and instant filter navigation", () => {
@@ -234,9 +363,9 @@ describe("course roster pages", () => {
 
     vi.useFakeTimers();
     try {
-      fireEvent.change(screen.getByRole("searchbox", { name: "Search assignments" }), {
-        target: { value: "CS1" },
-      });
+      const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+      searchbox.focus();
+      fireEvent.change(searchbox, { target: { value: "CS1" } });
       act(() => {
         vi.advanceTimersByTime(300);
       });

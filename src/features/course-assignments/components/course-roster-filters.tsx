@@ -1,50 +1,84 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import type { CourseRosterViewMode } from "./course-roster-view-selector";
 
 type CourseRosterDiscoveryFiltersProps = {
   initialSearch: string;
   initialHistory: boolean;
   view: CourseRosterViewMode;
+  onNavigate: (search: string, history: boolean) => void;
+  pending: boolean;
 };
 
 export function CourseRosterDiscoveryFilters({
   initialSearch,
   initialHistory,
   view,
+  onNavigate,
+  pending,
 }: CourseRosterDiscoveryFiltersProps) {
-  const router = useRouter();
   const [searchDraft, setSearchDraft] = useState(initialSearch);
   const [includeHistory, setIncludeHistory] = useState(initialHistory);
-  const [isPending, startTransition] = useTransition();
+  const [isFocused, setIsFocused] = useState(false);
+  // A keystroke marks the draft as a live edit; a server-side search change
+  // clears that flag so an armed debounce for the stale draft is cancelled
+  // instead of re-navigated. A response echoing our own navigation (the
+  // server value matches the last search we sent) is not a server-driven
+  // change and keeps the live flag.
+  const draftIsLive = useRef(false);
+  const lastServerSearch = useRef(initialSearch);
+  const lastNavigatedSearch = useRef<string | null>(null);
+  // Runs before the debounce effect below: when the server value changes,
+  // the pending timer's cleanup already ran, and the stale draft is no
+  // longer treated as a live edit.
+  useEffect(() => {
+    if (lastServerSearch.current === initialSearch) return;
+    lastServerSearch.current = initialSearch;
+    if (initialSearch !== lastNavigatedSearch.current) {
+      draftIsLive.current = false;
+    }
+  }, [initialSearch]);
 
-  const navigate = (search: string, history: boolean) => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (history) params.set("history", "1");
-    if (view === "card") params.set("view", "card");
-    const query = params.toString();
-    startTransition(() => router.replace(`/faculty/course-rosters${query ? `?${query}` : ""}`));
-  };
+  // Server-driven history changes (e.g. the Clear filters link) reset the
+  // checkbox. A pending navigation is skipped so an in-flight response never
+  // clobbers a toggle the user just made.
+  if (!pending && includeHistory !== initialHistory) {
+    setIncludeHistory(initialHistory);
+  }
+
+  // Server-side search changes (e.g. the Clear filters link) reset the draft,
+  // but never overwrite an in-progress keystroke: the sync is deferred until
+  // the input loses focus, so a focused field keeps the user's text and a
+  // blur always re-adopts the server value.
+  if (!isFocused && searchDraft !== initialSearch) {
+    setSearchDraft(initialSearch);
+  }
 
   // Search streams in after a quiet pause while typing; the history checkbox
   // applies immediately. Both preserve the server-side view and pagination.
+  // Losing focus or a server-side change cancels the pending timer so a
+  // stale draft is never re-navigated.
   useEffect(() => {
-    if (searchDraft === initialSearch) return;
-    const timer = setTimeout(() => navigate(searchDraft, includeHistory), 300);
+    if (!isFocused || !draftIsLive.current || searchDraft === initialSearch) return;
+    const timer = setTimeout(() => {
+      lastNavigatedSearch.current = searchDraft;
+      onNavigate(searchDraft, includeHistory);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [searchDraft, includeHistory, view]);
+  }, [searchDraft, includeHistory, onNavigate, isFocused, initialSearch]);
+
   return (
     <FieldGroup
       role="search"
       aria-label="Search course rosters"
-      aria-busy={isPending || undefined}
+      aria-busy={pending || undefined}
       className="flex flex-col gap-3"
     >
       <Field>
@@ -55,7 +89,12 @@ export function CourseRosterDiscoveryFilters({
           maxLength={100}
           placeholder="Course or program"
           value={searchDraft}
-          onChange={(event) => setSearchDraft(event.target.value)}
+          onChange={(event) => {
+            setSearchDraft(event.target.value);
+            draftIsLive.current = true;
+          }}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
         />
       </Field>
       <Field orientation="horizontal" className="min-h-11 w-fit">
@@ -64,7 +103,7 @@ export function CourseRosterDiscoveryFilters({
           checked={includeHistory}
           onCheckedChange={(checked) => {
             setIncludeHistory(checked);
-            navigate(searchDraft, checked);
+            onNavigate(searchDraft, checked);
           }}
         />
         <FieldLabel htmlFor="roster-history">
@@ -134,6 +173,7 @@ export function CourseRosterMemberFilters({
         />
       </div>
       <div className="flex flex-wrap items-center gap-4">
+        {isPending ? <Spinner size="sm" label="Updating roster members" /> : null}
         <label className="flex min-h-11 items-center gap-3 text-sm">
           <input
             type="checkbox"

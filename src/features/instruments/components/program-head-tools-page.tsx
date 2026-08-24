@@ -9,21 +9,8 @@ import {
   buildProgramHeadNewToolPath,
   buildProgramHeadPublishToolPath,
 } from "@/lib/constants/program-head-routes";
-import {
-  ChevronDown,
-  ChevronRight,
-  Copy,
-  Eye,
-  MoreVertical,
-  Pencil,
-  Plus,
-  Send,
-  Trash2,
-  XCircle,
-} from "lucide-react";
+import { Copy, Eye, Pencil, Plus, Send, Trash2, XCircle } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -34,24 +21,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Pagination } from "@/components/ui/pagination";
+import { showToast } from "@/components/ui/toast";
+import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ProgramHeadDeploymentItem } from "@/features/evaluations/services/list-program-head-deployments";
-import type { ProgramHeadTemplateItem } from "@/features/instruments/services/manage-program-head-templates";
-import type { InstitutionalBaselineItem } from "@/features/instruments/services/list-institutional-baselines";
+import {
+  PublishedDeploymentsCollection,
+  type PublishedDeploymentItem,
+} from "@/features/evaluations/components/published-deployments-collection";
 import { closeCentralDeploymentAction } from "@/lib/actions/central-deployment-actions";
 import {
   deleteTemplateAction,
   duplicateTemplateAction,
   toggleTemplateActiveAction,
 } from "@/lib/actions/program-head-template-actions";
-import { EvaluationToolsTabs, type EvaluationToolsTab } from "./evaluation-tools-tabs";
+import type { ProgramHeadTemplateItem } from "@/features/instruments/services/manage-program-head-templates";
+import type { InstitutionalBaselineItem } from "@/features/instruments/services/list-institutional-baselines";
+import { EvaluationToolsTabs, updateToolsUrl, type EvaluationToolsTab } from "./evaluation-tools-tabs";
+import {
+  TemplateCollection,
+  type TemplateCollectionItem,
+} from "./template-collection";
+import { ToolsViewSelector, type ToolsViewMode } from "./tools-view-selector";
 
 type ProgramHeadToolsPageProps = {
   templates: ProgramHeadTemplateItem[];
@@ -59,6 +53,7 @@ type ProgramHeadToolsPageProps = {
   baselines: InstitutionalBaselineItem[];
   program: { id: string; code: string; name: string };
   initialTab?: EvaluationToolsTab;
+  initialView?: ToolsViewMode;
 };
 
 function formatDate(date: Date | string | null): string {
@@ -78,9 +73,34 @@ function formatStakeholder(stakeholder: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-/** Categorical target-stakeholder badge treatment (ACD cyan category, theme-resolved). */
-function getTargetStakeholderBadgeClass(): string {
-  return "bg-brand-accent-soft text-brand-accent dark:text-brand-accent-highlight";
+function toTemplateItem(template: ProgramHeadTemplateItem): TemplateCollectionItem {
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.description,
+    templateType: template.template_type,
+    statusLabel: template.is_active ? "Active" : "Inactive",
+    statusActive: template.is_active,
+    origin: "program-owned",
+    originLabel: "Program-owned",
+    facultyAccessible: template.is_faculty_accessible,
+    versionCount: template._count.versions,
+    canPublish: true,
+  };
+}
+
+function toBaselineItem(baseline: InstitutionalBaselineItem): TemplateCollectionItem {
+  return {
+    id: baseline.id,
+    name: baseline.name,
+    description: baseline.description,
+    templateType: baseline.template_type,
+    statusLabel: baseline.is_active ? "Active" : "Inactive",
+    statusActive: baseline.is_active,
+    origin: "institutional",
+    originLabel: "Institutional baseline",
+    facultyAccessible: baseline.is_faculty_accessible,
+  };
 }
 
 export function ProgramHeadToolsPage({
@@ -89,17 +109,51 @@ export function ProgramHeadToolsPage({
   baselines,
   program,
   initialTab = "templates",
+  initialView = "card",
 }: ProgramHeadToolsPageProps) {
+  const router = useRouter();
+  const [view, setView] = useState<ToolsViewMode>(initialView);
+  const [isPending, startTransition] = useTransition();
+  const [deleteTarget, setDeleteTarget] = useState<TemplateCollectionItem | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+
+  function selectView(nextView: ToolsViewMode) {
+    setView(nextView);
+    updateToolsUrl({ view: nextView });
+  }
+
+  function handleToggleActive(item: TemplateCollectionItem) {
+    startTransition(async () => {
+      const result = await toggleTemplateActiveAction(program.id, item.id, !item.statusActive);
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    startTransition(async () => {
+      const result = await deleteTemplateAction(program.id, deleteTarget.id);
+      if (!result.success) {
+        setDialogError(result.error);
+        return;
+      }
+      setDeleteTarget(null);
+      router.refresh();
+    });
+  }
+
   return (
     <div className="space-y-8">
-      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-        <div>
-          <h1 className="font-heading text-text-primary text-2xl font-black">Evaluation Tools</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Manage templates and published deployments for{" "}
-            <span className="font-semibold">{program.name}</span>.
-          </p>
-        </div>
+      <div className="space-y-2">
+        <h1 className="text-heading-xl text-text-primary">Evaluation Tools</h1>
+        <p className="text-muted-foreground text-sm">
+          Manage templates and published deployments for{" "}
+          <span className="font-semibold">{program.name}</span>.
+        </p>
       </div>
 
       <EvaluationToolsTabs
@@ -113,318 +167,183 @@ export function ProgramHeadToolsPage({
             Create New Template
           </Button>
         }
-        templates={
-          <TemplatesGrid templates={templates} baselines={baselines} programId={program.id} />
+        viewControl={
+          <ToolsViewSelector label="Evaluation tools" value={view} onValueChange={selectView} />
         }
-        published={<PublishedDeploymentsTable deployments={deployments} programId={program.id} />}
+        templates={
+          <TemplateCollection
+            view={view}
+            sections={[
+              {
+                heading: "Program Templates",
+                items: templates.map(toTemplateItem),
+                renderFooterActions: (item) => (
+                  <ProgramHeadTemplateActions item={item} programId={program.id} />
+                ),
+                renderOverflowMenu: (item) => (
+                  <>
+                    <DropdownMenuItem disabled={isPending} onClick={() => handleToggleActive(item)}>
+                      {item.statusActive ? "Deactivate" : "Activate"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      disabled={isPending}
+                      onClick={() => {
+                        setDialogError(null);
+                        setDeleteTarget(item);
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                ),
+              },
+              {
+                heading: "Institutional Baselines",
+                items: baselines.map(toBaselineItem),
+                renderFooterActions: (item) => (
+                  <BaselineActions item={item} programId={program.id} />
+                ),
+              },
+            ]}
+            empty={
+              <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
+                <p className="text-muted-foreground">
+                  No templates found. Create your first template or import from institutional
+                  baselines.
+                </p>
+              </div>
+            }
+          />
+        }
+        published={
+          <ProgramHeadPublishedDeployments deployments={deployments} programId={program.id} view={view} />
+        }
       />
-    </div>
-  );
-}
 
-function TemplatesGrid({
-  templates,
-  baselines,
-  programId,
-}: {
-  templates: ProgramHeadTemplateItem[];
-  baselines: InstitutionalBaselineItem[];
-  programId: string;
-}) {
-  const hasContent = templates.length > 0 || baselines.length > 0;
-
-  if (!hasContent) {
-    return (
-      <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
-        <p className="text-muted-foreground">
-          No templates found. Create your first template or import from institutional baselines.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8">
-      {/* Program Templates */}
-      {templates.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-label-sm text-muted-foreground tracking-wider uppercase">
-            Program Templates
-          </h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            {templates.map((template) => (
-              <TemplateCard key={template.id} template={template} programId={programId} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Institutional Baselines */}
-      {baselines.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-label-sm text-muted-foreground tracking-wider uppercase">
-            Institutional Baselines (Copy to Customize)
-          </h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            {baselines.map((baseline) => (
-              <BaselineCard key={baseline.id} baseline={baseline} programId={programId} />
-            ))}
-          </div>
-        </div>
+      {/* Delete Confirmation AlertDialog */}
+      {deleteTarget && (
+        <AlertDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => {
+            if (!open && isPending) return;
+            if (!open) setDeleteTarget(null);
+          }}
+        >
+          <AlertDialogContent className="sm:max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Template</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete{" "}
+                <span className="font-semibold">{deleteTarget.name}</span>? This action cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {dialogError && (
+              <Alert variant="destructive">
+                <AlertDescription>{dialogError}</AlertDescription>
+              </Alert>
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+              <Button variant="destructive" onClick={handleConfirmDelete} loading={isPending}>
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
 }
 
-function TemplateCard({
-  template,
+// ---------------------------------------------------------------------------
+// Template actions (shared card anatomy, Program Head capabilities)
+// ---------------------------------------------------------------------------
+
+function ProgramHeadTemplateActions({
+  item,
   programId,
 }: {
-  template: ProgramHeadTemplateItem;
+  item: TemplateCollectionItem;
   programId: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const isProgramWide = template.template_type === "PROGRAM_WIDE";
 
   function handleDuplicate() {
-    setError(null);
     startTransition(async () => {
-      const result = await duplicateTemplateAction(programId, template.id);
+      const result = await duplicateTemplateAction(programId, item.id);
       if (!result.success) {
-        setError(result.error);
+        showToast(result.error, "error");
         return;
       }
-      router.refresh();
-    });
-  }
-
-  function handleToggleActive() {
-    setError(null);
-    startTransition(async () => {
-      const result = await toggleTemplateActiveAction(programId, template.id, !template.is_active);
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
-    });
-  }
-
-  function handleConfirmDelete() {
-    setError(null);
-    startTransition(async () => {
-      const result = await deleteTemplateAction(programId, template.id);
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
-      setShowDeleteDialog(false);
       router.refresh();
     });
   }
 
   return (
     <>
-      <div className="group bg-card relative flex flex-col rounded-2xl p-5 shadow-sm transition-shadow hover:shadow-md">
-        <div className="mb-3 flex items-center justify-between">
-          <Badge variant={template.is_active ? "success" : "outline"}>
-            {template.is_active ? "Active" : "Inactive"}
-          </Badge>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors">
-              <MoreVertical className="size-4" />
-              <span className="sr-only">Actions</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="bottom">
-              <DropdownMenuItem disabled={isPending} onClick={handleToggleActive}>
-                {template.is_active ? "Deactivate" : "Activate"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={isPending}
-                onClick={() => {
-                  setError(null);
-                  setShowDeleteDialog(true);
-                }}
-              >
-                <Trash2 className="size-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <h3 className="font-heading text-foreground text-lg font-semibold">{template.name}</h3>
-        <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
-          {template.description ?? "No description."}
-        </p>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-label-sm text-muted-foreground tracking-wider uppercase">
-            Program-owned - {template._count.versions} version(s)
-          </span>
-          <Badge variant="outline" className="text-xs">
-            {isProgramWide ? "Program-wide" : "Course-bound"}
-          </Badge>
-          {template.is_faculty_accessible && (
-            <Badge variant="outline" className="text-xs">
-              Faculty Access
-            </Badge>
-          )}
-        </div>
-
-        {error && (
-          <p role="alert" className="text-danger mt-2 text-xs font-medium">
-            {error}
-          </p>
-        )}
-
-        <div className="mt-4 flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            disabled={isPending}
-            render={<Link href={buildProgramHeadEditToolPath(programId, template.id)} />}
-          >
-            <Pencil className="size-3.5" data-icon="inline-start" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            disabled={isPending}
-            onClick={handleDuplicate}
-          >
-            <Copy className="size-3.5" data-icon="inline-start" />
-            Duplicate
-          </Button>
-          <Button
-            size="sm"
-            className="flex-1"
-            disabled={isPending}
-            render={
-              isProgramWide ? (
-                <Link href={buildProgramHeadPublishToolPath(programId, template.id)} />
-              ) : template.template_type === "COURSE_BOUND" ? (
-                <Link href={buildProgramHeadNewCiloEvaluationPath(programId)} />
-              ) : undefined
-            }
-          >
-            <Send className="size-3.5" data-icon="inline-start" />
-            Publish
-          </Button>
-        </div>
-      </div>
-
-      <AlertDialog
-        open={showDeleteDialog}
-        onOpenChange={(open) => {
-          if (!open && isPending) return;
-          if (!open) {
-            setShowDeleteDialog(false);
-          }
-        }}
+      <Button
+        variant="outline"
+        size="sm"
+        render={<Link href={buildProgramHeadEditToolPath(programId, item.id)} />}
       >
-        <AlertDialogContent className="sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Template</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <span className="font-semibold">{template.name}</span>
-              ? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleConfirmDelete} loading={isPending}>
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <Pencil className="size-3.5" data-icon="inline-start" />
+        Edit
+      </Button>
+      <Button variant="outline" size="sm" disabled={isPending} onClick={handleDuplicate}>
+        <Copy className="size-3.5" data-icon="inline-start" />
+        Duplicate
+      </Button>
+      <Button
+        size="sm"
+        disabled={isPending}
+        render={
+          item.templateType === "PROGRAM_WIDE" ? (
+            <Link href={buildProgramHeadPublishToolPath(programId, item.id)} />
+          ) : (
+            <Link href={buildProgramHeadNewCiloEvaluationPath(programId)} />
+          )
+        }
+      >
+        <Send className="size-3.5" data-icon="inline-start" />
+        Publish
+      </Button>
     </>
   );
 }
 
-function BaselineCard({
-  baseline,
-  programId,
-}: {
-  baseline: InstitutionalBaselineItem;
-  programId: string;
-}) {
-  const isProgramWide = baseline.template_type === "PROGRAM_WIDE";
-
+function BaselineActions({ item, programId }: { item: TemplateCollectionItem; programId: string }) {
   return (
-    <div className="bg-card group border-border hover:border-strong relative flex flex-col overflow-hidden rounded-xl border transition-all">
-      {/* Header */}
-      <div className="flex flex-col gap-2 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-foreground line-clamp-2 text-base font-semibold">
-              {baseline.name}
-            </h3>
-          </div>
-          <Badge variant="outline" className="shrink-0">
-            Institutional
-          </Badge>
-        </div>
-        <p className="text-muted-foreground line-clamp-2 text-sm">
-          {baseline.description || "No description"}
-        </p>
-      </div>
-
-      {/* Meta row */}
-      <div className="flex items-center gap-2 px-4 py-2">
-        <Badge variant={isProgramWide ? "default" : "outline"}>
-          {isProgramWide ? "Program-wide" : "Course-bound"}
-        </Badge>
-        {baseline.is_faculty_accessible && <Badge variant="outline">Faculty Accessible</Badge>}
-      </div>
-
-      {/* Actions */}
-      <div className="mt-auto flex items-center justify-end gap-2 border-t p-4">
-        <Button
-          variant="outline"
-          size="sm"
-          render={<Link href={buildProgramHeadEditToolPath(programId, baseline.id)} />}
-        >
-          <Pencil className="mr-1 size-3.5" />
-          Edit & Copy
-        </Button>
-      </div>
-    </div>
+    <Button
+      variant="outline"
+      size="sm"
+      render={<Link href={buildProgramHeadEditToolPath(programId, item.id)} />}
+    >
+      <Pencil className="size-3.5" data-icon="inline-start" />
+      Edit &amp; Copy
+    </Button>
   );
 }
 
-type DeploymentStatusFilter = "ALL" | "ACTIVE" | "SCHEDULED" | "CLOSED" | "ARCHIVED";
+// ---------------------------------------------------------------------------
+// Published deployments (Program Head capabilities)
+// ---------------------------------------------------------------------------
 
-const PAGE_SIZE = 10;
-
-function PublishedDeploymentsTable({
+function ProgramHeadPublishedDeployments({
   deployments,
   programId,
+  view,
 }: {
   deployments: ProgramHeadDeploymentItem[];
   programId: string;
+  view: ToolsViewMode;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<DeploymentStatusFilter>("ALL");
-  const [currentPage, setCurrentPage] = useState(1);
   const [optimisticDeployments, updateDeployment] = useOptimistic(
     deployments,
     (currentDeployments, closedDeploymentId: string) =>
@@ -435,327 +354,159 @@ function PublishedDeploymentsTable({
       )
   );
 
-  const filteredDeployments = optimisticDeployments.filter((d) => {
-    if (statusFilter === "ALL") return d.status !== "ARCHIVED";
-    return d.status === statusFilter;
-  });
-
-  // ---- Pagination -----------------------------------------------------------
-  const totalPages = Math.max(1, Math.ceil(filteredDeployments.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
-  const paginatedDeployments = filteredDeployments.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
-  );
-
-  function handleFilterChange(value: DeploymentStatusFilter) {
-    setStatusFilter(value);
-    setCurrentPage(1);
-  }
-
-  function toggleRow(id: string) {
-    setExpandedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }
-
   function handleClose(deploymentId: string) {
     startTransition(async () => {
       updateDeployment(deploymentId);
       const result = await closeCentralDeploymentAction(programId, deploymentId);
       if (!result.success) {
+        showToast(result.error, "error");
         return;
       }
       router.refresh();
     });
   }
 
-  const filterButtons: { label: string; value: DeploymentStatusFilter }[] = [
-    { label: "All", value: "ALL" },
-    { label: "Active", value: "ACTIVE" },
-    { label: "Scheduled", value: "SCHEDULED" },
-    { label: "Closed", value: "CLOSED" },
-    { label: "Archived", value: "ARCHIVED" },
-  ];
+  const byId = new Map(optimisticDeployments.map((d) => [d.id, d]));
 
-  if (optimisticDeployments.length === 0) {
-    return (
-      <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
-        <p className="text-muted-foreground">No published tools yet.</p>
-      </div>
-    );
-  }
+  const items: PublishedDeploymentItem[] = optimisticDeployments.map((deployment) => ({
+    id: deployment.id,
+    name: deployment.templateName,
+    targetLabel: formatStakeholder(deployment.target_stakeholder),
+    periodLabel: deployment.termInstanceLabel,
+    status: deployment.status,
+    responseCount: deployment.responseCount,
+    totalCount: deployment.assignmentCount,
+    publishedDate: deployment.created_at,
+    canClose: deployment.status === "ACTIVE" || deployment.status === "SCHEDULED",
+  }));
 
   return (
-    <div className="space-y-4">
-      {/* Status Filters */}
-      <div className="flex flex-wrap gap-2">
-        {filterButtons.map((btn) => (
-          <Button
-            key={btn.value}
-            variant={statusFilter === btn.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleFilterChange(btn.value)}
-          >
-            {btn.label}
-          </Button>
-        ))}
-      </div>
-
-      {/* Table Header */}
-      <div className="bg-muted text-muted-foreground hidden rounded-lg px-4 py-2 text-xs font-semibold tracking-wider uppercase md:grid md:grid-cols-[auto_2fr_1fr_1fr_1fr_1fr_1fr_auto]">
-        <span className="w-8" />
-        <span>Published Form</span>
-        <span>Target</span>
-        <span>Academic Period</span>
-        <span>Status</span>
-        <span>Responses</span>
-        <span>Published</span>
-        <span className="w-8" />
-      </div>
-
-      {/* Table Rows */}
-      <div className="space-y-2">
-        {filteredDeployments.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-8 text-center">
-            <p className="text-muted-foreground text-sm">
-              No {statusFilter.toLowerCase()} deployments found.
-            </p>
-          </div>
-        ) : (
-          paginatedDeployments.map((deployment) => (
-            <DeploymentAccordionRow
-              key={deployment.id}
-              deployment={deployment}
-              isExpanded={expandedRows.has(deployment.id)}
-              onToggle={() => toggleRow(deployment.id)}
-              onClose={() => handleClose(deployment.id)}
-            />
-          ))
-        )}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination
-          currentPage={safePage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          className="justify-center pt-4"
-        />
+    <PublishedDeploymentsCollection
+      view={view}
+      items={items}
+      label="Published deployments"
+      empty={
+        <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
+          <p className="text-muted-foreground">No published tools yet.</p>
+        </div>
+      }
+      renderExpanded={(item) => {
+        const deployment = byId.get(item.id);
+        if (!deployment) return null;
+        return <DeploymentExpandedDetails deployment={deployment} />;
+      }}
+      renderMenuItems={(item, ctx) => (
+        <>
+          {ctx.view === "list" && (
+            <DropdownMenuItem onClick={ctx.toggle}>
+              <Eye className="mr-2 size-4" />
+              View Details
+            </DropdownMenuItem>
+          )}
+          {item.canClose && (
+            <>
+              {ctx.view === "list" && <DropdownMenuSeparator />}
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => handleClose(item.id)}
+              >
+                <XCircle className="mr-2 size-4" />
+                Close Deployment
+              </DropdownMenuItem>
+            </>
+          )}
+        </>
       )}
-
-      {/* Result count */}
-      <p className="text-muted-foreground pt-2 text-center text-xs">
-        Showing {(safePage - 1) * PAGE_SIZE + 1}–
-        {Math.min(safePage * PAGE_SIZE, filteredDeployments.length)} of {filteredDeployments.length}{" "}
-        deployment
-        {filteredDeployments.length !== 1 ? "s" : ""}
-      </p>
-    </div>
+    />
   );
 }
 
-function DeploymentAccordionRow({
-  deployment,
-  isExpanded,
-  onToggle,
-  onClose,
-}: {
-  deployment: ProgramHeadDeploymentItem;
-  isExpanded: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-}) {
-  const [isPending, startTransition] = useTransition();
-  const canClose = deployment.status === "ACTIVE" || deployment.status === "SCHEDULED";
-
+function DeploymentExpandedDetails({ deployment }: { deployment: ProgramHeadDeploymentItem }) {
   const responseRate =
     deployment.assignmentCount > 0
       ? (deployment.responseCount / deployment.assignmentCount) * 100
       : 0;
 
   return (
-    <div className="bg-card rounded-lg border">
-      {/* Main Row */}
-      <div
-        className={`hover:bg-muted/50 grid cursor-pointer items-center gap-3 rounded-lg px-4 py-3 transition-colors md:grid-cols-[auto_2fr_1fr_1fr_1fr_1fr_1fr_auto] ${
-          isPending ? "opacity-60" : ""
-        }`}
-        onClick={onToggle}
-      >
-        {/* Expand Icon */}
-        <div className="flex w-8 items-center justify-center">
-          {isExpanded ? (
-            <ChevronDown className="text-muted-foreground size-4" />
-          ) : (
-            <ChevronRight className="text-muted-foreground size-4" />
+    <div className="grid gap-6 md:grid-cols-3">
+      {/* Column 1: Deployment Details */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold">Deployment Details</h4>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Program</span>
+            <span>
+              {deployment.programCode} - {deployment.programName}
+            </span>
+          </div>
+          {deployment.majorName && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Major</span>
+              <span>{deployment.majorName}</span>
+            </div>
           )}
-        </div>
-
-        {/* Deployment Name */}
-        <div>
-          <p className="font-semibold">{deployment.templateName}</p>
-        </div>
-
-        {/* Target */}
-        <div>
-          <Badge className={`text-xs ${getTargetStakeholderBadgeClass()}`}>
-            {formatStakeholder(deployment.target_stakeholder)}
-          </Badge>
-        </div>
-
-        {/* Academic Period */}
-        <div className="text-muted-foreground text-sm">{deployment.termInstanceLabel ?? "—"}</div>
-
-        {/* Status */}
-        <div>
-          <Badge
-            variant={deployment.status === "ACTIVE" ? "default" : "outline"}
-            className="text-xs"
-          >
-            {deployment.status.charAt(0) + deployment.status.slice(1).toLowerCase()}
-          </Badge>
-        </div>
-
-        {/* Responses */}
-        <div className="text-muted-foreground text-sm">
-          {deployment.responseCount}/{deployment.assignmentCount}
-        </div>
-
-        {/* Published Date */}
-        <div className="text-muted-foreground text-sm">{formatDate(deployment.created_at)}</div>
-
-        {/* Actions */}
-        <div className="flex justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              onClick={(e) => e.stopPropagation()}
-              render={
-                <button
-                  type="button"
-                  className="hover:bg-muted inline-flex size-8 cursor-pointer items-center justify-center rounded-md"
-                >
-                  <MoreVertical className="size-4" />
-                </button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onToggle()}>
-                <Eye className="mr-2 size-4" />
-                View Details
-              </DropdownMenuItem>
-              {canClose && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startTransition(onClose);
-                    }}
-                  >
-                    <XCircle className="mr-2 size-4" />
-                    Close Deployment
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {deployment.yearLevelName && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Year Level</span>
+              <span>{deployment.yearLevelName}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Target</span>
+            <span>{formatStakeholder(deployment.target_stakeholder)}</span>
+          </div>
         </div>
       </div>
 
-      {/* Expanded Details */}
-      {isExpanded && (
-        <div className="border-t px-4 py-4">
-          <div className="grid gap-6 md:grid-cols-3">
-            {/* Column 1: Deployment Details */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold">Deployment Details</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Program</span>
-                  <span>
-                    {deployment.programCode} - {deployment.programName}
-                  </span>
-                </div>
-                {deployment.majorName && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Major</span>
-                    <span>{deployment.majorName}</span>
-                  </div>
-                )}
-                {deployment.yearLevelName && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Year Level</span>
-                    <span>{deployment.yearLevelName}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Target</span>
-                  <span>{formatStakeholder(deployment.target_stakeholder)}</span>
-                </div>
-              </div>
+      {/* Column 2: Response Summary */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold">Response Summary</h4>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Total Assignments</span>
+            <span className="font-medium">{deployment.assignmentCount}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Responses</span>
+            <span className="font-medium">{deployment.responseCount}</span>
+          </div>
+          <div className="space-y-1">
+            <div className="text-muted-foreground flex justify-between text-xs">
+              <span>Response Rate</span>
+              <span>{responseRate.toFixed(0)}%</span>
             </div>
-
-            {/* Column 2: Response Summary */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold">Response Summary</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Assignments</span>
-                  <span className="font-medium">{deployment.assignmentCount}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Responses</span>
-                  <span className="font-medium">{deployment.responseCount}</span>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground flex justify-between text-xs">
-                    <span>Response Rate</span>
-                    <span>{responseRate.toFixed(0)}%</span>
-                  </div>
-                  <div className="bg-muted h-2 overflow-hidden rounded-full">
-                    <div
-                      className="bg-primary h-full transition-all"
-                      style={{ width: `${responseRate}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Column 3: Timeline */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold">Timeline</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Published</span>
-                  <span>{formatDate(deployment.created_at)}</span>
-                </div>
-                {deployment.activation_at && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Activation</span>
-                    <span>{formatDate(deployment.activation_at)}</span>
-                  </div>
-                )}
-                {deployment.deadline_at && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Deadline</span>
-                    <span>{formatDate(deployment.deadline_at)}</span>
-                  </div>
-                )}
-              </div>
+            <div className="bg-muted h-2 overflow-hidden rounded-full">
+              <div
+                className="bg-primary h-full transition-all"
+                style={{ width: `${responseRate}%` }}
+              />
             </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Column 3: Timeline */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold">Timeline</h4>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Published</span>
+            <span>{formatDate(deployment.created_at)}</span>
+          </div>
+          {deployment.activation_at && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Activation</span>
+              <span>{formatDate(deployment.activation_at)}</span>
+            </div>
+          )}
+          {deployment.deadline_at && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Deadline</span>
+              <span>{formatDate(deployment.deadline_at)}</span>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

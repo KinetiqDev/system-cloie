@@ -321,6 +321,26 @@ function encodeBindingKey(sectionKey: string, itemKey: string): string {
   return JSON.stringify([sectionKey, itemKey]);
 }
 
+/**
+ * Collects Program-wide question–PLO bindings from the live structure:
+ * deleting a question or switching it to open-ended automatically drops its
+ * bindings. Shared by the save-draft and save-as-copy payloads.
+ */
+function collectPloBindings(
+  structure: TemplateStructure,
+  ploQuestionBindings: Record<string, string[]>
+): TemplatePloQuestionBinding[] {
+  return structure.flatMap((section) =>
+    section.questions.flatMap((question) => {
+      if (question.type !== "likert") return [];
+      const ploIds = ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? [];
+      return ploIds
+        .filter(Boolean)
+        .map((ploId) => ({ itemKey: question.key, ploId, sectionKey: section.key }));
+    })
+  );
+}
+
 function decodeBindingKey(encodedKey: string): { sectionKey: string; itemKey: string } {
   const [sectionKey, itemKey] = JSON.parse(encodedKey) as [string, string];
 
@@ -469,7 +489,9 @@ export function TemplateBuilder({
       return;
     }
 
-    if (!boundCourseId || !boundProgramId) {
+    // boundProgramId is "" for General Education courses (no owning program),
+    // so only boundCourseId distinguishes "no course selected".
+    if (!boundCourseId) {
       queueMicrotask(() => {
         setLoadedCilos((current) => (current.length === 0 ? current : []));
         setIsLoadingCilos(false);
@@ -847,20 +869,10 @@ export function TemplateBuilder({
     formData.set("structure", JSON.stringify(normalizeTemplateStructure(sections)));
 
     if (programWideMode) {
-      // Derived from the live structure: deleting a question or switching it
-      // to open-ended automatically drops its bindings.
-      const ploBindings: TemplatePloQuestionBinding[] = [];
-      for (const section of normalizeTemplateStructure(sections)) {
-        for (const question of section.questions) {
-          if (question.type !== "likert") continue;
-          for (const ploId of ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []) {
-            if (ploId) {
-              ploBindings.push({ itemKey: question.key, ploId, sectionKey: section.key });
-            }
-          }
-        }
-      }
-      formData.set("program_question_plo_bindings", JSON.stringify(ploBindings));
+      formData.set(
+        "program_question_plo_bindings",
+        JSON.stringify(collectPloBindings(normalizeTemplateStructure(sections), ploQuestionBindings))
+      );
     }
 
     if (facultyMode) {
@@ -917,21 +929,7 @@ export function TemplateBuilder({
 
     setIsCopyPending(true);
     const structure = normalizeTemplateStructure(sections);
-    const ploBindings: TemplatePloQuestionBinding[] = [];
-    if (programWideMode) {
-      // Derived from the live structure: deleting a question or switching it
-      // to open-ended automatically drops its bindings.
-      for (const section of structure) {
-        for (const question of section.questions) {
-          if (question.type !== "likert") continue;
-          for (const ploId of ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []) {
-            if (ploId) {
-              ploBindings.push({ itemKey: question.key, ploId, sectionKey: section.key });
-            }
-          }
-        }
-      }
-    }
+    const ploBindings = programWideMode ? collectPloBindings(structure, ploQuestionBindings) : [];
     const result = await onSaveAsCopy(templateId, copyName, structure, ploBindings);
     setIsCopyPending(false);
     setCopyNameDialogOpen(false);

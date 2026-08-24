@@ -85,6 +85,22 @@ type ReadMembershipRow = {
   remover: { name: string } | null;
 };
 
+/**
+ * Minimal membership evidence for discovery counts. The discovery page shows
+ * only activeRosterCount and evaluationEligibleCount per assignment, so the
+ * display-shaped fields (names, emails, program/major labels, remover) are
+ * intentionally omitted from this read.
+ */
+type CountMembershipRow = {
+  course_assignment_id: string;
+  student: {
+    is_active: boolean;
+    roles: Array<{ role: SystemRole }>;
+    student_profile: RosterEligibilityStudent["student_profile"];
+    enrollments: Array<{ term_instance_id: string; program_id: string }>;
+  };
+};
+
 function projectMembershipEligibility(
   assignment: Pick<AssignmentReadRow, "course" | "program_id" | "term_instance">,
   student: {
@@ -280,43 +296,17 @@ async function loadMembershipRows(assignmentIds: string[], termInstanceIds: stri
     },
     select: {
       course_assignment_id: true,
-      id: true,
-      student_user_id: true,
-      is_active: true,
-      created_at: true,
-      removed_at: true,
       student: {
         select: {
-          name: true,
-          email: true,
           is_active: true,
           roles: { select: { role: true } },
-          student_profile: {
-            select: {
-              ...rosterStudentProfileSelect,
-              major: { select: { name: true, is_active: true, program_id: true } },
-              program: {
-                select: {
-                  code: true,
-                  name: true,
-                  is_active: true,
-                  majors: { where: { is_active: true }, select: { id: true }, take: 1 },
-                },
-              },
-            },
-          },
+          student_profile: { select: rosterStudentProfileSelect },
           enrollments: {
             where: { term_instance_id: { in: termInstanceIds }, is_active: true },
-            select: {
-              term_instance_id: true,
-              program_id: true,
-              program: { select: { code: true, name: true } },
-              major: { select: { name: true } },
-            },
+            select: { term_instance_id: true, program_id: true },
           },
         },
       },
-      remover: { select: { name: true } },
     },
   });
 }
@@ -326,7 +316,7 @@ async function addAssignmentCounts(assignments: AssignmentReadRow[]) {
     assignments.map((assignment) => assignment.id),
     assignments.map((assignment) => assignment.term_instance.id)
   );
-  const byAssignment = new Map<string, ReadMembershipRow[]>();
+  const byAssignment = new Map<string, CountMembershipRow[]>();
 
   // Counts are intentionally computed from active membership rows only.
   for (const membership of membershipRows) {

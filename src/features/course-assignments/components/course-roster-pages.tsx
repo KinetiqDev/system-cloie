@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useState, useTransition } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -32,6 +36,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Spinner } from "@/components/ui/spinner";
 
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
@@ -183,11 +188,46 @@ export function CourseRosterDiscoveryPage({
   error?: string;
   view: CourseRosterViewMode;
 }) {
+  const router = useRouter();
+  // View is purely presentational: toggling never changes the server query,
+  // so it stays local state and syncs the URL without a server round trip.
+  const [activeView, setActiveView] = useState<CourseRosterViewMode>(view);
+  const [lastServerView, setLastServerView] = useState<CourseRosterViewMode>(view);
+
+  // Server-driven view changes (deep links, back/forward) stay authoritative.
+  if (lastServerView !== view) {
+    setLastServerView(view);
+    setActiveView(view);
+  }
+  const [isPending, startTransition] = useTransition();
+
+  const navigate = useCallback(
+    (search: string, includeHistory: boolean) => {
+      const url = discoveryUrl({ search, includeHistory, view: activeView });
+      startTransition(() => router.replace(url));
+    },
+    [activeView, router]
+  );
+
   if (!data) {
     return (
       <CourseRosterDiscoveryError message={error ?? "The roster request could not be completed."} />
     );
   }
+
+  const selectView = (nextView: CourseRosterViewMode) => {
+    if (nextView === activeView) return;
+    setActiveView(nextView);
+    window.history.replaceState(
+      null,
+      "",
+      discoveryUrl({
+        search: data.search,
+        includeHistory: data.includeHistory,
+        view: nextView,
+      })
+    );
+  };
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
   return (
@@ -212,7 +252,9 @@ export function CourseRosterDiscoveryPage({
           <CourseRosterDiscoveryFilters
             initialSearch={data.search}
             initialHistory={data.includeHistory}
-            view={view}
+            view={activeView}
+            onNavigate={navigate}
+            pending={isPending}
           />
         </CardContent>
       </Card>
@@ -223,22 +265,19 @@ export function CourseRosterDiscoveryPage({
             <h2 id="course-roster-results" className="text-heading-md">
               Course assignments
             </h2>
-            <p className="text-muted-foreground text-sm" aria-live="polite">
+            <p className="text-muted-foreground flex items-center gap-2 text-sm" aria-live="polite">
+              {isPending ? <Spinner size="sm" label="Updating results" /> : null}
               {data.total} {data.total === 1 ? "assignment" : "assignments"} found
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {data.includeHistory && <Badge variant="secondary">History included</Badge>}
-            <CourseRosterViewSelector
-              value={view}
-              search={data.search}
-              includeHistory={data.includeHistory}
-            />
+            <CourseRosterViewSelector value={activeView} onValueChange={selectView} />
           </div>
         </div>
         {data.items.length === 0 ? (
-          <CourseRosterDiscoveryEmptyState data={data} view={view} />
-        ) : view === "card" ? (
+          <CourseRosterDiscoveryEmptyState data={data} view={activeView} />
+        ) : activeView === "card" ? (
           <CourseRosterCardGrid assignments={data.items} />
         ) : (
           <CourseRosterList assignments={data.items} />
@@ -250,7 +289,7 @@ export function CourseRosterDiscoveryPage({
         totalPages={totalPages}
         search={data.search}
         includeHistory={data.includeHistory}
-        view={view}
+        view={activeView}
       />
     </div>
   );
@@ -418,7 +457,7 @@ function CourseRosterDiscoveryEmptyState({
         </EmptyHeader>
         <EmptyContent>
           <Link
-            href={discoveryHref({ view, includeHistory: data.includeHistory })}
+            href={discoveryUrl({ view, includeHistory: data.includeHistory })}
             className={buttonVariants({ variant: "outline" })}
           >
             Clear filters
@@ -443,7 +482,7 @@ function CourseRosterDiscoveryEmptyState({
         </EmptyHeader>
         <EmptyContent>
           <Link
-            href={discoveryHref({ view, includeHistory: true })}
+            href={discoveryUrl({ view, includeHistory: true })}
             className={buttonVariants({ variant: "outline" })}
           >
             <History data-icon="inline-start" aria-hidden="true" />
@@ -469,16 +508,16 @@ function CourseRosterDiscoveryEmptyState({
   );
 }
 
-function discoveryHref({
-  view,
-  search,
-  includeHistory,
+function discoveryUrl({
   page,
+  search = "",
+  includeHistory = false,
+  view,
 }: {
-  view: CourseRosterViewMode;
+  page?: number;
   search?: string;
   includeHistory?: boolean;
-  page?: number;
+  view: CourseRosterViewMode;
 }) {
   const params = new URLSearchParams();
   if (page) params.set("page", String(page));
@@ -504,7 +543,7 @@ function DiscoveryPagination({
 }) {
   if (totalPages <= 1) return null;
   const href = (nextPage: number) =>
-    discoveryHref({ page: nextPage, search, includeHistory, view });
+    discoveryUrl({ page: nextPage, search, includeHistory, view });
   return (
     <nav
       aria-label="Course roster pages"

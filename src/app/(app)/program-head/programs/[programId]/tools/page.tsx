@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ProgramHeadToolsPage } from "@/features/instruments/components/program-head-tools-page";
+import { parseToolsViewState } from "@/features/instruments/components/tools-view-state";
 import { listInstitutionalBaselines } from "@/features/instruments/services/list-institutional-baselines";
 import { listProgramHeadTemplates } from "@/features/instruments/services/manage-program-head-templates";
 import { listProgramHeadDeployments } from "@/features/evaluations/services/list-program-head-deployments";
@@ -22,13 +23,16 @@ export default async function SelectedProgramToolsPage({
 
   if (!templatesResult.success || !deploymentsResult.success) notFound();
 
+  const { initialTab, initialView } = parseToolsViewState(rawSearchParams);
+
   return (
     <ProgramHeadToolsPage
       templates={templatesResult.data.templates}
       deployments={deploymentsResult.data.deployments}
       baselines={baselines}
       program={templatesResult.data.program}
-      initialTab={rawSearchParams.tab === "published" ? "published" : "templates"}
+      initialTab={initialTab}
+      initialView={initialView}
     />
   );
 }

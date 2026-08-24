@@ -274,6 +274,94 @@ describe("TemplateBuilder", () => {
     expect(pushMock).toHaveBeenCalledWith("/faculty/tools");
   });
 
+  test("loads cilos for a general education course with no owning program", async () => {
+    const loadManagedCilosAction = vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        hasSavedCilos: true,
+        items: [{ description: "Analyze primary sources", id: "cilo-gened-1" }],
+      },
+    });
+
+    render(
+      <TemplateBuilder
+        programLabel="Institutional Template"
+        onSave={vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } })}
+        toolsHref="/faculty/tools"
+        initialData={{
+          id: "template-1",
+          name: "Gened Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-gened-1",
+          bound_major_id: null,
+          bound_program_id: null,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate CILO 1",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "GESTECH",
+              courseId: "course-gened-1",
+              courseTitle: "Science, Technology and Society",
+              courseType: "GENERAL_EDUCATION",
+              majorId: null,
+              majorName: null,
+              programCode: "",
+              programId: "",
+              programName: "",
+              scopeLabel: " - General Education",
+            },
+          ],
+          initialBindings: [],
+          loadManagedCilosAction,
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: { id: "template-1" },
+          }),
+        }}
+        saveSuccessConfig={{
+          redirectTo: "/faculty/tools",
+          toastMessage: "Template saved successfully.",
+        }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(loadManagedCilosAction).toHaveBeenCalledWith({
+        courseId: "course-gened-1",
+        majorId: null,
+        programId: "",
+      });
+    });
+    expect(screen.getByText(/saved CILO\(s\) available for binding/i)).toBeInTheDocument();
+  });
+
   test("redirects program head saves back to tools with a success toast", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 

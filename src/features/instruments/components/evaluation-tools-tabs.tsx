@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ToolsViewMode } from "./tools-view-selector";
 
 export type EvaluationToolsTab = "templates" | "published";
 
@@ -12,13 +13,35 @@ type EvaluationToolsTabsProps = {
   templates: ReactNode;
   published: ReactNode;
   action?: ReactNode;
+  /** List/Card view toggle rendered next to the action button. */
+  viewControl?: ReactNode;
 };
 
-function updateTabInUrl(tab: EvaluationToolsTab) {
+/**
+ * Persist `tab` and `view` to the URL. Each key is written independently so a
+ * toggle never wipes the other parameter; the default value is omitted to keep
+ * shareable URLs canonical.
+ */
+export function updateToolsUrl({
+  tab,
+  view,
+}: {
+  tab?: EvaluationToolsTab;
+  view?: ToolsViewMode;
+}) {
   if (typeof window === "undefined") return;
 
   const url = new URL(window.location.href);
-  url.searchParams.set("tab", tab);
+  if (tab) {
+    url.searchParams.set("tab", tab);
+  }
+  if (view) {
+    if (view === "card") {
+      url.searchParams.delete("view");
+    } else {
+      url.searchParams.set("view", view);
+    }
+  }
   window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -27,6 +50,7 @@ export function EvaluationToolsTabs({
   templates,
   published,
   action,
+  viewControl,
 }: EvaluationToolsTabsProps) {
   const [activeTab, setActiveTab] = useState<EvaluationToolsTab>(initialTab);
 
@@ -35,7 +59,7 @@ export function EvaluationToolsTabs({
 
     const tab = value as EvaluationToolsTab;
     setActiveTab(tab);
-    updateTabInUrl(tab);
+    updateToolsUrl({ tab });
   }
 
   return (
@@ -50,7 +74,12 @@ export function EvaluationToolsTabs({
           </TabsTrigger>
         </TabsList>
 
-        {action}
+        {(action || viewControl) && (
+          <div className="flex flex-wrap items-center gap-3">
+            {action}
+            {viewControl}
+          </div>
+        )}
       </div>
 
       <TabsContent value="templates" className="pt-6">
