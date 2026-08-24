@@ -20,6 +20,7 @@ export const membershipDefinitions = [
   { course: "ITRES1", program: "BSIT", year: YearLevel.FOURTH_YEAR, section: "MORNING", students: [U.STU_BSIT, U.GRAD_BSIT] },
   { course: "IT201", program: "BSIT", year: YearLevel.SECOND_YEAR, section: "MORNING", students: [U.STU_BSIT, U.GRAD_BSIT] },
   { course: "GESTECH", program: "BSIT", year: YearLevel.FIRST_YEAR, section: "MORNING", students: [U.STU_BSIT] },
+  { course: "GESTECH", program: "BSIT", year: YearLevel.FIRST_YEAR, section: "MORNING", students: [U.STU_BSIT] },
   { course: "GESTECH", program: "BSBA", year: YearLevel.FIRST_YEAR, section: "MORNING", students: [U.STU_BSBA, U.STU_BSBA_G] },
   { course: "MM201", program: "BSBA", year: YearLevel.FOURTH_YEAR, section: "MORNING", students: [U.STU_BSBA, U.STU_BSBA_G] },
   { course: "FM200", program: "BSBA", year: YearLevel.SECOND_YEAR, section: "AFTERNOON", students: [U.STU_BSBA, U.STU_BSBA_G] },
