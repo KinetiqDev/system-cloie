@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,6 +27,24 @@ export function CourseRosterDiscoveryFilters({
   const [searchDraft, setSearchDraft] = useState(initialSearch);
   const [includeHistory, setIncludeHistory] = useState(initialHistory);
   const [isFocused, setIsFocused] = useState(false);
+  // A keystroke marks the draft as a live edit; a server-side search change
+  // clears that flag so an armed debounce for the stale draft is cancelled
+  // instead of re-navigated. A response echoing our own navigation (the
+  // server value matches the last search we sent) is not a server-driven
+  // change and keeps the live flag.
+  const draftIsLive = useRef(false);
+  const lastServerSearch = useRef(initialSearch);
+  const lastNavigatedSearch = useRef<string | null>(null);
+  // Runs before the debounce effect below: when the server value changes,
+  // the pending timer's cleanup already ran, and the stale draft is no
+  // longer treated as a live edit.
+  useEffect(() => {
+    if (lastServerSearch.current === initialSearch) return;
+    lastServerSearch.current = initialSearch;
+    if (initialSearch !== lastNavigatedSearch.current) {
+      draftIsLive.current = false;
+    }
+  }, [initialSearch]);
 
   // Server-driven history changes (e.g. the Clear filters link) reset the
   // checkbox. A pending navigation is skipped so an in-flight response never
@@ -45,13 +63,16 @@ export function CourseRosterDiscoveryFilters({
 
   // Search streams in after a quiet pause while typing; the history checkbox
   // applies immediately. Both preserve the server-side view and pagination.
-  // Losing focus cancels the pending timer so a discarded draft is never
-  // re-navigated.
+  // Losing focus or a server-side change cancels the pending timer so a
+  // stale draft is never re-navigated.
   useEffect(() => {
-    if (!isFocused || searchDraft === initialSearch) return;
-    const timer = setTimeout(() => onNavigate(searchDraft, includeHistory), 300);
+    if (!isFocused || !draftIsLive.current || searchDraft === initialSearch) return;
+    const timer = setTimeout(() => {
+      lastNavigatedSearch.current = searchDraft;
+      onNavigate(searchDraft, includeHistory);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [searchDraft, includeHistory, view, onNavigate, isFocused]);
+  }, [searchDraft, includeHistory, onNavigate, isFocused, initialSearch]);
 
   return (
     <FieldGroup
@@ -68,7 +89,10 @@ export function CourseRosterDiscoveryFilters({
           maxLength={100}
           placeholder="Course or program"
           value={searchDraft}
-          onChange={(event) => setSearchDraft(event.target.value)}
+          onChange={(event) => {
+            setSearchDraft(event.target.value);
+            draftIsLive.current = true;
+          }}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
         />

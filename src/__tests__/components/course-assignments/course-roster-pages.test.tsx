@@ -298,6 +298,56 @@ describe("course roster pages", () => {
     expect(searchbox).toHaveValue("");
   });
 
+  it("cancels a pending debounce when a server-driven search change lands mid-typing", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
+    );
+    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+    vi.useFakeTimers();
+    try {
+      searchbox.focus();
+      fireEvent.change(searchbox, { target: { value: "CS1" } });
+
+      // A server-driven change lands inside the debounce window; the stale
+      // draft must not be re-navigated.
+      rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(replaceMock).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a live draft when the server echoes the navigated search", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
+    );
+    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+    vi.useFakeTimers();
+    try {
+      searchbox.focus();
+      fireEvent.change(searchbox, { target: { value: "CS1" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(replaceMock).toHaveBeenCalledTimes(1);
+
+      // The response echoes the search we just navigated; typing more keeps
+      // the draft live and the next debounce still fires.
+      rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "CS1" }} view="list" />);
+      fireEvent.change(searchbox, { target: { value: "CS1x" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(replaceMock).toHaveBeenCalledTimes(2);
+      expect(replaceMock).toHaveBeenLastCalledWith("/faculty/course-rosters?search=CS1x");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("preserves Card in paginated links and instant filter navigation", () => {
     render(
       <CourseRosterDiscoveryPage
