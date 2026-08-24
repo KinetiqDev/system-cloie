@@ -61,6 +61,13 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         ],
         spansMultipleScales: true,
         excludedRatingCount: 0,
+        evidenceSummary: {
+          ratingCount: 3,
+          responseCount: 2,
+          evaluationCount: 2,
+          scaleLabel: "1–5 (5-point)",
+          explanation: "Mean of 3 valid ratings from 2 course-bound evaluation(s).",
+        },
       },
       {
         ploId: "go-b",
@@ -75,6 +82,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         distributions: [],
         spansMultipleScales: false,
         excludedRatingCount: 1,
+        evidenceSummary: { ratingCount: 1, explanation: "Mean of 1 valid rating." },
       },
     ],
     ...overrides,
@@ -109,6 +117,7 @@ describe("ProgramHeadOutcomesView", () => {
               submittedResponseCount: 8,
               evaluationCount: 2,
               questionCount: 3,
+              evidenceSummary: { ratingCount: 10, explanation: "Mean of 10 valid ratings." },
             },
           ],
         })}

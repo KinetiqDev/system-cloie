@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
+import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
 import {
-  buildProgramHeadAnalyticsPath,
+  buildProgramHeadResponsesPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
 
@@ -17,12 +19,28 @@ export default async function CentralResponseDetailPage({
   const { programId, deploymentId, responseId } = await params;
   const response = await getProgramHeadResponseDetail(programId, responseId);
 
-  if (!response || response.evaluation.id !== deploymentId) {
+  if (!response || response.evaluation.id !== deploymentId || response.evaluation.type !== "PROGRAM_WIDE") {
     notFound();
   }
 
+  const stakeholder = response.evaluation.context.stakeholder;
+
   return (
     <div className="space-y-6">
+      <Breadcrumbs
+        items={[
+          { label: "Responses", href: buildProgramHeadResponsesPath(programId) },
+          {
+            label: "Program-wide evaluations",
+            href: buildProgramHeadResponsesPath(programId, "program-wide"),
+          },
+          {
+            label: response.evaluation.title,
+            href: buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId),
+          },
+          { label: response.respondent.name },
+        ]}
+      />
       <Button
         render={
           <Link href={buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId)} />
@@ -35,7 +53,17 @@ export default async function CentralResponseDetailPage({
       <ResponseDetail
         response={response}
         evaluationHref={buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId)}
-        analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
+        analyticsHref={buildAnalyticsUrl(programId, {
+          tab: "outcomes",
+          evidenceSource:
+            stakeholder === "STUDENT"
+              ? "PROGRAM_WIDE_STUDENT"
+              : stakeholder === "ALUMNI"
+                ? "ALUMNI"
+                : "INDUSTRY",
+          stakeholder,
+        })}
+        programId={programId}
       />
     </div>
   );

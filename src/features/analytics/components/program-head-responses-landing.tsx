@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
 import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
 import type { ResponseDeploymentList } from "@/features/analytics/services/list-program-head-response-deployments";
 import {
   buildProgramHeadResponsesCourseEvaluationPath,
+  buildProgramHeadResponsesPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
 import { buildProgramHeadResponsesTabUrl } from "@/features/analytics/services/program-head-responses-state";
@@ -15,6 +17,10 @@ export function ProgramHeadResponsesLanding({ programId, program, state, data }:
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
   const isCourse = state.tab === "course";
   return <div className="flex flex-col gap-6">
+    <Breadcrumbs items={[
+      { label: "Responses", href: buildProgramHeadResponsesPath(programId) },
+      { label: state.tab === "course" ? "Course evaluations" : "Program-wide evaluations" }
+    ]} />
     <header className="space-y-1"><h1 className="text-heading-lg">Responses</h1><p className="text-body-md text-text-secondary">{program.code} — {program.name} · Browse evaluation evidence and submitted responses.</p></header>
     <nav aria-label="Response views" className="flex gap-1 overflow-x-auto"><Tab href={buildProgramHeadResponsesTabUrl(programId, "course", state)} active={isCourse}>Course evaluations</Tab><Tab href={buildProgramHeadResponsesTabUrl(programId, "program-wide", state)} active={!isCourse}>Program-wide evaluations</Tab></nav>
     <ProgramHeadResponsesFilters programId={programId} state={state} options={data.options} />

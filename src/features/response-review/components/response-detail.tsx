@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatMean } from "./format";
+import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
+import type { TargetStakeholder } from "@prisma/client";
 import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
 
 type ResponseDetailProps = {
@@ -10,10 +12,29 @@ type ResponseDetailProps = {
   evaluationHref: string;
   /** Link to the Analytics tab for upward trace (§27.6). */
   analyticsHref: string;
+  /** Selected-Program id for outcome deep links (§27.6 reverse trace). */
+  programId: string;
 };
 
-export function ResponseDetail({ response, evaluationHref, analyticsHref }: ResponseDetailProps) {
+const STAKEHOLDER_SOURCE: Record<TargetStakeholder, "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY"> = {
+  STUDENT: "PROGRAM_WIDE_STUDENT",
+  ALUMNI: "ALUMNI",
+  INDUSTRY_PARTNER: "INDUSTRY",
+};
+
+export function ResponseDetail({ response, evaluationHref, analyticsHref, programId }: ResponseDetailProps) {
   const { respondent, evaluation } = response;
+
+  const outcomeScope =
+    evaluation.type === "COURSE_BOUND"
+      ? ({ evidenceSource: "COURSE" as const })
+      : ({
+          evidenceSource: STAKEHOLDER_SOURCE[evaluation.context.stakeholder],
+          stakeholder: evaluation.context.stakeholder,
+        });
+
+  const outcomeHref = (ploId: string): string =>
+    buildAnalyticsUrl(programId, { tab: "outcomes", ploId, ...outcomeScope });
 
   return (
     <div className="space-y-6">
@@ -72,7 +93,7 @@ export function ResponseDetail({ response, evaluationHref, analyticsHref }: Resp
             <CardContent className="space-y-4">
               {section.items.map((item) =>
                 item.kind === "quantitative" ? (
-                  <QuantitativeAnswerCard key={item.itemKey} item={item} />
+                  <QuantitativeAnswerCard key={item.itemKey} item={item} outcomeHref={outcomeHref} />
                 ) : (
                   <QualitativeAnswerCard key={item.promptKey} item={item} />
                 )
@@ -85,7 +106,13 @@ export function ResponseDetail({ response, evaluationHref, analyticsHref }: Resp
   );
 }
 
-function QuantitativeAnswerCard({ item }: { item: QuantitativeSubmittedAnswer }) {
+function QuantitativeAnswerCard({
+  item,
+  outcomeHref,
+}: {
+  item: QuantitativeSubmittedAnswer;
+  outcomeHref: (ploId: string) => string;
+}) {
   const { binding } = item;
   return (
     <div className="space-y-1">
@@ -98,14 +125,36 @@ function QuantitativeAnswerCard({ item }: { item: QuantitativeSubmittedAnswer })
             CILO: {binding.ciloLabel}
             {binding.ploMappings.length > 0 && (
               <span className="text-text-muted ml-1">
-                → {binding.ploMappings.map((m) => `${m.ploCode} (${m.manifestation})`).join(", ")}
+                →{" "}
+                {binding.ploMappings.map((m, index) => (
+                  <span key={m.ploId}>
+                    {index > 0 ? ", " : null}
+                    <Link
+                      href={outcomeHref(m.ploId)}
+                      className="hover:text-foreground underline underline-offset-2"
+                    >
+                      {m.ploCode}
+                    </Link>
+                  </span>
+                ))}
               </span>
             )}
           </Badge>
         )}
         {binding.type === "PLO" && (
           <Badge variant="outline" className="border-success/30 bg-success-soft text-success">
-            PLO: {binding.ploBindings.map((p) => p.code).join(", ")}
+            PLO:{" "}
+            {binding.ploBindings.map((p, index) => (
+              <span key={p.key}>
+                {index > 0 ? ", " : null}
+                <Link
+                  href={outcomeHref(p.key)}
+                  className="hover:text-foreground underline underline-offset-2"
+                >
+                  {p.code}
+                </Link>
+              </span>
+            ))}
           </Badge>
         )}
         {binding.type === "GENERAL" && (

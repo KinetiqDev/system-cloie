@@ -23,13 +23,14 @@ import {
 } from "./program-head-analytics-aggregators";
 import {
   buildScaleIdentities,
+  describeScale,
   describeScales,
   extractDistinctScales,
   resolveItemScaleIdentity,
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
 import { buildParticipationSummary } from "../aggregators/participation";
-import { buildProgramWidePloMetrics, type CentralPloRatingRow } from "../aggregators/plo";
+import { buildProgramWidePloMetrics, type CentralPloRatingRow, type PloMetric } from "../aggregators/plo";
 import {
   FEEDBACK_SOURCE_LABELS,
   buildRedactedWordCloudTokens,
@@ -37,6 +38,8 @@ import {
 } from "./qualitative-analytics";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
+import { buildProgramHeadResponsesPath } from "@/lib/constants/program-head-routes";
+import { buildProgramHeadResponsesUrl } from "./program-head-responses-state";
 import type {
   ProgramHeadAnalyticsScopeSummary,
   ProgramHeadBreakdownsDTO,
@@ -932,10 +935,25 @@ async function buildProgramWideOutcomeDtos(
         submittedResponseCount: metric.responseCount,
         evaluationCount: metric.evaluationCount,
         questionCount: metric.questionCount,
+        evidenceSummary: {
+          ratingCount: metric.ratingCount,
+          responseCount: metric.responseCount,
+          evaluationCount: metric.evaluationCount,
+          questionCount: metric.questionCount,
+          scaleLabel: singleProgramWideScaleLabel(metric),
+          explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Program Learning Outcome; unbound items are excluded.`,
+        },
       });
     }
   }
   return dtos;
+}
+
+/** Human-readable label of the single compatible scale; null when mixed or unresolved. */
+function singleProgramWideScaleLabel(metric: PloMetric): string | undefined {
+  if (metric.scaleGroups.length !== 1) return undefined;
+  const scale = metric.scaleGroups[0].scale;
+  return scale ? describeScale(scale.descriptors) : undefined;
 }
 
 /**
@@ -1047,12 +1065,27 @@ export async function getProgramHeadOutcomes(
     .filter((row): row is OutcomeEvidenceRow => row !== null);
 
   const aggregation = aggregateOutcomeEvidence(evidenceRows);
-  const outcomes = buildProgramHeadOutcomeDtos(aggregation);
+  const outcomes = buildProgramHeadOutcomeDtos(aggregation).map((outcome) => ({
+    ...outcome,
+    evidenceSummary: {
+      ...outcome.evidenceSummary,
+      evidenceHref: buildProgramHeadResponsesPath(selectedProgram.id, "course"),
+    },
+  }));
 
-  const programWideOutcomes = await buildProgramWideOutcomeDtos(
-    centralRatingRows,
-    snapshotById
-  );
+  const programWideOutcomes = (
+    await buildProgramWideOutcomeDtos(centralRatingRows, snapshotById)
+  ).map((outcome) => ({
+    ...outcome,
+    evidenceSummary: {
+      ...outcome.evidenceSummary,
+      evidenceHref: buildProgramHeadResponsesUrl(selectedProgram.id, {
+        tab: "program-wide",
+        page: 1,
+        stakeholder: outcome.stakeholder,
+      }),
+    },
+  }));
 
   const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason = outcomesEmptyReason(

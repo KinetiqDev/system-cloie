@@ -23,6 +23,7 @@ import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/p
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadPLODetail } from "./program-head-plo-detail";
 import { ProgramHeadOutcomeRankingChart } from "./program-head-outcome-ranking-chart";
+import { HowCalculatedPopover } from "./how-calculated-popover";
 
 /**
  * Many-to-many contribution rule: a rating bound to a CILO mapped to several
@@ -195,7 +196,12 @@ export function ProgramHeadOutcomesView({
                       {row.submittedResponseCount}
                     </TableCell>
                     <TableCell className="text-right align-top tabular-nums">{row.evaluationCount}</TableCell>
-                    <TableCell className="text-right align-top tabular-nums">{row.questionCount}</TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      <span className="inline-flex items-center gap-1">
+                        {row.questionCount}
+                        <HowCalculatedPopover metric={row.evidenceSummary} label={row.code} />
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -234,19 +240,22 @@ function OutcomesExactValueTable({
             {outcomes.flatMap((outcome) => {
               const detailId = `plo-detail-${outcome.ploId}`;
               const rows = [
-                <TableRow key={outcome.ploId}>
-                  <TableCell className="align-top">
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{outcome.code}</span>
-                      <span className="text-text-secondary">{outcome.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right align-top tabular-nums">
-                    {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right align-top tabular-nums">
-                    {outcome.ratingCount}
-                  </TableCell>
+<TableRow key={outcome.ploId}>
+                    <TableCell className="align-top">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{outcome.code}</span>
+                        <span className="text-text-secondary">{outcome.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      <span className="inline-flex items-center gap-1">
+                        {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
+                        <HowCalculatedPopover metric={outcome.evidenceSummary} label={outcome.code} />
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      {outcome.ratingCount}
+                    </TableCell>
                   <TableCell className="text-right align-top tabular-nums">
                     {outcome.submittedResponseCount}
                   </TableCell>

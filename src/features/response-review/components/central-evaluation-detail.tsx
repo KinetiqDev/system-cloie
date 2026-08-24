@@ -9,6 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { HowCalculatedPopover } from "@/features/analytics/components/how-calculated-popover";
+import { describeScale } from "@/features/analytics/aggregators/scale-identity";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
 import type { ProgramHeadCentralEvaluationDetail } from "../types";
@@ -58,7 +60,18 @@ export function CentralEvaluationDetail({
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <SummaryStat label="Submitted" value={`${summary.submittedCount} / ${summary.assignedCount}`} />
         <SummaryStat label="Completion" value={formatPercent(summary.completionRate)} />
-        <SummaryStat label="Evaluation mean" value={formatMean(summary.evaluationMean)} />
+        <SummaryStat
+          label="Evaluation mean"
+          value={formatMean(summary.evaluationMean)}
+          evidence={{
+            explanation:
+              summary.evaluationScaleCount === 0
+                ? "No valid quantitative ratings from submitted responses in this evaluation."
+                : summary.evaluationScaleCount > 1
+                  ? `Ratings span ${summary.evaluationScaleCount} incompatible scales; each scale is reported separately with no combined mean.`
+                  : "Raw mean of all valid quantitative ratings from submitted responses; general items are included and qualitative answers are excluded.",
+          }}
+        />
         <SummaryStat label="PLOs" value={`${ploResults.length}`} />
         <SummaryStat label="Qualitative answers" value={`${summary.qualitativeAnswerCount}`} />
         <SummaryStat
@@ -98,15 +111,33 @@ export function CentralEvaluationDetail({
                   </TableCell>
                 </TableRow>
               ) : (
-                ploResults.map((plo) => (
-                  <TableRow key={plo.ploId}>
-                    <TableCell className="font-medium">{plo.ploCode}</TableCell>
-                    <TableCell>{plo.ploDescription}</TableCell>
-                    <TableCell className="text-right tabular-nums">{plo.ratingCount}</TableCell>
-                    <TableCell className="text-right tabular-nums">{plo.responseCount}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatMean(plo.mean)}</TableCell>
-                  </TableRow>
-                ))
+                ploResults.map((plo) => {
+                  const evidence = {
+                    ratingCount: plo.ratingCount,
+                    responseCount: plo.responseCount,
+                    evaluationCount: plo.evaluationCount,
+                    questionCount: plo.questionCount,
+                    scaleLabel:
+                      plo.scaleGroups.length === 1 && plo.scaleGroups[0].scale
+                        ? describeScale(plo.scaleGroups[0].scale.descriptors)
+                        : undefined,
+                    explanation: `Mean of ${plo.ratingCount} valid ratings from ${plo.questionCount} bound question(s); unbound items are excluded.`,
+                  };
+                  return (
+                    <TableRow key={plo.ploId}>
+                      <TableCell className="font-medium">{plo.ploCode}</TableCell>
+                      <TableCell>{plo.ploDescription}</TableCell>
+                      <TableCell className="text-right tabular-nums">{plo.ratingCount}</TableCell>
+                      <TableCell className="text-right tabular-nums">{plo.responseCount}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        <span className="inline-flex items-center gap-1">
+                          {formatMean(plo.mean)}
+                          <HowCalculatedPopover metric={evidence} label={`${plo.ploCode} mean`} />
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -138,26 +169,41 @@ export function CentralEvaluationDetail({
                   </TableCell>
                 </TableRow>
               ) : (
-                questionResults.map((question) => (
-                  <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
-                    <TableCell>{question.itemKey}</TableCell>
-                    <TableCell>{question.prompt}</TableCell>
-                    <TableCell>
-                      {question.ploBindings.length > 0
-                        ? question.ploBindings.map((binding) => binding.code).join(", ")
-                        : "General evaluation item"}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMean(question.quantitative?.mean ?? null)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {question.quantitative?.ratingCount ?? 0}
-                    </TableCell>
-                    <TableCell>
-                      <DistributionCounts metric={question.quantitative ?? null} />
-                    </TableCell>
-                  </TableRow>
-                ))
+                questionResults.map((question) => {
+                  const quantitative = question.quantitative;
+                  const evidence = {
+                    ratingCount: quantitative?.ratingCount ?? 0,
+                    responseCount: quantitative?.responseCount ?? 0,
+                    scaleLabel: quantitative?.scale ? describeScale(quantitative.scale.descriptors) : undefined,
+                    explanation:
+                      quantitative === null
+                        ? "No valid ratings for this question in the submitted responses."
+                        : `Mean of ${quantitative.ratingCount} valid ratings for this question from submitted responses.`,
+                  };
+                  return (
+                    <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
+                      <TableCell>{question.itemKey}</TableCell>
+                      <TableCell>{question.prompt}</TableCell>
+                      <TableCell>
+                        {question.ploBindings.length > 0
+                          ? question.ploBindings.map((binding) => binding.code).join(", ")
+                          : "General evaluation item"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        <span className="inline-flex items-center gap-1">
+                          {formatMean(quantitative?.mean ?? null)}
+                          <HowCalculatedPopover metric={evidence} label={`${question.itemKey} question mean`} />
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {quantitative?.ratingCount ?? 0}
+                      </TableCell>
+                      <TableCell>
+                        <DistributionCounts metric={quantitative ?? null} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -236,10 +282,21 @@ export function CentralEvaluationDetail({
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: string }) {
+function SummaryStat({
+  label,
+  value,
+  evidence,
+}: {
+  label: string;
+  value: string;
+  evidence?: { explanation: string; scaleLabel?: string; ratingCount?: number; responseCount?: number; assignmentCount?: number };
+}) {
   return (
     <div className="border-border rounded-xl border p-4">
-      <p className="text-text-muted text-sm">{label}</p>
+      <div className="flex items-start justify-between gap-1">
+        <p className="text-text-muted text-sm">{label}</p>
+        {evidence && <HowCalculatedPopover metric={evidence} label={label} />}
+      </div>
       <p className="text-2xl font-semibold tabular-nums">{value}</p>
     </div>
   );

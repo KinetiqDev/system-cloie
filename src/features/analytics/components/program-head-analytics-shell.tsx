@@ -5,11 +5,13 @@ import type {
   ProgramHeadAnalyticsScopeSummary,
 } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadAnalyticsFilters } from "./program-head-analytics-filters";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import {
   ANALYTICS_TABS,
   ANALYTICS_TAB_LABELS,
   buildAnalyticsTabUrl,
+  buildAnalyticsUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
 
 type ProgramHeadAnalyticsShellProps = {
@@ -29,6 +31,21 @@ export function ProgramHeadAnalyticsShell({
 }: ProgramHeadAnalyticsShellProps) {
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumbs
+        items={[
+          {
+            label: "Analytics",
+            href: buildAnalyticsUrl(programId, {
+              schoolYearId: filters.schoolYearId,
+              semester: filters.semester,
+              termInstanceId: filters.termInstanceId,
+              evidenceSource: filters.evidenceSource,
+              stakeholder: filters.stakeholder,
+            }),
+          },
+          { label: ANALYTICS_TAB_LABELS[filters.tab] },
+        ]}
+      />
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Analytics</h1>
         <p className="text-body-md text-text-secondary">

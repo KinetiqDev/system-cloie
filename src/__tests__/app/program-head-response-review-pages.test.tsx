@@ -185,7 +185,7 @@ describe("program head identified response-review pages", () => {
 
   it("renders the program-wide response detail page with identified respondent name", async () => {
     getProgramHeadResponseDetailMock.mockResolvedValue({
-      evaluation: { id: "central-1", title: "Exit Survey" },
+      evaluation: { id: "central-1", title: "Exit Survey", type: "PROGRAM_WIDE", context: { stakeholder: "ALUMNI" } },
       respondent: { name: "Maria Gomez" },
     });
     const Page = (

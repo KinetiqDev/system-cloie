@@ -17,6 +17,7 @@ const ratedOutcomes: ProgramHeadOutcomeDTO[] = [
     distributions: [],
     spansMultipleScales: false,
     excludedRatingCount: 0,
+    evidenceSummary: { ratingCount: 18, explanation: "Mean of 18 valid ratings." },
   },
   {
     ploId: "go-2",
@@ -31,6 +32,7 @@ const ratedOutcomes: ProgramHeadOutcomeDTO[] = [
     distributions: [],
     spansMultipleScales: false,
     excludedRatingCount: 0,
+    evidenceSummary: { ratingCount: 12, explanation: "Mean of 12 valid ratings." },
   },
 ];
 

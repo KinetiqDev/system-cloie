@@ -80,6 +80,7 @@ function ploRow(overrides: Partial<ProgramHeadDashboardData["ploSources"]["COURS
     spansMultipleScales: false,
     scaleMax: null,
     hasEvidence: false,
+    evidenceSummary: { explanation: "No evidence from this source in the selected period." },
     ...overrides,
   };
 }
@@ -102,6 +103,7 @@ function dashboardDataFixture(
         ratingCount: 1240,
         spansMultipleScales: false,
         scaleMax: 5,
+        evidenceSummary: { ratingCount: 1240, explanation: "Raw mean of 1240 valid ratings." },
       },
       {
         sourceKey: "CENTRAL_STUDENT",
@@ -110,6 +112,7 @@ function dashboardDataFixture(
         ratingCount: 310,
         spansMultipleScales: true,
         scaleMax: null,
+        evidenceSummary: { ratingCount: 310, explanation: "Ratings span incompatible scales." },
       },
       {
         sourceKey: "ALUMNI",
@@ -118,6 +121,7 @@ function dashboardDataFixture(
         ratingCount: 0,
         spansMultipleScales: false,
         scaleMax: null,
+        evidenceSummary: { explanation: "No valid ratings from this evidence source." },
       },
       {
         sourceKey: "INDUSTRY_PARTNER",
@@ -126,6 +130,7 @@ function dashboardDataFixture(
         ratingCount: 0,
         spansMultipleScales: false,
         scaleMax: null,
+        evidenceSummary: { explanation: "No valid ratings from this evidence source." },
       },
     ],
     ploSources: {

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   DASHBOARD_SOURCE_ORDER,
+  DASHBOARD_SOURCE_TO_ANALYTICS_FILTER,
   PLO_SOURCE_LABELS,
   type DashboardSourceKey,
 } from "@/features/analytics/program-head-dashboard-labels";
@@ -13,6 +14,8 @@ import type {
   DashboardPloSummaryRow,
   PloCatalogEntry,
 } from "@/features/analytics/services/get-program-head-dashboard";
+import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
+import { HowCalculatedPopover } from "./how-calculated-popover";
 
 function mergeCatalogRows(
   sourceKey: DashboardSourceKey,
@@ -33,6 +36,9 @@ function mergeCatalogRows(
       spansMultipleScales: false,
       scaleMax: null,
       hasEvidence: false,
+      evidenceSummary: {
+        explanation: "No evidence from this source for this Program Learning Outcome in the selected period.",
+      },
     }
   );
   const catalogIds = new Set(catalog.map((entry) => entry.id));
@@ -48,19 +54,30 @@ function mergeCatalogRows(
 /**
  * Program Learning Outcome summary (spec §13.8): one evidence source at a
  * time; details expose rating/response/evaluation plus contributing-CILO or
- * bound-question counts. No attainment status is shown anywhere.
+ * bound-question counts. Rows deep-link into Analytics > Outcomes with
+ * period, source, and PLO preserved (§12 upward navigation). No attainment
+ * status is shown anywhere.
  */
 export function ProgramHeadPloSummary({
   sources,
   ploCatalog,
-  outcomesHref,
+  programId,
+  periodFilters,
 }: {
   sources: Record<DashboardSourceKey, DashboardPloSummaryRow[]>;
   ploCatalog: PloCatalogEntry[];
-  outcomesHref: string;
+  programId: string;
+  periodFilters: { schoolYearId?: string; semester?: string; termInstanceId?: string };
 }) {
   const [sourceKey, setSourceKey] = useState<DashboardSourceKey>("COURSE_STUDENT");
   const rows = mergeCatalogRows(sourceKey, ploCatalog, sources[sourceKey] ?? []);
+  const rowHref = (ploId: string): string =>
+    buildAnalyticsUrl(programId, {
+      ...periodFilters,
+      tab: "outcomes",
+      ploId,
+      ...DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey],
+    });
 
   return (
     <Card>
@@ -98,12 +115,12 @@ export function ProgramHeadPloSummary({
             <div key={row.ploId} className="border-border/60 border-b py-2 last:border-b-0">
               <div className="-mx-2 grid grid-cols-[3.5rem_minmax(0,1fr)_5rem] items-center gap-3 rounded-lg px-2 focus-within:ring-2 focus-within:ring-ring">
                 <span className="truncate text-label-md font-bold" title={row.ploCode}>
-                  <Link href={outcomesHref} className="hover:underline">
+                  <Link href={rowHref(row.ploId)} className="hover:underline">
                     {row.ploCode}
                   </Link>
                 </span>
                 <Link
-                  href={outcomesHref}
+                  href={rowHref(row.ploId)}
                   aria-hidden="true"
                   tabIndex={-1}
                   className="bg-muted relative block h-3.5 overflow-hidden rounded border"
@@ -119,7 +136,7 @@ export function ProgramHeadPloSummary({
                     />
                   ) : null}
                 </Link>
-                <span className="tabular-nums text-label-md text-right font-bold">
+                <span className="tabular-nums flex items-center justify-end gap-1 text-label-md font-bold">
                   {row.spansMultipleScales ? (
                     <span className="text-muted-foreground text-label-sm font-semibold">Multiple scales</span>
                   ) : row.mean === null ? (
@@ -127,6 +144,10 @@ export function ProgramHeadPloSummary({
                   ) : (
                     row.mean.toFixed(2)
                   )}
+                  <HowCalculatedPopover
+                    metric={{ ...row.evidenceSummary, evidenceHref: rowHref(row.ploId) }}
+                    label={row.ploCode}
+                  />
                 </span>
               </div>
               <details className="mt-1">

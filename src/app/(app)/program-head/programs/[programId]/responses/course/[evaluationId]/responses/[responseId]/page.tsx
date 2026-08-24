@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
+import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
 import {
-  buildProgramHeadAnalyticsPath,
   buildProgramHeadResponsesCourseEvaluationPath,
+  buildProgramHeadResponsesPath,
 } from "@/lib/constants/program-head-routes";
 
 export default async function CourseResponseDetailPage({
@@ -23,6 +25,12 @@ export default async function CourseResponseDetailPage({
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[
+        { label: "Responses", href: buildProgramHeadResponsesPath(programId) },
+        { label: "Course evaluations", href: buildProgramHeadResponsesPath(programId, "course") },
+        { label: response.evaluation.title, href: buildProgramHeadResponsesCourseEvaluationPath(programId, evaluationId) },
+        { label: response.respondent.name }
+      ]} />
       <Button
         render={<Link href={buildProgramHeadResponsesCourseEvaluationPath(programId, evaluationId)} />}
         size="sm"
@@ -33,7 +41,8 @@ export default async function CourseResponseDetailPage({
       <ResponseDetail
         response={response}
         evaluationHref={buildProgramHeadResponsesCourseEvaluationPath(programId, evaluationId)}
-        analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
+        analyticsHref={buildAnalyticsUrl(programId, { tab: "outcomes", evidenceSource: "COURSE" })}
+        programId={programId}
       />
     </div>
   );

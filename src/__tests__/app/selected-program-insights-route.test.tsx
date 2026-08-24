@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 const {
   notFoundMock,
@@ -266,7 +266,8 @@ describe("selected Program insights routes", () => {
     expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
     expect(redirectMock).not.toHaveBeenCalled();
     render(page);
-    expect(screen.getByText("Outcomes")).toBeInTheDocument();
+    const tabNav = screen.getByRole("navigation", { name: "Analytics views" });
+    expect(within(tabNav).getByText("Outcomes")).toBeInTheDocument();
   });
 
   it("renders whitespace-padded tab values as their trimmed tab", async () => {
@@ -697,12 +698,13 @@ describe("selected Program insights routes", () => {
 
     render(page);
 
-    expect(screen.getByText("Outcomes")).toBeInTheDocument();
-    expect(screen.getByText("Courses")).toBeInTheDocument();
-    expect(screen.getByText("Stakeholders")).toBeInTheDocument();
-    expect(screen.getByText("Trends")).toBeInTheDocument();
-    expect(screen.getByText("Qualitative")).toBeInTheDocument();
-    expect(screen.getByText("AI Insights")).toBeInTheDocument();
+    const tabNav = screen.getByRole("navigation", { name: "Analytics views" });
+    expect(within(tabNav).getByText("Outcomes")).toBeInTheDocument();
+    expect(within(tabNav).getByText("Courses")).toBeInTheDocument();
+    expect(within(tabNav).getByText("Stakeholders")).toBeInTheDocument();
+    expect(within(tabNav).getByText("Trends")).toBeInTheDocument();
+    expect(within(tabNav).getByText("Qualitative")).toBeInTheDocument();
+    expect(within(tabNav).getByText("AI Insights")).toBeInTheDocument();
   });
 
   it("renders the Feedback view without falling back to Overview", async () => {

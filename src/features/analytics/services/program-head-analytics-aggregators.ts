@@ -1,4 +1,5 @@
 import { describeScale, resolveSnapshotItemScale, type ScaleDescriptor } from "../aggregators/scale-identity";
+import type { MetricEvidenceSummary } from "../aggregators/types";
 import type { TargetStakeholder, YearLevel } from "@prisma/client";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type {
@@ -452,6 +453,16 @@ export function buildProgramHeadOutcomeDtos(
       distributions,
       spansMultipleScales: aggregate.distributions.size > 1,
       excludedRatingCount: aggregate.excludedRatingCount,
+      evidenceSummary: {
+        ratingCount: aggregate.ratingCount,
+        responseCount: aggregate.responseIds.size,
+        evaluationCount: aggregate.evaluations.size,
+        scaleLabel: distributions.length === 1 ? distributions[0].scaleLabel : undefined,
+        explanation:
+          aggregate.distributions.size > 1
+            ? `Ratings span ${aggregate.distributions.size} incompatible scales; each scale is reported separately with no combined mean.`
+            : `Mean of ${aggregate.ratingCount} valid ratings from ${aggregate.evaluations.size} course-bound evaluation(s); general items and unbound questions are excluded.`,
+      },
     });
   }
 

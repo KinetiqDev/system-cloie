@@ -9,6 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { HowCalculatedPopover } from "@/features/analytics/components/how-calculated-popover";
+import { describeScale } from "@/features/analytics/aggregators/scale-identity";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
 import type { ProgramHeadCourseEvaluationDetail } from "../types";
@@ -57,7 +59,18 @@ export function CourseEvaluationDetail({
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <SummaryStat label="Submitted" value={`${summary.submittedCount} / ${summary.eligibleCount}`} />
         <SummaryStat label="Completion" value={formatPercent(summary.completionRate)} />
-        <SummaryStat label="Evaluation mean" value={formatMean(summary.evaluationMean)} />
+        <SummaryStat
+          label="Evaluation mean"
+          value={formatMean(summary.evaluationMean)}
+          evidence={{
+            explanation:
+              summary.evaluationScaleCount === 0
+                ? "No valid quantitative ratings from submitted responses in this evaluation."
+                : summary.evaluationScaleCount > 1
+                  ? `Ratings span ${summary.evaluationScaleCount} incompatible scales; each scale is reported separately with no combined mean.`
+                  : "Raw mean of all valid quantitative ratings from submitted responses; general items are included and qualitative answers are excluded.",
+          }}
+        />
         <SummaryStat label="CILOs" value={`${summary.ciloCount}`} />
         <SummaryStat label="Qualitative answers" value={`${summary.qualitativeAnswerCount}`} />
         <SummaryStat
@@ -110,7 +123,10 @@ export function CourseEvaluationDetail({
                       {cilo.quantitative?.responseCount ?? 0}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatMean(cilo.quantitative?.mean ?? null)}
+                      <span className="inline-flex items-center gap-1">
+                        {formatMean(cilo.quantitative?.mean ?? null)}
+                        <HowCalculatedPopover metric={cilo.evidenceSummary} label={`${cilo.ciloId} CILO mean`} />
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))
@@ -145,26 +161,41 @@ export function CourseEvaluationDetail({
                   </TableCell>
                 </TableRow>
               ) : (
-                questionResults.map((question) => (
-                  <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
-                    <TableCell>{question.itemKey}</TableCell>
-                    <TableCell>{question.prompt}</TableCell>
-                    <TableCell>
-                      {question.binding.type === "CILO"
-                        ? question.binding.ciloLabel
-                        : "General evaluation item"}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMean(question.quantitative?.mean ?? null)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {question.quantitative?.ratingCount ?? 0}
-                    </TableCell>
-                    <TableCell>
-                      <DistributionCounts metric={question.quantitative ?? null} />
-                    </TableCell>
-                  </TableRow>
-                ))
+                questionResults.map((question) => {
+                  const quantitative = question.quantitative;
+                  const evidence = {
+                    ratingCount: quantitative?.ratingCount ?? 0,
+                    responseCount: quantitative?.responseCount ?? 0,
+                    scaleLabel: quantitative?.scale ? describeScale(quantitative.scale.descriptors) : undefined,
+                    explanation:
+                      quantitative === null
+                        ? "No valid ratings for this question in the submitted responses."
+                        : `Mean of ${quantitative.ratingCount} valid ratings for this question from submitted responses.`,
+                  };
+                  return (
+                    <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
+                      <TableCell>{question.itemKey}</TableCell>
+                      <TableCell>{question.prompt}</TableCell>
+                      <TableCell>
+                        {question.binding.type === "CILO"
+                          ? question.binding.ciloLabel
+                          : "General evaluation item"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        <span className="inline-flex items-center gap-1">
+                          {formatMean(quantitative?.mean ?? null)}
+                          <HowCalculatedPopover metric={evidence} label={`${question.itemKey} question mean`} />
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {quantitative?.ratingCount ?? 0}
+                      </TableCell>
+                      <TableCell>
+                        <DistributionCounts metric={quantitative ?? null} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -243,10 +274,21 @@ export function CourseEvaluationDetail({
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: string }) {
+function SummaryStat({
+  label,
+  value,
+  evidence,
+}: {
+  label: string;
+  value: string;
+  evidence?: { explanation: string; scaleLabel?: string; ratingCount?: number; responseCount?: number; assignmentCount?: number };
+}) {
   return (
     <div className="border-border rounded-xl border p-4">
-      <p className="text-text-muted text-sm">{label}</p>
+      <div className="flex items-start justify-between gap-1">
+        <p className="text-text-muted text-sm">{label}</p>
+        {evidence && <HowCalculatedPopover metric={evidence} label={label} />}
+      </div>
       <p className="text-2xl font-semibold tabular-nums">{value}</p>
     </div>
   );

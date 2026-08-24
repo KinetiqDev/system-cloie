@@ -73,6 +73,11 @@ const outcomes: ProgramHeadOutcomesDTO = {
       ],
       spansMultipleScales: false,
       excludedRatingCount: 1,
+      evidenceSummary: {
+        ratingCount: 3,
+        responseCount: 2,
+        explanation: "Mean of 3 valid ratings from 1 course-bound evaluation(s).",
+      },
     },
   ],
 };

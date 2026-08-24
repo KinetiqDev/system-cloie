@@ -144,7 +144,7 @@ describe("buildDashboardSourceMeans", () => {
       centralRow("ALUMNI"),
       centralRow("INDUSTRY_PARTNER"),
     ];
-    const means = buildDashboardSourceMeans(rows, SNAPSHOT_MAP);
+    const means = buildDashboardSourceMeans(rows, SNAPSHOT_MAP, "program-1");
     expect(means.map((mean) => mean.sourceKey)).toEqual([
       "COURSE_STUDENT",
       "CENTRAL_STUDENT",
@@ -174,7 +174,7 @@ describe("buildDashboardSourceMeans", () => {
         },
       }),
     ];
-    const means = buildDashboardSourceMeans(rows, SNAPSHOT_MAP);
+    const means = buildDashboardSourceMeans(rows, SNAPSHOT_MAP, "program-1");
     expect(means[0].spansMultipleScales).toBe(true);
     expect(means[0].mean).toBeNull();
     expect(means[0].ratingCount).toBe(2);
@@ -183,7 +183,7 @@ describe("buildDashboardSourceMeans", () => {
   });
 
   it("reports an unavailable mean for a source without evidence", () => {
-    const means = buildDashboardSourceMeans([courseRow()], SNAPSHOT_MAP);
+    const means = buildDashboardSourceMeans([courseRow()], SNAPSHOT_MAP, "program-1");
     expect(means.map((mean) => mean.mean)).toEqual([2, null, null, null]);
     expect(means[1].spansMultipleScales).toBe(false);
     expect(means[1].ratingCount).toBe(0);
@@ -298,15 +298,16 @@ describe("PLO summary projections", () => {
   ];
 
   it("exposes CILO contributors for course evidence", () => {
-    const row = toDashboardPloRows(metrics)[0];
+    const row = toDashboardPloRows(metrics, () => "/program-head/programs/p1/analytics?tab=outcomes")[0];
     expect(row.contributorKind).toBe("cilos");
     expect(row.contributorCount).toBe(2);
     expect(row.hasEvidence).toBe(true);
     expect(row.scaleMax).toBeNull();
+    expect(row.evidenceSummary.evidenceHref).toContain("tab=outcomes");
   });
 
   it("exposes bound-question counts for program-wide evidence", () => {
-    const row = toCentralDashboardPloRows(metrics)[0];
+    const row = toCentralDashboardPloRows(metrics, () => "/program-head/programs/p1/analytics?tab=outcomes")[0];
     expect(row.contributorKind).toBe("questions");
     expect(row.contributorCount).toBe(3);
   });
@@ -408,6 +409,7 @@ describe("buildNeedsAttentionItems", () => {
             spansMultipleScales: false,
             scaleMax: 5,
             hasEvidence: true,
+            evidenceSummary: { ratingCount: 8, explanation: "Raw mean of 8 valid ratings." },
           },
         ],
       },

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { ParticipationSummary } from "@/features/analytics/aggregators/types";
 import type { DashboardSourceMean } from "@/features/analytics/services/get-program-head-dashboard";
 import { CompletionBreakdownPopover } from "./program-head-dashboard-completion-popover";
+import { HowCalculatedPopover } from "./how-calculated-popover";
 
 /**
  * The four dashboard KPI cards (spec §13.2–§13.5). Completion uses the raw
@@ -17,6 +18,7 @@ export function ProgramHeadDashboardKpiGrid({
   sourceMeans,
   responsesActiveCourseHref,
   responsesActiveProgramWideHref,
+  responsesHref,
 }: {
   participation: ParticipationSummary;
   pendingResponses: number;
@@ -24,7 +26,28 @@ export function ProgramHeadDashboardKpiGrid({
   sourceMeans: DashboardSourceMean[];
   responsesActiveCourseHref: string;
   responsesActiveProgramWideHref: string;
+  responsesHref: string;
 }) {
+  const completionEvidence = {
+    assignmentCount: participation.assigned,
+    responseCount: participation.submitted,
+    explanation:
+      "Submitted eligible evaluation assignments over every in-scope assignment row. The registered population is never the denominator.",
+    evidenceHref: responsesHref,
+  };
+  const respondentsEvidence = {
+    assignmentCount: participation.assigned,
+    responseCount: participation.submitted,
+    explanation:
+      "Person-level status across every eligible assignment: complete means all submitted, partial means at least one started or submitted, not started means none.",
+    evidenceHref: responsesHref,
+  };
+  const activeEvaluationsEvidence = {
+    evaluationCount: activeEvaluations.total,
+    explanation:
+      "ACTIVE course and program-wide deployments for the selected Program and academic period.",
+    evidenceHref: responsesHref,
+  };
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card>
@@ -33,7 +56,10 @@ export function ProgramHeadDashboardKpiGrid({
             <CardDescription className="text-muted-foreground text-label-md font-semibold tracking-wider uppercase">
               Response completion
             </CardDescription>
-            <CompletionBreakdownPopover stakeholders={participation.stakeholders} />
+            <div className="flex items-center gap-1">
+              <HowCalculatedPopover metric={completionEvidence} label="Response completion" />
+              <CompletionBreakdownPopover stakeholders={participation.stakeholders} />
+            </div>
           </div>
           <CardTitle className="text-3xl font-bold tabular-nums">
             {participation.completionRate === null
@@ -56,9 +82,12 @@ export function ProgramHeadDashboardKpiGrid({
 
       <Card>
         <CardHeader>
-          <CardDescription className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Respondents
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <CardDescription className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Respondents
+            </CardDescription>
+            <HowCalculatedPopover metric={respondentsEvidence} label="Respondents" />
+          </div>
           <CardTitle className="flex items-center gap-2 text-3xl font-bold tabular-nums">
             <Users aria-hidden="true" className="text-muted-foreground size-5" />
             {participation.respondents.total.toLocaleString()}
@@ -87,9 +116,12 @@ export function ProgramHeadDashboardKpiGrid({
 
       <Card>
         <CardHeader>
-          <CardDescription className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Active evaluations
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2">
+            <CardDescription className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Active evaluations
+            </CardDescription>
+            <HowCalculatedPopover metric={activeEvaluationsEvidence} label="Active evaluations" />
+          </div>
           <CardTitle className="flex items-center gap-2 text-3xl font-bold tabular-nums">
             <ClipboardList aria-hidden="true" className="text-muted-foreground size-5" />
             {activeEvaluations.total.toLocaleString()}
@@ -127,7 +159,7 @@ export function ProgramHeadDashboardKpiGrid({
                 <dt className="text-muted-foreground truncate" title={source.label}>
                   {source.label}
                 </dt>
-                <dd className="tabular-nums text-right font-semibold">
+                <dd className="tabular-nums flex items-center gap-1 text-right font-semibold">
                   {source.spansMultipleScales ? (
                     <span title="Evidence spans incompatible scales; no combined mean">
                       Multiple scales
@@ -142,6 +174,7 @@ export function ProgramHeadDashboardKpiGrid({
                       </span>
                     </>
                   )}
+                  <HowCalculatedPopover metric={source.evidenceSummary} label={source.label} />
                 </dd>
               </div>
             ))}

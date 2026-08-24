@@ -40,6 +40,21 @@ export const STAKEHOLDER_LABELS: Record<string, string> = {
 };
 
 /**
+ * Dashboard evidence-source key → analytics filter params (§15 coupling).
+ * Course evaluations are answered by students, so their analytics scope never
+ * carries an explicit stakeholder value.
+ */
+export const DASHBOARD_SOURCE_TO_ANALYTICS_FILTER: Record<
+  DashboardSourceKey,
+  { evidenceSource: "COURSE" | "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY"; stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER" }
+> = {
+  COURSE_STUDENT: { evidenceSource: "COURSE" },
+  CENTRAL_STUDENT: { evidenceSource: "PROGRAM_WIDE_STUDENT", stakeholder: "STUDENT" },
+  ALUMNI: { evidenceSource: "ALUMNI", stakeholder: "ALUMNI" },
+  INDUSTRY_PARTNER: { evidenceSource: "INDUSTRY", stakeholder: "INDUSTRY_PARTNER" },
+};
+
+/**
  * Server-side ceiling for the qualitative pulse word cloud (§13.10). Tokens
  * are identifier-redacted and truncated server-side; the client slider only
  * re-slices this bounded list.
