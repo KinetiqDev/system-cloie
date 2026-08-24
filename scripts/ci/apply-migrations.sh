@@ -15,11 +15,12 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 2
 fi
 
-# psql(1) accepts libpq connection strings directly.
-PSQL="psql -v ON_ERROR_STOP=1 -q -d ${DATABASE_URL}"
+# psql(1) accepts libpq connection strings directly; the array keeps the
+# connection string a single quoted argument.
+PSQL=(psql -v ON_ERROR_STOP=1 -q -d "$DATABASE_URL")
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-$PSQL <<'SQL'
+"${PSQL[@]}" <<'SQL'
 CREATE SCHEMA IF NOT EXISTS auth;
 DO $$ BEGIN
   CREATE ROLE anon NOLOGIN;
@@ -40,7 +41,7 @@ SQL
 
 for migration in "${REPO_ROOT}"/supabase/migrations/*.sql; do
   echo "Applying $(basename "$migration")"
-  $PSQL -f "$migration"
+  "${PSQL[@]}" -f "$migration"
 done
 
 echo "Migrations applied."

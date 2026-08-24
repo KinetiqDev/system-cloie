@@ -7,14 +7,8 @@ export const FIXTURE_DATA_PATH = join(__dirname, "..", ".fixture-data.json");
 export type FixtureData = {
   bsit: { id: string; code: string };
   beed: { id: string; code: string };
-  schoolYears: Record<string, string>;
-  activeTermId: string;
   /** Course evaluation used by journey A (top-down). */
-  courseEvaluation: {
-    id: string;
-    title: string;
-    courseCode: string;
-  };
+  courseEvaluation: { id: string; title: string };
   /** The single SUBMITTED response of the course evaluation (journey A). */
   courseResponse: {
     id: string;
@@ -22,7 +16,7 @@ export type FixtureData = {
     quantitative: Array<{ prompt: string; rating: number }>;
     qualitative: Array<{ text: string }>;
   };
-  /** Program-wide evaluation + submitted response (journey B anchor). */
+  /** Program-wide evaluation (cross-Program denial anchor). */
   centralEvaluation: { id: string; title: string };
   /** ITRES1 evaluation used by journey B (bottom-up): response → CILO → PLO. */
   bottomUpEvaluation: { id: string; title: string };
@@ -40,14 +34,6 @@ async function discoverFixture(): Promise<FixtureData> {
     prisma.program.findUniqueOrThrow({ where: { code: "BSIT" } }),
     prisma.program.findUniqueOrThrow({ where: { code: "BEED" } }),
   ]);
-
-  const schoolYears = await prisma.schoolYear.findMany({ select: { id: true, code: true } });
-  const schoolYearIds = Object.fromEntries(schoolYears.map((sy) => [sy.code, sy.id]));
-
-  const activeTerm = await prisma.academicTermInstance.findFirstOrThrow({
-    where: { school_year_id: schoolYearIds["2026-2027"], semester: "SECOND" },
-    select: { id: true },
-  });
 
   const [courseEvaluation, bottomUpEvaluation] = await Promise.all([
     prisma.courseBoundEvaluation.findFirstOrThrow({
@@ -140,9 +126,7 @@ async function discoverFixture(): Promise<FixtureData> {
   return {
     bsit: { id: bsit.id, code: bsit.code },
     beed: { id: beed.id, code: beed.code },
-    schoolYears: schoolYearIds,
-    activeTermId: activeTerm.id,
-    courseEvaluation: { id: courseEvaluation.id, title: courseEvaluation.deployment_name, courseCode: "IT201" },
+    courseEvaluation: { id: courseEvaluation.id, title: courseEvaluation.deployment_name },
     courseResponse: {
       id: courseResponse.id,
       respondentName: courseResponse.respondentName,

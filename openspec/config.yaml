@@ -48,7 +48,7 @@ context: |
 
   Do not install Radix UI packages.
   Do not install another charting library.
-  Playwright is a planned E2E target, not an installed dependency or CI gate yet.
+  Playwright (@playwright/test) is the E2E suite with the browser-e2e CI gate.
   TanStack Query is not a default dependency. Add it only when a design
   establishes a concrete need for client-owned asynchronous server state.
 
@@ -182,7 +182,7 @@ context: |
   - Unit/integration tests: pnpm test
   - Focused test: pnpm vitest run <path>
   - Production build and typecheck: pnpm build
-  - E2E target: Playwright after the dependency and CI workflow are added
+  - E2E: pnpm test:e2e (Playwright; browser-e2e CI job)
 
   ## Commit Convention
   Conventional Commits:
