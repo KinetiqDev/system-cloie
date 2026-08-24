@@ -1,8 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
 import { LayoutGrid, List } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -10,38 +8,26 @@ export type CourseRosterViewMode = "list" | "card";
 
 type CourseRosterViewSelectorProps = {
   value: CourseRosterViewMode;
-  search: string;
-  includeHistory: boolean;
+  onValueChange: (value: CourseRosterViewMode) => void;
 };
 
+/**
+ * Presentational view toggle. The switch itself is a local state change in
+ * the parent; no server round trip is involved.
+ */
 export function CourseRosterViewSelector({
   value,
-  search,
-  includeHistory,
+  onValueChange,
 }: CourseRosterViewSelectorProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
   function selectView(nextValues: string[]) {
     const nextView = nextValues[0];
     if ((nextView !== "list" && nextView !== "card") || nextView === value) return;
-
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (includeHistory) params.set("history", "1");
-    if (nextView === "card") params.set("view", "card");
-    const query = params.toString();
-
-    startTransition(() => {
-      router.replace(`/faculty/course-rosters${query ? `?${query}` : ""}`);
-    });
+    onValueChange(nextView);
   }
 
   return (
     <ToggleGroup
       aria-label="Course roster view"
-      aria-busy={isPending || undefined}
-      disabled={isPending}
       onValueChange={selectView}
       role="toolbar"
       spacing={0}

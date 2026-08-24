@@ -1,56 +1,60 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import type { CourseRosterViewMode } from "./course-roster-view-selector";
 
 type CourseRosterDiscoveryFiltersProps = {
   initialSearch: string;
   initialHistory: boolean;
   view: CourseRosterViewMode;
+  onNavigate: (search: string, history: boolean) => void;
+  pending: boolean;
 };
 
 export function CourseRosterDiscoveryFilters({
   initialSearch,
   initialHistory,
   view,
+  onNavigate,
+  pending,
 }: CourseRosterDiscoveryFiltersProps) {
-  const router = useRouter();
   const [searchDraft, setSearchDraft] = useState(initialSearch);
   const [includeHistory, setIncludeHistory] = useState(initialHistory);
-  const [isPending, startTransition] = useTransition();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const navigate = (search: string, history: boolean) => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (history) params.set("history", "1");
-    if (view === "card") params.set("view", "card");
-    const query = params.toString();
-    startTransition(() => router.replace(`/faculty/course-rosters${query ? `?${query}` : ""}`));
-  };
+  // Server-side search changes (e.g. the Clear filters link) reset the draft,
+  // but never overwrite an in-progress keystroke.
+  useEffect(() => {
+    if (document.activeElement === searchInputRef.current) return;
+    setSearchDraft(initialSearch);
+  }, [initialSearch]);
 
   // Search streams in after a quiet pause while typing; the history checkbox
   // applies immediately. Both preserve the server-side view and pagination.
   useEffect(() => {
     if (searchDraft === initialSearch) return;
-    const timer = setTimeout(() => navigate(searchDraft, includeHistory), 300);
+    const timer = setTimeout(() => onNavigate(searchDraft, includeHistory), 300);
     return () => clearTimeout(timer);
-  }, [searchDraft, includeHistory, view]);
+  }, [searchDraft, includeHistory, view, onNavigate]);
+
   return (
     <FieldGroup
       role="search"
       aria-label="Search course rosters"
-      aria-busy={isPending || undefined}
+      aria-busy={pending || undefined}
       className="flex flex-col gap-3"
     >
       <Field>
         <FieldLabel htmlFor="roster-search">Search assignments</FieldLabel>
         <Input
           id="roster-search"
+          ref={searchInputRef}
           type="search"
           maxLength={100}
           placeholder="Course or program"
@@ -64,7 +68,7 @@ export function CourseRosterDiscoveryFilters({
           checked={includeHistory}
           onCheckedChange={(checked) => {
             setIncludeHistory(checked);
-            navigate(searchDraft, checked);
+            onNavigate(searchDraft, checked);
           }}
         />
         <FieldLabel htmlFor="roster-history">
@@ -134,6 +138,7 @@ export function CourseRosterMemberFilters({
         />
       </div>
       <div className="flex flex-wrap items-center gap-4">
+        {isPending ? <Spinner size="sm" label="Updating roster members" /> : null}
         <label className="flex min-h-11 items-center gap-3 text-sm">
           <input
             type="checkbox"

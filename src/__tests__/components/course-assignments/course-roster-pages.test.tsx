@@ -193,7 +193,7 @@ describe("course roster pages", () => {
     expect(screen.queryByText(/Ada Lovelace|ada@example.com/)).not.toBeInTheDocument();
   });
 
-  it("switches views with replace navigation, preserves scope, resets page, and ignores deselection", () => {
+  it("switches views instantly without a server round trip, preserves scope, and syncs the URL", () => {
     const { rerender } = render(
       <CourseRosterDiscoveryPage
         data={{ ...discovery, search: "CS", includeHistory: true, page: 4 }}
@@ -201,12 +201,19 @@ describe("course roster pages", () => {
       />
     );
 
+    // Same-view click is a no-op.
     fireEvent.click(screen.getByRole("button", { name: "List view" }));
     expect(replaceMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("");
+
+    // Card switch is instant: no router navigation, URL synced via history.
     fireEvent.click(screen.getByRole("button", { name: "Card view" }));
-    expect(replaceMock).toHaveBeenCalledWith(
-      "/faculty/course-rosters?search=CS&history=1&view=card"
-    );
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?search=CS&history=1&view=card");
+    expect(
+      screen.getByRole("button", { name: "Card view" })
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("table", { name: "Course assignments" })).not.toBeInTheDocument();
 
     replaceMock.mockClear();
     rerender(
@@ -216,7 +223,40 @@ describe("course roster pages", () => {
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "List view" }));
-    expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?search=CS&history=1");
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(window.location.search).toBe("?search=CS&history=1");
+  });
+
+  it("adopts server-driven view changes from navigation (sidebar links, deep links)", () => {
+    const { rerender } = render(<CourseRosterDiscoveryPage data={discovery} view="card" />);
+
+    expect(screen.getByRole("button", { name: "Card view" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    // The default /faculty/course-rosters URL carries no view param.
+    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />);
+    expect(screen.getByRole("button", { name: "List view" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
+  it("clears a stale search draft when the server search changes (Clear filters)", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
+    );
+    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+    expect(searchbox).toHaveValue("CS");
+
+    // Typing updates the draft before any navigation completes.
+    fireEvent.change(searchbox, { target: { value: "CS1" } });
+    expect(searchbox).toHaveValue("CS1");
+
+    // The clear-filters navigation returns the server to an empty search.
+    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
+    expect(screen.getByRole("searchbox", { name: "Search assignments" })).toHaveValue("");
   });
 
   it("preserves Card in paginated links and instant filter navigation", () => {
