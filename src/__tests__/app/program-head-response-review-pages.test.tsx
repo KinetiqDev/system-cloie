@@ -205,6 +205,11 @@ describe("program head identified response-review pages", () => {
     // The evaluation step keeps the same scope.
     const evaluationStep = within(breadcrumb).getByRole("link", { name: "Post-Term CILO Evaluation" });
     expect(evaluationStep.getAttribute("href")).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
+    // Alternate back links keep the scope too.
+    expect(screen.getByRole("link", { name: /Back to evaluation/ })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/responses/course/eval-1?termInstanceId=11111111-1111-4111-8111-111111111111"
+    );
   });
 
   it("preserves stakeholder scope in the program-wide evaluation breadcrumb", async () => {
@@ -269,7 +274,7 @@ describe("program head identified response-review pages", () => {
     render(page);
 
     expect(getProgramHeadResponseDetailMock).toHaveBeenCalledWith("program-1", "response-1");
-    expect(screen.getByText("Response detail: Maria Gomez (Exit Survey) | back: /program-head/programs/program-1/responses/program-wide/central-1")).toBeInTheDocument();
+    expect(screen.getByText("Response detail: Maria Gomez (Exit Survey) | back: /program-head/programs/program-1/responses/program-wide/central-1?tab=program-wide&stakeholder=ALUMNI")).toBeInTheDocument();
   });
 
   it("returns 404 when the response does not belong to the program-wide deployment", async () => {

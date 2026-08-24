@@ -56,12 +56,12 @@ export default async function CourseResponseDetailPage({
           { label: response.respondent.name },
         ]}
       />
-      <Button render={<Link href={evaluationPath} />} size="sm" variant="ghost">
+      <Button render={<Link href={evaluationHref} />} size="sm" variant="ghost">
         <ArrowLeft className="mr-2 size-4" /> Back to evaluation
       </Button>
       <ResponseDetail
         response={response}
-        evaluationHref={evaluationPath}
+        evaluationHref={evaluationHref}
         analyticsHref={buildAnalyticsUrl(programId, {
           tab: "outcomes",
           evidenceSource: "COURSE",

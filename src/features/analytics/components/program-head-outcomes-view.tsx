@@ -183,7 +183,10 @@ export function ProgramHeadOutcomesView({
               </TableHeader>
               <TableBody>
                 {data.programWideOutcomes.map((row) => (
-                  <TableRow key={`${row.stakeholder}-${row.ploId}`}>
+                  <TableRow
+                    key={`${row.stakeholder}-${row.ploId}`}
+                    className={cn(row.ploId === selectedPloId && "bg-primary-soft/40")}
+                  >
                     <TableCell className="align-top">
                       <div className="flex flex-col">
                         <span className="font-semibold">{row.code}</span>

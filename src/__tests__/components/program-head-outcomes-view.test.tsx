@@ -235,13 +235,31 @@ describe("ProgramHeadOutcomesView", () => {
   });
 
   it("expands and highlights the PLO selected through a deep link", () => {
-    renderView(outcomeDTO(), "go-a");
+    const dto = outcomeDTO();
+    dto.programWideOutcomes = [
+      {
+        stakeholder: "ALUMNI",
+        ploId: "go-a",
+        code: "PLO-1",
+        name: "Graduate outcomes",
+        meanRating: 4.5,
+        ratingCount: 10,
+        submittedResponseCount: 8,
+        evaluationCount: 2,
+        questionCount: 3,
+        evidenceSummary: { ratingCount: 10, explanation: "Mean of 10 valid ratings." },
+      },
+    ];
+    renderView(dto, "go-a");
 
     const go1Detail = screen.getByText("Details for GO-1").closest("details")!;
     expect(go1Detail).toHaveAttribute("open");
     expect(within(go1Detail).getByText("Mean Rating (full precision)")).toBeInTheDocument();
     // The selected row carries the highlight; other rows stay closed.
     expect(screen.getByText("Details for GO-2").closest("details")).not.toHaveAttribute("open");
+    // Program-wide row also highlights.
+    const pwRow = screen.getByText("PLO-1").closest("tr");
+    expect(pwRow?.className).toContain("bg-primary-soft");
   });
 
   it("leaves every row closed without a selected PLO", () => {
