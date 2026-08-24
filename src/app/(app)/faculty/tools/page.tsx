@@ -31,6 +31,7 @@ export default async function FacultyToolsRoute({
       templates={templatesResult.data.templates}
       evaluations={evaluations}
       initialTab={rawSearchParams.tab === "published" ? "published" : "templates"}
+      initialView={rawSearchParams.view === "list" ? "list" : "card"}
     />
   );
 }

@@ -5,14 +5,17 @@ import type { ProgramHeadTemplateItem } from "@/features/instruments/services/ma
 import type { ProgramHeadDeploymentItem } from "@/features/evaluations/services/list-program-head-deployments";
 import type { InstitutionalBaselineItem } from "@/features/instruments/services/list-institutional-baselines";
 
-const { routerPushMock, routerRefreshMock } = vi.hoisted(() => ({
+const { routerPushMock, routerRefreshMock, showToastMock } = vi.hoisted(() => ({
   routerPushMock: vi.fn(),
   routerRefreshMock: vi.fn(),
+  showToastMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPushMock, refresh: routerRefreshMock }),
 }));
+
+vi.mock("@/components/ui/toast", () => ({ showToast: showToastMock }));
 
 const { duplicateTemplateActionMock } = vi.hoisted(() => ({
   duplicateTemplateActionMock: vi.fn(),
@@ -124,7 +127,7 @@ describe("ProgramHeadToolsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /duplicate/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Duplicate failed.")).toBeInTheDocument();
+      expect(showToastMock).toHaveBeenCalledWith("Duplicate failed.", "error");
     });
 
     fireEvent.click(screen.getAllByRole("button", { name: "Actions" })[0]);

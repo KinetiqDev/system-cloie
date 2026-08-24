@@ -2686,7 +2686,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/evaluations/components/faculty-published-evaluations-table.tsx",
+    path: "src/features/evaluations/components/faculty-published-evaluations.tsx",
     disposition: "task",
     taskId: 22,
     category: "feature_component",
@@ -2707,6 +2707,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/evaluations/components/publish-course-bound-evaluation-form-v2.tsx",
     disposition: "task",
     taskId: 21,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/evaluations/components/published-deployments-collection.tsx",
+    disposition: "task",
+    taskId: 22,
     category: "feature_component",
   },
   {
@@ -2752,7 +2758,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/instruments/components/templates-grid.tsx",
+    path: "src/features/instruments/components/template-collection.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/instruments/components/tools-view-selector.tsx",
     disposition: "task",
     taskId: 20,
     category: "feature_component",

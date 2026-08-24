@@ -6,8 +6,13 @@ import {
   deleteDeanTemplateAction,
 } from "@/lib/actions/dean-template-actions";
 
-export default async function DeanInstrumentsPage() {
-  const templates = await listBaselineTemplates();
+export default async function DeanInstrumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [templates, rawSearchParams] = await Promise.all([listBaselineTemplates(), searchParams]);
+
   return (
     <ManagementToolsPage
       templates={JSON.parse(JSON.stringify(templates))}
@@ -17,6 +22,7 @@ export default async function DeanInstrumentsPage() {
         onDuplicate: duplicateDeanTemplateAction,
         onDelete: deleteDeanTemplateAction,
       }}
+      initialView={rawSearchParams.view === "list" ? "list" : "card"}
     />
   );
 }

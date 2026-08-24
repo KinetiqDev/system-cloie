@@ -1,28 +1,67 @@
 "use client";
 
-import { FacultyPublishedEvaluationsTable } from "@/features/evaluations/components/faculty-published-evaluations-table";
-import type { FacultyTemplateItem } from "../services/list-faculty-templates";
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Copy, Edit, FileText, Send } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { showToast } from "@/components/ui/toast";
+import { duplicateFacultyTemplateAction } from "@/lib/actions/faculty-template-actions";
 import type { FacultyPublishedEvaluationItem } from "@/features/evaluations/types";
-import { TemplatesGrid } from "./templates-grid";
-import { EvaluationToolsTabs, type EvaluationToolsTab } from "./evaluation-tools-tabs";
+import { FacultyPublishedEvaluations } from "@/features/evaluations/components/faculty-published-evaluations";
+import type { FacultyTemplateItem } from "../services/list-faculty-templates";
+import { EvaluationToolsTabs, updateToolsUrl, type EvaluationToolsTab } from "./evaluation-tools-tabs";
+import { TemplateCollection, type TemplateCollectionItem } from "./template-collection";
+import { ToolsViewSelector, type ToolsViewMode } from "./tools-view-selector";
 
 type FacultyToolsPageProps = {
   evaluations: FacultyPublishedEvaluationItem[];
   program: { code: string; id: string; name: string };
   templates: FacultyTemplateItem[];
   initialTab?: EvaluationToolsTab;
+  initialView?: ToolsViewMode;
 };
+
+function toTemplateItem(template: FacultyTemplateItem): TemplateCollectionItem {
+  const isOwned = Boolean(template.facultyOwnerId);
+  const isProgramOwned = Boolean(template.programCode);
+
+  return {
+    id: template.id,
+    name: template.name,
+    description: template.description,
+    templateType: template.templateType,
+    statusLabel: template.is_active ? "Active" : "Inactive",
+    statusActive: template.is_active,
+    origin: isOwned ? "faculty-copy" : isProgramOwned ? "program-owned" : "institutional",
+    originLabel: isOwned ? "My copy" : isProgramOwned ? "Program-owned" : "Institutional baseline",
+    secondaryMeta: template.programCode ?? undefined,
+    facultyAccessible: template.is_faculty_accessible,
+    versionCount: template.versionCount,
+    canPublish: isOwned,
+  };
+}
 
 export function FacultyToolsPage({
   evaluations,
   program,
   templates,
   initialTab = "templates",
+  initialView = "card",
 }: FacultyToolsPageProps) {
+  const [view, setView] = useState<ToolsViewMode>(initialView);
+
+  function selectView(nextView: ToolsViewMode) {
+    setView(nextView);
+    updateToolsUrl({ view: nextView });
+  }
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h1 className="font-heading text-text-primary text-2xl font-black">Evaluation Tools</h1>
+        <h1 className="text-heading-xl text-text-primary">Evaluation Tools</h1>
         <p className="text-muted-foreground text-sm">
           Manage templates and published evaluations for{" "}
           <span className="text-link font-semibold">
@@ -34,9 +73,82 @@ export function FacultyToolsPage({
 
       <EvaluationToolsTabs
         initialTab={initialTab}
-        templates={<TemplatesGrid program={program} templates={templates} />}
-        published={<FacultyPublishedEvaluationsTable evaluations={evaluations} />}
+        viewControl={
+          <ToolsViewSelector
+            label="Evaluation tools"
+            value={view}
+            onValueChange={selectView}
+          />
+        }
+        templates={
+          <TemplateCollection
+            view={view}
+            sections={[
+              {
+                items: templates.map(toTemplateItem),
+                renderFooterActions: (item) => <FacultyTemplateActions item={item} />,
+              },
+            ]}
+            empty={
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <FileText className="text-muted-foreground mx-auto mb-4 size-10" />
+                  <p className="text-muted-foreground text-sm">
+                    No templates with faculty access are available yet. Contact your Program Head
+                    to enable faculty access on evaluation templates.
+                  </p>
+                </CardContent>
+              </Card>
+            }
+          />
+        }
+        published={<FacultyPublishedEvaluations evaluations={evaluations} view={view} />}
       />
     </div>
+  );
+}
+
+function FacultyTemplateActions({ item }: { item: TemplateCollectionItem }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleDuplicate() {
+    startTransition(async () => {
+      const result = await duplicateFacultyTemplateAction(item.id);
+
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
+
+      showToast("Template duplicated successfully.");
+      router.refresh();
+    });
+  }
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        render={<Link href={`/faculty/tools/${item.id}/edit`} />}
+      >
+        <Edit className="size-3.5" data-icon="inline-start" />
+        Edit
+      </Button>
+      <Button variant="outline" size="sm" disabled={isPending} onClick={handleDuplicate}>
+        <Copy className="size-3.5" data-icon="inline-start" />
+        Duplicate
+      </Button>
+      {item.canPublish && (
+        <Button
+          size="sm"
+          render={<Link href={`/faculty/cilo-evaluations/new?templateId=${item.id}`} />}
+        >
+          <Send className="size-3.5" data-icon="inline-start" />
+          Publish
+        </Button>
+      )}
+    </>
   );
 }

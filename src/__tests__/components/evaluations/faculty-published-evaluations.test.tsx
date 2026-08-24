@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";import { describe, expect, it, vi } from "vitest";
-import { FacultyPublishedEvaluationsTable } from "@/features/evaluations/components/faculty-published-evaluations-table";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { FacultyPublishedEvaluations } from "@/features/evaluations/components/faculty-published-evaluations";
 import type { FacultyPublishedEvaluationItem } from "@/features/evaluations/types";
 
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
@@ -47,10 +48,11 @@ function makeItem(
   };
 }
 
-describe("FacultyPublishedEvaluationsTable", () => {
+describe("FacultyPublishedEvaluations", () => {
   it("shows a semantic status badge per lifecycle state", () => {
     render(
-      <FacultyPublishedEvaluationsTable
+      <FacultyPublishedEvaluations
+        view="list"
         evaluations={[
           makeItem({ evaluationId: "e1", status: "ACTIVE" }),
           makeItem({ evaluationId: "e2", status: "SCHEDULED" }),
@@ -66,13 +68,14 @@ describe("FacultyPublishedEvaluationsTable", () => {
   });
 
   it("renders an empty state when nothing is published", () => {
-    render(<FacultyPublishedEvaluationsTable evaluations={[]} />);
+    render(<FacultyPublishedEvaluations view="list" evaluations={[]} />);
     expect(screen.getByText(/no published evaluations yet/i)).toBeInTheDocument();
   });
 
   it("filters rows by status", () => {
     render(
-      <FacultyPublishedEvaluationsTable
+      <FacultyPublishedEvaluations
+        view="list"
         evaluations={[
           makeItem({ evaluationId: "e1", deploymentName: "Active Eval", status: "ACTIVE" }),
           makeItem({ evaluationId: "e2", deploymentName: "Closed Eval", status: "CLOSED" }),
@@ -89,7 +92,8 @@ describe("FacultyPublishedEvaluationsTable", () => {
     closeFacultyEvaluationActionMock.mockResolvedValue({ success: true });
 
     render(
-      <FacultyPublishedEvaluationsTable
+      <FacultyPublishedEvaluations
+        view="list"
         evaluations={[makeItem({ evaluationId: "e1", deploymentName: "Active Eval" })]}
       />
     );
@@ -104,13 +108,9 @@ describe("FacultyPublishedEvaluationsTable", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: /close evaluation/i }));
 
+    await waitFor(() => expect(closeFacultyEvaluationActionMock).toHaveBeenCalledWith("e1"));
     await waitFor(() =>
-      expect(closeFacultyEvaluationActionMock).toHaveBeenCalledWith("e1")
-    );
-    await waitFor(() =>
-      expect(
-        within(screen.getByRole("table")).getByText("Closed")
-      ).toHaveClass("bg-secondary")
+      expect(within(screen.getByRole("table")).getByText("Closed")).toHaveClass("bg-secondary")
     );
   });
 });

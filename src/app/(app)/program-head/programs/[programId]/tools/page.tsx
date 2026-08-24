@@ -29,6 +29,7 @@ export default async function SelectedProgramToolsPage({
       baselines={baselines}
       program={templatesResult.data.program}
       initialTab={rawSearchParams.tab === "published" ? "published" : "templates"}
+      initialView={rawSearchParams.view === "list" ? "list" : "card"}
     />
   );
 }
