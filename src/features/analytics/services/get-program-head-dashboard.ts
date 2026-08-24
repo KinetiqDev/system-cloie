@@ -41,9 +41,8 @@ import {
   QUALITATIVE_TOKEN_CAP,
   SOURCE_CARD_LABELS,
 } from "../program-head-dashboard-labels";
-export { DASHBOARD_SOURCE_ORDER, PLO_SOURCE_LABELS, QUALITATIVE_TOKEN_CAP, SOURCE_CARD_LABELS };
+export { QUALITATIVE_TOKEN_CAP };
 import type { DashboardSourceKey } from "../program-head-dashboard-labels";
-export type { DashboardSourceKey };
 
 export type DashboardSourceMean = {
   sourceKey: DashboardSourceKey;
@@ -92,7 +91,7 @@ export type QualitativePulse = {
 };
 
 /** Cross-surface destinations every dashboard card links into (§13, §12). */
-export type DashboardLinks = {
+type DashboardLinks = {
   responses: string;
   responsesActive: string;
   analyticsOutcomes: string;
@@ -126,7 +125,7 @@ type DashboardScope = {
 };
 
 /** Period filters shared with the Analytics URL state (§12 upward navigation). */
-export type DashboardPeriodFilters = Pick<
+type DashboardPeriodFilters = Pick<
   AnalyticsFilterState,
   "schoolYearId" | "semester" | "termInstanceId"
 >;

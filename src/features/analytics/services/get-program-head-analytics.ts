@@ -58,20 +58,20 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
-export type TermInstanceSummary = {
+type TermInstanceSummary = {
   id: string;
   semester: string;
   term: string | null;
   school_year: { id: string; code: string };
 };
 
-export type ResolvedTermInstanceFilter = {
+type ResolvedTermInstanceFilter = {
   where: { term_instance_id?: string | { in: string[] } };
   schoolYearLabel: string | null;
   instances: TermInstanceSummary[];
 };
 
-export function buildTermInstanceWhere(
+function buildTermInstanceWhere(
   programId: string,
   filters: Partial<Pick<AnalyticsFilterState, "termInstanceId" | "schoolYearId" | "semester">> = {}
 ): Record<string, unknown> {
