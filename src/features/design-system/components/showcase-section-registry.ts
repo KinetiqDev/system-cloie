@@ -36,7 +36,7 @@ export const SHOWCASE_SECTIONS: readonly ShowcaseSectionEntry[] = [
     id: "actions",
     title: "Actions and states",
     description:
-      "The required state matrix — default, hover, focus, pressed, selected, disabled, loading, error, and success — on real action and control primitives.",
+      "Canonical default, invalid, disabled, loading, selected, and checked states. Use keyboard and pointer interaction to inspect hover, focus, and pressed states on the real primitives.",
     component: ComponentStateMatrix,
   },
   {

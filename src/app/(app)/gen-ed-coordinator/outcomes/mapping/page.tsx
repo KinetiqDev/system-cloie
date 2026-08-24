@@ -7,7 +7,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { buildGenEdOutcomesPath } from "@/lib/constants/gen-ed-routes";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -53,9 +59,7 @@ export default async function GenEdOutcomesMappingPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to Institutional Learning Outcomes
         </Button>
-        <h1 className="font-heading text-text-primary mb-2 text-4xl font-bold tracking-tight lg:text-5xl">
-          CILO Mapping Review
-        </h1>
+        <h1 className="text-heading-xl text-text-primary mb-2 text-pretty">CILO Mapping Review</h1>
         <p className="text-body-md text-text-muted">
           College-wide read-only review of General Education CILO-to-ILO mappings. Faculty classify
           every CILO-to-ILO pair through Course alignment. This review is read-only.
@@ -128,7 +132,9 @@ export default async function GenEdOutcomesMappingPage() {
                               title={target.description}
                             >
                               {target.code}
-                              {target.manifestation ? ` · ${manifestationLabel(target.manifestation)}` : ""}
+                              {target.manifestation
+                                ? ` · ${manifestationLabel(target.manifestation)}`
+                                : ""}
                               {!target.is_active && " (archived)"}
                             </Badge>
                           ))}

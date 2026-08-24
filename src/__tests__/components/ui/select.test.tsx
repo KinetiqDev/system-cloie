@@ -98,7 +98,7 @@ describe("Select", () => {
       renderBasicSelect();
       const trigger = screen.getByLabelText("Role");
       expect(trigger).toHaveClass("focus-visible:border-ring");
-      expect(trigger).toHaveClass("focus-visible:ring-ring/50");
+      expect(trigger).toHaveClass("focus-visible:ring-ring");
     });
 
     it("disables pointer and changes cursor when disabled", () => {
@@ -201,9 +201,7 @@ describe("SelectItem selected state", () => {
     );
     // The selected value is exposed via the hidden Base UI input so form
     // submission and screen readers have a single source of truth.
-    const hiddenInputs = document.querySelectorAll(
-      'input[aria-hidden="true"][value="editor"]'
-    );
+    const hiddenInputs = document.querySelectorAll('input[aria-hidden="true"][value="editor"]');
     expect(hiddenInputs.length).toBeGreaterThan(0);
   });
 

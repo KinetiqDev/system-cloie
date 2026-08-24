@@ -6,8 +6,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { listCILOMappingsForProgram, type CourseCILOMappings } from "@/features/outcomes/services/manage-program-head-outcomes";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  listCILOMappingsForProgram,
+  type CourseCILOMappings,
+} from "@/features/outcomes/services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomesPath } from "@/lib/constants/program-head-routes";
 
 export const metadata = {
@@ -48,13 +57,11 @@ export default async function SelectedProgramOutcomeMappingPage({
           <ArrowLeft className="h-4 w-4" />
           Back to Program Learning Outcomes
         </Button>
-        <h1 className="font-heading text-text-primary mb-2 text-3xl font-bold tracking-tight lg:text-4xl">
-          CILO Mapping Review
-        </h1>
+        <h1 className="text-heading-xl text-text-primary mb-2 text-pretty">CILO Mapping Review</h1>
         <p className="text-body-md text-text-muted">
-          Review how Course Intended Learning Outcomes manifest across this program&apos;s
-          Program Learning Outcomes. Faculty classify every CILO-to-PLO pair through Course
-          alignment. This review is read-only.
+          Review how Course Intended Learning Outcomes manifest across this program&apos;s Program
+          Learning Outcomes. Faculty classify every CILO-to-PLO pair through Course alignment. This
+          review is read-only.
         </p>
       </div>
 
@@ -66,8 +73,8 @@ export default async function SelectedProgramOutcomeMappingPage({
             </EmptyMedia>
             <EmptyTitle>No CILO mappings found</EmptyTitle>
             <EmptyDescription>
-              Faculty classify CILO-to-PLO manifestations through Course alignment. Classified
-              CILOs appear here for readiness review.
+              Faculty classify CILO-to-PLO manifestations through Course alignment. Classified CILOs
+              appear here for readiness review.
             </EmptyDescription>
           </EmptyHeader>
           <Button
@@ -94,180 +101,178 @@ export default async function SelectedProgramOutcomeMappingPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                    {course.plos.length === 0 && (
-                      <Alert>
-                        <AlertDescription>
-                          No Program Learning Outcomes have been defined for this program. A
-                          Program Head must create PLOs before Course alignment can be completed.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    {course.plos.length > 0 && (
-                      <div className="hidden md:block">
-                        <div className="border-border overflow-x-auto rounded-lg border">
-                          <table className="w-full min-w-[38rem] border-collapse">
-                            <thead>
-                              <tr className="border-border bg-muted/50 border-b">
+                  {course.plos.length === 0 && (
+                    <Alert>
+                      <AlertDescription>
+                        No Program Learning Outcomes have been defined for this program. A Program
+                        Head must create PLOs before Course alignment can be completed.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  {course.plos.length > 0 && (
+                    <div className="hidden md:block">
+                      <div className="border-border overflow-x-auto rounded-lg border">
+                        <table className="w-full min-w-[38rem] border-collapse">
+                          <thead>
+                            <tr className="border-border bg-muted/50 border-b">
+                              <th
+                                scope="col"
+                                className="text-text-muted text-label-sm py-3 pr-4 pl-4 text-left font-semibold"
+                              >
+                                CILO
+                              </th>
+                              {course.plos.map((plo) => (
                                 <th
+                                  key={plo.id}
                                   scope="col"
-                                  className="text-text-muted text-label-sm py-3 pr-4 pl-4 text-left font-semibold"
+                                  className="text-text-primary py-3 pr-4 pl-4 text-left"
                                 >
-                                  CILO
+                                  <span className="text-label-sm block font-semibold">
+                                    {plo.code}
+                                  </span>
+                                  <span
+                                    className="text-text-muted text-caption block max-w-44 truncate font-normal"
+                                    title={plo.description}
+                                  >
+                                    {plo.description}
+                                  </span>
                                 </th>
-                                {course.plos.map((plo) => (
-                                  <th
-                                    key={plo.id}
-                                    scope="col"
-                                    className="text-text-primary py-3 pr-4 pl-4 text-left"
-                                  >
-                                    <span className="text-label-sm block font-semibold">
-                                      {plo.code}
-                                    </span>
-                                    <span
-                                      className="text-text-muted block max-w-44 truncate text-caption font-normal"
-                                      title={plo.description}
-                                    >
-                                      {plo.description}
-                                    </span>
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {course.cilos.map((cilo, index) => (
-                                <tr
-                                  key={cilo.id}
-                                  className="border-border align-top border-b last:border-b-0"
-                                >
-                                  <th
-                                    scope="row"
-                                    className="text-text-muted py-3 pr-4 pl-4 text-left"
-                                  >
-                                    <span className="text-label-sm block font-semibold">
-                                      CILO {index + 1}
-                                    </span>
-                                    <span
-                                      className="text-text-primary mt-1 block max-w-56 text-body-sm"
-                                      title={cilo.description}
-                                    >
-                                      {cilo.description}
-                                    </span>
-                                  </th>
-                                  {course.plos.map((plo) => (
-                                    <td key={plo.id} className="text-text-primary py-3 pr-4 pl-4">
-                                      <span className="text-label-sm">
-                                        {manifestationLabel(manifestationFor(cilo, plo.id))}
-                                      </span>
-                                    </td>
-                                  ))}
-                                </tr>
                               ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                    <div
-                      className={
-                        course.plos.length > 0
-                          ? "flex flex-col gap-4 md:hidden"
-                          : "flex flex-col gap-4"
-                      }
-                    >
-                      {course.cilos.map((cilo, index) => (
-                        <div
-                          key={cilo.id}
-                          className="border-border rounded-lg border p-4"
-                          aria-label={`CILO ${index + 1}`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <span className="text-text-muted text-caption font-semibold tracking-wider uppercase">
-                              CILO {index + 1}
-                            </span>
-                            <Badge
-                              variant={cilo.readiness === "ready" ? "success" : "warning"}
-                              className="text-label-sm gap-1"
-                            >
-                              {cilo.readiness === "ready" ? (
-                                <CheckCircle2 aria-hidden className="size-3.5" />
-                              ) : (
-                                <AlertTriangle aria-hidden className="size-3.5" />
-                              )}
-                              {cilo.readiness === "ready" ? "Aligned" : "Needs mapping"}
-                            </Badge>
-                          </div>
-                          <p className="text-body-md text-text-primary mt-1">{cilo.description}</p>
-                          {course.plos.length > 0 && (
-                            <ul className="mt-3 flex flex-col gap-2">
-                              {course.plos.map((plo) => {
-                                const manifestation = manifestationFor(cilo, plo.id);
-                                return (
-                                  <li
-                                    key={plo.id}
-                                    className="bg-muted/50 flex items-start justify-between gap-3 rounded-lg px-3 py-2.5"
-                                  >
-                                    <span className="flex min-w-0 flex-col gap-0.5">
-                                      <span className="text-label-sm font-semibold">
-                                        {plo.code}
-                                      </span>
-                                      <span className="text-text-muted text-body-sm">
-                                        {plo.description}
-                                      </span>
-                                    </span>
-                                    <span className="text-label-sm shrink-0">
-                                      {manifestationLabel(manifestation)}
-                                    </span>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    {course.archivedPlos.length > 0 && (
-                      <div
-                        className="border-border border-dashed bg-muted/30 rounded-lg border p-4"
-                        aria-label="Archived Program Learning Outcome manifestations, read-only"
-                        data-testid="archived-mapping-rows"
-                      >
-                        <p className="text-label-sm font-semibold">
-                          Archived Program Learning Outcomes
-                        </p>
-                        <p className="text-text-muted text-body-sm">
-                          Historical manifestations on archived PLOs are read-only and do not
-                          count toward completeness.
-                        </p>
-                        <ul className="mt-3 flex flex-col gap-2">
-                          {course.cilos.flatMap((cilo, index) =>
-                            cilo.archivedManifestations.map((mapping) => {
-                              const archivedPlo = course.archivedPlos.find(
-                                (plo) => plo.id === mapping.ploId
-                              );
-                              return (
-                                <li
-                                  key={`${cilo.id}:${mapping.ploId}`}
-                                  className="flex flex-wrap items-center gap-2"
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {course.cilos.map((cilo, index) => (
+                              <tr
+                                key={cilo.id}
+                                className="border-border border-b align-top last:border-b-0"
+                              >
+                                <th
+                                  scope="row"
+                                  className="text-text-muted py-3 pr-4 pl-4 text-left"
                                 >
-                                  <span className="text-label-sm font-semibold">
+                                  <span className="text-label-sm block font-semibold">
                                     CILO {index + 1}
                                   </span>
-                                  <span className="text-body-sm">
-                                    {archivedPlo?.code ?? mapping.ploId}
+                                  <span
+                                    className="text-text-primary text-body-sm mt-1 block max-w-56"
+                                    title={cilo.description}
+                                  >
+                                    {cilo.description}
                                   </span>
-                                  <Badge variant="outline" className="text-text-muted">
-                                    Archived
-                                  </Badge>
-                                  <span className="text-body-sm">
-                                    {manifestationLabel(mapping.manifestation)}
+                                </th>
+                                {course.plos.map((plo) => (
+                                  <td key={plo.id} className="text-text-primary py-3 pr-4 pl-4">
+                                    <span className="text-label-sm">
+                                      {manifestationLabel(manifestationFor(cilo, plo.id))}
+                                    </span>
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  <div
+                    className={
+                      course.plos.length > 0
+                        ? "flex flex-col gap-4 md:hidden"
+                        : "flex flex-col gap-4"
+                    }
+                  >
+                    {course.cilos.map((cilo, index) => (
+                      <div
+                        key={cilo.id}
+                        className="border-border rounded-lg border p-4"
+                        aria-label={`CILO ${index + 1}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <span className="text-text-muted text-caption font-semibold tracking-wider uppercase">
+                            CILO {index + 1}
+                          </span>
+                          <Badge
+                            variant={cilo.readiness === "ready" ? "success" : "warning"}
+                            className="text-label-sm gap-1"
+                          >
+                            {cilo.readiness === "ready" ? (
+                              <CheckCircle2 aria-hidden className="size-3.5" />
+                            ) : (
+                              <AlertTriangle aria-hidden className="size-3.5" />
+                            )}
+                            {cilo.readiness === "ready" ? "Aligned" : "Needs mapping"}
+                          </Badge>
+                        </div>
+                        <p className="text-body-md text-text-primary mt-1">{cilo.description}</p>
+                        {course.plos.length > 0 && (
+                          <ul className="mt-3 flex flex-col gap-2">
+                            {course.plos.map((plo) => {
+                              const manifestation = manifestationFor(cilo, plo.id);
+                              return (
+                                <li
+                                  key={plo.id}
+                                  className="bg-muted/50 flex items-start justify-between gap-3 rounded-lg px-3 py-2.5"
+                                >
+                                  <span className="flex min-w-0 flex-col gap-0.5">
+                                    <span className="text-label-sm font-semibold">{plo.code}</span>
+                                    <span className="text-text-muted text-body-sm">
+                                      {plo.description}
+                                    </span>
+                                  </span>
+                                  <span className="text-label-sm shrink-0">
+                                    {manifestationLabel(manifestation)}
                                   </span>
                                 </li>
                               );
-                            })
-                          )}
-                        </ul>
+                            })}
+                          </ul>
+                        )}
                       </div>
-                    )}
+                    ))}
+                  </div>
+                  {course.archivedPlos.length > 0 && (
+                    <div
+                      className="border-border bg-muted/30 rounded-lg border border-dashed p-4"
+                      aria-label="Archived Program Learning Outcome manifestations, read-only"
+                      data-testid="archived-mapping-rows"
+                    >
+                      <p className="text-label-sm font-semibold">
+                        Archived Program Learning Outcomes
+                      </p>
+                      <p className="text-text-muted text-body-sm">
+                        Historical manifestations on archived PLOs are read-only and do not count
+                        toward completeness.
+                      </p>
+                      <ul className="mt-3 flex flex-col gap-2">
+                        {course.cilos.flatMap((cilo, index) =>
+                          cilo.archivedManifestations.map((mapping) => {
+                            const archivedPlo = course.archivedPlos.find(
+                              (plo) => plo.id === mapping.ploId
+                            );
+                            return (
+                              <li
+                                key={`${cilo.id}:${mapping.ploId}`}
+                                className="flex flex-wrap items-center gap-2"
+                              >
+                                <span className="text-label-sm font-semibold">
+                                  CILO {index + 1}
+                                </span>
+                                <span className="text-body-sm">
+                                  {archivedPlo?.code ?? mapping.ploId}
+                                </span>
+                                <Badge variant="outline" className="text-text-muted">
+                                  Archived
+                                </Badge>
+                                <span className="text-body-sm">
+                                  {manifestationLabel(mapping.manifestation)}
+                                </span>
+                              </li>
+                            );
+                          })
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

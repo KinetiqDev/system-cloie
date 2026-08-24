@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatMean } from "./format";
 import {
@@ -8,6 +8,11 @@ import {
   buildAnalyticsUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
 import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
+
+const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 
 type ResponseDetailProps = {
   response: ProgramHeadSubmittedResponseDetail;
@@ -19,45 +24,58 @@ type ResponseDetailProps = {
   programId: string;
 };
 
-export function ResponseDetail({ response, evaluationHref, analyticsHref, programId }: ResponseDetailProps) {
+export function ResponseDetail({
+  response,
+  evaluationHref,
+  analyticsHref,
+  programId,
+}: ResponseDetailProps) {
   const { respondent, evaluation } = response;
 
   const outcomeScope =
     evaluation.type === "COURSE_BOUND"
-      ? ({
+      ? {
           evidenceSource: "COURSE" as const,
           termInstanceId: evaluation.context.termInstanceId,
-        })
-      : ({
+        }
+      : {
           evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[evaluation.context.stakeholder],
           stakeholder: evaluation.context.stakeholder,
           termInstanceId: evaluation.context.termInstanceId,
-        });
+        };
 
   const outcomeHref = (ploId: string): string =>
     buildAnalyticsUrl(programId, { tab: "outcomes", ploId, ...outcomeScope });
 
   return (
-    <div className="space-y-6">
-      {/* Respondent identity (§27.1–§27.3) */}
-      <section className="space-y-1">
-        <h1 className="text-2xl font-bold">{respondent.name}</h1>
-        <p className="text-text-muted text-sm">{respondentContextLabel(respondent) ?? ""}</p>
-      </section>
+    <div className="flex min-w-0 flex-col gap-6">
+      <header className="border-border flex flex-col gap-2 border-b pb-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">Submitted response</Badge>
+          <Badge variant="secondary">Identified review</Badge>
+        </div>
+        <h1 className="text-heading-lg text-balance">{respondent.name}</h1>
+        <p className="text-body-md text-text-secondary text-pretty">
+          {respondentContextLabel(respondent) ?? "No additional respondent context"}
+        </p>
+      </header>
 
       {/* Evaluation context */}
       <Card>
         <CardHeader>
           <CardTitle>{evaluation.title}</CardTitle>
+          <CardDescription>Evaluation context and submitted response summary.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-1 text-sm">
+        <CardContent className="text-body-sm flex flex-col gap-1">
           <p>
             <span className="text-text-muted">Submitted: </span>
-            {response.submittedAt.toLocaleString()}
+            {dateTimeFormatter.format(response.submittedAt)}
           </p>
           <p>
             <span className="text-text-muted">Response mean: </span>
-            <span className="font-semibold tabular-nums">{formatMean(response.quantitativeMean)}</span>
+            <span className="font-semibold tabular-nums">
+              {formatMean(response.quantitativeMean)}
+            </span>
           </p>
           {evaluation.type === "COURSE_BOUND" ? (
             <CourseBoundContext context={evaluation.context} />
@@ -67,34 +85,37 @@ export function ResponseDetail({ response, evaluationHref, analyticsHref, progra
         </CardContent>
       </Card>
 
-      {/* Upward trace (§27.6) */}
-      <div className="flex flex-wrap gap-2">
+      <nav aria-label="Response destinations" className="flex flex-wrap gap-2">
         <Link
           href={evaluationHref}
-          className="text-link text-sm underline-offset-4 hover:underline"
+          className="text-label-md text-link hover:bg-muted focus-visible:ring-ring inline-flex min-h-11 items-center rounded-lg px-3 font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none"
         >
           View evaluation results
         </Link>
         <Link
           href={analyticsHref}
-          className="text-link text-sm underline-offset-4 hover:underline"
+          className="text-label-md text-link hover:bg-muted focus-visible:ring-ring inline-flex min-h-11 items-center rounded-lg px-3 font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none"
         >
           Open Analytics
         </Link>
-      </div>
+      </nav>
 
       {/* Per-section answers (§27.4–§27.5) */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Submitted Answers</h2>
+      <section className="flex flex-col gap-3">
+        <h2 className="text-heading-md">Submitted answers</h2>
         {response.sections.map((section) => (
           <Card key={section.key}>
             <CardHeader>
               <CardTitle>{section.title}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="flex flex-col gap-4">
               {section.items.map((item) =>
                 item.kind === "quantitative" ? (
-                  <QuantitativeAnswerCard key={item.itemKey} item={item} outcomeHref={outcomeHref} />
+                  <QuantitativeAnswerCard
+                    key={item.itemKey}
+                    item={item}
+                    outcomeHref={outcomeHref}
+                  />
                 ) : (
                   <QualitativeAnswerCard key={item.promptKey} item={item} />
                 )
@@ -116,8 +137,8 @@ function QuantitativeAnswerCard({
 }) {
   const { binding } = item;
   return (
-    <div className="space-y-1">
-      <p className="text-sm font-semibold">{item.prompt}</p>
+    <div className="border-border/70 flex flex-col gap-2 border-b pb-4 last:border-b-0 last:pb-0">
+      <p className="text-body-md font-semibold text-pretty">{item.prompt}</p>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-lg font-bold tabular-nums">{item.rating}</span>
         {item.scaleLabel && <span className="text-text-muted text-sm">({item.scaleLabel})</span>}
@@ -172,16 +193,29 @@ function QuantitativeAnswerCard({
   );
 }
 
-function QualitativeAnswerCard({ item }: { item: { promptKey: string; prompt: string; text: string } }) {
+function QualitativeAnswerCard({
+  item,
+}: {
+  item: { promptKey: string; prompt: string; text: string };
+}) {
   return (
-    <div className="border-border rounded-md border p-3">
-      <p className="text-sm font-semibold">{item.prompt}</p>
-      <p className="text-text-muted mt-1 text-sm">{item.text}</p>
+    <div className="border-border bg-surface-muted rounded-lg border p-4">
+      <p className="text-body-md font-semibold text-pretty">{item.prompt}</p>
+      <p className="text-body-md text-text-secondary mt-2 break-words">{item.text}</p>
     </div>
   );
 }
 
-function CourseBoundContext({ context }: { context: { courseCode: string; courseTitle: string; facultyName: string | null; periodLabel: string } }) {
+function CourseBoundContext({
+  context,
+}: {
+  context: {
+    courseCode: string;
+    courseTitle: string;
+    facultyName: string | null;
+    periodLabel: string;
+  };
+}) {
   return (
     <>
       <p>
@@ -202,7 +236,11 @@ function CourseBoundContext({ context }: { context: { courseCode: string; course
   );
 }
 
-function ProgramWideContext({ context }: { context: { stakeholder: string; targetProgramLabel: string | null; periodLabel: string } }) {
+function ProgramWideContext({
+  context,
+}: {
+  context: { stakeholder: string; targetProgramLabel: string | null; periodLabel: string };
+}) {
   return (
     <>
       <p>
@@ -223,7 +261,9 @@ function ProgramWideContext({ context }: { context: { stakeholder: string; targe
   );
 }
 
-function respondentContextLabel(respondent: ProgramHeadSubmittedResponseDetail["respondent"]): string | null {
+function respondentContextLabel(
+  respondent: ProgramHeadSubmittedResponseDetail["respondent"]
+): string | null {
   if (respondent.studentContext) {
     const { programLabel, majorLabel, yearLevel, section } = respondent.studentContext;
     return [programLabel, majorLabel, yearLevel, section].filter(Boolean).join(" · ");

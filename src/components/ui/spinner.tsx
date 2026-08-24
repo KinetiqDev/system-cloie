@@ -36,21 +36,13 @@ function Spinner({
       stroke="currentColor"
       strokeWidth={2.5}
       strokeLinecap="round"
-      className={cn("animate-spin", sizeClasses[size], className)}
+      className={cn("animate-spin motion-reduce:animate-none", sizeClasses[size], className)}
       {...props}
     >
       {/* Full circle track */}
-      <circle
-        cx={12}
-        cy={12}
-        r={10}
-        className="opacity-20"
-      />
+      <circle cx={12} cy={12} r={10} className="opacity-20" />
       {/* Active arc — quarter circle */}
-      <path
-        d="M12 2a10 10 0 0 1 10 10"
-        className="opacity-80"
-      />
+      <path d="M12 2a10 10 0 0 1 10 10" className="opacity-80" />
     </svg>
   );
 }

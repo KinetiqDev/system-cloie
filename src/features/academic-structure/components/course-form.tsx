@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { showToast } from "@/components/ui/toast";
 import { YEAR_LEVEL_OPTIONS } from "@/lib/constants/year-levels";
 import { SEMESTER_OPTIONS, TERM_OPTIONS } from "@/lib/constants/academic";
 
@@ -125,6 +126,7 @@ export function CourseForm({
         setTerm("");
         setMajorId("");
       }
+      showToast(defaultValues?.id ? "Course updated." : "Course created.");
 
       onSuccess?.();
     });

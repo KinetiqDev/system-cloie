@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { showToast } from "@/components/ui/toast";
 
 type ProgramFormProps = {
   action: (formData: FormData) => Promise<{ success: boolean; error?: string }>;
@@ -38,6 +39,7 @@ export function ProgramForm({
         setError(result.error);
       } else if (result.success) {
         formRef.current?.reset();
+        showToast(defaultValues?.id ? "Program updated." : "Program created.");
         onSuccess?.();
       }
     });

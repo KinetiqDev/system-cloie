@@ -17,7 +17,7 @@ import { ProgressReference } from "./progress-reference";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-1 items-center gap-3 border-b border-border px-3 py-3 last:border-b-0 md:grid-cols-[9rem_1fr]">
+    <div className="border-border grid grid-cols-1 items-center gap-3 border-b px-3 py-3 last:border-b-0 md:grid-cols-[9rem_1fr]">
       <span className="text-body-sm text-muted-foreground">{label}</span>
       <div className="flex flex-wrap items-center gap-2.5">{children}</div>
     </div>
@@ -29,7 +29,7 @@ export function ComponentStateMatrix() {
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Buttons</h3>
-        <div className="divide-y divide-border rounded-lg border border-border bg-card">
+        <div className="divide-border border-border bg-card divide-y rounded-lg border">
           <Row label="Variants">
             <Button>Default</Button>
             <Button variant="secondary">Secondary</Button>
@@ -37,6 +37,7 @@ export function ComponentStateMatrix() {
             <Button variant="ghost">Ghost</Button>
             <Button variant="destructive">Destructive</Button>
             <Button variant="link">Link</Button>
+            <Button variant="brand-accent">Brand accent</Button>
           </Row>
           <Row label="Sizes">
             <Button size="sm">Small</Button>
@@ -70,7 +71,7 @@ export function ComponentStateMatrix() {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Inputs</h3>
-        <div className="divide-y divide-border rounded-lg border border-border bg-card">
+        <div className="divide-border border-border bg-card divide-y rounded-lg border">
           <Row label="Default">
             <Input placeholder="Placeholder text" className="w-56" />
           </Row>
@@ -78,17 +79,35 @@ export function ComponentStateMatrix() {
             <Input aria-label="Sample value" defaultValue="Sample value" className="w-56" />
           </Row>
           <Row label="Read only">
-            <Input aria-label="Read only value" readOnly defaultValue="Read only value" className="w-56" />
+            <Input
+              aria-label="Read only value"
+              readOnly
+              defaultValue="Read only value"
+              className="w-56"
+            />
           </Row>
           <Row label="Disabled">
-            <Input aria-label="Disabled value" disabled defaultValue="Disabled value" className="w-56" />
+            <Input
+              aria-label="Disabled value"
+              disabled
+              defaultValue="Disabled value"
+              className="w-56"
+            />
+          </Row>
+          <Row label="Invalid">
+            <Input
+              aria-label="Invalid sample"
+              aria-invalid="true"
+              defaultValue="Invalid value"
+              className="w-56"
+            />
           </Row>
         </div>
       </section>
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Selection controls</h3>
-        <div className="divide-y divide-border rounded-lg border border-border bg-card">
+        <div className="divide-border border-border bg-card divide-y rounded-lg border">
           <Row label="Checkbox">
             <Label className="gap-2">
               <Checkbox defaultChecked />
@@ -116,6 +135,10 @@ export function ComponentStateMatrix() {
               <Switch size="sm" />
               Compact
             </Label>
+            <Label className="gap-2">
+              <Switch disabled />
+              Disabled
+            </Label>
           </Row>
           <Row label="Radio group">
             <RadioGroup defaultValue="one" className="flex flex-row gap-4">
@@ -133,12 +156,22 @@ export function ComponentStateMatrix() {
               </Label>
             </RadioGroup>
           </Row>
+          <Row label="Invalid">
+            <Label className="gap-2">
+              <Checkbox aria-invalid="true" />
+              Invalid checkbox
+            </Label>
+            <Label className="gap-2">
+              <Switch aria-invalid="true" />
+              Invalid switch
+            </Label>
+          </Row>
         </div>
       </section>
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Progress indicators</h3>
-        <div className="divide-y divide-border rounded-lg border border-border bg-card">
+        <div className="divide-border border-border bg-card divide-y rounded-lg border">
           <Row label="Determinate">
             <ProgressReference />
           </Row>

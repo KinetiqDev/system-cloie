@@ -45,6 +45,18 @@ function findUnsafePairingLines(source: string): number[] {
   });
   return violated;
 }
+function luminance(hex: string): number {
+  const channels = hex
+    .match(/[a-f\d]{2}/gi)!
+    .map((channel) => Number.parseInt(channel, 16) / 255)
+    .map((channel) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function contrast(first: string, second: string): number {
+  const [lighter, darker] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+  return (lighter + 0.05) / (darker + 0.05);
+}
 
 describe("Design System — Semantic Foundations (Issue #252)", () => {
   const tokensCss = readProjectFile("src/styles/tokens.css");
@@ -78,6 +90,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       // Border roles
       expect(tokensCss).toContain("--border-default: #e2e8f0");
       expect(tokensCss).toContain("--border-strong: #cbd5e1");
+      expect(tokensCss).toContain("--input-border: #64748b");
 
       // Status roles (Light)
       expect(tokensCss).toContain("--status-success-main: #047857");
@@ -125,6 +138,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       // Border roles (Dark)
       expect(tokensCss).toContain("--border-default: #334155");
       expect(tokensCss).toContain("--border-strong: #475569");
+      expect(tokensCss).toContain("--input-border: #64748b");
 
       // Status roles (Dark)
       expect(tokensCss).toContain("--status-success-main: #34d399");
@@ -161,6 +175,12 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(tokensCss.toLowerCase()).not.toContain("#0051c3");
     });
   });
+  it("keeps control boundaries above 3:1 in both appearances", () => {
+    expect(contrast("#64748b", "#ffffff")).toBeGreaterThanOrEqual(3);
+    expect(contrast("#64748b", "#f8fafc")).toBeGreaterThanOrEqual(3);
+    expect(contrast("#64748b", "#0f172a")).toBeGreaterThanOrEqual(3);
+    expect(contrast("#64748b", "#111827")).toBeGreaterThanOrEqual(3);
+  });
 
   describe("globals.css - Tailwind Theme & Semantic Bridge", () => {
     it("configures @custom-variant dark to match .dark class selector", () => {
@@ -191,7 +211,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(globalsCss).toContain("--primary: var(--color-primary);");
       expect(globalsCss).toContain("--destructive: var(--status-danger-main);");
       expect(globalsCss).toContain("--border: var(--border-default);");
-      expect(globalsCss).toContain("--input: var(--border-default);");
+      expect(globalsCss).toContain("--input: var(--input-border);");
       expect(globalsCss).toContain("--ring: var(--focus-ring);");
 
       // Verify no self-referential cyclic chart redeclarations in :root
@@ -278,7 +298,11 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       const unapproved: { file: string; color: string }[] = [];
 
       for (const file of sourceFiles) {
-        if (file === "src/app/layout.tsx" || file === "src/app/manifest.ts" || file === "src/app/(public)/layout.tsx") {
+        if (
+          file === "src/app/layout.tsx" ||
+          file === "src/app/manifest.ts" ||
+          file === "src/app/(public)/layout.tsx"
+        ) {
           const content = readProjectFile(file);
           const matches = content.match(hexRegex) || [];
           for (const hex of matches) {
@@ -314,9 +338,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       const violated: string[] = [];
 
       for (const dir of filesToScan) {
-        const files = getAllSourceFiles(dir).filter(
-          (f) => f.endsWith(".ts") || f.endsWith(".tsx")
-        );
+        const files = getAllSourceFiles(dir).filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"));
         for (const file of files) {
           if (file.includes(".test.") || file.includes(".spec.")) continue;
           for (const lineNumber of findUnsafePairingLines(readProjectFile(file))) {

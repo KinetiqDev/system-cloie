@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -9,6 +10,11 @@ import {
 } from "@/components/ui/table";
 import { formatMean } from "./format";
 import type { ProgramHeadRespondentRow } from "../types";
+
+const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 
 type IdentifiedRespondentsTableProps = {
   respondents: ProgramHeadRespondentRow[];
@@ -21,52 +27,57 @@ export function IdentifiedRespondentsTable({
   responseHref,
 }: IdentifiedRespondentsTableProps) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Submitted Respondents</h2>
-        <p className="text-text-muted text-sm">
-          Program Heads can inspect identified submitted responses and term-specific academic context.
-        </p>
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Respondent</TableHead>
-            <TableHead>Major</TableHead>
-            <TableHead>Year</TableHead>
-            <TableHead>Section</TableHead>
-            <TableHead>Submitted</TableHead>
-            <TableHead className="text-right">Response mean</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {respondents.length === 0 ? (
+    <Card>
+      <CardHeader>
+        <CardTitle>Submitted respondents</CardTitle>
+        <CardDescription>
+          Identified submitted responses and term-specific academic context. Program Head access
+          only.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={6} className="text-text-muted text-center">
-                No submitted evidence yet.
-              </TableCell>
+              <TableHead>Respondent</TableHead>
+              <TableHead>Major</TableHead>
+              <TableHead>Year</TableHead>
+              <TableHead>Section</TableHead>
+              <TableHead>Submitted</TableHead>
+              <TableHead className="text-right">Response mean</TableHead>
             </TableRow>
-          ) : (
-            respondents.map((row) => (
-              <TableRow key={row.responseId}>
-                <TableCell>
-                  <Link
-                    href={responseHref(row.responseId)}
-                    className="text-link underline-offset-4 hover:underline"
-                  >
-                    {row.name}
-                  </Link>
+          </TableHeader>
+          <TableBody>
+            {respondents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-muted-foreground text-center">
+                  No submitted evidence yet.
                 </TableCell>
-                <TableCell>{row.majorLabel ?? "—"}</TableCell>
-                <TableCell>{row.yearLevel ?? "—"}</TableCell>
-                <TableCell>{row.section ?? "—"}</TableCell>
-                <TableCell>{row.submittedAt.toLocaleString()}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatMean(row.quantitativeMean)}</TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+            ) : (
+              respondents.map((row) => (
+                <TableRow key={row.responseId}>
+                  <TableCell>
+                    <Link
+                      href={responseHref(row.responseId)}
+                      className="text-link font-semibold underline-offset-4 hover:underline"
+                    >
+                      {row.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{row.majorLabel ?? "—"}</TableCell>
+                  <TableCell>{row.yearLevel ?? "—"}</TableCell>
+                  <TableCell>{row.section ?? "—"}</TableCell>
+                  <TableCell>{dateTimeFormatter.format(row.submittedAt)}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatMean(row.quantitativeMean)}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

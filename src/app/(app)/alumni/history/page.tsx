@@ -27,10 +27,10 @@ export default async function AlumniHistoryPage() {
   };
 
   return (
-    <div className="motion-safe:animate-in motion-safe:fade-in space-y-6 motion-safe:duration-500">
-      <div>
-        <h1 className="font-heading text-2xl font-black">Submission History</h1>
-        <p className="text-text-muted text-sm">
+    <div className="motion-safe:animate-in motion-safe:fade-in flex flex-col gap-6 motion-safe:duration-300">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-heading-xl text-foreground text-pretty">Submission History</h1>
+        <p className="text-body-sm text-muted-foreground">
           A permanent record of all your completed evaluation forms.
         </p>
       </div>

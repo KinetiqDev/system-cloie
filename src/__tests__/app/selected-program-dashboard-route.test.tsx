@@ -11,9 +11,10 @@ const { notFoundMock, dashboardMock, wordCloudPropsMock } = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@/features/analytics/services/get-program-head-dashboard", async (importOriginal) => {
-  const actual = await importOriginal<
-    typeof import("@/features/analytics/services/get-program-head-dashboard")
-  >();
+  const actual =
+    await importOriginal<
+      typeof import("@/features/analytics/services/get-program-head-dashboard")
+    >();
   return { ...actual, getProgramHeadDashboard: dashboardMock };
 });
 vi.mock("@/features/analytics/components/qualitative-word-cloud", () => ({
@@ -67,7 +68,9 @@ function participationFixture(): ParticipationSummary {
   };
 }
 
-function ploRow(overrides: Partial<ProgramHeadDashboardData["ploSources"]["COURSE_STUDENT"][number]>) {
+function ploRow(
+  overrides: Partial<ProgramHeadDashboardData["ploSources"]["COURSE_STUDENT"][number]>
+) {
   return {
     ploId: "plo-x",
     ploCode: "PLO X",
@@ -188,7 +191,8 @@ function dashboardDataFixture(
     links: {
       responses: "/program-head/programs/p1/responses",
       responsesActiveCourse: "/program-head/programs/p1/responses?status=ACTIVE",
-      responsesActiveProgramWide: "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE",
+      responsesActiveProgramWide:
+        "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE",
       analyticsOutcomes: "/program-head/programs/p1/analytics?tab=outcomes",
       analyticsStakeholders: "/program-head/programs/p1/analytics?tab=stakeholders",
       analyticsFeedback: "/program-head/programs/p1/analytics?tab=qualitative",
@@ -300,10 +304,7 @@ describe("selected Program dashboard route", () => {
       "aria-pressed",
       "false"
     );
-    expect(screen.getByRole("button", { name: "Alumni" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    expect(screen.getByRole("button", { name: "Alumni" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByText(/Fully Achieved|Mostly Achieved/i)).not.toBeInTheDocument();
   });
 
@@ -327,20 +328,13 @@ describe("selected Program dashboard route", () => {
     expect(within(card).getAllByText("No ratings")).toHaveLength(1);
   });
 
-  it("caps the qualitative pulse slider at the server-bounded token list", async () => {
+  it("renders the qualitative word cloud and adjusts its visible token count", async () => {
     await loadPage();
-    const slider = screen.getByRole("slider", { name: /Number of top words shown/ });
-    expect(slider).toHaveAttribute("min", "10");
-    expect(slider).toHaveAttribute("max", "60");
 
-    const initialCalls = wordCloudPropsMock.mock.calls.length;
-    expect(initialCalls).toBeGreaterThan(0);
-    const before = (wordCloudPropsMock.mock.calls[initialCalls - 1][0] as unknown as { tokens: unknown[] }).tokens.length;
-    expect(before).toBe(30);
-
-    fireEvent.change(slider, { target: { value: "10" } });
-    const calls = wordCloudPropsMock.mock.calls;
-    expect(calls[calls.length - 1][0].tokens).toHaveLength(10);
+    expect(wordCloudPropsMock.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ adjustable: true, tokens: expect.any(Array) })
+    );
+    expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].tokens).toHaveLength(40);
   });
 
   it("links the qualitative pulse into the Qualitative analytics tab", async () => {
@@ -359,10 +353,7 @@ describe("selected Program dashboard route", () => {
     ).toHaveAttribute("href", "/program-head/programs/p1/responses?status=ACTIVE");
     expect(
       within(card).getByRole("link", { name: "Review active program-wide evaluations" })
-    ).toHaveAttribute(
-      "href",
-      "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE"
-    );
+    ).toHaveAttribute("href", "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE");
   });
 
   it("links header actions into Responses and Analytics", async () => {

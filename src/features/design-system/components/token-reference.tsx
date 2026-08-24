@@ -56,6 +56,28 @@ const SURFACE_SWATCHES = [
   { className: "bg-secondary", name: "secondary", note: "Neutral secondary" },
   { className: "bg-accent", name: "accent", note: "Neutral contextual hover" },
   { className: "bg-muted", name: "muted", note: "Muted interactive fill" },
+  {
+    className: "border-2 border-border-strong bg-background",
+    name: "border-strong",
+    note: "Control boundaries",
+  },
+  {
+    className: "border-4 border-ring bg-background",
+    name: "focus-ring",
+    note: "Keyboard focus",
+  },
+  {
+    className: "border border-primary-border bg-selected-bg",
+    name: "selected",
+    note: "Selected surface",
+    textClassName: "text-selected-fg",
+  },
+  {
+    className: "bg-brand-accent",
+    name: "brand-accent",
+    note: "Specialized ACD cyan",
+    textClassName: "text-brand-accent-on",
+  },
 ];
 
 const TEXT_SWATCHES = [
@@ -63,6 +85,7 @@ const TEXT_SWATCHES = [
   { className: "text-muted-foreground", name: "muted-foreground", note: "Secondary text" },
   { className: "text-link", name: "link", note: "Interactive text and links" },
   { className: "text-secondary-foreground", name: "secondary-foreground", note: "On secondary" },
+  { className: "text-text-disabled", name: "text-disabled", note: "Disabled text only" },
 ];
 
 const STATUS_SWATCHES: {

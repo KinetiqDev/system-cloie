@@ -63,6 +63,7 @@
    * ======================================== */
   --border-default: #e2e8f0;
   --border-strong: #cbd5e1;
+  --input-border: #64748b;
 
   --color-border: var(--border-default);
   --color-border-strong: var(--border-strong);
@@ -212,6 +213,7 @@
   /* Borders (Dark) */
   --border-default: #334155;
   --border-strong: #475569;
+  --input-border: #64748b;
 
   /* Text / Foregrounds (Dark) */
   --text-primary: #f8fafc;

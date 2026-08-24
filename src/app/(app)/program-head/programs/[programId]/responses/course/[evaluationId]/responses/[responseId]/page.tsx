@@ -27,7 +27,11 @@ export default async function CourseResponseDetailPage({
   const state = parseProgramHeadResponsesSearchParams(rawSearchParams);
   const response = await getProgramHeadResponseDetail(programId, responseId);
 
-  if (!response || response.evaluation.id !== evaluationId || response.evaluation.type !== "COURSE_BOUND") {
+  if (
+    !response ||
+    response.evaluation.id !== evaluationId ||
+    response.evaluation.type !== "COURSE_BOUND"
+  ) {
     notFound();
   }
 
@@ -47,7 +51,7 @@ export default async function CourseResponseDetailPage({
   const evaluationHref = upwardQuery ? `${evaluationPath}?${upwardQuery}` : evaluationPath;
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs
         items={[
           { label: "Responses", href: responsesHref },
@@ -56,8 +60,9 @@ export default async function CourseResponseDetailPage({
           { label: response.respondent.name },
         ]}
       />
-      <Button render={<Link href={evaluationHref} />} size="sm" variant="ghost">
-        <ArrowLeft className="mr-2 size-4" /> Back to evaluation
+      <Button render={<Link href={evaluationHref} />} variant="outline">
+        <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+        Back to evaluation
       </Button>
       <ResponseDetail
         response={response}

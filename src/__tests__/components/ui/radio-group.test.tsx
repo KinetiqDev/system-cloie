@@ -87,7 +87,7 @@ describe("RadioGroup", () => {
       );
       const item = screen.getByRole("radio");
       expect(item).toHaveClass("focus-visible:border-ring");
-      expect(item).toHaveClass("focus-visible:ring-ring/50");
+      expect(item).toHaveClass("focus-visible:ring-ring");
       expect(item).toHaveClass("focus-visible:ring-3");
     });
   });

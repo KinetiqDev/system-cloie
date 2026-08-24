@@ -18,16 +18,13 @@ describe("Switch", () => {
       expect(rootClasses).not.toMatch(/\bdark:/);
     });
 
-    it("keeps the thumb visually distinct from the track via the Base UI dark state selectors", () => {
-      // design.md §1 row permits `dark:` selectors that adjust Base UI state.
-      // The thumb uses dark variants of primary-foreground / foreground so that
-      // it stays distinguishable from the (dark) track surface.
+    it("keeps the thumb visually distinct from the track through semantic surface contrast", () => {
       render(<Switch aria-label="Notify" />);
       const sw = screen.getByRole("switch");
       const thumb = sw.querySelector('[data-slot="switch-thumb"]');
       expect(thumb).toBeInTheDocument();
-      expect(thumb).toHaveClass("dark:data-checked:bg-primary-foreground");
-      expect(thumb).toHaveClass("dark:data-unchecked:bg-foreground");
+      expect(thumb).toHaveClass("bg-background");
+      expect(thumb).toHaveClass("shadow-sm");
     });
   });
 
@@ -59,7 +56,7 @@ describe("Switch", () => {
       const sw = screen.getByRole("switch");
       expect(sw).toHaveAttribute("data-disabled");
       expect(sw).toHaveClass("data-disabled:cursor-not-allowed");
-      expect(sw).toHaveClass("data-disabled:opacity-50");
+      expect(sw).toHaveClass("data-disabled:opacity-60");
     });
   });
 
@@ -68,7 +65,7 @@ describe("Switch", () => {
       render(<Switch aria-label="Notify" />);
       const sw = screen.getByRole("switch");
       expect(sw).toHaveClass("focus-visible:border-ring");
-      expect(sw).toHaveClass("focus-visible:ring-ring/50");
+      expect(sw).toHaveClass("focus-visible:ring-ring");
       expect(sw).toHaveClass("focus-visible:ring-3");
     });
   });
@@ -123,9 +120,9 @@ describe("Switch", () => {
       expect(thumb).toHaveClass("group-data-[size=default]/switch:data-checked:translate-x-[22px]");
 
       render(<Switch size="sm" defaultChecked aria-label="Notify compact" />);
-      const compactThumb = screen.getAllByRole("switch")[1].querySelector(
-        "[data-slot='switch-thumb']"
-      );
+      const compactThumb = screen
+        .getAllByRole("switch")[1]
+        .querySelector("[data-slot='switch-thumb']");
       expect(compactThumb).toHaveClass(
         "group-data-[size=sm]/switch:data-checked:translate-x-[18px]"
       );
