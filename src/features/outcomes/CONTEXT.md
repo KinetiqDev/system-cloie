@@ -17,8 +17,8 @@ A course-level learning outcome that belongs to a Course and is stable across as
 _Avoid_: Assignment-specific CILO, faculty-owned CILO
 
 **Manifestation**:
-The way a CILO contributes to a PLO or Institutional Outcome, carried by every typed mapping: `LEARNING` (displayed `L`), `PRACTICE` (displayed `P`), or `OPPORTUNITY` (displayed `O`). Manifestations carry no numeric value or weight and feed no attainment calculation.
-_Avoid_: Numeric or weighted manifestation, missing manifestation on a mapping
+The way a CILO contributes to a PLO or Institutional Outcome, carried by every typed mapping: `LEARNING` (displayed `L`), `PRACTICE` (displayed `P`), or `OPPORTUNITY` (displayed `O`). Manifestations carry no numeric value or weight, feed no attainment calculation, and never filter analytics contributions: ratings flow to every mapped PLO regardless of manifestation.
+_Avoid_: Numeric or weighted manifestation, missing manifestation on a mapping, manifestation-filtered evidence
 
 **General Education Course**:
 A Course whose CILOs align to the shared Institutional Outcome catalog.
