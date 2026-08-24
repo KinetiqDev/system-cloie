@@ -88,17 +88,35 @@ export const DEMO_USER_EMAILS = DEMO_USERS.map((user) => user.email);
 
 export const DEMO_USER_EMAIL_SET: Set<string> = new Set(DEMO_USER_EMAILS);
 
-export const DEDICATED_DEMO_USERS = [
-  { email: "demo-secretary@cloie.test", label: "Secretary", role: SystemRole.SECRETARY },
-  { email: "demo-dean@cloie.test", label: "College Dean", role: SystemRole.DEAN },
-  { email: "demo-ph@cloie.test", label: "Program Head", role: SystemRole.PROGRAM_HEAD },
-  { email: "demo-faculty@cloie.test", label: "Faculty Member", role: SystemRole.FACULTY },
-  { email: "demo-student@cloie.test", label: "Student", role: SystemRole.STUDENT },
-  { email: "demo-alumni@cloie.test", label: "Alumni", role: SystemRole.ALUMNI },
-  {
-    email: "demo-industry@cloie.test",
-    label: "Industry Partner",
-    role: SystemRole.INDUSTRY_PARTNER,
-  },
-  { email: "demo-gened@cloie.test", label: "Gen Ed Coordinator", role: SystemRole.GEN_ED_COORDINATOR },
+const DEDICATED_DEMO_LABEL_OVERRIDES: Record<string, string> = {
+  "demo-dean@cloie.test": "College Dean",
+  "demo-ph@cloie.test": "Program Head",
+  "demo-faculty@cloie.test": "Faculty Member",
+  "demo-student@cloie.test": "Student",
+  "demo-alumni@cloie.test": "Alumni",
+  "demo-industry@cloie.test": "Industry Partner",
+};
+
+const DEDICATED_DEMO_CORE_ORDER = [
+  "demo-secretary@cloie.test",
+  "demo-dean@cloie.test",
+  "demo-ph@cloie.test",
+  "demo-faculty@cloie.test",
+  "demo-student@cloie.test",
+  "demo-alumni@cloie.test",
+  "demo-industry@cloie.test",
+  "demo-gened@cloie.test",
 ] as const;
+
+const coreUsers = DEDICATED_DEMO_CORE_ORDER.map((email) => {
+  const user = DEMO_USERS.find((entry) => entry.email === email);
+  if (!user) throw new Error(`Missing demo user for dedicated catalog: ${email}`);
+  const label = DEDICATED_DEMO_LABEL_OVERRIDES[email] ?? user.label;
+  return { ...user, label } as typeof user & { label: string };
+});
+
+const additionalUsers = DEMO_USERS.filter(
+  (user) => !(DEDICATED_DEMO_CORE_ORDER as readonly string[]).includes(user.email)
+);
+
+export const DEDICATED_DEMO_USERS = [...coreUsers, ...additionalUsers] as const;

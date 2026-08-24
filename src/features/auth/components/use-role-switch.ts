@@ -65,14 +65,15 @@ export function useRoleSwitch({
     startTransition(() => void switchRole(user));
   };
 
-  const query = search.toLowerCase();
-  const filteredUsers = users.filter(
-    (user) =>
-      user.label.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      user.role.toLowerCase().includes(query)
-  );
-
+  const query = search.trim().toLowerCase();
+  const filteredUsers = query
+    ? users.filter(
+        (user) =>
+          user.label.toLowerCase().includes(query) ||
+          user.email.toLowerCase().includes(query) ||
+          user.role.replaceAll("_", " ").toLowerCase().includes(query)
+      )
+    : users;
   return {
     search,
     setSearch,

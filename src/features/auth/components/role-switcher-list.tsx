@@ -54,12 +54,14 @@ export function RoleSwitcherList({
           placeholder="Search roles..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           className="pr-2 pl-6"
         />
       </div>
       {users.map((user) => {
         const isActive = user.email === activeEmail;
-
         return (
           <button
             key={user.email}
