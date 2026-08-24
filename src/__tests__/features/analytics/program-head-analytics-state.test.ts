@@ -9,178 +9,67 @@ import {
   rawAnalyticsSearchParamsToQueryString,
 } from "@/features/analytics/services/program-head-analytics-state";
 
+const uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+
 describe("parseAnalyticsSearchParams", () => {
-  it("defaults missing tab to overview", () => {
-    expect(parseAnalyticsSearchParams({})).toEqual({ tab: "overview" });
+  it("defaults missing and invalid tabs to outcomes", () => {
+    expect(parseAnalyticsSearchParams({})).toEqual({ tab: "outcomes" });
+    expect(parseAnalyticsSearchParams({ tab: "invalid" })).toEqual({ tab: "outcomes" });
   });
-
-  it("defaults invalid tab to overview", () => {
-    expect(parseAnalyticsSearchParams({ tab: "invalid" })).toEqual({ tab: "overview" });
+  it("accepts canonical tabs", () => {
+    for (const tab of ANALYTICS_TABS) expect(parseAnalyticsSearchParams({ tab })).toEqual({ tab });
   });
-
-  it("accepts all valid tabs", () => {
-    for (const tab of ANALYTICS_TABS) {
-      expect(parseAnalyticsSearchParams({ tab })).toEqual(
-        expect.objectContaining({ tab })
-      );
-    }
+  it("sanitizes malformed values", () => {
+    expect(parseAnalyticsSearchParams({ schoolYearId: "bad", termInstanceId: "bad", semester: "bad" })).toEqual({ tab: "outcomes" });
+    expect(parseAnalyticsSearchParams({ schoolYearId: uuid, semester: "FIRST", termInstanceId: uuid })).toEqual({ tab: "outcomes", schoolYearId: uuid, semester: "FIRST", termInstanceId: uuid });
   });
-
-  it("drops invalid UUID schoolYearId", () => {
-    const result = parseAnalyticsSearchParams({ schoolYearId: "not-a-uuid" });
-    expect(result.schoolYearId).toBeUndefined();
+  it("takes the first non-empty array value", () => {
+    expect(parseAnalyticsSearchParams({ tab: ["", "trends"], schoolYearId: ["", uuid] })).toEqual({ tab: "trends", schoolYearId: uuid });
   });
-
-  it("keeps valid UUID schoolYearId", () => {
-    const uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-    const result = parseAnalyticsSearchParams({ schoolYearId: uuid });
-    expect(result.schoolYearId).toBe(uuid);
+  it("drops individual invalid values while keeping valid neighbors", () => {
+    expect(parseAnalyticsSearchParams({ semester: "SPRING" })).toEqual({ tab: "outcomes" });
+    expect(parseAnalyticsSearchParams({ schoolYearId: "bad" })).toEqual({ tab: "outcomes" });
+    expect(parseAnalyticsSearchParams({ evidenceSource: "BOGUS" })).toEqual({ tab: "outcomes" });
+    expect(parseAnalyticsSearchParams({ stakeholder: "BOGUS" })).toEqual({ tab: "outcomes" });
+    expect(parseAnalyticsSearchParams({ schoolYearId: "bad", semester: "FIRST" })).toEqual({ tab: "outcomes", semester: "FIRST" });
   });
-
-  it("drops invalid semester", () => {
-    const result = parseAnalyticsSearchParams({ semester: "INVALID" });
-    expect(result.semester).toBeUndefined();
-  });
-
-  it("keeps valid semester values", () => {
-    for (const semester of ["FIRST", "SECOND", "SUMMER"]) {
-      const result = parseAnalyticsSearchParams({ semester });
-      expect(result.semester).toBe(semester);
-    }
-  });
-
-  it("drops invalid UUID termInstanceId", () => {
-    const result = parseAnalyticsSearchParams({ termInstanceId: "bad" });
-    expect(result.termInstanceId).toBeUndefined();
-  });
-
-  it("keeps valid UUID termInstanceId", () => {
-    const uuid = "a1b2c3d4-e5f6-4890-abcd-ef1234567890";
-    const result = parseAnalyticsSearchParams({ termInstanceId: uuid });
-    expect(result.termInstanceId).toBe(uuid);
-  });
-
-  it("handles array values by taking the first non-empty entry", () => {
-    const result = parseAnalyticsSearchParams({ tab: ["outcomes", "trends"] });
-    expect(result.tab).toBe("outcomes");
-  });
-
-  it("handles empty string values", () => {
-    const result = parseAnalyticsSearchParams({ tab: "" });
-    expect(result.tab).toBe("overview");
+  it("drops incompatible stakeholder values", () => {
+    expect(parseAnalyticsSearchParams({ evidenceSource: "COURSE", stakeholder: "ALUMNI" })).toEqual({ tab: "outcomes", evidenceSource: "COURSE" });
+    expect(parseAnalyticsSearchParams({ evidenceSource: "ALUMNI", stakeholder: "STUDENT" })).toEqual({ tab: "outcomes", evidenceSource: "ALUMNI" });
+    expect(parseAnalyticsSearchParams({ evidenceSource: "ALUMNI", stakeholder: "ALUMNI" })).toEqual({ tab: "outcomes", evidenceSource: "ALUMNI", stakeholder: "ALUMNI" });
   });
 });
 
-describe("rawAnalyticsSearchParamsToQueryString", () => {
-  it("preserves duplicate values for canonicalization checks", () => {
-    expect(
-      rawAnalyticsSearchParamsToQueryString({ tab: ["outcomes", "trends"] })
-    ).toBe("tab=outcomes&tab=trends");
+describe("analytics URLs", () => {
+  it("omits the default outcomes tab", () => expect(buildAnalyticsUrl("program-1")).toBe("/program-head/programs/program-1/analytics"));
+  it("keeps an explicit outcomes tab for reset links", () => expect(buildAnalyticsUrl("program-1", { tab: "outcomes" })).toBe("/program-head/programs/program-1/analytics?tab=outcomes"));
+  it("omits undefined filter fields from the query string", () => {
+    const url = buildAnalyticsUrl("program-1", { tab: "trends", semester: undefined });
+    expect(url).toBe("/program-head/programs/program-1/analytics?tab=trends");
   });
-
-  it("preserves whitespace for canonicalization checks", () => {
-    expect(rawAnalyticsSearchParamsToQueryString({ tab: " outcomes " })).toBe(
-      "tab=+outcomes+"
-    );
+  it("serializes filters", () => {
+    const url = buildAnalyticsUrl("program-1", { tab: "trends", schoolYearId: uuid, semester: "FIRST", evidenceSource: "COURSE" });
+    expect(url).toContain("tab=trends"); expect(url).toContain(`schoolYearId=${uuid}`); expect(url).toContain("semester=FIRST"); expect(url).toContain("evidenceSource=COURSE");
+  });
+  it("preserves filters on tab navigation", () => expect(buildAnalyticsTabUrl("program-1", "trends", { tab: "outcomes", termInstanceId: uuid })).toBe(`/program-head/programs/program-1/analytics?tab=trends&termInstanceId=${uuid}`));
+  it("keeps raw duplicates for canonicalization", () => expect(rawAnalyticsSearchParamsToQueryString({ tab: ["trends", "outcomes"] })).toBe("tab=trends&tab=outcomes"));
+  it("builds stable scope fingerprints from period and evidence fields", () => {
+    expect(buildAnalyticsFilterFingerprint({ schoolYearId: uuid, semester: "FIRST", termInstanceId: uuid })).toBe(`${uuid}|FIRST|${uuid}||`);
+    expect(buildAnalyticsFilterFingerprint({ schoolYearId: uuid, semester: "FIRST", termInstanceId: uuid, evidenceSource: "ALUMNI" })).toBe(`${uuid}|FIRST|${uuid}|ALUMNI|`);
+    expect(buildAnalyticsFilterFingerprint({ schoolYearId: uuid, semester: "FIRST", termInstanceId: uuid, evidenceSource: "ALUMNI", stakeholder: "ALUMNI" })).toBe(`${uuid}|FIRST|${uuid}|ALUMNI|ALUMNI`);
+    expect(buildAnalyticsFilterFingerprint({ evidenceSource: "ALUMNI" })).not.toBe(buildAnalyticsFilterFingerprint({ evidenceSource: "COURSE" }));
   });
 });
 
-describe("buildAnalyticsUrl", () => {
-  const programId = "program-1";
-
-  it("returns the base analytics path with no params", () => {
-    expect(buildAnalyticsUrl(programId)).toBe(
-      "/program-head/programs/program-1/analytics"
-    );
-  });
-
-  it("omits tab=overview from the URL since it is the default", () => {
-    expect(buildAnalyticsUrl(programId, { tab: "overview" })).toBe(
-      "/program-head/programs/program-1/analytics"
-    );
-  });
-
-  it("includes non-default tab", () => {
-    const url = buildAnalyticsUrl(programId, { tab: "outcomes" });
-    expect(url).toContain("tab=outcomes");
-  });
-
-  it("includes all filter params when present", () => {
-    const uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-    const url = buildAnalyticsUrl(programId, {
-      tab: "trends",
-      schoolYearId: uuid,
-      semester: "FIRST",
-      termInstanceId: uuid,
+describe("labels", () => {
+  it("maps every canonical tab to its display label", () => {
+    expect(ANALYTICS_TAB_LABELS).toEqual({
+      outcomes: "Outcomes",
+      courses: "Courses",
+      stakeholders: "Stakeholders",
+      trends: "Trends",
+      qualitative: "Qualitative",
+      ai: "AI Insights",
     });
-    expect(url).toContain("tab=trends");
-    expect(url).toContain(`schoolYearId=${uuid}`);
-    expect(url).toContain("semester=FIRST");
-    expect(url).toContain(`termInstanceId=${uuid}`);
-  });
-
-  it("omits undefined filter params", () => {
-    const url = buildAnalyticsUrl(programId, { tab: "outcomes" });
-    expect(url).not.toContain("schoolYearId");
-    expect(url).not.toContain("semester");
-    expect(url).not.toContain("termInstanceId");
-  });
-});
-
-describe("buildAnalyticsTabUrl", () => {
-  it("changes the tab while preserving existing filters", () => {
-    const url = buildAnalyticsTabUrl("program-1", "outcomes", {
-      tab: "overview",
-      schoolYearId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    });
-    expect(url).toContain("tab=outcomes");
-    expect(url).toContain("schoolYearId=a1b2c3d4-e5f6-7890-abcd-ef1234567890");
-  });
-});
-
-describe("ANALYTICS_TAB_LABELS", () => {
-  it("has a label for every tab", () => {
-    for (const tab of ANALYTICS_TABS) {
-      expect(ANALYTICS_TAB_LABELS[tab]).toBeTruthy();
-    }
-  });
-
-  it("labels the ai tab as AI Insights", () => {
-    expect(ANALYTICS_TAB_LABELS.ai).toBe("AI Insights");
-  });
-});
-
-describe("buildAnalyticsFilterFingerprint", () => {
-  it("is deterministic for an empty scope", () => {
-    expect(buildAnalyticsFilterFingerprint({})).toBe("||");
-    expect(buildAnalyticsFilterFingerprint({})).toBe(buildAnalyticsFilterFingerprint({}));
-  });
-
-  it("joins the canonical period filter fields in a stable order", () => {
-    expect(
-      buildAnalyticsFilterFingerprint({
-        schoolYearId: "school-year-1",
-        semester: "FIRST",
-        termInstanceId: "term-1",
-      })
-    ).toBe("school-year-1|FIRST|term-1");
-  });
-
-  it("distinguishes scopes that differ by any single filter", () => {
-    const base = { schoolYearId: "school-year-1", semester: "FIRST", termInstanceId: "term-1" };
-    expect(buildAnalyticsFilterFingerprint(base)).not.toBe(
-      buildAnalyticsFilterFingerprint({ ...base, termInstanceId: "term-2" })
-    );
-    expect(buildAnalyticsFilterFingerprint(base)).not.toBe(
-      buildAnalyticsFilterFingerprint({ ...base, semester: "SECOND" })
-    );
-    expect(buildAnalyticsFilterFingerprint(base)).not.toBe(
-      buildAnalyticsFilterFingerprint({ ...base, schoolYearId: "school-year-2" })
-    );
-  });
-
-  it("is stable across repeated computations for the same scope", () => {
-    const filters = { schoolYearId: "school-year-1", semester: "SECOND", termInstanceId: "term-9" };
-    expect(buildAnalyticsFilterFingerprint(filters)).toBe(buildAnalyticsFilterFingerprint(filters));
   });
 });

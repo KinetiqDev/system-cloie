@@ -1,162 +1,59 @@
 import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
 import { ProgramHeadAnalyticsShell } from "@/features/analytics/components/program-head-analytics-shell";
-import { ProgramHeadOverviewKPIs } from "@/features/analytics/components/program-head-overview-kpis";
 import { ProgramHeadOutcomesView } from "@/features/analytics/components/program-head-outcomes-view";
 import { ProgramHeadTrendsView } from "@/features/analytics/components/program-head-trends-view";
 import { ProgramHeadStakeholderView } from "@/features/analytics/components/program-head-stakeholder-view";
 import { ProgramHeadBreakdownsView } from "@/features/analytics/components/program-head-breakdowns-view";
 import { ProgramHeadFeedbackView } from "@/features/analytics/components/program-head-feedback-view";
 import { ProgramHeadAIInsightsView } from "@/features/analytics/components/program-head-ai-insights-view";
-import {
-  getProgramHeadAnalytics,
-  getProgramHeadBreakdowns,
-  getProgramHeadFeedback,
-  getProgramHeadOutcomes,
-  getProgramHeadStakeholders,
-  getProgramHeadTrends,
-} from "@/features/analytics/services/get-program-head-analytics";
-import {
-  buildAnalyticsQueryString,
-  buildAnalyticsUrl,
-  parseAnalyticsSearchParams,
-  rawAnalyticsSearchParamsToQueryString,
-} from "@/features/analytics/services/program-head-analytics-state";
-import type {
-  AnalyticsFilterState,
-} from "@/features/analytics/services/program-head-analytics-state";
-import type {
-  ProgramHeadAnalyticsPeriodOptions,
-  ProgramHeadAnalyticsScopeSummary,
-} from "@/features/analytics/program-head-analytics-types";
-import { buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes";
+import { getProgramHeadAnalytics, getProgramHeadBreakdowns, getProgramHeadFeedback, getProgramHeadOutcomes, getProgramHeadStakeholders, getProgramHeadTrends } from "@/features/analytics/services/get-program-head-analytics";
+import { ANALYTICS_TABS, buildAnalyticsQueryString, buildAnalyticsUrl, parseAnalyticsSearchParams } from "@/features/analytics/services/program-head-analytics-state";
+import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
+import type { ProgramHeadAnalyticsPeriodOptions, ProgramHeadAnalyticsScopeSummary } from "@/features/analytics/program-head-analytics-types";
+import { buildProgramHeadDashboardPath, buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes";
 
-export const metadata = {
-  title: "Analytics | Program Head | System CLOIE",
-};
+export const metadata = { title: "Analytics | Program Head | System CLOIE" };
+type Resolved = { scope: ProgramHeadAnalyticsScopeSummary; periodOptions: ProgramHeadAnalyticsPeriodOptions; children: ReactNode };
+async function withData<T extends { scope: ProgramHeadAnalyticsScopeSummary; periodOptions: ProgramHeadAnalyticsPeriodOptions }>(id: string, filters: AnalyticsFilterState, read: (id: string, filters: AnalyticsFilterState) => Promise<T | null>, render: (data: T) => ReactNode): Promise<Resolved | null> { const data = await read(id, filters); return data ? { scope: data.scope, periodOptions: data.periodOptions, children: render(data) } : null; }
+function resolveTab(id: string, filters: AnalyticsFilterState): Promise<Resolved | null> { switch (filters.tab) { case "outcomes": return withData(id, filters, getProgramHeadOutcomes, (dto) => <ProgramHeadOutcomesView programId={id} data={dto} resetHref={buildAnalyticsUrl(id, { tab: "outcomes" })} />); case "stakeholders": return withData(id, filters, getProgramHeadStakeholders, (dto) => <ProgramHeadStakeholderView data={dto} resetHref={buildAnalyticsUrl(id, { tab: "stakeholders" })} />); case "trends": return withData(id, filters, getProgramHeadTrends, (dto) => <ProgramHeadTrendsView data={dto} resetHref={buildAnalyticsUrl(id, { tab: "trends" })} />); case "ai": return withData(id, filters, getProgramHeadAnalytics, (dto) => <ProgramHeadAIInsightsView programId={id} filters={filters} scope={dto.scope} />); case "courses": return withData(id, filters, getProgramHeadBreakdowns, (dto) => <ProgramHeadBreakdownsView programId={id} data={dto} resetHref={buildAnalyticsUrl(id, { tab: "courses" })} />); case "qualitative": return withData(id, filters, getProgramHeadFeedback, (dto) => <ProgramHeadFeedbackView programId={id} data={dto} resetHref={buildAnalyticsUrl(id, { tab: "qualitative" })} />); default: return Promise.resolve(null); } }
 
-/** One resolved view: shared scope plus the tab's own content. */
-type ResolvedAnalyticsTab = {
-  scope: ProgramHeadAnalyticsScopeSummary;
-  periodOptions: ProgramHeadAnalyticsPeriodOptions;
-  children: ReactNode;
-};
+const VALID_RAW_TABS = new Set(["overview", "breakdowns", "feedback", ...ANALYTICS_TABS]);
 
-/**
- * Run one tab's authorized read and wrap its DTO in shell content. A null
- * read result (unassigned or malformed Program) resolves to a non-disclosing
- * denial for the caller.
- */
-async function withTabData<TData extends { scope: ProgramHeadAnalyticsScopeSummary; periodOptions: ProgramHeadAnalyticsPeriodOptions }>(
-  programId: string,
-  filters: AnalyticsFilterState,
-  read: (programId: string, filters: AnalyticsFilterState) => Promise<TData | null>,
-  render: (data: TData) => ReactNode
-): Promise<ResolvedAnalyticsTab | null> {
-  const data = await read(programId, filters);
-  if (!data) {
-    return null;
-  }
-  return {
-    scope: data.scope,
-    periodOptions: data.periodOptions,
-    children: render(data),
-  };
-}
-/**
- * Resolve the selected tab's authorized read into shell content.
- */
-function resolveAnalyticsTab(
-  programId: string,
-  filters: AnalyticsFilterState
-): Promise<ResolvedAnalyticsTab | null> {
-  switch (filters.tab) {
-    case "outcomes":
-      return withTabData(programId, filters, getProgramHeadOutcomes, (dto) => (
-        <ProgramHeadOutcomesView
-          programId={programId}
-          data={dto}
-          resetHref={buildAnalyticsUrl(programId, { tab: "outcomes" })}
-        />
-      ));
-    case "stakeholders":
-      return withTabData(programId, filters, getProgramHeadStakeholders, (dto) => (
-        <ProgramHeadStakeholderView
-          data={dto}
-          resetHref={buildAnalyticsUrl(programId, { tab: "stakeholders" })}
-        />
-      ));
-    case "breakdowns":
-      return withTabData(programId, filters, getProgramHeadBreakdowns, (dto) => (
-        <ProgramHeadBreakdownsView
-          programId={programId}
-          data={dto}
-          resetHref={buildAnalyticsUrl(programId, { tab: "breakdowns" })}
-        />
-      ));
-    case "trends":
-      return withTabData(programId, filters, getProgramHeadTrends, (dto) => (
-        <ProgramHeadTrendsView
-          data={dto}
-          resetHref={buildAnalyticsUrl(programId, { tab: "trends" })}
-        />
-      ));
-    case "feedback":
-      return withTabData(programId, filters, getProgramHeadFeedback, (dto) => (
-        <ProgramHeadFeedbackView
-          programId={programId}
-          data={dto}
-          resetHref={buildAnalyticsUrl(programId, { tab: "feedback" })}
-        />
-      ));
-    case "ai":
-      // The AI view is an on-demand client flow: the shell still resolves the
-      // authorized scope and period options through the shared overview read.
-      return withTabData(programId, filters, getProgramHeadAnalytics, (dto) => (
-        <ProgramHeadAIInsightsView programId={programId} filters={filters} scope={dto.scope} />
-      ));
-    default:
-      return withTabData(programId, filters, getProgramHeadAnalytics, (dto) => (
-        <ProgramHeadOverviewKPIs
-          kpi={dto.kpi}
-          emptyReason={dto.emptyReason}
-          resetHref={buildAnalyticsUrl(programId)}
-        />
-      ));
-  }
+function firstTrimmed(value: string | string[] | undefined): string | undefined {
+  return (Array.isArray(value) ? value[0] : value)?.trim();
 }
 
-export default async function SelectedProgramAnalyticsPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ programId: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const [{ programId }, rawSearchParams] = await Promise.all([params, searchParams]);
-  const filters = parseAnalyticsSearchParams(rawSearchParams);
+function legacyRedirectTarget(rawTab: string | undefined): "overview" | "courses" | "qualitative" | "none" {
+  if (rawTab === "overview") return "overview";
+  if (rawTab === "breakdowns") return "courses";
+  if (rawTab === "feedback") return "qualitative";
+  return "none";
+}
 
-  // Redirect to the canonical URL when raw params contain invalid or non-canonical values
-  const rawQuery = rawAnalyticsSearchParamsToQueryString(rawSearchParams);
-  const canonicalQuery = buildAnalyticsQueryString(filters);
-  if (rawQuery !== canonicalQuery) {
-    const basePath = buildProgramHeadProgramPath(programId, "analytics");
-    redirect(canonicalQuery ? `${basePath}?${canonicalQuery}` : basePath);
+function overviewRedirectUrl(programId: string, filters: AnalyticsFilterState): string {
+  const params: Record<string, string> = {};
+  if (filters.schoolYearId) params.schoolYearId = filters.schoolYearId;
+  if (filters.semester) params.semester = filters.semester;
+  if (filters.termInstanceId) params.termInstanceId = filters.termInstanceId;
+  const query = new URLSearchParams(params).toString();
+  return query ? `${buildProgramHeadDashboardPath(programId)}?${query}` : buildProgramHeadDashboardPath(programId);
+}
+
+export default async function SelectedProgramAnalyticsPage({ params, searchParams }: { params: Promise<{ programId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [{ programId }, raw] = await Promise.all([params, searchParams]);
+  const filters = parseAnalyticsSearchParams(raw);
+  const rawTab = firstTrimmed(raw.tab);
+  if (rawTab && !VALID_RAW_TABS.has(rawTab)) redirect(`${buildProgramHeadProgramPath(programId, "analytics")}?tab=outcomes`);
+  const legacy = legacyRedirectTarget(rawTab);
+  if (legacy === "overview") redirect(overviewRedirectUrl(programId, filters));
+  if (legacy === "courses" || legacy === "qualitative") {
+    const base = buildProgramHeadProgramPath(programId, "analytics");
+    const query = buildAnalyticsQueryString({ ...filters, tab: legacy });
+    redirect(query ? `${base}?${query}` : base);
   }
-
-  const tab = await resolveAnalyticsTab(programId, filters);
-  if (!tab) {
-    notFound();
-  }
-
-  return (
-    <ProgramHeadAnalyticsShell
-      programId={programId}
-      filters={filters}
-      scope={tab.scope}
-      periodOptions={tab.periodOptions}
-    >
-      {tab.children}
-    </ProgramHeadAnalyticsShell>
-  );
+  const effectiveFilters: AnalyticsFilterState = { ...filters, tab: rawTab === undefined ? "outcomes" : filters.tab };
+  const tab = await resolveTab(programId, effectiveFilters);
+  if (!tab) notFound();
+  return <ProgramHeadAnalyticsShell programId={programId} filters={effectiveFilters} scope={tab.scope} periodOptions={tab.periodOptions}>{tab.children}</ProgramHeadAnalyticsShell>;
 }

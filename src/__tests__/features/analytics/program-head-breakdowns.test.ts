@@ -211,7 +211,7 @@ function expectProgramScopedPredicates() {
   return ratingCall;
 }
 
-const breakdownFilters = { tab: "breakdowns" as const };
+const breakdownFilters = { tab: "courses" as const };
 const stakeholdersFilters = { tab: "stakeholders" as const };
 
 /** Default snapshot resolution: every requested version id maps to the 1–5 scale. */

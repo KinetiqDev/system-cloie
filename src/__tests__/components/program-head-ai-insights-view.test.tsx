@@ -20,7 +20,7 @@ const SCOPE = {
 const SUCCESS: GenerateAIInsightResult = {
   ok: true,
   data: {
-    fingerprint: "school-year-1|FIRST|term-1",
+    fingerprint: "school-year-1|FIRST|term-1|ALUMNI|ALUMNI",
     scope: SCOPE,
     summary: "Evidence shows engaged cohorts.",
     strengths: ["Consistent course-bound engagement"],
@@ -53,6 +53,8 @@ const FILTERS = {
   schoolYearId: "school-year-1",
   semester: "FIRST" as const,
   termInstanceId: "term-1",
+  evidenceSource: "ALUMNI" as const,
+  stakeholder: "ALUMNI" as const,
 };
 
 function renderView() {
@@ -84,6 +86,8 @@ describe("ProgramHeadAIInsightsView", () => {
           schoolYearId: "school-year-1",
           semester: "FIRST",
           termInstanceId: "term-1",
+          evidenceSource: "ALUMNI",
+          stakeholder: "ALUMNI",
         },
       });
     });
@@ -185,7 +189,7 @@ describe("ProgramHeadAIInsightsView", () => {
       .mockResolvedValueOnce(SUCCESS)
       .mockResolvedValueOnce({
         ...SUCCESS,
-        data: { ...SUCCESS.data, fingerprint: "school-year-1|FIRST|term-2" },
+        data: { ...SUCCESS.data, fingerprint: "school-year-1|FIRST|term-2|ALUMNI|ALUMNI" },
       } satisfies GenerateAIInsightResult);
     const { rerender } = renderView();
     fireEvent.click(screen.getByRole("button", { name: "Generate interpretation" }));
@@ -209,6 +213,8 @@ describe("ProgramHeadAIInsightsView", () => {
           schoolYearId: "school-year-1",
           semester: "FIRST",
           termInstanceId: "term-2",
+          evidenceSource: "ALUMNI",
+          stakeholder: "ALUMNI",
         },
       });
     });
@@ -246,12 +252,11 @@ describe("ProgramHeadAIInsightsView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate interpretation" }));
     await screen.findByText("Evidence shows engaged cohorts.");
 
-    const overviewLink = screen.getByRole("link", { name: "Review Overview" });
-    expect(overviewLink).toHaveAttribute(
+    const outcomesLink = screen.getByRole("link", { name: "Review Outcomes" });
+    expect(outcomesLink).toHaveAttribute(
       "href",
       expect.stringContaining("/program-head/programs/program-bsed/analytics")
     );
-    expect(screen.getByRole("link", { name: "Review Feedback" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Review Outcomes" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Review Qualitative" })).toBeInTheDocument();
   });
 });

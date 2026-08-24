@@ -922,6 +922,6 @@ function buildDashboardLinks(
     }),
     analyticsOutcomes: buildAnalyticsUrl(programId, { ...filters, tab: "outcomes" }),
     analyticsStakeholders: buildAnalyticsUrl(programId, { ...filters, tab: "stakeholders" }),
-    analyticsFeedback: buildAnalyticsUrl(programId, { ...filters, tab: "feedback" }),
+    analyticsFeedback: buildAnalyticsUrl(programId, { ...filters, tab: "qualitative" }),
   };
 }

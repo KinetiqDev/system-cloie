@@ -33,7 +33,7 @@ const bsedContext = {
   },
 };
 
-const feedbackFilters = { tab: "feedback" as const };
+const feedbackFilters = { tab: "qualitative" as const };
 
 const openPromptSnapshot = [
   {

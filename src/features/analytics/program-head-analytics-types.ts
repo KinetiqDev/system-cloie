@@ -154,13 +154,36 @@ export type ProgramHeadOutcomeDTO = {
 };
 
 /**
+ * One program-wide evidence row from a central deployment (student, alumni, or
+ * industry-partner) — aggregated across all PLOs in the selected Program. Mean
+ * retains full precision; rating count is distinct from submitted response count.
+ */
+export type ProgramHeadProgramWideOutcomeDTO = {
+  stakeholder: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
+  ploId: string;
+  code: string;
+  name: string;
+  /** Full-precision mean of valid ratings; null when the row has no valid ratings. */
+  meanRating: number | null;
+  ratingCount: number;
+  submittedResponseCount: number;
+  /** Number of evaluation instruments that contributed to this row. */
+  evaluationCount: number;
+  /** Number of distinct questions (items) that contributed to this row. */
+  questionCount: number;
+};
+
+/**
  * Reasons the Outcomes view may show an empty state. The chain mirrors the
  * Overview: no assignments, no submissions, then no mapped outcome evidence.
+ * `no-program-wide-evidence` is emitted when a central (program-wide) source
+ * is selected but no central PLO evidence exists.
  */
 export type ProgramHeadOutcomesEmptyReason =
   | "no-assignments"
   | "no-submissions"
   | "no-mapped-outcomes"
+  | "no-program-wide-evidence"
   | null;
 
 /** Closed, serializable Outcomes projection. */
@@ -177,6 +200,8 @@ export type ProgramHeadOutcomesDTO = {
   /** True when a contributing CILO maps to more than one selected-Program PLO. */
   manyToManyDisclosure: boolean;
   outcomes: ProgramHeadOutcomeDTO[];
+  /** Program-wide (central source) PLO evidence rows, grouped by stakeholder. */
+  programWideOutcomes: ProgramHeadProgramWideOutcomeDTO[];
 };
 
 // ---------------------------------------------------------------------------

@@ -1,16 +1,14 @@
 import type { ReactNode } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type {
   ProgramHeadAnalyticsPeriodOptions,
   ProgramHeadAnalyticsScopeSummary,
 } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadAnalyticsFilters } from "./program-head-analytics-filters";
-import type { AnalyticsFilterState, AnalyticsTab } from "@/features/analytics/services/program-head-analytics-state";
+import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import {
   ANALYTICS_TABS,
   ANALYTICS_TAB_LABELS,
-  LIVE_ANALYTICS_TABS,
   buildAnalyticsTabUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
 
@@ -29,8 +27,6 @@ export function ProgramHeadAnalyticsShell({
   periodOptions,
   children,
 }: ProgramHeadAnalyticsShellProps) {
-  const hasLiveView = LIVE_ANALYTICS_TABS.includes(filters.tab);
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -42,9 +38,7 @@ export function ProgramHeadAnalyticsShell({
           {scope.periodLabel ? <span> · {scope.periodLabel}</span> : null}
         </p>
       </div>
-
       <ProgramHeadAnalyticsFilters programId={programId} filters={filters} options={periodOptions} />
-
       <div className="flex flex-col gap-4">
         <nav
           aria-label="Analytics views"
@@ -61,9 +55,7 @@ export function ProgramHeadAnalyticsShell({
                   "text-label-md rounded-lg px-3 py-1.5 whitespace-nowrap transition-colors",
                   "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                   "pointer-coarse:min-h-11 pointer-coarse:px-4 pointer-coarse:py-2.5",
-                  isActive
-                    ? "bg-primary-soft text-selected-fg"
-                    : "text-muted-foreground hover:text-foreground"
+                  isActive ? "bg-primary-soft text-selected-fg" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {ANALYTICS_TAB_LABELS[tab]}
@@ -71,22 +63,8 @@ export function ProgramHeadAnalyticsShell({
             );
           })}
         </nav>
-
-        {hasLiveView ? children : <UpcomingTabNotice tab={filters.tab} />}
+        {children}
       </div>
     </div>
-  );
-}
-
-function UpcomingTabNotice({ tab }: { tab: AnalyticsTab }) {
-  return (
-    <Card size="sm">
-      <CardContent>
-        <p className="text-body-md text-muted-foreground">
-          The {ANALYTICS_TAB_LABELS[tab]} view is not available yet. Overview analytics are live;
-          the remaining views arrive in upcoming releases.
-        </p>
-      </CardContent>
-    </Card>
   );
 }

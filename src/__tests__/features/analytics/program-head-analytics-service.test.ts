@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getProgramHeadAnalytics } from "@/features/analytics/services/get-program-head-analytics";
+import { buildProgramOpportunityScope, buildProgramResponseScope, getProgramHeadAnalytics } from "@/features/analytics/services/get-program-head-analytics";
 
 const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
   resolveProgramHeadContextMock: vi.fn(),
@@ -27,7 +27,7 @@ const bsedContext = {
     selectedProgram: { code: "BSED", id: "program-bsed", name: "Bachelor of Secondary Education" },
   },
 };
-const defaultFilters = { tab: "overview" as const };
+const defaultFilters = { tab: "outcomes" as const };
 
 type AssignmentRow = {
   respondent_id: string;
@@ -276,7 +276,7 @@ describe("getProgramHeadAnalytics", () => {
       },
     ]);
 
-    await getProgramHeadAnalytics("program-bsed", { tab: "overview", termInstanceId: termId });
+    await getProgramHeadAnalytics("program-bsed", { tab: "outcomes", termInstanceId: termId });
 
     const aggregateWhere = prismaMock.quantitativeResponseItem.aggregate.mock.calls[0][0].where;
     expect(aggregateWhere.response.OR[0].assignment.central_deployment.term_instance_id).toEqual({
@@ -304,7 +304,7 @@ describe("getProgramHeadAnalytics", () => {
     ]);
 
     const result = await getProgramHeadAnalytics("program-bsed", {
-      tab: "overview",
+      tab: "outcomes",
       schoolYearId,
     });
 
@@ -328,7 +328,7 @@ describe("getProgramHeadAnalytics", () => {
     prismaMock.schoolYear.findUnique.mockResolvedValue({ code: "2025-2026" });
 
     const result = await getProgramHeadAnalytics("program-bsed", {
-      tab: "overview",
+      tab: "outcomes",
       schoolYearId,
     });
 
@@ -348,7 +348,7 @@ describe("getProgramHeadAnalytics", () => {
     ]);
 
     const result = await getProgramHeadAnalytics("program-bsed", {
-      tab: "overview",
+      tab: "outcomes",
       semester: "FIRST",
     });
 
@@ -374,7 +374,7 @@ describe("getProgramHeadAnalytics", () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue([]);
     mockQueryResults({ submittedCount: 0, opportunityCount: 0, ratingCount: 0 });
     const result = await getProgramHeadAnalytics("program-bsed", {
-      tab: "overview",
+      tab: "outcomes",
       semester: "SUMMER",
     });
 
@@ -389,7 +389,7 @@ describe("getProgramHeadAnalytics", () => {
     ]);
 
     const result = await getProgramHeadAnalytics("program-bsed", {
-      tab: "overview",
+      tab: "outcomes",
       semester: "SECOND",
     });
 
@@ -423,5 +423,44 @@ describe("getProgramHeadAnalytics", () => {
     expect(callOrder).toHaveLength(2);
     expect(callOrder).toContain("assignment.findMany");
     expect(callOrder).toContain("aggregate");
+  });
+});
+
+describe("evidence-source scope predicates", () => {
+  it("keeps both deployment kinds when no evidence filter is selected", () => {
+    const response = buildProgramResponseScope("program-bsed", {}) as { OR: unknown[] };
+    expect(response.OR).toHaveLength(2);
+    const opportunity = buildProgramOpportunityScope("program-bsed", {}) as { OR: unknown[] };
+    expect(opportunity.OR).toHaveLength(2);
+  });
+
+  it("narrows to course-bound evidence for COURSE", () => {
+    const response = buildProgramResponseScope("program-bsed", {}, { deployment_type: "COURSE_BOUND" }) as {
+      deployment_type: string;
+      assignment: { course_bound: { course_assignment: { program_id: string } } };
+    };
+    expect(response.deployment_type).toBe("COURSE_BOUND");
+    expect(response.assignment.course_bound.course_assignment.program_id).toBe("program-bsed");
+    const opportunity = buildProgramOpportunityScope("program-bsed", {}, { deployment_type: "COURSE_BOUND" }) as {
+      course_bound: { course_assignment: { program_id: string } };
+    };
+    expect(opportunity.course_bound.course_assignment.program_id).toBe("program-bsed");
+  });
+
+  it("narrows to the matched central stakeholder for central sources", () => {
+    const response = buildProgramResponseScope("program-bsed", {}, { deployment_type: "CENTRAL", target_stakeholder: "ALUMNI" }) as {
+      deployment_type: string;
+      assignment: { central_deployment: { program_id: string; target_stakeholder?: string } };
+    };
+    expect(response.deployment_type).toBe("CENTRAL");
+    expect(response.assignment.central_deployment.program_id).toBe("program-bsed");
+    expect(response.assignment.central_deployment.target_stakeholder).toBe("ALUMNI");
+  });
+
+  it("keeps both deployment kinds when a bare STUDENT stakeholder is selected", () => {
+    const response = buildProgramResponseScope("program-bsed", {}, { deployment_type: "ANY", target_stakeholder: "STUDENT" }) as { OR: unknown[] };
+    expect(response.OR).toHaveLength(2);
+    const opportunity = buildProgramOpportunityScope("program-bsed", {}, { deployment_type: "ANY", target_stakeholder: "STUDENT" }) as { OR: unknown[] };
+    expect(opportunity.OR).toHaveLength(2);
   });
 });

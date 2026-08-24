@@ -25,9 +25,11 @@ import {
   buildScaleIdentities,
   describeScales,
   extractDistinctScales,
+  resolveItemScaleIdentity,
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
 import { buildParticipationSummary } from "../aggregators/participation";
+import { buildProgramWidePloMetrics, type CentralPloRatingRow } from "../aggregators/plo";
 import {
   FEEDBACK_SOURCE_LABELS,
   buildRedactedWordCloudTokens,
@@ -47,6 +49,7 @@ import type {
   ProgramHeadFeedbackSourceCountDTO,
   ProgramHeadOutcomesDTO,
   ProgramHeadOutcomesEmptyReason,
+  ProgramHeadProgramWideOutcomeDTO,
   ProgramHeadOverviewDTO,
   ProgramHeadStakeholdersDTO,
   ProgramHeadStakeholdersEmptyReason,
@@ -90,8 +93,77 @@ function buildTermInstanceWhere(
 /** Sentinel term filter that matches no rows, used when a filter resolves to nothing. */
 export const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
 
+/**
+ * Evidence-source narrowing for analytics reads (§15). COURSE keeps only
+ * course-bound evidence; central sources keep only central deployments of the
+ * matching stakeholder (the source implies the population when no explicit
+ * stakeholder is present, and the state layer already drops incompatible
+ * stakeholder values). A bare stakeholder filter narrows to central
+ * deployments of that stakeholder; course-bound evidence is student evidence.
+ */
+type SourceScope = {
+  response: { deployment_type: "CENTRAL" | "COURSE_BOUND" | "ANY"; target_stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER" };
+  assignment: { deployment_type: "CENTRAL" | "COURSE_BOUND" | "ANY"; target_stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER" };
+};
+
+const SOURCE_DEFAULT_STAKEHOLDER = {
+  PROGRAM_WIDE_STUDENT: "STUDENT",
+  ALUMNI: "ALUMNI",
+  INDUSTRY: "INDUSTRY_PARTNER",
+} as const;
+
+function buildSourceScope(filters: AnalyticsFilterState): SourceScope | null {
+  const kind = filters.evidenceSource;
+  if (kind === "COURSE") {
+    return {
+      response: { deployment_type: "COURSE_BOUND" },
+      assignment: { deployment_type: "COURSE_BOUND" },
+    };
+  }
+  const stakeholder =
+    filters.stakeholder ?? (kind ? SOURCE_DEFAULT_STAKEHOLDER[kind] : undefined);
+  if (!kind && !stakeholder) return null;
+  // A bare STUDENT stakeholder owns course-bound evidence and central
+  // program-wide student evidence; excluding course-bound would silently
+  // under-report students under an advertised all-source scope.
+  if (!kind && stakeholder === "STUDENT") {
+    return {
+      response: { deployment_type: "ANY", target_stakeholder: "STUDENT" },
+      assignment: { deployment_type: "ANY", target_stakeholder: "STUDENT" },
+    };
+  }
+  return {
+    response: { deployment_type: "CENTRAL", target_stakeholder: stakeholder },
+    assignment: { deployment_type: "CENTRAL", target_stakeholder: stakeholder },
+  };
+}
+
 /** Response predicate scoped to the selected Program through both deployment kinds. */
-export function buildProgramResponseScope(programId: string, termInstanceWhere: Record<string, unknown>) {
+export function buildProgramResponseScope(programId: string, termInstanceWhere: Record<string, unknown>, source?: SourceScope["response"]) {
+  if (source) {
+    const central = {
+      deployment_type: "CENTRAL" as const,
+      assignment: {
+        central_deployment: {
+          program_id: programId,
+          ...termInstanceWhere,
+          ...(source.target_stakeholder ? { target_stakeholder: source.target_stakeholder } : {}),
+        },
+      },
+    };
+    const courseBound = {
+      deployment_type: "COURSE_BOUND" as const,
+      assignment: {
+        course_bound: {
+          course_assignment: { program_id: programId },
+          ...termInstanceWhere,
+        },
+      },
+    };
+    if (source.deployment_type === "CENTRAL") return central;
+    if (source.deployment_type === "COURSE_BOUND") return courseBound;
+    return { OR: [central, courseBound] };
+  }
   return {
     OR: [
       {
@@ -117,7 +189,25 @@ export function buildProgramResponseScope(programId: string, termInstanceWhere: 
 }
 
 /** EvaluationAssignment predicate scoped to the selected Program through both deployment kinds. */
-export function buildProgramOpportunityScope(programId: string, termInstanceWhere: Record<string, unknown>) {
+export function buildProgramOpportunityScope(programId: string, termInstanceWhere: Record<string, unknown>, source?: SourceScope["assignment"]) {
+  if (source) {
+    const central = {
+      central_deployment: {
+        program_id: programId,
+        ...termInstanceWhere,
+        ...(source.target_stakeholder ? { target_stakeholder: source.target_stakeholder } : {}),
+      },
+    };
+    const courseBound = {
+      course_bound: {
+        course_assignment: { program_id: programId },
+        ...termInstanceWhere,
+      },
+    };
+    if (source.deployment_type === "CENTRAL") return central;
+    if (source.deployment_type === "COURSE_BOUND") return courseBound;
+    return { OR: [central, courseBound] };
+  }
   return {
     OR: [
       {
@@ -278,11 +368,12 @@ export async function getProgramHeadAnalytics(
 
   // Responses tied to this program via central deployments OR course-bound evaluations,
   // following the same scope predicate as the existing dashboard service.
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere);
+  const sourceScope = buildSourceScope(filters);
+  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
 
   // Every in-scope EvaluationAssignment is an evaluation opportunity,
   // regardless of response status.
-  const programOpportunityScope = buildProgramOpportunityScope(selectedProgram.id, termInstanceWhere);
+  const programOpportunityScope = buildProgramOpportunityScope(selectedProgram.id, termInstanceWhere, sourceScope?.assignment);
 
   // One row per in-scope EvaluationAssignment: the canonical participation
   // denominator (resolved §5.12) with its response status. Submitted and
@@ -645,14 +736,216 @@ const CURRENT_MAPPING_DISCLOSURE =
   "Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.";
 
 /**
- * Authorized Program PLO evidence read for the selected Program. Only
- * course-bound quantitative items with a publication-time CILO question
- * binding and a canonical selected-Program CILO-to-PLO mapping contribute.
- * Bindings are resolved by evaluation plus section/item keys because the live
- * student submission flow writes ratings without a binding ID, mirroring the
- * existing review evidence compensation. Central instrument questions and
- * Institutional Outcome evidence never enter Program PLO rows because no
- * canonical central question-to-PLO relation exists.
+ * One central-deployment rating row narrowed for program-wide PLO evidence.
+ * The select mirrors the fields program-wide aggregation needs: deployment
+ * identity, stakeholder, instrument version, and the rating coordinates.
+ */
+type CentralOutcomeRatingRow = {
+  rating_value: number;
+  response_id: string;
+  section_key: string;
+  item_key: string;
+  response: {
+    assignment: {
+      central_deployment: {
+        id: string;
+        deployment_name: string;
+        target_stakeholder: TargetStakeholder;
+        instrument_version_id: string | null;
+      } | null;
+    };
+  };
+};
+
+type CentralPloSnapshotBinding = { ploId: string; ploCode: string; ploDescription: string };
+type CentralPloBindingsByDeployment = Map<string, Map<string, CentralPloSnapshotBinding[]>>;
+
+/** Published CentralDeploymentPloSnapshot bindings keyed by deployment then section:item. */
+async function loadCentralPloBindings(
+  deploymentIds: string[]
+): Promise<CentralPloBindingsByDeployment> {
+  if (deploymentIds.length === 0) {
+    return new Map();
+  }
+  const snapshots = await prisma.centralDeploymentPloSnapshot.findMany({
+    where: { central_deployment_id: { in: deploymentIds } },
+    select: {
+      central_deployment_id: true,
+      plo_id: true,
+      plo_code_snapshot: true,
+      plo_description_snapshot: true,
+      section_key: true,
+      item_key: true,
+    },
+  });
+  const byDeployment: CentralPloBindingsByDeployment = new Map();
+  for (const snapshot of snapshots) {
+    let byQuestion = byDeployment.get(snapshot.central_deployment_id);
+    if (!byQuestion) {
+      byQuestion = new Map();
+      byDeployment.set(snapshot.central_deployment_id, byQuestion);
+    }
+    const questionKey = `${snapshot.section_key}:${snapshot.item_key}`;
+    const bindings = byQuestion.get(questionKey) ?? [];
+    // Identity and labels come from the immutable snapshot fields, never the
+    // live PLO relation: renaming or deleting a PLO must not rewrite or drop
+    // previously published analytics evidence. A deleted PLO keeps its frozen
+    // label under a stable snapshot-derived identity.
+    bindings.push({
+      ploId:
+        snapshot.plo_id ??
+        `snapshot:${snapshot.plo_code_snapshot}:${snapshot.plo_description_snapshot}`,
+      ploCode: snapshot.plo_code_snapshot,
+      ploDescription: snapshot.plo_description_snapshot,
+    });
+    byQuestion.set(questionKey, bindings);
+  }
+  return byDeployment;
+}
+
+function resolveOutcomeRatingScale(
+  instrumentVersionId: string | null,
+  sectionKey: string,
+  itemKey: string,
+  snapshotById: Map<string, unknown>
+) {
+  return instrumentVersionId
+    ? resolveItemScaleIdentity(snapshotById.get(instrumentVersionId) ?? null, sectionKey, itemKey)
+    : null;
+}
+
+
+type CourseOutcomeRatingRow = {
+  rating_value: number;
+  response_id: string;
+  section_key: string;
+  item_key: string;
+  response: {
+    assignment: {
+      course_bound_id: string | null;
+      course_bound: { instrument_version_id: string | null } | null;
+    };
+  };
+};
+
+type OutcomeScopedEvidence = {
+  ratingRows: CourseOutcomeRatingRow[];
+  courseBoundOpportunityCount: number;
+  courseBoundSubmittedCount: number;
+  centralRatingRows: CentralOutcomeRatingRow[];
+  wantsCourse: boolean;
+};
+
+/** Run the course-bound and/or central rating queries gated by the evidence-source scope. */
+async function readOutcomeScopedEvidence(
+  programId: string,
+  termInstanceWhere: Record<string, unknown>,
+  sourceScope: SourceScope | null
+): Promise<OutcomeScopedEvidence> {
+  const isCourseOnlySource = sourceScope?.response.deployment_type === "COURSE_BOUND";
+  const isCentralSource = sourceScope?.response.deployment_type === "CENTRAL";
+  const wantsCourse = !isCentralSource;
+  const wantsCentral = !isCourseOnlySource;
+  const courseBoundResponseScope = buildCourseBoundResponseScope(programId, termInstanceWhere);
+  const centralScope = sourceScope && sourceScope.response.deployment_type !== "COURSE_BOUND"
+    ? { deployment_type: "CENTRAL" as const, target_stakeholder: sourceScope.response.target_stakeholder }
+    : { deployment_type: "CENTRAL" as const };
+  const centralResponseScope = wantsCentral
+    ? buildProgramResponseScope(programId, termInstanceWhere, centralScope)
+    : null;
+  const [ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount, centralRatingRows] = await Promise.all([
+    wantsCourse ? prisma.quantitativeResponseItem.findMany({ where: { response: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope } }, select: { rating_value: true, response_id: true, section_key: true, item_key: true, response: { select: { assignment: { select: { course_bound_id: true, course_bound: { select: { instrument_version_id: true } } } } } } } }) : Promise.resolve([]),
+    wantsCourse ? prisma.evaluationAssignment.count({ where: { course_bound: { course_assignment: { program_id: programId }, ...termInstanceWhere } } }) : Promise.resolve(0),
+    wantsCourse ? prisma.response.count({ where: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope } }) : Promise.resolve(0),
+    wantsCentral ? prisma.quantitativeResponseItem.findMany({ where: { response: { status: ResponseStatus.SUBMITTED, ...centralResponseScope } }, select: { rating_value: true, response_id: true, section_key: true, item_key: true, response: { select: { assignment: { select: { central_deployment: { select: { id: true, deployment_name: true, target_stakeholder: true, instrument_version_id: true } } } } } } } }) : Promise.resolve([]),
+  ]);
+  return { ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount, centralRatingRows, wantsCourse };
+}
+
+function outcomesEmptyReason(
+  outcomesLength: number,
+  programWideLength: number,
+  wantsCourse: boolean,
+  courseBoundOpportunityCount: number,
+  courseBoundSubmittedCount: number
+): ProgramHeadOutcomesEmptyReason {
+  if (outcomesLength > 0 || programWideLength > 0) return null;
+  if (wantsCourse) {
+    return courseBoundOpportunityCount === 0 ? "no-assignments"
+      : courseBoundSubmittedCount === 0 ? "no-submissions"
+      : "no-mapped-outcomes";
+  }
+  return "no-program-wide-evidence";
+}
+/**
+ * Program-wide PLO evidence through published deployment PLO snapshots
+ * (§5.9, §16.6). Ratings are grouped by stakeholder so source populations are
+ * never pooled; a question the deployment never bound to a live PLO
+ * contributes nothing.
+ */
+async function buildProgramWideOutcomeDtos(
+  rows: CentralOutcomeRatingRow[],
+  snapshotById: Map<string, unknown>
+): Promise<ProgramHeadProgramWideOutcomeDTO[]> {
+  const deploymentIds = [
+    ...new Set(
+      rows
+        .map((row) => row.response.assignment.central_deployment?.id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const bindingsByDeployment = await loadCentralPloBindings(deploymentIds);
+  const byStakeholder = new Map<TargetStakeholder, CentralPloRatingRow[]>();
+  for (const row of rows) {
+    const deployment = row.response.assignment.central_deployment;
+    const bindings = deployment
+      ? bindingsByDeployment.get(deployment.id)?.get(`${row.section_key}:${row.item_key}`)
+      : undefined;
+    if (!deployment || !bindings || bindings.length === 0) continue;
+    const bucket = byStakeholder.get(deployment.target_stakeholder) ?? [];
+    bucket.push({
+      sectionKey: row.section_key,
+      itemKey: row.item_key,
+      ratingValue: row.rating_value,
+      responseId: row.response_id,
+      evaluationId: deployment.id,
+      scale: resolveOutcomeRatingScale(
+        deployment.instrument_version_id,
+        row.section_key,
+        row.item_key,
+        snapshotById
+      ),
+      ploBindings: bindings,
+    });
+    byStakeholder.set(deployment.target_stakeholder, bucket);
+  }
+  const dtos: ProgramHeadProgramWideOutcomeDTO[] = [];
+  for (const [stakeholder, ratingRows] of byStakeholder) {
+    for (const metric of buildProgramWidePloMetrics(ratingRows)) {
+      dtos.push({
+        stakeholder,
+        ploId: metric.ploId,
+        code: metric.ploCode,
+        name: metric.ploDescription,
+        meanRating: metric.mean,
+        ratingCount: metric.ratingCount,
+        submittedResponseCount: metric.responseCount,
+        evaluationCount: metric.evaluationCount,
+        questionCount: metric.questionCount,
+      });
+    }
+  }
+  return dtos;
+}
+
+/**
+ * Authorized Program PLO evidence read for the selected Program. Course-bound
+ * quantitative items contribute through a publication-time CILO question
+ * binding and a canonical selected-Program CILO-to-PLO mapping; program-wide
+ * evidence contributes through published CentralDeploymentPloSnapshot
+ * bindings (§16.6). Bindings are resolved by evaluation plus section/item
+ * keys because the live student submission flow writes ratings without a
+ * binding ID, mirroring the existing review evidence compensation.
  *
  * Historical ratings are grouped by the Program's current mappings and the
  * limitation is disclosed on the DTO. Means and distributions use only
@@ -677,42 +970,13 @@ export async function getProgramHeadOutcomes(
     listProgramPeriodOptions(selectedProgram.id),
   ]);
 
-  const courseBoundResponseScope = buildCourseBoundResponseScope(
-    selectedProgram.id,
-    termInstanceWhere
-  );
-
-  const [ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount] = await Promise.all([
-    prisma.quantitativeResponseItem.findMany({
-      where: {
-        response: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope },
-      },
-      select: {
-        rating_value: true,
-        response_id: true,
-        section_key: true,
-        item_key: true,
-        response: {
-          select: {
-            assignment: {
-              select: {
-                course_bound_id: true,
-                course_bound: { select: { instrument_version_id: true } },
-              },
-            },
-          },
-        },
-      },
-    }),
-    prisma.evaluationAssignment.count({
-      where: {
-        course_bound: { course_assignment: { program_id: selectedProgram.id }, ...termInstanceWhere },
-      },
-    }),
-    prisma.response.count({
-      where: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope },
-    }),
-  ]);
+  // Course-bound PLO evidence comes from CILO bindings; program-wide PLO
+  // evidence comes from published CentralDeploymentPloSnapshot bindings
+  // (§5.9, §16.6). The evidence-source selection gates which read runs so one
+  // source's evidence never leaks into the other section.
+  const sourceScope = buildSourceScope(filters);
+  const { ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount, centralRatingRows, wantsCourse } =
+    await readOutcomeScopedEvidence(selectedProgram.id, termInstanceWhere, sourceScope);
 
   // Publication-time CILO question bindings are resolved by evaluation +
   // section/item keys, because the current student submission flow writes
@@ -758,11 +1022,14 @@ export async function getProgramHeadOutcomes(
   }
 
   const instrumentVersionIds = [
-    ...new Set(
-      ratingRows
+    ...new Set([
+      ...ratingRows
         .map((row) => row.response.assignment.course_bound?.instrument_version_id)
-        .filter((id): id is string => Boolean(id))
-    ),
+        .filter((id): id is string => Boolean(id)),
+      ...centralRatingRows
+        .map((row) => row.response.assignment.central_deployment?.instrument_version_id)
+        .filter((id): id is string => Boolean(id)),
+    ]),
   ];
   const instrumentVersions =
     instrumentVersionIds.length > 0
@@ -782,15 +1049,19 @@ export async function getProgramHeadOutcomes(
   const aggregation = aggregateOutcomeEvidence(evidenceRows);
   const outcomes = buildProgramHeadOutcomeDtos(aggregation);
 
+  const programWideOutcomes = await buildProgramWideOutcomeDtos(
+    centralRatingRows,
+    snapshotById
+  );
+
   const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
-  const emptyReason: ProgramHeadOutcomesEmptyReason =
-    courseBoundOpportunityCount === 0
-      ? "no-assignments"
-      : courseBoundSubmittedCount === 0
-        ? "no-submissions"
-        : outcomes.length === 0
-          ? "no-mapped-outcomes"
-          : null;
+  const emptyReason = outcomesEmptyReason(
+    outcomes.length,
+    programWideOutcomes.length,
+    wantsCourse,
+    courseBoundOpportunityCount,
+    courseBoundSubmittedCount
+  );
 
   return {
     scope: {
@@ -803,6 +1074,7 @@ export async function getProgramHeadOutcomes(
     currentMappingDisclosure: CURRENT_MAPPING_DISCLOSURE,
     manyToManyDisclosure: aggregation.hasMultiMappedCilo,
     outcomes,
+    programWideOutcomes,
   };
 }
 
@@ -831,7 +1103,8 @@ export async function getProgramHeadTrends(
     listProgramPeriodOptions(selectedProgram.id),
   ]);
 
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere);
+  const sourceScope = buildSourceScope(filters);
+  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
 
   const [ratingRows, responseRows] = await Promise.all([
     prisma.quantitativeResponseItem.findMany({
@@ -1055,10 +1328,12 @@ export async function getProgramHeadStakeholders(
     listProgramPeriodOptions(selectedProgram.id),
   ]);
 
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere);
+  const sourceScope = buildSourceScope(filters);
+  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
   const programOpportunityScope = buildProgramOpportunityScope(
     selectedProgram.id,
-    termInstanceWhere
+    termInstanceWhere,
+    sourceScope?.assignment
   );
 
   const [ratingRows, responseRows, evaluationOpportunityCount, submittedResponseCount] =
@@ -1181,10 +1456,12 @@ export async function getProgramHeadBreakdowns(
     listProgramPeriodOptions(selectedProgram.id),
   ]);
 
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere);
+  const sourceScope = buildSourceScope(filters);
+  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
   const programOpportunityScope = buildProgramOpportunityScope(
     selectedProgram.id,
-    termInstanceWhere
+    termInstanceWhere,
+    sourceScope?.assignment
   );
 
   const [ratingRows, responseRows, evaluationOpportunityCount, submittedResponseCount] =
@@ -1465,10 +1742,12 @@ export async function getProgramHeadFeedback(
     listProgramPeriodOptions(selectedProgram.id),
   ]);
 
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere);
+  const sourceScope = buildSourceScope(filters);
+  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
   const programOpportunityScope = buildProgramOpportunityScope(
     selectedProgram.id,
-    termInstanceWhere
+    termInstanceWhere,
+    sourceScope?.assignment
   );
 
   const [qualitativeRows, evaluationOpportunityCount, submittedResponseCount] = await Promise.all([
