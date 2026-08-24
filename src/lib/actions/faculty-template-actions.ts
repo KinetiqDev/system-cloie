@@ -6,6 +6,7 @@ import {
   duplicateFacultyTemplate,
   getFacultyTemplatePublicationContext,
   saveFacultyTemplateDraft,
+  deleteFacultyTemplate,
 } from "@/features/instruments/services/manage-faculty-templates";
 
 type ActionResult<T = void> = { success: true; data: T } | { success: false; error: string };
@@ -71,6 +72,19 @@ export async function duplicateFacultyTemplateAction(
 
   revalidatePath("/faculty/tools");
   return { success: true, data: result.data };
+}
+
+export async function deleteFacultyTemplateAction(
+  templateId: string
+): Promise<ActionResult> {
+  const result = await deleteFacultyTemplate(templateId);
+
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  revalidatePath("/faculty/tools");
+  return { success: true, data: undefined };
 }
 
 export async function validateFacultyTemplatePublishReadinessAction(

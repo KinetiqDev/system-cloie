@@ -426,6 +426,55 @@ export async function duplicateFacultyTemplate(
   return { success: true, data: { id: result.id } };
 }
 
+export async function deleteFacultyTemplate(templateId: string): Promise<ServiceResult> {
+  const auth = await requireFacultySession();
+
+  if (!auth.success) {
+    return auth;
+  }
+
+  const template = await prisma.instrumentTemplate.findUnique({
+    where: { id: templateId },
+    select: {
+      id: true,
+      faculty_owner_id: true,
+      versions: {
+        select: {
+          _count: {
+            select: {
+              course_bounds: true,
+              central_insts: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!template) {
+    return { success: false, error: "Template not found." };
+  }
+
+  if (template.faculty_owner_id !== auth.data.userId) {
+    return { success: false, error: "You can only delete templates you created." };
+  }
+
+  const hasDeployments = template.versions.some(
+    (version) => version._count.course_bounds > 0 || version._count.central_insts > 0
+  );
+
+  if (hasDeployments) {
+    return {
+      success: false,
+      error: "Templates with published evaluations cannot be deleted.",
+    };
+  }
+
+  await prisma.instrumentTemplate.delete({ where: { id: templateId } });
+
+  return { success: true, data: undefined };
+}
+
 type BoundCourseTemplate = {
   bound_course_id: string | null;
   bound_course: { course_scope: string } | null;
