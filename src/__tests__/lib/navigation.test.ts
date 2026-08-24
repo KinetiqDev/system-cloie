@@ -39,17 +39,14 @@ describe("navigation helpers", () => {
     );
   });
 
-  it("exposes curricula management to Secretary and Program Head users", () => {
+  it("omits Curricula from Secretary and Program Head navigation", () => {
     const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
-    expect(secretaryNav.find((item) => item.href === "/secretary/curricula")?.name).toBe(
-      "Curricula"
-    );
+    expect(secretaryNav.map((item) => item.href)).not.toContain("/secretary/curricula");
 
     const programHeadNav = getProgramHeadNav("/program-head/programs/program-2/curricula");
     expect(
       programHeadNav.find((item) => item.href === "/program-head/programs/program-2/curricula")
-        ?.name
-    ).toBe("Curricula");
+    ).toBeUndefined();
   });
 
   it("orders faculty navigation correctly", () => {
@@ -88,7 +85,6 @@ describe("navigation helpers", () => {
     expect(hrefs).toEqual([
       "/program-head/programs/program-2/dashboard",
       "/program-head/programs/program-2/courses",
-      "/program-head/programs/program-2/curricula",
       "/program-head/programs/program-2/course-assignments",
       "/program-head/programs/program-2/outcomes",
       "/program-head/programs/program-2/tools",
@@ -101,7 +97,6 @@ describe("navigation helpers", () => {
 
   it("returns Program Head management navigation to entry when no context is selected", () => {
     expect(getProgramHeadNav("/program-head/profile").map((item) => item.href)).toEqual([
-      "/program-head",
       "/program-head",
       "/program-head",
       "/program-head",

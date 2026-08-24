@@ -41,6 +41,7 @@ export interface CourseAssignmentsPageShellProps {
   availablePrograms: ProgramOption[];
   availableFaculty: FacultyOption[];
   termInstances: TermInstanceItem[];
+  activeTermInstanceId?: string | null;
   initialData: ListCourseAssignmentsResult | null;
   initialFilters: AssignmentFiltersState;
   initialPage: number;
@@ -58,6 +59,7 @@ export function CourseAssignmentsPageShell({
   availablePrograms,
   availableFaculty,
   termInstances,
+  activeTermInstanceId,
   initialData,
   initialFilters,
   initialPage,
@@ -162,6 +164,7 @@ export function CourseAssignmentsPageShell({
           availableCourses={availableCourses}
           availablePrograms={availablePrograms}
           termInstances={termInstances}
+          defaultTermInstanceId={activeTermInstanceId}
           mode={mode}
           onSuccess={refreshAssignments}
           selectedProgramId={selectedProgramId}

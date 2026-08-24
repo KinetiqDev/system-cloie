@@ -22,6 +22,7 @@ export type AllProgramCourseAssignmentsPageData = {
   availablePrograms: ProgramOption[];
   availableFaculty: FacultyOption[];
   termInstances: TermInstanceItem[];
+  activeTermInstanceId: string | null;
 };
 
 /**
@@ -121,11 +122,15 @@ export async function loadAllProgramCourseAssignmentsPageData(
     program_id: c.program_id,
   }));
 
+  const activeTermInstanceId =
+    termInstances.find((t) => t.status === "ACTIVE")?.id ?? null;
+
   return {
     availableCourses,
     availablePrograms: programs,
     availableFaculty,
     termInstances,
+    activeTermInstanceId,
   };
 }
 

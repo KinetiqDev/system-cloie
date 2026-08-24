@@ -66,7 +66,6 @@ const SECRETARY_NAV: NavItem[] = [
   { name: "School Years", href: "/secretary/school-years", icon: Calendar },
   { name: "Programs", href: "/secretary/programs", icon: Building2 },
   { name: "Courses", href: "/secretary/courses", icon: BookOpen },
-  { name: "Curricula", href: "/secretary/curricula", icon: Layers3 },
   { name: "Course Assignments", href: "/secretary/course-assignments", icon: UsersRound },
   { name: "Tools", href: "/secretary/instruments", icon: ClipboardList },
 ];
@@ -83,12 +82,6 @@ const PROGRAM_HEAD_NAV: NavItem[] = [
     href: "/program-head/courses",
     icon: BookOpen,
     programHeadChildPath: "courses",
-  },
-  {
-    name: "Curricula",
-    href: "/program-head/curricula",
-    icon: Layers3,
-    programHeadChildPath: "curricula",
   },
   {
     name: "Course Assignments",
