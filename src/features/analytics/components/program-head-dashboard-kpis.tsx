@@ -28,7 +28,7 @@ export function ProgramHeadDashboardKpiGrid({
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-2">
-            <CardDescription className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+            <CardDescription className="text-muted-foreground text-label-md font-semibold tracking-wider uppercase">
               Response completion
             </CardDescription>
             <CompletionBreakdownPopover stakeholders={participation.stakeholders} />
@@ -48,7 +48,7 @@ export function ProgramHeadDashboardKpiGrid({
               {participation.assigned.toLocaleString()} eligible evaluation assignments submitted
             </p>
           )}
-          <p className="mt-1">Assignment-based; the registered population is never the denominator.</p>
+          <p className="text-label-sm mt-1">Assignment-based; the registered population is never the denominator.</p>
         </CardContent>
       </Card>
 
@@ -77,7 +77,7 @@ export function ProgramHeadDashboardKpiGrid({
               {participation.respondents.notStarted.toLocaleString()}
             </dd>
           </dl>
-          <p className="text-muted-foreground mt-2 text-[11px]">
+          <p className="text-muted-foreground mt-2 text-label-sm">
             Person-level status across every eligible assignment (shared User identity).
           </p>
         </CardContent>
@@ -93,7 +93,7 @@ export function ProgramHeadDashboardKpiGrid({
             {activeEvaluations.total.toLocaleString()}
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-muted-foreground text-xs">
+        <CardContent className="text-muted-foreground text-label-sm">
           <p>{activeEvaluations.closingWithin7Days} close within the next 7 days</p>
           <p>{pendingResponses.toLocaleString()} assignments still open</p>
           <Link
@@ -129,7 +129,7 @@ export function ProgramHeadDashboardKpiGrid({
                   ) : (
                     <>
                       {source.mean.toFixed(2)} / {source.scaleMax ?? "–"}
-                      <span className="text-muted-foreground ml-1 text-[10px] font-normal">
+                      <span className="text-muted-foreground ml-1 text-caption font-normal">
                         ({source.ratingCount})
                       </span>
                     </>
@@ -138,7 +138,7 @@ export function ProgramHeadDashboardKpiGrid({
               </div>
             ))}
           </dl>
-          <p className="text-muted-foreground mt-2 text-[11px]">
+          <p className="text-muted-foreground mt-2 text-label-sm">
             Source means stay separate and are never pooled into one program score.
           </p>
         </CardContent>

@@ -32,6 +32,13 @@ export const PLO_SOURCE_LABELS: Record<DashboardSourceKey, string> = {
   INDUSTRY_PARTNER: "Industry",
 };
 
+/** §13.6/§13.2 stakeholder display labels (person-level participation rows). */
+export const STAKEHOLDER_LABELS: Record<string, string> = {
+  STUDENT: "Students",
+  ALUMNI: "Alumni",
+  INDUSTRY_PARTNER: "Industry Partners",
+};
+
 /**
  * Server-side ceiling for the qualitative pulse word cloud (§13.10). Tokens
  * are identifier-redacted and truncated server-side; the client slider only

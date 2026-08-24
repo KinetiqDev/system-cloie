@@ -10,12 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { StakeholderParticipation } from "@/features/analytics/aggregators/types";
-
-const STAKEHOLDER_LABELS: Record<string, string> = {
-  STUDENT: "Students",
-  ALUMNI: "Alumni",
-  INDUSTRY_PARTNER: "Industry Partners",
-};
+import { STAKEHOLDER_LABELS } from "@/features/analytics/program-head-dashboard-labels";
 
 function formatPercentage(rate: number | null): string {
   return rate === null ? "—" : `${(rate * 100).toFixed(1)}%`;
@@ -37,7 +32,7 @@ export function CompletionBreakdownPopover({
           <button
             type="button"
             aria-label="Completion by stakeholder"
-            className="text-muted-foreground hover:text-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="text-muted-foreground hover:text-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors pointer-coarse:size-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <Info aria-hidden="true" className="size-4" />
           </button>

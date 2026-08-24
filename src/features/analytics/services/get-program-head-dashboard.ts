@@ -457,6 +457,7 @@ type QualitativeRow = {
   text_content: string;
   response: {
     id: string;
+    respondent_id: string;
     assignment: {
       course_bound: { id: string } | null;
       central_deployment: { id: string; target_stakeholder: TargetStakeholder } | null;
@@ -471,12 +472,14 @@ type QualitativeRow = {
  */
 export function summarizeQualitativePulse(rows: QualitativeRow[]): QualitativePulse {
   const contributing = rows.filter((row) => row.text_content.trim().length > 0);
+  // Person-level respondent count across every deployment kind (§13.3): one
+  // person answering several evaluations counts once.
   const respondentIds = new Set<string>();
   const evaluationIds = new Set<string>();
   const sourceBuckets = new Map<DashboardSourceKey, number>();
 
   for (const row of contributing) {
-    respondentIds.add(row.response.id);
+    respondentIds.add(row.response.respondent_id);
     const courseBound = row.response.assignment.course_bound;
     const central = row.response.assignment.central_deployment;
     if (courseBound) {
@@ -604,6 +607,7 @@ export async function getProgramHeadDashboard(
         response: {
           select: {
             id: true,
+            respondent_id: true,
             assignment: {
               select: {
                 course_bound: { select: { id: true } },
@@ -738,7 +742,7 @@ async function listActiveEvaluations(
     prisma.centralDeployment.findMany({
       where: {
         program_id: programId,
-        status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+        status: DeploymentStatus.ACTIVE,
         term_instance: termFilter,
       },
       select: { id: true, deployment_name: true, status: true, deadline_at: true },
@@ -746,7 +750,7 @@ async function listActiveEvaluations(
     prisma.courseBoundEvaluation.findMany({
       where: {
         course_assignment: { program_id: programId },
-        status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+        status: DeploymentStatus.ACTIVE,
         term_instance: termFilter,
       },
       select: { id: true, deployment_name: true, status: true, deadline_at: true },

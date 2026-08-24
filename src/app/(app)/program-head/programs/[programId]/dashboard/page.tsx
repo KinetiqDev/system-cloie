@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
 import { parseAnalyticsSearchParams } from "@/features/analytics/services/program-head-analytics-state";
-import { buildProgramHeadCourseAssignmentsPath } from "@/lib/constants/program-head-routes";
+import { buildProgramHeadCourseAssignmentsPath, buildProgramHeadOutcomesPath } from "@/lib/constants/program-head-routes";
 import { ProgramHeadDashboardKpiGrid } from "@/features/analytics/components/program-head-dashboard-kpis";
 import { ProgramHeadStakeholderProgress } from "@/features/analytics/components/program-head-stakeholder-progress";
 import { ProgramHeadPloSummary } from "@/features/analytics/components/program-head-plo-summary";
@@ -24,13 +24,11 @@ export default async function SelectedProgramDashboardPage({
   // Period filters share the Analytics URL contract; missing filters default
   // to the active academic period inside the service (spec §13.1).
   const analyticsFilters = parseAnalyticsSearchParams(rawSearchParams);
-  const periodFilters = Object.fromEntries(
-    Object.entries({
-      schoolYearId: analyticsFilters.schoolYearId,
-      semester: analyticsFilters.semester,
-      termInstanceId: analyticsFilters.termInstanceId,
-    }).filter(([, value]) => value !== undefined)
-  );
+  const periodFilters = {
+    schoolYearId: analyticsFilters.schoolYearId,
+    semester: analyticsFilters.semester,
+    termInstanceId: analyticsFilters.termInstanceId,
+  };
   const dashboard = await getProgramHeadDashboard(programId, periodFilters);
   if (!dashboard) {
     notFound();
@@ -104,10 +102,10 @@ export default async function SelectedProgramDashboardPage({
               description="Manage classes, faculty and sections"
             />
             <QuickAction
-              href={dashboard.links.analyticsOutcomes}
+              href={buildProgramHeadOutcomesPath(programId)}
               icon={<Target aria-hidden="true" className="size-4" />}
-              title="Learning Outcomes evidence"
-              description="Compare PLO results across sources"
+              title="Manage Learning Outcomes"
+              description="Manage PLOs and outcome mappings"
             />
           </CardContent>
         </Card>
@@ -144,12 +142,12 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="focus-visible:ring-ring hover:border-primary/40 flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:outline-none"
+      className="focus-visible:ring-ring hover:border-primary/40 flex items-start gap-3 rounded-lg border px-3 py-2.5 pointer-coarse:min-h-11 transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:outline-none"
     >
       <span className="text-muted-foreground mt-0.5">{icon}</span>
       <span>
-        <span className="block text-xs font-bold">{title}</span>
-        <span className="text-muted-foreground block text-[11px]">{description}</span>
+        <span className="text-label-md block font-bold">{title}</span>
+        <span className="text-muted-foreground block text-label-sm">{description}</span>
       </span>
     </Link>
   );

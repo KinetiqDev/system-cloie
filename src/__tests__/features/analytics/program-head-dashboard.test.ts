@@ -474,6 +474,7 @@ describe("summarizeQualitativePulse", () => {
       text_content: text,
       response: {
         id,
+        respondent_id: `person-${id}`,
         assignment:
           source === "course"
             ? { course_bound: { id: "cb-1" }, central_deployment: null }
@@ -525,6 +526,25 @@ describe("summarizeQualitativePulse", () => {
     for (const token of pulse.tokens) {
       expect(Object.keys(token).sort()).toEqual(["text", "value"]);
     }
+  });
+
+  it("counts one person once across several evaluations (§13.3 person-level)", () => {
+    sequence = 0;
+    const rows = [
+      qualRow("Great laboratory activities", "course"),
+      qualRow("Loved the internship support", "course"),
+    ];
+    // Both rows belong to the same person: respondent identity is shared.
+    const personId = "person-shared";
+    const pulse = summarizeQualitativePulse(
+      rows.map((row) => ({
+        ...row,
+        response: { ...row.response, respondent_id: personId },
+      }))
+    );
+    expect(pulse.respondentCount).toBe(1);
+    expect(pulse.answerCount).toBe(2);
+    expect(pulse.evaluationCount).toBe(1);
   });
 
   it("never carries raw comment text on the returned projection", () => {

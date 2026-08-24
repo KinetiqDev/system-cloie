@@ -39,7 +39,7 @@ export function ProgramHeadQualitativePulse({
               Aggregated comments with source context; raw answers stay in Responses.
             </CardDescription>
           </div>
-          <label className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold">
+          <label className="text-muted-foreground flex items-center gap-2 text-label-sm font-semibold">
             Top{" "}
             <input
               type="range"
@@ -59,7 +59,7 @@ export function ProgramHeadQualitativePulse({
       <CardContent className="flex flex-col gap-4">
         <dl className="grid grid-cols-3 gap-3">
           <div className="rounded-lg border px-3 py-2">
-            <dt className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+            <dt className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase">
               Respondents
             </dt>
             <dd className="tabular-nums mt-0.5 text-xl font-bold">
@@ -67,7 +67,7 @@ export function ProgramHeadQualitativePulse({
             </dd>
           </div>
           <div className="rounded-lg border px-3 py-2">
-            <dt className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+            <dt className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase">
               Qualitative answers
             </dt>
             <dd className="tabular-nums mt-0.5 text-xl font-bold">
@@ -75,7 +75,7 @@ export function ProgramHeadQualitativePulse({
             </dd>
           </div>
           <div className="rounded-lg border px-3 py-2">
-            <dt className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">
+            <dt className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase">
               Evaluations
             </dt>
             <dd className="tabular-nums mt-0.5 text-xl font-bold">

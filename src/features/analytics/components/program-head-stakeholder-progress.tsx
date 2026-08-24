@@ -1,14 +1,8 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import { TargetStakeholder } from "@prisma/client";
 import type { ParticipationSummary } from "@/features/analytics/aggregators/types";
-
-const STAKEHOLDER_LABELS: Record<TargetStakeholder, string> = {
-  [TargetStakeholder.STUDENT]: "Students",
-  [TargetStakeholder.ALUMNI]: "Alumni",
-  [TargetStakeholder.INDUSTRY_PARTNER]: "Industry Partners",
-};
+import { STAKEHOLDER_LABELS } from "@/features/analytics/program-head-dashboard-labels";
 
 function shareOf(count: number, total: number): number {
   return total === 0 ? 0 : (count / total) * 100;
@@ -49,10 +43,10 @@ export function ProgramHeadStakeholderProgress({
             <Link
               key={row.stakeholder}
               href={stakeholdersHref}
-              className="focus-visible:ring-ring -mx-2 grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none"
+              className="focus-visible:ring-ring -mx-2 grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-1.5 pointer-coarse:min-h-11 focus-visible:ring-2 focus-visible:outline-none"
               aria-label={`${STAKEHOLDER_LABELS[row.stakeholder]}: ${row.submitted} of ${row.assigned} submitted, ${Math.round((row.completionRate ?? 0) * 100)} percent complete, ${row.inProgress} in progress, ${row.notStarted} not started`}
             >
-              <span className="truncate text-xs font-semibold">
+              <span className="text-label-md truncate font-semibold">
                 {STAKEHOLDER_LABELS[row.stakeholder]}
               </span>
               <span
@@ -78,7 +72,7 @@ export function ProgramHeadStakeholderProgress({
                   style={{ width: `${shareOf(row.notStarted, row.assigned)}%` }}
                 />
               </span>
-              <span className="text-right text-[11px] leading-tight">
+              <span className="text-label-sm text-right leading-tight">
                 <span className="tabular-nums block font-bold">
                   {Math.round((row.completionRate ?? 0) * 100)}%
                 </span>
@@ -89,7 +83,7 @@ export function ProgramHeadStakeholderProgress({
             </Link>
           ))
         )}
-        <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+        <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1 text-label-sm">
           <span className="flex items-center gap-1.5">
             <span aria-hidden="true" className="size-2 rounded-sm" style={{ backgroundColor: "var(--chart-1)" }} />
             Submitted
