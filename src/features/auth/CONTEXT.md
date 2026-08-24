@@ -1,6 +1,6 @@
 # Identity and Access
 
-Identity and Access defines how people enter CLOIE, claim or use account roles, authenticate with Google, complete onboarding, and move through access states.
+Identity and Access defines how people enter System CLOIE, claim or use account roles, authenticate with Google, complete onboarding, and move through access states.
 
 ## General Education Coordinator (approved scope, issue #477)
 
@@ -20,15 +20,15 @@ _Avoid_: Program Head Coordinator mutation, Secretary General Education mutation
 ## Language
 
 **Self-service role claim**:
-A user-selected request to join CLOIE under a role that the system allows the user to choose for themselves, without a prior invitation or roster match.
+A user-selected request to join System CLOIE under a role that the system allows the user to choose for themselves, without a prior invitation or roster match.
 _Avoid_: Self-sign up, self-registration when discussing authorization semantics
 
 **Incomplete self-service role claim**:
-A self-service role claim that has assigned the CLOIE account role but has not yet completed the role's required onboarding data.
+A self-service role claim that has assigned the System CLOIE account role but has not yet completed the role's required onboarding data.
 _Avoid_: Completed account, role change
 
 **Pre-provisioned role**:
-A CLOIE account role that must be created by an administrator before the person can enter through the role selection portal.
+A System CLOIE account role that must be created by an administrator before the person can enter through the role selection portal.
 _Avoid_: Invite-only when the account is already created directly by an administrator
 
 **Managed role transition**:
@@ -36,11 +36,11 @@ An administrator-controlled role change where the administrator must provide the
 _Avoid_: Self-service onboarding, incomplete self-service role claim
 
 **Secretary-created account**:
-A CLOIE account created by a Secretary as either the required path for pre-provisioned roles or an override path for self-service roles, with the selected role's required institution-managed information completed at creation time. Its required `User.name` is provisional until the first real Google OAuth link, which replaces it with the Google-derived account name defined by ADR 0014.
+A System CLOIE account created by a Secretary as either the required path for pre-provisioned roles or an override path for self-service roles, with the selected role's required institution-managed information completed at creation time. Its required `User.name` is provisional until the first real Google OAuth link, which replaces it with the Google-derived account name defined by ADR 0014.
 _Avoid_: Seeded user, invited user when no invitation is involved
 
 **Canonical account name**:
-The single opaque human-readable name stored on `User` and displayed throughout CLOIE. It is not a first-name/last-name pair and must not be parsed into semantic name components.
+The single opaque human-readable name stored on `User` and displayed throughout System CLOIE. It is not a first-name/last-name pair and must not be parsed into semantic name components.
 _Avoid_: First name, last name, surname, email-derived name
 
 **Provisional pre-link name**:
@@ -64,7 +64,7 @@ The first real Secretary account created through a one-time setup path before no
 _Avoid_: Self-claimed admin, public admin registration
 
 **Internal role**:
-A CLOIE role for people participating from inside Assumption College of Davao: Secretary, College Dean, Program Head, Faculty Member, or Student.
+A System CLOIE role for people participating from inside Assumption College of Davao: Secretary, College Dean, Program Head, Faculty Member, or Student.
 _Avoid_: Staff role, ACD role when including Students
 
 **ACD institutional email**:
@@ -72,51 +72,59 @@ An email address on exactly `acd.edu.ph` or `acdeducation.com`, used to establis
 _Avoid_: Any ACD subdomain, any school-looking email
 
 **External role**:
-A CLOIE role for people participating from outside the current institution: Alumni or Industry Partner.
+A System CLOIE role for people participating from outside the current institution: Alumni or Industry Partner.
 _Avoid_: Guest role, public role
 
 **Role selection portal**:
-The single public entry point where a person chooses the CLOIE role they want to enter with before continuing through authentication and any required onboarding.
+The single public entry point where a person chooses the System CLOIE role they want to enter with before continuing through authentication and any required onboarding.
 _Avoid_: Separate sign-up pages per role
 
 **Public entry**:
-The role selection portal is the primary way people enter CLOIE, whether they are registering for the first time or returning to an existing account.
+The role selection portal is the primary way people enter System CLOIE, whether they are registering for the first time or returning to an existing account.
 _Avoid_: Role-less login as the main entry point
 
+**External stakeholder invite**:
+A Secretary-managed invitation (ExternalStakeholderInvite) that offers an Alumni or Industry Partner person entry into System CLOIE, with statuses DRAFT, SENT, ACCEPTED, and REVOKED and an optional program scope; it is the parallel invite-based entry path alongside self-service external sign-up.
+_Avoid_: Self-service external sign-up, generic invitation email
+
 **Google-authenticated account**:
-A CLOIE account whose identity is proven through Google OAuth rather than a CLOIE-managed password. For real OAuth accounts, the Google profile supplies the canonical account name only when the account is first created or first linked; later callbacks preserve the stored name.
+A System CLOIE account whose identity is proven through Google OAuth rather than a System CLOIE-managed password. For real OAuth accounts, the Google profile supplies the canonical account name only when the account is first created or first linked; later callbacks preserve the stored name.
 _Avoid_: Password account, email-code account, synchronized Google profile
 
+**Legal acknowledgement gate**:
+The signed legal-acknowledgement ticket the OAuth callback requires before the Google code exchange proceeds; a missing or invalid ticket redirects to the site root, so the privacy/terms acknowledgement precedes role selection.
+_Avoid_: Post-login consent banner, cookie consent
+
 **Dedicated demo deployment**:
-An isolated production-mode CLOIE deployment with resettable demo data and explicitly enabled signed demo sessions for demonstrations and route-performance evidence.
+An isolated production-mode System CLOIE deployment with resettable demo data and explicitly enabled signed demo sessions for demonstrations and route-performance evidence.
 _Avoid_: Primary Production, development server, public demo bypass
 
 **Demo-authenticated account**:
-A seeded CLOIE account selected through the dedicated demo deployment role switcher and represented by a short-lived signed demo session; its identity does not change the account's normal authorization or account-state rules. Demo and development authentication retain fixture-controlled names and do not perform Google name derivation or first-link replacement.
+A seeded System CLOIE account selected through the dedicated demo deployment role switcher and represented by a short-lived signed demo session; its identity does not change the account's normal authorization or account-state rules. Demo and development authentication retain fixture-controlled names and do not perform Google name derivation or first-link replacement.
 _Avoid_: Real OAuth account, multi-role account, development-only account
 
 **Account email**:
-The trimmed lowercase email address used to match a Google-authenticated identity to a CLOIE account during the first OAuth link. It establishes the account match but never supplies the account name. An already-linked User whose email is presented with a different Auth identity fails closed rather than being relinked.
+The trimmed lowercase email address used to match a Google-authenticated identity to a System CLOIE account during the first OAuth link. It establishes the account match but never supplies the account name. An already-linked User whose email is presented with a different Auth identity fails closed rather than being relinked.
 _Avoid_: Gmail alias, display email when discussing identity matching
 
-**CLOIE account role**:
-The single role that defines a user's participation in CLOIE.
+**System CLOIE account role**:
+The single role that defines a user's participation in System CLOIE.
 _Avoid_: Primary role, role stack, multi-role account
 
 **Active account role**:
-The current CLOIE account role used for dashboard access, onboarding gates, and account-state decisions.
+The current System CLOIE account role used for dashboard access, onboarding gates, and account-state decisions.
 _Avoid_: Historical profile, previous role
 
 **Role change**:
-An administrator-controlled change from one CLOIE account role to another after the account has already been registered.
+An administrator-controlled change from one System CLOIE account role to another after the account has already been registered.
 _Avoid_: Self-service role switch, role upgrade, role stacking
 
 **Role requirement**:
-The role-specific information that must exist before a CLOIE account can actively use a selected account role.
+The role-specific information that must exist before a System CLOIE account can actively use a selected account role.
 _Avoid_: Optional profile data, historical record
 
 **Program Head assignment**:
-The managed program a Program Head is responsible for in CLOIE; a Secretary-created Program Head account must start with exactly one active Program Head assignment.
+The managed program a Program Head is responsible for in System CLOIE; a Secretary-created Program Head account must start with exactly one active Program Head assignment.
 _Avoid_: Faculty program affiliation, teaching assignment
 
 **Program Head assignment activation/deactivation**:
@@ -132,19 +140,19 @@ The one Program a Program Head deliberately chooses for the current management a
 _Avoid_: Primary Program, default Program, Program preference
 
 **Graduate transition**:
-An administrator-controlled role change that moves a former Student account into Alumni participation.
+An administrator-controlled role change that moves a former Student account into Alumni participation: an administrator removes the student academic context, revokes the Student role, and assigns the Alumni role through generic role management.
 _Avoid_: Separate alumni account, self-service graduation
 
 **Historical student record**:
-Student profile, enrollment, and evaluation history retained after a former Student moves into another CLOIE account role.
+Enrollment ledger rows and evaluation history that remain attached to the User account after the Student role is revoked; the student academic profile itself is not retained.
 _Avoid_: Active Student role, deleted student record
 
 **Role mismatch**:
-A sign-in attempt where the selected portal role differs from the existing CLOIE account role for the authenticated Google identity.
+A sign-in attempt where the selected portal role differs from the existing System CLOIE account role for the authenticated Google identity.
 _Avoid_: Role switch, primary-role fallback
 
 **Faculty program affiliation**:
-The academic program a Faculty Member is associated with for CLOIE participation; a Secretary-created Faculty account must start with one primary faculty program affiliation, while additional affiliations may be managed after account creation.
+The academic program a Faculty Member is associated with for System CLOIE participation; a Secretary-created Faculty account must start with one primary faculty program affiliation, while additional affiliations may be managed after account creation.
 _Avoid_: Faculty course assignment, teaching load when referring only to onboarding identity
 
 **Teaching capability**:
@@ -180,7 +188,7 @@ A Faculty account claimed through the role selection portal using an institution
 _Avoid_: Faculty pending account, faculty pre-provisioned account
 
 **Self-declared enrollment**:
-A Student-provided academic enrollment claim used by CLOIE to place the student in an active term, program, year level, and section.
+A Student-provided academic enrollment claim used by System CLOIE to place the student in an active term, program, year level, and section.
 _Avoid_: Registrar-verified enrollment, official enrollment record
 
 **Secretary-recorded enrollment**:
@@ -204,11 +212,11 @@ An Alumni or Industry Partner account that the institution has reviewed and deci
 _Avoid_: Pending account, incomplete account
 
 **Inactive account**:
-A CLOIE account that has been disabled by an administrator and cannot access role dashboards regardless of role, onboarding, or verification state.
+A System CLOIE account that has been disabled by an administrator and cannot access role dashboards regardless of role, onboarding, or verification state.
 _Avoid_: Rejected external account, incomplete account
 
 **Account status page**:
-A non-dashboard page that explains why a Google-authenticated person cannot continue into the selected CLOIE role or dashboard. Safe outcomes include missing Google account name (new account or first OAuth link blocked without mutation) and identity conflict (normalized-email match already linked to a different Auth identity; record preserved, session terminated, no internal IDs disclosed).
+A non-dashboard page that explains why a Google-authenticated person cannot continue into the selected System CLOIE role or dashboard. Safe outcomes include missing Google account name (new account or first OAuth link blocked without mutation) and identity conflict (normalized-email match already linked to a different Auth identity; record preserved, session terminated, no internal IDs disclosed).
 _Avoid_: Login error page, onboarding page, provider diagnostic dump
 
 **External verification**:
@@ -220,9 +228,9 @@ The graduate identity for an Alumni account, including the academic program, app
 _Avoid_: Student profile, alumni proof record
 
 **Industry Partner profile**:
-The self-declared organization identity for an Industry Partner account, including the company or organization the person represents and any applicable program affiliation.
+The self-declared organization identity for an Industry Partner account, including the company or organization the person represents and its program affiliations; affiliations are stored in the IndustryPartnerProgramAffiliation join table (unique per industry partner and program) and synced on profile save, while the legacy single program_id field remains with a one-program ceiling as the upgrade path.
 _Avoid_: Employer record, company account
 
 **Protected account edit**:
-A Secretary-managed account change that can alter academic history, current student placement, managed program responsibility, or external access; CLOIE requires an explicit review of the exact changes before saving it.
+A Secretary-managed account change that can alter academic history, current student placement, managed program responsibility, or external access; System CLOIE requires an explicit review of the exact changes before saving it.
 _Avoid_: Ordinary profile correction, browser-only confirmation

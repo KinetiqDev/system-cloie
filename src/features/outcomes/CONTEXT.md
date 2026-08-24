@@ -9,7 +9,7 @@ A college-wide learning outcome in the shared Institutional Outcome catalog, own
 _Avoid_: Program Learning Outcome, college-level PLO
 
 **Program Learning Outcome (PLO)**:
-A program-level learning outcome owned by exactly one Academic Program; Program Heads administer PLOs within their assigned Program scope. The legacy term "Graduate Outcome" is retired; all code, contracts, and user-visible copy use PLO.
+A program-level learning outcome owned by exactly one Academic Program; Program Heads administer PLOs within their assigned Program scope. The legacy term "Graduate Outcome" is retired in code and contracts; ADR 0017 exempts legal copy, and a few known user-visible strings still say "graduate outcome(s)" pending a terminology sweep.
 _Avoid_: Graduate Outcome, GO, Institutional outcome, program-level template
 
 **Course Intended Learning Outcome (CILO)**:
@@ -76,9 +76,17 @@ _Avoid_: Anonymous write, inferred actor
 The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one active Institutional Outcome mapping with a non-null manifestation. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active PLO of the Course's owning Academic Program; a Program with zero active PLOs alongside active CILOs is incomplete, not ready.
 _Avoid_: PLO-only readiness, per-assignment readiness, CILO count as readiness, vacuous readiness with zero active PLOs
 
+**Course alignment target layer**:
+The internal discriminator resolving a Course scope to its typed target catalog: `GENERAL_EDUCATION` resolves to `INSTITUTIONAL_OUTCOME` and `PROGRAM_SPECIFIC` to `GRADUATE_OUTCOME`; persisted in readiness snapshot contexts and Dean mapping-gap DTOs, translated before display, never surfaced verbatim to users.
+_Avoid_: Surfaced layer value, untyped course target catalog
+
 **Completed-period readiness snapshot**:
-An immutable, versioned record of readiness written when an Academic Period completes; it carries typed target details for new snapshots, while existing snapshots retain their legacy interpretation and are never rewritten by later mapping or catalog changes. Legacy snapshots may persist `GRADUATE_OUTCOME` as a stored target-layer value; it is data, not terminology, and is never surfaced verbatim to users.
+An immutable, versioned record of readiness written when an Academic Period completes; it carries typed target details for new snapshots, while existing snapshots retain their legacy interpretation and are never rewritten by later mapping or catalog changes. `GRADUATE_OUTCOME` persists as a stored target-layer value in legacy and schema_version-2 snapshots alike (every Program-specific context via `targetLayerForScope`, carried in Dean mapping-gap DTOs for both); it is stored data, always translated before display (e.g. "Incomplete Program Learning Outcome mapping:"), never surfaced verbatim to users.
 _Avoid_: Live readiness read, mutable snapshot, relabeled legacy snapshot
+
+**Readiness snapshot schema version**:
+The version tag on period readiness snapshots: new snapshots write version 2 (typed payloads under the exhaustive manifestation rule); version 1 (column default) keeps legacy at-least-one-target semantics, and reads branch on it; snapshots are immutable via DB trigger.
+_Avoid_: Unversioned snapshot, rewritable snapshot
 
 **Publication alignment gate**:
 The server-side rule that rejects new Course-bound evaluation publication while any active CILO of the locked Course fails the typed alignment rule (exhaustive manifestation coverage for Program-specific Courses, at-least-one active Institutional Outcome with a manifestation for General Education), with a direct repair path to Course alignment.

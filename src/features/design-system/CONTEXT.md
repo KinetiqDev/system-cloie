@@ -1,11 +1,11 @@
 # Design System
 
-Design System defines the unified Light, Dark, and System visual contract, semantic design tokens, appearance resolution, protected visual showcase, and production-surface migration inventory for CLOIE.
+Design System defines the unified Light, Dark, and System visual contract, semantic design tokens, appearance resolution, protected visual showcase, and production-surface migration inventory for System CLOIE.
 
 ## Language
 
 **Semantic design token**:
-A theme-resolved CSS variable role defined in `src/styles/tokens.css` (surface, text, border, interaction, status, visualization, elevation, metadata color) that replaces raw hex or palette values.
+A theme-resolved CSS variable role defined in `src/styles/tokens.css` (surface, text, border, interaction, status, visualization, elevation/shadow) that replaces raw hex or palette values.
 _Avoid_: Hardcoded hex color, component-local dark palette, raw Tailwind palette class when a semantic role exists
 
 **Appearance preference**:
@@ -23,6 +23,10 @@ _Avoid_: Uncontrolled dark mode rollout, client-only feature flag, default-enabl
 **Design System Showcase**:
 A protected, read-only visual reference route (`/design-system`) under the authenticated application shell that renders production tokens and components with static fixture data across themes, viewports, and accessibility states.
 _Avoid_: Public demo route, mutation playground, database-backed showcase
+
+**Offline reference**:
+The showcase's offline section is a static visual reference that disclaims real offline capability; PWA service-worker/offline remains deferred by ADR 0006 (reaffirmed by ADR 0010 section 3). The design system owns the PWA-facing metadata surfaces (manifest `theme_color`/`background_color`, viewport `themeColor`).
+_Avoid_: Offline data or caching claims, service-worker behavior in the showcase, `navigator.onLine` consumer
 
 **Production-surface inventory**:
 An audited catalog of all application UI surfaces, routes, layouts, and components mapping every file to exactly one migration owner or non-task disposition.
