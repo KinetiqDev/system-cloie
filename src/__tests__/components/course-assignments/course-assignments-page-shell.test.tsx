@@ -172,8 +172,11 @@ describe("CourseAssignmentsPageShell", () => {
         initialPage={1}
       />
     );
-
     expect(screen.queryByRole("button", { name: "Assign Faculty" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open actions for CS101" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("View only")).toBeInTheDocument();
     expect(screen.getByText("CS101")).toBeInTheDocument();
   });
 });

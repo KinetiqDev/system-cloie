@@ -151,6 +151,7 @@ export function CourseAssignmentsPageShell({
         onPageChange={(nextPage) => navigateWithState(filters, nextPage)}
         onAssignmentUpdated={refreshAssignments}
         onAssignFaculty={canManageAssignments ? () => setCreateOpen(true) : undefined}
+        canManageAssignments={canManageAssignments}
         selectedProgramId={selectedProgramId}
       />
 

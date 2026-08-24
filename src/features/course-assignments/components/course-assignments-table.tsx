@@ -82,6 +82,8 @@ interface CourseAssignmentsTableProps {
   onAssignmentUpdated?: () => void;
   onAssignFaculty?: () => void;
   selectedProgramId?: string;
+  /** False replaces row mutation menus with a read-only marker. */
+  canManageAssignments?: boolean;
 }
 
 export function CourseAssignmentsTable({
@@ -97,6 +99,7 @@ export function CourseAssignmentsTable({
   onAssignmentUpdated,
   onAssignFaculty,
   selectedProgramId,
+  canManageAssignments = true,
 }: CourseAssignmentsTableProps) {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -352,7 +355,9 @@ export function CourseAssignmentsTable({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {isReadOnly ? (
+                    {!canManageAssignments ? (
+                      <span className="text-muted-foreground text-xs">View only</span>
+                    ) : isReadOnly ? (
                       <span className="text-muted-foreground text-xs">
                         Managed by General Education Coordinator
                       </span>
