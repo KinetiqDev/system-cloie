@@ -37,7 +37,6 @@ import type { WordCloudToken } from "../types";
 
 import {
   DASHBOARD_SOURCE_ORDER,
-  PLO_SOURCE_LABELS,
   QUALITATIVE_TOKEN_CAP,
   SOURCE_CARD_LABELS,
 } from "../program-head-dashboard-labels";
@@ -93,7 +92,8 @@ export type QualitativePulse = {
 /** Cross-surface destinations every dashboard card links into (§13, §12). */
 type DashboardLinks = {
   responses: string;
-  responsesActive: string;
+  responsesActiveCourse: string;
+  responsesActiveProgramWide: string;
   analyticsOutcomes: string;
   analyticsStakeholders: string;
   analyticsFeedback: string;
@@ -904,8 +904,13 @@ function buildDashboardLinks(
 ): DashboardLinks {
   return {
     responses: buildProgramHeadResponsesPath(programId),
-    responsesActive: buildProgramHeadResponsesUrl(programId, {
+    responsesActiveCourse: buildProgramHeadResponsesUrl(programId, {
       tab: "course",
+      page: 1,
+      status: DeploymentStatus.ACTIVE,
+    }),
+    responsesActiveProgramWide: buildProgramHeadResponsesUrl(programId, {
+      tab: "program-wide",
       page: 1,
       status: DeploymentStatus.ACTIVE,
     }),

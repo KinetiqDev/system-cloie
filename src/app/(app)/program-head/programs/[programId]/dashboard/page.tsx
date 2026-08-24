@@ -69,7 +69,8 @@ export default async function SelectedProgramDashboardPage({
         pendingResponses={dashboard.pendingResponses}
         activeEvaluations={dashboard.activeEvaluations}
         sourceMeans={dashboard.sourceMeans}
-        responsesActiveHref={dashboard.links.responsesActive}
+        responsesActiveCourseHref={dashboard.links.responsesActiveCourse}
+        responsesActiveProgramWideHref={dashboard.links.responsesActiveProgramWide}
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">

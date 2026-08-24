@@ -182,7 +182,8 @@ function dashboardDataFixture(
     },
     links: {
       responses: "/program-head/programs/p1/responses",
-      responsesActive: "/program-head/programs/p1/responses?status=ACTIVE",
+      responsesActiveCourse: "/program-head/programs/p1/responses?status=ACTIVE",
+      responsesActiveProgramWide: "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE",
       analyticsOutcomes: "/program-head/programs/p1/analytics?tab=outcomes",
       analyticsStakeholders: "/program-head/programs/p1/analytics?tab=stakeholders",
       analyticsFeedback: "/program-head/programs/p1/analytics?tab=feedback",
@@ -269,8 +270,15 @@ describe("selected Program dashboard route", () => {
   it("links the active evaluations card into Responses with the ACTIVE status filter", async () => {
     await loadPage();
     const card = screen.getByText("Active evaluations").closest<HTMLElement>("[data-slot=card]")!;
-    const link = within(card).getByRole("link", { name: "Review active evaluations" });
-    expect(link).toHaveAttribute("href", "/program-head/programs/p1/responses?status=ACTIVE");
+    const courseLink = within(card).getByRole("link", { name: "Review active course evaluations" });
+    const programWideLink = within(card).getByRole("link", {
+      name: "Review active program-wide evaluations",
+    });
+    expect(courseLink).toHaveAttribute("href", "/program-head/programs/p1/responses?status=ACTIVE");
+    expect(programWideLink).toHaveAttribute(
+      "href",
+      "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE"
+    );
     expect(within(card).getByText(/3 close within the next 7 days/)).toBeInTheDocument();
     expect(within(card).getByText(/88 assignments still open/)).toBeInTheDocument();
   });

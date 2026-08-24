@@ -15,13 +15,15 @@ export function ProgramHeadDashboardKpiGrid({
   pendingResponses,
   activeEvaluations,
   sourceMeans,
-  responsesActiveHref,
+  responsesActiveCourseHref,
+  responsesActiveProgramWideHref,
 }: {
   participation: ParticipationSummary;
   pendingResponses: number;
   activeEvaluations: { total: number; closingWithin7Days: number };
   sourceMeans: DashboardSourceMean[];
-  responsesActiveHref: string;
+  responsesActiveCourseHref: string;
+  responsesActiveProgramWideHref: string;
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -97,10 +99,16 @@ export function ProgramHeadDashboardKpiGrid({
           <p>{activeEvaluations.closingWithin7Days} close within the next 7 days</p>
           <p>{pendingResponses.toLocaleString()} assignments still open</p>
           <Link
-            href={responsesActiveHref}
+            href={responsesActiveCourseHref}
             className="text-link mt-2 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
           >
-            Review active evaluations
+            Review active course evaluations
+          </Link>
+          <Link
+            href={responsesActiveProgramWideHref}
+            className="text-link ml-3 mt-2 inline-flex items-center gap-1 text-xs font-semibold hover:underline"
+          >
+            Review active program-wide evaluations
           </Link>
         </CardContent>
       </Card>
