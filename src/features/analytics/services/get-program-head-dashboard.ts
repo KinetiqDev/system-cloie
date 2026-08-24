@@ -796,13 +796,18 @@ async function listActiveEvaluations(
   programId: string,
   termInstanceWhere: Record<string, unknown>
 ): Promise<{ deployments: AttentionDeployment[] }> {
-  const termFilter = termInstanceWhere as Prisma.AcademicTermInstanceWhereInput;
+  // resolveTermInstanceFilter returns a scalar term_instance_id predicate;
+  // apply it on the FK columns of both deployment kinds.
+  const termInstanceId = termInstanceWhere.term_instance_id as
+    | string
+    | { in: string[] }
+    | undefined;
   const [central, courseBound] = await Promise.all([
     prisma.centralDeployment.findMany({
       where: {
         program_id: programId,
         status: DeploymentStatus.ACTIVE,
-        term_instance: termFilter,
+        term_instance_id: termInstanceId,
       },
       select: { id: true, deployment_name: true, status: true, deadline_at: true },
     }),
@@ -810,7 +815,7 @@ async function listActiveEvaluations(
       where: {
         course_assignment: { program_id: programId },
         status: DeploymentStatus.ACTIVE,
-        term_instance: termFilter,
+        term_instance_id: termInstanceId,
       },
       select: { id: true, deployment_name: true, status: true, deadline_at: true },
     }),

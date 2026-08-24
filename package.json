@@ -27,6 +27,7 @@
     "curriculum:generate-baseline": "tsx scripts/generate-baseline-curricula.ts",
     "academic:backfill-active-state": "tsx scripts/backfill-school-year-active-state.ts",
     "test:db": "vitest run --no-file-parallelism src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts src/__tests__/features/academic-calendar/read-period-readiness-totals-parity.test.ts src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts src/__tests__/features/academic-calendar/school-year-active-constraint.test.ts",
+    "test:e2e": "playwright test",
     "db:push": "prisma db push --schema prisma",
     "db:seed": "prisma generate --schema prisma && prisma db seed",
     "db:studio": "prisma studio --schema prisma",
@@ -70,7 +71,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@next/env": "^16.2.4",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

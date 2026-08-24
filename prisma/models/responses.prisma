@@ -25,6 +25,7 @@ model Response {
   qual_items  QualitativeResponseItem[]
 
   @@map("responses")
+  @@index([deployment_id])
 }
 
 model QuantitativeResponseItem {
@@ -41,6 +42,7 @@ model QuantitativeResponseItem {
   cilo_question_binding CourseBoundCiloQuestionBinding? @relation(fields: [cilo_question_binding_id], references: [id], onDelete: SetNull)
 
   @@map("quantitative_response_items")
+  @@index([response_id])
 }
 
 model QualitativeResponseItem {
@@ -55,4 +57,5 @@ model QualitativeResponseItem {
   response Response @relation(fields: [response_id], references: [id], onDelete: Cascade)
 
   @@map("qualitative_response_items")
+  @@index([response_id])
 }

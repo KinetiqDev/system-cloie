@@ -52,6 +52,19 @@ export const newCourseBoundDefs = [
     ylId: YearLevel.THIRD_YEAR,
     section: "MORNING",
   },
+  // Zero-response evaluation (§53/§61): eligible students exist on the
+  // roster, but no response has been submitted — the fixture keeps it that
+  // way (no response sequence references GESTECH).
+  {
+    id: D.CB_BSIT_GESTECH,
+    courseCode: "GESTECH",
+    deployName: "GESTECH Post-Term CILO Evaluation",
+    progId: undefined as string | undefined,
+    progCode: "BSIT",
+    progName: "Bachelor of Science in Information Technology",
+    ylId: YearLevel.FIRST_YEAR,
+    section: "MORNING",
+  },
 ] as const;
 
 export const centralDeploymentDefs = [
