@@ -24,9 +24,16 @@ type FacultyToolsPageProps = {
   initialView?: ToolsViewMode;
 };
 
+function templateOrigin(
+  template: FacultyTemplateItem
+): Pick<TemplateCollectionItem, "origin" | "originLabel"> {
+  if (template.facultyOwnerId) return { origin: "faculty-copy", originLabel: "My copy" };
+  if (template.programCode) return { origin: "program-owned", originLabel: "Program-owned" };
+  return { origin: "institutional", originLabel: "Institutional baseline" };
+}
+
 function toTemplateItem(template: FacultyTemplateItem): TemplateCollectionItem {
-  const isOwned = Boolean(template.facultyOwnerId);
-  const isProgramOwned = Boolean(template.programCode);
+  const origin = templateOrigin(template);
 
   return {
     id: template.id,
@@ -35,12 +42,12 @@ function toTemplateItem(template: FacultyTemplateItem): TemplateCollectionItem {
     templateType: template.templateType,
     statusLabel: template.is_active ? "Active" : "Inactive",
     statusActive: template.is_active,
-    origin: isOwned ? "faculty-copy" : isProgramOwned ? "program-owned" : "institutional",
-    originLabel: isOwned ? "My copy" : isProgramOwned ? "Program-owned" : "Institutional baseline",
+    origin: origin.origin,
+    originLabel: origin.originLabel,
     secondaryMeta: template.programCode ?? undefined,
     facultyAccessible: template.is_faculty_accessible,
     versionCount: template.versionCount,
-    canPublish: isOwned,
+    canPublish: Boolean(template.facultyOwnerId),
   };
 }
 
