@@ -250,9 +250,15 @@ describe("course roster pages", () => {
     const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
     expect(searchbox).toHaveValue("CS");
 
-    // Typing updates the draft before any navigation completes.
+    // Typing updates the draft; leaving the field discards the pending edit
+    // and re-adopts the server value.
+    searchbox.focus();
     fireEvent.change(searchbox, { target: { value: "CS1" } });
     expect(searchbox).toHaveValue("CS1");
+    act(() => {
+      searchbox.blur();
+    });
+    expect(searchbox).toHaveValue("CS");
 
     // The clear-filters navigation returns the server to an empty search.
     rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
@@ -271,6 +277,27 @@ describe("course roster pages", () => {
     expect(screen.getByRole("checkbox", { name: /include inactive/i })).not.toBeChecked();
   });
 
+  it("adopts a server-driven search change once the focused input blurs", () => {
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
+    );
+    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+    searchbox.focus();
+    fireEvent.change(searchbox, { target: { value: "CS1" } });
+    expect(searchbox).toHaveValue("CS1");
+
+    // A server-driven change lands while the input is still focused (e.g.
+    // browser back/forward): the in-progress keystroke is preserved.
+    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
+    expect(searchbox).toHaveValue("CS1");
+
+    // Blurring adopts the server value; the stale draft is never re-navigated.
+    act(() => {
+      searchbox.blur();
+    });
+    expect(searchbox).toHaveValue("");
+  });
+
   it("preserves Card in paginated links and instant filter navigation", () => {
     render(
       <CourseRosterDiscoveryPage
@@ -286,9 +313,9 @@ describe("course roster pages", () => {
 
     vi.useFakeTimers();
     try {
-      fireEvent.change(screen.getByRole("searchbox", { name: "Search assignments" }), {
-        target: { value: "CS1" },
-      });
+      const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
+      searchbox.focus();
+      fireEvent.change(searchbox, { target: { value: "CS1" } });
       act(() => {
         vi.advanceTimersByTime(300);
       });

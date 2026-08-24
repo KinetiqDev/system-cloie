@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -26,7 +26,7 @@ export function CourseRosterDiscoveryFilters({
 }: CourseRosterDiscoveryFiltersProps) {
   const [searchDraft, setSearchDraft] = useState(initialSearch);
   const [includeHistory, setIncludeHistory] = useState(initialHistory);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
   // Server-driven history changes (e.g. the Clear filters link) reset the
   // checkbox. A pending navigation is skipped so an in-flight response never
@@ -36,19 +36,22 @@ export function CourseRosterDiscoveryFilters({
   }
 
   // Server-side search changes (e.g. the Clear filters link) reset the draft,
-  // but never overwrite an in-progress keystroke.
-  useEffect(() => {
-    if (document.activeElement === searchInputRef.current) return;
+  // but never overwrite an in-progress keystroke: the sync is deferred until
+  // the input loses focus, so a focused field keeps the user's text and a
+  // blur always re-adopts the server value.
+  if (!isFocused && searchDraft !== initialSearch) {
     setSearchDraft(initialSearch);
-  }, [initialSearch]);
+  }
 
   // Search streams in after a quiet pause while typing; the history checkbox
   // applies immediately. Both preserve the server-side view and pagination.
+  // Losing focus cancels the pending timer so a discarded draft is never
+  // re-navigated.
   useEffect(() => {
-    if (searchDraft === initialSearch) return;
+    if (!isFocused || searchDraft === initialSearch) return;
     const timer = setTimeout(() => onNavigate(searchDraft, includeHistory), 300);
     return () => clearTimeout(timer);
-  }, [searchDraft, includeHistory, view, onNavigate]);
+  }, [searchDraft, includeHistory, view, onNavigate, isFocused]);
 
   return (
     <FieldGroup
@@ -61,12 +64,13 @@ export function CourseRosterDiscoveryFilters({
         <FieldLabel htmlFor="roster-search">Search assignments</FieldLabel>
         <Input
           id="roster-search"
-          ref={searchInputRef}
           type="search"
           maxLength={100}
           placeholder="Course or program"
           value={searchDraft}
           onChange={(event) => setSearchDraft(event.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
         />
       </Field>
       <Field orientation="horizontal" className="min-h-11 w-fit">
