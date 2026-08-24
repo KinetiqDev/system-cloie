@@ -41,7 +41,7 @@ const schema = z.object({
   tab: z.enum([...ANALYTICS_TABS, ...LEGACY_ANALYTICS_TABS]).catch("outcomes"),
   schoolYearId: uuid.optional().catch(undefined), semester: z.nativeEnum(AcademicSemester).optional().catch(undefined), termInstanceId: uuid.optional().catch(undefined),
   evidenceSource: z.enum(["COURSE", "PROGRAM_WIDE_STUDENT", "ALUMNI", "INDUSTRY"]).optional().catch(undefined), stakeholder: z.enum(["STUDENT", "ALUMNI", "INDUSTRY_PARTNER"]).optional().catch(undefined),
-  majorId: uuid.optional().catch(undefined), yearLevel: z.string().optional().catch(undefined), courseId: uuid.optional().catch(undefined), facultyId: uuid.optional().catch(undefined), section: z.string().optional().catch(undefined), ploId: uuid.optional().catch(undefined), evaluationId: uuid.optional().catch(undefined),
+  majorId: uuid.optional().catch(undefined), yearLevel: z.string().optional().catch(undefined), courseId: uuid.optional().catch(undefined), facultyId: uuid.optional().catch(undefined), section: z.string().optional().catch(undefined), ploId: z.string().trim().max(200).optional().catch(undefined), evaluationId: uuid.optional().catch(undefined),
 });
 function couple(state: Omit<AnalyticsFilterState, "tab"> & { tab: AnalyticsTab | LegacyAnalyticsTab }): AnalyticsFilterState {
   let stakeholder = state.stakeholder;

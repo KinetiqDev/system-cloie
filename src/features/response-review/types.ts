@@ -24,7 +24,10 @@ import type { WordCloudToken } from "@/features/analytics/types";
 
 /** One publication-time PLO binding from `CentralDeploymentPloSnapshot`. */
 export type ProgramWidePloBinding = {
-  /** Grouping key: `plo_id` when snapshotted, else `plo_code_snapshot`. */
+  /**
+   * Grouping key: `plo_id` for live PLOs, else the analytics snapshot key
+   * `snapshot:<code>:<description>` so retired PLOs stay deep-linkable.
+   */
   key: string;
   code: string;
   description: string;

@@ -2329,6 +2329,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "Slice #521 how-calculated disclosure on the shared Base UI popover primitive; spec §41 presentation metadata only",
   },
   {
+    path: "src/features/analytics/components/selected-plo-scroll-target.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Slice #521 scrolls the deep-linked PLO row into view after mount; matches data-plo-row by value to avoid selector escaping",
+  },
+  {
     path: "src/features/analytics/components/program-head-dashboard-completion-popover.tsx",
     disposition: "already_compliant",
     category: "feature_component",

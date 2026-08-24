@@ -255,7 +255,7 @@ function resolveCourseBoundBinding(
           snapshot.section_key === entry.section_key && snapshot.item_key === entry.item_key
       )
       .map((snapshot) => ({
-        key: snapshot.plo_id ?? snapshot.plo_code_snapshot,
+        key: snapshot.plo_id ?? `snapshot:${snapshot.plo_code_snapshot}:${snapshot.plo_description_snapshot}`,
         code: snapshot.plo_code_snapshot,
         description: snapshot.plo_description_snapshot,
       }));

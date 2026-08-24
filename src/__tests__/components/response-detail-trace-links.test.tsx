@@ -40,7 +40,7 @@ function responseDTO(
               type: "PLO",
               ploBindings: [
                 { key: "22222222-2222-4222-8222-222222222222", code: "PLO-1", description: "Graduate outcomes" },
-                { key: "PLO-9", code: "PLO-9", description: "Retired outcome" },
+                { key: "snapshot:PLO-9:Retired outcome", code: "PLO-9", description: "Retired outcome" },
               ],
             },
           },
@@ -71,7 +71,7 @@ describe("ResponseDetail reverse trace links", () => {
     expect(href).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
   });
 
-  it("renders snapshot-only PLO codes as plain text instead of dead links", () => {
+  it("deep-links retired snapshot PLOs through their analytics snapshot key", () => {
     render(
       <ResponseDetail
         response={responseDTO()}
@@ -81,8 +81,11 @@ describe("ResponseDetail reverse trace links", () => {
       />
     );
 
-    expect(screen.queryByRole("link", { name: "PLO-9" })).not.toBeInTheDocument();
-    expect(screen.getByText("PLO-9")).toBeInTheDocument();
+    const retiredLink = screen.getByRole("link", { name: "PLO-9" });
+    const href = retiredLink.getAttribute("href") ?? "";
+    expect(href).toContain("tab=outcomes");
+    expect(href).toContain("evidenceSource=ALUMNI");
+    expect(href).toContain("ploId=snapshot%3APLO-9%3ARetired+outcome");
   });
 
   it("keeps course-bound responses scoped to the COURSE source without a stakeholder", () => {

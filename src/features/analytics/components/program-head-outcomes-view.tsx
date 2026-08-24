@@ -24,6 +24,7 @@ import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-a
 import { ProgramHeadPLODetail } from "./program-head-plo-detail";
 import { ProgramHeadOutcomeRankingChart } from "./program-head-outcome-ranking-chart";
 import { HowCalculatedPopover } from "./how-calculated-popover";
+import { SelectedPloScrollTarget } from "./selected-plo-scroll-target";
 
 /**
  * Many-to-many contribution rule: a rating bound to a CILO mapped to several
@@ -185,6 +186,7 @@ export function ProgramHeadOutcomesView({
                 {data.programWideOutcomes.map((row) => (
                   <TableRow
                     key={`${row.stakeholder}-${row.ploId}`}
+                    data-plo-row={row.ploId}
                     className={cn(row.ploId === selectedPloId && "bg-primary-soft/40")}
                   >
                     <TableCell className="align-top">
@@ -215,6 +217,7 @@ export function ProgramHeadOutcomesView({
           </div>
         </div>
       )}
+          <SelectedPloScrollTarget ploId={selectedPloId} />
     </div>
   );
 }
@@ -249,7 +252,7 @@ function OutcomesExactValueTable({
               const detailId = `plo-detail-${outcome.ploId}`;
               const isSelected = outcome.ploId === selectedPloId;
               const rows = [
-                <TableRow key={outcome.ploId} className={cn(isSelected && "bg-primary-soft/40")}>
+                <TableRow key={outcome.ploId} data-plo-row={outcome.ploId} className={cn(isSelected && "bg-primary-soft/40")}>
                     <TableCell className="align-top">
                       <div className="flex flex-col">
                         <span className="font-semibold">{outcome.code}</span>

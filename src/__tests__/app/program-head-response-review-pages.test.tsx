@@ -112,6 +112,27 @@ describe("program head identified response-review pages", () => {
     expect(screen.getByText("Course detail: Post-Term CILO Evaluation | response href: /program-head/programs/program-1/responses/course/eval-1/responses/response-1")).toBeInTheDocument();
   });
 
+  it("preserves period and stakeholder scope in course evaluation respondent links", async () => {
+    getProgramHeadCourseEvaluationDetailMock.mockResolvedValue({
+      evaluation: { title: "Post-Term CILO Evaluation" },
+    });
+    const Page = (
+      await import("../../app/(app)/program-head/programs/[programId]/responses/course/[evaluationId]/page")
+    ).default;
+
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1" }),
+      searchParams: Promise.resolve({
+        termInstanceId: "11111111-1111-4111-8111-111111111111",
+        stakeholder: "ALUMNI",
+      }),
+    });
+    render(page);
+
+    const responseHref = "Course detail: Post-Term CILO Evaluation | response href: /program-head/programs/program-1/responses/course/eval-1/responses/response-1?termInstanceId=11111111-1111-4111-8111-111111111111&stakeholder=ALUMNI";
+    expect(screen.getByText(responseHref)).toBeInTheDocument();
+  });
+
   it("returns 404 when the course evaluation is not found", async () => {
     getProgramHeadCourseEvaluationDetailMock.mockResolvedValue(null);
     const Page = (
@@ -135,7 +156,7 @@ describe("program head identified response-review pages", () => {
     render(page);
 
     expect(getProgramHeadCentralEvaluationDetailMock).toHaveBeenCalledWith("program-1", "central-1");
-    expect(screen.getByText("Central detail: Exit Survey | response href: /program-head/programs/program-1/responses/program-wide/central-1/responses/response-1")).toBeInTheDocument();
+    expect(screen.getByText("Central detail: Exit Survey | response href: /program-head/programs/program-1/responses/program-wide/central-1/responses/response-1?tab=program-wide")).toBeInTheDocument();
   });
 
   it("returns 404 when the program-wide evaluation is not found", async () => {

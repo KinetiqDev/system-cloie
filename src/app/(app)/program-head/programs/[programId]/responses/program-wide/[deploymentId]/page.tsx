@@ -2,8 +2,11 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { CentralEvaluationDetail } from "@/features/response-review/components/central-evaluation-detail";
 import { getProgramHeadCentralEvaluationDetail } from "@/features/response-review/services/get-program-head-central-evaluation-detail";
-import { parseProgramHeadResponsesSearchParams } from "@/features/analytics/services/program-head-responses-state";
-import { buildProgramHeadResponsesUrl } from "@/features/analytics/services/program-head-responses-state";
+import {
+  parseProgramHeadResponsesSearchParams,
+  programHeadResponsesQuery,
+  buildProgramHeadResponsesUrl,
+} from "@/features/analytics/services/program-head-responses-state";
 import {
   buildProgramHeadAnalyticsPath,
   buildProgramHeadResponsesProgramWideResponsePath,
@@ -29,14 +32,16 @@ export default async function CentralEvaluationDetailPage({
 
   // Upward navigation preserves period and stakeholder scope; class-level
   // filters reset (§12).
-  const responsesHref = buildProgramHeadResponsesUrl(programId, {
-    tab: "program-wide",
+  const upwardState = {
+    tab: "program-wide" as const,
     page: 1,
     schoolYearId: state.schoolYearId,
     semester: state.semester,
     termInstanceId: state.termInstanceId,
     stakeholder: state.stakeholder,
-  });
+  };
+  const responsesHref = buildProgramHeadResponsesUrl(programId, upwardState);
+  const upwardQuery = programHeadResponsesQuery(upwardState);
 
   return (
     <div className="space-y-6">
@@ -50,9 +55,10 @@ export default async function CentralEvaluationDetailPage({
       <CentralEvaluationDetail
         detail={detail}
         analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
-        responseHref={(responseId: string) =>
-          buildProgramHeadResponsesProgramWideResponsePath(programId, deploymentId, responseId)
-        }
+        responseHref={(responseId: string) => {
+          const path = buildProgramHeadResponsesProgramWideResponsePath(programId, deploymentId, responseId);
+          return upwardQuery ? `${path}?${upwardQuery}` : path;
+        }}
       />
     </div>
   );
