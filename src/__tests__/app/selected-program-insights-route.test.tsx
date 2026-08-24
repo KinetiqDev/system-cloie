@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 const {
   notFoundMock,
@@ -255,8 +255,55 @@ describe("selected Program insights routes", () => {
     expect(analyticsMock).not.toHaveBeenCalled();
   });
 
-  it("renders the first duplicate tab parameter without a redirect", async () => {
+  it("shows the selected PLO as the deepest breadcrumb step when ploId is present", async () => {
     const Page = await loadAnalyticsPage();
+    outcomesMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+      emptyReason: null,
+      programWideOutcomes: [],
+      currentMappingDisclosure: "current mappings",
+      manyToManyDisclosure: false,
+      outcomes: [
+        {
+          ploId: "11111111-1111-4111-8111-111111111111",
+          code: "PLO 2",
+          name: "Graduate attribute",
+          meanRating: 4.2,
+          ratingCount: 10,
+          submittedResponseCount: 5,
+          contributingCilos: [],
+          contributingCourses: [],
+          evidenceEvaluations: [],
+          distributions: [],
+          spansMultipleScales: false,
+          excludedRatingCount: 0,
+          evidenceSummary: { ratingCount: 10, explanation: "Raw mean of 10 valid ratings." },
+        },
+      ],
+    });
+
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "outcomes", ploId: "11111111-1111-4111-8111-111111111111" }),
+    });
+    render(page);
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
+    expect(breadcrumb.textContent).toContain("Analytics");
+    expect(breadcrumb.textContent).toContain("Outcomes");
+    expect(within(breadcrumb).getByText("PLO 2")).toHaveAttribute("aria-current", "page");
+    // The Outcomes step links back up without the PLO selection.
+    const outcomesStep = within(breadcrumb).getByRole("link", { name: "Outcomes" });
+    expect(outcomesStep.getAttribute("href")).toContain("tab=outcomes");
+    expect(outcomesStep.getAttribute("href")).not.toContain("ploId=");
+  });
+
+  it("renders the first duplicate tab parameter without a redirect", async () => {    const Page = await loadAnalyticsPage();
 
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
@@ -266,7 +313,8 @@ describe("selected Program insights routes", () => {
     expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
     expect(redirectMock).not.toHaveBeenCalled();
     render(page);
-    expect(screen.getByText("Outcomes")).toBeInTheDocument();
+    const tabNav = screen.getByRole("navigation", { name: "Analytics views" });
+    expect(within(tabNav).getByText("Outcomes")).toBeInTheDocument();
   });
 
   it("renders whitespace-padded tab values as their trimmed tab", async () => {
@@ -697,12 +745,13 @@ describe("selected Program insights routes", () => {
 
     render(page);
 
-    expect(screen.getByText("Outcomes")).toBeInTheDocument();
-    expect(screen.getByText("Courses")).toBeInTheDocument();
-    expect(screen.getByText("Stakeholders")).toBeInTheDocument();
-    expect(screen.getByText("Trends")).toBeInTheDocument();
-    expect(screen.getByText("Qualitative")).toBeInTheDocument();
-    expect(screen.getByText("AI Insights")).toBeInTheDocument();
+    const tabNav = screen.getByRole("navigation", { name: "Analytics views" });
+    expect(within(tabNav).getByText("Outcomes")).toBeInTheDocument();
+    expect(within(tabNav).getByText("Courses")).toBeInTheDocument();
+    expect(within(tabNav).getByText("Stakeholders")).toBeInTheDocument();
+    expect(within(tabNav).getByText("Trends")).toBeInTheDocument();
+    expect(within(tabNav).getByText("Qualitative")).toBeInTheDocument();
+    expect(within(tabNav).getByText("AI Insights")).toBeInTheDocument();
   });
 
   it("renders the Feedback view without falling back to Overview", async () => {

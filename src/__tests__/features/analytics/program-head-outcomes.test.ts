@@ -282,6 +282,17 @@ describe("getProgramHeadOutcomes", () => {
         submittedResponseCount: 1,
         evaluationCount: 1,
         questionCount: 1,
+        evidenceSummary: {
+          ratingCount: 1,
+          responseCount: 1,
+          evaluationCount: 1,
+          questionCount: 1,
+          scaleLabel: "1–5 (5-point)",
+          explanation:
+            "Mean of 1 valid ratings from 1 bound question(s) published to this Program Learning Outcome; unbound items are excluded.",
+          evidenceHref:
+            "/program-head/programs/program-bsed/responses?tab=program-wide&stakeholder=ALUMNI",
+        },
       },
     ]);
   });

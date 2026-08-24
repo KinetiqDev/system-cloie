@@ -1,3 +1,5 @@
+import type { MetricEvidenceSummary } from "@/features/analytics/aggregators/types";
+
 /** Readable scope summary for the current analytics view */
 export type ProgramHeadAnalyticsScopeSummary = {
   programCode: string;
@@ -151,6 +153,8 @@ export type ProgramHeadOutcomeDTO = {
   spansMultipleScales: boolean;
   /** Ratings excluded from the valid aggregate (unresolvable or out-of-scale values). */
   excludedRatingCount: number;
+  /** Presentation metadata for the "How calculated" disclosure (§41). */
+  evidenceSummary: MetricEvidenceSummary;
 };
 
 /**
@@ -171,6 +175,8 @@ export type ProgramHeadProgramWideOutcomeDTO = {
   evaluationCount: number;
   /** Number of distinct questions (items) that contributed to this row. */
   questionCount: number;
+  /** Presentation metadata for the "How calculated" disclosure (§41). */
+  evidenceSummary: MetricEvidenceSummary;
 };
 
 /**

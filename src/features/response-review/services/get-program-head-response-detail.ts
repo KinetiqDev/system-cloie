@@ -221,6 +221,7 @@ function buildCourseBoundContext(evaluation: CourseBoundEvalShape): CourseBoundR
     section: ca.section,
     majorLabel: ca.course.major?.name ?? null,
     periodLabel: buildPeriodLabel(ca.term_instance),
+    termInstanceId: ca.term_instance.id,
   };
 }
 
@@ -232,6 +233,7 @@ function buildProgramWideContext(deployment: CentralEvalShape): ProgramWideRespo
     targetYearLevel: deployment.year_level,
     instrumentVersion: deployment.instrument.version_number,
     periodLabel: buildPeriodLabel(deployment.term_instance),
+    termInstanceId: deployment.term_instance.id,
   };
 }
 
@@ -253,7 +255,7 @@ function resolveCourseBoundBinding(
           snapshot.section_key === entry.section_key && snapshot.item_key === entry.item_key
       )
       .map((snapshot) => ({
-        key: snapshot.plo_id ?? snapshot.plo_code_snapshot,
+        key: snapshot.plo_id ?? `snapshot:${snapshot.plo_code_snapshot}:${snapshot.plo_description_snapshot}`,
         code: snapshot.plo_code_snapshot,
         description: snapshot.plo_description_snapshot,
       }));

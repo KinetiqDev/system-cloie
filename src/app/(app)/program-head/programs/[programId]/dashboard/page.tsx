@@ -1,3 +1,4 @@
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
 import { BarChart3, ClipboardList, MessagesSquare, Target } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +37,7 @@ export default async function SelectedProgramDashboardPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumbs items={[{ label: "Dashboard" }]} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-heading-lg">Dashboard</h1>
@@ -71,6 +73,7 @@ export default async function SelectedProgramDashboardPage({
         sourceMeans={dashboard.sourceMeans}
         responsesActiveCourseHref={dashboard.links.responsesActiveCourse}
         responsesActiveProgramWideHref={dashboard.links.responsesActiveProgramWide}
+        responsesHref={dashboard.links.responses}
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -116,7 +119,8 @@ export default async function SelectedProgramDashboardPage({
         <ProgramHeadPloSummary
           sources={dashboard.ploSources}
           ploCatalog={dashboard.ploCatalog}
-          outcomesHref={dashboard.links.analyticsOutcomes}
+          programId={programId}
+          periodFilters={periodFilters}
         />
         <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
       </div>

@@ -5,11 +5,13 @@ import type {
   ProgramHeadAnalyticsScopeSummary,
 } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadAnalyticsFilters } from "./program-head-analytics-filters";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import {
   ANALYTICS_TABS,
   ANALYTICS_TAB_LABELS,
   buildAnalyticsTabUrl,
+  buildAnalyticsUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
 
 type ProgramHeadAnalyticsShellProps = {
@@ -18,6 +20,8 @@ type ProgramHeadAnalyticsShellProps = {
   scope: ProgramHeadAnalyticsScopeSummary;
   periodOptions: ProgramHeadAnalyticsPeriodOptions;
   children: ReactNode;
+  /** Code of the selected PLO, shown as the deepest breadcrumb step (§12). */
+  ploCode?: string;
 };
 
 export function ProgramHeadAnalyticsShell({
@@ -26,9 +30,35 @@ export function ProgramHeadAnalyticsShell({
   scope,
   periodOptions,
   children,
+  ploCode,
 }: ProgramHeadAnalyticsShellProps) {
+  const breadcrumbItems = [
+    {
+      label: "Analytics",
+      href: buildAnalyticsUrl(programId, {
+        schoolYearId: filters.schoolYearId,
+        semester: filters.semester,
+        termInstanceId: filters.termInstanceId,
+        evidenceSource: filters.evidenceSource,
+        stakeholder: filters.stakeholder,
+      }),
+    },
+    ...(ploCode
+      ? [
+          {
+            label: ANALYTICS_TAB_LABELS[filters.tab],
+            href: buildAnalyticsUrl(programId, {
+              ...filters,
+              ploId: undefined,
+            }),
+          },
+        ]
+      : []),
+    { label: ploCode ?? ANALYTICS_TAB_LABELS[filters.tab] },
+  ];
   return (
     <div className="flex flex-col gap-6">
+      <Breadcrumbs items={breadcrumbItems} />
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Analytics</h1>
         <p className="text-body-md text-text-secondary">

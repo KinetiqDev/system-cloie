@@ -20,7 +20,7 @@ import {
 import { FEEDBACK_SOURCE_LABELS, buildRedactedWordCloudTokens } from "./qualitative-analytics";
 import { buildParticipationSummary, type ParticipationRow } from "../aggregators/participation";
 import { groupRatingsByScale } from "../aggregators/quantitative";
-import { resolveItemScaleIdentity, type ScaleIdentity } from "../aggregators/scale-identity";
+import { describeSingleScaleGroup, describeScale, resolveItemScaleIdentity, type ScaleIdentity } from "../aggregators/scale-identity";
 import {
   buildCourseDerivedPloMetrics,
   buildProgramWidePloMetrics,
@@ -28,7 +28,7 @@ import {
   type PloMetric,
 } from "../aggregators/plo";
 import type { OutcomeItemRatingRow } from "../aggregators/cilo";
-import type { ParticipationSummary } from "../aggregators/types";
+import type { MetricEvidenceSummary, ParticipationSummary } from "../aggregators/types";
 import type { WordCloudToken } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -37,6 +37,7 @@ import type { WordCloudToken } from "../types";
 
 import {
   DASHBOARD_SOURCE_ORDER,
+  DASHBOARD_SOURCE_TO_ANALYTICS_FILTER,
   QUALITATIVE_TOKEN_CAP,
   SOURCE_CARD_LABELS,
 } from "../program-head-dashboard-labels";
@@ -52,6 +53,8 @@ export type DashboardSourceMean = {
   spansMultipleScales: boolean;
   /** Max of the single compatible scale group; null when mixed scales. */
   scaleMax: number | null;
+  /** Presentation metadata for the "How calculated" disclosure (§41). */
+  evidenceSummary: MetricEvidenceSummary;
 };
 
 export type DashboardPloSummaryRow = {
@@ -69,6 +72,8 @@ export type DashboardPloSummaryRow = {
   /** Max of the single compatible scale; null when mixed scales or no evidence. */
   scaleMax: number | null;
   hasEvidence: boolean;
+  /** Presentation metadata for the "How calculated" disclosure (§41). */
+  evidenceSummary: MetricEvidenceSummary;
 };
 
 export type NeedsAttentionRule = "closing-soon" | "zero-submissions" | "zero-plo-ratings";
@@ -125,7 +130,7 @@ type DashboardScope = {
 };
 
 /** Period filters shared with the Analytics URL state (§12 upward navigation). */
-type DashboardPeriodFilters = Pick<
+export type DashboardPeriodFilters = Pick<
   AnalyticsFilterState,
   "schoolYearId" | "semester" | "termInstanceId"
 >;
@@ -180,16 +185,19 @@ function ratingRowScale(
  */
 export function buildDashboardSourceMeans(
   rows: DashboardRatingRow[],
-  snapshotById: Map<string, unknown>
+  snapshotById: Map<string, unknown>,
+  programId: string,
+  periodFilters: DashboardPeriodFilters = {}
 ): DashboardSourceMean[] {
   return DASHBOARD_SOURCE_ORDER.map((sourceKey) => {
+    const sourceScope = DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey];
+    const evidenceHref = buildAnalyticsUrl(programId, { ...periodFilters, tab: "outcomes", ...sourceScope });
+    const sourceRows = rows.filter((row) => ratingRowSourceKey(row) === sourceKey);
     const groups = groupRatingsByScale(
-      rows
-        .filter((row) => ratingRowSourceKey(row) === sourceKey)
-        .map((row) => ({
-          rating: { value: row.rating_value, responseId: row.response_id },
-          scale: ratingRowScale(row, snapshotById),
-        }))
+      sourceRows.map((row) => ({
+        rating: { value: row.rating_value, responseId: row.response_id },
+        scale: ratingRowScale(row, snapshotById),
+      }))
     );
 
     if (groups.length === 0 || (groups.length === 1 && groups[0].metric.ratingCount === 0)) {
@@ -200,33 +208,54 @@ export function buildDashboardSourceMeans(
         ratingCount: 0,
         spansMultipleScales: false,
         scaleMax: null,
+        evidenceSummary: {
+          explanation: `No valid ratings from this evidence source in the selected scope.`,
+          evidenceHref,
+        },
       };
     }
 
     if (groups.length > 1) {
+      const ratingCount = groups.reduce((sum, group) => sum + group.metric.ratingCount, 0);
       return {
         sourceKey,
         label: SOURCE_CARD_LABELS[sourceKey],
         mean: null,
-        ratingCount: groups.reduce((sum, group) => sum + group.metric.ratingCount, 0),
+        ratingCount,
         spansMultipleScales: true,
         scaleMax: null,
+        evidenceSummary: {
+          ratingCount,
+          explanation: `Ratings span ${groups.length} incompatible scales; each scale is reported separately with no combined mean.`,
+          evidenceHref,
+        },
       };
     }
 
+    const scale = groups[0].scale;
     return {
       sourceKey,
       label: SOURCE_CARD_LABELS[sourceKey],
       mean: groups[0].metric.mean,
       ratingCount: groups[0].metric.ratingCount,
       spansMultipleScales: false,
-      scaleMax: groups[0].scale?.max ?? null,
+      scaleMax: scale?.max ?? null,
+      evidenceSummary: {
+        ratingCount: groups[0].metric.ratingCount,
+        responseCount: groups[0].metric.responseCount,
+        scaleLabel: scale ? describeScale(scale.descriptors) : undefined,
+        explanation: `Raw mean of ${groups[0].metric.ratingCount} valid ratings from submitted responses of this evidence source; sources are never pooled.`,
+        evidenceHref,
+      },
     };
   });
 }
 
 /** Project course-derived PLO metrics into the compact summary row shape (§13.8). */
-export function toDashboardPloRows(metrics: PloMetric[]): DashboardPloSummaryRow[] {
+export function toDashboardPloRows(
+  metrics: PloMetric[],
+  evidenceHrefFor: (ploId: string) => string
+): DashboardPloSummaryRow[] {
   return metrics.map((metric) => ({
     ploId: metric.ploId,
     ploCode: metric.ploCode,
@@ -239,6 +268,15 @@ export function toDashboardPloRows(metrics: PloMetric[]): DashboardPloSummaryRow
     spansMultipleScales: metric.spansMultipleScales,
     scaleMax: singleScaleMax(metric),
     hasEvidence: metric.ratingCount > 0,
+    evidenceSummary: {
+      ratingCount: metric.ratingCount,
+      responseCount: metric.responseCount,
+      evaluationCount: metric.evaluationCount,
+      questionCount: metric.contributingCilos.length,
+      scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
+      explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.contributingCilos.length} contributing CILO(s); unbound and general items are excluded.`,
+      evidenceHref: evidenceHrefFor(metric.ploId),
+    },
   }));
 }
 
@@ -249,7 +287,10 @@ function singleScaleMax(metric: PloMetric): number | null {
 }
 
 /** Project program-wide PLO metrics into the compact summary row shape (§13.8). */
-export function toCentralDashboardPloRows(metrics: PloMetric[]): DashboardPloSummaryRow[] {
+export function toCentralDashboardPloRows(
+  metrics: PloMetric[],
+  evidenceHrefFor: (ploId: string) => string
+): DashboardPloSummaryRow[] {
   return metrics.map((metric) => ({
     ploId: metric.ploId,
     ploCode: metric.ploCode,
@@ -262,6 +303,15 @@ export function toCentralDashboardPloRows(metrics: PloMetric[]): DashboardPloSum
     spansMultipleScales: metric.spansMultipleScales,
     scaleMax: singleScaleMax(metric),
     hasEvidence: metric.ratingCount > 0,
+    evidenceSummary: {
+      ratingCount: metric.ratingCount,
+      responseCount: metric.responseCount,
+      evaluationCount: metric.evaluationCount,
+      questionCount: metric.questionCount,
+      scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
+      explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s); unbound items are excluded.`,
+      evidenceHref: evidenceHrefFor(metric.ploId),
+    },
   }));
 }
 
@@ -638,7 +688,7 @@ export async function getProgramHeadDashboard(
 
   // ── Source-separated quantitative results (§13.5) ────────────────────────
 
-  const sourceMeans = buildDashboardSourceMeans(ratingRows, snapshotById);
+  const sourceMeans = buildDashboardSourceMeans(ratingRows, snapshotById, scope.programId, effectiveFilters);
 
   // ── PLO evidence per source (§13.8) ──────────────────────────────────────
 
@@ -650,11 +700,20 @@ export async function getProgramHeadDashboard(
     loadCentralPloBindings(centralRows),
   ]);
 
+  const ploEvidenceHref = (sourceKey: DashboardSourceKey, ploId: string): string =>
+    buildAnalyticsUrl(scope.programId, {
+      ...effectiveFilters,
+      tab: "outcomes",
+      ploId,
+      ...DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey],
+    });
+
   const ploRowsBySource: Record<DashboardSourceKey, DashboardPloSummaryRow[]> = {
     COURSE_STUDENT: toDashboardPloRows(
       buildCourseDerivedPloMetrics(
         buildCoursePloRatingRows(courseBoundRows, bindingByKey, snapshotById)
-      )
+      ),
+      (ploId) => ploEvidenceHref("COURSE_STUDENT", ploId)
     ),
     CENTRAL_STUDENT: [],
     ALUMNI: [],
@@ -672,7 +731,8 @@ export async function getProgramHeadDashboard(
     ploRowsBySource[sourceKey] = toCentralDashboardPloRows(
       buildProgramWidePloMetrics(
         buildCentralPloRatingRows(centralBySource.get(sourceKey) ?? [], centralBindings, snapshotById)
-      )
+      ),
+      (ploId) => ploEvidenceHref(sourceKey, ploId)
     );
   }
 

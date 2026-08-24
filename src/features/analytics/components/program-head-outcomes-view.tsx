@@ -23,6 +23,8 @@ import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/p
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadPLODetail } from "./program-head-plo-detail";
 import { ProgramHeadOutcomeRankingChart } from "./program-head-outcome-ranking-chart";
+import { HowCalculatedPopover } from "./how-calculated-popover";
+import { SelectedPloScrollTarget } from "./selected-plo-scroll-target";
 
 /**
  * Many-to-many contribution rule: a rating bound to a CILO mapped to several
@@ -41,12 +43,15 @@ type ProgramHeadOutcomesViewProps = {
   programId: string;
   data: ProgramHeadOutcomesDTO;
   resetHref: string;
+  /** When set, the matching PLO row is expanded and highlighted (§16.2). */
+  selectedPloId?: string;
 };
 
 export function ProgramHeadOutcomesView({
   programId,
   data,
   resetHref,
+  selectedPloId,
 }: ProgramHeadOutcomesViewProps) {
   const { emptyReason, outcomes, currentMappingDisclosure, manyToManyDisclosure } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
@@ -157,7 +162,7 @@ export function ProgramHeadOutcomesView({
             outcomes={outcomes}
           />
 
-          <OutcomesExactValueTable programId={programId} outcomes={outcomes} />
+          <OutcomesExactValueTable programId={programId} outcomes={outcomes} selectedPloId={selectedPloId} />
         </>
       )}
 
@@ -179,7 +184,11 @@ export function ProgramHeadOutcomesView({
               </TableHeader>
               <TableBody>
                 {data.programWideOutcomes.map((row) => (
-                  <TableRow key={`${row.stakeholder}-${row.ploId}`}>
+                  <TableRow
+                    key={`${row.stakeholder}-${row.ploId}`}
+                    data-plo-row={row.ploId}
+                    className={cn(row.ploId === selectedPloId && "bg-primary-soft/40")}
+                  >
                     <TableCell className="align-top">
                       <div className="flex flex-col">
                         <span className="font-semibold">{row.code}</span>
@@ -195,7 +204,12 @@ export function ProgramHeadOutcomesView({
                       {row.submittedResponseCount}
                     </TableCell>
                     <TableCell className="text-right align-top tabular-nums">{row.evaluationCount}</TableCell>
-                    <TableCell className="text-right align-top tabular-nums">{row.questionCount}</TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      <span className="inline-flex items-center gap-1">
+                        {row.questionCount}
+                        <HowCalculatedPopover metric={row.evidenceSummary} label={row.code} />
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -203,6 +217,7 @@ export function ProgramHeadOutcomesView({
           </div>
         </div>
       )}
+          <SelectedPloScrollTarget ploId={selectedPloId} />
     </div>
   );
 }
@@ -210,9 +225,11 @@ export function ProgramHeadOutcomesView({
 function OutcomesExactValueTable({
   programId,
   outcomes,
+  selectedPloId,
 }: {
   programId: string;
   outcomes: ProgramHeadOutcomesDTO["outcomes"];
+  selectedPloId?: string;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -233,20 +250,24 @@ function OutcomesExactValueTable({
           <TableBody>
             {outcomes.flatMap((outcome) => {
               const detailId = `plo-detail-${outcome.ploId}`;
+              const isSelected = outcome.ploId === selectedPloId;
               const rows = [
-                <TableRow key={outcome.ploId}>
-                  <TableCell className="align-top">
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{outcome.code}</span>
-                      <span className="text-text-secondary">{outcome.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right align-top tabular-nums">
-                    {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right align-top tabular-nums">
-                    {outcome.ratingCount}
-                  </TableCell>
+                <TableRow key={outcome.ploId} data-plo-row={outcome.ploId} className={cn(isSelected && "bg-primary-soft/40")}>
+                    <TableCell className="align-top">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{outcome.code}</span>
+                        <span className="text-text-secondary">{outcome.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      <span className="inline-flex items-center gap-1">
+                        {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
+                        <HowCalculatedPopover metric={outcome.evidenceSummary} label={outcome.code} />
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      {outcome.ratingCount}
+                    </TableCell>
                   <TableCell className="text-right align-top tabular-nums">
                     {outcome.submittedResponseCount}
                   </TableCell>
@@ -292,7 +313,7 @@ function OutcomesExactValueTable({
                 </TableRow>,
                 <TableRow key={`${outcome.ploId}-detail`}>
                   <TableCell colSpan={7}>
-                    <details>
+                    <details open={isSelected}>
                       <summary
                         id={detailId}
                         className="text-label-sm text-text-secondary cursor-pointer"

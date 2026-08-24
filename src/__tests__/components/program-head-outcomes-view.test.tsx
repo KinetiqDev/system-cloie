@@ -61,6 +61,13 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         ],
         spansMultipleScales: true,
         excludedRatingCount: 0,
+        evidenceSummary: {
+          ratingCount: 3,
+          responseCount: 2,
+          evaluationCount: 2,
+          scaleLabel: "1–5 (5-point)",
+          explanation: "Mean of 3 valid ratings from 2 course-bound evaluation(s).",
+        },
       },
       {
         ploId: "go-b",
@@ -75,18 +82,20 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         distributions: [],
         spansMultipleScales: false,
         excludedRatingCount: 1,
+        evidenceSummary: { ratingCount: 1, explanation: "Mean of 1 valid rating." },
       },
     ],
     ...overrides,
   };
 }
 
-function renderView(dto: ProgramHeadOutcomesDTO) {
+function renderView(dto: ProgramHeadOutcomesDTO, selectedPloId?: string) {
   return render(
     <ProgramHeadOutcomesView
       programId={PROGRAM_ID}
       data={dto}
       resetHref="/program-head/programs/program-bsed/analytics?tab=outcomes"
+      selectedPloId={selectedPloId}
     />
   );
 }
@@ -109,6 +118,7 @@ describe("ProgramHeadOutcomesView", () => {
               submittedResponseCount: 8,
               evaluationCount: 2,
               questionCount: 3,
+              evidenceSummary: { ratingCount: 10, explanation: "Mean of 10 valid ratings." },
             },
           ],
         })}
@@ -222,5 +232,39 @@ describe("ProgramHeadOutcomesView", () => {
     expect(
       screen.getByText(/1 rating was excluded from the valid aggregate/)
     ).toBeInTheDocument();
+  });
+
+  it("expands and highlights the PLO selected through a deep link", () => {
+    const dto = outcomeDTO();
+    dto.programWideOutcomes = [
+      {
+        stakeholder: "ALUMNI",
+        ploId: "go-a",
+        code: "PLO-1",
+        name: "Graduate outcomes",
+        meanRating: 4.5,
+        ratingCount: 10,
+        submittedResponseCount: 8,
+        evaluationCount: 2,
+        questionCount: 3,
+        evidenceSummary: { ratingCount: 10, explanation: "Mean of 10 valid ratings." },
+      },
+    ];
+    renderView(dto, "go-a");
+
+    const go1Detail = screen.getByText("Details for GO-1").closest("details")!;
+    expect(go1Detail).toHaveAttribute("open");
+    expect(within(go1Detail).getByText("Mean Rating (full precision)")).toBeInTheDocument();
+    // The selected row carries the highlight; other rows stay closed.
+    expect(screen.getByText("Details for GO-2").closest("details")).not.toHaveAttribute("open");
+    // Program-wide row also highlights.
+    const pwRow = screen.getByText("PLO-1").closest("tr");
+    expect(pwRow?.className).toContain("bg-primary-soft");
+  });
+
+  it("leaves every row closed without a selected PLO", () => {
+    renderView(outcomeDTO());
+
+    expect(screen.getByText("Details for GO-1").closest("details")).not.toHaveAttribute("open");
   });
 });

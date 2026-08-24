@@ -12,6 +12,20 @@ export const ANALYTICS_TAB_LABELS: Record<AnalyticsTab, string> = {
 };
 type AnalyticsEvidenceSource = "COURSE" | "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY";
 type AnalyticsStakeholder = "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
+
+/**
+ * Central-deployment target stakeholder → analytics evidence-source value
+ * (§15 coupling). Program-wide student evidence reports under its own
+ * source, distinct from course-bound student evidence.
+ */
+export const STAKEHOLDER_EVIDENCE_SOURCE: Record<
+  AnalyticsStakeholder,
+  Exclude<AnalyticsEvidenceSource, "COURSE">
+> = {
+  STUDENT: "PROGRAM_WIDE_STUDENT",
+  ALUMNI: "ALUMNI",
+  INDUSTRY_PARTNER: "INDUSTRY",
+};
 export type AnalyticsFilterState = {
   tab: AnalyticsTab; schoolYearId?: string; semester?: string; termInstanceId?: string;
   evidenceSource?: AnalyticsEvidenceSource; stakeholder?: AnalyticsStakeholder; majorId?: string; yearLevel?: string;
@@ -27,7 +41,7 @@ const schema = z.object({
   tab: z.enum([...ANALYTICS_TABS, ...LEGACY_ANALYTICS_TABS]).catch("outcomes"),
   schoolYearId: uuid.optional().catch(undefined), semester: z.nativeEnum(AcademicSemester).optional().catch(undefined), termInstanceId: uuid.optional().catch(undefined),
   evidenceSource: z.enum(["COURSE", "PROGRAM_WIDE_STUDENT", "ALUMNI", "INDUSTRY"]).optional().catch(undefined), stakeholder: z.enum(["STUDENT", "ALUMNI", "INDUSTRY_PARTNER"]).optional().catch(undefined),
-  majorId: uuid.optional().catch(undefined), yearLevel: z.string().optional().catch(undefined), courseId: uuid.optional().catch(undefined), facultyId: uuid.optional().catch(undefined), section: z.string().optional().catch(undefined), ploId: uuid.optional().catch(undefined), evaluationId: uuid.optional().catch(undefined),
+  majorId: uuid.optional().catch(undefined), yearLevel: z.string().optional().catch(undefined), courseId: uuid.optional().catch(undefined), facultyId: uuid.optional().catch(undefined), section: z.string().optional().catch(undefined), ploId: z.string().trim().max(200).optional().catch(undefined), evaluationId: uuid.optional().catch(undefined),
 });
 function couple(state: Omit<AnalyticsFilterState, "tab"> & { tab: AnalyticsTab | LegacyAnalyticsTab }): AnalyticsFilterState {
   let stakeholder = state.stakeholder;

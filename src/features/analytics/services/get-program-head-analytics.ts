@@ -24,6 +24,7 @@ import {
 import {
   buildScaleIdentities,
   describeScales,
+  describeSingleScaleGroup,
   extractDistinctScales,
   resolveItemScaleIdentity,
   type ScaleDescriptor,
@@ -37,6 +38,8 @@ import {
 } from "./qualitative-analytics";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
+import { buildProgramHeadResponsesPath } from "@/lib/constants/program-head-routes";
+import { buildProgramHeadResponsesUrl } from "./program-head-responses-state";
 import type {
   ProgramHeadAnalyticsScopeSummary,
   ProgramHeadBreakdownsDTO,
@@ -932,6 +935,14 @@ async function buildProgramWideOutcomeDtos(
         submittedResponseCount: metric.responseCount,
         evaluationCount: metric.evaluationCount,
         questionCount: metric.questionCount,
+        evidenceSummary: {
+          ratingCount: metric.ratingCount,
+          responseCount: metric.responseCount,
+          evaluationCount: metric.evaluationCount,
+          questionCount: metric.questionCount,
+          scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
+          explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Program Learning Outcome; unbound items are excluded.`,
+        },
       });
     }
   }
@@ -1047,12 +1058,27 @@ export async function getProgramHeadOutcomes(
     .filter((row): row is OutcomeEvidenceRow => row !== null);
 
   const aggregation = aggregateOutcomeEvidence(evidenceRows);
-  const outcomes = buildProgramHeadOutcomeDtos(aggregation);
+  const outcomes = buildProgramHeadOutcomeDtos(aggregation).map((outcome) => ({
+    ...outcome,
+    evidenceSummary: {
+      ...outcome.evidenceSummary,
+      evidenceHref: buildProgramHeadResponsesPath(selectedProgram.id, "course"),
+    },
+  }));
 
-  const programWideOutcomes = await buildProgramWideOutcomeDtos(
-    centralRatingRows,
-    snapshotById
-  );
+  const programWideOutcomes = (
+    await buildProgramWideOutcomeDtos(centralRatingRows, snapshotById)
+  ).map((outcome) => ({
+    ...outcome,
+    evidenceSummary: {
+      ...outcome.evidenceSummary,
+      evidenceHref: buildProgramHeadResponsesUrl(selectedProgram.id, {
+        tab: "program-wide",
+        page: 1,
+        stakeholder: outcome.stakeholder,
+      }),
+    },
+  }));
 
   const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason = outcomesEmptyReason(
