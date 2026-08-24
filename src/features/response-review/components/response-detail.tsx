@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,11 @@ import {
   buildAnalyticsUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
 import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
 
 type ResponseDetailProps = {
   response: ProgramHeadSubmittedResponseDetail;
@@ -127,15 +133,17 @@ function QuantitativeAnswerCard({
               <span className="text-text-muted ml-1">
                 →{" "}
                 {binding.ploMappings.map((m, index) => (
-                  <span key={m.ploId}>
+                  <Fragment key={m.ploId}>
                     {index > 0 ? ", " : null}
-                    <Link
-                      href={outcomeHref(m.ploId)}
-                      className="hover:text-foreground underline underline-offset-2"
-                    >
-                      {m.ploCode}
-                    </Link>
-                  </span>
+                    <span>
+                      <Link
+                        href={outcomeHref(m.ploId)}
+                        className="hover:text-foreground underline underline-offset-2"
+                      >
+                        {m.ploCode}
+                      </Link>
+                    </span>
+                  </Fragment>
                 ))}
               </span>
             )}
@@ -145,15 +153,21 @@ function QuantitativeAnswerCard({
           <Badge variant="outline" className="border-success/30 bg-success-soft text-success">
             PLO:{" "}
             {binding.ploBindings.map((p, index) => (
-              <span key={p.key}>
+              <Fragment key={p.key}>
                 {index > 0 ? ", " : null}
-                <Link
-                  href={outcomeHref(p.key)}
-                  className="hover:text-foreground underline underline-offset-2"
-                >
-                  {p.code}
-                </Link>
-              </span>
+                <span>
+                  {isUuid(p.key) ? (
+                    <Link
+                      href={outcomeHref(p.key)}
+                      className="hover:text-foreground underline underline-offset-2"
+                    >
+                      {p.code}
+                    </Link>
+                  ) : (
+                    p.code
+                  )}
+                </span>
+              </Fragment>
             ))}
           </Badge>
         )}
