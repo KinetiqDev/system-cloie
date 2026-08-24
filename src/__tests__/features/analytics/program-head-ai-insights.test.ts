@@ -76,7 +76,8 @@ const outcomesDTO = () => ({
   scope: SCOPE,
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
-  currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
+  programWideOutcomes: [],
+      currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
   manyToManyDisclosure: false,
   outcomes: [
     {

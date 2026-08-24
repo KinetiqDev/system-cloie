@@ -71,6 +71,39 @@ const bsedOverview = {
   },
 };
 
+const bsedOutcomes = {
+  scope: {
+    programCode: "BSED",
+    programName: "Bachelor of Secondary Education",
+    periodLabel: null,
+  },
+  periodOptions: {
+    schoolYears: [{ id: "school-year-1", label: "2025-2026" }],
+    semesters: [{ value: "FIRST", label: "1st Semester" }],
+    termInstances: [
+      {
+        id: "term-1",
+        schoolYearId: "school-year-1",
+        schoolYearLabel: "2025-2026",
+        semester: "FIRST",
+        semesterLabel: "1st Semester",
+        termLabel: "1st Term",
+        label: "2025-2026 · 1st Semester · 1st Term",
+      },
+    ],
+  },
+  emptyReason: null,
+  programWideOutcomes: [],
+      currentMappingDisclosure: "current mappings",
+  manyToManyDisclosure: false,
+  outcomes: [],
+  selection: null,
+  distributions: [],
+  coverageMatrix: { rows: [] },
+  courseEvidenceRows: [],
+  programWideEvidenceRows: [],
+};
+
 const bsedContext = {
   success: true,
   data: {
@@ -87,7 +120,7 @@ describe("selected Program insights routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     analyticsMock.mockResolvedValue(bsedOverview);
-    outcomesMock.mockResolvedValue(null);
+    outcomesMock.mockResolvedValue(bsedOutcomes);
     trendsMock.mockResolvedValue(null);
     stakeholdersMock.mockResolvedValue(null);
     breakdownsMock.mockResolvedValue(null);
@@ -103,10 +136,10 @@ describe("selected Program insights routes", () => {
       searchParams: Promise.resolve({}),
     });
 
-    expect(analyticsMock).toHaveBeenCalledWith("program-bsed", { tab: "overview" });
+    expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
   });
 
-  it("renders only selected-Program scope summary and KPI data", async () => {
+  it("renders the analytics landing with selected-Program scope and no BEED leakage", async () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
@@ -115,12 +148,8 @@ describe("selected Program insights routes", () => {
 
     render(page);
 
+    expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
     expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
-    expect(screen.getByText("12")).toBeInTheDocument(); // submitted responses
-    expect(screen.getByText("20")).toBeInTheDocument(); // evaluation opportunities
-    expect(screen.getByText("60.0%")).toBeInTheDocument(); // response rate
-    expect(screen.getByText("48")).toBeInTheDocument(); // rating count
-    expect(screen.getByText("4.19")).toBeInTheDocument(); // mean rating (rounded display)
     expect(screen.queryByText(/BEED/)).not.toBeInTheDocument();
   });
 
@@ -144,8 +173,8 @@ describe("selected Program insights routes", () => {
     expect(screen.getByText("On-demand interpretation")).toBeInTheDocument();
   });
 
-  it("renders no analytics data when the analytics read denies a selected Program", async () => {
-    analyticsMock.mockResolvedValue(null);
+  it("renders no analytics data when the outcomes read denies a selected Program", async () => {
+    outcomesMock.mockResolvedValue(null);
     const Page = await loadAnalyticsPage();
 
     await expect(
@@ -154,7 +183,7 @@ describe("selected Program insights routes", () => {
         searchParams: Promise.resolve({}),
       })
     ).rejects.toThrow("NOT_FOUND");
-    expect(analyticsMock).toHaveBeenCalledWith("program-3", { tab: "overview" });
+    expect(outcomesMock).toHaveBeenCalledWith("program-3", { tab: "outcomes" });
   });
 
   it("renders context-aware period filter controls when options exist", async () => {
@@ -171,7 +200,7 @@ describe("selected Program insights routes", () => {
     expect(screen.getByLabelText("Academic Term")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Reset" })).toHaveAttribute(
       "href",
-      "/program-head/programs/program-bsed/analytics"
+      "/program-head/programs/program-bsed/analytics?tab=outcomes"
     );
   });
 
@@ -208,6 +237,7 @@ describe("selected Program insights routes", () => {
         termInstances: [],
       },
       emptyReason: null,
+      programWideOutcomes: [],
       currentMappingDisclosure: "current mappings",
       manyToManyDisclosure: false,
       outcomes: [],
@@ -225,36 +255,62 @@ describe("selected Program insights routes", () => {
     expect(analyticsMock).not.toHaveBeenCalled();
   });
 
-  it("redirects duplicate tab parameters to one canonical URL", async () => {
+  it("renders the first duplicate tab parameter without a redirect", async () => {
     const Page = await loadAnalyticsPage();
 
-    await expect(
-      Page({
-        params: Promise.resolve({ programId: "program-bsed" }),
-        searchParams: Promise.resolve({ tab: ["outcomes", "overview"] }),
-      })
-    ).rejects.toThrow(/REDIRECT/);
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: ["outcomes", "overview"] }),
+    });
 
-    expect(redirectMock).toHaveBeenCalledWith(
-      "/program-head/programs/program-bsed/analytics?tab=outcomes"
-    );
-    expect(analyticsMock).not.toHaveBeenCalled();
+    expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
+    expect(redirectMock).not.toHaveBeenCalled();
+    render(page);
+    expect(screen.getByText("Outcomes")).toBeInTheDocument();
   });
 
-  it("redirects whitespace-padded filter values to the trimmed canonical URL", async () => {
+  it("renders whitespace-padded tab values as their trimmed tab", async () => {
+    trendsMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periods: [],
+      breaks: [],
+      emptyReason: "no-evidence",
+      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+    });
     const Page = await loadAnalyticsPage();
 
-    await expect(
-      Page({
-        params: Promise.resolve({ programId: "program-bsed" }),
-        searchParams: Promise.resolve({ tab: " trends " }),
-      })
-    ).rejects.toThrow(/REDIRECT/);
+    await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: " trends " }),
+    });
 
-    expect(redirectMock).toHaveBeenCalledWith(
-      "/program-head/programs/program-bsed/analytics?tab=trends"
-    );
-    expect(analyticsMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(trendsMock).toHaveBeenCalledWith("program-bsed", { tab: "trends" });
+  });
+
+  it("renders the trimmed trends tab through the shell when data exists", async () => {
+    trendsMock.mockResolvedValue({
+      scope: {
+        programCode: "BSED",
+        programName: "Bachelor of Secondary Education",
+        periodLabel: null,
+      },
+      periods: [],
+      breaks: [],
+      emptyReason: "no-evidence",
+      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+    });
+    const Page = await loadAnalyticsPage();
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: " trends " }),
+    });
+    render(page);
+    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
   });
 
   it("shows the active-filter count on the mobile filter trigger", async () => {
@@ -284,6 +340,7 @@ describe("selected Program insights routes", () => {
         termInstances: [],
       },
       emptyReason: null,
+      programWideOutcomes: [],
       currentMappingDisclosure: "current mappings",
       manyToManyDisclosure: false,
       outcomes: [],
@@ -301,19 +358,13 @@ describe("selected Program insights routes", () => {
       "href",
       `/program-head/programs/program-bsed/analytics?tab=trends&schoolYearId=${schoolYearId}&semester=FIRST`
     );
-    // The active tab keeps its filters and is marked current.
+    // Tab links serialize filters with the tab parameter last.
     const outcomesLink = screen.getByRole("link", { name: "Outcomes" });
     expect(outcomesLink).toHaveAttribute(
       "href",
-      `/program-head/programs/program-bsed/analytics?tab=outcomes&schoolYearId=${schoolYearId}&semester=FIRST`
+      `/program-head/programs/program-bsed/analytics?schoolYearId=${schoolYearId}&semester=FIRST&tab=outcomes`
     );
     expect(outcomesLink).toHaveAttribute("aria-current", "page");
-    // Default overview tab omits `tab=overview` but keeps the scope filters.
-    const overviewLink = screen.getByRole("link", { name: "Overview" });
-    expect(overviewLink).toHaveAttribute(
-      "href",
-      `/program-head/programs/program-bsed/analytics?schoolYearId=${schoolYearId}&semester=FIRST`
-    );
   });
 
   it("renders the Trends view with comparable periods and exact values", async () => {
@@ -539,12 +590,12 @@ describe("selected Program insights routes", () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "breakdowns" }),
+      searchParams: Promise.resolve({ tab: "courses" }),
     });
 
     render(page);
 
-    expect(breakdownsMock).toHaveBeenCalledWith("program-bsed", { tab: "breakdowns" });
+    expect(breakdownsMock).toHaveBeenCalledWith("program-bsed", { tab: "courses" });
     expect(analyticsMock).not.toHaveBeenCalled();
     expect(screen.getByText("Mean Rating by Course")).toBeInTheDocument();
     expect(screen.getAllByText("CS101 — Intro to CS").length).toBeGreaterThan(0);
@@ -563,10 +614,10 @@ describe("selected Program insights routes", () => {
     await expect(
       Page({
         params: Promise.resolve({ programId: "program-3" }),
-        searchParams: Promise.resolve({ tab: "breakdowns" }),
+        searchParams: Promise.resolve({ tab: "courses" }),
       })
     ).rejects.toThrow("NOT_FOUND");
-    expect(breakdownsMock).toHaveBeenCalledWith("program-3", { tab: "breakdowns" });
+    expect(breakdownsMock).toHaveBeenCalledWith("program-3", { tab: "courses" });
   });
 
   it("renders the Breakdowns no-submissions empty state", async () => {
@@ -586,7 +637,7 @@ describe("selected Program insights routes", () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "breakdowns" }),
+      searchParams: Promise.resolve({ tab: "courses" }),
     });
 
     render(page);
@@ -624,18 +675,7 @@ describe("selected Program insights routes", () => {
     ).toHaveAttribute("href", "/program-head/programs/program-bsed/analytics?tab=trends");
   });
 
-  it("renders the no-assignments empty state", async () => {
-    analyticsMock.mockResolvedValue({
-      ...bsedOverview,
-      kpi: {
-        submittedResponseCount: 0,
-        evaluationOpportunityCount: 0,
-        responseRate: null,
-        ratingCount: 0,
-        meanRating: null,
-      },
-      emptyReason: "no-assignments",
-    });
+  it("renders the outcomes no-evidence empty state on the landing", async () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
@@ -644,21 +684,11 @@ describe("selected Program insights routes", () => {
 
     render(page);
 
-    expect(screen.getByText("No evaluation assignments")).toBeInTheDocument();
+    expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
+    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
   });
 
-  it("renders the no-submissions empty state", async () => {
-    analyticsMock.mockResolvedValue({
-      ...bsedOverview,
-      kpi: {
-        submittedResponseCount: 0,
-        evaluationOpportunityCount: 5,
-        responseRate: null,
-        ratingCount: 0,
-        meanRating: null,
-      },
-      emptyReason: "no-submissions",
-    });
+  it("renders all 6 canonical tab navigation links", async () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
@@ -667,48 +697,11 @@ describe("selected Program insights routes", () => {
 
     render(page);
 
-    expect(screen.getByText("No submitted responses")).toBeInTheDocument();
-  });
-
-  it("shows unavailable response rate and mean when zero denominator", async () => {
-    analyticsMock.mockResolvedValue({
-      ...bsedOverview,
-      kpi: {
-        submittedResponseCount: 0,
-        evaluationOpportunityCount: 5,
-        responseRate: null,
-        ratingCount: 0,
-        meanRating: null,
-      },
-      emptyReason: "no-submissions",
-    });
-    const Page = await loadAnalyticsPage();
-    const page = await Page({
-      params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({}),
-    });
-
-    render(page);
-
-    // KPI cards not rendered because emptyReason is set
-    expect(screen.getByText("No submitted responses")).toBeInTheDocument();
-  });
-
-  it("renders all 7 tab navigation links", async () => {
-    const Page = await loadAnalyticsPage();
-    const page = await Page({
-      params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({}),
-    });
-
-    render(page);
-
-    expect(screen.getByText("Overview")).toBeInTheDocument();
     expect(screen.getByText("Outcomes")).toBeInTheDocument();
+    expect(screen.getByText("Courses")).toBeInTheDocument();
     expect(screen.getByText("Stakeholders")).toBeInTheDocument();
-    expect(screen.getByText("Breakdowns")).toBeInTheDocument();
     expect(screen.getByText("Trends")).toBeInTheDocument();
-    expect(screen.getByText("Feedback")).toBeInTheDocument();
+    expect(screen.getByText("Qualitative")).toBeInTheDocument();
     expect(screen.getByText("AI Insights")).toBeInTheDocument();
   });
 
@@ -735,12 +728,12 @@ describe("selected Program insights routes", () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "feedback" }),
+      searchParams: Promise.resolve({ tab: "qualitative" }),
     });
 
     render(page);
 
-    expect(feedbackMock).toHaveBeenCalledWith("program-bsed", { tab: "feedback" });
+    expect(feedbackMock).toHaveBeenCalledWith("program-bsed", { tab: "qualitative" });
     expect(analyticsMock).not.toHaveBeenCalled();
     expect(screen.getByText("No qualitative evidence")).toBeInTheDocument();
     expect(screen.queryByText(/Feedback view is not available yet/)).not.toBeInTheDocument();
@@ -753,10 +746,10 @@ describe("selected Program insights routes", () => {
     await expect(
       Page({
         params: Promise.resolve({ programId: "program-3" }),
-        searchParams: Promise.resolve({ tab: "feedback" }),
+        searchParams: Promise.resolve({ tab: "qualitative" }),
       })
     ).rejects.toThrow("NOT_FOUND");
-    expect(feedbackMock).toHaveBeenCalledWith("program-3", { tab: "feedback" });
+    expect(feedbackMock).toHaveBeenCalledWith("program-3", { tab: "qualitative" });
     expect(analyticsMock).not.toHaveBeenCalled();
   });
 
@@ -794,6 +787,56 @@ describe("selected Program insights routes", () => {
     expect(analyticsMock).not.toHaveBeenCalled();
   });
 });
+
+
+  it("redirects the legacy overview tab to the Program Head Dashboard", async () => {
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-bsed" }),
+        searchParams: Promise.resolve({ tab: "overview" }),
+      })
+    ).rejects.toThrow(/REDIRECT:/);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/program-head/programs/program-bsed/dashboard"
+    );
+    expect(analyticsMock).not.toHaveBeenCalled();
+    expect(outcomesMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects the legacy breakdowns tab to Courses with filters preserved", async () => {
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-bsed" }),
+        searchParams: Promise.resolve({ tab: "breakdowns", schoolYearId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }),
+      })
+    ).rejects.toThrow(/REDIRECT:/);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/program-head/programs/program-bsed/analytics?tab=courses&schoolYearId=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    );
+    expect(breakdownsMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects the legacy feedback tab to Qualitative with filters preserved", async () => {
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-bsed" }),
+        searchParams: Promise.resolve({ tab: "feedback" }),
+      })
+    ).rejects.toThrow(/REDIRECT:/);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/program-head/programs/program-bsed/analytics?tab=qualitative"
+    );
+    expect(feedbackMock).not.toHaveBeenCalled();
+  });
 
 async function loadAnalyticsPage() {
   const { default: Page } = await import(

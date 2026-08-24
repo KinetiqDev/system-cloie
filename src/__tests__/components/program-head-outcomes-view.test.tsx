@@ -14,7 +14,8 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
     },
     periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
     emptyReason: null,
-    currentMappingDisclosure:
+    programWideOutcomes: [],
+      currentMappingDisclosure:
       "Outcome rows group historical ratings using the Program's current CILO-to-PLO mappings. Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.",
     manyToManyDisclosure: false,
     outcomes: [
@@ -91,6 +92,36 @@ function renderView(dto: ProgramHeadOutcomesDTO) {
 }
 
 describe("ProgramHeadOutcomesView", () => {
+  it("renders the program-wide PLO evidence table when program-wide outcomes exist", () => {
+    render(
+      <ProgramHeadOutcomesView
+        programId={PROGRAM_ID}
+        data={outcomeDTO({
+          outcomes: [],
+          programWideOutcomes: [
+            {
+              stakeholder: "ALUMNI",
+              ploId: "plo-1",
+              code: "PLO-1",
+              name: "Graduate outcomes",
+              meanRating: 4.5,
+              ratingCount: 10,
+              submittedResponseCount: 8,
+              evaluationCount: 2,
+              questionCount: 3,
+            },
+          ],
+        })}
+        resetHref="/analytics"
+      />
+    );
+
+    expect(screen.getByText("Program-wide PLO evidence")).toBeInTheDocument();
+    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+    expect(screen.getByText("Alumni")).toBeInTheDocument();
+    expect(screen.getByText("4.50")).toBeInTheDocument();
+  });
+
   it("renders the no-mapped-outcomes empty state with a reset link", () => {
     renderView(outcomeDTO({ emptyReason: "no-mapped-outcomes", outcomes: [] }));
 

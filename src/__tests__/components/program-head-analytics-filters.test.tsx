@@ -19,11 +19,11 @@ const options: ProgramHeadAnalyticsPeriodOptions = {
   ],
 };
 
-const baseFilters = { tab: "overview" as const };
+const baseFilters = { tab: "outcomes" as const };
 
 describe("ProgramHeadAnalyticsFilters", () => {
-  it("renders nothing when no period options exist", () => {
-    const { container } = render(
+  it("keeps evidence-scope controls when no period options exist", () => {
+    render(
       <ProgramHeadAnalyticsFilters
         programId="program-bsed"
         filters={baseFilters}
@@ -31,7 +31,10 @@ describe("ProgramHeadAnalyticsFilters", () => {
       />
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByLabelText("Evidence source")).toBeInTheDocument();
+    expect(screen.queryByLabelText("School Year")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Semester")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Academic Term")).not.toBeInTheDocument();
   });
 
   it("shows the active-filter count on the mobile trigger and All periods when clean", () => {

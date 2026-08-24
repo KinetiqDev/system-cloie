@@ -13,6 +13,7 @@ const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
     schoolYear: { findUnique: vi.fn() },
     quantitativeResponseItem: { findMany: vi.fn() },
     courseBoundCiloQuestionBinding: { findMany: vi.fn() },
+    centralDeploymentPloSnapshot: { findMany: vi.fn() },
     evaluationAssignment: { count: vi.fn() },
     response: { count: vi.fn() },
     instrumentVersion: { findMany: vi.fn() },
@@ -213,6 +214,146 @@ describe("getProgramHeadOutcomes", () => {
     expect(submittedCall.where.assignment.course_bound.course_assignment.program_id).toBe(
       "program-bsed"
     );
+  });
+
+  it("returns the no-program-wide-evidence empty state when a central source has no snapshot-bound ratings", async () => {
+    prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
+    prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([]);
+
+    const result = await getProgramHeadOutcomes("program-bsed", {
+      ...outcomesFilters,
+      evidenceSource: "ALUMNI",
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.emptyReason).toBe("no-program-wide-evidence");
+    expect(result?.outcomes).toEqual([]);
+    expect(result?.programWideOutcomes).toEqual([]);
+  });
+
+  it("builds program-wide PLO rows from central ratings through deployment snapshots", async () => {
+    prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue(instrumentVersions);
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      {
+        rating_value: 5,
+        response_id: "response-1",
+        section_key: "cilo-items",
+        item_key: "cilo-attainment-1",
+        response: {
+          assignment: {
+            central_deployment: {
+              id: "deployment-1",
+              deployment_name: "Alumni Survey",
+              target_stakeholder: "ALUMNI",
+              instrument_version_id: "iv-cilo-v1",
+            },
+          },
+        },
+      },
+    ]);
+    prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([
+      {
+        central_deployment_id: "deployment-1",
+        plo_id: "plo-1",
+        plo_code_snapshot: "PLO-1",
+        plo_description_snapshot: "Graduate outcomes",
+        section_key: "cilo-items",
+        item_key: "cilo-attainment-1",
+      },
+    ]);
+
+    const result = await getProgramHeadOutcomes("program-bsed", {
+      ...outcomesFilters,
+      evidenceSource: "ALUMNI",
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.emptyReason).toBeNull();
+    expect(result?.programWideOutcomes).toEqual([
+      {
+        stakeholder: "ALUMNI",
+        ploId: "plo-1",
+        code: "PLO-1",
+        name: "Graduate outcomes",
+        meanRating: 5,
+        ratingCount: 1,
+        submittedResponseCount: 1,
+        evaluationCount: 1,
+        questionCount: 1,
+      },
+    ]);
+  });
+
+  it("keeps published evidence when the live PLO was deleted, using frozen snapshot labels", async () => {
+    prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue(instrumentVersions);
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      {
+        rating_value: 4,
+        response_id: "response-1",
+        section_key: "cilo-items",
+        item_key: "cilo-attainment-1",
+        response: {
+          assignment: {
+            central_deployment: {
+              id: "deployment-1",
+              deployment_name: "Alumni Survey",
+              target_stakeholder: "ALUMNI",
+              instrument_version_id: "iv-cilo-v1",
+            },
+          },
+        },
+      },
+    ]);
+    prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([
+      {
+        central_deployment_id: "deployment-1",
+        plo_id: null,
+        plo_code_snapshot: "PLO-9",
+        plo_description_snapshot: "Retired outcome",
+        section_key: "cilo-items",
+        item_key: "cilo-attainment-1",
+      },
+    ]);
+
+    const result = await getProgramHeadOutcomes("program-bsed", {
+      ...outcomesFilters,
+      evidenceSource: "ALUMNI",
+    });
+
+    expect(result?.programWideOutcomes).toHaveLength(1);
+    expect(result?.programWideOutcomes[0].code).toBe("PLO-9");
+    expect(result?.programWideOutcomes[0].name).toBe("Retired outcome");
+    expect(result?.programWideOutcomes[0].ploId).toContain("snapshot:");
+  });
+
+  it("reads both course-bound and central evidence for a bare STUDENT stakeholder", async () => {
+    prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
+    prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([]);
+
+    await getProgramHeadOutcomes("program-bsed", {
+      ...outcomesFilters,
+      stakeholder: "STUDENT",
+    });
+
+    const courseCall = prismaMock.quantitativeResponseItem.findMany.mock.calls[0][0];
+    expect(courseCall.where.response.deployment_type).toBe("COURSE_BOUND");
+    const centralCall = prismaMock.quantitativeResponseItem.findMany.mock.calls[1][0];
+    expect(centralCall.where.response.deployment_type).toBe("CENTRAL");
+    expect(centralCall.where.response.assignment.central_deployment.target_stakeholder).toBe("STUDENT");
+  });
+
+  it("keeps the course-bound read when Course evidence is selected", async () => {
+    await getProgramHeadOutcomes("program-bsed", {
+      ...outcomesFilters,
+      evidenceSource: "COURSE",
+    });
+
+    const ratingCall = prismaMock.quantitativeResponseItem.findMany.mock.calls[0][0];
+    expect(ratingCall.where.response.deployment_type).toBe("COURSE_BOUND");
   });
 
   it("resolves publication-time bindings by evaluation and item keys with mapped CILOs only", async () => {
@@ -659,6 +800,7 @@ describe("getProgramHeadOutcomes", () => {
       "currentMappingDisclosure",
       "manyToManyDisclosure",
       "outcomes",
+      "programWideOutcomes",
     ]);
     const serialized = JSON.stringify(result);
     expect(() => JSON.parse(serialized)).not.toThrow();

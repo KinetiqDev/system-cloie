@@ -72,6 +72,8 @@ export function ProgramHeadAIInsightsView({
             schoolYearId: filters.schoolYearId,
             semester: filters.semester,
             termInstanceId: filters.termInstanceId,
+            evidenceSource: filters.evidenceSource,
+            stakeholder: filters.stakeholder,
           },
         })
       );
@@ -322,21 +324,15 @@ function InterpretationResult({
         <CardContent className="flex flex-wrap gap-2">
           <a
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            href={buildAnalyticsTabUrl(programId, "overview", filters)}
-          >
-            Review Overview
-          </a>
-          <a
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            href={buildAnalyticsTabUrl(programId, "feedback", filters)}
-          >
-            Review Feedback
-          </a>
-          <a
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             href={buildAnalyticsTabUrl(programId, "outcomes", filters)}
           >
             Review Outcomes
+          </a>
+          <a
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            href={buildAnalyticsTabUrl(programId, "qualitative", filters)}
+          >
+            Review Qualitative
           </a>
         </CardContent>
       </Card>

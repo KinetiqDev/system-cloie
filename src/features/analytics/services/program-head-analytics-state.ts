@@ -2,161 +2,70 @@ import { AcademicSemester } from "@prisma/client";
 import { z } from "zod";
 import { buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes";
 
-/** Canonical Program Head analytics tabs. `overview` is the default landing tab. */
-export const ANALYTICS_TABS = [
-  "overview",
-  "outcomes",
-  "stakeholders",
-  "breakdowns",
-  "trends",
-  "feedback",
-  "ai",
-] as const;
-
-/**
- * Tabs with a shipped view. Upcoming tabs render the shell's explanatory
- * notice instead of their (not-yet-shipped) view content.
- */
-export const LIVE_ANALYTICS_TABS: readonly AnalyticsTab[] = [
-  "overview",
-  "outcomes",
-  "stakeholders",
-  "breakdowns",
-  "trends",
-  "feedback",
-  "ai",
-];
-
-export type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
-
-/** Filter state parsed from the analytics URL query string. */
-export type AnalyticsFilterState = {
-  tab: AnalyticsTab;
-  schoolYearId?: string;
-  semester?: string;
-  termInstanceId?: string;
-};
-
-/** Human-readable labels for each analytics tab. */
+/** Canonical analytics workspace tabs (spec §14). */
+export const ANALYTICS_TABS = ["outcomes", "courses", "stakeholders", "trends", "qualitative", "ai"] as const;
+const LEGACY_ANALYTICS_TABS = ["overview", "breakdowns", "feedback"] as const;
+type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
+type LegacyAnalyticsTab = (typeof LEGACY_ANALYTICS_TABS)[number];
 export const ANALYTICS_TAB_LABELS: Record<AnalyticsTab, string> = {
-  overview: "Overview",
-  outcomes: "Outcomes",
-  stakeholders: "Stakeholders",
-  breakdowns: "Breakdowns",
-  trends: "Trends",
-  feedback: "Feedback",
-  ai: "AI Insights",
+  outcomes: "Outcomes", courses: "Courses", stakeholders: "Stakeholders", trends: "Trends", qualitative: "Qualitative", ai: "AI Insights",
 };
-
-type RawAnalyticsSearchParams = Record<string, string | string[] | undefined>;
-
-function firstNonEmpty(value: string | string[] | undefined): string | undefined {
-  const values = Array.isArray(value) ? value : [value];
+type AnalyticsEvidenceSource = "COURSE" | "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY";
+type AnalyticsStakeholder = "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
+export type AnalyticsFilterState = {
+  tab: AnalyticsTab; schoolYearId?: string; semester?: string; termInstanceId?: string;
+  evidenceSource?: AnalyticsEvidenceSource; stakeholder?: AnalyticsStakeholder; majorId?: string; yearLevel?: string;
+  courseId?: string; facultyId?: string; section?: string; ploId?: string; evaluationId?: string;
+};
+type Raw = Record<string, string | string[] | undefined>;
+const first = (v: string | string[] | undefined) => {
+  const values = Array.isArray(v) ? v : [v];
   return values.find((entry): entry is string => !!entry && entry.trim().length > 0)?.trim();
-}
-
-// Every field is lenient: invalid or missing values are dropped (or defaulted
-// for `tab`) rather than surfaced as errors, so the page never 404s on a
-// stale or hand-edited query string.
-const analyticsSearchParamsSchema = z.object({
-  tab: z.enum(ANALYTICS_TABS).catch("overview"),
-  schoolYearId: z.string().uuid().optional().catch(undefined),
-  semester: z.nativeEnum(AcademicSemester).optional().catch(undefined),
-  termInstanceId: z.string().uuid().optional().catch(undefined),
+};
+const uuid = z.string().uuid();
+const schema = z.object({
+  tab: z.enum([...ANALYTICS_TABS, ...LEGACY_ANALYTICS_TABS]).catch("outcomes"),
+  schoolYearId: uuid.optional().catch(undefined), semester: z.nativeEnum(AcademicSemester).optional().catch(undefined), termInstanceId: uuid.optional().catch(undefined),
+  evidenceSource: z.enum(["COURSE", "PROGRAM_WIDE_STUDENT", "ALUMNI", "INDUSTRY"]).optional().catch(undefined), stakeholder: z.enum(["STUDENT", "ALUMNI", "INDUSTRY_PARTNER"]).optional().catch(undefined),
+  majorId: uuid.optional().catch(undefined), yearLevel: z.string().optional().catch(undefined), courseId: uuid.optional().catch(undefined), facultyId: uuid.optional().catch(undefined), section: z.string().optional().catch(undefined), ploId: uuid.optional().catch(undefined), evaluationId: uuid.optional().catch(undefined),
 });
-
-/**
- * Parse the analytics route's search params into a canonical filter state.
- * Missing/invalid `tab` defaults to `overview`; invalid optional values are
- * dropped.
- */
-export function parseAnalyticsSearchParams(
-  raw: RawAnalyticsSearchParams = {}
-): AnalyticsFilterState {
-  return analyticsSearchParamsSchema.parse({
-    tab: firstNonEmpty(raw.tab),
-    schoolYearId: firstNonEmpty(raw.schoolYearId),
-    semester: firstNonEmpty(raw.semester),
-    termInstanceId: firstNonEmpty(raw.termInstanceId),
-  });
+function couple(state: Omit<AnalyticsFilterState, "tab"> & { tab: AnalyticsTab | LegacyAnalyticsTab }): AnalyticsFilterState {
+  let stakeholder = state.stakeholder;
+  if (state.evidenceSource === "COURSE") stakeholder = undefined;
+  if ((state.evidenceSource === "PROGRAM_WIDE_STUDENT" && stakeholder !== "STUDENT") || (state.evidenceSource === "ALUMNI" && stakeholder !== "ALUMNI") || (state.evidenceSource === "INDUSTRY" && stakeholder !== "INDUSTRY_PARTNER")) stakeholder = undefined;
+  const { tab, ...rest } = state;
+  return { ...rest, tab: ANALYTICS_TABS.includes(tab as AnalyticsTab) ? tab as AnalyticsTab : "outcomes", stakeholder };
 }
-
-/** Known analytics filter keys for raw query comparison. */
-const ANALYTICS_PARAM_KEYS = ["tab", "schoolYearId", "semester", "termInstanceId"] as const;
-
-/**
- * Build a query string from the raw analytics-related params without trimming
- * or collapsing values. This lets the route redirect duplicate, padded, or
- * otherwise non-canonical query input instead of accepting it as a stable URL.
- */
-export function rawAnalyticsSearchParamsToQueryString(
-  raw: RawAnalyticsSearchParams
-): string {
-  const searchParams = new URLSearchParams();
-  for (const key of ANALYTICS_PARAM_KEYS) {
-    const value = raw[key];
-    if (Array.isArray(value)) {
-      for (const entry of value) searchParams.append(key, entry);
-    } else if (value !== undefined) {
-      searchParams.append(key, value);
-    }
+export function parseAnalyticsSearchParams(raw: Raw = {}): AnalyticsFilterState {
+  const parsed = schema.parse({ tab: first(raw.tab), schoolYearId: first(raw.schoolYearId), semester: first(raw.semester), termInstanceId: first(raw.termInstanceId), evidenceSource: first(raw.evidenceSource), stakeholder: first(raw.stakeholder), majorId: first(raw.majorId), yearLevel: first(raw.yearLevel), courseId: first(raw.courseId), facultyId: first(raw.facultyId), section: first(raw.section), ploId: first(raw.ploId), evaluationId: first(raw.evaluationId) });
+  const normalized = couple(parsed);
+  return Object.fromEntries(Object.entries(normalized).filter(([, value]) => value !== undefined)) as AnalyticsFilterState;
+}
+const PARAM_KEYS = ["tab", "schoolYearId", "semester", "termInstanceId", "evidenceSource", "stakeholder", "majorId", "yearLevel", "courseId", "facultyId", "section", "ploId", "evaluationId"] as const;
+export function rawAnalyticsSearchParamsToQueryString(raw: Raw): string { const p = new URLSearchParams(); for (const key of PARAM_KEYS) { const value = raw[key]; for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) p.append(key, entry); } return p.toString(); }
+function append(p: URLSearchParams, state: Partial<AnalyticsFilterState>) {
+  for (const key of PARAM_KEYS) {
+    const value = state[key];
+    if (value === undefined || value === null || value === "" || (key === "tab" && value === "outcomes")) continue;
+    p.set(key, String(value));
   }
-  return searchParams.toString();
 }
-/**
- * Build the canonical query string for the given filter state.
- * Used to compare against the raw URL for canonicalization redirects.
- */
-export function buildAnalyticsQueryString(filters: AnalyticsFilterState): string {
-  const searchParams = new URLSearchParams();
-  if (filters.tab && filters.tab !== "overview") searchParams.set("tab", filters.tab);
-  if (filters.schoolYearId) searchParams.set("schoolYearId", filters.schoolYearId);
-  if (filters.semester) searchParams.set("semester", filters.semester);
-  if (filters.termInstanceId) searchParams.set("termInstanceId", filters.termInstanceId);
-  return searchParams.toString();
-}
-
-/**
- * Build the analytics URL for a program, appending only non-default,
- * non-empty query params (`tab=overview` is the default and is omitted).
- */
-export function buildAnalyticsUrl(
-  programId: string,
-  params: Partial<AnalyticsFilterState> = {}
-): string {
+export function buildAnalyticsQueryString(filters: AnalyticsFilterState): string { const p = new URLSearchParams(); append(p, filters); return p.toString(); }
+export function buildAnalyticsUrl(programId: string, params: Partial<AnalyticsFilterState> = {}): string {
   const path = buildProgramHeadProgramPath(programId, "analytics");
-  const searchParams = new URLSearchParams();
-  if (params.tab && params.tab !== "overview") searchParams.set("tab", params.tab);
-  if (params.schoolYearId) searchParams.set("schoolYearId", params.schoolYearId);
-  if (params.semester) searchParams.set("semester", params.semester);
-  if (params.termInstanceId) searchParams.set("termInstanceId", params.termInstanceId);
-  const query = searchParams.toString();
+  const p = new URLSearchParams();
+  append(p, params);
+  if (params.tab === "outcomes") p.set("tab", "outcomes");
+  const query = p.toString();
   return query ? `${path}?${query}` : path;
 }
 
-/**
- * Build the analytics URL for a specific tab, preserving the valid filter
- * params already present in `currentFilters`.
- */
-export function buildAnalyticsTabUrl(
-  programId: string,
-  tab: AnalyticsTab,
-  currentFilters: AnalyticsFilterState
-): string {
-  return buildAnalyticsUrl(programId, { ...currentFilters, tab });
+export function buildAnalyticsTabUrl(programId: string, tab: AnalyticsTab, current: AnalyticsFilterState): string {
+  return buildAnalyticsUrl(programId, { ...current, tab });
 }
 
-/**
- * Deterministic fingerprint of the analytics scope filters. The AI Server
- * Action attaches it to every generated interpretation so the client can mark
- * results stale when the URL filter state changes after generation.
- */
 export function buildAnalyticsFilterFingerprint(
-  filters: Pick<AnalyticsFilterState, "schoolYearId" | "semester" | "termInstanceId">
+  filters: Pick<AnalyticsFilterState, "schoolYearId" | "semester" | "termInstanceId" | "evidenceSource" | "stakeholder">
 ): string {
-  return [
-    filters.schoolYearId ?? "",
-    filters.semester ?? "",
-    filters.termInstanceId ?? "",
-  ].join("|");
+  return [filters.schoolYearId ?? "", filters.semester ?? "", filters.termInstanceId ?? "", filters.evidenceSource ?? "", filters.stakeholder ?? ""].join("|");
 }

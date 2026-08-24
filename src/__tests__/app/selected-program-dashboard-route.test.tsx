@@ -186,7 +186,7 @@ function dashboardDataFixture(
       responsesActiveProgramWide: "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE",
       analyticsOutcomes: "/program-head/programs/p1/analytics?tab=outcomes",
       analyticsStakeholders: "/program-head/programs/p1/analytics?tab=stakeholders",
-      analyticsFeedback: "/program-head/programs/p1/analytics?tab=feedback",
+      analyticsFeedback: "/program-head/programs/p1/analytics?tab=qualitative",
     },
     ...overrides,
   };
@@ -338,11 +338,11 @@ describe("selected Program dashboard route", () => {
     expect(calls[calls.length - 1][0].tokens).toHaveLength(10);
   });
 
-  it("links the qualitative pulse into the Feedback analytics tab", async () => {
+  it("links the qualitative pulse into the Qualitative analytics tab", async () => {
     await loadPage();
     expect(screen.getByRole("link", { name: "Open qualitative analysis" })).toHaveAttribute(
       "href",
-      "/program-head/programs/p1/analytics?tab=feedback"
+      "/program-head/programs/p1/analytics?tab=qualitative"
     );
   });
 

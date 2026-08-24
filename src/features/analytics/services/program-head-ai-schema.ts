@@ -137,6 +137,8 @@ export const aiActionInputSchema = z
       schoolYearId: z.string().uuid().optional(),
       semester: z.nativeEnum(AcademicSemester).optional(),
       termInstanceId: z.string().uuid().optional(),
+      evidenceSource: z.enum(["COURSE", "PROGRAM_WIDE_STUDENT", "ALUMNI", "INDUSTRY"]).optional(),
+      stakeholder: z.enum(["STUDENT", "ALUMNI", "INDUSTRY_PARTNER"]).optional(),
     }),
   })
   .strict();

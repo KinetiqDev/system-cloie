@@ -28,6 +28,12 @@ import { ProgramHeadOutcomeRankingChart } from "./program-head-outcome-ranking-c
  * Many-to-many contribution rule: a rating bound to a CILO mapped to several
  * selected-Program Program Learning Outcomes counts once in each mapped outcome row.
  */
+const STAKEHOLDER_LABELS: Record<"STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER", string> = {
+  STUDENT: "Students",
+  ALUMNI: "Alumni",
+  INDUSTRY_PARTNER: "Industry partners",
+};
+
 const MANY_TO_MANY_DISCLOSURE =
   "A rating bound to a CILO mapped to more than one Program Learning Outcome contributes to each mapped outcome row.";
 
@@ -110,6 +116,27 @@ export function ProgramHeadOutcomesView({
         </Empty>
       )}
 
+      {emptyReason === "no-program-wide-evidence" && (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Target aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>No program-wide PLO evidence</EmptyTitle>
+            <EmptyDescription>
+              No central-deployment ratings in the selected scope are bound to a Program Learning
+              Outcome through a published deployment PLO snapshot. Program-wide outcome evidence is
+              reported by Stakeholder when snapshot bindings exist.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Link href={resetHref} className={resetClassName}>
+              View all periods
+            </Link>
+          </EmptyContent>
+        </Empty>
+      )}
+
       {hasOutcomes && (
         <>
           <div className="flex flex-col gap-3">
@@ -132,6 +159,49 @@ export function ProgramHeadOutcomesView({
 
           <OutcomesExactValueTable programId={programId} outcomes={outcomes} />
         </>
+      )}
+
+      {data.programWideOutcomes.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h3 className="text-title-sm text-foreground">Program-wide PLO evidence</h3>
+          <div className="border-border overflow-x-auto rounded-lg border">
+            <Table aria-label="Program-wide evidence by graduate outcome">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Program Learning Outcome</TableHead>
+                  <TableHead>Stakeholder</TableHead>
+                  <TableHead className="text-right">Mean Rating</TableHead>
+                  <TableHead className="text-right">Rating Count</TableHead>
+                  <TableHead className="text-right">Submitted Responses</TableHead>
+                  <TableHead className="text-right">Evaluations</TableHead>
+                  <TableHead className="text-right">Bound Questions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.programWideOutcomes.map((row) => (
+                  <TableRow key={`${row.stakeholder}-${row.ploId}`}>
+                    <TableCell className="align-top">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{row.code}</span>
+                        <span className="text-text-secondary">{row.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top">{STAKEHOLDER_LABELS[row.stakeholder]}</TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right align-top tabular-nums">{row.ratingCount}</TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      {row.submittedResponseCount}
+                    </TableCell>
+                    <TableCell className="text-right align-top tabular-nums">{row.evaluationCount}</TableCell>
+                    <TableCell className="text-right align-top tabular-nums">{row.questionCount}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       )}
     </div>
   );
