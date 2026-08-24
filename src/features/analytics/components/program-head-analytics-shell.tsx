@@ -20,6 +20,8 @@ type ProgramHeadAnalyticsShellProps = {
   scope: ProgramHeadAnalyticsScopeSummary;
   periodOptions: ProgramHeadAnalyticsPeriodOptions;
   children: ReactNode;
+  /** Code of the selected PLO, shown as the deepest breadcrumb step (§12). */
+  ploCode?: string;
 };
 
 export function ProgramHeadAnalyticsShell({
@@ -28,24 +30,35 @@ export function ProgramHeadAnalyticsShell({
   scope,
   periodOptions,
   children,
+  ploCode,
 }: ProgramHeadAnalyticsShellProps) {
-  return (
-    <div className="flex flex-col gap-6">
-      <Breadcrumbs
-        items={[
+  const breadcrumbItems = [
+    {
+      label: "Analytics",
+      href: buildAnalyticsUrl(programId, {
+        schoolYearId: filters.schoolYearId,
+        semester: filters.semester,
+        termInstanceId: filters.termInstanceId,
+        evidenceSource: filters.evidenceSource,
+        stakeholder: filters.stakeholder,
+      }),
+    },
+    ...(ploCode
+      ? [
           {
-            label: "Analytics",
+            label: ANALYTICS_TAB_LABELS[filters.tab],
             href: buildAnalyticsUrl(programId, {
-              schoolYearId: filters.schoolYearId,
-              semester: filters.semester,
-              termInstanceId: filters.termInstanceId,
-              evidenceSource: filters.evidenceSource,
-              stakeholder: filters.stakeholder,
+              ...filters,
+              ploId: undefined,
             }),
           },
-          { label: ANALYTICS_TAB_LABELS[filters.tab] },
-        ]}
-      />
+        ]
+      : []),
+    { label: ploCode ?? ANALYTICS_TAB_LABELS[filters.tab] },
+  ];
+  return (
+    <div className="flex flex-col gap-6">
+      <Breadcrumbs items={breadcrumbItems} />
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">Analytics</h1>
         <p className="text-body-md text-text-secondary">
