@@ -469,7 +469,9 @@ export function TemplateBuilder({
       return;
     }
 
-    if (!boundCourseId || !boundProgramId) {
+    // boundProgramId is "" for General Education courses (no owning program),
+    // so only boundCourseId distinguishes "no course selected".
+    if (!boundCourseId) {
       queueMicrotask(() => {
         setLoadedCilos((current) => (current.length === 0 ? current : []));
         setIsLoadingCilos(false);
