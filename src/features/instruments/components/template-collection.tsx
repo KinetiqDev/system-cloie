@@ -25,7 +25,7 @@ import type { ToolsViewMode } from "./tools-view-selector";
 // View DTO
 // ---------------------------------------------------------------------------
 
-export type TemplateOrigin = "program-owned" | "institutional" | "faculty-copy";
+type TemplateOrigin = "program-owned" | "institutional" | "faculty-copy";
 
 export type TemplateCollectionItem = {
   id: string;
@@ -48,7 +48,7 @@ export type TemplateCollectionItem = {
   canPublish?: boolean;
 };
 
-export type TemplateSection = {
+type TemplateSection = {
   heading?: string;
   items: TemplateCollectionItem[];
   /** Role-specific action buttons (Edit, Duplicate, Publish, ...). */
