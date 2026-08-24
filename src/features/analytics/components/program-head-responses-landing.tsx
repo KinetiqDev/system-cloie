@@ -10,15 +10,27 @@ import {
   buildProgramHeadResponsesPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
-import { buildProgramHeadResponsesTabUrl } from "@/features/analytics/services/program-head-responses-state";
+import {
+  buildProgramHeadResponsesTabUrl,
+  buildProgramHeadResponsesUrl,
+} from "@/features/analytics/services/program-head-responses-state";
 
 import type { ProgramHeadResponsesFilterState } from "@/features/analytics/services/program-head-responses-state";
 export function ProgramHeadResponsesLanding({ programId, program, state, data }: { programId: string; program: { code: string; name: string }; state: ProgramHeadResponsesFilterState; data: ResponseDeploymentList }) {
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
   const isCourse = state.tab === "course";
+  // Upward navigation preserves period and stakeholder scope (§12).
+  const rootHref = buildProgramHeadResponsesUrl(programId, {
+    tab: state.tab,
+    page: 1,
+    schoolYearId: state.schoolYearId,
+    semester: state.semester,
+    termInstanceId: state.termInstanceId,
+    stakeholder: state.stakeholder,
+  });
   return <div className="flex flex-col gap-6">
     <Breadcrumbs items={[
-      { label: "Responses", href: buildProgramHeadResponsesPath(programId) },
+      { label: "Responses", href: rootHref },
       { label: state.tab === "course" ? "Course evaluations" : "Program-wide evaluations" }
     ]} />
     <header className="space-y-1"><h1 className="text-heading-lg">Responses</h1><p className="text-body-md text-text-secondary">{program.code} — {program.name} · Browse evaluation evidence and submitted responses.</p></header>

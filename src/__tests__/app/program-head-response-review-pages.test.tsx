@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 const {
@@ -170,6 +170,67 @@ describe("program head identified response-review pages", () => {
 
     expect(getProgramHeadResponseDetailMock).toHaveBeenCalledWith("program-1", "response-1");
     expect(screen.getByText("Response detail: Juan dela Cruz (Post-Term CILO Evaluation) | back: /program-head/programs/program-1/responses/course/eval-1")).toBeInTheDocument();
+  });
+
+  it("preserves period and stakeholder scope in the course response breadcrumb", async () => {
+    getProgramHeadResponseDetailMock.mockResolvedValue({
+      evaluation: {
+        id: "eval-1",
+        title: "Post-Term CILO Evaluation",
+        type: "COURSE_BOUND",
+        context: { termInstanceId: "term-1" },
+      },
+      respondent: { name: "Juan dela Cruz" },
+    });
+    const Page = (
+      await import("../../app/(app)/program-head/programs/[programId]/responses/course/[evaluationId]/responses/[responseId]/page")
+    ).default;
+
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1", responseId: "response-1" }),
+      searchParams: Promise.resolve({
+        termInstanceId: "11111111-1111-4111-8111-111111111111",
+        courseId: "22222222-2222-4222-8222-222222222222",
+        facultyId: "33333333-3333-4333-8333-333333333333",
+      }),
+    });
+    render(page);
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
+    const responsesLink = within(breadcrumb).getByRole("link", { name: "Responses" });
+    expect(responsesLink.getAttribute("href")).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
+    // Class-level filters reset on upward navigation (§12).
+    expect(responsesLink.getAttribute("href")).not.toContain("courseId");
+    expect(responsesLink.getAttribute("href")).not.toContain("facultyId");
+    // The evaluation step keeps the same scope.
+    const evaluationStep = within(breadcrumb).getByRole("link", { name: "Post-Term CILO Evaluation" });
+    expect(evaluationStep.getAttribute("href")).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
+  });
+
+  it("preserves stakeholder scope in the program-wide evaluation breadcrumb", async () => {
+    getProgramHeadCentralEvaluationDetailMock.mockResolvedValue({
+      evaluation: { title: "Exit Survey" },
+    });
+    const Page = (
+      await import("../../app/(app)/program-head/programs/[programId]/responses/program-wide/[deploymentId]/page")
+    ).default;
+
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-1", deploymentId: "central-1" }),
+      searchParams: Promise.resolve({
+        termInstanceId: "11111111-1111-4111-8111-111111111111",
+        stakeholder: "ALUMNI",
+        section: "MORNING",
+      }),
+    });
+    render(page);
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
+    const responsesLink = within(breadcrumb).getByRole("link", { name: "Responses" });
+    expect(responsesLink.getAttribute("href")).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
+    expect(responsesLink.getAttribute("href")).toContain("stakeholder=ALUMNI");
+    expect(responsesLink.getAttribute("href")).toContain("tab=program-wide");
+    expect(responsesLink.getAttribute("href")).not.toContain("section");
   });
 
   it("returns 404 when the response does not belong to the course evaluation", async () => {

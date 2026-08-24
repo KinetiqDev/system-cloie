@@ -6,20 +6,28 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
 import {
+  parseProgramHeadResponsesSearchParams,
+  programHeadResponsesQuery,
+  buildProgramHeadResponsesUrl,
+} from "@/features/analytics/services/program-head-responses-state";
+import {
   STAKEHOLDER_EVIDENCE_SOURCE,
   buildAnalyticsUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
-import {
-  buildProgramHeadResponsesPath,
-  buildProgramHeadResponsesProgramWideDeploymentPath,
-} from "@/lib/constants/program-head-routes";
+import { buildProgramHeadResponsesProgramWideDeploymentPath } from "@/lib/constants/program-head-routes";
 
 export default async function CentralResponseDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ programId: string; deploymentId: string; responseId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { programId, deploymentId, responseId } = await params;
+  const [{ programId, deploymentId, responseId }, rawSearchParams] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve({}),
+  ]);
+  const state = parseProgramHeadResponsesSearchParams(rawSearchParams);
   const response = await getProgramHeadResponseDetail(programId, responseId);
 
   if (!response || response.evaluation.id !== deploymentId || response.evaluation.type !== "PROGRAM_WIDE") {
@@ -28,34 +36,37 @@ export default async function CentralResponseDetailPage({
 
   const stakeholder = response.evaluation.context.stakeholder;
 
+  // Upward navigation preserves period and stakeholder scope; class-level
+  // filters reset (§12).
+  const upwardState = {
+    tab: "program-wide" as const,
+    page: 1,
+    schoolYearId: state.schoolYearId,
+    semester: state.semester,
+    termInstanceId: state.termInstanceId,
+    stakeholder,
+  };
+  const responsesHref = buildProgramHeadResponsesUrl(programId, upwardState);
+  const evaluationPath = buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId);
+  const upwardQuery = programHeadResponsesQuery(upwardState);
+  const evaluationHref = upwardQuery ? `${evaluationPath}?${upwardQuery}` : evaluationPath;
+
   return (
     <div className="space-y-6">
       <Breadcrumbs
         items={[
-          { label: "Responses", href: buildProgramHeadResponsesPath(programId) },
-          {
-            label: "Program-wide evaluations",
-            href: buildProgramHeadResponsesPath(programId, "program-wide"),
-          },
-          {
-            label: response.evaluation.title,
-            href: buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId),
-          },
+          { label: "Responses", href: responsesHref },
+          { label: "Program-wide evaluations", href: responsesHref },
+          { label: response.evaluation.title, href: evaluationHref },
           { label: response.respondent.name },
         ]}
       />
-      <Button
-        render={
-          <Link href={buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId)} />
-        }
-        size="sm"
-        variant="ghost"
-      >
+      <Button render={<Link href={evaluationPath} />} size="sm" variant="ghost">
         <ArrowLeft className="mr-2 size-4" /> Back to evaluation
       </Button>
       <ResponseDetail
         response={response}
-        evaluationHref={buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId)}
+        evaluationHref={evaluationPath}
         analyticsHref={buildAnalyticsUrl(programId, {
           tab: "outcomes",
           evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[stakeholder],

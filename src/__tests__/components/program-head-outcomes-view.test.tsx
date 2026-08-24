@@ -89,12 +89,13 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
   };
 }
 
-function renderView(dto: ProgramHeadOutcomesDTO) {
+function renderView(dto: ProgramHeadOutcomesDTO, selectedPloId?: string) {
   return render(
     <ProgramHeadOutcomesView
       programId={PROGRAM_ID}
       data={dto}
       resetHref="/program-head/programs/program-bsed/analytics?tab=outcomes"
+      selectedPloId={selectedPloId}
     />
   );
 }
@@ -231,5 +232,21 @@ describe("ProgramHeadOutcomesView", () => {
     expect(
       screen.getByText(/1 rating was excluded from the valid aggregate/)
     ).toBeInTheDocument();
+  });
+
+  it("expands and highlights the PLO selected through a deep link", () => {
+    renderView(outcomeDTO(), "go-a");
+
+    const go1Detail = screen.getByText("Details for GO-1").closest("details")!;
+    expect(go1Detail).toHaveAttribute("open");
+    expect(within(go1Detail).getByText("Mean Rating (full precision)")).toBeInTheDocument();
+    // The selected row carries the highlight; other rows stay closed.
+    expect(screen.getByText("Details for GO-2").closest("details")).not.toHaveAttribute("open");
+  });
+
+  it("leaves every row closed without a selected PLO", () => {
+    renderView(outcomeDTO());
+
+    expect(screen.getByText("Details for GO-1").closest("details")).not.toHaveAttribute("open");
   });
 });

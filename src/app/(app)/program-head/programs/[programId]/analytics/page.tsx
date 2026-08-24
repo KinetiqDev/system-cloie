@@ -32,6 +32,7 @@ async function resolveOutcomesTab(id: string, filters: AnalyticsFilterState): Pr
         programId={id}
         data={data}
         resetHref={buildAnalyticsUrl(id, { tab: "outcomes" })}
+        selectedPloId={filters.ploId}
       />
     ),
   };

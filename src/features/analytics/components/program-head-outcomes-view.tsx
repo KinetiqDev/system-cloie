@@ -42,12 +42,15 @@ type ProgramHeadOutcomesViewProps = {
   programId: string;
   data: ProgramHeadOutcomesDTO;
   resetHref: string;
+  /** When set, the matching PLO row is expanded and highlighted (§16.2). */
+  selectedPloId?: string;
 };
 
 export function ProgramHeadOutcomesView({
   programId,
   data,
   resetHref,
+  selectedPloId,
 }: ProgramHeadOutcomesViewProps) {
   const { emptyReason, outcomes, currentMappingDisclosure, manyToManyDisclosure } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
@@ -158,7 +161,7 @@ export function ProgramHeadOutcomesView({
             outcomes={outcomes}
           />
 
-          <OutcomesExactValueTable programId={programId} outcomes={outcomes} />
+          <OutcomesExactValueTable programId={programId} outcomes={outcomes} selectedPloId={selectedPloId} />
         </>
       )}
 
@@ -216,9 +219,11 @@ export function ProgramHeadOutcomesView({
 function OutcomesExactValueTable({
   programId,
   outcomes,
+  selectedPloId,
 }: {
   programId: string;
   outcomes: ProgramHeadOutcomesDTO["outcomes"];
+  selectedPloId?: string;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -239,8 +244,9 @@ function OutcomesExactValueTable({
           <TableBody>
             {outcomes.flatMap((outcome) => {
               const detailId = `plo-detail-${outcome.ploId}`;
+              const isSelected = outcome.ploId === selectedPloId;
               const rows = [
-<TableRow key={outcome.ploId}>
+                <TableRow key={outcome.ploId} className={cn(isSelected && "bg-primary-soft/40")}>
                     <TableCell className="align-top">
                       <div className="flex flex-col">
                         <span className="font-semibold">{outcome.code}</span>
@@ -301,7 +307,7 @@ function OutcomesExactValueTable({
                 </TableRow>,
                 <TableRow key={`${outcome.ploId}-detail`}>
                   <TableCell colSpan={7}>
-                    <details>
+                    <details open={isSelected}>
                       <summary
                         id={detailId}
                         className="text-label-sm text-text-secondary cursor-pointer"
