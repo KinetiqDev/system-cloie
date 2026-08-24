@@ -17,6 +17,9 @@
 /coverage
 /.playwright-mcp
 /.fallow
+/playwright-report/
+/test-results/
+/e2e/.fixture-data.json
 
 # fallow baseline refresh transaction artifacts
 /.fallow-staging-*
