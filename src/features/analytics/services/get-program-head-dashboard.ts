@@ -555,11 +555,7 @@ export async function getProgramHeadDashboard(
     scope.programId,
     effectiveFilters
   );
-  const activeEvaluations = await listActiveEvaluations(
-    scope.programId,
-    termInstanceWhere,
-    new Date()
-  );
+  const activeEvaluations = await listActiveEvaluations(scope.programId, termInstanceWhere);
 
   const periodLabel = buildPeriodLabel(
     effectiveFilters,
@@ -738,8 +734,7 @@ export async function getProgramHeadDashboard(
 
 async function listActiveEvaluations(
   programId: string,
-  termInstanceWhere: Record<string, unknown>,
-  now: Date
+  termInstanceWhere: Record<string, unknown>
 ): Promise<{ deployments: AttentionDeployment[] }> {
   const termFilter = termInstanceWhere as Prisma.AcademicTermInstanceWhereInput;
   const [central, courseBound] = await Promise.all([
@@ -747,7 +742,6 @@ async function listActiveEvaluations(
       where: {
         program_id: programId,
         status: DeploymentStatus.ACTIVE,
-        OR: [{ deadline_at: null }, { deadline_at: { gte: now } }],
         term_instance: termFilter,
       },
       select: { id: true, deployment_name: true, status: true, deadline_at: true },
@@ -756,7 +750,6 @@ async function listActiveEvaluations(
       where: {
         course_assignment: { program_id: programId },
         status: DeploymentStatus.ACTIVE,
-        OR: [{ deadline_at: null }, { deadline_at: { gte: now } }],
         term_instance: termFilter,
       },
       select: { id: true, deployment_name: true, status: true, deadline_at: true },
