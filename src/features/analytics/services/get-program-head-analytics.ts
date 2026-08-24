@@ -88,10 +88,10 @@ function buildTermInstanceWhere(
 }
 
 /** Sentinel term filter that matches no rows, used when a filter resolves to nothing. */
-const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
+export const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
 
 /** Response predicate scoped to the selected Program through both deployment kinds. */
-function buildProgramResponseScope(programId: string, termInstanceWhere: Record<string, unknown>) {
+export function buildProgramResponseScope(programId: string, termInstanceWhere: Record<string, unknown>) {
   return {
     OR: [
       {
@@ -117,7 +117,7 @@ function buildProgramResponseScope(programId: string, termInstanceWhere: Record<
 }
 
 /** EvaluationAssignment predicate scoped to the selected Program through both deployment kinds. */
-function buildProgramOpportunityScope(programId: string, termInstanceWhere: Record<string, unknown>) {
+export function buildProgramOpportunityScope(programId: string, termInstanceWhere: Record<string, unknown>) {
   return {
     OR: [
       {
@@ -171,9 +171,9 @@ async function resolveSchoolYearLabel(
   return schoolYear?.code ?? null;
 }
 
-async function resolveTermInstanceFilter(
+export async function resolveTermInstanceFilter(
   programId: string,
-  filters: AnalyticsFilterState
+  filters: Pick<AnalyticsFilterState, "termInstanceId" | "schoolYearId" | "semester">
 ): Promise<ResolvedTermInstanceFilter> {
   if (!filters.termInstanceId && !filters.schoolYearId && !filters.semester) {
     return { where: {}, schoolYearLabel: null, instances: [] };
@@ -235,8 +235,8 @@ function buildPeriodOptions(instances: TermInstanceSummary[]) {
   };
 }
 
-function buildPeriodLabel(
-  filters: AnalyticsFilterState,
+export function buildPeriodLabel(
+  filters: Pick<AnalyticsFilterState, "semester" | "termInstanceId">,
   schoolYearLabel: string | null,
   hasMatchingTerm: boolean
 ): string | null {

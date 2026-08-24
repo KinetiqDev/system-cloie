@@ -338,6 +338,53 @@ describe("program-wide PLO metrics", () => {
 });
 
 // ---------------------------------------------------------------------------
+// PLO provenance counts behind the dashboard's evidence details (§13.8)
+// ---------------------------------------------------------------------------
+
+describe("PLO provenance counts", () => {
+  it("counts distinct evaluations and bound questions per course-derived PLO", () => {
+    const metrics = buildCourseDerivedPloMetrics(ciloRows("e1", "e2"));
+    const plo1 = metrics.find((metric) => metric.ploId === "plo-1")!;
+    // Valid mapped ratings come from e1 (q-cilo-a ×2, q-cilo-a2, q-cilo-b ×2)
+    // and e2 (q-cilo-a, q-cilo-b): two evaluations, three distinct questions.
+    expect(plo1.evaluationCount).toBe(2);
+    expect(plo1.questionCount).toBe(3);
+    const plo2 = metrics.find((metric) => metric.ploId === "plo-2")!;
+    // PLO2 receives only CILO-a's ratings; CILO-a binds two questions
+    // (q-cilo-a and q-cilo-a2) that both contribute valid ratings in e1.
+    expect(plo2.evaluationCount).toBe(2);
+    expect(plo2.questionCount).toBe(2);
+  });
+  it("counts distinct deployments and directly bound questions per program-wide PLO", () => {
+    const metrics = buildProgramWidePloMetrics(centralPloRows());
+    const plo1 = metrics.find((metric) => metric.ploId === "plo-1")!;
+    expect(plo1.evaluationCount).toBe(1);
+    expect(plo1.questionCount).toBe(2);
+    const plo2 = metrics.find((metric) => metric.ploId === "plo-2")!;
+    expect(plo2.evaluationCount).toBe(1);
+    expect(plo2.questionCount).toBe(1);
+  });
+
+  it("never counts evidence that was excluded as out-of-scale", () => {
+    const rows: CentralPloRatingRow[] = [
+      {
+        sectionKey: "plo-items",
+        itemKey: "q-plo-single",
+        ratingValue: 9,
+        responseId: "resp-corrupt",
+        evaluationId: "cd-x",
+        scale: toScaleIdentity([...AGREEMENT5]),
+        ploBindings: [{ ploId: "plo-1", ploCode: "PLO1", ploDescription: "Communicate effectively." }],
+      },
+    ];
+    const plo1 = buildProgramWidePloMetrics(rows).find((metric) => metric.ploId === "plo-1")!;
+    expect(plo1.ratingCount).toBe(0);
+    expect(plo1.evaluationCount).toBe(0);
+    expect(plo1.questionCount).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Cross-version scale separation and duplicate prevention (§9, §54)
 // ---------------------------------------------------------------------------
 

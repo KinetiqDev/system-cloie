@@ -14,6 +14,7 @@ const {
   resolveProgramHeadContextMock,
   countEligibleMock,
   buildWordCloudTokensMock,
+  getActiveTermIdMock,
   prismaMock,
 } = vi.hoisted(() => ({
     resolveAuthSessionMock: vi.fn(),
@@ -22,14 +23,20 @@ const {
     buildWordCloudTokensMock: vi.fn<
       (texts: string[]) => Array<{ text: string; value: number }>
     >(() => []),
+    getActiveTermIdMock: vi.fn<() => Promise<string | null>>(async () => "term-active-1"),
     prismaMock: {
       program: { findUniqueOrThrow: vi.fn() },
       centralDeployment: { count: vi.fn(), findMany: vi.fn() },
       courseBoundEvaluation: { count: vi.fn(), findMany: vi.fn() },
-      response: { count: vi.fn() },
-      evaluationAssignment: { count: vi.fn() },
-      quantitativeResponseItem: { aggregate: vi.fn() },
+      response: { count: vi.fn(), groupBy: vi.fn() },
+      evaluationAssignment: { count: vi.fn(), findMany: vi.fn() },
+      quantitativeResponseItem: { aggregate: vi.fn(), findMany: vi.fn() },
       qualitativeResponseItem: { findMany: vi.fn() },
+      pLO: { findMany: vi.fn() },
+      instrumentVersion: { findMany: vi.fn() },
+      courseBoundCiloQuestionBinding: { findMany: vi.fn() },
+      centralDeploymentPloSnapshot: { findMany: vi.fn() },
+      academicTermInstance: { findMany: vi.fn() },
       facultyProgramAffiliation: { findFirst: vi.fn() },
     },
   }));
@@ -46,11 +53,47 @@ vi.mock("@/features/course-assignments/services/course-assignment-roster", () =>
 vi.mock("@/features/analytics/services/get-course-bound-review-detail", () => ({
   buildReviewWordCloudTokens: buildWordCloudTokensMock,
 }));
+vi.mock("@/features/academic-calendar/services/resolve-active-term", () => ({
+  getActiveTermId: getActiveTermIdMock,
+}));
 vi.mock("@/lib/db/prisma", () => ({ prisma: prismaMock }));
+
+// ---------------------------------------------------------------------------
+// Program Head read fixtures
+// ---------------------------------------------------------------------------
+
+function mockAuthorizedProgramHead(selectedProgramId: string, code: string, name: string) {
+  resolveAuthSessionMock.mockResolvedValue({
+    userId: "program-head-1",
+    activeRole: ROLES.PROGRAM_HEAD,
+    roles: [ROLES.PROGRAM_HEAD],
+  });
+  resolveProgramHeadContextMock.mockResolvedValue({
+    success: true,
+    data: {
+      userId: "program-head-1",
+      authorizedPrograms: [{ id: selectedProgramId, code, name }],
+      selectedProgram: { id: selectedProgramId, code, name },
+    },
+  });
+}
+
+function mockEmptyDashboardReads() {
+  prismaMock.academicTermInstance.findMany.mockResolvedValue([]);
+  prismaMock.evaluationAssignment.findMany.mockResolvedValue([]);
+  prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
+  prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
+  prismaMock.pLO.findMany.mockResolvedValue([]);
+  prismaMock.centralDeployment.findMany.mockResolvedValue([]);
+  prismaMock.courseBoundEvaluation.findMany.mockResolvedValue([]);
+  prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([]);
+  prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([]);
+}
 
 describe("analytics dashboard access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getActiveTermIdMock.mockResolvedValue("term-active-1");
     resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "unauthorized" });
   });
 
@@ -99,80 +142,63 @@ describe("analytics dashboard access", () => {
     expect(prismaMock.program.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 
-  it("limits Program Head pending central assignments to currently available deployments", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      userId: "program-head-1",
-      activeRole: ROLES.PROGRAM_HEAD,
-      roles: [ROLES.PROGRAM_HEAD],
-    });
-    resolveProgramHeadContextMock.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "program-head-1",
-        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
-        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
-      },
-    });
-    prismaMock.centralDeployment.count.mockResolvedValue(0);
-    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
-    prismaMock.response.count.mockResolvedValue(0);
-    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
-    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _sum: { rating_value: null },
-      _count: { rating_value: 0 },
-    });
-    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
-    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
-    countEligibleMock.mockResolvedValue(0);
+  it("derives pending responses from the same raw assignment rows as completion", async () => {
+    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    // Two submitted, one in progress, one not started over four opportunity rows.
+    prismaMock.evaluationAssignment.findMany.mockResolvedValue([
+      { respondent_id: "u1", central_deployment: null, response: { status: "SUBMITTED" } },
+      { respondent_id: "u1", central_deployment: null, response: { status: "SUBMITTED" } },
+      { respondent_id: "u2", central_deployment: null, response: { status: "IN_PROGRESS" } },
+      { respondent_id: "u3", central_deployment: null, response: null },
+    ]);
 
-    await expect(getProgramHeadDashboard("program-1")).resolves.toMatchObject({
-      kpi: { pendingResponses: 0 },
-    });
+    const result = await getProgramHeadDashboard("program-1");
 
-    expect(prismaMock.evaluationAssignment.count).toHaveBeenCalledWith({
-      where: {
-        OR: [{ response: null }, { response: { status: "IN_PROGRESS" } }],
-        central_deployment: expect.objectContaining({
-          program_id: "program-1",
-          status: { in: ["ACTIVE", "SCHEDULED"] },
-          OR: [{ activation_at: null }, { activation_at: { lte: expect.any(Date) } }],
-          AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: expect.any(Date) } }] }],
-        }),
-      },
-    });
+    expect(result).toMatchObject({ pendingResponses: 2 });
+    expect(result?.participation.assigned).toBe(4);
+    expect(result?.participation.submitted).toBe(2);
+
+    // The participation read carries every in-scope row with no availability
+    // or exclusion filtering (resolved §5.12).
+    const call = JSON.stringify(prismaMock.evaluationAssignment.findMany.mock.calls);
+    expect(call).toContain("program-1");
+    expect(call).not.toContain("activation_at");
+    expect(call).not.toContain("deadline_at");
+    expect(call).not.toContain("exclusion");
   });
 
-  it("reads the dashboard only after the public resolver validates the selected Program", async () => {
-    resolveProgramHeadContextMock.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "program-head-1",
-        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
-        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
+  it("counts ACTIVE-only evaluations in the KPI and preserves period in drill-down links", async () => {
+    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    getActiveTermIdMock.mockResolvedValue(null);
+    prismaMock.academicTermInstance.findMany.mockResolvedValue([
+      {
+        id: "term-1",
+        semester: "FIRST",
+        term: "FIRST_TERM",
+        school_year: { id: "sy-1", code: "2026-2027" },
       },
-    });
-    prismaMock.centralDeployment.count.mockResolvedValue(0);
-    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
-    prismaMock.response.count.mockResolvedValue(0);
-    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
-    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _sum: { rating_value: null },
-      _count: { rating_value: 0 },
-    });
-    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
-    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
-    countEligibleMock.mockResolvedValue(0);
+    ]);
 
-    await expect(
-      getProgramHeadDashboard("program-1")
-    ).resolves.toMatchObject({
-      programCode: "BSIT",
-      programLabel: "Information Technology",
-      kpi: { pendingResponses: 0 },
+    const result = await getProgramHeadDashboard("program-1", {
+      termInstanceId: "term-1",
     });
 
-    expect(resolveProgramHeadContextMock).toHaveBeenCalledWith("program-1");
-    expect(prismaMock.program.findUniqueOrThrow).not.toHaveBeenCalled();
+    // The Responses drill-down preserves the dashboard's period scope (§12)
+    // and filters by the same ACTIVE status the KPI counts, so the drill-down
+    // never lists evaluations absent from the displayed total.
+    expect(result?.links.responsesActiveCourse).toContain("termInstanceId=term-1");
+    expect(result?.links.responsesActiveProgramWide).toContain("termInstanceId=term-1");
+    expect(result?.links.responsesActiveCourse).toContain("status=ACTIVE");
+
+    // Status-based KPI: SCHEDULED deployments never inflate the count.
+    for (const mock of [
+      prismaMock.centralDeployment.findMany,
+      prismaMock.courseBoundEvaluation.findMany,
+    ]) {
+      expect(mock.mock.calls[0][0].where.status).toBe("ACTIVE");
+    }
   });
 
   it("constrains every dashboard analytics query to the selected Program for a multi-Program head", async () => {
@@ -192,35 +218,23 @@ describe("analytics dashboard access", () => {
         selectedProgram: { id: "program-bsed", code: "BSED", name: "Secondary Education" },
       },
     });
-    prismaMock.centralDeployment.count.mockResolvedValue(0);
-    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
-    prismaMock.response.count.mockResolvedValue(0);
-    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
-    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _sum: { rating_value: null },
-      _count: { rating_value: 0 },
-    });
-    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
-    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
-    countEligibleMock.mockResolvedValue(0);
+    mockEmptyDashboardReads();
 
     await expect(getProgramHeadDashboard("program-bsed")).resolves.toMatchObject({
       programCode: "BSED",
-      kpi: { pendingResponses: 0 },
     });
 
-    const queryMocks = [
-      prismaMock.centralDeployment.count,
-      prismaMock.courseBoundEvaluation.count,
-      prismaMock.response.count,
-      prismaMock.evaluationAssignment.count,
-      prismaMock.quantitativeResponseItem.aggregate,
-      prismaMock.centralDeployment.findMany,
+    const alwaysCalledQueries = [
+      prismaMock.evaluationAssignment.findMany,
+      prismaMock.quantitativeResponseItem.findMany,
       prismaMock.qualitativeResponseItem.findMany,
-      countEligibleMock,
+      prismaMock.pLO.findMany,
+      prismaMock.centralDeployment.findMany,
+      prismaMock.courseBoundEvaluation.findMany,
+      prismaMock.academicTermInstance.findMany,
     ];
 
-    for (const queryMock of queryMocks) {
+    for (const queryMock of alwaysCalledQueries) {
       expect(queryMock.mock.calls.length).toBeGreaterThan(0);
       const serialized = JSON.stringify(queryMock.mock.calls);
       expect(serialized).toContain("program-bsed");
@@ -228,105 +242,115 @@ describe("analytics dashboard access", () => {
     }
   });
 
-  it("shares submitted, opportunity, rating-count, and full-precision mean semantics with Analytics", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      userId: "program-head-1",
-      activeRole: ROLES.PROGRAM_HEAD,
-      roles: [ROLES.PROGRAM_HEAD],
-    });
-    resolveProgramHeadContextMock.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "program-head-1",
-        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
-        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
-      },
-    });
-    prismaMock.centralDeployment.count.mockResolvedValue(2);
-    prismaMock.courseBoundEvaluation.count.mockResolvedValue(1);
-    prismaMock.response.count.mockResolvedValue(7);
-    prismaMock.evaluationAssignment.count.mockResolvedValue(13);
-    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _sum: { rating_value: 30 },
-      _count: { rating_value: 9 },
-    });
-    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
-    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
-    countEligibleMock.mockResolvedValue(0);
-
-    const result = await getProgramHeadDashboard("program-1");
-
-    expect(result).not.toBeNull();
-    if (!result) return;
-
-    expect(result.kpi).toMatchObject({
-      submittedResponseCount: 7,
-      evaluationOpportunityCount: 13,
-      ratingCount: 9,
-    });
-
-    // Mean Rating retains full precision in the server contract; presentation rounds.
-    expect(result.kpi.meanRating).toBe(30 / 9);
-    expect(result.kpi.meanRating).not.toBe(Math.round((30 / 9) * 100) / 100);
-
-    // The evaluation-opportunity denominator counts ALL in-scope assignments,
-    // matching Analytics: no response-status or availability filter.
-    const opportunityCall = prismaMock.evaluationAssignment.count.mock.calls.find(
-      (call) => call[0]?.where?.OR?.[0]?.central_deployment?.program_id === "program-1"
-    );
-    expect(opportunityCall?.[0].where).not.toHaveProperty("response");
-    expect(opportunityCall?.[0].where.OR).toHaveLength(2);
-    expect(opportunityCall?.[0].where.OR[0].central_deployment.program_id).toBe("program-1");
-    expect(opportunityCall?.[0].where.OR[1].course_bound.course_assignment.program_id).toBe(
-      "program-1"
-    );
-  });
-
-  it("keeps stakeholder comparison means at full precision", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      userId: "program-head-1",
-      activeRole: ROLES.PROGRAM_HEAD,
-      roles: [ROLES.PROGRAM_HEAD],
-    });
-    resolveProgramHeadContextMock.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "program-head-1",
-        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
-        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
-      },
-    });
-    prismaMock.centralDeployment.count.mockResolvedValue(0);
-    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
-    prismaMock.response.count.mockResolvedValue(0);
-    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
-    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _sum: { rating_value: null },
-      _count: { rating_value: 0 },
-    });
-    prismaMock.centralDeployment.findMany.mockResolvedValue([
+  it("keeps source quantitative means at full precision and separated per evidence source", async () => {
+    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    const snapshot = [
       {
-        target_stakeholder: "STUDENT",
-        assignments: [
+        key: "cilo-items",
+        title: "S",
+        items: [
           {
-            response: {
-              quant_items: [{ rating_value: 4 }, { rating_value: 4 }, { rating_value: 5 }],
-            },
+            key: "q-cilo-a",
+            prompt: "Q",
+            likertDescriptors: [
+              { value: 1, label: "Low" },
+              { value: 2, label: "Mid" },
+              { value: 3, label: "High" },
+            ],
           },
         ],
       },
+    ];
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([
+      { id: "iv-course", structure_snapshot: snapshot },
     ]);
-    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
-    countEligibleMock.mockResolvedValue(0);
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      courseRating("r1", 3),
+      courseRating("r2", 3),
+      courseRating("r2", 4),
+    ]);
 
     const result = await getProgramHeadDashboard("program-1");
 
     expect(result).not.toBeNull();
     if (!result) return;
 
-    expect(result.stakeholderMeans).toEqual([
-      { stakeholder: "STUDENT", label: "Students", mean: 13 / 3, responseCount: 1 },
+    const courseMean = result.sourceMeans.find((mean) => mean.sourceKey === "COURSE_STUDENT")!;
+    // Full precision pooled mean of [3, 3, 4]; presentation rounds later.
+    expect(courseMean.mean).toBe(10 / 3);
+    expect(courseMean.ratingCount).toBe(3);
+    expect(courseMean.scaleMax).toBe(3);
+    // Central sources stay separate even though this program has course evidence.
+    for (const key of ["CENTRAL_STUDENT", "ALUMNI", "INDUSTRY_PARTNER"] as const) {
+      expect(result.sourceMeans.find((mean) => mean.sourceKey === key)).toMatchObject({
+        mean: null,
+        ratingCount: 0,
+      });
+    }
+  });
+
+  function courseRating(responseId: string, rating_value: number) {
+    return {
+      rating_value,
+      response_id: responseId,
+      section_key: "cilo-items",
+      item_key: "q-cilo-a",
+      response: {
+        assignment: {
+          course_bound_id: "cb-1",
+          course_bound: { id: "cb-1", instrument_version_id: "iv-course" },
+          central_deployment: null,
+        },
+      },
+    };
+  }
+
+  it("returns aggregate-only de-identified qualitative pulse data without raw comment text", async () => {
+    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
+      {
+        text_content: "Private respondent@example.com student123 comment",
+        response: {
+          id: "resp-1",
+          assignment: {
+            course_bound: { id: "cb-9" },
+            central_deployment: null,
+          },
+        },
+      },
+      {
+        text_content: "   ",
+        response: {
+          id: "resp-2",
+          assignment: {
+            course_bound: { id: "cb-9" },
+            central_deployment: null,
+          },
+        },
+      },
     ]);
+
+    const result = await getProgramHeadDashboard("program-1");
+
+    expect(result).not.toBeNull();
+    if (!result) return;
+
+    expect(result.qualitative.answerCount).toBe(1);
+    expect(result.qualitative.respondentCount).toBe(1);
+    expect(result.qualitative.evaluationCount).toBe(1);
+    expect(result.qualitative.tokens.length).toBeLessThanOrEqual(60);
+    for (const token of result.qualitative.tokens) {
+      expect(Object.keys(token).sort()).toEqual(["text", "value"]);
+    }
+
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("Private respondent@example.com student123 comment");
+    expect(serialized).not.toContain("respondent@example.com");
+    expect(serialized).not.toContain("student123");
+    expect(serialized).not.toContain("program-head-1");
+    expect(serialized).not.toContain("text_content");
   });
 
   it("preserves Faculty KPI values in the primary metrics read model", async () => {
@@ -445,77 +469,6 @@ describe("analytics dashboard access", () => {
     expect(JSON.stringify(result)).not.toContain("respondent@example.com");
     expect(JSON.stringify(result)).not.toContain("student123");
     expect(buildWordCloudTokensMock).toHaveBeenCalledWith(["Private comment"]);
-  });
-
-  it("returns aggregate-only Program Head visualization data without raw qualitative text", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      userId: "program-head-1",
-      activeRole: ROLES.PROGRAM_HEAD,
-      roles: [ROLES.PROGRAM_HEAD],
-    });
-    resolveProgramHeadContextMock.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "program-head-1",
-        authorizedPrograms: [{ id: "program-1", code: "BSIT", name: "Information Technology" }],
-        selectedProgram: { id: "program-1", code: "BSIT", name: "Information Technology" },
-      },
-    });
-    prismaMock.centralDeployment.count.mockResolvedValue(0);
-    prismaMock.courseBoundEvaluation.count.mockResolvedValue(0);
-    prismaMock.response.count.mockResolvedValue(0);
-    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
-    prismaMock.quantitativeResponseItem.aggregate.mockResolvedValue({
-      _sum: { rating_value: null },
-      _count: { rating_value: 0 },
-    });
-    prismaMock.centralDeployment.findMany.mockResolvedValue([]);
-    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
-      { text_content: "Private respondent@example.com student123 comment" },
-      { text_content: "   " },
-    ]);
-    countEligibleMock.mockResolvedValue(0);
-    buildWordCloudTokensMock.mockReturnValue([{ text: "private", value: 1 }]);
-
-    const result = await getProgramHeadDashboard("program-1");
-
-    expect(result).not.toBeNull();
-    if (!result) return;
-
-    expect(result.qualitativeItemCount).toBe(1);
-    expect(result.wordCloudTokens).toEqual([{ text: "private", value: 1 }]);
-    expect(buildWordCloudTokensMock).toHaveBeenCalledWith([
-      "Private respondent@example.com student123 comment",
-    ]);
-
-    const serialized = JSON.stringify(result);
-    expect(serialized).not.toContain("Private respondent comment");
-    expect(serialized).not.toContain("respondent@example.com");
-    expect(serialized).not.toContain("student123");
-    expect(serialized).not.toContain("program-head-1");
-    expect(serialized).not.toContain("text_content");
-    expect(Object.keys(result).sort()).toEqual(
-      [
-        "kpi",
-        "programCode",
-        "programLabel",
-        "qualitativeItemCount",
-        "stakeholderMeans",
-        "wordCloudTokens",
-      ].sort()
-    );
-    expect(Object.keys(result.kpi).sort()).toEqual(
-      [
-        "activeDeployments",
-        "evaluationOpportunityCount",
-        "meanRating",
-        "pendingResponses",
-        "ratingCount",
-        "responseRate",
-        "submittedResponseCount",
-      ].sort()
-    );
-    expect(Object.keys(result.wordCloudTokens[0]).sort()).toEqual(["text", "value"]);
   });
 });
 

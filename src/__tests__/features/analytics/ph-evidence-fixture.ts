@@ -372,6 +372,7 @@ export function ciloRows(...evaluationKeys: Array<keyof typeof EVALUATIONS>): Ou
         prompt: entry.itemKey,
         ratingValue: entry.value,
         responseId: entry.responseId,
+        evaluationId: entry.evaluationId,
         scale: entry.scale ?? resolveItemScaleIdentity(snapshot, entry.sectionKey, entry.itemKey),
         cilo: cilo ? { id: cilo.id, label: cilo.label, description: cilo.description } : null,
         ploMappings: ciloKey ? [...CILO_MAPPINGS[ciloKey]] : [],
@@ -405,6 +406,7 @@ export function centralPloRows(): CentralPloRatingRow[] {
     itemKey: entry.itemKey,
     ratingValue: entry.value,
     responseId: entry.responseId,
+    evaluationId: entry.evaluationId,
     scale: entry.scale ?? resolveItemScaleIdentity(snapshot, entry.sectionKey, entry.itemKey),
     ploBindings: centralBindings(entry.sectionKey, entry.itemKey),
   }));

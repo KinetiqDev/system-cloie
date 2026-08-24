@@ -2311,6 +2311,42 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/analytics/components/program-head-dashboard-kpis.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Slice #519 KPI cards: semantic tokens, tabular numerals, accessible popover breakdown, source-separated means",
+  },
+  {
+    path: "src/features/analytics/components/program-head-dashboard-completion-popover.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Slice #519 completion breakdown popover on the shared Base UI popover primitive with labelled table",
+  },
+  {
+    path: "src/features/analytics/components/program-head-stakeholder-progress.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Slice #519 keyboard-operable stacked participation bars; counts and percentage visible without hover",
+  },
+  {
+    path: "src/features/analytics/components/program-head-plo-summary.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Slice #519 PLO summary with evidence-source selector and details disclosure; no attainment status",
+  },
+  {
+    path: "src/features/analytics/components/program-head-needs-attention.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Slice #519 needs-attention list carrying text status labels rather than color-only signals",
+  },
+  {
+    path: "src/features/analytics/components/program-head-qualitative-pulse.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Slice #519 qualitative pulse; slider re-slices server-capped redacted tokens only",
+  },
+  {
     path: "src/features/analytics/components/stakeholder-mean-comparison.tsx",
     disposition: "already_compliant",
     category: "feature_component",
