@@ -114,6 +114,42 @@ describe("TemplateCollection", () => {
     expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
   });
 
+  test("omits overflow menu button when renderOverflowMenu returns null in card view", () => {
+    render(
+      <TemplateCollection
+        view="card"
+        sections={[
+          {
+            items: [makeItem()],
+            renderFooterActions: () => null,
+            renderOverflowMenu: () => null,
+          },
+        ]}
+        empty={<p>Empty</p>}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
+  });
+
+  test("omits overflow menu button when renderOverflowMenu returns null in list view", () => {
+    render(
+      <TemplateCollection
+        view="list"
+        sections={[
+          {
+            items: [makeItem()],
+            renderFooterActions: () => null,
+            renderOverflowMenu: () => null,
+          },
+        ]}
+        empty={<p>Empty</p>}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Actions" })).not.toBeInTheDocument();
+  });
+
   test("renders footer actions and overflow menu together in list view", () => {
     render(
       <TemplateCollection

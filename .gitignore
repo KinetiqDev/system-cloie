@@ -71,3 +71,6 @@ skills-lock.json
 
 # redundant ci
 .depot/workflows
+
+#playwright
+.playwright-cli

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { FacultySearchPopover } from "@/features/course-assignments/components/shared/faculty-search-popover";
@@ -56,10 +56,10 @@ describe("FacultySearchPopover", () => {
     });
     renderPopover();
 
-    fireEvent.click(screen.getByRole("button", { name: /search faculty/i }));
+    fireEvent.click(screen.getByRole("button"));
 
-    expect(await screen.findByRole("button", { name: /test faculty/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /elena torres/i })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: /test faculty/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /elena torres/i })).toBeInTheDocument();
     expect(searchFacultyPoolAction).toHaveBeenCalledWith("", 0, 20);
   });
 
@@ -70,17 +70,14 @@ describe("FacultySearchPopover", () => {
     });
     const { onSelect } = renderPopover();
 
-    fireEvent.click(screen.getByRole("button", { name: /search faculty/i }));
-    const search = await screen.findByPlaceholderText(/search by name or email/i);
-    fireEvent.change(search, { target: { value: "Elena" } });
+    fireEvent.click(screen.getByRole("button"));
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "Elena" } });
 
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: /elena torres/i })).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole("button", { name: /elena torres/i }));
+    const option = await screen.findByRole("option", { name: /elena torres/i });
+    fireEvent.click(option);
 
     expect(onSelect).toHaveBeenCalledWith(facultyPool[1]);
-    expect(screen.queryByPlaceholderText(/search by name or email/i)).not.toBeInTheDocument();
   });
 
   it("debounces the query before searching the faculty pool", async () => {
@@ -92,11 +89,11 @@ describe("FacultySearchPopover", () => {
       });
       renderPopover();
 
-      fireEvent.click(screen.getByRole("button", { name: /search faculty/i }));
+      fireEvent.click(screen.getByRole("button"));
       await act(async () => {});
-      const search = screen.getByPlaceholderText(/search by name or email/i);
+      const input = screen.getByRole("combobox");
 
-      fireEvent.change(search, { target: { value: "Elena" } });
+      fireEvent.change(input, { target: { value: "Elena" } });
       act(() => {
         vi.advanceTimersByTime(299);
       });
@@ -119,12 +116,12 @@ describe("FacultySearchPopover", () => {
     });
     renderPopover({ targetProgramId: "prog-1", targetProgramName: "BS Computer Science" });
 
-    fireEvent.click(screen.getByRole("button", { name: /search faculty/i }));
+    fireEvent.click(screen.getByRole("button"));
 
-    const crossProgram = await screen.findByRole("button", { name: /elena torres/i });
+    const crossProgram = await screen.findByRole("option", { name: /elena torres/i });
     expect(crossProgram).toHaveTextContent(/different program/i);
     expect(
-      screen.getByRole("button", { name: /test faculty/i })
+      screen.getByRole("option", { name: /test faculty/i })
     ).not.toHaveTextContent(/different program/i);
   });
 
@@ -141,12 +138,12 @@ describe("FacultySearchPopover", () => {
     );
     renderPopover();
 
-    fireEvent.click(screen.getByRole("button", { name: /search faculty/i }));
+    fireEvent.click(screen.getByRole("button"));
 
     expect(await screen.findByRole("status", { name: /searching faculty/i })).toBeInTheDocument();
 
     resolvePool({ success: true, data: { items: facultyPool, total: facultyPool.length } });
-    expect(await screen.findByRole("button", { name: /test faculty/i })).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: /test faculty/i })).toBeInTheDocument();
   });
 
   it("shows an empty message when no faculty match the query", async () => {
@@ -156,8 +153,7 @@ describe("FacultySearchPopover", () => {
     });
     renderPopover();
 
-    fireEvent.click(screen.getByRole("button", { name: /search faculty/i }));
-    await screen.findByPlaceholderText(/search by name or email/i);
+    fireEvent.click(screen.getByRole("button"));
 
     expect(await screen.findByText(/no faculty available/i)).toBeInTheDocument();
   });
@@ -165,28 +161,26 @@ describe("FacultySearchPopover", () => {
   it("does not open when disabled", () => {
     renderPopover({ disabled: true });
 
-    fireEvent.click(screen.getByRole("button", { name: /search faculty/i }));
+    fireEvent.click(screen.getByRole("button"));
 
     expect(searchFacultyPoolAction).not.toHaveBeenCalled();
-    expect(screen.queryByPlaceholderText(/search by name or email/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
   });
 
-  it("focuses the search input when opened", async () => {
+  it("opens the pool from the chevron trigger without typing", async () => {
     vi.mocked(searchFacultyPoolAction).mockResolvedValue({
       success: true,
       data: { items: facultyPool, total: facultyPool.length },
     });
     renderPopover();
 
-    fireEvent.click(screen.getByRole("button", { name: /search faculty/i }));
+    fireEvent.click(screen.getByRole("button"));
 
-    const search = await screen.findByPlaceholderText(/search by name or email/i);
-    await waitFor(() => {
-      expect(search).toHaveFocus();
-    });
+    expect(await screen.findByRole("option", { name: /test faculty/i })).toBeInTheDocument();
+    expect(searchFacultyPoolAction).toHaveBeenCalledWith("", 0, 20);
   });
 
-  it("marks the currently selected faculty with aria-pressed", async () => {
+  it("marks the currently selected faculty with a check icon", async () => {
     vi.mocked(searchFacultyPoolAction).mockResolvedValue({
       success: true,
       data: { items: facultyPool, total: facultyPool.length },
@@ -196,12 +190,12 @@ describe("FacultySearchPopover", () => {
       selectedFacultyName: "Test Faculty",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /selected faculty: test faculty/i }));
+    fireEvent.click(screen.getByRole("button"));
 
-    const selected = await screen.findByRole("button", { name: /test faculty/i, pressed: true });
-    expect(selected).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("button", { name: /elena torres/i, pressed: false })
-    ).not.toHaveAttribute("aria-pressed", "true");
+    const selected = await screen.findByRole("option", { name: /test faculty/i });
+    expect(selected.querySelector(".lucide-check")).not.toBeNull();
+
+    const other = screen.getByRole("option", { name: /elena torres/i });
+    expect(other.querySelector(".lucide-check")).toBeNull();
   });
 });

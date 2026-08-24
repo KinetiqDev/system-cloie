@@ -392,7 +392,7 @@ describe("CourseAssignmentsTable", () => {
     const dialog = await screen.findByRole("dialog", { name: /edit course assignment/i });
     expect(dialog).toHaveTextContent(/CS101 — Intro to Computing/i);
     expect(dialog).toHaveTextContent(/Test Faculty/i);
-    expect(dialog).toHaveTextContent(/BSCS/i);
+    expect(within(dialog).getByLabelText("Program")).toHaveValue("BSCS — BS Computer Science");
     expect(dialog).toHaveTextContent(/2nd Year/i);
   });
 

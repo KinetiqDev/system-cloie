@@ -57,7 +57,6 @@ import DeanProfileLoading from "@/app/(app)/dean/profile/loading";
 import FacultyProfileLoading from "@/app/(app)/faculty/profile/loading";
 import ProgramHeadEntryLoading from "@/app/(app)/program-head/loading";
 import ProgramHeadProfileLoading from "@/app/(app)/program-head/profile/loading";
-import SelectedProgramCurriculaLoading from "@/app/(app)/program-head/programs/[programId]/curricula/loading";
 import SelectedProgramToolsLoading from "@/app/(app)/program-head/programs/[programId]/tools/loading";
 import SelectedProgramToolsNewLoading from "@/app/(app)/program-head/programs/[programId]/tools/new/loading";
 import SelectedProgramToolEditLoading from "@/app/(app)/program-head/programs/[programId]/tools/[id]/edit/loading";
@@ -65,7 +64,6 @@ import SelectedProgramToolsPublishLoading from "@/app/(app)/program-head/program
 import SelectedProgramCiloEvaluationNewLoading from "@/app/(app)/program-head/programs/[programId]/cilo-evaluations/new/loading";
 import SelectedProgramCourseRosterLoading from "@/app/(app)/program-head/programs/[programId]/course-rosters/[assignmentId]/loading";
 import CourseRosterDetailLoading from "@/app/(app)/course-rosters/[assignmentId]/loading";
-import SecretaryCurriculaLoading from "@/app/(app)/secretary/curricula/loading";
 import SecretaryInstrumentNewLoading from "@/app/(app)/secretary/instruments/new/loading";
 import SecretaryProgramNewLoading from "@/app/(app)/secretary/programs/new/loading";
 import SecretaryError from "@/app/(app)/secretary/error";
@@ -130,7 +128,6 @@ const loadingRoutes = [
   [FacultyProfileLoading, "Loading profile"],
   [ProgramHeadEntryLoading, "Loading records"],
   [ProgramHeadProfileLoading, "Loading profile"],
-  [SelectedProgramCurriculaLoading, "Loading records"],
   [SelectedProgramToolsLoading, "Loading records"],
   [SelectedProgramToolsNewLoading, "Loading form"],
   [SelectedProgramToolEditLoading, "Loading form"],
@@ -138,7 +135,6 @@ const loadingRoutes = [
   [SelectedProgramCiloEvaluationNewLoading, "Loading form"],
   [SelectedProgramCourseRosterLoading, "Loading records"],
   [CourseRosterDetailLoading, "Loading records"],
-  [SecretaryCurriculaLoading, "Loading records"],
   [SecretaryInstrumentNewLoading, "Loading form"],
   [SecretaryProgramNewLoading, "Loading form"],
 ] as const;

@@ -7,13 +7,11 @@ import { useState, useEffect } from "react";
 import { ClassIdentityFields } from "@/features/course-assignments/components/shared/class-identity-fields";
 import { CourseAssignmentFormDialog } from "@/features/course-assignments/components/course-assignment-form-dialog";
 import { createCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
-import { loadCurriculumCoursesForProgramAction } from "@/lib/actions/course-assignment-actions";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import type { FacultySearchResult } from "@/features/course-assignments/types";
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
   createCourseAssignmentAction: vi.fn(),
-  loadCurriculumCoursesForProgramAction: vi.fn(() => Promise.resolve({ success: true, data: [] })),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
   loadCourseAssignmentsForSheetAction: vi.fn(),
@@ -347,7 +345,6 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     facultyMockState.crossProgram = false;
     toastMessages = [];
     window.addEventListener("cloie-toast", toastListener);
-    vi.mocked(loadCurriculumCoursesForProgramAction).mockResolvedValue({ success: true, data: [] });
     vi.mocked(createCourseAssignmentAction).mockResolvedValue({
       success: true,
       data: { id: "assignment-1", programIds: ["prog-1"] },
@@ -359,10 +356,10 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     vi.restoreAllMocks();
   });
 
-  function clickSelectByPlaceholder(placeholder: string) {
-    const value = screen.getByText(placeholder);
-    const trigger = value.closest('[role="combobox"]');
-    if (!trigger) throw new Error(`Select trigger for "${placeholder}" not found`);
+  function clickCoursePicker() {
+    const input = screen.getByRole("combobox", { name: "Course" });
+    const trigger = input.closest('[data-slot="input-group"]')?.querySelector("button");
+    if (!trigger) throw new Error(`Course combobox trigger not found`);
     fireEvent.click(trigger);
   }
 
@@ -378,7 +375,7 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
       />
     );
 
-    clickSelectByPlaceholder("Select a course...");
+    clickCoursePicker();
 
     expect(await screen.findByRole("option", { name: /cs101 — intro/i })).toBeInTheDocument();
     expect(
@@ -398,14 +395,14 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
       />
     );
 
-    clickSelectByPlaceholder("Select a course...");
+    clickCoursePicker();
     fireEvent.click(await screen.findByRole("option", { name: /cs101 — intro/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     const programTrigger = screen.getByLabelText("Program");
     expect(programTrigger).toBeDisabled();
-    expect(programTrigger).toHaveTextContent(/bscs — bs computer science/i);
+    expect(programTrigger).toHaveValue("BSCS — BS Computer Science");
   });
 
   it("pre-fills the year level from the catalog default", async () => {
@@ -415,210 +412,6 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
     expect(await screen.findByText(/course default: 2nd year/i)).toBeInTheDocument();
-  });
-
-  it("shows the optional curriculum step and prefills course and year level", async () => {
-    vi.mocked(loadCurriculumCoursesForProgramAction).mockResolvedValueOnce({
-      success: true,
-      data: [
-        {
-          id: "curriculum-course-1",
-          curriculumVersionId: "curriculum-version-1",
-          curriculumVersionCode: "BSCS-2030",
-          curriculumVersionName: null,
-          courseId: "course-2",
-          courseCode: "CS201",
-          courseTitle: "Data Structures",
-          courseScope: CourseScope.PROGRAM_SPECIFIC,
-          yearLevel: YearLevel.SECOND_YEAR,
-          semester: "FIRST",
-          term: "FIRST_TERM",
-        },
-      ],
-    });
-    const courseWithDifferentDefault = {
-      ...mockCourses[1],
-      default_year_level: YearLevel.FIRST_YEAR,
-    };
-
-    render(
-      <CourseAssignmentFormDialog
-        open
-        onOpenChange={vi.fn()}
-        availableCourses={[mockCourses[0], courseWithDifferentDefault, ...mockCourses.slice(2)]}
-        availablePrograms={mockPrograms}
-        termInstances={mockTermInstances}
-        defaultTermInstanceId="term-1"
-        selectedProgramId="prog-1"
-      />
-    );
-
-    await waitFor(() => expect(screen.getByText("Curriculum")).toBeInTheDocument());
-    fireEvent.click(screen.getByText("Select a course...").closest('[role="combobox"]')!);
-    fireEvent.click(await screen.findByRole("option", { name: /cs101 — intro/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(
-      (await screen.findByText(/select a curriculum course/i)).closest('[role="combobox"]')!
-    );
-    const curriculumOption = await screen.findByRole("option", {
-      name: /cs201 — data structures/i,
-    });
-    fireEvent.focus(curriculumOption);
-    fireEvent.keyDown(curriculumOption, { key: "Enter" });
-    fireEvent.keyUp(curriculumOption, { key: "Enter" });
-    await waitFor(() => {
-      expect(screen.getByRole("combobox", { name: /curriculum course/i })).toHaveTextContent(
-        /cs201 — data structures/i
-      );
-    });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /back/i }));
-
-    expect(screen.getByRole("combobox", { name: /year level.*course default/i })).toHaveTextContent(
-      /2nd year/i
-    );
-  });
-
-  it("allows clearing a selected curriculum link before creation", async () => {
-    vi.mocked(loadCurriculumCoursesForProgramAction).mockResolvedValueOnce({
-      success: true,
-      data: [
-        {
-          id: "curriculum-course-1",
-          curriculumVersionId: "curriculum-version-1",
-          curriculumVersionCode: "BSCS-2030",
-          curriculumVersionName: null,
-          courseId: "course-2",
-          courseCode: "CS201",
-          courseTitle: "Data Structures",
-          courseScope: CourseScope.PROGRAM_SPECIFIC,
-          yearLevel: YearLevel.SECOND_YEAR,
-          semester: "FIRST",
-          term: "FIRST_TERM",
-        },
-      ],
-    });
-
-    render(<Wrapper />);
-    await waitFor(() => expect(screen.getByText("Curriculum")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(
-      (await screen.findByText(/select a curriculum course/i)).closest('[role="combobox"]')!
-    );
-    const curriculumOption = await screen.findByRole("option", {
-      name: /cs201 — data structures/i,
-    });
-    fireEvent.focus(curriculumOption);
-    fireEvent.keyDown(curriculumOption, { key: "Enter" });
-    fireEvent.keyUp(curriculumOption, { key: "Enter" });
-    await waitFor(() => {
-      expect(screen.getByRole("combobox", { name: /curriculum course/i })).toHaveTextContent(
-        /cs201 — data structures/i
-      );
-    });
-
-    fireEvent.click(screen.getByRole("combobox", { name: /curriculum course/i }));
-    const clearOption = await screen.findByRole("option", { name: /no curriculum link/i });
-    fireEvent.focus(clearOption);
-    fireEvent.keyDown(clearOption, { key: "Enter" });
-    fireEvent.keyUp(clearOption, { key: "Enter" });
-
-    expect(screen.getByRole("combobox", { name: /curriculum course/i })).toHaveTextContent(
-      /select a curriculum course/i
-    );
-  });
-
-  it("shows retry state when curriculum options fail to load", async () => {
-    vi.mocked(loadCurriculumCoursesForProgramAction).mockRejectedValueOnce(
-      new Error("network down")
-    );
-
-    render(<Wrapper />);
-
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-
-    expect(
-      await screen.findByText(/unable to load published curriculum courses/i)
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
-    expect(await screen.findByText(/select faculty/i)).toBeInTheDocument();
-  });
-
-  it("clears a curriculum link when target program changes", async () => {
-    vi.mocked(loadCurriculumCoursesForProgramAction)
-      .mockResolvedValueOnce({
-        success: true,
-        data: [
-          {
-            id: "curriculum-course-1",
-            curriculumVersionId: "curriculum-version-1",
-            curriculumVersionCode: "BSCS-2030",
-            curriculumVersionName: null,
-            courseId: "course-3",
-            courseCode: "GE101",
-            courseTitle: "General Education",
-            courseScope: CourseScope.GENERAL_EDUCATION,
-            yearLevel: YearLevel.SECOND_YEAR,
-            semester: "FIRST",
-            term: "FIRST_TERM",
-          },
-        ],
-      })
-      .mockResolvedValue({ success: true, data: [] });
-
-    render(
-      <CourseAssignmentFormDialog
-        open
-        onOpenChange={vi.fn()}
-        availableCourses={mockCourses}
-        availablePrograms={mockPrograms}
-        termInstances={mockTermInstances}
-        defaultTermInstanceId="term-1"
-        defaultCourseId="course-3"
-        mode="all-program"
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByLabelText("Program"));
-    const initialProgram = await screen.findByRole("option", {
-      name: /bscs — bs computer science/i,
-    });
-    fireEvent.focus(initialProgram);
-    fireEvent.keyDown(initialProgram, { key: "Enter" });
-    fireEvent.keyUp(initialProgram, { key: "Enter" });
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    await screen.findByText(/select a curriculum course/i);
-    fireEvent.click(screen.getByText(/select a curriculum course/i).closest('[role="combobox"]')!);
-    const curriculumOption = await screen.findByRole("option", {
-      name: /ge101 — general education/i,
-    });
-    fireEvent.focus(curriculumOption);
-    fireEvent.keyDown(curriculumOption, { key: "Enter" });
-    fireEvent.keyUp(curriculumOption, { key: "Enter" });
-    await waitFor(() => {
-      expect(screen.getByRole("combobox", { name: /curriculum course/i })).toHaveTextContent(
-        /ge101 — general education/i
-      );
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /back/i }));
-    fireEvent.click(screen.getByRole("button", { name: /back/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByLabelText("Program"));
-    const otherProgram = await screen.findByRole("option", { name: /bsed — bs education/i });
-    fireEvent.focus(otherProgram);
-    fireEvent.keyDown(otherProgram, { key: "Enter" });
-    fireEvent.keyUp(otherProgram, { key: "Enter" });
-
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    await waitFor(() => expect(screen.getByRole("button", { name: /skip/i })).toBeInTheDocument());
-    expect(screen.getByRole("combobox", { name: /curriculum course/i })).toHaveTextContent(
-      /select a curriculum course/i
-    );
   });
 
   it("resets cleanly after closing so the next assignment still gets the catalog default", async () => {
@@ -646,12 +439,9 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
 
   it("creates an assignment directly when the faculty belongs to the selected program", async () => {
     render(<Wrapper />);
-    await waitFor(() => expect(loadCurriculumCoursesForProgramAction).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
-
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
@@ -686,7 +476,7 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
       />
     );
 
-    clickSelectByPlaceholder("Select a course...");
+    clickCoursePicker();
 
     expect(await screen.findByRole("option", { name: /cs101 — intro/i })).toBeInTheDocument();
     expect(
@@ -698,11 +488,9 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     facultyMockState.crossProgram = true;
 
     render(<Wrapper crossProgram />);
-    await waitFor(() => expect(loadCurriculumCoursesForProgramAction).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
@@ -737,11 +525,9 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     );
 
     render(<Wrapper crossProgram />);
-    await waitFor(() => expect(loadCurriculumCoursesForProgramAction).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
@@ -763,15 +549,16 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
   beforeEach(() => {
     facultyMockState.crossProgram = false;
     vi.clearAllMocks();
-    vi.mocked(loadCurriculumCoursesForProgramAction).mockResolvedValue({ success: true, data: [] });
     vi.mocked(createCourseAssignmentAction).mockResolvedValue({
       success: true,
       data: { id: "assignment-1", programIds: ["prog-1"] },
     });
   });
 
-  async function openAndSelect(label: RegExp, optionText: string) {
-    const trigger = screen.getByLabelText(label);
+  async function openAndSelect(label: RegExp, optionText: string | RegExp) {
+    const input = screen.getByLabelText(label);
+    const trigger = input.closest('[data-slot="input-group"]')?.querySelector("button");
+    if (!trigger) throw new Error(`Combobox trigger for "${label}" not found`);
     fireEvent.click(trigger);
     const option = await screen.findByRole("option", { name: optionText });
     fireEvent.focus(option);
@@ -779,10 +566,10 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
     fireEvent.keyUp(option, { key: "Enter" });
   }
 
-  function clickSelectByPlaceholder(placeholder: string) {
-    const value = screen.getByText(placeholder);
-    const trigger = value.closest('[role="combobox"]');
-    if (!trigger) throw new Error(`Select trigger for "${placeholder}" not found`);
+  function clickCoursePicker() {
+    const input = screen.getByRole("combobox", { name: "Course" });
+    const trigger = input.closest('[data-slot="input-group"]')?.querySelector("button");
+    if (!trigger) throw new Error(`Course combobox trigger not found`);
     fireEvent.click(trigger);
   }
 
@@ -807,7 +594,7 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
   it("includes General Education courses in the create picker", async () => {
     render(<Wrapper />);
 
-    clickSelectByPlaceholder("Select a course...");
+    clickCoursePicker();
 
     expect(await screen.findByRole("option", { name: /cs101 — intro/i })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /ge101 — general education/i })).toBeInTheDocument();
@@ -820,7 +607,7 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
 
     const programTrigger = screen.getByLabelText("Program");
     expect(programTrigger).toBeDisabled();
-    expect(programTrigger).toHaveTextContent(/bscs — bs computer science/i);
+    expect(programTrigger).toHaveValue("BSCS — BS Computer Science");
   });
 
   it("requires choosing a target program for General Education courses", async () => {
@@ -830,13 +617,11 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
 
     const programTrigger = screen.getByLabelText("Program");
     expect(programTrigger).not.toBeDisabled();
-    expect(programTrigger).not.toHaveTextContent(/bscs/i);
+    expect(programTrigger).not.toHaveValue(/bscs/i);
 
-    await openAndSelect(/program/i, "BSED — BS Education");
+    await openAndSelect(/program/i, /BS Education/);
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    await waitFor(() => expect(loadCurriculumCoursesForProgramAction).toHaveBeenCalled());
-    fireEvent.click(screen.getByRole("button", { name: /skip/i }));
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 

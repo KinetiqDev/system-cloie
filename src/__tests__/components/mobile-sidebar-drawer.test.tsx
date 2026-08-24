@@ -132,10 +132,6 @@ describe("Dean mobile navigation drawer", () => {
       "href",
       "/program-head/programs/program-2/outcomes"
     );
-    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute(
-      "href",
-      "/program-head/programs/program-2/curricula"
-    );
     expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute(
       "href",
       "/program-head/profile"
@@ -157,34 +153,6 @@ describe("Dean mobile navigation drawer", () => {
     );
     expect(consoleError).not.toHaveBeenCalled();
     consoleError.mockRestore();
-  });
-
-  it("marks only Curricula current in the Program Head drawer on the curricula route", async () => {
-    pathnameMock.mockReturnValue("/program-head/programs/program-2/curricula");
-    render(<MobileSidebarDrawer roles={[ROLES.PROGRAM_HEAD]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
-
-    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
-    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute(
-      "href",
-      "/program-head/programs/program-2/curricula"
-    );
-    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("dialog").querySelectorAll('[aria-current="page"]')).toHaveLength(1);
-  });
-
-  it("exposes Curricula in the Secretary drawer and marks it current", async () => {
-    pathnameMock.mockReturnValue("/secretary/curricula");
-    render(<MobileSidebarDrawer roles={[ROLES.SECRETARY]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
-
-    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
-    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute(
-      "href",
-      "/secretary/curricula"
-    );
-    expect(screen.getByRole("link", { name: "Curricula" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("dialog").querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
   it("uses semantic sidebar surface, scrim, and selected roles", async () => {

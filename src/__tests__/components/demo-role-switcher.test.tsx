@@ -38,14 +38,16 @@ describe("DemoRoleSwitcher", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /demo/i }));
 
-    expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(8);
+    expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(24);
     expect(screen.getByText("College Dean")).toBeInTheDocument();
+    expect(screen.getByText("PH — Maria Santos (BEED)")).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("textbox", { name: "Search roles" }), {
       target: { value: "alumni" },
     });
 
     expect(screen.getByRole("button", { name: "Switch to Alumni" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Switch to Alumni — Miguel Ong (BSBA)" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Switch to Student" })).not.toBeInTheDocument();
   });
 
@@ -147,7 +149,7 @@ describe("DemoRoleSwitcher", () => {
   });
 
   it("keeps the dedicated presentation catalog distinct from the broader seed catalog", () => {
-    expect(DEDICATED_DEMO_USERS).toHaveLength(8);
+    expect(DEDICATED_DEMO_USERS).toHaveLength(24);
     expect(DEDICATED_DEMO_USERS.map((user) => user.label)).toEqual([
       "Secretary",
       "College Dean",
@@ -157,6 +159,22 @@ describe("DemoRoleSwitcher", () => {
       "Alumni",
       "Industry Partner",
       "Gen Ed Coordinator",
+      "PH — Maria Santos (BEED)",
+      "PH — Jose Reyes (BSED)",
+      "PH — Ana Cruz (BSSW)",
+      "PH — Roberto Lim (BSBA)",
+      "PH — Carmen Flores (BSHM)",
+      "Faculty — Elena Torres (BSED)",
+      "Faculty — Marco Villanueva (BSBA)",
+      "Faculty — Lisa Mendoza (BSHM)",
+      "Student — Juan Dela Cruz (BSED)",
+      "Student — Angela Reyes (BSBA)",
+      "Graduating — Carlos Santos (BSBA)",
+      "Student — Patricia Luna (BEED)",
+      "Student — Daniel Tan (BSHM)",
+      "Graduating — Grace Aquino (BSHM)",
+      "Alumni — Miguel Ong (BSBA)",
+      "Industry — Karen Sy (BSHM)",
     ]);
   });
 });

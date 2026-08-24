@@ -13,12 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { showToast } from "@/components/ui/toast";
 import { UserIcon } from "lucide-react";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
@@ -26,12 +27,8 @@ import { ClassIdentityFields } from "./shared/class-identity-fields";
 import { FacultySearchPopover } from "./shared/faculty-search-popover";
 import { WizardStepper } from "./shared/wizard-stepper";
 import { AssignmentSummaryBlock } from "./shared/assignment-summary-block";
-import {
-  createCourseAssignmentAction,
-  loadCurriculumCoursesForProgramAction,
-} from "@/lib/actions/course-assignment-actions";
+import { createCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
 import type { AssignableCourse, FacultySearchResult } from "@/features/course-assignments/types";
-import type { PublishedCurriculumCourseOption } from "@/features/curriculum/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
@@ -78,127 +75,7 @@ interface CourseAssignmentFormDialogProps {
   selectedProgramId?: string;
 }
 
-type Step = "term" | "course" | "class" | "curriculum" | "faculty" | "confirm";
-
-interface CurriculumCoursePickerProps {
-  programId: string | null;
-  courseId: string | null;
-  filterCourseId: string | null;
-  value: string | null;
-  onSelect: (option: PublishedCurriculumCourseOption) => void;
-  onClear: () => void;
-}
-
-function CurriculumCoursePicker({
-  programId,
-  courseId,
-  filterCourseId,
-  value,
-  onSelect,
-  onClear,
-}: CurriculumCoursePickerProps) {
-  const [options, setOptions] = useState<PublishedCurriculumCourseOption[]>([]);
-  const [loadedProgramId, setLoadedProgramId] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loadAttempt, setLoadAttempt] = useState(0);
-  const isLoading = !!programId && loadedProgramId !== programId;
-  const availableOptions = filterCourseId
-    ? options.filter((option) => option.courseId === courseId)
-    : options;
-
-  useEffect(() => {
-    if (!programId) return;
-
-    let cancelled = false;
-    loadCurriculumCoursesForProgramAction(programId)
-      .then((result) => {
-        if (cancelled) return;
-        setLoadedProgramId(programId);
-        if (result.success) {
-          setOptions(result.data);
-          setLoadError(null);
-        } else {
-          setOptions([]);
-          setLoadError("Unable to load published curriculum courses. Please try again.");
-        }
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoadedProgramId(programId);
-        setOptions([]);
-        setLoadError("Unable to load published curriculum courses. Please try again.");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loadAttempt, programId]);
-
-  return (
-    <div className="space-y-4">
-      <Field>
-        <FieldLabel htmlFor="assignment-curriculum-course">Curriculum course (optional)</FieldLabel>
-        <FieldContent>
-          {isLoading ? (
-            <p className="text-muted-foreground text-sm">Loading published curriculum courses...</p>
-          ) : loadError ? (
-            <div className="space-y-2">
-              <p role="alert" className="text-danger text-sm">
-                {loadError}
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setLoadError(null);
-                  setLoadedProgramId(null);
-                  setLoadAttempt((attempt) => attempt + 1);
-                }}
-              >
-                Retry
-              </Button>
-            </div>
-          ) : (
-            <Select
-              value={value ?? ""}
-              onValueChange={(selectedValue) => {
-                if (selectedValue === "none") {
-                  onClear();
-                  return;
-                }
-                const option = availableOptions.find((item) => item.id === selectedValue);
-                if (option) onSelect(option);
-              }}
-            >
-              <SelectTrigger id="assignment-curriculum-course" className="w-full">
-                <SelectValue placeholder="Select a curriculum course...">
-                  {value
-                    ? (() => {
-                        const option = availableOptions.find((item) => item.id === value);
-                        return option ? `${option.courseCode} — ${option.courseTitle}` : null;
-                      })()
-                    : null}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No curriculum link</SelectItem>
-                {availableOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.courseCode} — {option.courseTitle} ({option.curriculumVersionCode})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </FieldContent>
-      </Field>
-      <p className="text-muted-foreground text-xs">
-        Select a published placement to prefill course and year level. Both remain editable.
-      </p>
-    </div>
-  );
-}
+type Step = "term" | "course" | "class" | "faculty" | "confirm";
 
 interface AssignmentStepContentProps {
   step: Step;
@@ -217,10 +94,6 @@ interface AssignmentStepContentProps {
   onSectionChange: (value: StudentSection | null) => void;
   programLocked: boolean;
   suggestedYearLevel: YearLevel | null | undefined;
-  curriculumCourseId: string | null;
-  onCurriculumSelect: (option: PublishedCurriculumCourseOption) => void;
-  onCurriculumClear: () => void;
-  defaultCourseId: string | null | undefined;
   selectedFaculty: FacultySearchResult | null;
   selectedProgramName: string | undefined;
   selectedProgramCode: string | undefined;
@@ -246,10 +119,6 @@ function AssignmentStepContent({
   onSectionChange,
   programLocked,
   suggestedYearLevel,
-  curriculumCourseId,
-  onCurriculumSelect,
-  onCurriculumClear,
-  defaultCourseId,
   selectedFaculty,
   selectedProgramName,
   selectedProgramCode,
@@ -286,17 +155,6 @@ function AssignmentStepContent({
           suggestedYearLevel={suggestedYearLevel}
         />
       );
-    case "curriculum":
-      return (
-        <CurriculumCoursePicker
-          programId={programId}
-          courseId={courseId}
-          filterCourseId={defaultCourseId ?? null}
-          value={curriculumCourseId}
-          onSelect={onCurriculumSelect}
-          onClear={onCurriculumClear}
-        />
-      );
     case "faculty":
       return (
         <FacultyStep
@@ -329,27 +187,42 @@ function CourseStep({
   courses: AssignableCourse[];
   onChange: (value: string) => void;
 }) {
+  const selectedCourse = courses.find((item) => item.id === courseId) ?? null;
+
   return (
     <Field>
       <FieldLabel htmlFor="assignment-course">Course</FieldLabel>
       <FieldContent>
-        <Select value={courseId ?? ""} onValueChange={(value) => value && onChange(value)}>
-          <SelectTrigger id="assignment-course">
-            <SelectValue placeholder="Select a course...">
-              {(() => {
-                const course = courses.find((item) => item.id === courseId);
-                return course ? `${course.code} — ${course.title}` : null;
-              })()}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {courses.map((course) => (
-              <SelectItem key={course.id} value={course.id}>
-                {course.code} — {course.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Combobox
+          value={selectedCourse}
+          onValueChange={(value) => value && onChange(value.id)}
+          items={courses}
+          filter={(course, query) =>
+            !query ||
+            [course.code, course.title].some((v) =>
+              v.toLowerCase().includes(query.toLowerCase())
+            )
+          }
+          itemToStringLabel={(c) => `${c.code} — ${c.title}`}
+          itemToStringValue={(c) => c.id}
+          autoHighlight
+        >
+          <ComboboxInput
+            id="assignment-course"
+            className="w-full"
+            placeholder="Search by code or title…"
+          />
+          <ComboboxContent>
+            <ComboboxEmpty>No courses match your search.</ComboboxEmpty>
+            <ComboboxList>
+              {(course) => (
+                <ComboboxItem key={course.id} value={course}>
+                  {course.code} — {course.title}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
       </FieldContent>
     </Field>
   );
@@ -482,7 +355,6 @@ export function CourseAssignmentFormDialog({
   const [selectedFaculty, setSelectedFaculty] = useState<FacultySearchResult | null>(null);
   const [showCrossProgramWarning, setShowCrossProgramWarning] = useState(false);
   const [hasTouchedYearLevel, setHasTouchedYearLevel] = useState(false);
-  const [curriculumCourseId, setCurriculumCourseId] = useState<string | null>(null);
 
   const previousCourseId = useRef<string | null>(null);
 
@@ -503,13 +375,11 @@ export function CourseAssignmentFormDialog({
   const isGeneralEducation = selectedCourse?.course_scope === CourseScope.GENERAL_EDUCATION;
   const programLocked = !isGeneralEducation;
   const selectedProgram = availablePrograms.find((p) => p.id === programId);
-  const curriculumPickerEnabled = mode === "all-program" || mode === "general-education" || !!programId;
 
   const nextStepAfter = (current: Step): Step => {
     if (current === "term") return "course";
     if (current === "course") return "class";
-    if (current === "class") return curriculumPickerEnabled ? "curriculum" : "faculty";
-    if (current === "curriculum") return "faculty";
+    if (current === "class") return "faculty";
     if (current === "faculty") return "confirm";
     return "confirm";
   };
@@ -517,9 +387,7 @@ export function CourseAssignmentFormDialog({
   const previousStepBefore = (current: Step): Step => {
     if (current === "course") return "term";
     if (current === "class") return "course";
-    if (current === "curriculum") return "class";
-    if (current === "faculty")
-      return curriculumPickerEnabled && !curriculumCourseId ? "curriculum" : "class";
+    if (current === "faculty") return "class";
     return "faculty";
   };
 
@@ -543,29 +411,19 @@ export function CourseAssignmentFormDialog({
   const handleProgramChange = (value: string) => {
     if (value === programId) return;
     setProgramId(value);
-    setCurriculumCourseId(null);
   };
 
   const handleCourseChange = (value: string) => {
     setCourseId(value);
-    setCurriculumCourseId(null);
     const nextCourse = assignableCourses.find((c) => c.id === value);
     setProgramId(nextCourse?.program_id ?? null);
-    setHasTouchedYearLevel(false);
-  };
-
-  const handleCurriculumCourseSelect = (option: PublishedCurriculumCourseOption) => {
-    setCurriculumCourseId(option.id);
-    previousCourseId.current = option.courseId;
-    setCourseId(option.courseId);
-    setYearLevel(option.yearLevel);
     setHasTouchedYearLevel(false);
   };
 
   const handleNext = () => {
     if (isSubmitting) return;
 
-    if (["term", "course", "class", "curriculum"].includes(step)) {
+    if (["term", "course", "class"].includes(step)) {
       setStep(nextStepAfter(step));
       return;
     }
@@ -586,7 +444,7 @@ export function CourseAssignmentFormDialog({
     if (isSubmitting) return;
 
     if (step === "term") return;
-    if (step === "course" || step === "class" || step === "curriculum" || step === "faculty") {
+    if (step === "course" || step === "class" || step === "faculty") {
       setStep(previousStepBefore(step));
     }
     if (step === "confirm") {
@@ -612,7 +470,6 @@ export function CourseAssignmentFormDialog({
       programId,
       yearLevel,
       section,
-      ...(curriculumCourseId ? { curriculumCourseId } : {}),
       ...(selectedProgramId ? { selectedProgramId } : {}),
     });
 
@@ -634,7 +491,6 @@ export function CourseAssignmentFormDialog({
     setTermInstanceId(defaultTermInstanceId ?? null);
     setCourseId(defaultCourseId ?? null);
     setProgramId(selectedProgramId ?? getInitialProgramId(defaultCourseId, availableCourses));
-    setCurriculumCourseId(null);
     setYearLevel(YearLevel.FIRST_YEAR);
     setSection(StudentSection.MORNING);
     setSelectedFaculty(null);
@@ -662,8 +518,6 @@ export function CourseAssignmentFormDialog({
         return !!selectedCourse;
       case "class":
         return !!programId && !!section;
-      case "curriculum":
-        return !!curriculumCourseId;
       case "faculty":
         return !!selectedFaculty;
       case "confirm":
@@ -675,7 +529,6 @@ export function CourseAssignmentFormDialog({
     { key: "term", label: "Term" },
     { key: "course", label: "Course" },
     { key: "class", label: "Class" },
-    ...(curriculumPickerEnabled ? [{ key: "curriculum" as const, label: "Curriculum" }] : []),
     { key: "faculty", label: "Faculty" },
     { key: "confirm", label: "Confirm" },
   ];
@@ -706,10 +559,6 @@ export function CourseAssignmentFormDialog({
           onSectionChange={(value) => value && setSection(value)}
           programLocked={programLocked}
           suggestedYearLevel={selectedCourse?.default_year_level}
-          curriculumCourseId={curriculumCourseId}
-          onCurriculumSelect={handleCurriculumCourseSelect}
-          onCurriculumClear={() => setCurriculumCourseId(null)}
-          defaultCourseId={defaultCourseId}
           selectedFaculty={selectedFaculty}
           selectedProgramName={selectedProgram?.name}
           selectedProgramCode={selectedProgram?.code}
@@ -744,20 +593,9 @@ export function CourseAssignmentFormDialog({
                 Confirm Assignment
               </Button>
             ) : (
-              <>
-                {step === "curriculum" && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setStep(nextStepAfter(step))}
-                    disabled={isSubmitting}
-                  >
-                    Skip
-                  </Button>
-                )}
-                <Button loading={isSubmitting} onClick={handleNext} disabled={!canProceed()}>
-                  Next
-                </Button>
-              </>
+              <Button loading={isSubmitting} onClick={handleNext} disabled={!canProceed()}>
+                Next
+              </Button>
             )}
           </div>
         </DialogFooter>

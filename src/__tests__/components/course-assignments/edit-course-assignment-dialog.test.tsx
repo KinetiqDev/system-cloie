@@ -98,11 +98,12 @@ describe("EditCourseAssignmentDialog", () => {
     );
 
     expect(screen.getByText(/CS101 — Intro to Computing/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Test Faculty/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/Test Faculty/i).length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText(/Class identity locks after the first roster membership/i)
     ).toBeInTheDocument();
-    expect(screen.getByText("BSCS — BS Computer Science")).toBeInTheDocument();
+    expect(screen.getByLabelText("Program")).toHaveValue("BSCS — BS Computer Science");
+    expect(screen.getByLabelText("Faculty")).toHaveValue("Test Faculty");
     expect(screen.getByText(/course default: 2nd year/i)).toBeInTheDocument();
   });
 
@@ -210,14 +211,18 @@ describe("EditCourseAssignmentDialog", () => {
       />
     );
 
-    fireEvent.click(screen.getByLabelText("Faculty"));
-    const facultySearch = await screen.findByPlaceholderText(/search by name or email/i);
-    fireEvent.change(facultySearch, { target: { value: "Elena" } });
+    const facultyInput = screen.getByLabelText("Faculty");
+    const facultyTrigger = facultyInput
+      .closest('[data-slot="input-group"]')
+      ?.querySelector("button");
+    if (!facultyTrigger) throw new Error("Faculty combobox trigger not found");
+    fireEvent.click(facultyTrigger);
+    fireEvent.change(facultyInput, { target: { value: "Elena" } });
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Elena Torres/i })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: /Elena Torres/i })).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole("button", { name: /Elena Torres/i }));
+    fireEvent.click(screen.getByRole("option", { name: /Elena Torres/i }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => {

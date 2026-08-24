@@ -1039,16 +1039,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/program-head/programs/[programId]/curricula/loading.tsx",
-    disposition: "already_compliant",
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/program-head/programs/[programId]/curricula/page.tsx",
-    disposition: "already_compliant",
-    category: "route",
-  },
-  {
     path: "src/app/(app)/program-head/programs/[programId]/dashboard/loading.tsx",
     disposition: "task",
     taskId: 14,
@@ -1257,16 +1247,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/app/(app)/secretary/courses/page.tsx",
     disposition: "task",
     taskId: 14,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/secretary/curricula/loading.tsx",
-    disposition: "already_compliant",
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/secretary/curricula/page.tsx",
-    disposition: "already_compliant",
     category: "route",
   },
   {

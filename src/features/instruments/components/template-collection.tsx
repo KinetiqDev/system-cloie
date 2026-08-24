@@ -149,6 +149,8 @@ function TemplateCard({
   renderFooterActions: (item: TemplateCollectionItem) => ReactNode;
   renderOverflowMenu?: (item: TemplateCollectionItem) => ReactNode;
 }) {
+  const overflowMenu = renderOverflowMenu?.(item);
+
   return (
     <Card className="relative">
       <CardHeader>
@@ -156,7 +158,7 @@ function TemplateCard({
           <CardTitle className="line-clamp-2 text-base font-bold">{item.name}</CardTitle>
           <div className="flex shrink-0 items-center gap-1">
             <Badge variant={item.statusActive ? "success" : "outline"}>{item.statusLabel}</Badge>
-            {renderOverflowMenu && <OverflowMenu>{renderOverflowMenu(item)}</OverflowMenu>}
+            {overflowMenu && <OverflowMenu>{overflowMenu}</OverflowMenu>}
           </div>
         </div>
       </CardHeader>
@@ -216,40 +218,44 @@ function TemplateTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => (
-            <TableRow key={item.id} className="hover:bg-muted/30">
-              <TableCell>
-                <span className="block font-medium">{item.name}</span>
-                {item.description && (
-                  <span className="text-muted-foreground line-clamp-1 block max-w-[36rem]">
-                    {item.description}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="text-xs">
-                  {templateTypeLabel(item)}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant={item.statusActive ? "success" : "outline"} className="text-xs">
-                  {item.statusLabel}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <OriginMarker item={item} />
-              </TableCell>
-              <TableCell className="text-sm tabular-nums">
-                {item.versionCount !== undefined ? item.versionCount : "—"}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center justify-end gap-2">
-                  {renderFooterActions(item)}
-                  {renderOverflowMenu && <OverflowMenu>{renderOverflowMenu(item)}</OverflowMenu>}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+          {items.map((item) => {
+            const overflowMenu = renderOverflowMenu?.(item);
+
+            return (
+              <TableRow key={item.id} className="hover:bg-muted/30">
+                <TableCell>
+                  <span className="block font-medium">{item.name}</span>
+                  {item.description && (
+                    <span className="text-muted-foreground line-clamp-1 block max-w-[36rem]">
+                      {item.description}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="text-xs">
+                    {templateTypeLabel(item)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={item.statusActive ? "success" : "outline"} className="text-xs">
+                    {item.statusLabel}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <OriginMarker item={item} />
+                </TableCell>
+                <TableCell className="text-sm tabular-nums">
+                  {item.versionCount !== undefined ? item.versionCount : "—"}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-2">
+                    {renderFooterActions(item)}
+                    {overflowMenu && <OverflowMenu>{overflowMenu}</OverflowMenu>}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
