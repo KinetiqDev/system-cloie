@@ -139,7 +139,7 @@ The Coordinator dashboard whose KPIs are scoped to active General Education cour
 _Avoid_: Dashboard mirroring the management list, all-course KPI scope
 
 **Role-owned route**:
-A dashboard URL owned by one role even when the underlying operation capability is shared with another role. Dean, Coordinator, and Program Head Course assignment routes remain separate role-owned routes; the Secretary assignment route was removed.
+A dashboard URL owned by one role even when the underlying operation capability is shared with another role. Dean, Coordinator, Program Head, and Secretary Course assignment routes remain separate role-owned routes; the Secretary route is a read-only view.
 _Avoid_: Role impersonation route, shared dashboard route
 
 **Faculty affiliation**:

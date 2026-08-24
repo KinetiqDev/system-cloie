@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { StudentSection, YearLevel } from "@prisma/client";
+import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
@@ -74,6 +74,11 @@ describe("manage-course-assignments", () => {
     roles: [ROLES.FACULTY],
   });
 
+  const mockCoordinatorSession = createAuthSessionSnapshot({
+    userId: "coordinator-1",
+    email: "coordinator@test.com",
+    roles: [ROLES.GEN_ED_COORDINATOR],
+  });
   beforeEach(async () => {
     vi.clearAllMocks();
     resolveProgramHeadContextMock.mockResolvedValue({
@@ -105,11 +110,8 @@ describe("manage-course-assignments", () => {
   });
 
   describe("createCourseAssignment", () => {
-    it.each([
-      { label: "Secretary", session: mockAdminSession },
-      { label: "Dean", session: mockDeanSession },
-    ])("should allow $label to create assignment", async ({ session }) => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+    it("should allow Dean to create assignment", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
@@ -130,6 +132,32 @@ describe("manage-course-assignments", () => {
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it("rejects Secretary creation before persistence", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "course-1",
+        program_id: "program-1",
+      } as never);
+
+      const result = await createCourseAssignment({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "course-1",
+        programId: "program-1",
+        selectedProgramId: "program-1",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Secretary cannot manage course assignments.",
+      });
+      expect(prisma.courseAssignment.create).not.toHaveBeenCalled();
     });
 
     it("should return error when faculty tries to create assignment", async () => {
@@ -181,7 +209,7 @@ describe("manage-course-assignments", () => {
     });
 
     it("accepts a curriculum link and preserves an overridden year level", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
@@ -364,43 +392,38 @@ describe("manage-course-assignments", () => {
       }
     });
 
-    it.each([
-      { label: "Secretary", session: mockAdminSession },
-      { label: "Dean", session: mockDeanSession },
-    ])(
-      "should allow $label to create a General Education assignment for a program",
-      async ({ session }) => {
-        vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+    it("should allow Gen Ed Coordinator to create a General Education assignment for a program", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockCoordinatorSession);
 
-        const { prisma } = await import("@/lib/db/prisma");
-        vi.mocked(prisma.course.findUnique).mockResolvedValue({
-          id: "ge-course",
-          program_id: null,
-        } as never);
-        vi.mocked(prisma.courseAssignment.create).mockResolvedValue({
-          id: "assignment-1",
-        } as never);
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.course.findUnique).mockResolvedValue({
+        id: "ge-course",
+        program_id: null,
+        course_scope: CourseScope.GENERAL_EDUCATION,
+      } as never);
+      vi.mocked(prisma.courseAssignment.create).mockResolvedValue({
+        id: "assignment-1",
+      } as never);
 
-        const result = await createCourseAssignment({
-          termInstanceId: "term-1",
-          facultyId: "faculty-1",
-          courseId: "ge-course",
-          programId: "program-1",
-          yearLevel: YearLevel.FIRST_YEAR,
-          section: StudentSection.MORNING,
-        });
+      const result = await createCourseAssignment({
+        termInstanceId: "term-1",
+        facultyId: "faculty-1",
+        courseId: "ge-course",
+        programId: "program-1",
+        yearLevel: YearLevel.FIRST_YEAR,
+        section: StudentSection.MORNING,
+      });
 
-        expect(result.success).toBe(true);
-        expect(prisma.courseAssignment.create).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({
-              course_id: "ge-course",
-              program_id: "program-1",
-            }),
-          })
-        );
-      }
-    );
+      expect(result.success).toBe(true);
+      expect(prisma.courseAssignment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            course_id: "ge-course",
+            program_id: "program-1",
+          }),
+        })
+      );
+    });
 
     it("should reject Dean creation of a Program-specific assignment for a non-owning program", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
@@ -482,7 +505,7 @@ describe("manage-course-assignments", () => {
     });
 
     it("should handle unique constraint violation", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
@@ -578,11 +601,8 @@ describe("manage-course-assignments", () => {
       expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
     });
 
-    it.each([
-      { label: "Secretary", session: mockAdminSession },
-      { label: "Dean", session: mockDeanSession },
-    ])("should allow $label to update assignment", async ({ session }) => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+    it("should allow Dean to update assignment", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
@@ -626,7 +646,7 @@ describe("manage-course-assignments", () => {
       );
     });
 
-    it("should allow secretary to update a General Education assignment program", async () => {
+    it("rejects a Secretary update of a General Education assignment", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
 
       const { prisma } = await import("@/lib/db/prisma");
@@ -641,16 +661,15 @@ describe("manage-course-assignments", () => {
         programId: "program-1",
       });
 
-      expect(result.success).toBe(true);
-      expect(prisma.courseAssignment.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ program_id: "program-1" }),
-        })
-      );
+      expect(result).toEqual({
+        success: false,
+        error: "Secretary cannot manage course assignments.",
+      });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
     });
 
     it("rejects class identity changes after the first roster membership", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
@@ -696,7 +715,7 @@ describe("manage-course-assignments", () => {
     });
 
     it("updates Faculty and class identity in one transaction", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       const tx = {
@@ -737,7 +756,7 @@ describe("manage-course-assignments", () => {
 
   describe("Faculty reassignment", () => {
     it("changes Faculty ownership without changing membership records", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
@@ -761,11 +780,8 @@ describe("manage-course-assignments", () => {
   });
 
   describe("deactivateCourseAssignment", () => {
-    it.each([
-      { label: "Secretary", session: mockAdminSession },
-      { label: "Dean", session: mockDeanSession },
-    ])("should allow $label to deactivate assignment", async ({ session }) => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+    it("should allow Dean to deactivate assignment", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
@@ -777,6 +793,24 @@ describe("manage-course-assignments", () => {
       const result = await deactivateCourseAssignment("assignment-1");
 
       expect(result.success).toBe(true);
+    });
+
+    it("rejects Secretary deactivation before persistence", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-1",
+        course: { program_id: "program-1" },
+      } as never);
+
+      const result = await deactivateCourseAssignment("assignment-1");
+
+      expect(result).toEqual({
+        success: false,
+        error: "Secretary cannot manage course assignments.",
+      });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
     });
 
     it("blocks a Program Head from deactivating an assignment in another selected Program", async () => {
@@ -824,11 +858,8 @@ describe("manage-course-assignments", () => {
   });
 
   describe("activateCourseAssignment", () => {
-    it.each([
-      { label: "Secretary", session: mockAdminSession },
-      { label: "Dean", session: mockDeanSession },
-    ])("should allow $label to reactivate assignment", async ({ session }) => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+    it("should allow Dean to reactivate assignment", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
@@ -845,6 +876,24 @@ describe("manage-course-assignments", () => {
           data: expect.objectContaining({ is_active: true }),
         })
       );
+    });
+
+    it("rejects Secretary reactivation before persistence", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
+        id: "assignment-1",
+        course: { program_id: "program-1" },
+      } as never);
+
+      const result = await activateCourseAssignment({ assignmentId: "assignment-1" });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Secretary cannot manage course assignments.",
+      });
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
     });
 
     it("blocks a Program Head from activating an assignment in another selected Program", async () => {
@@ -909,42 +958,70 @@ describe("manage-course-assignments", () => {
       _count: { memberships: 0, course_bound_evaluations: 0 },
     };
 
-    it.each([
-      { label: "Secretary", session: mockAdminSession },
-      { label: "Dean", session: mockDeanSession },
-    ])(
-      "should allow $label to safely delete assignment with no course-bound evaluations",
-      async ({ session }) => {
-        vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+    it("should allow Dean to safely delete assignment with no course-bound evaluations", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
-        const { prisma } = await import("@/lib/db/prisma");
-        const tx = {
-          courseAssignment: {
-            findUnique: vi.fn().mockResolvedValue(lifecycleAssignment),
-            delete: vi.fn().mockResolvedValue({ id: "assignment-1" }),
-          },
-          courseAssignmentMembership: { count: vi.fn().mockResolvedValue(0) },
-          programHeadAssignment: { findMany: vi.fn() },
-          $queryRaw: vi.fn().mockResolvedValue([]),
-        };
-        vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
-          callback(tx as never)
-        );
+      const { prisma } = await import("@/lib/db/prisma");
+      const tx = {
+        courseAssignment: {
+          findUnique: vi.fn().mockResolvedValue(lifecycleAssignment),
+          delete: vi.fn().mockResolvedValue({ id: "assignment-1" }),
+        },
+        courseAssignmentMembership: { count: vi.fn().mockResolvedValue(0) },
+        programHeadAssignment: { findMany: vi.fn() },
+        $queryRaw: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
+        callback(tx as never)
+      );
 
-        const result = await deleteCourseAssignment({
-          assignmentId: "assignment-1",
-          confirmationLabel:
-            "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
-          revision: lifecycleAssignment.updated_at.toISOString(),
-          membershipCount: 0,
-          activeMembershipCount: 0,
-          removedMembershipCount: 0,
-        });
+      const result = await deleteCourseAssignment({
+        assignmentId: "assignment-1",
+        confirmationLabel:
+          "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+        revision: lifecycleAssignment.updated_at.toISOString(),
+        membershipCount: 0,
+        activeMembershipCount: 0,
+        removedMembershipCount: 0,
+      });
 
-        expect(result.success).toBe(true);
-        expect(tx.courseAssignment.delete).toHaveBeenCalledWith({ where: { id: "assignment-1" } });
-      }
-    );
+      expect(result.success).toBe(true);
+      expect(tx.courseAssignment.delete).toHaveBeenCalledWith({ where: { id: "assignment-1" } });
+    });
+
+    it("rejects Secretary deletion before persistence", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+
+      const { prisma } = await import("@/lib/db/prisma");
+      const tx = {
+        courseAssignment: {
+          findUnique: vi.fn().mockResolvedValue(lifecycleAssignment),
+          delete: vi.fn(),
+        },
+        courseAssignmentMembership: { count: vi.fn().mockResolvedValue(0) },
+        programHeadAssignment: { findMany: vi.fn() },
+        $queryRaw: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
+        callback(tx as never)
+      );
+
+      const result = await deleteCourseAssignment({
+        assignmentId: "assignment-1",
+        confirmationLabel:
+          "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+        revision: lifecycleAssignment.updated_at.toISOString(),
+        membershipCount: 0,
+        activeMembershipCount: 0,
+        removedMembershipCount: 0,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Secretary cannot manage course assignments.",
+      });
+      expect(tx.courseAssignment.delete).not.toHaveBeenCalled();
+    });
 
     it("blocks a Program Head from deleting an assignment in another selected Program", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockProgramHeadSession);
@@ -1011,11 +1088,8 @@ describe("manage-course-assignments", () => {
       expect(tx.courseAssignment.delete).not.toHaveBeenCalled();
     });
 
-    it.each([
-      { label: "Secretary", session: mockAdminSession },
-      { label: "Dean", session: mockDeanSession },
-    ])("should block $label deletion when course-bound evaluations exist", async ({ session }) => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(session);
+    it("blocks deletion when course-bound evaluations exist", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       const tx = {
@@ -1103,7 +1177,7 @@ describe("manage-course-assignments", () => {
     });
 
     it("should return success=true when some assignments are created despite errors", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.course.findUnique)
@@ -1150,7 +1224,7 @@ describe("manage-course-assignments", () => {
     });
 
     it("should return success=false when every assignment fails", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");
       vi.mocked(prisma.course.findUnique)
@@ -1184,15 +1258,10 @@ describe("manage-course-assignments", () => {
       expect(result.errors).toHaveLength(2);
     });
 
-    it("should allow secretary to bulk create General Education assignments", async () => {
+    it("rejects Secretary bulk creation via the role allowlist", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
 
       const { prisma } = await import("@/lib/db/prisma");
-      vi.mocked(prisma.course.findUnique).mockResolvedValue({
-        id: "ge-course",
-        program_id: null,
-      } as never);
-      vi.mocked(prisma.courseAssignment.create).mockResolvedValue({ id: "assignment-1" } as never);
 
       const result = await bulkCreateCourseAssignments([
         {
@@ -1205,15 +1274,12 @@ describe("manage-course-assignments", () => {
         },
       ]);
 
-      expect(result).toEqual({ success: true, created: 1, errors: [] });
-      expect(prisma.courseAssignment.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            course_id: "ge-course",
-            program_id: "program-1",
-          }),
-        })
-      );
+      expect(result).toEqual({
+        success: false,
+        created: 0,
+        errors: [{ index: -1, error: "Insufficient permissions." }],
+      });
+      expect(prisma.courseAssignment.create).not.toHaveBeenCalled();
     });
   });
 });

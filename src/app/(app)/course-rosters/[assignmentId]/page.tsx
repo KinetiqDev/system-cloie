@@ -74,7 +74,7 @@ export default async function CourseRosterDetailRoute({
 
 function resolveBackHref(activeRole: string | null | undefined) {
   return activeRole === ROLES.SECRETARY
-    ? "/secretary/dashboard"
+    ? "/secretary/course-assignments"
     : activeRole === ROLES.DEAN
       ? "/dean/academic-structure/course-assignments"
       : activeRole === ROLES.PROGRAM_HEAD

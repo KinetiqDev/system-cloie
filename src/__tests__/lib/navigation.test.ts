@@ -23,11 +23,11 @@ describe("navigation helpers", () => {
     });
   });
 
-  it("omits Course Assignments from Secretary navigation", () => {
+  it("includes read-only Course Assignments in Secretary navigation", () => {
     const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
-    expect(secretaryNav.map((item) => item.href)).not.toContain("/secretary/course-assignments");
-    expect(getMobileNavByRoles([ROLES.SECRETARY]).map((item) => item.href)).not.toContain(
-      "/secretary/course-assignments"
+    expect(secretaryNav.map((item) => item.href)).toContain("/secretary/course-assignments");
+    expect(secretaryNav.find((item) => item.href === "/secretary/course-assignments")?.name).toBe(
+      "Course Assignments"
     );
   });
 

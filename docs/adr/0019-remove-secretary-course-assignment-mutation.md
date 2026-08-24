@@ -10,10 +10,10 @@ Education assignments are stewarded college-wide by the General Education
 Coordinator (`course.course_scope == GENERAL_EDUCATION` predicate inside server
 services). Program-specific assignments are stewarded by the owning program's
 Program Head within their Authorized Program set. The Dean retains all-program
-stewardship of both kinds. The Secretary keeps read-only visibility; the
-`/secretary/course-assignments` route, its navigation entry, and its inventory
-entries were removed, and the Secretary was dropped from the bulk-create
-allowlist.
+stewardship of both kinds. The Secretary keeps read-only visibility through a
+read-only `/secretary/course-assignments` list (mutation affordances hidden via
+`canManageAssignments={false}`), preserving the documented roster-discovery
+path; the bulk-create allowlist drops the Secretary.
 
 Rationale: one accountable owner per assignment kind, and no UI advertising
 actions the server denies.

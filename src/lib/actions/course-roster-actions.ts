@@ -30,6 +30,7 @@ import { searchScopedRosterStudents } from "@/features/course-assignments/servic
 function revalidateRosterRoutes(assignmentId: string, programId?: string) {
   revalidatePath(`/course-rosters/${assignmentId}`);
   revalidatePath("/faculty/course-rosters");
+  revalidatePath("/secretary/course-assignments");
   revalidatePath("/dean/academic-structure/course-assignments");
   if (programId) {
     revalidatePath(buildProgramHeadCourseAssignmentsPath(programId));

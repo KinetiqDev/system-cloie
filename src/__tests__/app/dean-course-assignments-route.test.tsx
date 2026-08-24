@@ -201,3 +201,73 @@ describe("Dean Course Assignments route", () => {
   });
 });
 
+describe("Secretary Course Assignments route", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadPageDataMock.mockResolvedValue({
+      availableCourses: [],
+      availablePrograms: [],
+      availableFaculty: [],
+      termInstances: [],
+    });
+  });
+
+  it("redirects non-Secretary active roles to /unauthorized", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "dean-1",
+      email: "dean@example.com",
+      roles: [ROLES.DEAN],
+      activeRole: ROLES.DEAN,
+      profileGate: { status: "COMPLETE" },
+    });
+
+    const SecretaryCourseAssignmentsPage = (
+      await import("../../app/(app)/secretary/course-assignments/page")
+    ).default;
+
+    await expect(
+      SecretaryCourseAssignmentsPage({ searchParams: Promise.resolve({}) })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
+  });
+
+  it("renders a read-only list for the authorized Secretary", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "secretary-1",
+      email: "secretary@example.com",
+      roles: [ROLES.SECRETARY],
+      activeRole: ROLES.SECRETARY,
+      profileGate: { status: "COMPLETE" },
+    });
+    loadListPageMock.mockResolvedValueOnce({
+      state: { page: 1, filters: {} },
+      initialFilters: {
+        termInstanceId: null,
+        courseId: null,
+        facultyId: null,
+        programId: null,
+        yearLevel: null,
+        section: null,
+        isActive: true,
+        courseScope: null,
+        searchQuery: "",
+      },
+      result: { success: true, data: { items: [], total: 0, page: 0, pageSize: 20 } },
+    });
+
+    const SecretaryCourseAssignmentsPage = (
+      await import("../../app/(app)/secretary/course-assignments/page")
+    ).default;
+    const page = await SecretaryCourseAssignmentsPage({
+      searchParams: Promise.resolve({}),
+    });
+
+    expect(loadListPageMock).toHaveBeenCalledWith({
+      pathname: "/secretary/course-assignments",
+      rawSearchParams: {},
+      role: "all-program",
+    });
+    expect(page.props.canManageAssignments).toBe(false);
+    expect(page.props.initialError).toBeNull();
+  });
+});
+

@@ -13,6 +13,7 @@ import SecretaryInstrumentEditLoading from "@/app/(app)/secretary/instruments/[i
 import SecretarySchoolYearsLoading from "@/app/(app)/secretary/school-years/loading";
 import SecretaryRolloverLoading from "@/app/(app)/secretary/school-years/[id]/rollover/loading";
 import SecretarySchoolYearDetailLoading from "@/app/(app)/secretary/school-years/[id]/loading";
+import SecretaryCourseAssignmentsLoading from "@/app/(app)/secretary/course-assignments/loading";
 import FacultyDashboardLoading from "@/app/(app)/faculty/dashboard/loading";
 import FacultyAnalyticsLoading from "@/app/(app)/faculty/analytics/loading";
 import FacultyCilosLoading from "@/app/(app)/faculty/cilos/loading";
@@ -85,6 +86,7 @@ const loadingRoutes = [
   [SecretarySchoolYearsLoading, "Loading records"],
   [SecretaryRolloverLoading, "Loading rollover workspace"],
   [SecretarySchoolYearDetailLoading, "Loading school year details"],
+  [SecretaryCourseAssignmentsLoading, "Loading records"],
   [FacultyDashboardLoading, "Loading dashboard"],
   [FacultyAnalyticsLoading, "Loading dashboard"],
   [FacultyCilosLoading, "Loading records"],

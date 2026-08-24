@@ -46,6 +46,8 @@ export interface CourseAssignmentsPageShellProps {
   initialPage: number;
   initialError?: string | null;
   selectedProgramId?: string;
+  /** False renders a read-only list: no create entry points or form dialog. */
+  canManageAssignments?: boolean;
 }
 
 export function CourseAssignmentsPageShell({
@@ -61,6 +63,7 @@ export function CourseAssignmentsPageShell({
   initialPage,
   initialError = null,
   selectedProgramId,
+  canManageAssignments = true,
 }: CourseAssignmentsPageShellProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -108,12 +111,14 @@ export function CourseAssignmentsPageShell({
           <h1 className="text-heading-lg">{pageTitle}</h1>
           <p className="text-body-sm text-text-secondary">{pageDescription}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus aria-hidden="true" className="size-4" />
-            Assign Faculty
-          </Button>
-        </div>
+        {canManageAssignments && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus aria-hidden="true" className="size-4" />
+              Assign Faculty
+            </Button>
+          </div>
+        )}
       </div>
 
       <AssignmentFilters
@@ -145,20 +150,22 @@ export function CourseAssignmentsPageShell({
         availablePrograms={availablePrograms}
         onPageChange={(nextPage) => navigateWithState(filters, nextPage)}
         onAssignmentUpdated={refreshAssignments}
-        onAssignFaculty={() => setCreateOpen(true)}
+        onAssignFaculty={canManageAssignments ? () => setCreateOpen(true) : undefined}
         selectedProgramId={selectedProgramId}
       />
 
-      <CourseAssignmentFormDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        availableCourses={availableCourses}
-        availablePrograms={availablePrograms}
-        termInstances={termInstances}
-        mode={mode}
-        onSuccess={refreshAssignments}
-        selectedProgramId={selectedProgramId}
-      />
+      {canManageAssignments && (
+        <CourseAssignmentFormDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          availableCourses={availableCourses}
+          availablePrograms={availablePrograms}
+          termInstances={termInstances}
+          mode={mode}
+          onSuccess={refreshAssignments}
+          selectedProgramId={selectedProgramId}
+        />
+      )}
     </div>
   );
 }

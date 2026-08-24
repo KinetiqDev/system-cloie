@@ -144,6 +144,36 @@ describe("CourseAssignmentsPageShell", () => {
     );
 
     expect(screen.getByRole("alert")).toHaveTextContent("Failed to list course assignments.");
-    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+  });
+
+  it("hides mutation affordances when canManageAssignments is false", () => {
+    render(
+      <CourseAssignmentsPageShell
+        pageTitle="Course Assignments"
+        pageDescription="View assignments"
+        mode="all-program"
+        canManageAssignments={false}
+        availableCourses={[]}
+        availablePrograms={[]}
+        availableFaculty={[]}
+        termInstances={termInstances}
+        initialData={{ items: [assignment], total: 1, page: 0, pageSize: 20 }}
+        initialFilters={{
+          termInstanceId: null,
+          courseId: null,
+          facultyId: null,
+          programId: null,
+          yearLevel: null,
+          section: null,
+          isActive: true,
+          courseScope: null,
+          searchQuery: "",
+        }}
+        initialPage={1}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Assign Faculty" })).not.toBeInTheDocument();
+    expect(screen.getByText("CS101")).toBeInTheDocument();
   });
 });
