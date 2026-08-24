@@ -1,4 +1,4 @@
-import { DeploymentStatus, Prisma, ResponseStatus, TargetStakeholder } from "@prisma/client";
+import { AcademicSemester, DeploymentStatus, Prisma, ResponseStatus, TargetStakeholder } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
@@ -555,7 +555,11 @@ export async function getProgramHeadDashboard(
     scope.programId,
     effectiveFilters
   );
-  const activeEvaluations = await listActiveEvaluations(scope.programId, termInstanceWhere);
+  const activeEvaluations = await listActiveEvaluations(
+    scope.programId,
+    termInstanceWhere,
+    new Date()
+  );
 
   const periodLabel = buildPeriodLabel(
     effectiveFilters,
@@ -734,7 +738,8 @@ export async function getProgramHeadDashboard(
 
 async function listActiveEvaluations(
   programId: string,
-  termInstanceWhere: Record<string, unknown>
+  termInstanceWhere: Record<string, unknown>,
+  now: Date
 ): Promise<{ deployments: AttentionDeployment[] }> {
   const termFilter = termInstanceWhere as Prisma.AcademicTermInstanceWhereInput;
   const [central, courseBound] = await Promise.all([
@@ -742,6 +747,7 @@ async function listActiveEvaluations(
       where: {
         program_id: programId,
         status: DeploymentStatus.ACTIVE,
+        OR: [{ deadline_at: null }, { deadline_at: { gte: now } }],
         term_instance: termFilter,
       },
       select: { id: true, deployment_name: true, status: true, deadline_at: true },
@@ -750,6 +756,7 @@ async function listActiveEvaluations(
       where: {
         course_assignment: { program_id: programId },
         status: DeploymentStatus.ACTIVE,
+        OR: [{ deadline_at: null }, { deadline_at: { gte: now } }],
         term_instance: termFilter,
       },
       select: { id: true, deployment_name: true, status: true, deadline_at: true },
@@ -905,11 +912,17 @@ function buildDashboardLinks(
   return {
     responses: buildProgramHeadResponsesPath(programId),
     responsesActiveCourse: buildProgramHeadResponsesUrl(programId, {
+      schoolYearId: filters.schoolYearId,
+      semester: filters.semester as AcademicSemester | undefined,
+      termInstanceId: filters.termInstanceId,
       tab: "course",
       page: 1,
       status: DeploymentStatus.ACTIVE,
     }),
     responsesActiveProgramWide: buildProgramHeadResponsesUrl(programId, {
+      schoolYearId: filters.schoolYearId,
+      semester: filters.semester as AcademicSemester | undefined,
+      termInstanceId: filters.termInstanceId,
       tab: "program-wide",
       page: 1,
       status: DeploymentStatus.ACTIVE,

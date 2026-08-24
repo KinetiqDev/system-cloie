@@ -346,6 +346,20 @@ describe("selected Program dashboard route", () => {
     );
   });
 
+  it("renders the fixture drill-down links from the dashboard read", async () => {
+    await loadPage();
+    const card = screen.getByText("Active evaluations").closest<HTMLElement>("[data-slot=card]")!;
+    expect(
+      within(card).getByRole("link", { name: "Review active course evaluations" })
+    ).toHaveAttribute("href", "/program-head/programs/p1/responses?status=ACTIVE");
+    expect(
+      within(card).getByRole("link", { name: "Review active program-wide evaluations" })
+    ).toHaveAttribute(
+      "href",
+      "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE"
+    );
+  });
+
   it("links header actions into Responses and Analytics", async () => {
     await loadPage();
     expect(screen.getByRole("link", { name: "View Responses" })).toHaveAttribute(

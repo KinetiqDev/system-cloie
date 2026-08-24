@@ -93,6 +93,7 @@ function mockEmptyDashboardReads() {
 describe("analytics dashboard access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getActiveTermIdMock.mockResolvedValue("term-active-1");
     resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "unauthorized" });
   });
 
@@ -165,6 +166,40 @@ describe("analytics dashboard access", () => {
     expect(call).not.toContain("activation_at");
     expect(call).not.toContain("deadline_at");
     expect(call).not.toContain("exclusion");
+  });
+
+  it("counts only live ACTIVE evaluations in the KPI and attention set", async () => {
+    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    getActiveTermIdMock.mockResolvedValue(null);
+    prismaMock.academicTermInstance.findMany.mockResolvedValue([
+      {
+        id: "term-1",
+        semester: "FIRST",
+        term: "FIRST_TERM",
+        school_year: { id: "sy-1", code: "2026-2027" },
+      },
+    ]);
+
+    const result = await getProgramHeadDashboard("program-1", {
+      termInstanceId: "term-1",
+    });
+
+    // The Responses drill-down preserves the dashboard's period scope (§12).
+    expect(result?.links.responsesActiveCourse).toContain("termInstanceId=term-1");
+    expect(result?.links.responsesActiveProgramWide).toContain("termInstanceId=term-1");
+
+    // ACTIVE-only status plus an open-deadline window: expired ACTIVE
+    // deployments must not inflate the Active evaluations KPI.
+    for (const mock of [
+      prismaMock.centralDeployment.findMany,
+      prismaMock.courseBoundEvaluation.findMany,
+    ]) {
+      const where = mock.mock.calls[0][0].where;
+      expect(where.status).toBe("ACTIVE");
+      expect(JSON.stringify(where)).toContain("deadline_at");
+      expect(JSON.stringify(where)).toContain("gte");
+    }
   });
 
   it("constrains every dashboard analytics query to the selected Program for a multi-Program head", async () => {
