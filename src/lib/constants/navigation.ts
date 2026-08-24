@@ -67,7 +67,6 @@ const SECRETARY_NAV: NavItem[] = [
   { name: "Programs", href: "/secretary/programs", icon: Building2 },
   { name: "Courses", href: "/secretary/courses", icon: BookOpen },
   { name: "Curricula", href: "/secretary/curricula", icon: Layers3 },
-  { name: "Course Assignments", href: "/secretary/course-assignments", icon: UsersRound },
   { name: "Tools", href: "/secretary/instruments", icon: ClipboardList },
 ];
 

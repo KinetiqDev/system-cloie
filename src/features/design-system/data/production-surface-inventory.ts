@@ -1211,18 +1211,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/secretary/course-assignments/loading.tsx",
-    disposition: "task",
-    taskId: 15,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/secretary/course-assignments/page.tsx",
-    disposition: "task",
-    taskId: 15,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/secretary/courses/[id]/edit/page.tsx",
     disposition: "redirect",
     category: "route",

@@ -148,14 +148,14 @@ The baseline catalog is the source from which Program Heads can create program-o
 
 ### 2.6 Course-assignment setup
 
-1. The Secretary opens `/secretary/course-assignments`.
-2. The Secretary selects the academic assignment period, Course, program context, year level, section, and Faculty Member.
-3. Catalog defaults prefill advisory values, but the Secretary can apply the actual period and year-level context.
-4. The Secretary selects a required section: Morning, Afternoon, or Evening.
-5. CLOIE enforces one class identity per academic period, Course, program, year level, and section, with exactly one Faculty owner.
+1. The Secretary holds no Course assignment management: General Education assignments are stewarded by the General Education Coordinator at `/gen-ed-coordinator/course-assignments`, and Program-specific assignments by each program's Program Head. The Dean retains all-program authority. The Secretary keeps read-only visibility.
+2. The steward selects the academic assignment period, Course, program context, year level, section, and Faculty Member.
+3. Catalog defaults prefill advisory values, but the steward can apply the actual period and year-level context.
+4. The steward selects a required section: Morning, Afternoon, or Evening.
+5. System CLOIE enforces one class identity per academic period, Course, program, year level, and section, with exactly one Faculty owner.
 6. A class taught to Students from multiple programs is represented by separate Course assignments, one per program; it is not stored as one mixed assignment.
-7. The Secretary may create assignments individually or in a partial-success bulk operation.
-8. The Secretary can edit class identity before roster membership exists, reassign the Faculty owner after that point, deactivate/reactivate an assignment, open its roster, and run the typed-confirmation deletion flow when deletion is allowed.
+7. The steward may create assignments individually or in a partial-success bulk operation.
+8. The steward can edit class identity before roster membership exists, reassign the Faculty owner after that point, deactivate/reactivate an assignment, open its roster, and run the typed-confirmation deletion flow when deletion is allowed.
 
 Permanent deletion requires the displayed assignment label, a fresh revision/count check, no published Course-bound evaluation, and confirmation that roster membership and audit history will be deleted. A published Course-bound evaluation blocks permanent assignment deletion.
 

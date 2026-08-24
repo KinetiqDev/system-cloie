@@ -122,10 +122,10 @@ context: |
 
   ## General Education Coordinator boundaries (approved in 477)
   - General Education assignment matrix (server-enforced after the approved transfer):
-    SECRETARY: read-only General Education assignments; retains Program-specific assignment mutation (General Education mutation denied).
+    SECRETARY: no Course assignment mutation; read-only assignment visibility only.
     DEAN: preserves current all-program mutation behavior for General Education and Program-specific assignments.
     GEN_ED_COORDINATOR: college-wide read and mutation for General Education assignments only (General Education predicate `course.course_scope == GENERAL_EDUCATION` enforced inside server services; Program-specific mutation denied).
-    PROGRAM_HEAD: read-only General Education assignments within the Authorized Program set; mutation denied for General Education.
+    PROGRAM_HEAD: mutation for Program-specific assignments within the Authorized Program set; read-only for General Education.
     FACULTY: read-only for own assignments; assignment mutation denied for every Faculty account.
   - Coordinator scope model: shared college-wide. Multiple Coordinators share the same `course.course_scope == GENERAL_EDUCATION` predicate. Separate portfolios require a new OpenSpec capability and assignment model.
   - First analytics release: Course-bound General Education evidence only (`course.course_scope == GENERAL_EDUCATION`, submitted Course-bound responses). Central Deployments are excluded from Coordinator analytics. ILO attainment and ILO-to-PLO crosswalks are not part of this change.

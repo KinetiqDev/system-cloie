@@ -50,10 +50,6 @@ export function NavigationShowcase() {
   const [deanDashboard, deanProfile] = getDeanStandaloneNav();
   const studentMobile = getMobileNavByRoles([ROLES.STUDENT]);
   const SecretaryDashboardIcon = secretary[0].icon;
-  const courseAssignments = secretary.find(
-    (item) => item.href === "/secretary/course-assignments"
-  )!;
-  const CourseAssignmentsIcon = courseAssignments.icon;
   const DeanDashboardIcon = deanDashboard.icon;
   const DeanProfileIcon = deanProfile.icon;
 
@@ -126,14 +122,14 @@ export function NavigationShowcase() {
             <span className="text-body-sm text-muted-foreground">Selected (current page)</span>
             <div className="flex flex-wrap items-center gap-2.5">
               <NavigationRow
-                href={courseAssignments.href}
+                href={deanDashboard.href}
                 active
                 aria-current="page"
                 className="justify-between"
               >
                 <div className="flex items-center gap-3">
-                  <CourseAssignmentsIcon className="size-5 shrink-0" aria-hidden="true" />
-                  {courseAssignments.name}
+                  <DeanDashboardIcon className="size-5 shrink-0" aria-hidden="true" />
+                  {deanDashboard.name}
                 </div>
                 <span className="bg-sidebar-primary text-sidebar-primary-foreground text-label-sm flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 leading-none">
                   5
