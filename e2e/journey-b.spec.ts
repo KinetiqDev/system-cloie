@@ -27,6 +27,9 @@ test("bottom-up journey: answer to PLO evidence and back to dashboard", async ({
   ).toBeVisible();
 
   // CILO badge → PLO link → Outcomes Analytics scoped to that PLO.
+  // The reviewed PLO code (BSIT-GO1) is the evidence expectation; the PLO id
+  // is a runtime handle discovered in global-setup so the URL is pinned to
+  // the reviewed PLO without deriving the expectation from the read under test.
   await expect(page.getByText(`CILO: ${ploLink.ciloLabel}`, { exact: false })).toBeVisible();
   await page.getByRole("link", { name: ploLink.ploCode, exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`ploId=${ploLink.ploId}`));
