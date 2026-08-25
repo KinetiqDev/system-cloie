@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadFeedbackDTO } from "@/features/analytics/program-head-analytics-types";
-import { QualitativeWordCloud } from "./qualitative-word-cloud";
+import { QualitativeWordCloud } from "./program-head-analytics-visualizations";
 
 type ProgramHeadFeedbackViewProps = {
   programId: string;

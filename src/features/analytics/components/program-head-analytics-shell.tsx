@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -7,6 +7,8 @@ import type {
 } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadAnalyticsFilters } from "./program-head-analytics-filters";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { NavigationLink } from "@/components/layout/navigation-link";
+import { ProgramHeadAnalyticsContentFallback } from "./program-head-analytics-content-fallback";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import {
   ANALYTICS_TABS,
@@ -78,9 +80,10 @@ export function ProgramHeadAnalyticsShell({
         {ANALYTICS_TABS.map((tab) => {
           const isActive = tab === filters.tab;
           return (
-            <a
+            <NavigationLink
               key={tab}
               href={buildAnalyticsTabUrl(programId, tab, filters)}
+              prefetch={false}
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "text-label-md relative inline-flex min-h-11 shrink-0 items-center px-3 font-semibold whitespace-nowrap transition-colors motion-reduce:transition-none",
@@ -92,7 +95,7 @@ export function ProgramHeadAnalyticsShell({
               )}
             >
               {ANALYTICS_TAB_LABELS[tab]}
-            </a>
+            </NavigationLink>
           );
         })}
       </nav>
@@ -104,7 +107,7 @@ export function ProgramHeadAnalyticsShell({
       />
 
       <section aria-label={`${ANALYTICS_TAB_LABELS[filters.tab]} evidence`} className="min-w-0">
-        {children}
+        <Suspense fallback={<ProgramHeadAnalyticsContentFallback />}>{children}</Suspense>
       </section>
     </div>
   );

@@ -19,9 +19,9 @@ import type {
 } from "@/features/analytics/program-head-analytics-types";
 import {
   ProgramHeadComparisonChart,
-  type ProgramHeadComparisonDatum,
-} from "./program-head-comparison-chart";
-import { ProgramHeadInstrumentBreakdownChart } from "./program-head-instrument-breakdown-chart";
+  ProgramHeadInstrumentBreakdownChart,
+} from "./program-head-analytics-visualizations";
+import type { ProgramHeadComparisonDatum } from "./program-head-comparison-chart";
 
 type ProgramHeadBreakdownsViewProps = {
   programId: string;
@@ -53,10 +53,7 @@ function courseRowToDatum(
   };
 }
 
-function contextualChart(
-  title: string,
-  breakdown: ProgramHeadContextualBreakdownDTO
-) {
+function contextualChart(title: string, breakdown: ProgramHeadContextualBreakdownDTO) {
   return (
     <ProgramHeadComparisonChart
       title={title}
@@ -199,8 +196,8 @@ export function ProgramHeadBreakdownsView({
       ) : (
         <DimensionNote title="Year-Level Breakdown" resetHref={resetHref}>
           No evidence in this scope has defensible year-level attribution, so no year-level
-          comparison is shown. Attribution requires a central deployment targeting one year level
-          or a course-bound evaluation targeting exactly one year level for this Program.
+          comparison is shown. Attribution requires a central deployment targeting one year level or
+          a course-bound evaluation targeting exactly one year level for this Program.
         </DimensionNote>
       )}
     </div>
