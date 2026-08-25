@@ -145,6 +145,8 @@ function itemHref(programId: string, item: Deployment, isCourse: boolean): strin
     : buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id);
 }
 
+// Card branches keep course and program-wide evidence readable in the mobile layout.
+// fallow-ignore-next-line complexity
 function ResponseCard({
   item,
   programId,
@@ -180,7 +182,7 @@ function ResponseCard({
         {isCourse ? <Data label="Period">{item.period}</Data> : null}
         <Data label="Submitted">
           <span className="font-semibold tabular-nums">
-            {item.submitted} / {item.assigned}
+            {item.submitted === 0 ? "No responses yet" : `${item.submitted} / ${item.assigned}`}
           </span>
         </Data>
         <Data label="Quantitative mean">
@@ -253,7 +255,7 @@ function ResponseTable({
               <Badge variant="outline">{item.status}</Badge>
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {item.submitted} / {item.assigned}
+              {item.submitted === 0 ? "No responses yet" : `${item.submitted} / ${item.assigned}`}
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {item.mean === null ? "—" : item.mean.toFixed(2)}
