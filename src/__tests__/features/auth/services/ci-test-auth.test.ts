@@ -34,7 +34,11 @@ describe("isolated CI test authentication", () => {
     vi.stubEnv("DIRECT_URL", "postgresql://postgres:postgres@localhost:5432/cloie_test");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://localhost:54321");
     vi.stubEnv("CLOIE_DEMO_ENABLED", "");
+    vi.stubEnv("CLOIE_PRIMARY_SUPABASE_PROJECT_REF", "");
+    vi.stubEnv("CLOIE_DEMO_SUPABASE_PROJECT_REF", "");
+    vi.stubEnv("SUPABASE_PROJECT_REF", "");
   });
+
   it("fails closed when disabled, incomplete, or attached to non-disposable target", () => {
     expect(getCiTestAuthConfig()).not.toBeNull();
     vi.stubEnv("CLOIE_CI_TEST_ENABLED", "false");
@@ -45,6 +49,14 @@ describe("isolated CI test authentication", () => {
     expect(getCiTestAuthConfig()).toBeNull();
 
     vi.stubEnv("CLOIE_DEPLOYMENT_KIND", "ci-test");
+    vi.stubEnv("CLOIE_PRIMARY_SUPABASE_PROJECT_REF", "primary-ref");
+    expect(getCiTestAuthConfig()).toBeNull();
+    vi.stubEnv("CLOIE_PRIMARY_SUPABASE_PROJECT_REF", "");
+
+    vi.stubEnv("CLOIE_DEMO_SUPABASE_PROJECT_REF", "demo-ref");
+    expect(getCiTestAuthConfig()).toBeNull();
+    vi.stubEnv("CLOIE_DEMO_SUPABASE_PROJECT_REF", "");
+
     vi.stubEnv("CLOIE_CI_TEST_SESSION_SECRET", "short");
     expect(getCiTestAuthConfig()).toBeNull();
 

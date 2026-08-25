@@ -71,8 +71,17 @@ export function getCiTestAuthConfig(
   if (environment.NODE_ENV !== "production" || environment.CLOIE_CI_TEST_ENABLED !== "true") {
     return null;
   }
-
   if (environment.CLOIE_DEPLOYMENT_KIND !== CI_TEST_DEPLOYMENT_KIND) {
+    return null;
+  }
+
+  // Fail closed on primary production and dedicated demo deployments even if
+  // CI test variables are present. CI test auth is restricted to the
+  // disposable CI environment with a dedicated CI target identity.
+  if (
+    environment.CLOIE_PRIMARY_SUPABASE_PROJECT_REF ||
+    environment.CLOIE_DEMO_SUPABASE_PROJECT_REF
+  ) {
     return null;
   }
 
