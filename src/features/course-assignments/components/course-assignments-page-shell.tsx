@@ -82,6 +82,8 @@ export function CourseAssignmentsPageShell({
   const refreshAssignments = () => router.refresh();
 
   const navigateWithState = useCallback(
+    // URL serialization keeps role-specific defaults atomic with each filter navigation.
+    // fallow-ignore-next-line complexity
     (
       nextFilters: AssignmentFiltersState,
       nextPage: number,

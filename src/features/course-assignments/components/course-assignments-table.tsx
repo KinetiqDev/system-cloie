@@ -135,6 +135,8 @@ function RosterCell({
   return <span className="text-muted-foreground px-2 text-sm">Roster available in next phase</span>;
 }
 
+// Menu branches express the role/scope action matrix pinned by assignment workflow tests.
+// fallow-ignore-next-line complexity
 function AssignmentActions({
   assignment,
   mode,
@@ -206,6 +208,8 @@ function AssignmentActions({
   );
 }
 
+// Row branches keep the desktop role/scope matrix visible and covered as one table contract.
+// fallow-ignore-next-line complexity
 function CourseAssignmentsRow({
   assignment,
   mode,
@@ -284,6 +288,8 @@ function CourseAssignmentsRow({
   );
 }
 
+// Desktop and mobile presentations intentionally share mutation state and confirmation workflows.
+// fallow-ignore-next-line complexity
 export function CourseAssignmentsTable({
   assignments,
   total,

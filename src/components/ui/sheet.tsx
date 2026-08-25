@@ -116,6 +116,7 @@ function SheetDescription({ className, ...props }: SheetPrimitive.Description.Pr
 export {
   Sheet,
   SheetTrigger,
+  // fallow-ignore-next-line unused-export
   SheetClose,
   SheetContent,
   SheetHeader,

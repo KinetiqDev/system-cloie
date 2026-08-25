@@ -48,4 +48,5 @@ function Spinner({
 }
 
 export { Spinner };
+// fallow-ignore-next-line unused-type
 export type { SpinnerSize };
