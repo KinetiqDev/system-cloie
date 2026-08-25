@@ -9,9 +9,12 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
  * The app runs as a Next.js dev server so the dev-auth cookie path
  * (resolve-auth-session.ts → readDevAuthCookie) is available — no OAuth UI
  * automation. The database is the disposable Postgres seeded by the same
- * fixture the database-integration job uses; the global setup discovers the
- * seeded identifiers (programs, evaluations, responses) at runtime because
- * most seed rows are generated with random UUIDs.
+ * fixture the database-integration job uses; the global setup uses the
+ * reviewed deterministic contract in `e2e/support/contract.ts` (SystemRole
+ * `U.*` and deployment `D.*` identifiers reused from the Prisma seed) and
+ * verifies the seed rows match before any browser journey starts — the
+ * expectations are pinned, not derived from the same database read being
+ * checked.
  */
 export default defineConfig({
   testDir: "./e2e",

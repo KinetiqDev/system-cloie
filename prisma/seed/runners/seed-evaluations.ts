@@ -1,6 +1,6 @@
 import { DeploymentStatus, Prisma, YearLevel } from "@prisma/client";
 import { prisma } from "../../../src/lib/db/prisma";
-import { U } from "../constants/ids";
+import { D, U } from "../constants/ids";
 import { centralAssignDefs, centralDeploymentDefs, newCourseBoundDefs } from "../fixtures/evaluations";
 import { ensureAssignment, listSeededRosterStudents, requireCourseAssignment } from "../helpers/assignments";
 import type { CourseAssignmentContext, EvaluationContext, FoundationContext, OutcomeContext } from "../types";
@@ -80,7 +80,7 @@ export async function seedEvaluations(
         data: cbEval1Data,
       })
     : await prisma.courseBoundEvaluation.create({
-        data: cbEval1Data,
+        data: { ...cbEval1Data, id: D.CB_BSIT_ITRES1 },
       });
 
   await prisma.courseBoundEvaluationTarget.upsert({
@@ -166,7 +166,7 @@ export async function seedEvaluations(
         data: cbEval2Data,
       })
     : await prisma.courseBoundEvaluation.create({
-        data: cbEval2Data,
+        data: { ...cbEval2Data, id: D.CB_BSBA_MM201 },
       });
 
   await prisma.courseBoundEvaluationTarget.upsert({
@@ -248,7 +248,7 @@ export async function seedEvaluations(
 
     const cb = existingCb
       ? await prisma.courseBoundEvaluation.update({ where: { id: existingCb.id }, data: cbData })
-      : await prisma.courseBoundEvaluation.create({ data: cbData });
+      : await prisma.courseBoundEvaluation.create({ data: { ...cbData, id: def.id } });
 
     newCbEvals.set(def.courseCode, cb);
 
