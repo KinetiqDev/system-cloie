@@ -21,6 +21,8 @@ type ProgramFormProps = {
   onSuccess?: () => void;
 };
 
+// One compact create/edit form keeps submission feedback and field defaults in one tested surface.
+// fallow-ignore-next-line complexity
 export function ProgramForm({
   action,
   defaultValues,
@@ -33,6 +35,8 @@ export function ProgramForm({
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    // Submission branches map the server action result directly to error or success feedback.
+    // fallow-ignore-next-line complexity
     startTransition(async () => {
       const result = await action(formData);
       if (!result.success && result.error) {

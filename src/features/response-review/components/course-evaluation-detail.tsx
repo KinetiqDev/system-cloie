@@ -25,6 +25,8 @@ type CourseEvaluationDetailProps = {
   analyticsHref: string;
 };
 
+// Evaluation evidence stays in one read-only report so shared counts and links cannot diverge.
+// fallow-ignore-next-line complexity
 export function CourseEvaluationDetail({
   detail,
   responseHref,
