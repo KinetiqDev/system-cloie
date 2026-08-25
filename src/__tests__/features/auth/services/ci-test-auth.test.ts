@@ -64,6 +64,12 @@ describe("isolated CI test authentication", () => {
     vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@db.supabase.co:5432/postgres");
     expect(getCiTestAuthConfig()).toBeNull();
 
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://postgres:postgres@localhost:5432/ordinary_primary_data"
+    );
+    expect(getCiTestAuthConfig()).toBeNull();
+
     vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/cloie_test");
     vi.stubEnv("NODE_ENV", "development");
     expect(getCiTestAuthConfig()).toBeNull();

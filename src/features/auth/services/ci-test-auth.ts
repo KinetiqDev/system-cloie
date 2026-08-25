@@ -89,6 +89,13 @@ export function getCiTestAuthConfig(
     return null;
   }
 
+  // Enforce a dedicated CI target identity: the disposable database must be
+  // the CI test database (cloie_test), not an ordinary primary database
+  // even when hosted on the allowlisted localhost host.
+  if (!environment.DATABASE_URL?.includes("/cloie_test")) {
+    return null;
+  }
+
   const sessionSecret = environment.CLOIE_CI_TEST_SESSION_SECRET;
   const allowedUsers = parseAllowedUsers(environment.CLOIE_CI_TEST_ALLOWED_USERS);
 
