@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { ProgramHeadTrendsDTO } from "@/features/analytics/program-head-analytics-types";
-import { ProgramHeadTrendChart } from "./program-head-trend-chart";
+import { ProgramHeadTrendChart } from "./program-head-analytics-visualizations";
 
 type ProgramHeadTrendsViewProps = {
   data: ProgramHeadTrendsDTO;

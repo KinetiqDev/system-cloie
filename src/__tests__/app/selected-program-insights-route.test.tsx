@@ -5,6 +5,7 @@ const {
   notFoundMock,
   redirectMock,
   analyticsMock,
+  analyticsFrameMock,
   outcomesMock,
   trendsMock,
   stakeholdersMock,
@@ -19,6 +20,7 @@ const {
     throw new Error(`REDIRECT:${url}`);
   }),
   analyticsMock: vi.fn(),
+  analyticsFrameMock: vi.fn(),
   outcomesMock: vi.fn(),
   trendsMock: vi.fn(),
   stakeholdersMock: vi.fn(),
@@ -29,6 +31,7 @@ const {
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
 vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
+  getProgramHeadAnalyticsFrame: analyticsFrameMock,
   getProgramHeadAnalytics: analyticsMock,
   getProgramHeadOutcomes: outcomesMock,
   getProgramHeadTrends: trendsMock,
@@ -94,7 +97,7 @@ const bsedOutcomes = {
   },
   emptyReason: null,
   programWideOutcomes: [],
-      currentMappingDisclosure: "current mappings",
+  currentMappingDisclosure: "current mappings",
   manyToManyDisclosure: false,
   outcomes: [],
   selection: null,
@@ -120,6 +123,10 @@ describe("selected Program insights routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     analyticsMock.mockResolvedValue(bsedOverview);
+    analyticsFrameMock.mockResolvedValue({
+      scope: bsedOverview.scope,
+      periodOptions: bsedOverview.periodOptions,
+    });
     outcomesMock.mockResolvedValue(bsedOutcomes);
     trendsMock.mockResolvedValue(null);
     stakeholdersMock.mockResolvedValue(null);
@@ -162,7 +169,8 @@ describe("selected Program insights routes", () => {
 
     render(page);
 
-    expect(analyticsMock).toHaveBeenCalledWith("program-bsed", { tab: "ai" });
+    expect(analyticsFrameMock).toHaveBeenCalledWith("program-bsed", { tab: "ai" });
+    expect(analyticsMock).not.toHaveBeenCalled();
     expect(outcomesMock).not.toHaveBeenCalled();
     expect(trendsMock).not.toHaveBeenCalled();
     expect(stakeholdersMock).not.toHaveBeenCalled();
@@ -286,10 +294,18 @@ describe("selected Program insights routes", () => {
         },
       ],
     });
+    analyticsFrameMock.mockResolvedValue({
+      scope: bsedOverview.scope,
+      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+      ploCode: "PLO 2",
+    });
 
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "outcomes", ploId: "11111111-1111-4111-8111-111111111111" }),
+      searchParams: Promise.resolve({
+        tab: "outcomes",
+        ploId: "11111111-1111-4111-8111-111111111111",
+      }),
     });
     render(page);
 
@@ -303,7 +319,8 @@ describe("selected Program insights routes", () => {
     expect(outcomesStep.getAttribute("href")).not.toContain("ploId=");
   });
 
-  it("renders the first duplicate tab parameter without a redirect", async () => {    const Page = await loadAnalyticsPage();
+  it("renders the first duplicate tab parameter without a redirect", async () => {
+    const Page = await loadAnalyticsPage();
 
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
@@ -475,7 +492,9 @@ describe("selected Program insights routes", () => {
     expect(screen.getByText("2024-2025 · 1st Semester · 1st Term")).toBeInTheDocument();
     expect(screen.getByText("4.40")).toBeInTheDocument();
     expect(screen.getByText("CILO Evaluation v1")).toBeInTheDocument();
-    expect(screen.getByText(/Not directly comparable with the previous period/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Not directly comparable with the previous period/)
+    ).toBeInTheDocument();
   });
 
   it("renders no Trends data when the trends read denies the selected Program", async () => {
@@ -538,8 +557,8 @@ describe("selected Program insights routes", () => {
     expect(analyticsMock).not.toHaveBeenCalled();
     expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
     expect(screen.getByText("Evidence sources are kept separate")).toBeInTheDocument();
-    expect(screen.getAllByText("Course-bound student evidence").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Alumni evidence").length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Course-bound student evidence")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Alumni evidence")).length).toBeGreaterThan(0);
     expect(screen.queryByText(/not available yet/)).not.toBeInTheDocument();
   });
 
@@ -577,9 +596,7 @@ describe("selected Program insights routes", () => {
     render(page);
 
     expect(screen.getByText("No evaluation assignments")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "View all periods" })
-    ).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View all periods" })).toHaveAttribute(
       "href",
       "/program-head/programs/program-bsed/analytics?tab=stakeholders"
     );
@@ -604,9 +621,7 @@ describe("selected Program insights routes", () => {
           ratingCount: 12,
           submittedResponseCount: 6,
           instrumentContext: "CILO Evaluation v2",
-          evidenceEvaluations: [
-            { evaluationId: "eval-1", deploymentName: "CILO Deployment" },
-          ],
+          evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "CILO Deployment" }],
         },
       ],
       instrumentRows: [],
@@ -645,10 +660,12 @@ describe("selected Program insights routes", () => {
 
     expect(breakdownsMock).toHaveBeenCalledWith("program-bsed", { tab: "courses" });
     expect(analyticsMock).not.toHaveBeenCalled();
-    expect(screen.getByText("Mean Rating by Course")).toBeInTheDocument();
+    expect(await screen.findByText("Mean Rating by Course")).toBeInTheDocument();
     expect(screen.getAllByText("CS101 — Intro to CS").length).toBeGreaterThan(0);
     expect(screen.getByText("Mean Rating by Major")).toBeInTheDocument();
-    expect(screen.getAllByText("Mathematics — Central student-respondent evidence").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("Mathematics — Central student-respondent evidence").length
+    ).toBeGreaterThan(0);
     expect(screen.getByText("Unspecified — Course-bound student evidence")).toBeInTheDocument();
     // No defensible year-level attribution: the dimension is omitted.
     expect(screen.getByText("Year-Level Breakdown")).toBeInTheDocument();
@@ -718,9 +735,10 @@ describe("selected Program insights routes", () => {
     render(page);
 
     expect(screen.getByText("No submitted evidence")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "View all periods" })
-    ).toHaveAttribute("href", "/program-head/programs/program-bsed/analytics?tab=trends");
+    expect(screen.getByRole("link", { name: "View all periods" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-bsed/analytics?tab=trends"
+    );
   });
 
   it("renders the outcomes no-evidence empty state on the landing", async () => {
@@ -837,66 +855,64 @@ describe("selected Program insights routes", () => {
   });
 });
 
+it("redirects the legacy overview tab to the Program Head Dashboard", async () => {
+  const Page = await loadAnalyticsPage();
 
-  it("redirects the legacy overview tab to the Program Head Dashboard", async () => {
-    const Page = await loadAnalyticsPage();
+  await expect(
+    Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "overview" }),
+    })
+  ).rejects.toThrow(/REDIRECT:/);
 
-    await expect(
-      Page({
-        params: Promise.resolve({ programId: "program-bsed" }),
-        searchParams: Promise.resolve({ tab: "overview" }),
-      })
-    ).rejects.toThrow(/REDIRECT:/);
+  expect(redirectMock).toHaveBeenCalledWith("/program-head/programs/program-bsed/dashboard");
+  expect(analyticsMock).not.toHaveBeenCalled();
+  expect(outcomesMock).not.toHaveBeenCalled();
+});
 
-    expect(redirectMock).toHaveBeenCalledWith(
-      "/program-head/programs/program-bsed/dashboard"
-    );
-    expect(analyticsMock).not.toHaveBeenCalled();
-    expect(outcomesMock).not.toHaveBeenCalled();
-  });
+it("redirects the legacy breakdowns tab to Courses with filters preserved", async () => {
+  const Page = await loadAnalyticsPage();
 
-  it("redirects the legacy breakdowns tab to Courses with filters preserved", async () => {
-    const Page = await loadAnalyticsPage();
+  await expect(
+    Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({
+        tab: "breakdowns",
+        schoolYearId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      }),
+    })
+  ).rejects.toThrow(/REDIRECT:/);
 
-    await expect(
-      Page({
-        params: Promise.resolve({ programId: "program-bsed" }),
-        searchParams: Promise.resolve({ tab: "breakdowns", schoolYearId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }),
-      })
-    ).rejects.toThrow(/REDIRECT:/);
+  expect(redirectMock).toHaveBeenCalledWith(
+    "/program-head/programs/program-bsed/analytics?tab=courses&schoolYearId=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  );
+  expect(breakdownsMock).not.toHaveBeenCalled();
+});
 
-    expect(redirectMock).toHaveBeenCalledWith(
-      "/program-head/programs/program-bsed/analytics?tab=courses&schoolYearId=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-    );
-    expect(breakdownsMock).not.toHaveBeenCalled();
-  });
+it("redirects the legacy feedback tab to Qualitative with filters preserved", async () => {
+  const Page = await loadAnalyticsPage();
 
-  it("redirects the legacy feedback tab to Qualitative with filters preserved", async () => {
-    const Page = await loadAnalyticsPage();
+  await expect(
+    Page({
+      params: Promise.resolve({ programId: "program-bsed" }),
+      searchParams: Promise.resolve({ tab: "feedback" }),
+    })
+  ).rejects.toThrow(/REDIRECT:/);
 
-    await expect(
-      Page({
-        params: Promise.resolve({ programId: "program-bsed" }),
-        searchParams: Promise.resolve({ tab: "feedback" }),
-      })
-    ).rejects.toThrow(/REDIRECT:/);
-
-    expect(redirectMock).toHaveBeenCalledWith(
-      "/program-head/programs/program-bsed/analytics?tab=qualitative"
-    );
-    expect(feedbackMock).not.toHaveBeenCalled();
-  });
+  expect(redirectMock).toHaveBeenCalledWith(
+    "/program-head/programs/program-bsed/analytics?tab=qualitative"
+  );
+  expect(feedbackMock).not.toHaveBeenCalled();
+});
 
 async function loadAnalyticsPage() {
-  const { default: Page } = await import(
-    "@/app/(app)/program-head/programs/[programId]/analytics/page"
-  );
+  const { default: Page } =
+    await import("@/app/(app)/program-head/programs/[programId]/analytics/page");
   return Page;
 }
 
 async function loadReportsPage() {
-  const { default: Page } = await import(
-    "@/app/(app)/program-head/programs/[programId]/reports/page"
-  );
+  const { default: Page } =
+    await import("@/app/(app)/program-head/programs/[programId]/reports/page");
   return Page;
 }

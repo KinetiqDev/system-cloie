@@ -15,7 +15,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
     periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
     emptyReason: null,
     programWideOutcomes: [],
-      currentMappingDisclosure:
+    currentMappingDisclosure:
       "Outcome rows group historical ratings using the Program's current CILO-to-PLO mappings. Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.",
     manyToManyDisclosure: false,
     outcomes: [
@@ -155,7 +155,9 @@ describe("ProgramHeadOutcomesView", () => {
     renderView(outcomeDTO());
 
     expect(screen.getByText("Current CILO-to-PLO mappings")).toBeInTheDocument();
-    expect(screen.getByText(/Publication-time mapping snapshots are not yet available/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Publication-time mapping snapshots are not yet available/)
+    ).toBeInTheDocument();
   });
 
   it("discloses the many-to-many contribution rule only when it applies", () => {
@@ -196,10 +198,10 @@ describe("ProgramHeadOutcomesView", () => {
     );
   });
 
-  it("shows the ranking chart insight and exact-value alternative", () => {
+  it("shows the ranking chart insight and exact-value alternative", async () => {
     renderView(outcomeDTO());
 
-    expect(screen.getByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
+    expect(await screen.findByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
     expect(screen.getByText(/Highest mean: GO-1 \(4.33\)/)).toBeInTheDocument();
     expect(screen.getByText("View exact values")).toBeInTheDocument();
   });
@@ -229,9 +231,7 @@ describe("ProgramHeadOutcomesView", () => {
 
     // Excluded-rating diagnostic appears only for rows with exclusions.
     fireEvent.click(screen.getByText("Details for GO-2"));
-    expect(
-      screen.getByText(/1 rating was excluded from the valid aggregate/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 rating was excluded from the valid aggregate/)).toBeInTheDocument();
   });
 
   it("expands and highlights the PLO selected through a deep link", () => {

@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadPLODetail } from "./program-head-plo-detail";
-import { ProgramHeadOutcomeRankingChart } from "./program-head-outcome-ranking-chart";
+import { ProgramHeadOutcomeRankingChart } from "./program-head-analytics-visualizations";
 import { HowCalculatedPopover } from "./how-calculated-popover";
 import { SelectedPloScrollTarget } from "./selected-plo-scroll-target";
 
@@ -109,8 +109,8 @@ export function ProgramHeadOutcomesView({
             <EmptyDescription>
               Submitted course-bound ratings exist in this scope, but none are bound to a CILO with
               a canonical mapping to a Program Learning Outcome of this Program. Central instrument
-              questions and Institutional Outcome evidence are never assigned to a Program Learning Outcome
-              by wording or item key.
+              questions and Institutional Outcome evidence are never assigned to a Program Learning
+              Outcome by wording or item key.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
@@ -162,7 +162,11 @@ export function ProgramHeadOutcomesView({
             outcomes={outcomes}
           />
 
-          <OutcomesExactValueTable programId={programId} outcomes={outcomes} selectedPloId={selectedPloId} />
+          <OutcomesExactValueTable
+            programId={programId}
+            outcomes={outcomes}
+            selectedPloId={selectedPloId}
+          />
         </>
       )}
 
@@ -195,15 +199,21 @@ export function ProgramHeadOutcomesView({
                         <span className="text-text-secondary">{row.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="align-top">{STAKEHOLDER_LABELS[row.stakeholder]}</TableCell>
+                    <TableCell className="align-top">
+                      {STAKEHOLDER_LABELS[row.stakeholder]}
+                    </TableCell>
                     <TableCell className="text-right align-top tabular-nums">
                       {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">{row.ratingCount}</TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      {row.ratingCount}
+                    </TableCell>
                     <TableCell className="text-right align-top tabular-nums">
                       {row.submittedResponseCount}
                     </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">{row.evaluationCount}</TableCell>
+                    <TableCell className="text-right align-top tabular-nums">
+                      {row.evaluationCount}
+                    </TableCell>
                     <TableCell className="text-right align-top tabular-nums">
                       <span className="inline-flex items-center gap-1">
                         {row.questionCount}
@@ -217,7 +227,7 @@ export function ProgramHeadOutcomesView({
           </div>
         </div>
       )}
-          <SelectedPloScrollTarget ploId={selectedPloId} />
+      <SelectedPloScrollTarget ploId={selectedPloId} />
     </div>
   );
 }
@@ -252,22 +262,26 @@ function OutcomesExactValueTable({
               const detailId = `plo-detail-${outcome.ploId}`;
               const isSelected = outcome.ploId === selectedPloId;
               const rows = [
-                <TableRow key={outcome.ploId} data-plo-row={outcome.ploId} className={cn(isSelected && "bg-primary-soft/40")}>
-                    <TableCell className="align-top">
-                      <div className="flex flex-col">
-                        <span className="font-semibold">{outcome.code}</span>
-                        <span className="text-text-secondary">{outcome.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">
-                      <span className="inline-flex items-center gap-1">
-                        {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
-                        <HowCalculatedPopover metric={outcome.evidenceSummary} label={outcome.code} />
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">
-                      {outcome.ratingCount}
-                    </TableCell>
+                <TableRow
+                  key={outcome.ploId}
+                  data-plo-row={outcome.ploId}
+                  className={cn(isSelected && "bg-primary-soft/40")}
+                >
+                  <TableCell className="align-top">
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{outcome.code}</span>
+                      <span className="text-text-secondary">{outcome.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums">
+                    <span className="inline-flex items-center gap-1">
+                      {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
+                      <HowCalculatedPopover metric={outcome.evidenceSummary} label={outcome.code} />
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums">
+                    {outcome.ratingCount}
+                  </TableCell>
                   <TableCell className="text-right align-top tabular-nums">
                     {outcome.submittedResponseCount}
                   </TableCell>
@@ -284,9 +298,7 @@ function OutcomesExactValueTable({
                   </TableCell>
                   <TableCell className="align-top">
                     {outcome.contributingCourses.length > 0
-                      ? outcome.contributingCourses
-                          .map((course) => course.code)
-                          .join(", ")
+                      ? outcome.contributingCourses.map((course) => course.code).join(", ")
                       : "—"}
                   </TableCell>
                   <TableCell className="align-top">
@@ -299,7 +311,7 @@ function OutcomesExactValueTable({
                                 programId,
                                 evaluation.evaluationId
                               )}
-                              className="text-link underline underline-offset-3 hover:text-foreground"
+                              className="text-link hover:text-foreground underline underline-offset-3"
                             >
                               {evaluation.deploymentName}
                             </Link>

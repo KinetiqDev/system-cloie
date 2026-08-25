@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 import type { ProgramHeadStakeholdersDTO } from "@/features/analytics/program-head-analytics-types";
 import {
   ProgramHeadComparisonChart,
-  type ProgramHeadComparisonDatum,
-} from "./program-head-comparison-chart";
-import { ProgramHeadResponseCompositionDonut } from "./program-head-response-composition-donut";
+  ProgramHeadResponseCompositionDonut,
+} from "./program-head-analytics-visualizations";
+import type { ProgramHeadComparisonDatum } from "./program-head-comparison-chart";
 
 type ProgramHeadStakeholderViewProps = {
   data: ProgramHeadStakeholdersDTO;
@@ -29,10 +29,7 @@ type ProgramHeadStakeholderViewProps = {
  * stay in separate buckets with instrument disclosure; means are ranked bars,
  * and a donut appears only for genuine response composition.
  */
-export function ProgramHeadStakeholderView({
-  data,
-  resetHref,
-}: ProgramHeadStakeholderViewProps) {
+export function ProgramHeadStakeholderView({ data, resetHref }: ProgramHeadStakeholderViewProps) {
   const { emptyReason, buckets, sourceSeparationDisclosure } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
@@ -106,11 +103,9 @@ export function ProgramHeadStakeholderView({
         <ul className="flex flex-col gap-1.5">
           {buckets.map((bucket) => (
             <li key={bucket.sourceKey} className="text-body-sm text-text-secondary">
-              <span className="font-semibold text-foreground">{bucket.sourceLabel}:</span>{" "}
+              <span className="text-foreground font-semibold">{bucket.sourceLabel}:</span>{" "}
               {bucket.sourceDescription}
-              {bucket.instrumentContext
-                ? ` Instruments: ${bucket.instrumentContext}.`
-                : null}
+              {bucket.instrumentContext ? ` Instruments: ${bucket.instrumentContext}.` : null}
             </li>
           ))}
         </ul>

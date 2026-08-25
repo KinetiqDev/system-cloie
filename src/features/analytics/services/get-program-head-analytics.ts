@@ -1,5 +1,6 @@
 import type { AcademicSemester, Prisma } from "@prisma/client";
 import { ResponseStatus, TargetStakeholder } from "@prisma/client";
+import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import {
@@ -41,6 +42,7 @@ import type { AnalyticsFilterState } from "./program-head-analytics-state";
 import { buildProgramHeadResponsesPath } from "@/lib/constants/program-head-routes";
 import { buildProgramHeadResponsesUrl } from "./program-head-responses-state";
 import type {
+  ProgramHeadAnalyticsPeriodOptions,
   ProgramHeadAnalyticsScopeSummary,
   ProgramHeadBreakdownsDTO,
   ProgramHeadBreakdownsEmptyReason,
@@ -76,6 +78,12 @@ type ResolvedTermInstanceFilter = {
   schoolYearLabel: string | null;
   instances: TermInstanceSummary[];
 };
+type ProgramHeadAnalyticsReadContext = {
+  selectedProgram: { id: string; code: string; name: string };
+  termInstanceWhere: ResolvedTermInstanceFilter["where"];
+  schoolYearLabel: string | null;
+  periodInstances: TermInstanceSummary[];
+};
 
 function buildTermInstanceWhere(
   programId: string,
@@ -105,8 +113,14 @@ export const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000
  * deployments of that stakeholder; course-bound evidence is student evidence.
  */
 type SourceScope = {
-  response: { deployment_type: "CENTRAL" | "COURSE_BOUND" | "ANY"; target_stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER" };
-  assignment: { deployment_type: "CENTRAL" | "COURSE_BOUND" | "ANY"; target_stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER" };
+  response: {
+    deployment_type: "CENTRAL" | "COURSE_BOUND" | "ANY";
+    target_stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
+  };
+  assignment: {
+    deployment_type: "CENTRAL" | "COURSE_BOUND" | "ANY";
+    target_stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
+  };
 };
 
 const SOURCE_DEFAULT_STAKEHOLDER = {
@@ -123,8 +137,7 @@ function buildSourceScope(filters: AnalyticsFilterState): SourceScope | null {
       assignment: { deployment_type: "COURSE_BOUND" },
     };
   }
-  const stakeholder =
-    filters.stakeholder ?? (kind ? SOURCE_DEFAULT_STAKEHOLDER[kind] : undefined);
+  const stakeholder = filters.stakeholder ?? (kind ? SOURCE_DEFAULT_STAKEHOLDER[kind] : undefined);
   if (!kind && !stakeholder) return null;
   // A bare STUDENT stakeholder owns course-bound evidence and central
   // program-wide student evidence; excluding course-bound would silently
@@ -142,7 +155,11 @@ function buildSourceScope(filters: AnalyticsFilterState): SourceScope | null {
 }
 
 /** Response predicate scoped to the selected Program through both deployment kinds. */
-export function buildProgramResponseScope(programId: string, termInstanceWhere: Record<string, unknown>, source?: SourceScope["response"]) {
+export function buildProgramResponseScope(
+  programId: string,
+  termInstanceWhere: Record<string, unknown>,
+  source?: SourceScope["response"]
+) {
   if (source) {
     const central = {
       deployment_type: "CENTRAL" as const,
@@ -192,7 +209,11 @@ export function buildProgramResponseScope(programId: string, termInstanceWhere: 
 }
 
 /** EvaluationAssignment predicate scoped to the selected Program through both deployment kinds. */
-export function buildProgramOpportunityScope(programId: string, termInstanceWhere: Record<string, unknown>, source?: SourceScope["assignment"]) {
+export function buildProgramOpportunityScope(
+  programId: string,
+  termInstanceWhere: Record<string, unknown>,
+  source?: SourceScope["assignment"]
+) {
   if (source) {
     const central = {
       central_deployment: {
@@ -248,7 +269,6 @@ async function listProgramPeriodOptions(programId: string): Promise<TermInstance
   return listMatchingTermInstances(programId);
 }
 
-
 async function resolveSchoolYearLabel(
   schoolYearId: string | undefined,
   instances: TermInstanceSummary[]
@@ -275,7 +295,7 @@ export async function resolveTermInstanceFilter(
   const instances = await listMatchingTermInstances(programId, filters);
   const schoolYearLabel = await resolveSchoolYearLabel(filters.schoolYearId, instances);
   const resolvedSchoolYearLabel =
-    schoolYearLabel ?? (filters.schoolYearId ? instances[0]?.school_year.code ?? null : null);
+    schoolYearLabel ?? (filters.schoolYearId ? (instances[0]?.school_year.code ?? null) : null);
 
   if (instances.length === 0) {
     return {
@@ -321,10 +341,51 @@ function buildPeriodOptions(instances: TermInstanceSummary[]) {
         schoolYearLabel: instance.school_year.code,
         semester: instance.semester,
         semesterLabel: SEMESTER_LABELS[instance.semester] ?? instance.semester,
-        termLabel: instance.term ? TERM_LABELS[instance.term] ?? instance.term : null,
+        termLabel: instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null,
         label: buildInstancePeriodLabel(instance),
       };
     }),
+  };
+}
+const resolveProgramHeadAnalyticsReadContext = cache(
+  async function resolveProgramHeadAnalyticsReadContext(
+    programId: string,
+    filters: AnalyticsFilterState
+  ): Promise<ProgramHeadAnalyticsReadContext | null> {
+    const contextResult = await resolveProgramHeadContext(programId);
+    if (!contextResult.success) return null;
+
+    const { selectedProgram } = contextResult.data;
+    const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
+      resolveTermInstanceFilter(selectedProgram.id, filters),
+      listProgramPeriodOptions(selectedProgram.id),
+    ]);
+
+    return { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances };
+  }
+);
+
+export async function getProgramHeadAnalyticsFrame(
+  programId: string,
+  filters: AnalyticsFilterState
+): Promise<{
+  scope: ProgramHeadAnalyticsScopeSummary;
+  periodOptions: ProgramHeadAnalyticsPeriodOptions;
+} | null> {
+  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  if (!context) return null;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  return {
+    scope: {
+      programCode: selectedProgram.code,
+      programName: selectedProgram.name,
+      periodLabel: buildPeriodLabel(
+        filters,
+        schoolYearLabel,
+        termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID
+      ),
+    },
+    periodOptions: buildPeriodOptions(periodInstances),
   };
 }
 
@@ -344,7 +405,7 @@ export function buildPeriodLabel(
 /** Readable label for one canonical AcademicTermInstance. */
 function buildInstancePeriodLabel(instance: TermInstanceSummary): string {
   const semesterLabel = SEMESTER_LABELS[instance.semester] ?? instance.semester;
-  const termLabel = instance.term ? TERM_LABELS[instance.term] ?? instance.term : null;
+  const termLabel = instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null;
   return [instance.school_year.code, semesterLabel, termLabel].filter(Boolean).join(" · ");
 }
 
@@ -356,27 +417,26 @@ export async function getProgramHeadAnalytics(
   programId: string,
   filters: AnalyticsFilterState
 ): Promise<ProgramHeadOverviewDTO | null> {
-  const contextResult = await resolveProgramHeadContext(programId);
+  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  if (!context) return null;
 
-  if (!contextResult.success) {
-    return null;
-  }
-
-  const { selectedProgram } = contextResult.data;
-
-  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
-    resolveTermInstanceFilter(selectedProgram.id, filters),
-    listProgramPeriodOptions(selectedProgram.id),
-  ]);
-
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
   // Responses tied to this program via central deployments OR course-bound evaluations,
   // following the same scope predicate as the existing dashboard service.
   const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
+  const programResponseScope = buildProgramResponseScope(
+    selectedProgram.id,
+    termInstanceWhere,
+    sourceScope?.response
+  );
 
   // Every in-scope EvaluationAssignment is an evaluation opportunity,
   // regardless of response status.
-  const programOpportunityScope = buildProgramOpportunityScope(selectedProgram.id, termInstanceWhere, sourceScope?.assignment);
+  const programOpportunityScope = buildProgramOpportunityScope(
+    selectedProgram.id,
+    termInstanceWhere,
+    sourceScope?.assignment
+  );
 
   // One row per in-scope EvaluationAssignment: the canonical participation
   // denominator (resolved §5.12) with its response status. Submitted and
@@ -638,7 +698,10 @@ function buildTrendSeriesInputs(
 }
 
 /** Response predicate scoped to the selected Program's course-bound evidence only. */
-function buildCourseBoundResponseScope(programId: string, termInstanceWhere: Record<string, unknown>) {
+function buildCourseBoundResponseScope(
+  programId: string,
+  termInstanceWhere: Record<string, unknown>
+) {
   return {
     deployment_type: "COURSE_BOUND" as const,
     assignment: {
@@ -817,7 +880,6 @@ function resolveOutcomeRatingScale(
     : null;
 }
 
-
 type CourseOutcomeRatingRow = {
   rating_value: number;
   response_id: string;
@@ -850,19 +912,86 @@ async function readOutcomeScopedEvidence(
   const wantsCourse = !isCentralSource;
   const wantsCentral = !isCourseOnlySource;
   const courseBoundResponseScope = buildCourseBoundResponseScope(programId, termInstanceWhere);
-  const centralScope = sourceScope && sourceScope.response.deployment_type !== "COURSE_BOUND"
-    ? { deployment_type: "CENTRAL" as const, target_stakeholder: sourceScope.response.target_stakeholder }
-    : { deployment_type: "CENTRAL" as const };
+  const centralScope =
+    sourceScope && sourceScope.response.deployment_type !== "COURSE_BOUND"
+      ? {
+          deployment_type: "CENTRAL" as const,
+          target_stakeholder: sourceScope.response.target_stakeholder,
+        }
+      : { deployment_type: "CENTRAL" as const };
   const centralResponseScope = wantsCentral
     ? buildProgramResponseScope(programId, termInstanceWhere, centralScope)
     : null;
-  const [ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount, centralRatingRows] = await Promise.all([
-    wantsCourse ? prisma.quantitativeResponseItem.findMany({ where: { response: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope } }, select: { rating_value: true, response_id: true, section_key: true, item_key: true, response: { select: { assignment: { select: { course_bound_id: true, course_bound: { select: { instrument_version_id: true } } } } } } } }) : Promise.resolve([]),
-    wantsCourse ? prisma.evaluationAssignment.count({ where: { course_bound: { course_assignment: { program_id: programId }, ...termInstanceWhere } } }) : Promise.resolve(0),
-    wantsCourse ? prisma.response.count({ where: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope } }) : Promise.resolve(0),
-    wantsCentral ? prisma.quantitativeResponseItem.findMany({ where: { response: { status: ResponseStatus.SUBMITTED, ...centralResponseScope } }, select: { rating_value: true, response_id: true, section_key: true, item_key: true, response: { select: { assignment: { select: { central_deployment: { select: { id: true, deployment_name: true, target_stakeholder: true, instrument_version_id: true } } } } } } } }) : Promise.resolve([]),
-  ]);
-  return { ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount, centralRatingRows, wantsCourse };
+  const [ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount, centralRatingRows] =
+    await Promise.all([
+      wantsCourse
+        ? prisma.quantitativeResponseItem.findMany({
+            where: { response: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope } },
+            select: {
+              rating_value: true,
+              response_id: true,
+              section_key: true,
+              item_key: true,
+              response: {
+                select: {
+                  assignment: {
+                    select: {
+                      course_bound_id: true,
+                      course_bound: { select: { instrument_version_id: true } },
+                    },
+                  },
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+      wantsCourse
+        ? prisma.evaluationAssignment.count({
+            where: {
+              course_bound: { course_assignment: { program_id: programId }, ...termInstanceWhere },
+            },
+          })
+        : Promise.resolve(0),
+      wantsCourse
+        ? prisma.response.count({
+            where: { status: ResponseStatus.SUBMITTED, ...courseBoundResponseScope },
+          })
+        : Promise.resolve(0),
+      wantsCentral
+        ? prisma.quantitativeResponseItem.findMany({
+            where: { response: { status: ResponseStatus.SUBMITTED, ...centralResponseScope } },
+            select: {
+              rating_value: true,
+              response_id: true,
+              section_key: true,
+              item_key: true,
+              response: {
+                select: {
+                  assignment: {
+                    select: {
+                      central_deployment: {
+                        select: {
+                          id: true,
+                          deployment_name: true,
+                          target_stakeholder: true,
+                          instrument_version_id: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+  return {
+    ratingRows,
+    courseBoundOpportunityCount,
+    courseBoundSubmittedCount,
+    centralRatingRows,
+    wantsCourse,
+  };
 }
 
 function outcomesEmptyReason(
@@ -874,9 +1003,11 @@ function outcomesEmptyReason(
 ): ProgramHeadOutcomesEmptyReason {
   if (outcomesLength > 0 || programWideLength > 0) return null;
   if (wantsCourse) {
-    return courseBoundOpportunityCount === 0 ? "no-assignments"
-      : courseBoundSubmittedCount === 0 ? "no-submissions"
-      : "no-mapped-outcomes";
+    return courseBoundOpportunityCount === 0
+      ? "no-assignments"
+      : courseBoundSubmittedCount === 0
+        ? "no-submissions"
+        : "no-mapped-outcomes";
   }
   return "no-program-wide-evidence";
 }
@@ -968,26 +1099,23 @@ export async function getProgramHeadOutcomes(
   programId: string,
   filters: AnalyticsFilterState
 ): Promise<ProgramHeadOutcomesDTO | null> {
-  const contextResult = await resolveProgramHeadContext(programId);
+  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  if (!context) return null;
 
-  if (!contextResult.success) {
-    return null;
-  }
-
-  const { selectedProgram } = contextResult.data;
-
-  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
-    resolveTermInstanceFilter(selectedProgram.id, filters),
-    listProgramPeriodOptions(selectedProgram.id),
-  ]);
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
 
   // Course-bound PLO evidence comes from CILO bindings; program-wide PLO
   // evidence comes from published CentralDeploymentPloSnapshot bindings
   // (§5.9, §16.6). The evidence-source selection gates which read runs so one
   // source's evidence never leaks into the other section.
   const sourceScope = buildSourceScope(filters);
-  const { ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount, centralRatingRows, wantsCourse } =
-    await readOutcomeScopedEvidence(selectedProgram.id, termInstanceWhere, sourceScope);
+  const {
+    ratingRows,
+    courseBoundOpportunityCount,
+    courseBoundSubmittedCount,
+    centralRatingRows,
+    wantsCourse,
+  } = await readOutcomeScopedEvidence(selectedProgram.id, termInstanceWhere, sourceScope);
 
   // Publication-time CILO question bindings are resolved by evaluation +
   // section/item keys, because the current student submission flow writes
@@ -1116,21 +1244,17 @@ export async function getProgramHeadTrends(
   programId: string,
   filters: AnalyticsFilterState
 ): Promise<ProgramHeadTrendsDTO | null> {
-  const contextResult = await resolveProgramHeadContext(programId);
+  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  if (!context) return null;
 
-  if (!contextResult.success) {
-    return null;
-  }
-
-  const { selectedProgram } = contextResult.data;
-
-  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
-    resolveTermInstanceFilter(selectedProgram.id, filters),
-    listProgramPeriodOptions(selectedProgram.id),
-  ]);
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
 
   const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
+  const programResponseScope = buildProgramResponseScope(
+    selectedProgram.id,
+    termInstanceWhere,
+    sourceScope?.response
+  );
 
   const [ratingRows, responseRows] = await Promise.all([
     prisma.quantitativeResponseItem.findMany({
@@ -1341,21 +1465,17 @@ export async function getProgramHeadStakeholders(
   programId: string,
   filters: AnalyticsFilterState
 ): Promise<ProgramHeadStakeholdersDTO | null> {
-  const contextResult = await resolveProgramHeadContext(programId);
+  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  if (!context) return null;
 
-  if (!contextResult.success) {
-    return null;
-  }
-
-  const { selectedProgram } = contextResult.data;
-
-  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
-    resolveTermInstanceFilter(selectedProgram.id, filters),
-    listProgramPeriodOptions(selectedProgram.id),
-  ]);
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
 
   const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
+  const programResponseScope = buildProgramResponseScope(
+    selectedProgram.id,
+    termInstanceWhere,
+    sourceScope?.response
+  );
   const programOpportunityScope = buildProgramOpportunityScope(
     selectedProgram.id,
     termInstanceWhere,
@@ -1469,21 +1589,17 @@ export async function getProgramHeadBreakdowns(
   programId: string,
   filters: AnalyticsFilterState
 ): Promise<ProgramHeadBreakdownsDTO | null> {
-  const contextResult = await resolveProgramHeadContext(programId);
+  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  if (!context) return null;
 
-  if (!contextResult.success) {
-    return null;
-  }
-
-  const { selectedProgram } = contextResult.data;
-
-  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
-    resolveTermInstanceFilter(selectedProgram.id, filters),
-    listProgramPeriodOptions(selectedProgram.id),
-  ]);
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
 
   const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
+  const programResponseScope = buildProgramResponseScope(
+    selectedProgram.id,
+    termInstanceWhere,
+    sourceScope?.response
+  );
   const programOpportunityScope = buildProgramOpportunityScope(
     selectedProgram.id,
     termInstanceWhere,
@@ -1621,11 +1737,15 @@ function resolveFeedbackPromptLabel(
   );
 }
 
-function instrumentOf(row: FeedbackQualitativeRow): { id: string; structureSnapshot: unknown } | null {
+function instrumentOf(
+  row: FeedbackQualitativeRow
+): { id: string; structureSnapshot: unknown } | null {
   const instrument =
     row.response.assignment.course_bound?.instrument ??
     row.response.assignment.central_deployment?.instrument;
-  return instrument ? { id: instrument.id, structureSnapshot: instrument.structure_snapshot } : null;
+  return instrument
+    ? { id: instrument.id, structureSnapshot: instrument.structure_snapshot }
+    : null;
 }
 
 function aggregateFeedbackEvidence(rows: FeedbackQualitativeRow[]): {
@@ -1733,7 +1853,9 @@ function aggregateFeedbackEvidence(rows: FeedbackQualitativeRow[]): {
             return right.itemCount - left.itemCount;
           }
           const sourceOrder = left.sourceLabel.localeCompare(right.sourceLabel);
-          return sourceOrder === 0 ? left.promptLabel.localeCompare(right.promptLabel) : sourceOrder;
+          return sourceOrder === 0
+            ? left.promptLabel.localeCompare(right.promptLabel)
+            : sourceOrder;
         });
     })(),
     evidenceEvaluations: [...evaluations.entries()]
@@ -1755,21 +1877,17 @@ export async function getProgramHeadFeedback(
   programId: string,
   filters: AnalyticsFilterState
 ): Promise<ProgramHeadFeedbackDTO | null> {
-  const contextResult = await resolveProgramHeadContext(programId);
+  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  if (!context) return null;
 
-  if (!contextResult.success) {
-    return null;
-  }
-
-  const { selectedProgram } = contextResult.data;
-
-  const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
-    resolveTermInstanceFilter(selectedProgram.id, filters),
-    listProgramPeriodOptions(selectedProgram.id),
-  ]);
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
 
   const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response);
+  const programResponseScope = buildProgramResponseScope(
+    selectedProgram.id,
+    termInstanceWhere,
+    sourceScope?.response
+  );
   const programOpportunityScope = buildProgramOpportunityScope(
     selectedProgram.id,
     termInstanceWhere,

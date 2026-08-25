@@ -1211,13 +1211,15 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 15,
     category: "route",
-    notes: "read-only secretary view after ADR 0019; mutation affordances hidden via canManageAssignments=false",
+    notes:
+      "read-only secretary view after ADR 0019; mutation affordances hidden via canManageAssignments=false",
   },
   {
     path: "src/app/(app)/secretary/courses/[id]/edit/page.tsx",
     disposition: "redirect",
     category: "route",
-    notes: "Secretary course editing moved to a modal on the course catalog; redirects to the catalog",
+    notes:
+      "Secretary course editing moved to a modal on the course catalog; redirects to the catalog",
   },
   {
     path: "src/app/(app)/secretary/courses/loading.tsx",
@@ -2301,49 +2303,57 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/program-head-dashboard-kpis.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Slice #519 KPI cards: semantic tokens, tabular numerals, accessible popover breakdown, source-separated means",
+    notes:
+      "Slice #519 KPI cards: semantic tokens, tabular numerals, accessible popover breakdown, source-separated means",
   },
   {
     path: "src/components/ui/breadcrumbs.tsx",
     disposition: "already_compliant",
     category: "ui_primitive",
-    notes: "Slice #521 responsive breadcrumb trail: full hierarchy in DOM, middle steps collapse on mobile, aria-current on the current page",
+    notes:
+      "Slice #521 responsive breadcrumb trail: full hierarchy in DOM, middle steps collapse on mobile, aria-current on the current page",
   },
   {
     path: "src/features/analytics/components/how-calculated-popover.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Slice #521 how-calculated disclosure on the shared Base UI popover primitive; spec §41 presentation metadata only",
+    notes:
+      "Slice #521 how-calculated disclosure on the shared Base UI popover primitive; spec §41 presentation metadata only",
   },
   {
     path: "src/features/analytics/components/selected-plo-scroll-target.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Slice #521 scrolls the deep-linked PLO row into view after mount; matches data-plo-row by value to avoid selector escaping",
+    notes:
+      "Slice #521 scrolls the deep-linked PLO row into view after mount; matches data-plo-row by value to avoid selector escaping",
   },
   {
     path: "src/features/analytics/components/program-head-dashboard-completion-popover.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Slice #519 completion breakdown popover on the shared Base UI popover primitive with labelled table",
+    notes:
+      "Slice #519 completion breakdown popover on the shared Base UI popover primitive with labelled table",
   },
   {
     path: "src/features/analytics/components/program-head-stakeholder-progress.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Slice #519 keyboard-operable stacked participation bars; counts and percentage visible without hover",
+    notes:
+      "Slice #519 keyboard-operable stacked participation bars; counts and percentage visible without hover",
   },
   {
     path: "src/features/analytics/components/program-head-plo-summary.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Slice #519 PLO summary with evidence-source selector and details disclosure; no attainment status",
+    notes:
+      "Slice #519 PLO summary with evidence-source selector and details disclosure; no attainment status",
   },
   {
     path: "src/features/analytics/components/program-head-needs-attention.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Slice #519 needs-attention list carrying text status labels rather than color-only signals",
+    notes:
+      "Slice #519 needs-attention list carrying text status labels rather than color-only signals",
   },
   {
     path: "src/features/analytics/components/program-head-qualitative-pulse.tsx",
@@ -2355,13 +2365,28 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/stakeholder-mean-comparison.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New client chart replacing mean pie for independent stakeholder means; semantic tokens, exact-value table, reduced-motion safe",
+    notes:
+      "New client chart replacing mean pie for independent stakeholder means; semantic tokens, exact-value table, reduced-motion safe",
   },
   {
     path: "src/features/analytics/components/program-head-analytics-shell.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes: "New server component using semantic tokens, no client boundary needed",
+  },
+  {
+    path: "src/features/analytics/components/program-head-analytics-content-fallback.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Accessible Suspense fallback preserving chart and table geometry while selected analytics evidence streams",
+  },
+  {
+    path: "src/features/analytics/components/program-head-analytics-visualizations.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Client-only dynamic visualization boundary with semantic Skeleton fallbacks for Recharts and the qualitative word cloud",
   },
   {
     path: "src/features/analytics/components/program-head-overview-kpis.tsx",
@@ -2379,7 +2404,8 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/program-head-trend-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New client trend chart using semantic tokens, legends, comparability breaks, and reduced-motion-safe behavior",
+    notes:
+      "New client trend chart using semantic tokens, legends, comparability breaks, and reduced-motion-safe behavior",
   },
   {
     path: "src/features/analytics/components/program-head-trends-view.tsx",
@@ -2391,49 +2417,57 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/program-head-feedback-view.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Server component composing aggregate-only qualitative feedback, accessible word-cloud alternatives, counts, empty states, and authorized review links",
+    notes:
+      "Server component composing aggregate-only qualitative feedback, accessible word-cloud alternatives, counts, empty states, and authorized review links",
   },
   {
     path: "src/features/analytics/components/program-head-ai-insights-view.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Client on-demand AI interpretation view with fixed prompt boundary, validated aggregate-only output, locally computed sentiment counts, stale fingerprints, and recoverable failure states",
+    notes:
+      "Client on-demand AI interpretation view with fixed prompt boundary, validated aggregate-only output, locally computed sentiment counts, stale fingerprints, and recoverable failure states",
   },
   {
     path: "src/features/analytics/components/program-head-outcomes-view.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New server component composing outcome disclosures, ranked chart, exact-value table, and detail rows",
+    notes:
+      "New server component composing outcome disclosures, ranked chart, exact-value table, and detail rows",
   },
   {
     path: "src/features/analytics/components/program-head-outcome-ranking-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New client ranked outcome chart with data-derived axis domain, legend, insight, and exact-value table",
+    notes:
+      "New client ranked outcome chart with data-derived axis domain, legend, insight, and exact-value table",
   },
   {
     path: "src/features/analytics/components/program-head-plo-detail.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New server component exposing full-precision mean, scale-separated distributions, and excluded-rating diagnostics",
+    notes:
+      "New server component exposing full-precision mean, scale-separated distributions, and excluded-rating diagnostics",
   },
   {
     path: "src/features/analytics/components/program-head-likert-distribution.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New server component rendering one accessible per-scale Likert table with snapshot labels",
+    notes:
+      "New server component rendering one accessible per-scale Likert table with snapshot labels",
   },
   {
     path: "src/features/analytics/components/program-head-stakeholder-view.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New server component composing source-separation disclosure, ranked source means, and response composition",
+    notes:
+      "New server component composing source-separation disclosure, ranked source means, and response composition",
   },
   {
     path: "src/features/analytics/components/program-head-comparison-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New client ranked-bar comparison chart with semantic tokens, insight, legend, and exact-value table",
+    notes:
+      "New client ranked-bar comparison chart with semantic tokens, insight, legend, and exact-value table",
   },
   {
     path: "src/features/analytics/components/program-head-response-composition-donut.tsx",
@@ -2445,7 +2479,8 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/program-head-breakdowns-view.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "New server component composing course, instrument, major, and year-level breakdowns with Unspecified attribution",
+    notes:
+      "New server component composing course, instrument, major, and year-level breakdowns with Unspecified attribution",
   },
   {
     path: "src/features/analytics/components/program-head-instrument-breakdown-chart.tsx",
