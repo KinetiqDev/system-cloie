@@ -36,10 +36,7 @@ export function ProgramHeadResponsesFilters({
   ].filter(Boolean).length;
 
   return (
-    <details
-      className="group border-border bg-card rounded-xl border shadow-sm"
-      open={activeCount > 0}
-    >
+    <details className="group border-border bg-card rounded-xl border shadow-sm" open>
       <summary className="focus-visible:ring-ring flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3 focus-visible:ring-3 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 items-center gap-2">
           <SlidersHorizontal aria-hidden="true" className="text-muted-foreground" />
@@ -73,7 +70,7 @@ export function ProgramHeadResponsesFilters({
               autoComplete="off"
               placeholder={
                 state.tab === "course"
-                  ? "Course, evaluation, or faculty…"
+                  ? "Course, title, evaluation or faculty…"
                   : "Evaluation or stakeholder…"
               }
               className="border-input bg-background text-body-md focus-visible:border-ring focus-visible:ring-ring h-11 min-w-0 rounded-lg border px-3 outline-none focus-visible:ring-3"

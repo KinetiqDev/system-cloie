@@ -104,7 +104,7 @@ export function ProgramHeadResponsesLanding({
               </EmptyMedia>
               <EmptyTitle>No matching evaluations</EmptyTitle>
               <EmptyDescription>
-                Change or clear the filters to widen this evidence view.
+                No {isCourse ? "Course" : "Program-wide"} evaluations match the selected filters.
               </EmptyDescription>
             </Empty>
           ) : (
