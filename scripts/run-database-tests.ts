@@ -7,11 +7,22 @@ import { resolveLocalBin } from "./resolve-local-bin";
 
 loadEnvConfig(process.cwd());
 
-function main(): void {
+export function buildVitestArgs(suites: string[]): string[] {
+  return ["run", "--no-file-parallelism", ...suites];
+}
+
+export function validateTargetOrExit(): boolean {
   const target = verifyDisposableDatabaseTarget(process.env);
   if (!target.valid) {
     console.error("Disposable database target validation FAILED — refusing to run database tests:");
     for (const err of target.errors) console.error(`  - ${err}`);
+    return false;
+  }
+  return true;
+}
+
+function main(): void {
+  if (!validateTargetOrExit()) {
     process.exitCode = 1;
     return;
   }
@@ -27,7 +38,7 @@ function main(): void {
   for (const s of suites) console.log(`  - ${s}`);
 
   const vitestBin = resolveLocalBin("vitest");
-  const result = spawnSync(vitestBin, ["run", "--no-file-parallelism", ...suites], {
+  const result = spawnSync(vitestBin, buildVitestArgs(suites), {
     stdio: "inherit",
     env: process.env,
   });

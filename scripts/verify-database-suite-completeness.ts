@@ -4,6 +4,23 @@ import { discoverDatabaseSuites, getDatabaseSuiteCompleteness } from "./lib/data
 
 loadEnvConfig(process.cwd());
 
+export function evaluateCompleteness(suites: string[], gatedFiles: string[], orphans: string[]): { ok: boolean; errors: string[] } {
+  const errors: string[] = [];
+  if (orphans.length > 0) {
+    errors.push(`gated suites fall outside convention: ${orphans.join(", ")}`);
+  }
+  if (suites.length < 9) {
+    // warning, not error
+  }
+  const mustInclude = [
+    "src/__tests__/features/curriculum/curriculum-version-program-major-pairing.test.ts",
+    "src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts",
+  ];
+  const missing = mustInclude.filter((f) => !suites.includes(f));
+  if (missing.length > 0) errors.push(`required suites missing: ${missing.join(", ")}`);
+  return { ok: errors.length === 0, errors };
+}
+
 function main(): void {
   const { suites, gatedFiles, orphans } = getDatabaseSuiteCompleteness(process.cwd());
 
@@ -20,14 +37,10 @@ function main(): void {
     return;
   }
 
-  // Also ensure discovery actually finds the expected suites (at least the 9 known ones).
-  // This guards against the discovery helper silently returning empty due to a bug.
   if (suites.length < 9) {
     console.error(`Completeness warning: expected at least 9 database suites, got ${suites.length}.`);
-    // Not fatal if fewer due to file renames, but flag it.
   }
 
-  // Cross-check that the discovered suites indeed include the two previously omitted ones.
   const mustInclude = [
     "src/__tests__/features/curriculum/curriculum-version-program-major-pairing.test.ts",
     "src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts",

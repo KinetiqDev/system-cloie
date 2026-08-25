@@ -39,12 +39,17 @@ function walk(dir: string, out: string[]): void {
     } catch {
       continue;
     }
-    if (stat.isDirectory()) {
-      walk(full, out);
-    } else if (stat.isFile() && TEST_EXT_RE.test(entry)) {
-      out.push(full);
-    }
+    if (stat.isDirectory()) walk(full, out);
+    else if (stat.isFile() && TEST_EXT_RE.test(entry)) out.push(full);
   }
+}
+
+function isDatabaseSuiteContent(content: string): boolean {
+  return content.includes(DATABASE_GATE_MARKER) && content.includes(SKIP_IF_MARKER);
+}
+
+function isGatedFileContent(content: string): boolean {
+  return content.includes(DATABASE_GATE_MARKER) && (content.includes("skipIf") || content.includes("RUN_DATABASE"));
 }
 
 export function discoverDatabaseSuites(repoRoot: string = REPO_ROOT): string[] {
@@ -62,26 +67,20 @@ export function discoverDatabaseSuites(repoRoot: string = REPO_ROOT): string[] {
     } catch {
       continue;
     }
-    if (content.includes(DATABASE_GATE_MARKER) && content.includes(SKIP_IF_MARKER)) {
-      suites.push(rel);
-    }
+    if (isDatabaseSuiteContent(content)) suites.push(rel);
   }
 
   suites.sort();
   return suites;
 }
 
-export function getDatabaseSuiteCompleteness(
-  repoRoot: string = REPO_ROOT
-): { suites: string[]; gatedFiles: string[]; orphans: string[] } {
-  const suites = discoverDatabaseSuites(repoRoot);
+function collectGatedFiles(repoRoot: string): string[] {
   const allTestFiles: string[] = [];
   walk(join(repoRoot, "src"), allTestFiles);
   const gatedFiles: string[] = [];
   for (const file of allTestFiles) {
     const rel = relative(repoRoot, file);
     if (EXCLUDED_FILES[rel]) continue;
-    // Also exclude vitest-discovery which is meta
     if (rel === "src/__tests__/config/vitest-discovery.test.ts") continue;
     let content: string;
     try {
@@ -89,16 +88,19 @@ export function getDatabaseSuiteCompleteness(
     } catch {
       continue;
     }
-    if (content.includes(DATABASE_GATE_MARKER)) {
-      if (content.includes("skipIf") || content.includes("RUN_DATABASE")) {
-        if (rel.includes("__tests__/config/vitest-discovery") || rel.includes("db-invariants-gate")) {
-          continue;
-        }
-        gatedFiles.push(rel);
-      }
-    }
+    if (!isGatedFileContent(content)) continue;
+    if (rel.includes("__tests__/config/vitest-discovery") || rel.includes("db-invariants-gate")) continue;
+    gatedFiles.push(rel);
   }
   gatedFiles.sort();
+  return gatedFiles;
+}
+
+export function getDatabaseSuiteCompleteness(
+  repoRoot: string = REPO_ROOT
+): { suites: string[]; gatedFiles: string[]; orphans: string[] } {
+  const suites = discoverDatabaseSuites(repoRoot);
+  const gatedFiles = collectGatedFiles(repoRoot);
   const suiteSet: Record<string, true> = {};
   for (const s of suites) suiteSet[s] = true;
   const orphans = gatedFiles.filter((f) => !suiteSet[f]);
