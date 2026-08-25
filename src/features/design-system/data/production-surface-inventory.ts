@@ -274,18 +274,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/dean/academic-structure/programs/new/loading.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/dean/academic-structure/programs/new/page.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/dean/academic-structure/programs/loading.tsx",
     disposition: "task",
     taskId: 14,
@@ -1342,18 +1330,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/secretary/programs/new/loading.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/secretary/programs/new/page.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/secretary/programs/page.tsx",
     disposition: "task",
     taskId: 14,
@@ -2091,6 +2067,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/academic-calendar/components/term-instance-picker.tsx",
     disposition: "task",
     taskId: 13,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/academic-structure/components/create-program-dialog.tsx",
+    disposition: "task",
+    taskId: 14,
     category: "feature_component",
   },
   {

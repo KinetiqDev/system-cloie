@@ -61,7 +61,9 @@ Oversight Suspense regions belong to #191.
 
 Excluded routes are static group landings, redirect or `notFound()` polyfills,
 lightweight profiles, report/analytics stubs, and client-only create pages such
-as `/secretary/programs/new` and `/dean/academic-structure/programs/new`.
+as `/secretary/courses/new` and `/secretary/instruments/new`. Create flows that
+now live in dialogs (for example program creation) have no loading boundary of
+their own.
 
 ## Browser Evidence Limitation
 

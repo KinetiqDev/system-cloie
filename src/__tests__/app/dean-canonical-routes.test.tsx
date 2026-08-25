@@ -33,7 +33,7 @@ describe("Dean canonical routes", () => {
     await expect(async () => OldCoursesPage()).rejects.toThrow("PERMANENT:/dean/academic-structure/courses");
     await expect(async () => OldAssignmentsPage()).rejects.toThrow("PERMANENT:/dean/academic-structure/course-assignments");
     await expect(async () => OldInstrumentsPage()).rejects.toThrow("PERMANENT:/dean/academic-structure/instruments");
-    await expect(Promise.resolve().then(() => OldProgramNewPage())).rejects.toThrow("PERMANENT:/dean/academic-structure/programs/new");
+    await expect(Promise.resolve().then(() => OldProgramNewPage())).rejects.toThrow("PERMANENT:/dean/academic-structure/programs");
     await expect(Promise.resolve().then(() => OldCourseNewPage())).rejects.toThrow("PERMANENT:/dean/academic-structure/courses/new");
     await expect(Promise.resolve().then(() => OldInstrumentNewPage())).rejects.toThrow("PERMANENT:/dean/academic-structure/instruments/new");
     await expect(OldProgramEditPage({ params: Promise.resolve({ id: "program-1" }) })).rejects.toThrow("PERMANENT:/dean/academic-structure/programs/program-1/edit");
