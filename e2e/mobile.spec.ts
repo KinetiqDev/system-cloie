@@ -32,7 +32,10 @@ test("mobile drawer navigation and filter persistence", async ({ page }) => {
 
   // Drawer navigation to Analytics; tab choice persists in the URL.
   await page.getByRole("button", { name: "Open navigation menu" }).click();
-  await page.getByRole("dialog", { name: "Navigation menu" }).getByRole("link", { name: "Analytics" }).click();
+  await page
+    .getByRole("dialog", { name: "Navigation menu" })
+    .getByRole("link", { name: "Analytics" })
+    .click();
   await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
 
   await page.getByRole("link", { name: "Trends", exact: true }).click();
