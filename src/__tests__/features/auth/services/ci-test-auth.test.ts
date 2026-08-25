@@ -10,7 +10,6 @@ vi.mock("next/headers", () => ({
 }));
 
 import {
-  CI_TEST_AUTH_COOKIE_NAME,
   createCiTestSessionValue,
   getCiTestAuthConfig,
   getCiTestCookieOptions,
