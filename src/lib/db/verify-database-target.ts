@@ -46,9 +46,7 @@ function collectDatabaseUrlErrors(
 ): string | null {
   const hostname = parseHostname(databaseUrl);
   if (!hostname) {
-    errors.push(
-      `DATABASE_URL is not a valid URL: "${databaseUrl.slice(0, 64)}".`
-    );
+    errors.push("DATABASE_URL is not a valid URL.");
     return null;
   }
   if (isHostedSupabaseHostname(hostname)) {
