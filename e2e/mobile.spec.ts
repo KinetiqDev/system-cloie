@@ -24,6 +24,7 @@ test("mobile drawer navigation and filter persistence", async ({ page }) => {
   await page.getByLabel("Completion").selectOption("zero");
   await page.getByRole("button", { name: "Apply filters" }).click();
   await expect(page).toHaveURL(/completion=zero/);
+  await page.waitForLoadState("networkidle");
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
@@ -36,6 +37,7 @@ test("mobile drawer navigation and filter persistence", async ({ page }) => {
 
   await page.getByRole("link", { name: "Trends", exact: true }).click();
   await expect(page).toHaveURL(/tab=trends/);
+  await page.waitForLoadState("networkidle");
   await page.reload();
   await expect(page.getByRole("link", { name: "Trends", exact: true })).toHaveAttribute(
     "aria-current",
