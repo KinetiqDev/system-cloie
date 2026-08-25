@@ -20,7 +20,7 @@ export default async function DeanEditProgramPage({ params }: { params: Promise<
       <Card>
         <CardHeader>
           <CardTitle>Program Details</CardTitle>
-          <CardDescription>Update program details.</CardDescription>
+          <CardDescription>Update the program code or name.</CardDescription>
         </CardHeader>
         <CardContent>
           <ProgramForm
@@ -29,7 +29,6 @@ export default async function DeanEditProgramPage({ params }: { params: Promise<
               id: program.id,
               code: program.code,
               name: program.name,
-              description: program.description,
             }}
             submitLabel="Update Program"
           />

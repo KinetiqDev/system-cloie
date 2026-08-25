@@ -28,13 +28,11 @@ export async function seedFoundation(): Promise<FoundationContext> {
       where: { code: d.code },
       update: {
         name: d.name,
-        description: `${d.name} — seeded from ACD academic catalog.`,
         is_active: true,
       },
       create: {
         code: d.code,
         name: d.name,
-        description: `${d.name} — seeded from ACD academic catalog.`,
         is_active: true,
       },
     });

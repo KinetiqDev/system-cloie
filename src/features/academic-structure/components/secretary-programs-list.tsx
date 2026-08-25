@@ -57,6 +57,7 @@ import {
   toggleProgramActiveAction,
 } from "@/lib/actions/admin-program-actions";
 import { showToast } from "@/components/ui/toast";
+import { CreateProgramDialog } from "./create-program-dialog";
 import { ManageMajorsDialog } from "./manage-majors-dialog";
 import type { ProgramDeletionPreflight } from "../services/manage-programs";
 
@@ -108,6 +109,9 @@ export function SecretaryProgramsList({
   // ---- Manage Majors dialog state -----------------------------------------
   const [majorsDialogProgram, setMajorsDialogProgram] =
     useState<SecretaryProgramSummaryItem | null>(null);
+
+  // ---- Create Program dialog state ----------------------------------------
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // ---- Filtered programs ---------------------------------------------------
   const filteredPrograms = useMemo(() => {
@@ -263,8 +267,8 @@ export function SecretaryProgramsList({
             Manage academic programs, their majors, and program metadata across the college.
           </p>
         </div>
-        {/* CTA — always visible, top-right */}
-        <Button render={<Link href={`${basePath}/new`} />} className="shrink-0">
+        {/* CTA — always visible, top-right; opens the create dialog */}
+        <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0">
           <Plus className="size-4 sm:hidden" data-icon="inline-start" />
           <span className="hidden sm:inline">Create Program</span>
           <span className="sr-only sm:hidden">Create Program</span>
@@ -314,7 +318,7 @@ export function SecretaryProgramsList({
           </SelectContent>
         </Select>
 
-        <div className="relative flex-1">
+        <div className="relative w-full sm:max-w-xs">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search by code or name..."
@@ -445,6 +449,16 @@ export function SecretaryProgramsList({
         program
         {filteredPrograms.length !== 1 ? "s" : ""}
       </p>
+
+      {/* Create Program Dialog */}
+      {createDialogOpen && (
+        <CreateProgramDialog
+          open={createDialogOpen}
+          onOpenChange={(open) => {
+            setCreateDialogOpen(open);
+          }}
+        />
+      )}
 
       {/* Manage Majors Dialog */}
       {majorsDialogProgram && (

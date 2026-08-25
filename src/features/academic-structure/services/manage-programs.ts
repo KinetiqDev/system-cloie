@@ -186,7 +186,6 @@ export async function createProgram(
       data: {
         code: input.code,
         name: input.name,
-        description: input.description ?? null,
       },
     });
 
@@ -212,7 +211,6 @@ export async function updateProgram(
       data: {
         code: input.code,
         name: input.name,
-        description: input.description ?? null,
         ...(input.is_active !== undefined ? { is_active: input.is_active } : {}),
       },
     });

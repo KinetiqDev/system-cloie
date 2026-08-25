@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -335,7 +335,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cilo_institutional_outcome_mappings_institutional_outcome_id_fk"
+            foreignKeyName: "cilo_institutional_outcome_mappings_institutional_outcome__fkey"
             columns: ["institutional_outcome_id"]
             isOneToOne: false
             referencedRelation: "institutional_outcomes"
@@ -688,7 +688,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "course_bound_cilo_question_bindings_course_bound_evaluation_id_"
+            foreignKeyName: "course_bound_cilo_question_bindings_course_bound_evaluatio_fkey"
             columns: ["course_bound_evaluation_id"]
             isOneToOne: false
             referencedRelation: "course_bound_evaluations"
@@ -747,25 +747,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "course_bound_evaluation_exclusions_actor_fkey"
-            columns: ["excluded_by"]
+            foreignKeyName: "course_bound_evaluation_exclusions_course_assignment_membe_fkey"
+            columns: ["course_assignment_membership_id", "course_assignment_id"]
             isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedRelation: "course_assignment_memberships"
+            referencedColumns: ["id", "course_assignment_id"]
           },
           {
-            foreignKeyName: "course_bound_evaluation_exclusions_evaluation_fkey"
+            foreignKeyName: "course_bound_evaluation_exclusions_course_bound_evaluation_fkey"
             columns: ["course_bound_evaluation_id", "course_assignment_id"]
             isOneToOne: false
             referencedRelation: "course_bound_evaluations"
             referencedColumns: ["id", "course_assignment_id"]
           },
           {
-            foreignKeyName: "course_bound_evaluation_exclusions_membership_fkey"
-            columns: ["course_assignment_membership_id", "course_assignment_id"]
+            foreignKeyName: "course_bound_evaluation_exclusions_excluded_by_fkey"
+            columns: ["excluded_by"]
             isOneToOne: false
-            referencedRelation: "course_assignment_memberships"
-            referencedColumns: ["id", "course_assignment_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "course_bound_evaluation_exclusions_reversed_by_fkey"
@@ -1728,7 +1728,6 @@ export type Database = {
         Row: {
           code: string
           created_at: string
-          description: string | null
           id: string
           is_active: boolean
           name: string
@@ -1737,7 +1736,6 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
-          description?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -1746,7 +1744,6 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
-          description?: string | null
           id?: string
           is_active?: boolean
           name?: string

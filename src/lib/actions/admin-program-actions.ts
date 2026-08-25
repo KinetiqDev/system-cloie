@@ -52,7 +52,6 @@ export async function createProgramAction(formData: FormData): Promise<ActionRes
   const parsed = createProgramSchema.safeParse({
     code: formData.get("code"),
     name: formData.get("name"),
-    description: formData.get("description") || undefined,
   });
 
   if (!parsed.success) {
@@ -83,7 +82,6 @@ export async function updateProgramAction(formData: FormData): Promise<ActionRes
     id: formData.get("id"),
     code: formData.get("code"),
     name: formData.get("name"),
-    description: formData.get("description") || undefined,
   });
 
   if (!parsed.success) {

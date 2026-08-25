@@ -3,5 +3,5 @@
 import { permanentRedirect } from "next/navigation";
 
 export default function DeanCreateProgramPage() {
-  permanentRedirect("/dean/academic-structure/programs/new");
+  permanentRedirect("/dean/academic-structure/programs");
 }

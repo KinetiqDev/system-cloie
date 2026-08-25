@@ -1,16 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { SecretaryProgramsList } from "@/features/academic-structure/components/secretary-programs-list";
 
 const preflightMock = vi.hoisted(() => vi.fn());
 const deleteMock = vi.hoisted(() => vi.fn());
 const toggleMock = vi.hoisted(() => vi.fn());
+const createMock = vi.hoisted(() => vi.fn());
 const refreshMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/actions/admin-program-actions", () => ({
   preflightProgramDeletionAction: preflightMock,
   deleteProgramAction: deleteMock,
   toggleProgramActiveAction: toggleMock,
+  createProgramAction: createMock,
 }));
 
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
@@ -39,13 +41,13 @@ describe("SecretaryProgramsList", () => {
     });
     deleteMock.mockResolvedValue({ success: true, data: { id: "prog-2" } });
     toggleMock.mockResolvedValue({ success: true, data: undefined });
+    createMock.mockResolvedValue({ success: true });
   });
   const mockPrograms = [
     {
       id: "prog-1",
       code: "BSCE",
       name: "Bachelor of Science in Civil Engineering",
-      description: "Civil Engineering program",
       isActive: true,
       majorNames: ["Structural Engineering", "Water Resources"],
       majorCount: 2,
@@ -62,7 +64,6 @@ describe("SecretaryProgramsList", () => {
       id: "prog-2",
       code: "BSEE",
       name: "Bachelor of Science in Electrical Engineering",
-      description: "Electrical Engineering program",
       isActive: false,
       majorNames: ["Electronics", "Power Systems"],
       majorCount: 2,
@@ -175,5 +176,62 @@ describe("SecretaryProgramsList", () => {
     });
 
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+  });
+
+  it("opens the create dialog from the CTA", async () => {
+    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Create Program/ }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "Create Program" })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Program Code")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Program Name")).toBeInTheDocument();
+  });
+
+  it("creates a program from the dialog and refreshes the list", async () => {
+    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
+    fireEvent.click(screen.getByRole("button", { name: /Create Program/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    fireEvent.change(within(dialog).getByLabelText("Program Code"), {
+      target: { value: "bscs" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Program Name"), {
+      target: { value: "Bachelor of Science in Computer Science" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create Program" }));
+
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+    const formData = createMock.mock.calls[0][0] as FormData;
+    expect(formData.get("code")).toBe("bscs");
+    expect(formData.get("name")).toBe("Bachelor of Science in Computer Science");
+    expect(formData.get("description")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open and shows the error when creation fails", async () => {
+    createMock.mockResolvedValue({ success: false, error: "A program with code \"BSIT\" already exists." });
+    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
+    fireEvent.click(screen.getByRole("button", { name: /Create Program/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    fireEvent.change(within(dialog).getByLabelText("Program Code"), {
+      target: { value: "BSIT" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Program Name"), {
+      target: { value: "Bachelor of Science in Information Technology" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create Program" }));
+
+    await waitFor(() =>
+      expect(within(dialog).getByRole("alert")).toHaveTextContent(
+        'A program with code "BSIT" already exists.'
+      )
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 });

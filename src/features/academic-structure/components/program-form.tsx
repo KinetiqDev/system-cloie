@@ -1,11 +1,10 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { showToast } from "@/components/ui/toast";
 
@@ -15,10 +14,13 @@ type ProgramFormProps = {
     id?: string;
     code?: string;
     name?: string;
-    description?: string | null;
   };
   submitLabel?: string;
   onSuccess?: () => void;
+  /** Optional form id so an external submit button can target it. */
+  formId?: string;
+  /** Reports the form's pending state to a parent (e.g. a dialog footer button). */
+  onPendingChange?: (pending: boolean) => void;
 };
 
 // One compact create/edit form keeps submission feedback and field defaults in one tested surface.
@@ -28,10 +30,16 @@ export function ProgramForm({
   defaultValues,
   submitLabel = "Save Program",
   onSuccess,
+  formId,
+  onPendingChange,
 }: ProgramFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    onPendingChange?.(isPending);
+  }, [isPending, onPendingChange]);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -50,7 +58,7 @@ export function ProgramForm({
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="space-y-4">
+    <form ref={formRef} action={handleSubmit} className="space-y-4" id={formId}>
       {defaultValues?.id && <input type="hidden" name="id" value={defaultValues.id} />}
 
       {error && (
@@ -85,21 +93,11 @@ export function ProgramForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Description (optional)</Label>
-        <Textarea
-          id="description"
-          name="description"
-          placeholder="Program description, accreditation notes..."
-          defaultValue={defaultValues?.description ?? ""}
-          maxLength={1000}
-          rows={3}
-        />
-      </div>
-
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving..." : submitLabel}
-      </Button>
+      {formId ? null : (
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "Saving..." : submitLabel}
+        </Button>
+      )}
     </form>
   );
 }
