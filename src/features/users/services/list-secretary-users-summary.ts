@@ -145,7 +145,10 @@ const pageSelect = {
 
 type PrismaUserPageRow = Prisma.UserGetPayload<{ select: typeof pageSelect }>;
 
-function buildWhere(query: SecretaryUsersListQuery): Prisma.UserWhereInput {
+function buildWhere(
+  query: SecretaryUsersListQuery,
+  activePeriodId: string | null
+): Prisma.UserWhereInput {
   const programFilter = query.program
     ? {
         OR: [
@@ -174,6 +177,24 @@ function buildWhere(query: SecretaryUsersListQuery): Prisma.UserWhereInput {
   if (query.role) conditions.push({ roles: { some: { role: query.role } } });
   if (query.major) conditions.push({ student_profile: { major: { name: query.major } } });
   if (query.program) conditions.push(programFilter);
+  if (query.state === "awaiting-term-placement") {
+    conditions.push(
+      { is_active: true },
+      { roles: { some: { role: SystemRole.STUDENT } } },
+      { student_profile: { isNot: null } },
+      activePeriodId
+        ? { enrollments: { none: { term_instance_id: activePeriodId, is_active: true } } }
+        : { id: { in: [] } }
+    );
+  }
+  if (query.verification === "pending") {
+    conditions.push({
+      OR: [
+        { alumni_profile: { verification_status: "PENDING" } },
+        { industry_partner_profile: { verification_status: "PENDING" } },
+      ],
+    });
+  }
   if (query.q) {
     conditions.push({
       OR: [
@@ -248,7 +269,13 @@ export async function listSecretaryUsersSummary(
     };
   }
 
-  const where = buildWhere(query);
+  const activePeriod = query.state
+    ? await prisma.academicTermInstance.findFirst({
+        where: { status: "ACTIVE", school_year: { is_active: true } },
+        select: { id: true },
+      })
+    : null;
+  const where = buildWhere(query, activePeriod?.id ?? null);
   const [total, totalUsers, totalStudents, totalAlumni, totalIndustryPartners] = await Promise.all([
     prisma.user.count({ where }),
     prisma.user.count(),

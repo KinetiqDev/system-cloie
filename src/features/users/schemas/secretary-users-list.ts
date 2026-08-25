@@ -27,6 +27,8 @@ const secretaryUsersQueryValuesSchema = z.object({
   program: z.string().trim().min(1).max(100).optional().catch(undefined),
   major: z.string().trim().min(1).max(100).optional().catch(undefined),
   q: z.string().trim().min(1).max(100).optional().catch(undefined),
+  state: z.enum(["awaiting-term-placement"]).optional().catch(undefined),
+  verification: z.enum(["pending"]).optional().catch(undefined),
   // Accept current fields plus legacy firstName/lastName so bookmarks can be
   // canonicalized to complete-name sorting without surname semantics.
   sort: z
@@ -42,6 +44,8 @@ export type SecretaryUsersListQuery = {
   program?: string;
   major?: string;
   q?: string;
+  state?: "awaiting-term-placement";
+  verification?: "pending";
   sort: SecretaryUsersSortField;
   direction: SecretaryUsersSortDirection;
 };
@@ -77,6 +81,8 @@ export function parseSecretaryUsersListQuery(
     program: firstNonEmpty(raw.program),
     major: firstNonEmpty(raw.major),
     q: firstNonEmpty(raw.q),
+    state: firstNonEmpty(raw.state),
+    verification: firstNonEmpty(raw.verification),
     sort: firstNonEmpty(raw.sort),
     dir: firstNonEmpty(raw.dir),
   };
@@ -90,6 +96,8 @@ export function parseSecretaryUsersListQuery(
     program: values.program,
     major: values.major,
     q: values.q,
+    state: values.state,
+    verification: values.verification,
     sort,
     direction,
   };
@@ -102,6 +110,8 @@ export function serializeSecretaryUsersListQuery(query: SecretaryUsersListQuery)
   if (query.program) params.set("program", query.program);
   if (query.major) params.set("major", query.major);
   if (query.q) params.set("q", query.q);
+  if (query.state) params.set("state", query.state);
+  if (query.verification) params.set("verification", query.verification);
   if (query.sort !== "name" || query.direction !== "asc") {
     params.set("sort", query.sort);
   }

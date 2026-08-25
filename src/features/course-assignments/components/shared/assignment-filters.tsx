@@ -19,6 +19,7 @@ export interface AssignmentFiltersState {
   section: StudentSection | null;
   isActive: boolean | null;
   courseScope: CourseScope | null;
+  hasActiveRosterMembers?: boolean;
   searchQuery: string;
 }
 
@@ -52,6 +53,7 @@ export function AssignmentFilters({
     filters.section ||
     filters.isActive !== null ||
     filters.courseScope ||
+    filters.hasActiveRosterMembers === false ||
     filters.searchQuery;
 
   const clearFilters = () => {
@@ -64,6 +66,7 @@ export function AssignmentFilters({
       section: null,
       isActive: null,
       courseScope: null,
+      hasActiveRosterMembers: undefined,
       searchQuery: "",
     });
   };

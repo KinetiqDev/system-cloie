@@ -347,6 +347,7 @@ export type ListCourseAssignmentsFilter = {
   isActive?: boolean;
   courseScope?: CourseScope;
   q?: string;
+  hasActiveRosterMembers?: boolean;
 };
 
 /**

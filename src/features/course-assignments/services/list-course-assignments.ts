@@ -76,6 +76,9 @@ export async function listCourseAssignments(
     ...(enforcedCourseScope && {
       course: { course_scope: enforcedCourseScope },
     }),
+    ...(filter.hasActiveRosterMembers === false && {
+      memberships: { none: { is_active: true } },
+    }),
     ...(filter.q && {
       OR: [
         { course: { code: { contains: filter.q, mode: "insensitive" } } },

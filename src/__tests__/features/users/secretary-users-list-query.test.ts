@@ -52,6 +52,24 @@ describe("Secretary Users list URL", () => {
     );
   });
 
+  it("round-trips actionable dashboard filters", () => {
+    const awaitingPlacement = parseSecretaryUsersListQuery({ state: "awaiting-term-placement" });
+    expect(awaitingPlacement).toMatchObject({ state: "awaiting-term-placement" });
+    expect(serializeSecretaryUsersListQuery(awaitingPlacement)).toBe(
+      "state=awaiting-term-placement"
+    );
+
+    const pendingVerification = parseSecretaryUsersListQuery({ verification: "pending" });
+    expect(pendingVerification).toMatchObject({ verification: "pending" });
+    expect(serializeSecretaryUsersListQuery(pendingVerification)).toBe("verification=pending");
+  });
+
+  it("drops unsupported dashboard filter values", () => {
+    expect(
+      parseSecretaryUsersListQuery({ state: "inactive", verification: "approved" })
+    ).toEqual({ page: 1, sort: "name", direction: "asc" });
+  });
+
   it("bounds the maximum page value", () => {
     expect(parseSecretaryUsersListQuery({ page: "10001" })).toEqual({
       page: 1,

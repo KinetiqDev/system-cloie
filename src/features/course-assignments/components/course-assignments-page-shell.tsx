@@ -92,6 +92,7 @@ export function CourseAssignmentsPageShell({
         ...(nextFilters.section && { section: nextFilters.section }),
         ...(nextFilters.isActive !== null && { isActive: nextFilters.isActive }),
         ...(nextFilters.courseScope && { courseScope: nextFilters.courseScope }),
+        ...(nextFilters.hasActiveRosterMembers === false && { hasActiveRosterMembers: false }),
         ...(nextFilters.searchQuery.trim() && { q: nextFilters.searchQuery.trim() }),
       },
       ...((role === "all-program" || role === "general-education") && nextFilters.isActive === null
