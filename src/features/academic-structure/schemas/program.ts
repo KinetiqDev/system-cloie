@@ -11,11 +11,6 @@ export const createProgramSchema = z.object({
     .min(3, "Program name must be at least 3 characters")
     .max(200, "Program name must be at most 200 characters")
     .transform((val) => val.trim()),
-  description: z
-    .string()
-    .max(1000, "Description must be at most 1000 characters")
-    .optional()
-    .transform((val) => val?.trim() || undefined),
 });
 
 export type CreateProgramInput = z.infer<typeof createProgramSchema>;
@@ -32,11 +27,6 @@ export const updateProgramSchema = z.object({
     .min(3, "Program name must be at least 3 characters")
     .max(200, "Program name must be at most 200 characters")
     .transform((val) => val.trim()),
-  description: z
-    .string()
-    .max(1000, "Description must be at most 1000 characters")
-    .optional()
-    .transform((val) => val?.trim() || undefined),
   is_active: z.boolean().optional(),
 });
 

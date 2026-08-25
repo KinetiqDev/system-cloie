@@ -8,7 +8,6 @@ export type SecretaryProgramSummaryItem = {
   id: string;
   code: string;
   name: string;
-  description: string | null;
   isActive: boolean;
   majorNames: string[]; // e.g., ["English", "Mathematics", ...]
   majorCount: number;
@@ -68,7 +67,6 @@ export async function listSecretaryProgramsSummary(): Promise<{
       id: p.id,
       code: p.code,
       name: p.name,
-      description: p.description,
       isActive: p.is_active,
       majorNames: activeMajorNames,
       majorCount: p.majors.length,

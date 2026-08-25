@@ -33,7 +33,7 @@ export default async function EditProgramPage({ params }: Props) {
       <Card>
         <CardHeader>
           <CardTitle>Program Details</CardTitle>
-          <CardDescription>Update the program code, name, or description.</CardDescription>
+          <CardDescription>Update the program code or name.</CardDescription>
         </CardHeader>
         <CardContent>
           <ProgramForm
@@ -42,7 +42,6 @@ export default async function EditProgramPage({ params }: Props) {
               id: program.id,
               code: program.code,
               name: program.name,
-              description: program.description,
             }}
             submitLabel="Update Program"
           />
