@@ -5,6 +5,8 @@ import { verifyDisposableDatabaseTarget } from "@/lib/db/verify-database-target"
 
 export const CI_TEST_AUTH_COOKIE_NAME = "cloie_ci_test_auth";
 // fallow-ignore-next-line unused-export
+export const CI_TEST_DEPLOYMENT_KIND = "ci-test";
+// fallow-ignore-next-line unused-export
 export const CI_TEST_SESSION_MAX_AGE_SECONDS = 60 * 60;
 const CI_TEST_CLOCK_SKEW_SECONDS = 60;
 
@@ -63,11 +65,14 @@ function parseAllowedUsers(value: string | undefined): ReadonlySet<string> | nul
 
   return new Set(users);
 }
-
 export function getCiTestAuthConfig(
   environment: NodeJS.ProcessEnv = process.env
 ): CiTestAuthConfig | null {
   if (environment.NODE_ENV !== "production" || environment.CLOIE_CI_TEST_ENABLED !== "true") {
+    return null;
+  }
+
+  if (environment.CLOIE_DEPLOYMENT_KIND !== CI_TEST_DEPLOYMENT_KIND) {
     return null;
   }
 
