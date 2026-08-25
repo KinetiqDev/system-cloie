@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import vitestConfig from "../../../vitest.config";
+
 function readVitestConfig(): string {
   return readFileSync(join(process.cwd(), "vitest.config.ts"), "utf8");
 }
@@ -22,8 +24,11 @@ describe("vitest discovery determinism (537)", () => {
   it("restricts discovery to repository-owned src roots", () => {
     const source = readVitestConfig();
 
-    // include must be explicit src-only
-    expect(source).toMatch(/include:\s*\[\s*"src\/\*\*\/\*\.{\s*test,spec\s*}\./);
+    // effective config value — behavior-preserving refactors remain green
+    expect(vitestConfig.test?.include).toEqual([
+      "src/**/*.{test,spec}.{ts,tsx,js,jsx}",
+    ]);
+    // textual guard to catch drift
     expect(source).toContain(`"src/**/*.{test,spec}.{ts,tsx,js,jsx}"`);
   });
 
@@ -53,13 +58,20 @@ describe("vitest discovery determinism (537)", () => {
     for (const file of hiddenCases) {
       // hidden tool paths are either outside src (so not included) or contain node_modules/opencode (so excluded)
       const insideSrc = file.startsWith("src/") && /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(file);
-      const excluded = file.includes("node_modules/") || file.includes(".opencode/") || file.includes(".claude/") || file.includes(".cursor/");
+      const excluded =
+        file.includes("node_modules/") ||
+        file.includes(".opencode/") ||
+        file.includes(".claude/") ||
+        file.includes(".cursor/");
       const discovered = insideSrc && !excluded;
       expect(discovered, `${file} must not be discovered`).toBe(false);
     }
 
     // sanity: repo-owned tests are still discovered
-    expect("src/__tests__/sample.test.ts".startsWith("src/") && /\.(test|spec)\.(ts|tsx|js|jsx)$/.test("src/__tests__/sample.test.ts")).toBe(true);
+    expect(
+      "src/__tests__/sample.test.ts".startsWith("src/") &&
+        /\.(test|spec)\.(ts|tsx|js|jsx)$/.test("src/__tests__/sample.test.ts")
+    ).toBe(true);
 
     // also verify exclude list covers e2e and build artifacts
     expect(source).toContain(`"e2e/**"`);
