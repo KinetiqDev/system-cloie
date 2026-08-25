@@ -139,10 +139,14 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
 
-  # Browser-level user journeys (§61) against the seeded fixture. Auth is the
-  # dev/demo cookie path (resolve-auth-session.ts) — no OAuth UI automation.
-  # Retries are disabled for required checks; a red-then-green run is treated
-  # as flaky evidence, not a clean pass.
+  # Browser-level user journeys (§61) against the seeded fixture in production
+  # mode (next build + next start). Auth is the isolated signed CI test session
+  # (cloie_ci_test_auth) restricted to the disposable seeded database — no OAuth
+  # UI automation. Normal account state, SystemRole, Authorized Program, Course
+  # Assignment, roster, and respondent-eligibility checks still execute. Retries
+  # are disabled for required checks; a red-then-green run is treated as flaky
+  # evidence, not a clean pass. The production-mode verification checks that
+  # POST /api/auth/dev-login remains 404 outside development.
   browser-e2e:
     name: Browser E2E
     runs-on: ubuntu-latest
@@ -150,8 +154,12 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
       NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
       NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+      CLOIE_CI_TEST_ENABLED: "true"
+      CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
+      CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test"
     services:
       postgres:
         image: postgres:16-alpine
@@ -196,9 +204,15 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run Playwright journeys
+      - name: Run Playwright journeys (production)
         run: pnpm exec playwright test
-
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          CLOIE_CI_TEST_ENABLED: "true"
+          CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
+          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test"
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

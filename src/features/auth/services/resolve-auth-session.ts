@@ -2,10 +2,10 @@ import { cache } from "react";
 import { ROLES, type Role } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { getCiTestAuthConfig, readCiTestAuthCookie } from "./ci-test-auth";
 import { readDevAuthCookie } from "./dev-auth";
 import { getDemoAuthConfig, readDemoAuthCookie } from "./demo-auth";
 import { buildAuthSessionSnapshot } from "./build-auth-session-snapshot";
-
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import type { VerificationStatus } from "@prisma/client";
 
@@ -30,28 +30,32 @@ const KNOWN_ROLES = new Set<Role>(Object.values(ROLES));
 function isKnownRole(roleName: string): roleName is Role {
   return KNOWN_ROLES.has(roleName as Role);
 }
-
 function resolveAuthSessionFromAuthenticatedUser(
   user: AuthenticatedUser,
   mode: "oauth" | "dev"
 ): Promise<ReturnType<typeof buildAuthSessionSnapshot>>;
 function resolveAuthSessionFromAuthenticatedUser(
   user: AuthenticatedUser,
-  mode: "dedicated-demo"
+  mode: "dedicated-demo" | "ci-test"
 ): Promise<ReturnType<typeof buildAuthSessionSnapshot> | null>;
 async function resolveAuthSessionFromAuthenticatedUser(
   user: AuthenticatedUser,
-  mode: "oauth" | "dev" | "dedicated-demo"
+  mode: "oauth" | "dev" | "dedicated-demo" | "ci-test"
 ) {
   const isDevAuth = mode === "dev";
   const isDedicatedDemo = mode === "dedicated-demo";
+  const isCiTest = mode === "ci-test";
   const demoConfig = isDedicatedDemo ? getDemoAuthConfig() : null;
   if (isDedicatedDemo && !demoConfig) {
     return null;
   }
+  const ciTestConfig = isCiTest ? getCiTestAuthConfig() : null;
+  if (isCiTest && !ciTestConfig) {
+    return null;
+  }
 
   const dbUser: AuthSessionUserRecord = await prisma.user.findUnique({
-    where: isDevAuth || isDedicatedDemo ? { id: user.id } : { auth_user_id: user.id },
+    where: isDevAuth || isDedicatedDemo || isCiTest ? { id: user.id } : { auth_user_id: user.id },
     include: {
       roles: true,
       student_profile: true,
@@ -62,6 +66,12 @@ async function resolveAuthSessionFromAuthenticatedUser(
 
   if (isDedicatedDemo) {
     if (!dbUser || !demoConfig?.allowedUsers.has(dbUser.email.trim().toLowerCase())) {
+      return null;
+    }
+  }
+
+  if (isCiTest) {
+    if (!dbUser || !ciTestConfig?.allowedUsers.has(dbUser.email.trim().toLowerCase())) {
       return null;
     }
   }
@@ -100,7 +110,7 @@ async function resolveAuthSessionFromAuthenticatedUser(
 
   return buildAuthSessionSnapshot({
     userId: dbUser?.id ?? user.id,
-    email: isDedicatedDemo ? (dbUser?.email ?? null) : user.email,
+    email: isDedicatedDemo || isCiTest ? (dbUser?.email ?? null) : user.email,
     // Domain User.name only — never invent from email or provider metadata here.
     name: dbUser?.name ?? null,
     roles,
@@ -124,10 +134,13 @@ export async function resolveAuthSessionFromDevUser(user: AuthenticatedUser) {
   return resolveAuthSessionFromAuthenticatedUser(user, "dev");
 }
 
+export async function resolveAuthSessionFromCiTestUser(user: AuthenticatedUser) {
+  return resolveAuthSessionFromAuthenticatedUser(user, "ci-test");
+}
+
 export async function resolveAuthSessionFromDemoUser(user: AuthenticatedUser) {
   return resolveAuthSessionFromAuthenticatedUser(user, "dedicated-demo");
 }
-
 export const resolveAuthSession = cache(async function resolveAuthSession() {
   const devAuthUser = await readDevAuthCookie();
 
@@ -138,6 +151,17 @@ export const resolveAuthSession = cache(async function resolveAuthSession() {
         email: devAuthUser.email,
       },
       "dev"
+    );
+  }
+
+  const ciTestAuthUser = await readCiTestAuthCookie();
+  if (ciTestAuthUser) {
+    return resolveAuthSessionFromAuthenticatedUser(
+      {
+        id: ciTestAuthUser.userId,
+        email: null,
+      },
+      "ci-test"
     );
   }
 

@@ -6,9 +6,12 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 /**
  * Browser-level Program Head evidence journeys (§61).
  *
- * The app runs as a Next.js dev server so the dev-auth cookie path
- * (resolve-auth-session.ts → readDevAuthCookie) is available — no OAuth UI
- * automation. The database is the disposable Postgres seeded by the same
+ * In local development the app runs as a Next.js dev server so the dev-auth
+ * cookie path (resolve-auth-session.ts → readDevAuthCookie) is available.
+ * In CI the critical journeys run against the production runtime (`next build`
+ * + `next start`) with the isolated signed CI test session
+ * (cloie_ci_test_auth) restricted to the disposable seeded database — no OAuth
+ * UI automation. The database is the disposable Postgres seeded by the same
  * fixture the database-integration job uses; the global setup uses the
  * reviewed deterministic contract in `e2e/support/contract.ts` (SystemRole
  * `U.*` and deployment `D.*` identifiers reused from the Prisma seed) and
@@ -16,6 +19,8 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
  * expectations are pinned, not derived from the same database read being
  * checked.
  */
+const isCiTestProduction = process.env.CLOIE_CI_TEST_ENABLED === "true";
+
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/support/global-setup.ts",
@@ -47,9 +52,14 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm dev -p 3100",
+    command: isCiTestProduction ? "pnpm build && pnpm start -p 3100" : "pnpm dev -p 3100",
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
+    env: isCiTestProduction
+      ? {
+          NODE_ENV: "production",
+        }
+      : undefined,
   },
 });
