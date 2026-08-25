@@ -21,6 +21,8 @@ export default defineConfig({
   globalSetup: "./e2e/support/global-setup.ts",
   fullyParallel: false,
   workers: 1,
+  // Required checks keep retries disabled; flaky red-then-green is not reported as clean.
+  retries: 0,
   timeout: 90_000,
   expect: { timeout: 15_000 },
   reporter: [["list"], ["html", { open: "never" }]],
