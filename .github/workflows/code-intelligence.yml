@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '0 6 * * 1'
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -17,6 +17,7 @@ jobs:
     name: Fallow Audit Gate
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -35,8 +36,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -57,6 +58,7 @@ jobs:
           name: fallow-audit-${{ github.event.pull_request.number }}
           path: artifacts/fallow/
           if-no-files-found: ignore
+          retention-days: 14
 
   fallow-reports:
     name: Fallow Code Intelligence Reports
@@ -84,8 +86,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -100,3 +102,4 @@ jobs:
           name: fallow-reports
           path: artifacts/fallow/
           if-no-files-found: ignore
+          retention-days: 14

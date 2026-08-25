@@ -14,12 +14,15 @@ jobs:
   quality-checks:
     name: Quality Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
@@ -29,8 +32,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -44,8 +47,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
 
+      - name: Check formatting (Prettier --check, never --write)
+        run: pnpm format:check:changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
       - name: Lint
         run: pnpm lint
+
+      - name: Lint changed production code (no new warnings)
+        run: pnpm lint:changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
 
       - name: Test
         run: pnpm test
@@ -68,9 +80,10 @@ jobs:
   database-integration:
     name: Database Integration
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      RUN_DATABASE_INTEGRATION_TESTS: '1'
+      RUN_DATABASE_INTEGRATION_TESTS: "1"
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
     services:
       postgres:
@@ -98,8 +111,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -122,9 +135,12 @@ jobs:
 
   # Browser-level user journeys (§61) against the seeded fixture. Auth is the
   # dev/demo cookie path (resolve-auth-session.ts) — no OAuth UI automation.
+  # Retries are disabled for required checks; a red-then-green run is treated
+  # as flaky evidence, not a clean pass.
   browser-e2e:
     name: Browser E2E
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
@@ -156,8 +172,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: '22'
-          cache: 'pnpm'
+          node-version: "22"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -184,3 +200,13 @@ jobs:
           name: playwright-report
           path: playwright-report/
           if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload Playwright test results on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-test-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
