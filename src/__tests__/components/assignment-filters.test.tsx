@@ -1,6 +1,9 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AssignmentFilters, type AssignmentFiltersState } from "@/features/course-assignments/components/shared/assignment-filters";
+import {
+  AssignmentFilters,
+  type AssignmentFiltersState,
+} from "@/features/course-assignments/components/shared/assignment-filters";
 
 const filters: AssignmentFiltersState = {
   termInstanceId: null,
@@ -59,9 +62,23 @@ describe("AssignmentFilters", () => {
     });
     expect(onFiltersChange).not.toHaveBeenCalled();
     act(() => vi.advanceTimersByTime(300));
-    expect(onFiltersChange).toHaveBeenCalledWith(
-      { ...filters, searchQuery: "faculty" },
-      "replace"
+    expect(onFiltersChange).toHaveBeenCalledWith({ ...filters, searchQuery: "faculty" }, "replace");
+  });
+
+  it("can reset the Secretary empty-roster attention filter", () => {
+    const onFiltersChange = vi.fn();
+    render(
+      <AssignmentFilters
+        filters={{ ...filters, isActive: true, hasActiveRosterMembers: false }}
+        onFiltersChange={onFiltersChange}
+        availableCourses={[]}
+        availablePrograms={[]}
+        availableFaculty={[]}
+        termInstances={[]}
+      />
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(onFiltersChange).toHaveBeenCalledWith(filters);
   });
 });

@@ -83,6 +83,7 @@ export function AssignmentFilters({
     filters.section,
     filters.isActive,
     hideCourseScopeFilter ? null : filters.courseScope,
+    filters.hasActiveRosterMembers === false ? "empty-roster" : null,
   ].filter((value) => value !== null).length;
 
   const resetFilters = () => {
