@@ -41,30 +41,36 @@ async function withData<T>(
   return { children: render(data) };
 }
 
+async function resolveOutcomesTab(
+  programId: string,
+  filters: AnalyticsFilterState
+): Promise<ResolvedTabContent> {
+  const data = await getProgramHeadOutcomes(programId, filters);
+  if (!data) notFound();
+  const ploCode = filters.ploId
+    ? (data.outcomes.find((outcome) => outcome.ploId === filters.ploId)?.code ??
+      data.programWideOutcomes.find((outcome) => outcome.ploId === filters.ploId)?.code)
+    : undefined;
+  return {
+    ploCode,
+    children: (
+      <ProgramHeadOutcomesView
+        programId={programId}
+        data={data}
+        resetHref={buildAnalyticsUrl(programId, { tab: "outcomes" })}
+        selectedPloId={filters.ploId}
+      />
+    ),
+  };
+}
+
 async function resolveProgramHeadAnalyticsTabContent(
   programId: string,
   filters: AnalyticsFilterState
 ): Promise<ResolvedTabContent> {
   switch (filters.tab) {
-    case "outcomes": {
-      const data = await getProgramHeadOutcomes(programId, filters);
-      if (!data) notFound();
-      const ploCode = filters.ploId
-        ? (data.outcomes.find((outcome) => outcome.ploId === filters.ploId)?.code ??
-          data.programWideOutcomes.find((outcome) => outcome.ploId === filters.ploId)?.code)
-        : undefined;
-      return {
-        ploCode,
-        children: (
-          <ProgramHeadOutcomesView
-            programId={programId}
-            data={data}
-            resetHref={buildAnalyticsUrl(programId, { tab: "outcomes" })}
-            selectedPloId={filters.ploId}
-          />
-        ),
-      };
-    }
+    case "outcomes":
+      return resolveOutcomesTab(programId, filters);
     case "stakeholders":
       return withData(programId, filters, getProgramHeadStakeholders, (data) => (
         <ProgramHeadStakeholderView
