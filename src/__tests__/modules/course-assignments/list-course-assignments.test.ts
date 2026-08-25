@@ -216,6 +216,18 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
     expect(JSON.stringify(where)).not.toContain("is_active");
   });
 
+  it("filters active assignments without active roster members", async () => {
+    await listCourseAssignments({ hasActiveRosterMembers: false });
+
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          memberships: { none: { is_active: true } },
+        }),
+      })
+    );
+  });
+
   it("searches only approved assignment display fields", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
 

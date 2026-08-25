@@ -35,6 +35,8 @@ interface UsersFilterBarProps {
   onProgramChange: (value: string | null) => void;
   majorFilter: string;
   onMajorChange: (value: string | null) => void;
+  attentionFilter: "__all__" | "awaiting-term-placement" | "pending-verification";
+  onAttentionChange: (value: string | null) => void;
   searchTerm: string;
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
@@ -57,6 +59,8 @@ export function UsersFilterBar({
   onProgramChange,
   majorFilter,
   onMajorChange,
+  attentionFilter,
+  onAttentionChange,
   searchTerm,
   onSearchChange,
   onClearFilters,
@@ -76,6 +80,7 @@ export function UsersFilterBar({
     roleFilter !== "__all__" ||
     programFilter !== "__all__" ||
     majorFilter !== "__all__" ||
+    attentionFilter !== "__all__" ||
     searchTerm.trim().length > 0;
 
   return (
@@ -136,6 +141,23 @@ export function UsersFilterBar({
           </SelectContent>
         </Select>
       )}
+
+      <Select value={attentionFilter} onValueChange={onAttentionChange}>
+        <SelectTrigger aria-label="Filter attention state" className="w-full md:w-[220px]">
+          <SelectValue>
+            {attentionFilter === "awaiting-term-placement"
+              ? "Awaiting Term Placement"
+              : attentionFilter === "pending-verification"
+                ? "Pending Verification"
+                : "All Attention States"}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__all__">All Attention States</SelectItem>
+          <SelectItem value="awaiting-term-placement">Awaiting Term Placement</SelectItem>
+          <SelectItem value="pending-verification">Pending Verification</SelectItem>
+        </SelectContent>
+      </Select>
 
       <Select value={sort} onValueChange={onSortChange}>
         <SelectTrigger aria-label="Sort users" className="w-full md:w-[160px]">

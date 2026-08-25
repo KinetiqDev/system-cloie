@@ -75,6 +75,14 @@ export function SecretaryUsersList({
   const handleToggleActive = (userId: string, currentActive: boolean) => {
     toggleActive(userId, currentActive, handleUserUpdated);
   };
+  const handleAttentionChange = (value: string | null) => {
+    const nextAttention = value === "__all__" ? undefined : value;
+    navigateWithQuery({
+      state: nextAttention === "awaiting-term-placement" ? nextAttention : undefined,
+      verification: nextAttention === "pending-verification" ? "pending" : undefined,
+      page: 1,
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -123,6 +131,14 @@ export function SecretaryUsersList({
         onMajorChange={(value) =>
           navigateWithQuery({ major: value && value !== "__all__" ? value : undefined, page: 1 })
         }
+        attentionFilter={
+          query.state === "awaiting-term-placement"
+            ? "awaiting-term-placement"
+            : query.verification === "pending"
+              ? "pending-verification"
+              : "__all__"
+        }
+        onAttentionChange={handleAttentionChange}
         searchTerm={searchDraft}
         onSearchChange={setSearchDraft}
         onClearFilters={() =>
@@ -131,6 +147,8 @@ export function SecretaryUsersList({
             program: undefined,
             major: undefined,
             q: undefined,
+            state: undefined,
+            verification: undefined,
             page: 1,
           })
         }

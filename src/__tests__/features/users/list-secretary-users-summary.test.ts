@@ -10,6 +10,7 @@ vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     user: { count: vi.fn(), findMany: vi.fn() },
     program: { findMany: vi.fn() },
+    academicTermInstance: { findFirst: vi.fn() },
   },
 }));
 
@@ -192,6 +193,61 @@ describe("listSecretaryUsersSummary", () => {
       expect.objectContaining({
         orderBy: [{ name: "desc" }, { id: "asc" }],
         select: expect.objectContaining({ name: true }),
+      })
+    );
+  });
+
+  it("filters Students awaiting placement in the active Academic Period", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "period-1" } as never);
+
+    await listSecretaryUsersSummary({
+      page: 1,
+      state: "awaiting-term-placement",
+      sort: "name",
+      direction: "asc",
+    });
+    expect(prisma.academicTermInstance.findFirst).toHaveBeenCalledWith({
+      where: { status: "ACTIVE", school_year: { is_active: true } },
+      select: { id: true },
+    });
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            { is_active: true },
+            { roles: { some: { role: SystemRole.STUDENT } } },
+            { student_profile: { isNot: null } },
+            { enrollments: { none: { term_instance_id: "period-1", is_active: true } } },
+          ],
+        },
+      })
+    );
+  });
+
+  it("filters external accounts pending verification", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+
+    await listSecretaryUsersSummary({
+      page: 1,
+      verification: "pending",
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            {
+              OR: [
+                { alumni_profile: { verification_status: "PENDING" } },
+                { industry_partner_profile: { verification_status: "PENDING" } },
+              ],
+            },
+          ],
+        },
       })
     );
   });

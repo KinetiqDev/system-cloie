@@ -19,6 +19,7 @@ export function toAssignmentFiltersState(state: CourseAssignmentListUrlState): {
   section: StudentSection | null;
   isActive: boolean | null;
   courseScope: CourseScope | null;
+  hasActiveRosterMembers?: boolean;
   searchQuery: string;
 } {
   return {
@@ -31,6 +32,7 @@ export function toAssignmentFiltersState(state: CourseAssignmentListUrlState): {
     isActive: state.isActiveMode === "all" ? null : (state.filters.isActive ?? null),
     courseScope: state.filters.courseScope ?? null,
     searchQuery: state.filters.q ?? "",
+    hasActiveRosterMembers: state.filters.hasActiveRosterMembers,
   };
 }
 
@@ -48,6 +50,7 @@ const queryKeys = [
   "section",
   "courseScope",
   "isActive",
+  "roster",
   "q",
 ] as const;
 
@@ -128,6 +131,7 @@ export function parseCourseAssignmentListState(
   const isActive = parseBoolean(rawSearchParams.isActive);
   const isActiveCandidate = firstNonEmptyValue(rawSearchParams.isActive);
   const q = parseQuery(rawSearchParams.q);
+  const roster = firstNonEmptyValue(rawSearchParams.roster);
   const effectiveCourseScope = effectiveCourseScopeForRole(role, courseScope);
 
   const filters: ListCourseAssignmentsFilter = {
@@ -140,6 +144,7 @@ export function parseCourseAssignmentListState(
     ...(effectiveCourseScope !== undefined && { courseScope: effectiveCourseScope }),
     ...(isActive !== undefined && { isActive }),
     ...(q !== undefined && { q }),
+    ...(isAllProgramLikeRole(role) && roster === "empty" && { hasActiveRosterMembers: false }),
   };
 
   if (isAllProgramLikeRole(role) && isActiveCandidate === "all") {
@@ -176,6 +181,9 @@ export function serializeCourseAssignmentListState(
     params.set("isActive", String(filters.isActive));
   }
   if (filters.q) params.set("q", filters.q);
+  if (isAllProgramLikeRole(role) && filters.hasActiveRosterMembers === false) {
+    params.set("roster", "empty");
+  }
 
   return params;
 }

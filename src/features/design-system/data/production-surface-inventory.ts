@@ -2152,6 +2152,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/secretary/components/secretary-dashboard.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "feature_component",
+  },
+  {
     path: "src/features/analytics/components/anonymized-response-cards.tsx",
     disposition: "task",
     taskId: 10,

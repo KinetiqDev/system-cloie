@@ -44,6 +44,22 @@ describe("course assignment list URL state", () => {
     expect(toCourseAssignmentListOptions(state)).toEqual({ page: 2 });
   });
 
+  it("round-trips the Secretary empty-roster attention filter", () => {
+    const state = parseCourseAssignmentListState(
+      { termInstanceId: TERM_ID, roster: "empty" },
+      "all-program"
+    );
+
+    expect(state.filters).toMatchObject({
+      termInstanceId: TERM_ID,
+      isActive: true,
+      hasActiveRosterMembers: false,
+    });
+    expect(serializeCourseAssignmentListState(state, "all-program").toString()).toBe(
+      `termInstanceId=${TERM_ID}&roster=empty`
+    );
+  });
+
   it("uses the role default and removes Program Head program scope from URL input", () => {
     const state = parseCourseAssignmentListState(
       {
