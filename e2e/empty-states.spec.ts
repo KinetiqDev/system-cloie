@@ -29,9 +29,12 @@ test("empty states differentiate the reason", async ({ page }) => {
   await page.getByPlaceholder(/Course, title, evaluation or faculty/).fill("");
   await page.getByLabel("Completion").selectOption("zero");
   await page.getByRole("button", { name: "Apply filters" }).click();
-  await expect(page.getByText("GESTECH Post-Term CILO Evaluation")).toBeVisible();
-  await expect(page.getByText("No responses yet")).toBeVisible();
-  await page.getByRole("link", { name: "GESTECH Post-Term CILO Evaluation" }).click();
+  const emptyEvaluationRow = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("link", { name: "GESTECH Post-Term CILO Evaluation" }) });
+  await expect(emptyEvaluationRow).toBeVisible();
+  await expect(emptyEvaluationRow.getByText("No responses yet")).toBeVisible();
+  await emptyEvaluationRow.getByRole("link", { name: "GESTECH Post-Term CILO Evaluation" }).click();
   await expect(
     page.getByText("Evaluations exist, but no responses have been submitted.")
   ).toBeVisible();
