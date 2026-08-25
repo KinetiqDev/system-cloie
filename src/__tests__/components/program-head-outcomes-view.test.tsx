@@ -196,10 +196,10 @@ describe("ProgramHeadOutcomesView", () => {
     );
   });
 
-  it("shows the ranking chart insight and exact-value alternative", () => {
+  it("shows the ranking chart insight and exact-value alternative", async () => {
     renderView(outcomeDTO());
 
-    expect(screen.getByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
+    expect(await screen.findByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
     expect(screen.getByText(/Highest mean: GO-1 \(4.33\)/)).toBeInTheDocument();
     expect(screen.getByText("View exact values")).toBeInTheDocument();
   });

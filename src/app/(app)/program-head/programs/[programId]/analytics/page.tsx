@@ -28,34 +28,43 @@ import {
 
 export const metadata = { title: "Analytics | Program Head | System CLOIE" };
 
+type ResolvedTabContent = { children: ReactNode; ploCode?: string };
+
 async function withData<T>(
   programId: string,
   filters: AnalyticsFilterState,
   read: (id: string, state: AnalyticsFilterState) => Promise<T | null>,
   render: (data: T) => ReactNode
-): Promise<ReactNode> {
+): Promise<ResolvedTabContent> {
   const data = await read(programId, filters);
   if (!data) notFound();
-  return render(data);
+  return { children: render(data) };
 }
 
-async function ProgramHeadAnalyticsTabContent({
-  programId,
-  filters,
-}: {
-  programId: string;
-  filters: AnalyticsFilterState;
-}) {
+async function resolveProgramHeadAnalyticsTabContent(
+  programId: string,
+  filters: AnalyticsFilterState
+): Promise<ResolvedTabContent> {
   switch (filters.tab) {
-    case "outcomes":
-      return withData(programId, filters, getProgramHeadOutcomes, (data) => (
-        <ProgramHeadOutcomesView
-          programId={programId}
-          data={data}
-          resetHref={buildAnalyticsUrl(programId, { tab: "outcomes" })}
-          selectedPloId={filters.ploId}
-        />
-      ));
+    case "outcomes": {
+      const data = await getProgramHeadOutcomes(programId, filters);
+      if (!data) notFound();
+      const ploCode = filters.ploId
+        ? (data.outcomes.find((outcome) => outcome.ploId === filters.ploId)?.code ??
+          data.programWideOutcomes.find((outcome) => outcome.ploId === filters.ploId)?.code)
+        : undefined;
+      return {
+        ploCode,
+        children: (
+          <ProgramHeadOutcomesView
+            programId={programId}
+            data={data}
+            resetHref={buildAnalyticsUrl(programId, { tab: "outcomes" })}
+            selectedPloId={filters.ploId}
+          />
+        ),
+      };
+    }
     case "stakeholders":
       return withData(programId, filters, getProgramHeadStakeholders, (data) => (
         <ProgramHeadStakeholderView
@@ -89,9 +98,11 @@ async function ProgramHeadAnalyticsTabContent({
     case "ai": {
       const frame = await getProgramHeadAnalyticsFrame(programId, filters);
       if (!frame) notFound();
-      return (
-        <ProgramHeadAIInsightsView programId={programId} filters={filters} scope={frame.scope} />
-      );
+      return {
+        children: (
+          <ProgramHeadAIInsightsView programId={programId} filters={filters} scope={frame.scope} />
+        ),
+      };
     }
   }
 }
@@ -158,7 +169,10 @@ export default async function SelectedProgramAnalyticsPage({
     ...filters,
     tab: rawTab === undefined ? "outcomes" : filters.tab,
   };
-  const frame = await getProgramHeadAnalyticsFrame(programId, effectiveFilters);
+  const [frame, tab] = await Promise.all([
+    getProgramHeadAnalyticsFrame(programId, effectiveFilters),
+    resolveProgramHeadAnalyticsTabContent(programId, effectiveFilters),
+  ]);
   if (!frame) notFound();
 
   return (
@@ -166,9 +180,10 @@ export default async function SelectedProgramAnalyticsPage({
       programId={programId}
       filters={effectiveFilters}
       scope={frame.scope}
+      ploCode={tab.ploCode}
       periodOptions={frame.periodOptions}
     >
-      <ProgramHeadAnalyticsTabContent programId={programId} filters={effectiveFilters} />
+      {tab.children}
     </ProgramHeadAnalyticsShell>
   );
 }

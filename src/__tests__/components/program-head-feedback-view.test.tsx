@@ -125,10 +125,10 @@ describe("ProgramHeadFeedbackView", () => {
     expect(screen.getByText("No submitted responses")).toBeInTheDocument();
   });
 
-  it("shows source and prompt counts plus exact token values", () => {
+  it("shows source and prompt counts plus exact token values", async () => {
     renderView(feedbackDTO());
 
-    expect(screen.getByText("Qualitative Feedback")).toBeInTheDocument();
+    expect(await screen.findByText("Qualitative Feedback")).toBeInTheDocument();
     expect(screen.getByText("3 qualitative responses")).toBeInTheDocument();
     expect(screen.getByText("clarity")).toBeInTheDocument();
     expect(screen.getByText("Adjustable word count")).toBeInTheDocument();
