@@ -53,5 +53,9 @@ export function runCheck(label, cmd, args) {
     console.error(`[${label}] Failed to run ${cmd}: ${result.error.message}`);
     process.exit(2);
   }
-  process.exit(result.status ?? 0);
+  if (result.signal) {
+    console.error(`[${label}] ${cmd} terminated with signal ${result.signal}`);
+    process.exit(1);
+  }
+  process.exit(result.status ?? 1);
 }
