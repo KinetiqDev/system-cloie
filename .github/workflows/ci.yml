@@ -50,14 +50,14 @@ jobs:
       - name: Check formatting (Prettier --check, never --write)
         run: pnpm format:check:changed
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
       - name: Lint
         run: pnpm lint
 
       - name: Lint changed production code (no new warnings)
         run: pnpm lint:changed
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
 
       - name: Test
         run: pnpm test

@@ -44,7 +44,19 @@ export function getChangedFiles(baseRef) {
   collect("git diff --cached --name-only --diff-filter=ACMRT", working);
   collect("git ls-files --others --exclude-standard", working);
 
-  return [...new Set([...committed, ...working])];
+  const combined = [...new Set([...committed, ...working])];
+  if (combined.length === 0) {
+    // Push to main: no PR base, no working tree changes – diff against previous commit.
+    try {
+      const out = run("git diff --name-only --diff-filter=ACMRT HEAD~1...HEAD");
+      if (out)
+        return out
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
+    } catch {}
+  }
+  return combined;
 }
 
 export function runCheck(label, cmd, args) {
