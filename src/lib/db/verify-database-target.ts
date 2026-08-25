@@ -14,6 +14,7 @@ const DISPOSABLE_HOST_ALLOWLIST: Record<string, true> = {
   localhost: true,
   "127.0.0.1": true,
   "::1": true,
+  "[::1]": true,
   postgres: true,
   db: true,
   "0.0.0.0": true,
@@ -22,7 +23,10 @@ const DISPOSABLE_HOST_ALLOWLIST: Record<string, true> = {
 
 function parseHostname(value: string): string | null {
   try {
-    return new URL(value).hostname;
+    const raw = new URL(value).hostname;
+    // WHATWG URL returns "[::1]" with brackets for IPv6 literals; normalize to "::1" as well as keep bracket form in allowlist.
+    if (raw.startsWith("[") && raw.endsWith("]")) return raw.slice(1, -1);
+    return raw;
   } catch {
     return null;
   }

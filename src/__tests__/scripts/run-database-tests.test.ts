@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildVitestArgs } from "../../../scripts/run-database-tests";
 
 describe("run-database-tests helpers (539)", () => {

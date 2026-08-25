@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { loadEnvConfig } from "@next/env";
-import { discoverDatabaseSuites, getDatabaseSuiteCompleteness } from "./lib/database-suite-discovery";
+import { getDatabaseSuiteCompleteness } from "./lib/database-suite-discovery";
 
 loadEnvConfig(process.cwd());
 

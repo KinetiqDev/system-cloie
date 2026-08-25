@@ -32,6 +32,7 @@
     "test:db": "tsx scripts/run-database-tests.ts",
     "verify:database-target": "tsx scripts/verify-database-target.ts",
     "verify:database-suites": "tsx scripts/verify-database-suite-completeness.ts",
+    "test:e2e": "playwright test",
     "db:push": "prisma db push --schema prisma",
     "db:seed": "prisma generate --schema prisma && prisma db seed",
     "db:studio": "prisma studio --schema prisma",

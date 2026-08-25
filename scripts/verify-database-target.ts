@@ -4,6 +4,16 @@ import { verifyDisposableDatabaseTarget } from "../src/lib/db/verify-database-ta
 
 loadEnvConfig(process.cwd());
 
+function redactDatabaseUrl(url: string | undefined): string {
+  if (!url) return "<unset>";
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.hostname}${parsed.port ? `:${parsed.port}` : ""}${parsed.pathname}`;
+  } catch {
+    return "<invalid-url>";
+  }
+}
+
 function main(): void {
   const result = verifyDisposableDatabaseTarget(process.env);
   if (!result.valid) {
@@ -12,7 +22,7 @@ function main(): void {
     process.exitCode = 1;
     return;
   }
-  console.log("Disposable database target OK:", process.env.DATABASE_URL ?? "<unset>");
+  console.log("Disposable database target OK:", redactDatabaseUrl(process.env.DATABASE_URL));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

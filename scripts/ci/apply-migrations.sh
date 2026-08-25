@@ -24,7 +24,7 @@ fi
 # Extract hostname from DATABASE_URL for disposable host check (best-effort bash).
 DB_HOST="$(node -e 'try{console.log(new URL(process.env.DATABASE_URL).hostname)}catch{console.log("")}' 2>/dev/null || echo "")"
 case "$DB_HOST" in
-  localhost|127.0.0.1|::1|postgres|db|0.0.0.0|host.docker.internal) ;;
+  localhost|127.0.0.1|::1|\[::1\]|postgres|db|0.0.0.0|host.docker.internal) ;;
   *)
     echo "DATABASE_URL must target a disposable database (allowed hosts: localhost, 127.0.0.1, ::1, postgres, db, 0.0.0.0, host.docker.internal); got \"$DB_HOST\"." >&2
     exit 2
