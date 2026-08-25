@@ -41,7 +41,7 @@ import {
   PowerOff,
   XCircle,
 } from "lucide-react";
-import { formatDateRange } from "@/lib/utils/date-format";
+import { formatDate, formatDateRange } from "@/lib/utils/date-format";
 import { SEMESTER_OPTIONS, getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
 import {
   activateSchoolYearAction,
@@ -107,7 +107,8 @@ export function CalendarStructureView({ schoolYears }: CalendarStructureViewProp
   async function runAction(
     yearId: string,
     key: string,
-    action: () => Promise<{ success: boolean; error?: string }>
+    action: () => Promise<{ success: boolean; error?: string }>,
+    successMessage?: string
   ) {
     setPendingAction(key);
     setActionError(null);
@@ -115,6 +116,9 @@ export function CalendarStructureView({ schoolYears }: CalendarStructureViewProp
       const result = await action();
       if (result.success) {
         router.refresh();
+        if (successMessage) {
+          showToast(successMessage, "success");
+        }
       } else {
         setActionError({ yearId, message: result.error ?? "Action failed" });
         showToast(result.error ?? "Action failed", "error");
@@ -144,8 +148,11 @@ export function CalendarStructureView({ schoolYears }: CalendarStructureViewProp
     if (action.type === "archive") {
       const formData = new FormData();
       formData.append("id", action.schoolYearId);
-      void runAction(action.schoolYearId, `archive:${action.schoolYearId}`, () =>
-        archiveSchoolYearAction(formData)
+      void runAction(
+        action.schoolYearId,
+        `archive:${action.schoolYearId}`,
+        () => archiveSchoolYearAction(formData),
+        `${action.code} archived`
       );
       return;
     }
@@ -318,13 +325,21 @@ function SchoolYearCard({
   return (
     <div className="bg-card overflow-hidden rounded-lg border">
       <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-semibold">{year.code}</span>
-          {year.isActive && !archived && <Badge variant="success">Active</Badge>}
-          {archived && <Badge variant="secondary">Archived</Badge>}
-          <span className="text-muted-foreground text-sm">
-            {formatDateRange(year.startDate, year.endDate)}
-          </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-lg font-semibold">{year.code}</span>
+            {year.isActive && !archived && <Badge variant="success">Active</Badge>}
+            {archived && <Badge variant="secondary">Archived</Badge>}
+            <span className="text-muted-foreground text-sm">
+              {formatDateRange(year.startDate, year.endDate)}
+            </span>
+          </div>
+          {archived && (year.archivedAt || year.archivedBy) && (
+            <p className="text-muted-foreground text-xs">
+              {year.archivedAt ? `Archived ${formatDate(year.archivedAt)}` : "Archived"}
+              {year.archivedBy ? ` · by ${year.archivedBy.name}` : ""}
+            </p>
+          )}
         </div>
 
         <SchoolYearHeaderActions

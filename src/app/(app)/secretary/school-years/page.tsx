@@ -10,14 +10,33 @@ export const metadata: Metadata = {
   description: "Manage school years and academic terms",
 };
 
-export default async function SchoolYearsPage() {
+interface SchoolYearsPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function SchoolYearsPage({
+  searchParams,
+}: SchoolYearsPageProps) {
   const session = await resolveAuthSession();
 
   if (!session || !session.roles.includes(ROLES.SECRETARY)) {
     redirect("/dashboard");
   }
 
-  const schoolYears = await listSchoolYears({ includeArchived: false });
+  const [{ items: activeYears }, { items: archivedYears }, params] =
+    await Promise.all([
+      listSchoolYears({ includeArchived: false }),
+      listSchoolYears({ onlyArchived: true }),
+      searchParams,
+    ]);
 
-  return <SchoolYearsClientPage initialData={schoolYears.items} />;
+  const initialTab = params.tab === "archived" ? "archived" : "active";
+
+  return (
+    <SchoolYearsClientPage
+      initialActive={activeYears}
+      initialArchived={archivedYears}
+      initialTab={initialTab}
+    />
+  );
 }

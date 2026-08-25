@@ -18,11 +18,16 @@ export async function listSchoolYears(
 ): Promise<ListSchoolYearsResult> {
   const {
     includeArchived = false,
+    onlyArchived = false,
     page = 1,
     pageSize = DEFAULT_TABLE_PAGE_SIZE,
   } = filter;
 
-  const where = includeArchived ? {} : { is_archived: false };
+  const where = onlyArchived
+    ? { is_archived: true }
+    : includeArchived
+      ? {}
+      : { is_archived: false };
 
   const [items, total] = await Promise.all([
     prisma.schoolYear.findMany({

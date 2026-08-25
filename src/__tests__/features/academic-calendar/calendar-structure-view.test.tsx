@@ -7,12 +7,14 @@ const {
   deactivateSchoolYearActionMock,
   setActiveSemesterActionMock,
   transitionPeriodStatusActionMock,
+  showToastMock,
 } = vi.hoisted(() => ({
   activateSchoolYearActionMock: vi.fn(),
   archiveSchoolYearActionMock: vi.fn(),
   deactivateSchoolYearActionMock: vi.fn(),
   setActiveSemesterActionMock: vi.fn(),
   transitionPeriodStatusActionMock: vi.fn(),
+  showToastMock: vi.fn(),
 }));
 
 const { refreshMock } = vi.hoisted(() => ({ refreshMock: vi.fn() }));
@@ -30,7 +32,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/components/ui/toast", () => ({
-  showToast: vi.fn(),
+  showToast: showToastMock,
 }));
 
 import { CalendarStructureView } from "@/features/academic-calendar/components/calendar-structure-view";
@@ -131,6 +133,49 @@ describe("CalendarStructureView", () => {
     expect(screen.queryByRole("button", { name: /Make Active/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Complete/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Cancel/ })).not.toBeInTheDocument();
+  });
+
+  it("shows the archive metadata line on an archived School Year card", () => {
+    render(
+      <CalendarStructureView
+        schoolYears={[
+          schoolYear({
+            isArchived: true,
+            archivedAt: new Date("2025-03-18"),
+            archivedBy: { id: "user-1", name: "Maria Santos" },
+          }),
+        ]}
+      />
+    );
+
+    expect(
+      screen.getByText(/Archived Mar 18, 2025 · by Maria Santos/)
+    ).toBeInTheDocument();
+  });
+
+  it("omits the archive metadata line when no audit record exists", () => {
+    render(<CalendarStructureView schoolYears={[schoolYear({ isArchived: true })]} />);
+
+    expect(screen.queryByText(/Archived .* by/)).not.toBeInTheDocument();
+  });
+
+  it("shows a success toast when a School Year is archived", async () => {
+    archiveSchoolYearActionMock.mockResolvedValue({ success: true });
+    render(
+      <CalendarStructureView
+        schoolYears={[
+          schoolYear({ code: "2024-2025", isActive: false, activeSemester: null }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Archive/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Archive School Year" }));
+
+    await waitFor(() => {
+      expect(showToastMock).toHaveBeenCalledWith("2024-2025 archived", "success");
+    });
+    expect(refreshMock).toHaveBeenCalled();
   });
 
   it("shows per-status term actions: Make Active only on hierarchy-eligible PLANNED, Complete/Cancel on ACTIVE, none on terminal", () => {
