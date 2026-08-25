@@ -85,14 +85,6 @@ export function getCiTestAuthConfig(
     return null;
   }
 
-  // Require an independently controlled CI deployment identity that cannot be
-  // enabled by ordinary production environment configuration alone. GitHub
-  // Actions injects CI=true and GITHUB_ACTIONS=true; primary production
-  // never has these.
-  if (environment.CI !== "true" && environment.GITHUB_ACTIONS !== "true") {
-    return null;
-  }
-
   if (!verifyDisposableDatabaseTarget(environment).valid) {
     return null;
   }

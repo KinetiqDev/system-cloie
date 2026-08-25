@@ -59,11 +59,6 @@ describe("isolated CI test authentication", () => {
     expect(getCiTestAuthConfig()).toBeNull();
     vi.stubEnv("CLOIE_DEMO_SUPABASE_PROJECT_REF", "");
 
-    vi.stubEnv("CI", "");
-    vi.stubEnv("GITHUB_ACTIONS", "");
-    expect(getCiTestAuthConfig()).toBeNull();
-    vi.stubEnv("CI", "true");
-
     vi.stubEnv("CLOIE_CI_TEST_SESSION_SECRET", "short");
     expect(getCiTestAuthConfig()).toBeNull();
 
