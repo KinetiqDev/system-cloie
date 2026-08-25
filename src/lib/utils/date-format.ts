@@ -6,6 +6,18 @@ import {
 } from "@/lib/constants/academic-period";
 
 /**
+ * Format a single date as a readable string.
+ * Example: "Mar 18, 2025"
+ */
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+/**
  * Format a date range as a readable string.
  * Example: "Jan 1, 2025 – Dec 31, 2025"
  */

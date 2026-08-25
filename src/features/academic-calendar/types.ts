@@ -104,7 +104,10 @@ export interface SetActiveTermInput {
  * Filter options for listing School Years.
  */
 export interface ListSchoolYearsFilter {
+  /** Include both archived and active school years. */
   includeArchived?: boolean;
+  /** Only include archived school years. */
+  onlyArchived?: boolean;
   page?: number;
   pageSize?: number;
 }
