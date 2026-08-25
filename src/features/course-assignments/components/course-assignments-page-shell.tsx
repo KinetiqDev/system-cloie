@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,6 +18,7 @@ import {
   courseAssignmentListPath,
   type CourseAssignmentListRole,
 } from "../course-assignment-list-state";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 
 interface ProgramOption {
   id: string;
@@ -80,32 +81,53 @@ export function CourseAssignmentsPageShell({
 
   const refreshAssignments = () => router.refresh();
 
-  const navigateWithState = (nextFilters: AssignmentFiltersState, nextPage: number) => {
-    const nextState = {
-      page: nextPage + 1,
-      filters: {
-        ...(nextFilters.termInstanceId && { termInstanceId: nextFilters.termInstanceId }),
-        ...(nextFilters.courseId && { courseId: nextFilters.courseId }),
-        ...(nextFilters.facultyId && { facultyId: nextFilters.facultyId }),
-        ...(nextFilters.programId && { programId: nextFilters.programId }),
-        ...(nextFilters.yearLevel && { yearLevel: nextFilters.yearLevel }),
-        ...(nextFilters.section && { section: nextFilters.section }),
-        ...(nextFilters.isActive !== null && { isActive: nextFilters.isActive }),
-        ...(nextFilters.courseScope && { courseScope: nextFilters.courseScope }),
-        ...(nextFilters.hasActiveRosterMembers === false && { hasActiveRosterMembers: false }),
-        ...(nextFilters.searchQuery.trim() && { q: nextFilters.searchQuery.trim() }),
-      },
-      ...((role === "all-program" || role === "general-education") && nextFilters.isActive === null
-        ? { isActiveMode: "all" as const }
-        : {}),
-    };
-    router.push(courseAssignmentListPath(pathname, nextState, role));
-  };
+  const navigateWithState = useCallback(
+    (
+      nextFilters: AssignmentFiltersState,
+      nextPage: number,
+      navigation: "push" | "replace" = "push"
+    ) => {
+      const nextState = {
+        page: nextPage + 1,
+        filters: {
+          ...(nextFilters.termInstanceId && { termInstanceId: nextFilters.termInstanceId }),
+          ...(nextFilters.courseId && { courseId: nextFilters.courseId }),
+          ...(nextFilters.facultyId && { facultyId: nextFilters.facultyId }),
+          ...(nextFilters.programId && { programId: nextFilters.programId }),
+          ...(nextFilters.yearLevel && { yearLevel: nextFilters.yearLevel }),
+          ...(nextFilters.section && { section: nextFilters.section }),
+          ...(nextFilters.isActive !== null && { isActive: nextFilters.isActive }),
+          ...(nextFilters.courseScope && { courseScope: nextFilters.courseScope }),
+          ...(nextFilters.hasActiveRosterMembers === false && {
+            hasActiveRosterMembers: false,
+          }),
+          ...(nextFilters.searchQuery.trim() && { q: nextFilters.searchQuery.trim() }),
+        },
+        ...(role === "program-head" && !nextFilters.termInstanceId
+          ? { termInstanceMode: "all" as const }
+          : {}),
+        ...((role === "all-program" || role === "general-education") &&
+        nextFilters.isActive === null
+          ? { isActiveMode: "all" as const }
+          : {}),
+      };
+      router[navigation](courseAssignmentListPath(pathname, nextState, role));
+    },
+    [pathname, role, router]
+  );
 
-  const handleFiltersChange = (next: AssignmentFiltersState) => {
-    setFilters(next);
-    navigateWithState(next, 0);
-  };
+  const handleFiltersChange = useCallback(
+    (next: AssignmentFiltersState, navigation: "push" | "replace" = "push") => {
+      setFilters(next);
+      navigateWithState(next, 0, navigation);
+    },
+    [navigateWithState]
+  );
+
+  const selectedTerm = termInstances.find((term) => term.id === filters.termInstanceId);
+  const periodLabel = selectedTerm
+    ? formatTermInstanceLabel(selectedTerm.schoolYearCode, selectedTerm.semester, selectedTerm.term)
+    : "All Academic Periods";
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,7 +155,15 @@ export function CourseAssignmentsPageShell({
         termInstances={termInstances}
         showProgramFilter={mode === "all-program" || mode === "general-education"}
         hideCourseScopeFilter={mode === "general-education"}
+        defaultTermInstanceId={activeTermInstanceId}
       />
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <p className="font-medium">
+          {total} {total === 1 ? "assignment" : "assignments"}
+        </p>
+        <p className="text-muted-foreground">{periodLabel}</p>
+      </div>
 
       {loadError && (
         <Alert variant="destructive">

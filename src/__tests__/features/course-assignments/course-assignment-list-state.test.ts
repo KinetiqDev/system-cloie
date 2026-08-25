@@ -76,6 +76,32 @@ describe("course assignment list URL state", () => {
     );
   });
 
+  it("uses the active academic period as the Program Head default and preserves explicit all periods", () => {
+    const defaultState = parseCourseAssignmentListState({}, "program-head", TERM_ID);
+    expect(defaultState).toEqual({ page: 1, filters: { termInstanceId: TERM_ID } });
+    expect(serializeCourseAssignmentListState(defaultState, "program-head").toString()).toBe(
+      `termInstanceId=${TERM_ID}`
+    );
+
+    const allPeriods = parseCourseAssignmentListState(
+      { termInstanceId: "all" },
+      "program-head",
+      TERM_ID
+    );
+    expect(allPeriods).toEqual({ page: 1, filters: {}, termInstanceMode: "all" });
+    expect(serializeCourseAssignmentListState(allPeriods, "program-head").toString()).toBe(
+      "termInstanceId=all"
+    );
+  });
+
+  it("uses explicit all periods when no academic period is active", () => {
+    const state = parseCourseAssignmentListState({}, "program-head", null);
+    expect(state).toEqual({ page: 1, filters: {}, termInstanceMode: "all" });
+    expect(serializeCourseAssignmentListState(state, "program-head").toString()).toBe(
+      "termInstanceId=all"
+    );
+  });
+
   it("preserves an explicit all-statuses selection for all-program routes", () => {
     const state = parseCourseAssignmentListState({ isActive: "all" }, "all-program");
 

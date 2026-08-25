@@ -9,6 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -32,6 +40,7 @@ import type { AssignableCourse, FacultySearchResult } from "@/features/course-as
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface Program {
   id: string;
@@ -199,9 +208,7 @@ function CourseStep({
           items={courses}
           filter={(course, query) =>
             !query ||
-            [course.code, course.title].some((v) =>
-              v.toLowerCase().includes(query.toLowerCase())
-            )
+            [course.code, course.title].some((v) => v.toLowerCase().includes(query.toLowerCase()))
           }
           itemToStringLabel={(c) => `${c.code} — ${c.title}`}
           itemToStringValue={(c) => c.id}
@@ -291,8 +298,8 @@ function ConfirmStep({
       <Alert variant="warning">
         <AlertTitle>Cross-Program Assignment</AlertTitle>
         <AlertDescription>
-          {selectedFaculty?.name} is not affiliated with{" "}
-          {selectedProgramName}. Are you sure you want to proceed?
+          {selectedFaculty?.name} is not affiliated with {selectedProgramName}. Are you sure you
+          want to proceed?
         </AlertDescription>
       </Alert>
       <AssignmentSummaryBlock title="Assignment Summary">
@@ -339,6 +346,7 @@ export function CourseAssignmentFormDialog({
   onSuccess,
   selectedProgramId,
 }: CourseAssignmentFormDialogProps) {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [step, setStep] = useState<Step>(defaultTermInstanceId ? "course" : "term");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -533,15 +541,10 @@ export function CourseAssignmentFormDialog({
     { key: "confirm", label: "Confirm" },
   ];
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Assign Faculty to Course</DialogTitle>
-        </DialogHeader>
-
-        <WizardStepper steps={STEPS} currentStep={step} />
-
+  const stepContent = (
+    <>
+      <WizardStepper steps={STEPS} currentStep={step} />
+      <div className="min-h-0 flex-1 overflow-y-auto py-1">
         <AssignmentStepContent
           step={step}
           termInstances={termInstances}
@@ -566,39 +569,60 @@ export function CourseAssignmentFormDialog({
           showCrossProgramWarning={showCrossProgramWarning}
           selectedCourse={selectedCourse}
         />
+      </div>
+    </>
+  );
+  const footer = (
+    <div className="flex w-full items-center justify-between gap-2">
+      <div>
+        {step !== "term" && (
+          <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
+            Back
+          </Button>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        {step === "confirm" ? (
+          <Button loading={isSubmitting} onClick={handleSubmit}>
+            Confirm Assignment
+          </Button>
+        ) : (
+          <Button loading={isSubmitting} onClick={handleNext} disabled={!canProceed()}>
+            Next
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
-        <DialogFooter className="flex justify-between">
-          <div>
-            {step !== "term" && step !== "confirm" && (
-              <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
-                Back
-              </Button>
-            )}
-            {step === "confirm" && (
-              <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
-                Back
-              </Button>
-            )}
+  if (!isDesktop) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>
+        <DrawerContent className="flex max-h-[min(92dvh,48rem)] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <DrawerHeader className="px-0 pt-4 text-left">
+            <DrawerTitle>Assign Faculty to Course</DrawerTitle>
+            <DrawerDescription>Complete the class assignment details.</DrawerDescription>
+          </DrawerHeader>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden py-3">
+            {stepContent}
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            {step === "confirm" ? (
-              <Button loading={isSubmitting} onClick={handleSubmit}>
-                Confirm Assignment
-              </Button>
-            ) : (
-              <Button loading={isSubmitting} onClick={handleNext} disabled={!canProceed()}>
-                Next
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
+          <DrawerFooter className="px-0 pt-3">{footer}</DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>Assign Faculty to Course</DialogTitle>
+        </DialogHeader>
+        {stepContent}
+        <DialogFooter>{footer}</DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -16,13 +16,15 @@ export async function loadCourseAssignmentListPage({
   rawSearchParams,
   role,
   programId,
+  defaultTermInstanceId,
 }: {
   pathname: string;
   rawSearchParams: CourseAssignmentSearchParams;
   role: CourseAssignmentListRole;
   programId?: string;
+  defaultTermInstanceId?: string | null;
 }) {
-  const state = parseCourseAssignmentListState(rawSearchParams, role);
+  const state = parseCourseAssignmentListState(rawSearchParams, role, defaultTermInstanceId);
 
   if (!isCanonicalCourseAssignmentListState(rawSearchParams, state, role)) {
     redirect(courseAssignmentListPath(pathname, state, role));

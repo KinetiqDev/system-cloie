@@ -82,16 +82,16 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
         <DrawerTrigger
           render={
             <Button variant="outline" className="mt-4 w-full justify-between lg:hidden">
-              <span>Change scope</span>
+              <span>Filters</span>
               <span className="text-muted-foreground">
-                {activeCount > 0 ? `${activeCount} active` : "All evidence"}
+                {activeCount > 0 ? `${activeCount} active` : "All periods"}
               </span>
             </Button>
           }
         />
         <DrawerContent className="max-h-[88dvh]">
           <DrawerHeader className="text-left">
-            <DrawerTitle>Evidence scope</DrawerTitle>
+            <DrawerTitle>Analytics scope filters</DrawerTitle>
             <DrawerDescription>
               Choose the evidence sources and academic period to include.
             </DrawerDescription>
@@ -177,14 +177,14 @@ function FilterForm({
       ) : null}
       <div className={cn("flex items-end gap-2", drawer && "bg-background sticky bottom-0 pt-2")}>
         <Button type="submit" className={cn(drawer && "flex-1")}>
-          Apply scope
+          Apply filters
         </Button>
         {drawer && activeCount(filters) > 0 ? (
           <Link
             href={buildAnalyticsUrl(programId, { tab: filters.tab })}
             className={buttonVariants({ variant: "outline" })}
           >
-            Clear
+            Reset
           </Link>
         ) : null}
       </div>

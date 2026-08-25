@@ -23,6 +23,7 @@ interface TermInstancePickerProps {
   disabled?: boolean;
   showOnlyActive?: boolean;
   allowClear?: boolean;
+  allowAll?: boolean;
   id?: string;
 }
 
@@ -39,6 +40,7 @@ export function TermInstancePicker({
   disabled = false,
   showOnlyActive = false,
   allowClear = false,
+  allowAll = false,
   id,
 }: TermInstancePickerProps) {
   const generatedId = useId();
@@ -69,31 +71,28 @@ export function TermInstancePicker({
   return (
     <div className="space-y-2">
       {label && <Label htmlFor={pickerId}>{label}</Label>}
-      <Select
-        value={value}
-        onValueChange={(val) => onChange(val ?? "")}
-        disabled={disabled}
-      >
+      <Select value={value} onValueChange={(val) => onChange(val ?? "")} disabled={disabled}>
         <SelectTrigger id={pickerId} className="w-full">
           <SelectValue placeholder={placeholder}>
-            {value
-              ? (() => {
-                  const selected = sortedInstances.find((i) => i.id === value);
-                  return selected
-                    ? formatTermInstanceLabel(
-                        selected.schoolYearCode,
-                        selected.semester,
-                        selected.term
-                      )
-                    : null;
-                })()
-              : null}
+            {value === "all"
+              ? "All Academic Periods"
+              : value
+                ? (() => {
+                    const selected = sortedInstances.find((i) => i.id === value);
+                    return selected
+                      ? `${formatTermInstanceLabel(
+                          selected.schoolYearCode,
+                          selected.semester,
+                          selected.term
+                        )}${selected.status === "ACTIVE" ? " — Current" : ""}`
+                      : null;
+                  })()
+                : null}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {allowClear && (
-            <SelectItem value="">Clear selection</SelectItem>
-          )}
+          {allowAll && <SelectItem value="all">All Academic Periods</SelectItem>}
+          {allowClear && <SelectItem value="">Clear selection</SelectItem>}
           {sortedInstances.map((instance) => (
             <SelectItem key={instance.id} value={instance.id}>
               <span className="flex items-center gap-2">
@@ -103,11 +102,7 @@ export function TermInstancePicker({
                     <span className="sr-only">Active</span>
                   </span>
                 )}
-                {formatTermInstanceLabel(
-                  instance.schoolYearCode,
-                  instance.semester,
-                  instance.term
-                )}
+                {formatTermInstanceLabel(instance.schoolYearCode, instance.semester, instance.term)}
               </span>
             </SelectItem>
           ))}
@@ -131,11 +126,7 @@ interface SemesterTermPickerProps {
   disabled?: boolean;
 }
 
-export function SemesterTermPicker({
-  value,
-  onChange,
-  disabled = false,
-}: SemesterTermPickerProps) {
+export function SemesterTermPicker({ value, onChange, disabled = false }: SemesterTermPickerProps) {
   const isSummer = value.semester === AcademicSemester.SUMMER;
 
   function handleSemesterChange(next: string | null) {
@@ -200,11 +191,7 @@ export function SemesterTermPicker({
             )}
           </SelectContent>
         </Select>
-        {isSummer && (
-          <p className="text-muted-foreground text-xs">
-            Summer semester has no terms
-          </p>
-        )}
+        {isSummer && <p className="text-muted-foreground text-xs">Summer semester has no terms</p>}
       </div>
     </div>
   );
