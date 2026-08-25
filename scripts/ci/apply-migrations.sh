@@ -15,6 +15,22 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 2
 fi
 
+# Target safety: refuse hosted Supabase before any mutation.
+# Keep in sync with src/lib/db/verify-database-target.ts allowlist.
+if [[ "$DATABASE_URL" == *"supabase.co"* ]] || [[ "$DATABASE_URL" == *"pooler.supabase.com"* ]]; then
+  echo "Refusing to apply migrations against hosted Supabase target: DATABASE_URL looks like a hosted Supabase connection." >&2
+  exit 2
+fi
+# Extract hostname from DATABASE_URL for disposable host check (best-effort bash).
+DB_HOST="$(node -e 'try{console.log(new URL(process.env.DATABASE_URL).hostname)}catch{console.log("")}' 2>/dev/null || echo "")"
+case "$DB_HOST" in
+  localhost|127.0.0.1|::1|\[::1\]|postgres|db|0.0.0.0|host.docker.internal) ;;
+  *)
+    echo "DATABASE_URL must target a disposable database (allowed hosts: localhost, 127.0.0.1, ::1, postgres, db, 0.0.0.0, host.docker.internal); got \"$DB_HOST\"." >&2
+    exit 2
+    ;;
+esac
+
 # psql(1) accepts libpq connection strings directly; the array keeps the
 # connection string a single quoted argument.
 PSQL=(psql -v ON_ERROR_STOP=1 -q -d "$DATABASE_URL")
