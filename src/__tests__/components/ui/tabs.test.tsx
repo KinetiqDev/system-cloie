@@ -111,7 +111,7 @@ describe("Tabs", () => {
       );
       const trigger = screen.getByText("One");
       expect(trigger).toHaveClass("focus-visible:border-ring");
-      expect(trigger).toHaveClass("focus-visible:ring-ring/50");
+      expect(trigger).toHaveClass("focus-visible:ring-ring");
       expect(trigger).toHaveClass("focus-visible:ring-[3px]");
     });
   });
@@ -178,9 +178,7 @@ describe("Tabs", () => {
       expect(trigger).toHaveClass("group-data-[variant=pill]/tabs-list:rounded-full");
       expect(trigger).toHaveClass("group-data-[variant=pill]/tabs-list:min-h-11");
       expect(trigger).toHaveClass("group-data-[variant=pill]/tabs-list:bg-surface");
-      expect(trigger).toHaveClass(
-        "group-data-[variant=pill]/tabs-list:data-active:bg-primary"
-      );
+      expect(trigger).toHaveClass("group-data-[variant=pill]/tabs-list:data-active:bg-primary");
       expect(trigger).toHaveClass(
         "group-data-[variant=pill]/tabs-list:data-active:text-on-primary"
       );

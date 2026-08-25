@@ -12,10 +12,7 @@ describe("Spinner", () => {
 
   it("accepts a custom label for screen readers", () => {
     render(<Spinner label="Submitting form" />);
-    expect(screen.getByRole("status")).toHaveAttribute(
-      "aria-label",
-      "Submitting form"
-    );
+    expect(screen.getByRole("status")).toHaveAttribute("aria-label", "Submitting form");
   });
 
   it("applies size classes for each size variant", () => {
@@ -32,6 +29,7 @@ describe("Spinner", () => {
   it("applies the animate-spin class", () => {
     render(<Spinner />);
     expect(screen.getByRole("status")).toHaveClass("animate-spin");
+    expect(screen.getByRole("status")).toHaveClass("motion-reduce:animate-none");
   });
 
   it("accepts additional className without losing core classes", () => {

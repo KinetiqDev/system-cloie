@@ -1,6 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 describe("Table", () => {
   describe("semantic retokening", () => {
@@ -59,7 +66,7 @@ describe("Table", () => {
         </Table>
       );
       const row = screen.getByRole("row");
-      expect(row).toHaveClass("hover:bg-muted/50");
+      expect(row).toHaveClass("hover:bg-surface-hover");
     });
 
     it("applies the same semantic surface when the row is expanded", () => {
@@ -73,7 +80,7 @@ describe("Table", () => {
         </Table>
       );
       const row = screen.getByRole("row");
-      expect(row).toHaveClass("has-aria-expanded:bg-muted/50");
+      expect(row).toHaveClass("has-aria-expanded:bg-surface-hover");
     });
 
     it("applies the semantic selected surface and text role when the row is in the selected state", () => {
@@ -87,8 +94,8 @@ describe("Table", () => {
         </Table>
       );
       const row = screen.getByRole("row");
-      expect(row).toHaveClass("data-[state=selected]:bg-muted");
-      expect(row).toHaveClass("data-[state=selected]:text-foreground");
+      expect(row).toHaveClass("data-[state=selected]:bg-selected-bg");
+      expect(row).toHaveClass("data-[state=selected]:text-selected-fg");
       expect(row).toHaveAttribute("data-state", "selected");
     });
   });

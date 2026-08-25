@@ -30,7 +30,11 @@ export default async function CentralResponseDetailPage({
   const state = parseProgramHeadResponsesSearchParams(rawSearchParams);
   const response = await getProgramHeadResponseDetail(programId, responseId);
 
-  if (!response || response.evaluation.id !== deploymentId || response.evaluation.type !== "PROGRAM_WIDE") {
+  if (
+    !response ||
+    response.evaluation.id !== deploymentId ||
+    response.evaluation.type !== "PROGRAM_WIDE"
+  ) {
     notFound();
   }
 
@@ -47,12 +51,15 @@ export default async function CentralResponseDetailPage({
     stakeholder,
   };
   const responsesHref = buildProgramHeadResponsesUrl(programId, upwardState);
-  const evaluationPath = buildProgramHeadResponsesProgramWideDeploymentPath(programId, deploymentId);
+  const evaluationPath = buildProgramHeadResponsesProgramWideDeploymentPath(
+    programId,
+    deploymentId
+  );
   const upwardQuery = programHeadResponsesQuery(upwardState);
   const evaluationHref = upwardQuery ? `${evaluationPath}?${upwardQuery}` : evaluationPath;
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs
         items={[
           { label: "Responses", href: responsesHref },
@@ -61,8 +68,9 @@ export default async function CentralResponseDetailPage({
           { label: response.respondent.name },
         ]}
       />
-      <Button render={<Link href={evaluationHref} />} size="sm" variant="ghost">
-        <ArrowLeft className="mr-2 size-4" /> Back to evaluation
+      <Button render={<Link href={evaluationHref} />} variant="outline">
+        <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+        Back to evaluation
       </Button>
       <ResponseDetail
         response={response}

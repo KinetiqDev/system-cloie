@@ -115,11 +115,14 @@ describe("Program Head Course Assignments route", () => {
       availablePrograms: [{ id: "program-1", code: "BSED", name: "BS Education" }],
       availableFaculty: [],
       termInstances: [],
+      activeTermInstanceId: "11111111-1111-4111-a111-111111111111",
     });
   });
 
   it("loads only the selected canonical Program route", async () => {
-    const Page = (await import("../../app/(app)/program-head/programs/[programId]/course-assignments/page")).default;
+    const Page = (
+      await import("../../app/(app)/program-head/programs/[programId]/course-assignments/page")
+    ).default;
 
     await Page({
       params: Promise.resolve({ programId: "program-1" }),
@@ -131,6 +134,7 @@ describe("Program Head Course Assignments route", () => {
       rawSearchParams: { programId: "program-2", q: "faculty" },
       role: "program-head",
       programId: "program-1",
+      defaultTermInstanceId: "11111111-1111-4111-a111-111111111111",
     });
   });
 
@@ -141,7 +145,9 @@ describe("Program Head Course Assignments route", () => {
         success: false,
         error: "Selected Program is not assigned.",
       });
-      const Page = (await import("../../app/(app)/program-head/programs/[programId]/course-assignments/page")).default;
+      const Page = (
+        await import("../../app/(app)/program-head/programs/[programId]/course-assignments/page")
+      ).default;
 
       await expect(
         Page({ params: Promise.resolve({ programId }), searchParams: Promise.resolve({}) })

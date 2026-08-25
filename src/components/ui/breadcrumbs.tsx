@@ -8,17 +8,11 @@ type BreadcrumbItem = {
   href?: string;
 };
 
-function BreadcrumbSegment({
-  item,
-  isLast,
-}: {
-  item: BreadcrumbItem;
-  isLast: boolean;
-}) {
+function BreadcrumbSegment({ item, isLast }: { item: BreadcrumbItem; isLast: boolean }) {
   return item.href && !isLast ? (
     <Link
       href={item.href}
-      className="text-muted-foreground hover:text-foreground max-w-40 truncate rounded-sm transition-colors sm:max-w-56 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex min-h-11 max-w-40 touch-manipulation items-center truncate rounded-sm transition-colors focus-visible:ring-3 focus-visible:outline-none motion-reduce:transition-none sm:max-w-56"
     >
       {item.label}
     </Link>
@@ -40,17 +34,14 @@ function BreadcrumbSegment({
  * item is the current page and never a link. Upward links are plain hrefs so
  * the page owns URL-state preservation.
  */
-export function Breadcrumbs({
-  items,
-  className,
-}: {
-  items: BreadcrumbItem[];
-  className?: string;
-}) {
+export function Breadcrumbs({ items, className }: { items: BreadcrumbItem[]; className?: string }) {
   const showEllipsis = items.length > 3;
   const lastIndex = items.length - 1;
   const collapsedLabels = showEllipsis
-    ? items.slice(1, lastIndex).map((i) => i.label).join(", ")
+    ? items
+        .slice(1, lastIndex)
+        .map((i) => i.label)
+        .join(", ")
     : "";
 
   return (
@@ -62,7 +53,10 @@ export function Breadcrumbs({
           const hiddenOnMobile = showEllipsis && isMiddle;
           const separator =
             index === 0 ? null : (
-              <li aria-hidden="true" className={cn("flex items-center", hiddenOnMobile && "hidden md:flex")}>
+              <li
+                aria-hidden="true"
+                className={cn("flex items-center", hiddenOnMobile && "hidden md:flex")}
+              >
                 <ChevronRight
                   aria-hidden="true"
                   className="text-muted-foreground size-3.5 shrink-0"
@@ -72,12 +66,7 @@ export function Breadcrumbs({
           return (
             <Fragment key={item.label}>
               {separator}
-              <li
-                className={cn(
-                  "flex min-w-0 items-center",
-                  hiddenOnMobile && "hidden md:flex"
-                )}
-              >
+              <li className={cn("flex min-w-0 items-center", hiddenOnMobile && "hidden md:flex")}>
                 <BreadcrumbSegment item={item} isLast={isLast} />
               </li>
               {showEllipsis && isMiddle && index === 1 && (

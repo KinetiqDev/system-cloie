@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, ArrowRight, Save, CheckCircle, CheckCircle2, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ReviewModal } from "./review-modal";
@@ -54,11 +55,14 @@ export function WizardShell({
   const currentSection = sections[currentStep];
 
   const scrollToTop = () => {
+    const behavior = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth";
     const mainContainer = document.querySelector("main");
     if (mainContainer) {
-      mainContainer.scrollTo({ top: 0, behavior: "smooth" });
+      mainContainer.scrollTo({ top: 0, behavior });
     } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior });
     }
   };
 
@@ -243,14 +247,14 @@ export function WizardShell({
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2">
             <ArrowLeft className="mr-2 size-4" /> Back to Dashboard
           </Button>
-          <div className="text-text-muted flex items-center gap-2 text-label-sm font-bold tracking-wider uppercase">
+          <div className="text-text-muted text-label-sm flex items-center gap-2 font-bold tracking-wider uppercase">
             <Save className="size-4" /> {isSaving ? "Saving..." : savedTimeText}
           </div>
         </div>
         <h1 className="font-heading text-heading-md mb-3 font-black">{title}</h1>
-        {courseTitle && <p className="text-text-secondary mb-3 text-body-md">{courseTitle}</p>}
+        {courseTitle && <p className="text-text-secondary text-body-md mb-3">{courseTitle}</p>}
         <div className="space-y-1.5">
-          <div className="text-text-muted flex justify-between text-label-sm font-bold uppercase">
+          <div className="text-text-muted text-label-sm flex justify-between font-bold uppercase">
             <span>
               Section {currentStep + 1} of {totalSteps}
             </span>
@@ -264,133 +268,141 @@ export function WizardShell({
       <div className="flex-1">
         {/* Section Content */}
         <div className="pb-32">
-        {validationError && (
-          <Alert variant="destructive" className="motion-safe:animate-in motion-safe:slide-in-from-top-2 mb-6">
-            <AlertCircle className="size-4" />
-            <AlertTitle className="sr-only">Validation Error</AlertTitle>
-            <AlertDescription className="font-medium">{validationError}</AlertDescription>
-          </Alert>
-        )}
+          {validationError && (
+            <Alert
+              variant="destructive"
+              className="motion-safe:animate-in motion-safe:slide-in-from-top-2 mb-6"
+            >
+              <AlertCircle className="size-4" />
+              <AlertTitle className="sr-only">Validation Error</AlertTitle>
+              <AlertDescription className="font-medium">{validationError}</AlertDescription>
+            </Alert>
+          )}
 
-        <h2 className="text-title-lg mb-4 font-bold">{currentSection.name}</h2>
-        <p className="text-text-secondary mb-8 text-body-sm">{currentSection.description}</p>
+          <h2 className="text-title-lg mb-4 font-bold">{currentSection.name}</h2>
+          <p className="text-text-secondary text-body-sm mb-8">{currentSection.description}</p>
 
-        <div className="space-y-8">
-          {currentSection.items.map((item) => {
-            if (item.kind === "quantitative") {
-              const typedAnswerKey = buildStudentEvaluationAnswerKey(
-                currentSection.id,
-                "quantitative",
-                item.itemKey
-              );
-              const currentValue = answers[typedAnswerKey];
+          <div className="space-y-8">
+            {currentSection.items.map((item) => {
+              if (item.kind === "quantitative") {
+                const typedAnswerKey = buildStudentEvaluationAnswerKey(
+                  currentSection.id,
+                  "quantitative",
+                  item.itemKey
+                );
+                const currentValue = answers[typedAnswerKey];
 
-              return (
-                <fieldset
-                  key={item.itemKey}
-                  className={cn(
-                    "bg-surface rounded-xl border p-4 transition-colors",
-                    validationError && !currentValue
-                      ? "border-danger bg-danger-soft/30"
-                      : "border-border"
-                  )}
-                >
-                  <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
-                  <div
-                    role="radiogroup"
-                    aria-label={item.prompt}
-                    className="flex flex-wrap gap-4 sm:gap-6"
+                return (
+                  <fieldset
+                    key={item.itemKey}
+                    className={cn(
+                      "bg-surface rounded-xl border p-4 transition-colors",
+                      validationError && !currentValue
+                        ? "border-danger bg-danger-soft/30"
+                        : "border-border"
+                    )}
                   >
-                    {item.scale.map((v, idx) => {
-                      const descriptorLabel = item.descriptorLabels?.[idx];
-                      return (
-                        <label
-                          key={v}
-                          className="group flex cursor-pointer flex-col items-center gap-1"
-                        >
-                          <input
-                            type="radio"
-                            name={`q-${item.itemKey}`}
-                            value={v}
-                            checked={currentValue === v}
-                            onChange={() => handleValueChange(item.itemKey, v)}
-                            className="peer sr-only"
-                          />
-                          <div className="border-border peer-checked:bg-primary peer-checked:border-primary hover:bg-primary-soft hover:border-primary flex size-12 items-center justify-center rounded-full border-2 text-lg font-bold transition-all peer-checked:text-on-primary active:scale-90">
-                            {v}
-                          </div>
-                          {descriptorLabel && (
-                            <span className="text-text-muted mt-0.5 max-w-[80px] text-center text-caption leading-tight">
-                              {descriptorLabel}
-                            </span>
-                          )}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </fieldset>
-              );
-            } else {
-              const answerKey = buildStudentEvaluationAnswerKey(
-                currentSection.id,
-                "qualitative",
-                item.promptKey
-              );
-              const currentValue = (answers[answerKey] as string) || "";
-
-              return (
-                <fieldset
-                  key={item.promptKey}
-                  className="bg-surface border-border rounded-xl border p-4"
-                >
-                  <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
-
-                  {/* Suggestion chips for guided open-ended questions */}
-                  {item.suggestedResponses && item.suggestedResponses.length > 0 && (
-                    <div className="mb-3 flex flex-wrap gap-2">
-                      {getNormalizedSuggestedResponses(item.suggestedResponses).map(
-                        (suggestion, index) => (
-                          <button
-                            key={`${item.promptKey}:${index}:${suggestion}`}
-                            type="button"
-                            onClick={() =>
-                              handleSuggestedResponseClick(item.promptKey, suggestion, currentValue)
-                            }
-                            className={cn(
-                              "rounded-full border px-3 py-1.5 text-label-sm font-medium transition-all",
-                              "hover:bg-primary-soft hover:border-primary hover:text-selected-fg",
-                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                              "active:scale-95",
-                              currentValue
-                                .split(",")
-                                .map((value) => value.trim())
-                                .includes(suggestion)
-                                  ? "bg-primary/10 border-primary text-selected-fg"
-                                : "bg-surface border-border text-text-secondary"
-                            )}
+                    <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
+                    <div
+                      role="radiogroup"
+                      aria-label={item.prompt}
+                      className="flex flex-wrap gap-4 sm:gap-6"
+                    >
+                      {item.scale.map((v, idx) => {
+                        const descriptorLabel = item.descriptorLabels?.[idx];
+                        return (
+                          <label
+                            key={v}
+                            className="group flex cursor-pointer flex-col items-center gap-1"
                           >
-                            {suggestion}
-                          </button>
-                        )
-                      )}
+                            <input
+                              type="radio"
+                              name={`q-${item.itemKey}`}
+                              value={v}
+                              checked={currentValue === v}
+                              onChange={() => handleValueChange(item.itemKey, v)}
+                              className="peer sr-only"
+                            />
+                            <div className="border-border-strong peer-focus-visible:ring-ring peer-checked:bg-primary peer-checked:border-primary hover:bg-primary-soft hover:border-primary peer-checked:text-on-primary flex size-12 touch-manipulation items-center justify-center rounded-full border-2 text-lg font-bold transition-[color,background-color,border-color,box-shadow,transform] peer-focus-visible:ring-3 active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100">
+                              {v}
+                            </div>
+                            {descriptorLabel && (
+                              <span className="text-text-muted text-caption mt-0.5 max-w-[80px] text-center leading-tight">
+                                {descriptorLabel}
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
                     </div>
-                  )}
+                  </fieldset>
+                );
+              } else {
+                const answerKey = buildStudentEvaluationAnswerKey(
+                  currentSection.id,
+                  "qualitative",
+                  item.promptKey
+                );
+                const currentValue = (answers[answerKey] as string) || "";
 
-                  <textarea
-                    value={currentValue}
-                    onChange={(e) => handleValueChange(item.promptKey, e.target.value)}
-                    placeholder="Enter your response..."
-                    className="border-border bg-background focus-visible:ring-primary min-h-[100px] w-full rounded-lg border p-3 text-body-sm focus-visible:ring-2 focus-visible:outline-none"
-                  />
-                </fieldset>
-              );
-            }
-          })}
+                return (
+                  <fieldset
+                    key={item.promptKey}
+                    className="bg-surface border-border rounded-xl border p-4"
+                  >
+                    <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
+
+                    {/* Suggestion chips for guided open-ended questions */}
+                    {item.suggestedResponses && item.suggestedResponses.length > 0 && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {getNormalizedSuggestedResponses(item.suggestedResponses).map(
+                          (suggestion, index) => (
+                            <button
+                              key={`${item.promptKey}:${index}:${suggestion}`}
+                              type="button"
+                              onClick={() =>
+                                handleSuggestedResponseClick(
+                                  item.promptKey,
+                                  suggestion,
+                                  currentValue
+                                )
+                              }
+                              className={cn(
+                                "text-label-sm touch-manipulation rounded-full border px-3 py-1.5 font-medium transition-[color,background-color,border-color,box-shadow,transform] motion-reduce:transition-none",
+                                "hover:bg-primary-soft hover:border-primary hover:text-selected-fg",
+                                "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                                "active:scale-95 motion-reduce:active:scale-100",
+                                currentValue
+                                  .split(",")
+                                  .map((value) => value.trim())
+                                  .includes(suggestion)
+                                  ? "bg-primary/10 border-primary text-selected-fg"
+                                  : "bg-surface border-border text-text-secondary"
+                              )}
+                            >
+                              {suggestion}
+                            </button>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                    <Textarea
+                      aria-label={item.prompt}
+                      value={currentValue}
+                      onChange={(e) => handleValueChange(item.promptKey, e.target.value)}
+                      placeholder="Enter your response…"
+                      className="min-h-[100px]"
+                    />
+                  </fieldset>
+                );
+              }
+            })}
+          </div>
         </div>
       </div>
-    </div>
 
-    {/* Sticky Wizard Footer */}
+      {/* Sticky Wizard Footer */}
       <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-40 border-t p-4 lg:left-64">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between">
           <Button
@@ -402,7 +414,11 @@ export function WizardShell({
             <ArrowLeft className="mr-2 size-4" /> Previous
           </Button>
 
-          <Button onClick={handleNext} className="min-h-11 min-w-[160px] font-bold" disabled={isSaving}>
+          <Button
+            onClick={handleNext}
+            className="min-h-11 min-w-[160px] font-bold"
+            disabled={isSaving}
+          >
             {currentStep === totalSteps - 1 ? (
               <span className="flex items-center">
                 Review & Submit <CheckCircle className="ml-2 size-4" />
@@ -427,4 +443,3 @@ export function WizardShell({
     </div>
   );
 }
-

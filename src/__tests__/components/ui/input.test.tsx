@@ -60,7 +60,7 @@ describe("Input", () => {
       const input = screen.getByLabelText("Email");
       expect(input).toBeDisabled();
       expect(input).toHaveClass("disabled:bg-muted");
-      expect(input).toHaveClass("disabled:opacity-50");
+      expect(input).toHaveClass("disabled:opacity-60");
       expect(input).toHaveClass("disabled:pointer-events-none");
       expect(input).toHaveClass("disabled:cursor-not-allowed");
     });
@@ -69,7 +69,7 @@ describe("Input", () => {
       render(<Input aria-label="Search" />);
       const input = screen.getByLabelText("Search");
       expect(input).toHaveClass("focus-visible:border-ring");
-      expect(input).toHaveClass("focus-visible:ring-ring/50");
+      expect(input).toHaveClass("focus-visible:ring-ring");
       expect(input).toHaveClass("focus-visible:ring-3");
     });
   });

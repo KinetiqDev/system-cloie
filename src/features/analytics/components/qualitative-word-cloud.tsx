@@ -21,12 +21,16 @@ type QualitativeWordCloudProps = {
   tokens: WordCloudToken[];
   /** Number of qualitative responses the tokens were aggregated from. */
   responseCount: number;
+  adjustable?: boolean;
 };
 
 const MIN_WIDTH = 280;
 const MAX_WIDTH = 960;
 const MIN_HEIGHT = 220;
 const MAX_HEIGHT = 420;
+const MIN_VISIBLE_WORDS = 10;
+const DEFAULT_VISIBLE_WORDS = 30;
+const WORD_STEP = 5;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -56,7 +60,12 @@ function usePrefersReducedMotion(): boolean {
   );
 }
 
-export function QualitativeWordCloud({ title, tokens, responseCount }: QualitativeWordCloudProps) {
+export function QualitativeWordCloud({
+  title,
+  tokens,
+  responseCount,
+  adjustable = false,
+}: QualitativeWordCloudProps) {
   const instanceId = useId().replace(/[:]/g, "");
   const chartId = `word-cloud-${instanceId}`;
   const titleId = `${chartId}-title`;
@@ -67,6 +76,10 @@ export function QualitativeWordCloud({ title, tokens, responseCount }: Qualitati
     height: 320,
     width: 360,
   });
+  const [visibleWordCount, setVisibleWordCount] = useState(DEFAULT_VISIBLE_WORDS);
+  const minimumWordCount = Math.min(MIN_VISIBLE_WORDS, tokens.length);
+  const maximumWordCount = tokens.length;
+  const renderedTokens = adjustable ? tokens.slice(0, visibleWordCount) : tokens;
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -110,19 +123,42 @@ export function QualitativeWordCloud({ title, tokens, responseCount }: Qualitati
     );
   }
 
-  const totalOccurrences = tokens.reduce((sum, token) => sum + token.value, 0);
-  const topToken = tokens[0];
-  const summary = `Top ${tokens.length} words from ${responseCount} qualitative ${
+  const totalOccurrences = renderedTokens.reduce((sum, token) => sum + token.value, 0);
+  const topToken = renderedTokens[0];
+  const summary = `Top ${renderedTokens.length} words from ${responseCount} qualitative ${
     responseCount === 1 ? "response" : "responses"
   }`;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle id={titleId} className="text-title-sm">
-          {title}
-        </CardTitle>
-        <CardDescription>{summary}</CardDescription>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <CardTitle id={titleId} className="text-title-sm">
+              {title}
+            </CardTitle>
+            <CardDescription>{summary}</CardDescription>
+          </div>
+          {adjustable ? (
+            <label className="text-label-sm text-muted-foreground flex min-h-11 items-center gap-3 font-semibold">
+              <span>Top words</span>
+              <input
+                type="range"
+                min={minimumWordCount}
+                max={maximumWordCount}
+                step={WORD_STEP}
+                value={Math.min(visibleWordCount, maximumWordCount)}
+                onChange={(event) => setVisibleWordCount(Number(event.target.value))}
+                disabled={minimumWordCount === maximumWordCount}
+                aria-label={`Number of top words shown: ${renderedTokens.length}`}
+                className="accent-primary min-h-11 w-32 cursor-pointer disabled:cursor-not-allowed sm:w-40"
+              />
+              <output className="text-foreground min-w-16 tabular-nums">
+                {renderedTokens.length} words
+              </output>
+            </label>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <div
@@ -132,11 +168,11 @@ export function QualitativeWordCloud({ title, tokens, responseCount }: Qualitati
           className="border-border rounded-xl border p-3"
         >
           <svg aria-hidden="true" className="absolute h-0 w-0">
-            <ChartPatternDefs chartId={chartId} categoryCount={tokens.length} />
+            <ChartPatternDefs chartId={chartId} categoryCount={renderedTokens.length} />
           </svg>
           <div ref={containerRef} className="flex w-full justify-center">
             <WordCloud
-              words={tokens}
+              words={renderedTokens}
               width={dimensions.width}
               height={dimensions.height}
               font="ui-sans-serif, system-ui, sans-serif"
@@ -165,7 +201,7 @@ export function QualitativeWordCloud({ title, tokens, responseCount }: Qualitati
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tokens.map((token) => (
+                {renderedTokens.map((token) => (
                   <TableRow key={token.text}>
                     <TableCell className="font-medium">{token.text}</TableCell>
                     <TableCell className="text-right tabular-nums">{token.value}</TableCell>

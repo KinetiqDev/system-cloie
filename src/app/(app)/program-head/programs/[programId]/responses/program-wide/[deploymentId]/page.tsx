@@ -44,7 +44,7 @@ export default async function CentralEvaluationDetailPage({
   const upwardQuery = programHeadResponsesQuery(upwardState);
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs
         items={[
           { label: "Responses", href: responsesHref },
@@ -56,7 +56,11 @@ export default async function CentralEvaluationDetailPage({
         detail={detail}
         analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
         responseHref={(responseId: string) => {
-          const path = buildProgramHeadResponsesProgramWideResponsePath(programId, deploymentId, responseId);
+          const path = buildProgramHeadResponsesProgramWideResponsePath(
+            programId,
+            deploymentId,
+            responseId
+          );
           return upwardQuery ? `${path}?${upwardQuery}` : path;
         }}
       />

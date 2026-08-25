@@ -113,6 +113,7 @@ export function ProgramHeadFeedbackView({
               title="Qualitative Feedback"
               tokens={tokens}
               responseCount={qualitativeResponseCount}
+              adjustable
             />
           ) : (
             <Alert variant="information">
@@ -213,9 +214,12 @@ function FeedbackEvidenceLinks({
           {evaluations.map((evaluation) => (
             <li key={evaluation.evaluationId}>
               <Link
-                href={buildProgramHeadResponsesCourseEvaluationPath(programId, evaluation.evaluationId)}
+                href={buildProgramHeadResponsesCourseEvaluationPath(
+                  programId,
+                  evaluation.evaluationId
+                )}
                 className={cn(
-                  "text-link underline underline-offset-3 hover:text-foreground",
+                  "text-link hover:text-foreground underline underline-offset-3",
                   "pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
                 )}
               >

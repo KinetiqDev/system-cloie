@@ -8,15 +8,18 @@ vi.mock("@/features/analytics/components/qualitative-word-cloud", () => ({
     title,
     tokens,
     responseCount,
+    adjustable,
   }: {
     title: string;
     tokens: Array<{ text: string; value: number }>;
     responseCount: number;
+    adjustable?: boolean;
   }) => (
     <section>
       <h2>{title}</h2>
       <p>
         {responseCount} qualitative {responseCount === 1 ? "response" : "responses"}
+        <span>{adjustable ? "Adjustable word count" : "Fixed word count"}</span>
       </p>
       <table>
         <tbody>
@@ -128,9 +131,12 @@ describe("ProgramHeadFeedbackView", () => {
     expect(screen.getByText("Qualitative Feedback")).toBeInTheDocument();
     expect(screen.getByText("3 qualitative responses")).toBeInTheDocument();
     expect(screen.getByText("clarity")).toBeInTheDocument();
+    expect(screen.getByText("Adjustable word count")).toBeInTheDocument();
     expect(screen.getByText("Course-bound student evidence")).toBeInTheDocument();
     expect(screen.getByText("Alumni evidence")).toBeInTheDocument();
-    expect(screen.getByText(/Course-bound student evidence — What worked well\?/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Course-bound student evidence — What worked well\?/)
+    ).toBeInTheDocument();
     expect(screen.getByText("4 qualitative items from 3 submitted responses")).toBeInTheDocument();
   });
 

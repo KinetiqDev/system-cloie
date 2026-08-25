@@ -6,7 +6,15 @@ import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -78,6 +86,8 @@ export function FormControlsShowcase() {
   const showInvalidState = () => {
     setError("department", { message: "Sample invalid value: pick a department." });
     setError("displayName", { message: "Sample invalid value: 2 characters minimum." });
+    setError("role", { message: "Sample invalid value: choose a role." });
+    setError("plan", { message: "Sample invalid value: choose a plan." });
   };
 
   return (
@@ -97,7 +107,9 @@ export function FormControlsShowcase() {
               <Input
                 id="showcase-display-name"
                 placeholder="Sample name"
-                aria-describedby={errors.displayName ? "showcase-display-name-error" : "showcase-display-name-help"}
+                aria-describedby={
+                  errors.displayName ? "showcase-display-name-error" : "showcase-display-name-help"
+                }
                 aria-invalid={errors.displayName ? true : undefined}
                 {...register("displayName")}
               />
@@ -128,10 +140,7 @@ export function FormControlsShowcase() {
                 control={control}
                 name="department"
                 render={({ field }) => (
-                  <Select
-                    value={field.value || null}
-                    onValueChange={field.onChange}
-                  >
+                  <Select value={field.value || null} onValueChange={field.onChange}>
                     <SelectTrigger
                       id="showcase-department"
                       className="w-full"
@@ -191,10 +200,7 @@ export function FormControlsShowcase() {
                 control={control}
                 name="plan"
                 render={({ field }) => (
-                  <Select
-                    value={field.value || null}
-                    onValueChange={field.onChange}
-                  >
+                  <Select value={field.value || null} onValueChange={field.onChange}>
                     <SelectTrigger
                       id="showcase-plan"
                       className="w-full"
@@ -275,7 +281,9 @@ export function FormControlsShowcase() {
         </div>
 
         {submittedLabel ? (
-          <p className="text-body-sm text-muted-foreground">{submittedLabel}</p>
+          <p role="status" aria-live="polite" className="text-body-sm text-muted-foreground">
+            {submittedLabel}
+          </p>
         ) : null}
       </form>
     </div>

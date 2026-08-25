@@ -1,12 +1,10 @@
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
-import { BarChart3, ClipboardList, MessagesSquare, Target } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
 import { parseAnalyticsSearchParams } from "@/features/analytics/services/program-head-analytics-state";
-import { buildProgramHeadCourseAssignmentsPath, buildProgramHeadOutcomesPath } from "@/lib/constants/program-head-routes";
 import { ProgramHeadDashboardKpiGrid } from "@/features/analytics/components/program-head-dashboard-kpis";
 import { ProgramHeadStakeholderProgress } from "@/features/analytics/components/program-head-stakeholder-progress";
 import { ProgramHeadPloSummary } from "@/features/analytics/components/program-head-plo-summary";
@@ -36,35 +34,35 @@ export default async function SelectedProgramDashboardPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs items={[{ label: "Dashboard" }]} />
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-heading-lg">Dashboard</h1>
-          <p className="text-body-md text-text-secondary">
-            <span className="text-link font-semibold">
-              {dashboard.programCode} — {dashboard.programLabel}
-            </span>
+      <header className="border-border flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-label-sm text-primary font-semibold tracking-wider uppercase">
+            Evaluation cycle
+          </p>
+          <h1 className="text-heading-lg mt-1 text-balance">{dashboard.programCode} dashboard</h1>
+          <p className="text-body-md text-text-secondary mt-2 max-w-3xl text-pretty">
+            <span className="text-foreground font-semibold">{dashboard.programLabel}</span>
             {dashboard.periodLabel ? <span> · {dashboard.periodLabel}</span> : null}
-            · Operational summary of this evaluation cycle
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <Link
             href={dashboard.links.responses}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}
           >
             View Responses
           </Link>
           <Link
             href={dashboard.links.analyticsOutcomes}
-            className={cn(buttonVariants({ variant: "default", size: "sm" }))}
+            className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
           >
-            <BarChart3 aria-hidden="true" className="size-4" />
+            <BarChart3 data-icon="inline-start" aria-hidden="true" />
             Open Analytics
           </Link>
         </div>
-      </div>
+      </header>
 
       <ProgramHeadDashboardKpiGrid
         participation={dashboard.participation}
@@ -76,46 +74,12 @@ export default async function SelectedProgramDashboardPage({
         responsesHref={dashboard.links.responses}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <ProgramHeadStakeholderProgress
-          participation={dashboard.participation}
-          stakeholdersHref={dashboard.links.analyticsStakeholders}
-        />
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-bold">Quick actions</CardTitle>
-            <CardDescription>Common Program Head workflows.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            <QuickAction
-              href={dashboard.links.responses}
-              icon={<MessagesSquare aria-hidden="true" className="size-4" />}
-              title="View Responses"
-              description="Inspect evaluations and submitted answers"
-            />
-            <QuickAction
-              href={dashboard.links.analyticsOutcomes}
-              icon={<BarChart3 aria-hidden="true" className="size-4" />}
-              title="Explore Analytics"
-              description="Trace PLO, course and stakeholder evidence"
-            />
-            <QuickAction
-              href={buildProgramHeadCourseAssignmentsPath(programId)}
-              icon={<ClipboardList aria-hidden="true" className="size-4" />}
-              title="Course Assignments"
-              description="Manage classes, faculty and sections"
-            />
-            <QuickAction
-              href={buildProgramHeadOutcomesPath(programId)}
-              icon={<Target aria-hidden="true" className="size-4" />}
-              title="Manage Learning Outcomes"
-              description="Manage PLOs and outcome mappings"
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <ProgramHeadStakeholderProgress
+        participation={dashboard.participation}
+        stakeholdersHref={dashboard.links.analyticsStakeholders}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(20rem,1fr)]">
         <ProgramHeadPloSummary
           sources={dashboard.ploSources}
           ploCatalog={dashboard.ploCatalog}
@@ -130,30 +94,5 @@ export default async function SelectedProgramDashboardPage({
         feedbackHref={dashboard.links.analyticsFeedback}
       />
     </div>
-  );
-}
-
-function QuickAction({
-  href,
-  icon,
-  title,
-  description,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="focus-visible:ring-ring hover:border-primary/40 flex items-start gap-3 rounded-lg border px-3 py-2.5 pointer-coarse:min-h-11 transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:outline-none"
-    >
-      <span className="text-muted-foreground mt-0.5">{icon}</span>
-      <span>
-        <span className="text-label-md block font-bold">{title}</span>
-        <span className="text-muted-foreground block text-label-sm">{description}</span>
-      </span>
-    </Link>
   );
 }

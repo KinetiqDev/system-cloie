@@ -56,7 +56,7 @@ describe("Textarea", () => {
       render(<Textarea aria-label="Notes" />);
       const textarea = screen.getByLabelText("Notes");
       expect(textarea).toHaveClass("focus-visible:border-ring");
-      expect(textarea).toHaveClass("focus-visible:ring-ring/50");
+      expect(textarea).toHaveClass("focus-visible:ring-ring");
       expect(textarea).toHaveClass("focus-visible:ring-3");
     });
 

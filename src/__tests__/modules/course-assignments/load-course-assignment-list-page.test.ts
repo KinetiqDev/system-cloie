@@ -65,6 +65,21 @@ describe("loadCourseAssignmentListPage", () => {
     expect(result.initialFilters.isActive).toBeNull();
   });
 
+  it("canonicalizes a bare Program Head list to its active academic period", async () => {
+    await expect(
+      loadCourseAssignmentListPage({
+        pathname: "/program-head/programs/program-1/course-assignments",
+        rawSearchParams: {},
+        role: "program-head",
+        programId: "program-1",
+        defaultTermInstanceId: "11111111-1111-4111-a111-111111111111",
+      })
+    ).rejects.toThrow(
+      "REDIRECT:/program-head/programs/program-1/course-assignments?termInstanceId=11111111-1111-4111-a111-111111111111"
+    );
+    expect(listMock).not.toHaveBeenCalled();
+  });
+
   it("redirects a valid page beyond the available result set", async () => {
     listMock.mockResolvedValueOnce({
       success: true,

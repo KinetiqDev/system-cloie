@@ -75,10 +75,10 @@ describe("CourseAssignmentsTable", () => {
         id: "assignment-1",
         label:
           "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
-          revision: "2026-07-21T00:00:00.000Z",
-          membershipCount: 2,
-          activeMembershipCount: 1,
-          removedMembershipCount: 1,
+        revision: "2026-07-21T00:00:00.000Z",
+        membershipCount: 2,
+        activeMembershipCount: 1,
+        removedMembershipCount: 1,
         courseBoundEvaluationCount: 0,
       },
     });
@@ -212,10 +212,10 @@ describe("CourseAssignmentsTable", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: /activate/i }));
 
     await waitFor(() => {
-       expect(activateCourseAssignmentAction).toHaveBeenCalledWith({
-         assignmentId: assignment.id,
-         programId: undefined,
-       });
+      expect(activateCourseAssignmentAction).toHaveBeenCalledWith({
+        assignmentId: assignment.id,
+        programId: undefined,
+      });
     });
     expect(onUpdated).toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -436,5 +436,23 @@ describe("CourseAssignmentsTable", () => {
     openRowActions("GE101");
     expect(screen.getByRole("menuitem", { name: /edit/i })).toBeInTheDocument();
     expect(container.querySelector("div.overflow-x-auto")).not.toBeNull();
+  });
+
+  it("renders a complete mobile assignment card without relying on the wide table", () => {
+    mockMatchMedia(false);
+    renderTable({
+      assignments: [createAssignment({ rosterMembershipCount: 12 })],
+      mode: "program-head",
+      selectedProgramId: "program-1",
+    });
+
+    const card = screen.getByTestId("assignment-card-assignment-1");
+    expect(card).toHaveTextContent("CS101");
+    expect(card).toHaveTextContent("Intro to Computing");
+    expect(card).toHaveTextContent("Test Faculty");
+    expect(card).toHaveTextContent("2nd Year · Morning");
+    expect(card).toHaveTextContent("12 roster members");
+    expect(within(card).getByRole("link", { name: /open roster/i })).toBeInTheDocument();
+    expect(within(card).getByLabelText(/open actions for CS101/i)).toBeInTheDocument();
   });
 });

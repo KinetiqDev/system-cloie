@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WordCloudToken } from "@/features/analytics/types";
 import { QualitativeWordCloud } from "@/features/analytics/components/qualitative-word-cloud";
@@ -49,6 +49,30 @@ describe("QualitativeWordCloud", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("limits adjustable clouds with an accessible word-count slider", () => {
+    const manyTokens = Array.from({ length: 40 }, (_, index) => ({
+      text: `word${index}`,
+      value: 40 - index,
+    }));
+
+    render(
+      <QualitativeWordCloud
+        title="Qualitative Feedback"
+        tokens={manyTokens}
+        responseCount={3}
+        adjustable
+      />
+    );
+
+    const slider = screen.getByRole("slider", { name: /Number of top words shown/ });
+    expect(slider).toHaveAttribute("min", "10");
+    expect(slider).toHaveAttribute("max", "40");
+    expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].words).toHaveLength(30);
+
+    fireEvent.change(slider, { target: { value: "10" } });
+    expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].words).toHaveLength(10);
   });
 
   it("clamps responsive width between mobile and desktop bounds", async () => {
@@ -103,19 +127,13 @@ describe("QualitativeWordCloud", () => {
   });
 
   it("renders empty-state text when no tokens exist", () => {
-    render(
-      <QualitativeWordCloud title="Qualitative Feedback" tokens={[]} responseCount={3} />
-    );
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={[]} responseCount={3} />);
     expect(screen.getByText("No qualitative responses yet")).toBeInTheDocument();
-    expect(
-      screen.getByText("No qualitative response data available yet.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("No qualitative response data available yet.")).toBeInTheDocument();
   });
 
   it("resolves word fills from semantic tokens and hatches words beyond five", () => {
-    render(
-      <QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />
-    );
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />);
 
     const { fill } = wordCloudPropsMock.mock.calls.at(-1)![0] as {
       fill: (word: WordCloudToken, index: number) => string;
@@ -143,8 +161,7 @@ describe("QualitativeWordCloud", () => {
   });
 
   it("names the cloud region from its title and insight", () => {
-    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens}
-        responseCount={3} />);
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />);
 
     const region = screen.getByRole("region", { name: "Qualitative Feedback" });
     expect(region).toBeInTheDocument();
@@ -157,16 +174,10 @@ describe("QualitativeWordCloud", () => {
 
   it("shows the frequency summary, insight, and exact-value table", () => {
     const { container } = render(
-      <QualitativeWordCloud
-        title="Qualitative Feedback"
-        tokens={tokens}
-        responseCount={9}
-      />
+      <QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={9} />
     );
 
-    expect(
-      screen.getByText("Top 7 words from 9 qualitative responses")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Top 7 words from 9 qualitative responses")).toBeInTheDocument();
     expect(screen.getByText("Most frequent word: clarity (12).")).toBeInTheDocument();
 
     const exactTable = container.querySelector("table");
@@ -179,9 +190,7 @@ describe("QualitativeWordCloud", () => {
   });
 
   it("pluralizes the response count", () => {
-    render(
-      <QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={1} />
-    );
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={1} />);
     expect(screen.getByText("Top 7 words from 1 qualitative response")).toBeInTheDocument();
   });
 
@@ -198,9 +207,7 @@ describe("QualitativeWordCloud", () => {
       }))
     );
 
-    render(
-      <QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />
-    );
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />);
 
     expect(wordCloudPropsMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ transition: "none" })

@@ -57,7 +57,7 @@ describe("Checkbox", () => {
       render(<Checkbox aria-label="Agree" />);
       const checkbox = screen.getByRole("checkbox");
       expect(checkbox).toHaveClass("focus-visible:border-ring");
-      expect(checkbox).toHaveClass("focus-visible:ring-ring/50");
+      expect(checkbox).toHaveClass("focus-visible:ring-ring");
       expect(checkbox).toHaveClass("focus-visible:ring-3");
     });
   });

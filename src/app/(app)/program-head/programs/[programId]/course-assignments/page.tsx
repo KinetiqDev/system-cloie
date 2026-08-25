@@ -21,15 +21,14 @@ export default async function SelectedProgramCourseAssignmentsPage({
   const contextResult = await resolveProgramHeadContext(programId);
   if (!contextResult.success) notFound();
 
-  const [pageData, listPage] = await Promise.all([
-    loadProgramHeadCourseAssignmentsPageData(programId),
-    loadCourseAssignmentListPage({
-      pathname: `/program-head/programs/${encodeURIComponent(programId)}/course-assignments`,
-      rawSearchParams,
-      role: "program-head",
-      programId,
-    }),
-  ]);
+  const pageData = await loadProgramHeadCourseAssignmentsPageData(programId);
+  const listPage = await loadCourseAssignmentListPage({
+    pathname: `/program-head/programs/${encodeURIComponent(programId)}/course-assignments`,
+    rawSearchParams,
+    role: "program-head",
+    programId,
+    defaultTermInstanceId: pageData.activeTermInstanceId,
+  });
 
   return (
     <CourseAssignmentsPageShell

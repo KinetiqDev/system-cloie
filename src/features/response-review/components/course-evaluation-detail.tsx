@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -8,13 +9,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { HowCalculatedPopover } from "@/features/analytics/components/how-calculated-popover";
 import { describeScale } from "@/features/analytics/aggregators/scale-identity";
 import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics/aggregators/types";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
 import type { ProgramHeadCourseEvaluationDetail } from "../types";
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 
 type CourseEvaluationDetailProps = {
   detail: ProgramHeadCourseEvaluationDetail;
@@ -23,42 +25,61 @@ type CourseEvaluationDetailProps = {
   analyticsHref: string;
 };
 
+// Evaluation evidence stays in one read-only report so shared counts and links cannot diverge.
+// fallow-ignore-next-line complexity
 export function CourseEvaluationDetail({
   detail,
   responseHref,
   analyticsHref,
 }: CourseEvaluationDetailProps) {
-  const { evaluation, summary, participation, ciloResults, questionResults, qualitative, respondents } =
-    detail;
+  const {
+    evaluation,
+    summary,
+    participation,
+    ciloResults,
+    questionResults,
+    qualitative,
+    respondents,
+  } = detail;
 
   return (
-    <div className="space-y-6">
-      {/* Header (§25) */}
-      <section className="space-y-1">
-        <h1 className="text-2xl font-bold">{evaluation.title}</h1>
-        <p className="text-text-muted text-sm">
-          {evaluation.courseCode} — {evaluation.courseTitle} | {evaluation.periodLabel}
+    <div className="flex min-w-0 flex-col gap-6">
+      <header className="border-border flex flex-col gap-2 border-b pb-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">Course evaluation</Badge>
+          <Badge variant="secondary">{evaluation.status}</Badge>
+        </div>
+        <h1 className="text-heading-lg text-balance">{evaluation.title}</h1>
+        <p className="text-body-md text-text-secondary text-pretty">
+          <span className="text-foreground font-semibold">
+            {evaluation.courseCode} — {evaluation.courseTitle}
+          </span>
+          {" · "}
+          {evaluation.periodLabel}
         </p>
-        <p className="text-text-muted text-sm">
-          {evaluation.facultyName ?? "No faculty"} · Year {evaluation.yearLevel} · Section{" "}
+        <p className="text-body-sm text-muted-foreground">
+          {evaluation.facultyName ?? "No faculty assigned"} · Year {evaluation.yearLevel} · Section{" "}
           {evaluation.section}
-          {evaluation.majorLabel ? ` · ${evaluation.majorLabel}` : ""} · {evaluation.status}
+          {evaluation.majorLabel ? ` · ${evaluation.majorLabel}` : ""}
         </p>
-        {(evaluation.activationAt || evaluation.deadlineAt) && (
-          <p className="text-text-muted text-sm">
+        {evaluation.activationAt || evaluation.deadlineAt ? (
+          <p className="text-body-sm text-muted-foreground">
             {evaluation.activationAt
-              ? `Activated ${evaluation.activationAt.toLocaleDateString()}`
+              ? `Activated ${dateFormatter.format(evaluation.activationAt)}`
               : "Not yet activated"}
             {evaluation.deadlineAt
-              ? ` · Deadline ${evaluation.deadlineAt.toLocaleDateString()}`
+              ? ` · Deadline ${dateFormatter.format(evaluation.deadlineAt)}`
               : ""}
           </p>
-        )}
-      </section>
+        ) : null}
+      </header>
 
       {/* Summary (§25) */}
       <section className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <SummaryStat label="Submitted" value={`${summary.submittedCount} / ${summary.eligibleCount}`} />
+        <SummaryStat
+          label="Submitted"
+          value={`${summary.submittedCount} / ${summary.eligibleCount}`}
+        />
         <SummaryStat label="Completion" value={formatPercent(summary.completionRate)} />
         <SummaryStat
           label="Evaluation mean"
@@ -83,14 +104,19 @@ export function CourseEvaluationDetail({
       {/* Zero-response empty state (§50) */}
       {summary.submittedCount === 0 && (
         <div className="border-border rounded-xl border border-dashed p-6">
-          <p className="text-text-muted text-sm">Evaluations exist, but no responses have been submitted.</p>
+          <p className="text-text-muted text-sm">
+            Evaluations exist, but no responses have been submitted.
+          </p>
         </div>
       )}
 
       {/* CILO results (§25.1) */}
       <Card>
         <CardHeader>
-          <CardTitle>CILO Results</CardTitle>
+          <CardTitle>CILO results</CardTitle>
+          <CardDescription>
+            Mapped quantitative evidence for this course evaluation.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -126,7 +152,10 @@ export function CourseEvaluationDetail({
                     <TableCell className="text-right tabular-nums">
                       <span className="inline-flex items-center gap-1">
                         {formatMean(cilo.quantitative?.mean ?? null)}
-                        <HowCalculatedPopover metric={cilo.evidenceSummary} label={`${cilo.ciloId} CILO mean`} />
+                        <HowCalculatedPopover
+                          metric={cilo.evidenceSummary}
+                          label={`${cilo.ciloId} CILO mean`}
+                        />
                       </span>
                     </TableCell>
                   </TableRow>
@@ -140,7 +169,10 @@ export function CourseEvaluationDetail({
       {/* Question results (§25.2) */}
       <Card>
         <CardHeader>
-          <CardTitle>Question Results</CardTitle>
+          <CardTitle>Question results</CardTitle>
+          <CardDescription>
+            Question-level means, bindings, and response distributions.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -177,7 +209,10 @@ export function CourseEvaluationDetail({
                       <TableCell className="text-right tabular-nums">
                         <span className="inline-flex items-center gap-1">
                           {formatMean(quantitative?.mean ?? null)}
-                          <HowCalculatedPopover metric={evidence} label={`${question.itemKey} question mean`} />
+                          <HowCalculatedPopover
+                            metric={evidence}
+                            label={`${question.itemKey} question mean`}
+                          />
                         </span>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
@@ -198,9 +233,12 @@ export function CourseEvaluationDetail({
       {/* Qualitative summary (§25.3) */}
       <Card>
         <CardHeader>
-          <CardTitle>Qualitative Summary</CardTitle>
+          <CardTitle>Qualitative summary</CardTitle>
+          <CardDescription>
+            Aggregate prompt counts; raw answers remain in submitted responses.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-col gap-4">
           <p className="text-sm">
             <span className="text-text-muted">Answers: </span>
             <span className="font-semibold tabular-nums">{qualitative.answerCount}</span>
@@ -250,13 +288,15 @@ export function CourseEvaluationDetail({
       <Card>
         <CardHeader>
           <CardTitle>Participation</CardTitle>
+          <CardDescription>Assignment status for this evaluation.</CardDescription>
         </CardHeader>
-        <CardContent className="text-sm">
+        <CardContent className="text-body-sm">
           <p>
-            Eligible: <span className="font-semibold tabular-nums">{participation.assigned}</span> · Submitted:{" "}
-            <span className="font-semibold tabular-nums">{participation.submitted}</span> · In progress:{" "}
-            <span className="font-semibold tabular-nums">{participation.inProgress}</span> · Not started:{" "}
-            <span className="font-semibold tabular-nums">{participation.notStarted}</span>
+            Eligible: <span className="font-semibold tabular-nums">{participation.assigned}</span> ·
+            Submitted: <span className="font-semibold tabular-nums">{participation.submitted}</span>{" "}
+            · In progress:{" "}
+            <span className="font-semibold tabular-nums">{participation.inProgress}</span> · Not
+            started: <span className="font-semibold tabular-nums">{participation.notStarted}</span>
           </p>
         </CardContent>
       </Card>
@@ -290,23 +330,29 @@ function SummaryStat({
   evidence?: MetricEvidenceSummary;
 }) {
   return (
-    <div className="border-border rounded-xl border p-4">
+    <div className="border-border bg-card rounded-xl border p-4 shadow-sm">
       <div className="flex items-start justify-between gap-1">
-        <p className="text-text-muted text-sm">{label}</p>
-        {evidence && <HowCalculatedPopover metric={evidence} label={label} />}
+        <p className="text-label-sm text-muted-foreground font-semibold">{label}</p>
+        {evidence ? <HowCalculatedPopover metric={evidence} label={label} /> : null}
       </div>
-      <p className="text-2xl font-semibold tabular-nums">{value}</p>
+      <p className="text-title-lg mt-1 font-semibold tabular-nums">{value}</p>
     </div>
   );
 }
 
-function mappingLabels(cilo: { mappings: Array<{ ploCode: string; manifestation: string }> }): string {
+function mappingLabels(cilo: {
+  mappings: Array<{ ploCode: string; manifestation: string }>;
+}): string {
   return cilo.mappings.length === 0
     ? "—"
     : cilo.mappings.map((mapping) => `${mapping.ploCode} (${mapping.manifestation})`).join(", ");
 }
 
-function DistributionCounts({ metric }: { metric: { distribution: Array<{ label: string; count: number }> } | null }) {
+function DistributionCounts({
+  metric,
+}: {
+  metric: { distribution: Array<{ label: string; count: number }> } | null;
+}) {
   if (!metric) {
     return <span className="text-text-muted text-sm">—</span>;
   }

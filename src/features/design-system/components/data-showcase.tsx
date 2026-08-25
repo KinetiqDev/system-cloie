@@ -3,7 +3,14 @@
 import { AlertTriangle, CheckCircle2, Info, XCircle, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProgressListReference } from "./progress-reference";
 import {
@@ -21,7 +28,10 @@ const STATUS_ICON: Record<ShowcaseStatus, LucideIcon> = {
   information: Info,
 };
 
-const STATUS_BADGE_VARIANT: Record<ShowcaseStatus, "success" | "warning" | "destructive" | "information"> = {
+const STATUS_BADGE_VARIANT: Record<
+  ShowcaseStatus,
+  "success" | "warning" | "destructive" | "information"
+> = {
   success: "success",
   warning: "warning",
   danger: "destructive",
@@ -40,7 +50,9 @@ export function DataShowcase() {
                 <CardTitle className="text-title-sm">{kpi.label}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-1">
-                <span className="font-heading text-heading-xl text-foreground">{kpi.value}</span>
+                <span className="font-heading text-heading-xl text-foreground tabular-nums">
+                  {kpi.value}
+                </span>
                 <CardDescription>{kpi.change}</CardDescription>
               </CardContent>
             </Card>
@@ -50,13 +62,13 @@ export function DataShowcase() {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Table with status badges</h3>
-        <div className="rounded-lg border border-border bg-card">
+        <div className="border-border bg-card rounded-lg border">
           <Table className="[&_tr]:last:border-0">
             <TableHeader>
               <TableRow>
-                <TableHead>Program</TableHead>
+                <TableHead aria-sort="ascending">Program</TableHead>
                 <TableHead>Code</TableHead>
-                <TableHead>Courses</TableHead>
+                <TableHead className="tabular-nums">Courses</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -64,10 +76,13 @@ export function DataShowcase() {
               {SHOWCASE_PROGRAMS.map((program) => {
                 const StatusIcon = STATUS_ICON[program.status];
                 return (
-                  <TableRow key={program.id}>
+                  <TableRow
+                    key={program.id}
+                    data-state={program.id === SHOWCASE_PROGRAMS[0].id ? "selected" : undefined}
+                  >
                     <TableCell className="font-medium">{program.name}</TableCell>
                     <TableCell className="font-mono text-xs">{program.code}</TableCell>
-                    <TableCell>{program.courseCount}</TableCell>
+                    <TableCell className="tabular-nums">{program.courseCount}</TableCell>
                     <TableCell>
                       <Badge variant={STATUS_BADGE_VARIANT[program.status]} className="gap-1">
                         <StatusIcon aria-hidden className="size-3.5" />
@@ -145,7 +160,7 @@ export function DataShowcase() {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">Progress</h3>
-        <div className="flex max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-4">
+        <div className="border-border bg-card flex max-w-md flex-col gap-4 rounded-lg border p-4">
           <ProgressListReference items={SHOWCASE_PROGRESS_ITEMS} />
         </div>
       </section>

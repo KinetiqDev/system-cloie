@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { showToast } from "@/components/ui/toast";
 
 type ProgramFormProps = {
   action: (formData: FormData) => Promise<{ success: boolean; error?: string }>;
@@ -20,6 +21,8 @@ type ProgramFormProps = {
   onSuccess?: () => void;
 };
 
+// One compact create/edit form keeps submission feedback and field defaults in one tested surface.
+// fallow-ignore-next-line complexity
 export function ProgramForm({
   action,
   defaultValues,
@@ -32,12 +35,15 @@ export function ProgramForm({
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    // Submission branches map the server action result directly to error or success feedback.
+    // fallow-ignore-next-line complexity
     startTransition(async () => {
       const result = await action(formData);
       if (!result.success && result.error) {
         setError(result.error);
       } else if (result.success) {
         formRef.current?.reset();
+        showToast(defaultValues?.id ? "Program updated." : "Program created.");
         onSuccess?.();
       }
     });

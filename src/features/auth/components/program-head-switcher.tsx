@@ -41,7 +41,8 @@ export function ProgramHeadSwitcher({ programs }: { programs: ProgramHeadProgram
   // contains no resource-scoped segments (UUIDs), which belong to the current
   // Program and would 404 under the destination.
   const childPath = pathname.match(/^\/program-head\/programs\/[^/]+(\/.*)?$/)?.[1] ?? "";
-  const hasResourceSegment = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/|$)/i.test(childPath);
+  const hasResourceSegment =
+    /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/|$)/i.test(childPath);
   const safeChildPath = hasResourceSegment ? "" : childPath;
 
   return (
@@ -54,17 +55,14 @@ export function ProgramHeadSwitcher({ programs }: { programs: ProgramHeadProgram
             aria-label={`Switch Program. Current: ${activeProgram.code}`}
             className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground gap-1.5"
           >
-            <span className="bg-primary/10 text-primary flex size-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold">
+            <span className="bg-primary/10 text-primary text-caption flex size-6 shrink-0 items-center justify-center rounded-md font-bold">
               {activeProgram.code.slice(0, 2)}
             </span>
             <span className="hidden max-w-44 truncate text-xs font-semibold md:inline">
               {activeProgram.code} — {activeProgram.name}
             </span>
             <span className="text-xs font-semibold md:hidden">{activeProgram.code}</span>
-            <ChevronsUpDown
-              className="text-sidebar-foreground/60 size-3.5"
-              aria-hidden="true"
-            />
+            <ChevronsUpDown className="text-sidebar-foreground/60 size-3.5" aria-hidden="true" />
           </Button>
         }
       />
