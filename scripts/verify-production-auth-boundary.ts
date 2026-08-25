@@ -168,7 +168,9 @@ async function assertCiTestSessionAccepted(response: Response, baseUrl: URL): Pr
   const sessionCookie = assertCiTestLoginAvailable(response);
   const body = (await response.clone().json()) as { destination?: unknown };
   if (typeof body.destination !== "string" || !body.destination.startsWith("/")) {
-    throw new Error("POST /api/auth/ci-test-login did not return a valid authenticated destination.");
+    throw new Error(
+      "POST /api/auth/ci-test-login did not return a valid authenticated destination."
+    );
   }
 
   const destinationResponse = await fetch(new URL(body.destination, baseUrl), {
@@ -216,7 +218,9 @@ export async function verifyCiTestAuthBoundary(
   }
   const ciCatalog = new Set<string>(DEMO_USER_EMAILS);
   if ([...allowedUsers].some((identifier) => !ciCatalog.has(identifier))) {
-    throw new Error("CLOIE_CI_TEST_ALLOWED_USERS contains an identifier outside the seeded demo catalog.");
+    throw new Error(
+      "CLOIE_CI_TEST_ALLOWED_USERS contains an identifier outside the seeded demo catalog."
+    );
   }
 
   const devLoginResponse = await fetch(new URL("/api/auth/dev-login", baseUrl), {

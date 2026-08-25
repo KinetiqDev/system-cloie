@@ -37,7 +37,10 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "A CI test account identifier is required." }, { status: 400 });
+    return NextResponse.json(
+      { error: "A CI test account identifier is required." },
+      { status: 400 }
+    );
   }
 
   const identifier = getRequestedIdentifier(body);
@@ -67,7 +70,11 @@ export async function POST(request: Request) {
   }
 
   const cookieStore = await cookies();
-  cookieStore.set(CI_TEST_AUTH_COOKIE_NAME, createCiTestSessionValue(user.id), getCiTestCookieOptions());
+  cookieStore.set(
+    CI_TEST_AUTH_COOKIE_NAME,
+    createCiTestSessionValue(user.id),
+    getCiTestCookieOptions()
+  );
 
   const destination = resolvePostLoginDestination({
     requestedPath: "/dashboard",
