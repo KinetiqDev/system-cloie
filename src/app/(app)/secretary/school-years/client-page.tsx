@@ -28,7 +28,7 @@ interface SchoolYearsClientPageProps {
  * Persist the selected tab to the URL. The canonical default (active) is
  * omitted so shareable URLs stay canonical.
  */
-export function updateSchoolYearsUrl(tab: SchoolYearsTab) {
+function updateSchoolYearsUrl(tab: SchoolYearsTab) {
   if (typeof window === "undefined") return;
 
   const url = new URL(window.location.href);

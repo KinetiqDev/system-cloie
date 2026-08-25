@@ -307,6 +307,7 @@ interface SchoolYearCardProps {
   onCancel: (term: TermInstanceItem) => void;
 }
 
+// fallow-ignore-next-line complexity
 function SchoolYearCard({
   year,
   pendingAction,

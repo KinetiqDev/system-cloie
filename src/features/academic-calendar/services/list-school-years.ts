@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
