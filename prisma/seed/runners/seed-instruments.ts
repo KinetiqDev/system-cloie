@@ -73,6 +73,12 @@ async function seedAlumniIndustryPloBindings(
 
   const bindLikertQuestions = async (templateId: string, structure: TemplateStructure) => {
     const questions = listTemplateLikertQuestions(structure);
+    const desiredKeys = new Set(
+      questions.map((question, index) => {
+        const plo = bsitPlos[index % bsitPlos.length];
+        return `${question.sectionKey}|${question.itemKey}|${plo.id}`;
+      })
+    );
     for (let index = 0; index < questions.length; index++) {
       const question = questions[index];
       const plo = bsitPlos[index % bsitPlos.length];
@@ -99,6 +105,19 @@ async function seedAlumniIndustryPloBindings(
           item_key: question.itemKey,
           question_prompt_snapshot: question.prompt,
         },
+      });
+    }
+    // Delete stale bindings that no longer match the current structure or PLO set
+    const existing = await prisma.instrumentTemplatePloQuestionBinding.findMany({
+      where: { template_id: templateId },
+      select: { id: true, section_key: true, item_key: true, plo_id: true },
+    });
+    const staleIds = existing
+      .filter((row) => !desiredKeys.has(`${row.section_key}|${row.item_key}|${row.plo_id}`))
+      .map((row) => row.id);
+    if (staleIds.length > 0) {
+      await prisma.instrumentTemplatePloQuestionBinding.deleteMany({
+        where: { id: { in: staleIds } },
       });
     }
   };
