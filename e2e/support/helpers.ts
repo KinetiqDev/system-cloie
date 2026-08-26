@@ -36,3 +36,29 @@ export async function expectNoAxeViolations(page: Page): Promise<void> {
   }));
   expect(summary, JSON.stringify(summary, null, 2)).toEqual([]);
 }
+
+/**
+ * Student wizard Likert interaction: click the descriptor label inside the
+ * radiogroup for the given prompt (mirrors a real user choosing a rating).
+ */
+export async function rateQuestion(page: Page, prompt: string, label: string): Promise<void> {
+  const group = page.getByRole("group", { name: prompt });
+  await group.getByText(label, { exact: true }).click();
+  await expect(group.getByRole("radio", { name: new RegExp(label) })).toBeChecked();
+}
+
+/** Assert a student wizard Likert question has no selected rating. */
+export async function expectQuestionUnanswered(page: Page, prompt: string): Promise<void> {
+  const group = page.getByRole("group", { name: prompt });
+  await expect(group.getByRole("radio", { checked: true })).toHaveCount(0);
+}
+
+/** Horizontal-overflow guard: no document/body scroll width beyond the viewport. */
+export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+  const overflow = await page.evaluate(() => {
+    const doc = document.documentElement;
+    const body = document.body;
+    return Math.max(doc.scrollWidth - window.innerWidth, body.scrollWidth - window.innerWidth);
+  });
+  expect(overflow, `horizontal overflow of ${overflow}px`).toBeLessThanOrEqual(0);
+}

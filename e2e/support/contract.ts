@@ -76,12 +76,19 @@ export const E2E_CONTRACT = {
     axeSuggested: { id: U.STU_BSED, name: "Juan Dela Cruz", email: "student-bsed@cloie.test" },
   },
 
+  /** Student identities for the lifecycle journey (issue #544). */
+  demoStudent: { id: U.STU_BSIT, email: "demo-student@cloie.test", name: "Demo Student" },
+  bsbaStudent: { id: U.STU_BSBA, email: "student-bsba@cloie.test", name: "Angela Reyes" },
+
   /** Deterministic deployment identifiers reused from the Prisma seed. */
   deployments: {
     courseEvaluation: { id: D.CB_BSIT_IT201, title: "IT201 Post-Term CILO Evaluation" },
     bottomUpEvaluation: { id: D.CB_BSIT_ITRES1, title: "ITRES1 Post-Term CILO Evaluation" },
     centralEvaluation: { id: D.BSIT_ALUMNI, title: "BSIT Alumni Evaluation" },
   },
+
+  /** The GESTECH zero-response evaluation used for the Student lifecycle journey (issue #544). */
+  gestechEval: { id: D.CB_BSIT_GESTECH, title: "GESTECH Post-Term CILO Evaluation" },
 
   /** Reviewed expectations for the IT201 course-bound SUBMITTED response (journey A). */
   courseResponse: {
@@ -129,6 +136,8 @@ export type FixtureData = {
     outOfScope: { name: string; email: string };
     axeSuggested: { id: string; name: string; email: string };
   };
+  demoStudent: { id: string; email: string; name: string };
+  bsbaStudent: { id: string; email: string; name: string };
   bsit: { id: string; code: string };
   beed: { id: string; code: string };
   courseEvaluation: { id: string; title: string };
@@ -145,4 +154,7 @@ export type FixtureData = {
     respondentName: string;
     ploLinks: Array<{ ploId: string; ploCode: string; ciloLabel: string }>;
   };
+  gestechEval: { id: string; title: string };
+  gestechAssignment: { id: string };
+  gestechBsbaAssignment: { id: string };
 };

@@ -95,6 +95,8 @@ async function verifyIdentities(): Promise<void> {
   await verifySeededIdentity(E2E_CONTRACT.demoPh, "PROGRAM_HEAD");
   await verifySeededIdentity(E2E_CONTRACT.beedPh, "PROGRAM_HEAD");
   await verifySeededIdentity(E2E_CONTRACT.demoFaculty, "FACULTY");
+  await verifySeededIdentity(E2E_CONTRACT.demoStudent, "STUDENT");
+  await verifySeededIdentity(E2E_CONTRACT.bsbaStudent, "STUDENT");
 }
 
 async function verifyDeployments(): Promise<{
@@ -301,6 +303,7 @@ export default async function globalSetup(): Promise<void> {
 
   await verifyResponseExpectations(courseResponse, bottomUpResponse);
   const ploId = await verifyPloEvidenceLink(bsit.id);
+  const { gestechAssignment, gestechBsbaAssignment } = await verifyStudentLifecycleFixture();
 
   const contract = E2E_CONTRACT;
   const fixture: FixtureData = {
@@ -353,6 +356,15 @@ export default async function globalSetup(): Promise<void> {
         name: contract.rosterStudents.axeSuggested.name,
         email: contract.rosterStudents.axeSuggested.email,
       },
+    demoStudent: {
+      id: contract.demoStudent.id,
+      email: contract.demoStudent.email,
+      name: contract.demoStudent.name,
+    },
+    bsbaStudent: {
+      id: contract.bsbaStudent.id,
+      email: contract.bsbaStudent.email,
+      name: contract.bsbaStudent.name,
     },
     bsit,
     beed,
@@ -386,6 +398,9 @@ export default async function globalSetup(): Promise<void> {
         ciloLabel: p.ciloLabel,
       })),
     },
+    gestechEval: { id: contract.gestechEval.id, title: contract.gestechEval.title },
+    gestechAssignment,
+    gestechBsbaAssignment,
   };
 
   mkdirSync(join(__dirname, ".."), { recursive: true });
