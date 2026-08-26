@@ -78,7 +78,7 @@ export const E2E_CONTRACT = {
 
   /** Student identities for the lifecycle journey (issue #544). */
   demoStudent: { id: U.STU_BSIT, email: "demo-student@cloie.test", name: "Demo Student" },
-  bsbaStudent: { id: U.STU_BSBA, email: "student-bsba@cloie.test", name: "Angela Reyes" },
+  bsbaStudent: { id: U.GRAD_BSIT, email: "demo-grad@cloie.test", name: "Demo Graduate" },
 
   /** Deterministic deployment identifiers reused from the Prisma seed. */
   deployments: {
