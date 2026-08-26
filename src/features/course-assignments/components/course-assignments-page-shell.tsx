@@ -4,7 +4,8 @@ import { useCallback, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CalendarDays, GraduationCap, Plus, Users } from "lucide-react";
 import { CourseAssignmentsTable } from "./course-assignments-table";
 import { AssignmentFilters } from "./shared/assignment-filters";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
@@ -130,17 +131,52 @@ export function CourseAssignmentsPageShell({
   const periodLabel = selectedTerm
     ? formatTermInstanceLabel(selectedTerm.schoolYearCode, selectedTerm.semester, selectedTerm.term)
     : "All Academic Periods";
+  const selectedProgram = selectedProgramId
+    ? availablePrograms.find((p) => p.id === selectedProgramId) ?? null
+    : null;
+  const activeCount = assignments.filter((a) => a.isActive).length;
+  const inactiveCount = total > 0 ? total - activeCount : 0;
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-heading-lg">{pageTitle}</h1>
-          <p className="text-body-sm text-text-secondary">{pageDescription}</p>
+      {/* Header — institutional, calm, program-aware */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-2">
+          {mode === "program-head" && selectedProgram && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border bg-primary/8 px-2.5 py-1 text-xs font-semibold tracking-wide text-primary ring-1 ring-primary/15">
+                <GraduationCap className="size-3.5 shrink-0" aria-hidden="true" />
+                {selectedProgram.code} · {selectedProgram.name}
+              </span>
+              <span className="hidden size-1 rounded-full bg-border sm:block" aria-hidden="true" />
+              <span className="text-label-sm text-muted-foreground hidden sm:inline">
+                Program scope
+              </span>
+            </div>
+          )}
+          {mode === "program-head" && !selectedProgram && (
+            <p className="text-label-sm font-medium tracking-widest uppercase text-muted-foreground">
+              Program assignments
+            </p>
+          )}
+          <h1 className="text-heading-lg tracking-tight">{pageTitle}</h1>
+          <p className="text-body-sm max-w-2xl text-text-secondary leading-relaxed">
+            {pageDescription}
+          </p>
+          {mode === "program-head" && (
+            <p className="text-xs leading-relaxed text-muted-foreground max-w-2xl">
+              Each assignment connects a faculty member to a course and class section for a term.
+              The class roster unlocks evaluations and attainment evidence.
+            </p>
+          )}
         </div>
         {canManageAssignments && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={() => setCreateOpen(true)}>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="min-h-11 w-full shadow-sm sm:w-auto"
+              size="default"
+            >
               <Plus aria-hidden="true" className="size-4" />
               Assign Faculty
             </Button>
@@ -160,11 +196,44 @@ export function CourseAssignmentsPageShell({
         defaultTermInstanceId={activeTermInstanceId}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <p className="font-medium">
-          {total} {total === 1 ? "assignment" : "assignments"}
-        </p>
-        <p className="text-muted-foreground">{periodLabel}</p>
+      {/* Summary strip — count + period context */}
+      <div className="flex flex-col gap-3 rounded-xl border bg-card px-4 py-3 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border">
+            <Users className="size-4" aria-hidden="true" />
+          </div>
+          <div className="flex flex-col">
+            <p className="text-sm font-semibold tabular-nums leading-none">
+              {total} {total === 1 ? "assignment" : "assignments"}
+            </p>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {total === 0 ? (
+                "No records in current view"
+              ) : (
+                <>
+                  <span className="font-medium text-foreground">{activeCount} active</span>
+                  {inactiveCount > 0 && (
+                    <>
+                      <span className="mx-1.5 text-border-strong">·</span>
+                      <span>{inactiveCount} inactive</span>
+                    </>
+                  )}
+                  <span className="mx-1.5 hidden text-border-strong sm:inline">·</span>
+                  <span className="hidden sm:inline">page {page + 1}</span>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className="inline-flex items-center gap-1.5 rounded-full bg-background px-3 py-1.5 text-xs font-medium"
+          >
+            <CalendarDays className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            {periodLabel}
+          </Badge>
+        </div>
       </div>
 
       {loadError && (

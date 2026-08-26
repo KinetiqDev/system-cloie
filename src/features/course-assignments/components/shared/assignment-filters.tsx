@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CourseScope, YearLevel, StudentSection } from "@prisma/client";
-import { SlidersHorizontal, X } from "lucide-react";
+import { ListFilter, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -211,26 +211,41 @@ export function AssignmentFilters({
     </>
   );
 
+  const searchPlaceholder = showProgramFilter
+    ? "Search course, faculty, or program"
+    : "Search course or faculty";
+  const hasActiveFilters =
+    secondaryCount > 0 ||
+    filters.searchQuery.length > 0 ||
+    filters.termInstanceId !== defaultTermInstanceId;
+
   return (
     <section
-      aria-labelledby="assignment-scope-title"
-      className="bg-card flex flex-col gap-4 rounded-xl border p-4 shadow-sm"
+      aria-labelledby="assignment-filter-title"
+      className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs"
     >
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="assignment-scope-title" className="text-heading-sm">
-          Assignment scope
-        </h2>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="hidden size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border sm:inline-flex" aria-hidden="true">
+            <ListFilter className="size-4" />
+          </span>
+          <div className="flex flex-col">
+            <h2 id="assignment-filter-title" className="text-title-sm leading-none">
+              Filter assignments
+            </h2>
+            <p className="text-xs leading-none text-muted-foreground mt-1">
+              Term, course, class, and faculty — combine filters to narrow the list.
+            </p>
+          </div>
+        </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={resetFilters}
-          disabled={
-            !secondaryCount &&
-            !filters.searchQuery &&
-            filters.termInstanceId === defaultTermInstanceId
-          }
+          disabled={!hasActiveFilters}
+          className="shrink-0 gap-1.5"
         >
-          <X data-icon="inline-start" />
+          <X className="size-3.5" aria-hidden="true" />
           Reset
         </Button>
       </div>
@@ -242,19 +257,29 @@ export function AssignmentFilters({
           onChange={(value) => updateFilter("termInstanceId", value === "all" ? null : value)}
           allowAll
         />
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor="assignment-search">Search</Label>
-          <Input
-            id="assignment-search"
-            placeholder="Search course, Faculty, or Program"
-            value={searchDraft}
-            onChange={(event) => setSearchDraft(event.target.value)}
-          />
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              id="assignment-search"
+              placeholder={searchPlaceholder}
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              className="pl-9"
+              autoComplete="off"
+            />
+          </div>
         </div>
       </div>
-      <div className="hidden grid-cols-2 gap-3 md:grid lg:grid-cols-4 xl:grid-cols-7">
+      {/* Desktop: secondary filters as responsive grid */}
+      <div className="hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {secondaryControls(filters, updateFilter)}
       </div>
+      {/* Mobile: collapsed into drawer */}
       <div className="md:hidden">
         <Drawer
           open={drawerOpen}
@@ -264,14 +289,17 @@ export function AssignmentFilters({
           }}
           showSwipeHandle
         >
-          <DrawerTrigger render={<Button variant="outline" className="w-full" />}>
-            <SlidersHorizontal data-icon="inline-start" />
+          <DrawerTrigger render={<Button variant="outline" className="w-full justify-center gap-2" />}>
+            <SlidersHorizontal className="size-4" aria-hidden="true" />
             Filters{secondaryCount ? ` (${secondaryCount})` : ""}
+            <span className="sr-only">Open additional filters</span>
           </DrawerTrigger>
           <DrawerContent className="max-h-[88dvh]">
             <DrawerHeader className="text-left">
-              <DrawerTitle>Assignment filters</DrawerTitle>
-              <DrawerDescription>Narrow the visible class register.</DrawerDescription>
+              <DrawerTitle>Filter assignments</DrawerTitle>
+              <DrawerDescription>
+                Choose course, faculty, and class to narrow the visible assignments.
+              </DrawerDescription>
             </DrawerHeader>
             <div className="grid min-h-0 gap-3 overflow-y-auto px-4 py-2">
               {secondaryControls(drawerFilters, (key, value) =>
@@ -285,10 +313,11 @@ export function AssignmentFilters({
                   setDrawerOpen(false);
                 }}
               >
-                Show Results
+                Show results
+                {secondaryCount ? ` · ${secondaryCount} filter${secondaryCount === 1 ? "" : "s"}` : ""}
               </Button>
               <Button variant="outline" onClick={resetFilters}>
-                Reset
+                Reset filters
               </Button>
             </DrawerFooter>
           </DrawerContent>
@@ -315,7 +344,7 @@ function FilterSelect({
     <div className="flex min-w-0 flex-col gap-2">
       <Label htmlFor={id}>{label}</Label>
       <Select value={value} onValueChange={(value) => value && onChange(value)}>
-        <SelectTrigger id={id} className="w-full">
+        <SelectTrigger id={id} className="w-full bg-background">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>{children}</SelectContent>

@@ -49,7 +49,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Trash2, Power, Pencil, AlertTriangle, FileX2, Plus } from "lucide-react";
+import {
+  MoreHorizontal,
+  Trash2,
+  Power,
+  Pencil,
+  AlertTriangle,
+  Plus,
+  Users,
+  GraduationCap,
+  BookOpen,
+  CalendarDays,
+  ExternalLink,
+} from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { showToast } from "@/components/ui/toast";
 import {
@@ -116,23 +128,37 @@ function RosterCell({
 }) {
   const isCoordinator = mode === "general-education";
   if (isCoordinator) {
-    return <span className="text-muted-foreground px-2 text-xs">Roster managed by Program</span>;
-  }
-  if (mode === "all-program" || (mode === "program-head" && selectedProgramId)) {
     return (
-      <Link
-        href={
-          mode === "all-program"
-            ? `/course-rosters/${assignment.id}`
-            : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id)
-        }
-        className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
-      >
-        Open roster
-      </Link>
+      <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1.5 text-xs font-medium text-muted-foreground ring-1 ring-border">
+        Roster managed by Program
+      </span>
     );
   }
-  return <span className="text-muted-foreground px-2 text-sm">Roster available in next phase</span>;
+  if (mode === "all-program" || (mode === "program-head" && selectedProgramId)) {
+    const href =
+      mode === "all-program"
+        ? `/course-rosters/${assignment.id}`
+        : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id);
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        asChild
+        className="h-8 gap-1.5 rounded-full bg-background px-3 text-xs font-medium shadow-xs hover:bg-accent"
+      >
+        <Link href={href}>
+          <Users className="size-3.5" aria-hidden="true" />
+          Open roster
+          <ExternalLink className="size-3 opacity-60" aria-hidden="true" />
+        </Link>
+      </Button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+      Roster available in program view
+    </span>
+  );
 }
 
 // Menu branches express the role/scope action matrix pinned by assignment workflow tests.
@@ -156,7 +182,7 @@ function AssignmentActions({
   const busy = processingId === assignment.id;
 
   if (readOnlyReason) {
-    return <span className="text-muted-foreground text-xs">{readOnlyReason}</span>;
+    return <span className="text-muted-foreground text-xs font-medium">{readOnlyReason}</span>;
   }
 
   return (
@@ -167,16 +193,17 @@ function AssignmentActions({
             variant="ghost"
             size="icon-sm"
             aria-label={`Open actions for ${assignment.courseCode}`}
+            className="size-8 rounded-full"
           >
-            <MoreHorizontal />
+            <MoreHorizontal className="size-4" />
           </Button>
         }
       />
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="min-w-40">
         <DropdownMenuGroup>
           {(mode === "all-program" || mode === "general-education" || !isGeneralEducation) && (
             <DropdownMenuItem onClick={() => onEdit(assignment)} disabled={busy}>
-              <Pencil />
+              <Pencil className="size-4" />
               Edit
             </DropdownMenuItem>
           )}
@@ -185,21 +212,21 @@ function AssignmentActions({
               onClick={() => onOpenConfirm("deactivate", assignment)}
               disabled={busy}
             >
-              <Power className="text-warning" />
+              <Power className="size-4 text-warning" />
               Deactivate
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem onClick={() => onActivate(assignment.id)} disabled={busy}>
-              <Power className="text-success" />
+              <Power className="size-4 text-success" />
               Activate
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
             onClick={() => onOpenConfirm("delete", assignment)}
             disabled={busy}
-            className="text-destructive"
+            className="text-destructive focus:text-destructive"
           >
-            <Trash2 />
+            <Trash2 className="size-4" />
             Delete
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -231,49 +258,88 @@ function CourseAssignmentsRow({
         ? "Program-specific"
         : null;
   const scopeLabel = isGeneralEducation ? "GE" : "Program-specific";
-
   return (
-    <TableRow data-readonly={readOnlyReason !== null || undefined}>
-      <TableCell>
-        <RosterCell assignment={assignment} mode={mode} selectedProgramId={selectedProgramId} />
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{assignment.courseCode}</span>
+    <TableRow
+      data-readonly={readOnlyReason !== null || undefined}
+      className="group hover:bg-muted/40"
+    >
+      <TableCell className="py-3">
+        <div className="flex flex-col gap-1">
+          <span className="font-semibold tracking-tight tabular-nums">{assignment.courseCode}</span>
+          <span className="text-muted-foreground line-clamp-1 max-w-[18rem] text-xs">
+            {assignment.courseTitle}
+          </span>
         </div>
-        <div className="text-muted-foreground text-sm">{assignment.courseTitle}</div>
       </TableCell>
-      <TableCell>
+      <TableCell className="py-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-primary/15">
+            {(assignment.facultyName ?? "Unknown")
+              .split(" ")
+              .slice(0, 2)
+              .map((part) => part[0] ?? "")
+              .join("")
+              .toUpperCase()
+              .slice(0, 2)}
+          </span>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-medium leading-none">
+              {assignment.facultyName ?? "Unknown faculty"}
+            </span>
+            <span className="text-muted-foreground truncate text-xs">{assignment.facultyEmail ?? "—"}</span>
+          </div>
+        </div>
+      </TableCell>
+      {mode !== "program-head" && (
+        <TableCell className="py-3">
+          <Badge variant="outline" className="rounded-full bg-background font-medium">
+            {assignment.programCode}
+          </Badge>
+        </TableCell>
+      )}
+      <TableCell className="py-3">
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-background px-2.5 py-1 text-xs font-medium">
+          <GraduationCap className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+          {getYearLevelDisplay(assignment.yearLevel)} · {getSectionLabel(assignment.section)}
+        </span>
+      </TableCell>
+      <TableCell className="py-3">
+        <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
+          <CalendarDays className="size-3 shrink-0" aria-hidden="true" />
+          <span className="max-w-[10rem] truncate tabular-nums">{assignment.termLabel}</span>
+        </span>
+      </TableCell>
+      <TableCell className="py-3">
         <div className="flex flex-col items-start gap-1">
-          <Badge variant={isGeneralEducation ? "secondary" : "outline"}>{scopeLabel}</Badge>
+          <Badge
+            variant={isGeneralEducation ? "secondary" : "outline"}
+            className="rounded-full px-2.5 py-1 text-xs"
+          >
+            {scopeLabel}
+          </Badge>
           {isGeneralEducation && mode === "program-head" && (
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground block text-[10px] leading-none">
               Managed by General Education Coordinator
             </span>
           )}
         </div>
       </TableCell>
-      <TableCell>
-        <div>{assignment.facultyName}</div>
-        <div className="text-muted-foreground text-sm">{assignment.facultyEmail}</div>
-      </TableCell>
-      {mode !== "program-head" && (
-        <TableCell>
-          <Badge variant="outline">{assignment.programCode}</Badge>
-        </TableCell>
-      )}
-      <TableCell>
-        <span className="whitespace-nowrap">
-          {getYearLevelDisplay(assignment.yearLevel)} · {getSectionLabel(assignment.section)}
-        </span>
-      </TableCell>
-      {mode !== "program-head" && <TableCell>{assignment.termLabel}</TableCell>}
-      <TableCell>
-        <Badge variant={assignment.isActive ? "success" : "outline"}>
+      <TableCell className="py-3">
+        <Badge
+          variant={assignment.isActive ? "success" : "outline"}
+          className="rounded-full px-2.5 py-1 text-xs"
+        >
+          <span
+            className={`mr-1.5 size-1.5 rounded-full ${assignment.isActive ? "bg-success" : "bg-muted-foreground"}`}
+            aria-hidden="true"
+          />
           {assignment.isActive ? "Active" : "Inactive"}
         </Badge>
       </TableCell>
-      <TableCell>
+      <TableCell className="py-3">
+        <RosterCell assignment={assignment} mode={mode} selectedProgramId={selectedProgramId} />
+      </TableCell>
+      <TableCell className="py-3">
         <AssignmentActions
           assignment={assignment}
           mode={mode}
@@ -439,41 +505,54 @@ export function CourseAssignmentsTable({
 
   if (loading) {
     return (
-      <div className="space-y-2" aria-busy="true">
+      <div className="space-y-3" aria-busy="true">
         <div className="flex items-center gap-2 py-1">
           <Spinner size="sm" label="Loading assignments" />
-          <span className="text-muted-foreground text-sm">Loading assignments...</span>
+          <span className="text-muted-foreground text-sm">Loading assignments…</span>
         </div>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
       </div>
     );
   }
 
   if (assignments.length === 0) {
     return (
-      <Empty className="py-12" data-testid="empty-state">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <FileX2 />
+      <Empty
+        className="border bg-card py-10 shadow-xs rounded-xl"
+        data-testid="empty-state"
+      >
+        <EmptyHeader className="items-center">
+          <EmptyMedia variant="icon" className="bg-muted ring-1 ring-border">
+            <BookOpen className="size-5 text-muted-foreground" />
           </EmptyMedia>
-          <EmptyTitle>No course assignments found</EmptyTitle>
-          <EmptyDescription>
-            {mode === "all-program"
-              ? "Assign faculty to a course across any program to get started."
+          <EmptyTitle className="text-title-md">
+            {mode === "all-program" || mode === "program-head"
+              ? "No course assignments found"
               : mode === "general-education"
-                ? "Assign faculty to a General Education Course to get started."
-                : "Assign faculty to a Program-specific Course to get started."}
+                ? "No General Education assignments"
+                : "No course assignments found"}
+          </EmptyTitle>
+          <EmptyDescription className="max-w-md text-balance text-sm leading-relaxed">
+            {mode === "all-program"
+              ? "Assign faculty to a course across any program to get started. Each assignment creates a class and its roster."
+              : mode === "general-education"
+                ? "Assign faculty to a General Education course to get started. GE assignments are shared college-wide."
+                : "Assign faculty to a Program-specific Course to get started. Create a class — year, section, and term — and its roster unlocks evaluations."}
           </EmptyDescription>
         </EmptyHeader>
         {onAssignFaculty && (
-          <Button onClick={onAssignFaculty}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={onAssignFaculty} className="mt-2 min-h-11 shadow-sm">
+            <Plus className="size-4" aria-hidden="true" />
             Assign Faculty
           </Button>
+        )}
+        {!onAssignFaculty && mode === "program-head" && (
+          <p className="text-xs text-muted-foreground">Read-only view for this program.</p>
         )}
       </Empty>
     );
@@ -495,20 +574,46 @@ export function CourseAssignmentsTable({
         <div className="grid gap-3">
           {assignments.map((assignment) => {
             const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
+            const classLabel = `${getYearLevelDisplay(assignment.yearLevel)} · ${getSectionLabel(assignment.section)}`;
             return (
-              <Card key={assignment.id} size="sm" data-testid={`assignment-card-${assignment.id}`}>
-                <CardHeader>
-                  <CardTitle className="flex flex-wrap items-center gap-2">
-                    <span>{assignment.courseCode}</span>
-                    <Badge variant={isGeneralEducation ? "secondary" : "outline"}>
-                      {isGeneralEducation ? "GE" : "Program-specific"}
-                    </Badge>
-                    <Badge variant={assignment.isActive ? "success" : "outline"}>
-                      {assignment.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>{assignment.courseTitle}</CardDescription>
-                  <CardAction>
+              <Card
+                key={assignment.id}
+                size="sm"
+                data-testid={`assignment-card-${assignment.id}`}
+                className="overflow-hidden border shadow-xs transition-shadow hover:shadow-sm"
+              >
+                <CardHeader className="gap-3 pb-3">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <CardTitle className="flex flex-wrap items-center gap-2 text-[15px] leading-tight">
+                      <span className="font-semibold tracking-tight tabular-nums">
+                        {assignment.courseCode}
+                      </span>
+                      <Badge
+                        variant={isGeneralEducation ? "secondary" : "outline"}
+                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                      >
+                        {isGeneralEducation ? "GE" : "Program-specific"}
+                      </Badge>
+                      <Badge
+                        variant={assignment.isActive ? "success" : "outline"}
+                        className="rounded-full px-2 py-0.5 text-[10px]"
+                      >
+                        <span
+                          className={`mr-1 size-1 rounded-full ${assignment.isActive ? "bg-success" : "bg-muted-foreground"}`}
+                          aria-hidden="true"
+                        />
+                        {assignment.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2 text-sm leading-snug">
+                      {assignment.courseTitle}
+                    </CardDescription>
+                    <p className="inline-flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
+                      <CalendarDays className="size-3 shrink-0" aria-hidden="true" />
+                      {assignment.termLabel}
+                    </p>
+                  </div>
+                  <CardAction className="self-start">
                     <AssignmentActions
                       assignment={assignment}
                       mode={mode}
@@ -524,23 +629,49 @@ export function CourseAssignmentsTable({
                     />
                   </CardAction>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                  <div>
-                    <p className="font-medium">{assignment.facultyName}</p>
-                    <p className="text-muted-foreground text-sm break-all">
-                      {assignment.facultyEmail}
-                    </p>
+                <CardContent className="flex flex-col gap-3 pt-0">
+                  <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3">
+                    <div className="col-span-2 flex items-center gap-2.5">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-primary/15">
+                        {(assignment.facultyName ?? "Unknown")
+                          .split(" ")
+                          .slice(0, 2)
+                          .map((p) => p[0] ?? "")
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium leading-none">
+                          {assignment.facultyName ?? "Unknown faculty"}
+                        </p>
+                        <p className="text-muted-foreground truncate text-xs">
+                          {assignment.facultyEmail ?? "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        Class
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+                        <GraduationCap className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                        {classLabel}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        Roster
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium tabular-nums">
+                        <Users className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                        {assignment.rosterMembershipCount ?? 0} roster{" "}
+                        {(assignment.rosterMembershipCount ?? 0) === 1 ? "member" : "members"}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-muted-foreground">
-                    {getYearLevelDisplay(assignment.yearLevel)} ·{" "}
-                    {getSectionLabel(assignment.section)}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {assignment.rosterMembershipCount ?? 0} roster{" "}
-                    {(assignment.rosterMembershipCount ?? 0) === 1 ? "member" : "members"}
-                  </p>
                   {isGeneralEducation && mode === "program-head" && (
-                    <p className="text-muted-foreground text-xs">
+                    <p className="rounded-md bg-warning-soft px-2.5 py-1.5 text-xs font-medium text-warning-foreground ring-1 ring-warning/20">
                       Managed by General Education Coordinator
                     </p>
                   )}
@@ -555,19 +686,37 @@ export function CourseAssignmentsTable({
           })}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
+        <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Roster</TableHead>
-                <TableHead>Course</TableHead>
-                <TableHead>Scope</TableHead>
-                <TableHead>Faculty</TableHead>
-                {mode !== "program-head" && <TableHead>Program</TableHead>}
-                <TableHead>Class</TableHead>
-                {mode !== "program-head" && <TableHead>Term</TableHead>}
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[50px]">
+            <TableHeader className="bg-muted/40">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                  Course
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                  Faculty
+                </TableHead>
+                {mode !== "program-head" && (
+                  <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                    Program
+                  </TableHead>
+                )}
+                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                  Class
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                  Term
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                  Scope
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                  Status
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                  Roster
+                </TableHead>
+                <TableHead className="w-[48px]">
                   <span className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
@@ -705,8 +854,8 @@ export function CourseAssignmentsTable({
       )}
 
       {totalPages > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-muted-foreground text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5">
+          <div className="text-muted-foreground text-sm tabular-nums">
             Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total}{" "}
             results
           </div>

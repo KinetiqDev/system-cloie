@@ -544,7 +544,7 @@ export function CourseAssignmentFormDialog({
   const stepContent = (
     <>
       <WizardStepper steps={STEPS} currentStep={step} />
-      <div className="min-h-0 flex-1 overflow-y-auto py-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain py-1">
         <AssignmentStepContent
           step={step}
           termInstances={termInstances}

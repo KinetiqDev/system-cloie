@@ -44,10 +44,10 @@ export function ClassIdentityFields({
   const hintMatches = hasHint && yearLevel === suggestedYearLevel;
 
   return (
-    <div className="space-y-4">
-      <Field>
+    <div className="space-y-5">
+      <Field className="min-w-0">
         <FieldLabel htmlFor="program">Program</FieldLabel>
-        <FieldContent>
+        <FieldContent className="min-w-0">
           <Combobox
             value={availablePrograms.find((p) => p.id === programId) ?? null}
             onValueChange={(value) => value && onProgramChange(value.id)}
@@ -65,7 +65,7 @@ export function ClassIdentityFields({
           >
             <ComboboxInput
               id="program"
-              className="w-full"
+              className="w-full min-w-0 truncate"
               placeholder="Search program…"
               disabled={disabled || programDisabled}
             />
@@ -94,13 +94,16 @@ export function ClassIdentityFields({
         </FieldContent>
       </Field>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Field>
-          <FieldLabel htmlFor="year-level">
-            <span className="flex items-center gap-2">
-              Year Level
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field className="min-w-0">
+          <FieldLabel htmlFor="year-level" className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2 min-w-0">
+              <span className="shrink-0">Year Level</span>
               {hasHint && (
-                <Badge variant={hintMatches ? "secondary" : "warning"} className="text-xs">
+                <Badge
+                  variant={hintMatches ? "secondary" : "warning"}
+                  className="max-w-full shrink text-xs break-words whitespace-normal"
+                >
                   {hintMatches
                     ? `Course default: ${getYearLevelDisplay(suggestedYearLevel)}`
                     : `Course default: ${getYearLevelDisplay(
@@ -110,13 +113,13 @@ export function ClassIdentityFields({
               )}
             </span>
           </FieldLabel>
-          <FieldContent>
+          <FieldContent className="min-w-0">
             <Select
               value={yearLevel}
               onValueChange={(value) => onYearLevelChange(value as YearLevel)}
               disabled={disabled}
             >
-              <SelectTrigger id="year-level">
+              <SelectTrigger id="year-level" className="w-full min-w-0">
                 <SelectValue placeholder="Select year">
                   {yearLevel
                     ? (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevel)?.label ?? null)
@@ -134,15 +137,15 @@ export function ClassIdentityFields({
           </FieldContent>
         </Field>
 
-        <Field>
+        <Field className="min-w-0">
           <FieldLabel htmlFor="section">Section</FieldLabel>
-          <FieldContent>
+          <FieldContent className="min-w-0">
             <Select
               value={section ?? ""}
               onValueChange={(value) => onSectionChange(value as StudentSection)}
               disabled={disabled}
             >
-              <SelectTrigger id="section">
+              <SelectTrigger id="section" className="w-full min-w-0">
                 <SelectValue placeholder="Select section">
                   {section
                     ? (STUDENT_SECTION_OPTIONS.find((o) => o.value === section)?.label ?? null)

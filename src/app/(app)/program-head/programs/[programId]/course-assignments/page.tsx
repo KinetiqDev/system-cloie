@@ -34,7 +34,7 @@ export default async function SelectedProgramCourseAssignmentsPage({
     <CourseAssignmentsPageShell
       key={JSON.stringify(listPage.state)}
       pageTitle="Course Assignments"
-      pageDescription={`Manage ${contextResult.data.selectedProgram.code} Program-specific Course assignments`}
+      pageDescription={`Faculty class assignments for ${contextResult.data.selectedProgram.code} — ${contextResult.data.selectedProgram.name}`}
       mode="program-head"
       selectedProgramId={programId}
       initialData={listPage.result.success ? listPage.result.data : null}
