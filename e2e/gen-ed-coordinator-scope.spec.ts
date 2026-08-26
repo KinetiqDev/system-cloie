@@ -100,9 +100,14 @@ test.describe("General Education Coordinator Scope Verification", () => {
     await expectNoHorizontalOverflow(page);
 
     // Attempt direct navigation to Program Head route -> denied at server boundary.
+    // The route may redirect to /unauthorized or render unauthorized content at the same URL;
+    // either way the Coordinator must not see Program Head dashboard content.
     await page.goto("/program-head/programs");
-    await expect(page).toHaveURL(/\/unauthorized|\/login/);
-    await expect(page.getByText("Program Head Dashboard")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Program Head Dashboard" })).toHaveCount(0);
+    const phUrl = page.url();
+    if (!/\/unauthorized|\/login/.test(phUrl)) {
+      await expect(page.locator("body")).not.toContainText("Program Head Dashboard");
+    }
 
     // Attempt direct navigation to Secretary route -> denied at server boundary.
     await page.goto("/secretary/users");

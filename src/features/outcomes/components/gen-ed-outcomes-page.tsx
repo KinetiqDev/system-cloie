@@ -328,25 +328,26 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
       {totalILOs > 0 && (
         <div className="border-border bg-muted mb-6 flex items-center gap-6 rounded-lg border px-5 py-3">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-foreground/70 text-sm">Total ILOs</span>
+            <span className="font-heading text-text-primary text-2xl font-bold">{totalILOs}</span>
+            <span className="text-foreground text-sm">Total ILOs</span>
           </div>
           <div className="bg-border h-5 w-px" />
           <div className="flex items-baseline gap-1.5">
             <span className="font-heading text-success text-2xl font-bold">{withMappings}</span>
-            <span className="text-foreground/70 text-sm">Mapped to CILOs</span>
+            <span className="text-foreground text-sm">Mapped to CILOs</span>
           </div>
           {totalILOs - withMappings > 0 && (
             <>
               <div className="bg-border h-5 w-px" />
               <div className="flex items-baseline gap-1.5">
-                <span className="font-heading text-muted-foreground text-2xl font-bold">
+                <span className="font-heading text-foreground text-2xl font-bold">
                   {totalILOs - withMappings}
                 </span>
-                <span className="text-foreground/70 text-sm">Unmapped</span>
+                <span className="text-foreground text-sm">Unmapped</span>
               </div>
             </>
           )}
-          <p className="text-foreground/60 ml-auto hidden text-xs sm:block">Drag rows to reorder</p>
+          <p className="text-foreground ml-auto hidden text-xs sm:block">Drag rows to reorder</p>
         </div>
       )}
 
