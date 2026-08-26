@@ -5,3 +5,8 @@ ignoredBuiltDependencies:
 onlyBuiltDependencies:
   - prisma
   - supabase
+  - "@prisma/client"
+  - "@prisma/engines"
+  - esbuild
+  - fallow
+  - msw
