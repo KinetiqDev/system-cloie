@@ -341,7 +341,9 @@ describe("WizardShell", () => {
         id: "section-2",
         name: "Section 2 Name",
         description: "Second part",
-        items: [{ kind: "qualitative" as const, promptKey: "remarks", prompt: "Remarks" }],
+        items: [
+          { kind: "qualitative" as const, promptKey: "remarks", prompt: "Remarks", required: true },
+        ],
       },
     ];
 
@@ -393,7 +395,7 @@ describe("WizardShell", () => {
             prompt: "Question 1",
             scale: [1, 2, 3, 4, 5],
           },
-          { kind: "qualitative" as const, promptKey: "remarks", prompt: "Remarks" },
+          { kind: "qualitative" as const, promptKey: "remarks", prompt: "Remarks", required: true },
         ],
       },
     ];
@@ -407,5 +409,75 @@ describe("WizardShell", () => {
         /including the written responses?, before proceeding \(2 remaining\)/i
       )
     ).toBeDefined();
+  });
+
+  test("does not block forward navigation on optional qualitative items", async () => {
+    const onSaveDraft = vi
+      .fn()
+      .mockResolvedValue({ savedAt: "2026-04-20T10:00:00.000Z", success: true });
+    const sections = [
+      mockSections[0],
+      {
+        id: "section-2",
+        name: "Section 2 Name",
+        description: "Second part",
+        items: [
+          {
+            kind: "qualitative" as const,
+            promptKey: "remarks",
+            prompt: "Remarks",
+            required: false,
+          },
+        ],
+      },
+    ];
+
+    render(
+      <WizardShell
+        assignmentId="assignment-1"
+        title="Test Eval"
+        sections={sections}
+        onSaveDraft={onSaveDraft}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /4/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next section/i }));
+
+    await screen.findByText("Remarks");
+    fireEvent.click(screen.getByRole("button", { name: /review & submit/i }));
+
+    expect(await screen.findByRole("dialog", { name: "Review Your Answers" })).toBeDefined();
+  });
+
+  test("treats sections with only optional qualitative items as complete for resume", () => {
+    const sections = [
+      mockSections[0],
+      {
+        id: "section-2",
+        name: "Section 2 Name",
+        description: "Second part",
+        items: [
+          {
+            kind: "qualitative" as const,
+            promptKey: "remarks",
+            prompt: "Remarks",
+            required: false,
+          },
+        ],
+      },
+    ];
+
+    render(
+      <WizardShell
+        assignmentId="assignment-1"
+        title="Test Eval"
+        sections={sections}
+        initialAnswers={{ "section-1:quantitative:q1": 4 }}
+      />
+    );
+
+    expect(screen.getByText(/Section 2 of 2/i)).toBeDefined();
+    expect(screen.getByText("Section 2 completed")).toBeDefined();
   });
 });

@@ -85,6 +85,7 @@ function mapNewFormatSection(section: NewFormatSection): StudentEvaluationSectio
           prompt: q.prompt,
           scale: descriptors.map((d) => d.value),
           descriptorLabels: descriptors.length > 0 ? descriptors.map((d) => d.label) : undefined,
+          required: q.required,
         };
       }
       // guided_open_ended → qualitative
@@ -96,6 +97,7 @@ function mapNewFormatSection(section: NewFormatSection): StudentEvaluationSectio
           q.suggestedResponses && q.suggestedResponses.length > 0
             ? q.suggestedResponses
             : undefined,
+        required: q.required,
       };
     }),
   };

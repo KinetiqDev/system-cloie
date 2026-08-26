@@ -28,6 +28,10 @@ function hasQualitativeAnswer(value: number | string | undefined): boolean {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isItemRequired(item: StudentEvaluationSection["items"][number]): boolean {
+  return item.required ?? (item.kind === "quantitative" ? true : false);
+}
+
 function isSectionComplete(
   section: StudentEvaluationSection,
   answers: Record<string, number | string>
@@ -37,6 +41,10 @@ function isSectionComplete(
   }
 
   return section.items.every((item) => {
+    if (!isItemRequired(item)) {
+      return true;
+    }
+
     const answerKey =
       item.kind === "quantitative"
         ? buildStudentEvaluationAnswerKey(section.id, "quantitative", item.itemKey)
@@ -192,7 +200,7 @@ export function WizardShell({
 
   const validateCurrentSection = React.useCallback(() => {
     const unansweredQuantitative = currentSection.items.filter((item) => {
-      if (item.kind !== "quantitative") {
+      if (item.kind !== "quantitative" || !isItemRequired(item)) {
         return false;
       }
       const answerKey = buildStudentEvaluationAnswerKey(
@@ -203,7 +211,7 @@ export function WizardShell({
       return !hasQuantitativeAnswer(answers[answerKey]);
     });
     const unansweredQualitative = currentSection.items.filter((item) => {
-      if (item.kind !== "qualitative") {
+      if (item.kind !== "qualitative" || !isItemRequired(item)) {
         return false;
       }
       const answerKey = buildStudentEvaluationAnswerKey(
@@ -483,7 +491,7 @@ export function WizardShell({
                     key={item.promptKey}
                     className={cn(
                       "bg-surface rounded-xl border p-4 transition-colors",
-                      validationError && currentValue.trim().length === 0
+                      validationError && isItemRequired(item) && currentValue.trim().length === 0
                         ? "border-danger bg-danger-soft/30"
                         : "border-border"
                     )}

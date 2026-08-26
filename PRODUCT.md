@@ -21,6 +21,7 @@ Every account holds exactly one active role. Production authentication is Google
 System CLOIE ("Comprehensive Learning Outcomes and Instructional Evaluation") is Assumption College of Davao's college-level Outcome-Based Education evaluation, monitoring, analytics, and reporting platform. It manages academic structures and learning outcomes (ILO / PLO / CILO), supports stakeholder evaluations from students, alumni, and industry partners, and produces attainment analytics and evidence for quality assurance, accreditation, and continuous quality improvement. It is explicitly **not** an LMS, SIS, grading system, or transcript/enrollment replacement.
 
 **Success means:**
+
 - Credible, defensible attainment evidence for QA and accreditation.
 - **Traceable analytics** (confirmed): every chart, mean, and figure must visibly connect back to the respondent answers that produced it. The chain from response → aggregation → presented analytics must be followable and visually coherent.
 - Usable end-to-end by people with varying technical literacy, replacing the currently confusing UX with clear flows for every role.

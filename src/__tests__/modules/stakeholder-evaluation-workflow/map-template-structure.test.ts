@@ -37,11 +37,12 @@ describe("mapTemplateStructureToSections", () => {
           description: "Evaluate teaching quality",
           items: [
             {
-              kind: "quantitative",
+              kind: "quantitative" as const,
               itemKey: "q1",
               prompt: "Rate the instructor's clarity.",
               scale: [1, 2, 3, 4, 5],
               descriptorLabels: ["Poor", "Fair", "Good", "Very Good", "Excellent"],
+              required: true,
             },
           ],
         },
@@ -194,6 +195,32 @@ describe("mapTemplateStructureToSections", () => {
       const sections = mapTemplateStructureToSections(structure);
 
       expect(sections[0].items.map((i) => i.prompt)).toEqual(["First", "Second", "Third"]);
+    });
+
+    it("passes through the required flag from questions", () => {
+      const structure = [
+        {
+          key: "section",
+          title: "Section",
+          questions: [
+            { key: "q1", prompt: "Q1", type: "likert", required: true },
+            { key: "q2", prompt: "Q2", type: "likert", required: false },
+            { key: "q3", prompt: "Q3", type: "guided_open_ended", required: false },
+            { key: "q4", prompt: "Q4", type: "guided_open_ended" },
+          ],
+        },
+      ];
+
+      const sections = mapTemplateStructureToSections(structure);
+      const items = sections[0].items;
+
+      expect(items[0]).toMatchObject({ kind: "quantitative", itemKey: "q1", required: true });
+      expect(items[1]).toMatchObject({ kind: "quantitative", itemKey: "q2", required: false });
+      expect(items[2]).toMatchObject({ kind: "qualitative", promptKey: "q3", required: false });
+      // When absent, required stays undefined — the validator then applies
+      // the default (quantitative required, qualitative optional).
+      expect(items[3]).toMatchObject({ kind: "qualitative", promptKey: "q4" });
+      expect(items[3].required).toBeUndefined();
     });
   });
 

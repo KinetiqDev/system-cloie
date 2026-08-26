@@ -11,12 +11,14 @@ export type StudentEvaluationSection = {
         prompt: string;
         scale: number[];
         descriptorLabels?: string[];
+        required?: boolean;
       }
     | {
         kind: "qualitative";
         promptKey: string;
         prompt: string;
         suggestedResponses?: string[];
+        required?: boolean;
       }
   >;
 };

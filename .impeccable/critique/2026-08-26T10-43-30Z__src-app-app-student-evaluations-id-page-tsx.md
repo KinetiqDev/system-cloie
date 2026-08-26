@@ -2,13 +2,15 @@
 target: student evaluation-taking flow
 total_score: 28
 max_score: 40
-na_heuristics: 
+na_heuristics:
 p0_count: 3
 p1_count: 2
 timestamp: 2026-08-26T10-43-30Z
 slug: src-app-app-student-evaluations-id-page-tsx
 ---
+
 # Design Critique — Student Evaluation-Taking Flow
+
 Method: dual-agent (A: CritiqueDesignReview · B: CritiqueDetectorEvidence)
 Target: src/app/(app)/student/evaluations/[id]/page.tsx + src/features/responses/components/wizard-shell.tsx (incl. list page and responses components)
 
@@ -18,19 +20,19 @@ Target: src/app/(app)/student/evaluations/[id]/page.tsx + src/features/responses
 
 ## Design Health Score
 
-| # | Heuristic | Score | Key Issue |
-|---|-----------|-------|-----------|
-| 1 | Visibility of System Status | 3 | Draft-save indicator subtle; no "last saved" proof when resuming |
-| 2 | Match System / Real World | 3 | Clear language overall; `router.back()` breaks "Back to Dashboard" promise |
-| 3 | User Control and Freedom | 3 | No explicit Save & Exit; exit relies on unreliable history back |
-| 4 | Consistency and Standards | 4 | Token discipline and component reuse genuinely strong |
-| 5 | Error Prevention | 3 | Quantitative validated, qualitative not — despite domain invariant |
-| 6 | Recognition Rather Than Recall | 3 | Resume always starts at section 0; no completed-section visibility |
-| 7 | Flexibility and Efficiency | 2 | Strictly linear wizard; no section jump, shortcuts, or accelerators |
-| 8 | Aesthetic and Minimalist Design | 3 | Calm and restrained, but header+footer eat ~25% of mobile viewport |
-| 9 | Error Recovery | 3 | Good boundary pattern, but generic cause-free copy; no scroll-to-first-error |
-| 10 | Help and Documentation | 1 | Zero contextual help/onboarding; weakest area vs the literacy-level bar |
-| **Total** | | **28/40** | **Good (low end)** |
+| #         | Heuristic                       | Score     | Key Issue                                                                    |
+| --------- | ------------------------------- | --------- | ---------------------------------------------------------------------------- |
+| 1         | Visibility of System Status     | 3         | Draft-save indicator subtle; no "last saved" proof when resuming             |
+| 2         | Match System / Real World       | 3         | Clear language overall; `router.back()` breaks "Back to Dashboard" promise   |
+| 3         | User Control and Freedom        | 3         | No explicit Save & Exit; exit relies on unreliable history back              |
+| 4         | Consistency and Standards       | 4         | Token discipline and component reuse genuinely strong                        |
+| 5         | Error Prevention                | 3         | Quantitative validated, qualitative not — despite domain invariant           |
+| 6         | Recognition Rather Than Recall  | 3         | Resume always starts at section 0; no completed-section visibility           |
+| 7         | Flexibility and Efficiency      | 2         | Strictly linear wizard; no section jump, shortcuts, or accelerators          |
+| 8         | Aesthetic and Minimalist Design | 3         | Calm and restrained, but header+footer eat ~25% of mobile viewport           |
+| 9         | Error Recovery                  | 3         | Good boundary pattern, but generic cause-free copy; no scroll-to-first-error |
+| 10        | Help and Documentation          | 1         | Zero contextual help/onboarding; weakest area vs the literacy-level bar      |
+| **Total** |                                 | **28/40** | **Good (low end)**                                                           |
 
 ## Design Specificity Verdict
 
@@ -42,7 +44,7 @@ Target: src/app/(app)/student/evaluations/[id]/page.tsx + src/features/responses
 
 ## Overall Impression
 
-A disciplined, consistent implementation of a good design system wrapped around a structurally average wizard, currently invisible behind a broken dev database. The system carries the design; the flow itself adds little CLOIE-specific intelligence. Biggest opportunity: make the resume experience and the submission moment trustworthy enough that a first-time, low-literacy respondent never fears losing work or submitting blind.
+A disciplined, consistent implementation of a good design system wrapped around a structurally average wizard, currently invisible behind a broken dev database. The system carries the design; the flow itself adds little System CLOIE-specific intelligence. Biggest opportunity: make the resume experience and the submission moment trustworthy enough that a first-time, low-literacy respondent never fears losing work or submitting blind.
 
 ## What's Working
 
@@ -80,6 +82,6 @@ Strong positive peak at submission (checkmark animation + warm copy) but functio
 
 ## Questions to Consider
 
-- If submitting an evaluation is the highest-stakes student action in CLOIE, why does success offer no receipt, reference, or way back to the submission?
+- If submitting an evaluation is the highest-stakes student action in System CLOIE, why does success offer no receipt, reference, or way back to the submission?
 - What would a zero-training interface look like for a student who has never seen a 5-point Likert scale?
-- What would make this flow unmistakably CLOIE rather than a generic form wizard?
+- What would make this flow unmistakably System CLOIE rather than a generic form wizard?
