@@ -15,10 +15,22 @@ import { lockResponseSubmission } from "./lock-response-submission";
 type StructureSnapshotItem = {
   key: string;
   kind?: "quantitative" | "qualitative";
+  /**
+   * Whether the item must be answered for submission. Absent means required:
+   * legacy snapshots never set the flag and have always enforced every item.
+   */
+  required?: boolean;
+};
+
+type StructureSnapshotQuestion = {
+  key: string;
+  type?: "likert" | "guided_open_ended";
+  required?: boolean;
 };
 
 type StructureSnapshotSection = {
   items?: StructureSnapshotItem[];
+  questions?: StructureSnapshotQuestion[];
   key: string;
   qualitative_prompts?: unknown;
   quantitative_items?: unknown;
@@ -88,29 +100,73 @@ function getSnapshotItems(items: unknown): StructureSnapshotItem[] {
   return Array.isArray(items) ? items.filter(isSnapshotItem) : [];
 }
 
+type RequiredAnswer = { kind: "quantitative" | "qualitative"; key: string };
+
+function collectRequiredAnswers(section: StructureSnapshotSection): RequiredAnswer[] {
+  // Phase 3 format: questions[] with an explicit type and required flag.
+  if (Array.isArray(section.questions)) {
+    return section.questions.flatMap((question) => {
+      const kind =
+        question.type === "likert"
+          ? "quantitative"
+          : question.type === "guided_open_ended"
+            ? "qualitative"
+            : null;
+
+      if (!kind || question.required === false) {
+        return [];
+      }
+
+      return [{ kind, key: question.key }];
+    });
+  }
+
+  // Intermediate format: unified items[] with a kind discriminator.
+  if (Array.isArray(section.items)) {
+    return section.items.flatMap((item) => {
+      const kind =
+        item.kind === "quantitative"
+          ? "quantitative"
+          : item.kind === "qualitative"
+            ? "qualitative"
+            : null;
+
+      // Optional items may stay blank; absent flag keeps the legacy
+      // behaviour of requiring every answer.
+      if (!kind || item.required === false) {
+        return [];
+      }
+
+      return [{ kind, key: item.key }];
+    });
+  }
+
+  // Legacy format: separate quantitative_items and qualitative_prompts arrays.
+  const quantitative = getSnapshotItems(section.quantitative_items).map((item) => ({
+    key: item.key,
+    kind: "quantitative" as const,
+  }));
+  const qualitative = getSnapshotItems(section.qualitative_prompts).map((item) => ({
+    key: item.key,
+    kind: "qualitative" as const,
+  }));
+
+  return [...quantitative, ...qualitative];
+}
+
 export function assertSubmissionIsAllowed({
   answers,
   structureSnapshot,
 }: AssertSubmissionIsAllowedInput): void {
   const missingAnswerKeys = Array.isArray(structureSnapshot)
-    ? structureSnapshot.filter(isSnapshotSection).flatMap((section) => [
-        ...(Array.isArray(section.items)
-          ? section.items
-              .filter((item) => item.kind === "quantitative")
-              .map((item) => buildAnswerKey(section.key, "quantitative", item.key))
-              .filter((answerKey) => !hasAnswerValue("quantitative", answers[answerKey]))
-          : getSnapshotItems(section.quantitative_items)
-              .map((item) => buildAnswerKey(section.key, "quantitative", item.key))
-              .filter((answerKey) => !hasAnswerValue("quantitative", answers[answerKey]))),
-        ...(Array.isArray(section.items)
-          ? section.items
-              .filter((item) => item.kind === "qualitative")
-              .map((item) => buildAnswerKey(section.key, "qualitative", item.key))
-              .filter((answerKey) => !hasAnswerValue("qualitative", answers[answerKey]))
-          : getSnapshotItems(section.qualitative_prompts)
-              .map((item) => buildAnswerKey(section.key, "qualitative", item.key))
-              .filter((answerKey) => !hasAnswerValue("qualitative", answers[answerKey]))),
-      ])
+    ? structureSnapshot.filter(isSnapshotSection).flatMap((section) =>
+        collectRequiredAnswers(section)
+          .filter(
+            ({ kind, key }) =>
+              !hasAnswerValue(kind, answers[buildAnswerKey(section.key, kind, key)])
+          )
+          .map(({ kind, key }) => buildAnswerKey(section.key, kind, key))
+      )
     : [];
 
   if (missingAnswerKeys.length > 0) {

@@ -91,6 +91,12 @@ test("student lifecycle: draft, reload, submit, and second-submission denial", a
   ).toBeVisible();
 
   await page.reload();
+  // Resume reopens the wizard on the first incomplete section (section 2);
+  // the persisted section 1 draft is verified by navigating back.
+  await expect(
+    page.getByRole("heading", { name: "Overall Course Outcome Attainment" })
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Previous" }).click();
   await expect(
     page.getByRole("heading", { name: "Course Intended Learning Outcomes Evaluation" })
   ).toBeVisible();
