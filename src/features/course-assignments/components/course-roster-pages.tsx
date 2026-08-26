@@ -542,8 +542,7 @@ function DiscoveryPagination({
   view: CourseRosterViewMode;
 }) {
   if (totalPages <= 1) return null;
-  const href = (nextPage: number) =>
-    discoveryUrl({ page: nextPage, search, includeHistory, view });
+  const href = (nextPage: number) => discoveryUrl({ page: nextPage, search, includeHistory, view });
   return (
     <nav
       aria-label="Course roster pages"
@@ -712,7 +711,7 @@ function RosterTable({
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full min-w-[72rem] text-left text-sm">
         <caption className="sr-only">Course roster members and current eligibility</caption>
-        <thead className="bg-muted/40 text-muted-foreground border-b text-xs">
+        <thead className="bg-muted/40 text-foreground border-b text-xs">
           <tr>
             <th scope="col" className="px-3 py-3 font-medium">
               Student
