@@ -260,7 +260,11 @@ export function WizardShell({
             </span>
             <span>{Math.round(progress)}% Complete</span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <Progress
+            value={progress}
+            className="h-2"
+            aria-label={`Section progress: ${Math.round(progress)}%`}
+          />
         </div>
       </div>
 
@@ -403,7 +407,7 @@ export function WizardShell({
       </div>
 
       {/* Sticky Wizard Footer */}
-      <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-40 border-t p-4 lg:left-64">
+      <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-[60] border-t p-4 lg:left-64">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between">
           <Button
             variant="outline"
