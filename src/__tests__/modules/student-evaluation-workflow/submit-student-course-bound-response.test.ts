@@ -152,6 +152,38 @@ describe("assertSubmissionIsAllowed", () => {
     ).toThrowError("Missing required answers: section-a:qualitative:remarks");
   });
 
+  it("allows optional quantitative items (required: false) to remain blank", () => {
+    const snapshot = [
+      {
+        key: "section-a",
+        title: "Section A",
+        items: [
+          {
+            key: "optional-likert",
+            kind: "quantitative",
+            prompt: "Optional rating.",
+            scale: [1, 2, 3, 4, 5],
+            required: false,
+          },
+          {
+            key: "required-likert",
+            kind: "quantitative",
+            prompt: "Required rating.",
+            scale: [1, 2, 3, 4, 5],
+            required: true,
+          },
+        ],
+      },
+    ];
+
+    expect(() =>
+      assertSubmissionIsAllowed({
+        answers: { "section-a:quantitative:required-likert": 4 },
+        structureSnapshot: snapshot,
+      })
+    ).not.toThrow();
+  });
+
   it("allows blank optional questions in the questions format", () => {
     const snapshot = [
       {
@@ -172,6 +204,31 @@ describe("assertSubmissionIsAllowed", () => {
     expect(() =>
       assertSubmissionIsAllowed({
         answers: { "section-a:quantitative:q1": 4 },
+        structureSnapshot: snapshot,
+      })
+    ).not.toThrow();
+  });
+
+  it("allows blank optional quantitative questions in the questions format", () => {
+    const snapshot = [
+      {
+        key: "phase-3",
+        title: "Phase 3 Section",
+        questions: [
+          {
+            key: "optional-likert",
+            type: "likert",
+            prompt: "Optional Likert.",
+            required: false,
+          },
+          { key: "required-likert", type: "likert", prompt: "Required Likert.", required: true },
+        ],
+      },
+    ];
+
+    expect(() =>
+      assertSubmissionIsAllowed({
+        answers: { "phase-3:quantitative:required-likert": 3 },
         structureSnapshot: snapshot,
       })
     ).not.toThrow();

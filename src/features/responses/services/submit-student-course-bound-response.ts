@@ -113,7 +113,7 @@ function collectRequiredAnswers(section: StructureSnapshotSection): RequiredAnsw
             ? "qualitative"
             : null;
 
-      if (!kind || (kind === "qualitative" && question.required === false)) {
+      if (!kind || question.required === false) {
         return [];
       }
 
@@ -132,8 +132,8 @@ function collectRequiredAnswers(section: StructureSnapshotSection): RequiredAnsw
             : null;
 
       // Optional items may stay blank; absent flag keeps the legacy
-      // behaviour of requiring every qualitative answer.
-      if (!kind || (kind === "qualitative" && item.required === false)) {
+      // behaviour of requiring every answer.
+      if (!kind || item.required === false) {
         return [];
       }
 
