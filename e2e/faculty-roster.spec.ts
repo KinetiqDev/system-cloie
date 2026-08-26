@@ -266,7 +266,7 @@ test.describe("Faculty Course roster mutation", () => {
     await expectNoAxeViolations(page);
 
     // Roster review phase with a suggested match and its acknowledgement.
-    // "Juan Dela Cruz Jr." resolves as a suggested READY_CREATE (the BSED
+    // "Patricia Luna Jr." resolves as a suggested READY_CREATE (the BEED
     // Student is eligible for the General Education roster and not a member),
     // keeping the workspace state stable without any write.
     await dialog.locator("#course-roster-csv").setInputFiles({

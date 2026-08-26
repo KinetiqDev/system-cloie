@@ -20,11 +20,14 @@ export default async function StudentSubmittedResponseReviewPage({
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in space-y-6 motion-safe:duration-500">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/student/history" className="inline-flex items-center gap-2">
-            <ArrowLeft className="size-4" />
-            <span>Back to History</span>
-          </Link>
+        <Button
+          variant="ghost"
+          size="sm"
+          render={<Link href="/student/history" />}
+          className="inline-flex items-center gap-2"
+        >
+          <ArrowLeft className="size-4" />
+          <span>Back to History</span>
         </Button>
       </div>
 

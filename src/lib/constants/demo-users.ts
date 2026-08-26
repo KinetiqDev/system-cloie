@@ -7,6 +7,7 @@ export const DEMO_USERS = [
   { email: "demo-ph@cloie.test", label: "Program Head (BSIT)", role: SystemRole.PROGRAM_HEAD },
   { email: "demo-faculty@cloie.test", label: "Faculty (BSIT)", role: SystemRole.FACULTY },
   { email: "demo-student@cloie.test", label: "Student (BSIT)", role: SystemRole.STUDENT },
+  { email: "demo-grad@cloie.test", label: "Graduating Student (BSIT)", role: SystemRole.STUDENT },
   { email: "demo-alumni@cloie.test", label: "Alumni (BSIT)", role: SystemRole.ALUMNI },
   {
     email: "demo-industry@cloie.test",
@@ -81,7 +82,11 @@ export const DEMO_USERS = [
     label: "Industry — Karen Sy (BSHM)",
     role: SystemRole.INDUSTRY_PARTNER,
   },
-  { email: "demo-gened@cloie.test", label: "Gen Ed Coordinator", role: SystemRole.GEN_ED_COORDINATOR },
+  {
+    email: "demo-gened@cloie.test",
+    label: "Gen Ed Coordinator",
+    role: SystemRole.GEN_ED_COORDINATOR,
+  },
 ] as const;
 
 export const DEMO_USER_EMAILS = DEMO_USERS.map((user) => user.email);

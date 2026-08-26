@@ -1,9 +1,22 @@
 import { DeploymentStatus, Prisma, YearLevel } from "@prisma/client";
 import { prisma } from "../../../src/lib/db/prisma";
 import { D, U } from "../constants/ids";
-import { centralAssignDefs, centralDeploymentDefs, newCourseBoundDefs } from "../fixtures/evaluations";
-import { ensureAssignment, listSeededRosterStudents, requireCourseAssignment } from "../helpers/assignments";
-import type { CourseAssignmentContext, EvaluationContext, FoundationContext, OutcomeContext } from "../types";
+import {
+  centralAssignDefs,
+  centralDeploymentDefs,
+  newCourseBoundDefs,
+} from "../fixtures/evaluations";
+import {
+  ensureAssignment,
+  listSeededRosterStudents,
+  requireCourseAssignment,
+} from "../helpers/assignments";
+import type {
+  CourseAssignmentContext,
+  EvaluationContext,
+  FoundationContext,
+  OutcomeContext,
+} from "../types";
 
 export async function seedEvaluations(
   { pMap, cMap }: Pick<FoundationContext, "pMap" | "cMap">,
@@ -233,15 +246,25 @@ export async function seedEvaluations(
       },
     });
 
+    const now = Date.now();
     const cbData = {
       deployment_name: def.deployName,
       instrument_version_id: ciloVer.id,
       cilos_snapshot: ciloSnap,
       course_info_snapshot: courseSnap,
-      activation_at: new Date("2026-04-10T08:00:00Z"),
-      deadline_at: new Date("2026-05-31T23:59:00Z"),
+      activation_at:
+        def.courseCode === "GESTECH"
+          ? new Date(now - 7 * 24 * 60 * 60 * 1000)
+          : new Date("2026-04-10T08:00:00Z"),
+      deadline_at:
+        def.courseCode === "GESTECH"
+          ? new Date(now + 90 * 24 * 60 * 60 * 1000)
+          : new Date("2026-05-31T23:59:00Z"),
       status: DeploymentStatus.ACTIVE,
-      published_at: new Date("2026-04-10T08:00:00Z"),
+      published_at:
+        def.courseCode === "GESTECH"
+          ? new Date(now - 7 * 24 * 60 * 60 * 1000)
+          : new Date("2026-04-10T08:00:00Z"),
       term_instance_id: termInstanceId,
       course_assignment_id: cbAssignmentId,
     };

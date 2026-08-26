@@ -55,6 +55,15 @@ export const newCourseBoundDefs = [
   // Zero-response evaluation (§53/§61): eligible students exist on the
   // roster, but no response has been submitted — the fixture keeps it that
   // way (no response sequence references GESTECH).
+  //
+  // GESTECH's availability window is deliberately rolling (relative to seed
+  // time) instead of the fixed 2026 window used by the other fixtures: the
+  // Student lifecycle browser journey (issue #544) answers GESTECH end to
+  // end, and the server-side availability gate (`activation_at <= now <=
+  // deadline_at`) must hold whenever the disposable database is seeded in
+  // CI. The fixed dates would freeze the journey to a single calendar
+  // window. The window stays deterministic in content — only the dates
+  // follow the seed run.
   {
     id: D.CB_BSIT_GESTECH,
     courseCode: "GESTECH",
@@ -64,6 +73,19 @@ export const newCourseBoundDefs = [
     progName: "Bachelor of Science in Information Technology",
     ylId: YearLevel.FIRST_YEAR,
     section: "MORNING",
+  },
+  {
+    // Isolated BSIT AFTERNOON cohort for the mobile Student lifecycle journey.
+    // Demo Graduate's profile and roster membership match this scope, while
+    // the desktop journey continues to own the FIRST_YEAR MORNING cohort.
+    id: D.CB_BSIT_GESTECH_MOBILE,
+    courseCode: "GESTECH",
+    deployName: "GESTECH Post-Term CILO Evaluation",
+    progId: undefined as string | undefined,
+    progCode: "BSIT",
+    progName: "Bachelor of Science in Information Technology",
+    ylId: YearLevel.FOURTH_YEAR,
+    section: "AFTERNOON",
   },
 ] as const;
 

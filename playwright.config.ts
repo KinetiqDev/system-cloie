@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 3100;
+const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 /**
@@ -52,7 +52,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: isCiTestProduction ? "pnpm build && pnpm start -p 3100" : "pnpm dev -p 3100",
+    command: isCiTestProduction ? `pnpm build && pnpm start -p ${PORT}` : `pnpm dev -p ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,

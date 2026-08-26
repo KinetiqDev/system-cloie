@@ -5,6 +5,7 @@ import { parseStudentEvaluationAnswerKey } from "@/features/responses/answer-key
 import { isCentralDeploymentAvailable } from "./central-deployment-availability";
 import { CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR } from "./central-deployment-availability";
 import { assertSubmissionIsAllowed } from "./submit-student-course-bound-response";
+import { lockResponseSubmission } from "./lock-response-submission";
 
 // ─── Public types ───────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ export async function submitCentralDeploymentResponse({
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      await lockResponseSubmission(tx, assignment.id);
       let response = await tx.response.findUnique({
         where: {
           assignment_id: assignment.id,

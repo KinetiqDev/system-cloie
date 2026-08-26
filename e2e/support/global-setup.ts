@@ -95,6 +95,92 @@ async function verifyIdentities(): Promise<void> {
   await verifySeededIdentity(E2E_CONTRACT.demoPh, "PROGRAM_HEAD");
   await verifySeededIdentity(E2E_CONTRACT.beedPh, "PROGRAM_HEAD");
   await verifySeededIdentity(E2E_CONTRACT.demoFaculty, "FACULTY");
+  await verifySeededIdentity(E2E_CONTRACT.demoStudent, "STUDENT");
+  await verifySeededIdentity(E2E_CONTRACT.mobileStudent, "STUDENT");
+}
+
+/**
+ * Student lifecycle fixture (issue #544): the GESTECH zero-response
+ * evaluation and both journey students' assignments. The GESTECH deployment
+ * window is rolling by fixture design (see `prisma/seed/fixtures/evaluations.ts`),
+ * so the contract verifies the window is open at setup time instead of
+ * pinning a calendar date. Both assignments must start with NO response —
+ * the journey owns the draft→submitted mutation, and the Program Head
+ * zero-response empty-state journey (empty-states.spec.ts) depends on that
+ * initial state.
+ *
+ * Global setup only verifies this contract. It never deletes response data.
+ * Re-run the deterministic seed before repeating the browser suite against
+ * the same disposable database.
+ */
+async function verifyStudentLifecycleFixture(): Promise<{
+  gestechAssignment: { id: string };
+  gestechMobileAssignment: { id: string };
+}> {
+  const contract = E2E_CONTRACT;
+
+  const gestechEval = await prisma.courseBoundEvaluation.findUnique({
+    where: { id: contract.gestechEval.id },
+  });
+  assertContract(
+    gestechEval,
+    `missing seeded Course-bound evaluation "${contract.gestechEval.title}" (${contract.gestechEval.id})`
+  );
+  assertContract(
+    gestechEval?.deployment_name === contract.gestechEval.title,
+    `Course-bound evaluation ${contract.gestechEval.id} title drift: got "${gestechEval?.deployment_name}"`
+  );
+  assertContract(
+    gestechEval?.status === "ACTIVE",
+    `Course-bound evaluation ${contract.gestechEval.id} is not ACTIVE (got "${gestechEval?.status}")`
+  );
+  const now = new Date();
+  assertContract(
+    gestechEval?.activation_at !== null && gestechEval.activation_at.getTime() <= now.getTime(),
+    `Course-bound evaluation ${contract.gestechEval.id} activation window is not open at setup time`
+  );
+  assertContract(
+    gestechEval?.deadline_at !== null && gestechEval.deadline_at.getTime() >= now.getTime(),
+    `Course-bound evaluation ${contract.gestechEval.id} deadline has passed at setup time`
+  );
+
+  const gestechAssignment = await prisma.evaluationAssignment.findFirst({
+    where: { course_bound_id: contract.gestechEval.id, respondent_id: contract.demoStudent.id },
+  });
+  assertContract(
+    gestechAssignment,
+    `missing GESTECH assignment for ${contract.demoStudent.email} (${contract.demoStudent.id})`
+  );
+
+  // The second GESTECH deployment is the BSIT AFTERNOON cohort, isolated
+  // from the published MORNING cohort. Its id is a runtime handle.
+  const gestechMobileEval = await prisma.courseBoundEvaluation.findUnique({
+    where: { id: contract.gestechMobileEval.id },
+  });
+  assertContract(
+    gestechMobileEval,
+    `missing seeded Course-bound evaluation "${contract.gestechEval.title}" for the mobile cohort`
+  );
+
+  const gestechMobileAssignment = await prisma.evaluationAssignment.findFirst({
+    where: { course_bound_id: gestechMobileEval!.id, respondent_id: contract.mobileStudent.id },
+  });
+  assertContract(
+    gestechMobileAssignment,
+    `missing GESTECH assignment for ${contract.mobileStudent.email} (${contract.mobileStudent.id})`
+  );
+  const existingResponses = await prisma.response.count({
+    where: { assignment_id: { in: [gestechAssignment.id, gestechMobileAssignment.id] } },
+  });
+  assertContract(
+    existingResponses === 0,
+    `GESTECH assignments must start with no response (zero-response fixture), found ${existingResponses} response rows. Re-seed the disposable database before re-running the e2e suite.`
+  );
+
+  return {
+    gestechAssignment: { id: gestechAssignment.id },
+    gestechMobileAssignment: { id: gestechMobileAssignment.id },
+  };
 }
 
 async function verifyDeployments(): Promise<{
@@ -301,6 +387,7 @@ export default async function globalSetup(): Promise<void> {
 
   await verifyResponseExpectations(courseResponse, bottomUpResponse);
   const ploId = await verifyPloEvidenceLink(bsit.id);
+  const { gestechAssignment, gestechMobileAssignment } = await verifyStudentLifecycleFixture();
 
   const contract = E2E_CONTRACT;
   const fixture: FixtureData = {
@@ -354,6 +441,16 @@ export default async function globalSetup(): Promise<void> {
         email: contract.rosterStudents.axeSuggested.email,
       },
     },
+    demoStudent: {
+      id: contract.demoStudent.id,
+      email: contract.demoStudent.email,
+      name: contract.demoStudent.name,
+    },
+    mobileStudent: {
+      id: contract.mobileStudent.id,
+      email: contract.mobileStudent.email,
+      name: contract.mobileStudent.name,
+    },
     bsit,
     beed,
     courseEvaluation: {
@@ -386,6 +483,9 @@ export default async function globalSetup(): Promise<void> {
         ciloLabel: p.ciloLabel,
       })),
     },
+    gestechEval: { id: contract.gestechEval.id, title: contract.gestechEval.title },
+    gestechAssignment,
+    gestechMobileAssignment,
   };
 
   mkdirSync(join(__dirname, ".."), { recursive: true });

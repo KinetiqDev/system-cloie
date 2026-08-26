@@ -12,6 +12,7 @@ import {
   STUDENT_EVALUATION_UNAVAILABLE_ERROR,
 } from "./course-bound-availability";
 import { assertSubmissionIsAllowed } from "./submit-student-course-bound-response";
+import { lockResponseSubmission } from "./lock-response-submission";
 
 type SubmissionAnswers = Record<string, unknown>;
 
@@ -127,6 +128,7 @@ export async function submitStudentEvaluationResponse({
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      await lockResponseSubmission(tx, assignment.id);
       let response = await tx.response.findUnique({
         where: {
           assignment_id: assignment.id,

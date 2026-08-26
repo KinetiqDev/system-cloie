@@ -160,7 +160,7 @@ describe("demo-login production boundary", () => {
       assertDemoCatalogUnavailable(new URL("https://primary.example.test"))
     ).resolves.toBeUndefined();
 
-    expect(fetchMock).toHaveBeenCalledTimes(24);
+    expect(fetchMock).toHaveBeenCalledTimes(25);
     fetchMock.mockRestore();
   });
 
@@ -236,7 +236,7 @@ describe("demo-login production boundary", () => {
       })
     ).resolves.toBeUndefined();
 
-    expect(fetchMock).toHaveBeenCalledTimes(26);
+    expect(fetchMock).toHaveBeenCalledTimes(27);
     fetchMock.mockRestore();
   });
 

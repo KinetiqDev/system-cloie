@@ -38,7 +38,12 @@ export function ReviewModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+          className="flex-1 overflow-y-auto p-6"
+          role="region"
+          aria-label="Review answers"
+          tabIndex={0}
+        >
           <div className="space-y-8">
             {sections.map((s) => (
               <div key={s.id}>
