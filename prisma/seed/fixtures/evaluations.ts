@@ -86,7 +86,7 @@ export const newCourseBoundDefs = [
     progCode: "BSBA",
     progName: "Bachelor of Science in Business Administration",
     ylId: YearLevel.FIRST_YEAR,
-    section: "MORNING",
+    section: "AFTERNOON",
   },
 ] as const;
 

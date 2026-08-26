@@ -177,13 +177,13 @@ async function verifyStudentLifecycleFixture(): Promise<{
     `missing GESTECH assignment for ${contract.demoStudent.email} (${contract.demoStudent.id})`
   );
 
-  // The BSBA GESTECH deployment shares the same deployment name and rolling
-  // window; it is created from the same fixture definition (GESTECH/BSBA
-  // course assignment) so its id is a runtime handle, not a contract value.
+  // The BSBA GESTECH deployment is the AFTERNOON cohort, isolated from the
+  // faculty's MORNING cohort (issue #545 expects MORNING to stay mutable).
+  // Its id is a runtime handle, not a contract value.
   const gestechBsbaEval = await prisma.courseBoundEvaluation.findFirst({
     where: {
       deployment_name: contract.gestechEval.title,
-      course_assignment: { program: { code: "BSBA" } },
+      course_assignment: { program: { code: "BSBA" }, section: "AFTERNOON" },
     },
   });
   assertContract(
