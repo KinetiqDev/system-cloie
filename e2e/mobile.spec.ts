@@ -46,3 +46,62 @@ test("mobile drawer navigation and filter persistence", async ({ page }) => {
     "page"
   );
 });
+
+/**
+ * §33/§36/§61 (issue #545): the Faculty roster-management Drawer supports the
+ * same mutation workflow on mobile, restores focus to its trigger after
+ * closing, and prevents accidental dismissal while an unfinished preview is
+ * pending. The already-active add is a safe no-op, so the journey performs no
+ * database write and stays isolated from the desktop mutation journeys.
+ */
+test("faculty roster drawer: same workflow, focus restoration, and dismissal protection", async ({
+  page,
+}) => {
+  const fx = fixture();
+
+  await loginAs(page, fx.demoFaculty.email);
+  await page.goto(`/course-rosters/${fx.gestechBsba.id}`);
+  await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+
+  const manageButton = page.getByRole("button", { name: "Manage roster" });
+  await manageButton.click();
+  const drawer = page.getByRole("dialog", { name: "Manage roster" });
+  await expect(drawer).toBeVisible();
+
+  // Same workflow as desktop: scoped name search with a safe already-active
+  // result (no write, no duplicate membership).
+  await drawer.getByRole("tab", { name: "Add one Student" }).click();
+  await drawer
+    .getByRole("searchbox", { name: "Search scoped Students" })
+    .fill(fx.rosterStudents.suggested.name);
+  await drawer.getByRole("button", { name: new RegExp(fx.rosterStudents.suggested.name) }).click();
+  await drawer.getByRole("button", { name: "Add Student" }).click();
+  await expect(
+    drawer.getByText("Student is already an active member of this Course roster.")
+  ).toBeVisible();
+
+  // Accidental-dismissal protection: an unfinished preview asks before closing.
+  await drawer.getByRole("tab", { name: "Import from CSV" }).click();
+  await drawer.locator("#course-roster-csv").setInputFiles({
+    name: "roster.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(`name\n${fx.rosterStudents.suggested.name} Jr.\n`, "utf8"),
+  });
+  await drawer.getByRole("button", { name: "Prepare preview" }).click();
+  await expect(
+    drawer.getByText("This confirmation will not add or restore any Students.")
+  ).toBeVisible();
+
+  await drawer.getByRole("button", { name: "Cancel" }).click();
+  const discard = page.getByRole("alertdialog", { name: "Discard preview?" });
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "Keep editing" }).click();
+  await expect(drawer).toBeVisible();
+
+  await drawer.getByRole("button", { name: "Cancel" }).click();
+  await discard.getByRole("button", { name: "Discard preview" }).click();
+  await expect(drawer).toBeHidden();
+
+  // Focus returns to the trigger that opened the workspace.
+  await expect(manageButton).toBeFocused();
+});

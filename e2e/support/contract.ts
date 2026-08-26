@@ -20,6 +20,58 @@ export const E2E_CONTRACT = {
   /** Deterministic SystemRole identities reused from the Prisma seed. */
   demoPh: { id: U.PH_BSIT, email: "demo-ph@cloie.test", name: "Demo Program Head" },
   beedPh: { id: U.PH_BEED, email: "ph-beed@cloie.test", name: "Maria Santos" },
+  demoFaculty: { id: U.FAC_BSIT, email: "demo-faculty@cloie.test", name: "Demo Faculty" },
+
+  /**
+   * Deterministic Course Assignment roster-mutation fixtures (issue #545).
+   * Course assignments are located by their seed definition (course code,
+   * program code, year level, section) inside the ACTIVE academic period;
+   * the runtime assignment id is discovered in `global-setup`.
+   */
+  rosterAssignments: {
+    /** GESTECH BSBA MORNING: owned by the demo Faculty, active, no published evaluation (mutable). */
+    gestechBsba: {
+      courseCode: "GESTECH",
+      programCode: "BSBA",
+      yearLevel: "FIRST_YEAR",
+      section: "MORNING",
+    },
+    /** GESTECH BSIT MORNING: owned by the demo Faculty but locked by a published evaluation. */
+    gestechBsit: {
+      courseCode: "GESTECH",
+      programCode: "BSIT",
+      yearLevel: "FIRST_YEAR",
+      section: "MORNING",
+    },
+    /** ITRES1 BSIT AFTERNOON: owned by the demo Faculty, active, no published evaluation. */
+    itres1Afternoon: {
+      courseCode: "ITRES1",
+      programCode: "BSIT",
+      yearLevel: "FOURTH_YEAR",
+      section: "AFTERNOON",
+    },
+    /** MM201 BSBA MORNING: owned by a different Faculty (not-found for the demo Faculty). */
+    mm201: {
+      courseCode: "MM201",
+      programCode: "BSBA",
+      yearLevel: "FOURTH_YEAR",
+      section: "MORNING",
+    },
+  },
+
+  /** Deterministic roster-mutation Student identities (issue #545). */
+  rosterStudents: {
+    /** Eligible, not a member of GESTECH BSBA MORNING → CREATED through scoped search. */
+    addable: { id: U.GRAD_BSIT, name: "Demo Graduate", email: "demo-grad@cloie.test" },
+    /** Active member of GESTECH BSBA MORNING → ALREADY_ACTIVE. */
+    alreadyActive: { id: U.STU_BSBA, name: "Angela Reyes", email: "student-bsba@cloie.test" },
+    /** Eligible, not a member of GESTECH BSBA MORNING → CREATED through CSV reconciliation. */
+    csvAdd: { id: U.STU_BSIT, name: "Demo Student", email: "demo-student@cloie.test" },
+    /** Active member of GESTECH BSBA MORNING; "… Jr." upload resolves as SUGGESTED_MATCH. */
+    suggested: { id: U.STU_BSBA_G, name: "Carlos Santos", email: "student-bsba-grad@cloie.test" },
+    /** BSBA Student whose profile mismatches the BSIT ITRES1 assignment → out of scope, not disclosed. */
+    outOfScope: { name: "Angela Reyes", email: "student-bsba@cloie.test" },
+  },
 
   /** Deterministic deployment identifiers reused from the Prisma seed. */
   deployments: {
@@ -60,6 +112,19 @@ export const E2E_CONTRACT = {
 export type FixtureData = {
   demoPh: { id: string; email: string };
   beedPh: { id: string; email: string };
+  demoFaculty: { id: string; email: string };
+  /** Runtime handles for the deterministic Course Assignment definitions above. */
+  gestechBsba: { id: string; courseCode: string; programCode: string };
+  gestechBsit: { id: string; courseCode: string; programCode: string };
+  itres1Afternoon: { id: string; courseCode: string; programCode: string };
+  mm201: { id: string; courseCode: string; programCode: string };
+  rosterStudents: {
+    addable: { id: string; name: string; email: string };
+    alreadyActive: { id: string; name: string; email: string };
+    csvAdd: { id: string; name: string; email: string };
+    suggested: { id: string; name: string; email: string };
+    outOfScope: { name: string; email: string };
+  };
   bsit: { id: string; code: string };
   beed: { id: string; code: string };
   courseEvaluation: { id: string; title: string };
@@ -77,4 +142,3 @@ export type FixtureData = {
     ploLinks: Array<{ ploId: string; ploCode: string; ciloLabel: string }>;
   };
 };
-
