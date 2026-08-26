@@ -285,7 +285,9 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await expect(pendingCard.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
   await pendingCard.getByRole("button", { name: "Start Evaluation" }).click();
 
-  await expect(page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Program Learning Experience" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
@@ -333,15 +335,22 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   }
   await page.getByRole("button", { name: "Next Section" }).click();
   await expect(page.getByRole("heading", { name: "Overall Assessment" })).toBeVisible();
-  for (const prompt of ["Overall satisfaction with the program", "Overall readiness as a graduate"]) {
+  for (const prompt of [
+    "Overall satisfaction with the program",
+    "Overall readiness as a graduate",
+  ]) {
     await rateQuestion(page, prompt, "Agree");
   }
   await page.getByRole("button", { name: "Next Section" }).click();
   await expect(page.getByRole("heading", { name: "Qualitative Feedback" })).toBeVisible();
   const qualitativePrompt = "Strengths of the program:";
-  await page.getByRole("textbox", { name: qualitativePrompt }).fill("Excellent faculty and relevant curriculum.");
+  await page
+    .getByRole("textbox", { name: qualitativePrompt })
+    .fill("Excellent faculty and relevant curriculum.");
   await page.getByRole("textbox", { name: "Areas for improvement:" }).fill("More internships.");
-  await page.getByRole("textbox", { name: "Suggestions to improve graduate readiness:" }).fill("Add certification prep.");
+  await page
+    .getByRole("textbox", { name: "Suggestions to improve graduate readiness:" })
+    .fill("Add certification prep.");
 
   const textarea = page.getByRole("textbox", { name: qualitativePrompt });
   await textarea.focus();
@@ -357,7 +366,9 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await expect(reviewDialog).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await reviewDialog.getByRole("button", { name: "Confirm & Submit" }).click();
-  await expect(page.getByRole("heading", { name: "Evaluation Submitted!", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Evaluation Submitted!", level: 1 })
+  ).toBeVisible();
 
   await page.goto("/alumni/history");
   await expect(page.getByRole("heading", { name: "Submission History" })).toBeVisible();
@@ -368,7 +379,9 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
     .locator("..")
     .locator("..");
   await expect(submittedCard.getByText("Completed", { exact: true })).toBeVisible();
-  const reviewHref = await submittedCard.getByRole("button", { name: "View Answers" }).getAttribute("href");
+  const reviewHref = await submittedCard
+    .getByRole("button", { name: "View Answers" })
+    .getAttribute("href");
   await page.goto(reviewHref! + "?t=" + Date.now(), { waitUntil: "networkidle" });
   await expect(page.getByText(/Submitted on /)).toBeVisible();
   await expectNoHorizontalOverflow(page);

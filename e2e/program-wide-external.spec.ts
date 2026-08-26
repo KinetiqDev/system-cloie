@@ -1,11 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { fixture } from "./support/fixture";
-import {
-  expectNoAxeViolations,
-  loginAs,
-  rateQuestion,
-} from "./support/helpers";
+import { expectNoAxeViolations, loginAs, rateQuestion } from "./support/helpers";
 
 /**
  * §40/§46/§47: Program-wide external respondent evidence (issue #550).
@@ -53,9 +49,12 @@ const ALUMNI_SECTION_4_PROMPTS = [
 ];
 
 const ALUMNI_QUALITATIVE_PROMPTS = {
-  "Strengths of the program:": "Strong programming fundamentals and excellent faculty mentorship throughout the course.",
-  "Areas for improvement:": "More industry internships and earlier exposure to real-world projects.",
-  "Suggestions to improve graduate readiness:": "Add cloud certification prep and agile methodology workshops.",
+  "Strengths of the program:":
+    "Strong programming fundamentals and excellent faculty mentorship throughout the course.",
+  "Areas for improvement:":
+    "More industry internships and earlier exposure to real-world projects.",
+  "Suggestions to improve graduate readiness:":
+    "Add cloud certification prep and agile methodology workshops.",
 };
 
 // Distinct Industry Partner scale labels (EV5) for assertion coverage
@@ -86,7 +85,13 @@ async function completeAlumniWizard(
     await page.getByRole("group", { name: prompt }).getByRole("radio", { name: /Agree/ }).waitFor();
   }
   await page.getByRole("button", { name: "Next Section" }).click();
-  await expect(page.getByRole("group", { name: "I can apply knowledge and skills acquired from the program in my work" }).getByRole("radio", { checked: true })).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("group", {
+        name: "I can apply knowledge and skills acquired from the program in my work",
+      })
+      .getByRole("radio", { checked: true })
+  ).toHaveCount(0);
 
   for (const prompt of ALUMNI_SECTION_2_PROMPTS) {
     await rateQuestion(page, prompt, "Agree");
@@ -107,8 +112,6 @@ async function completeAlumniWizard(
     await page.getByRole("textbox", { name: prompt }).fill(answer);
   }
 }
-
-
 
 test("program-wide alumni: publish, preview, alumni submit, and scoped evidence review", async ({
   page,
@@ -214,21 +217,36 @@ test("program-wide alumni: publish, preview, alumni submit, and scoped evidence 
     reviewDialog.getByText(ALUMNI_QUALITATIVE_PROMPTS["Strengths of the program:"], { exact: true })
   ).toBeVisible();
   await expect(
-    reviewDialog.getByText(ALUMNI_SECTION_1_PROMPTS[0], { exact: true }).locator("..").getByText("4", { exact: true })
+    reviewDialog
+      .getByText(ALUMNI_SECTION_1_PROMPTS[0], { exact: true })
+      .locator("..")
+      .getByText("4", { exact: true })
   ).toBeVisible();
-  await expect(reviewDialog.getByText("Responses are final after submission", { exact: true })).toBeVisible();
+  await expect(
+    reviewDialog.getByText("Responses are final after submission", { exact: true })
+  ).toBeVisible();
   await expectNoAxeViolations(page);
   await reviewDialog.getByRole("button", { name: "Confirm & Submit" }).click();
-  await expect(page.getByRole("heading", { name: "Evaluation Submitted!", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Evaluation Submitted!", level: 1 })
+  ).toBeVisible();
   await page.getByRole("button", { name: "Return to Dashboard" }).click();
   await expect(page).toHaveURL(/\/alumni\/dashboard$/);
 
   // Persisted history after reload
   await page.goto("/alumni/history");
   await expect(page.getByRole("heading", { name: "Submission History" })).toBeVisible();
-  const historyRow = page.getByRole("row").filter({ has: page.getByText(deploymentName, { exact: true }) });
+  const historyRow = page
+    .getByRole("row")
+    .filter({ has: page.getByText(deploymentName, { exact: true }) });
   // Table is desktop-only; fallback to card lookup if needed
-  const rowOrCard = (await historyRow.count()) > 0 ? historyRow : page.locator("div").filter({ has: page.getByText(deploymentName) }).first();
+  const rowOrCard =
+    (await historyRow.count()) > 0
+      ? historyRow
+      : page
+          .locator("div")
+          .filter({ has: page.getByText(deploymentName) })
+          .first();
   await expect(rowOrCard.getByText("Completed", { exact: true }).first()).toBeVisible();
   // View Answers goes to deployment-id-keyed submitted review
   const viewButton = rowOrCard.getByRole("button", { name: "View Answers" }).first();
@@ -270,7 +288,9 @@ test("program-wide alumni: publish, preview, alumni submit, and scoped evidence 
   await expect(page.getByText("Demo Alumni")).toBeVisible();
   // Quantitative and qualitative answers are visible in the identified detail
   await expect(page.getByText(ALUMNI_SECTION_1_PROMPTS[0], { exact: true })).toBeVisible();
-  await expect(page.getByText(ALUMNI_QUALITATIVE_PROMPTS["Strengths of the program:"], { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(ALUMNI_QUALITATIVE_PROMPTS["Strengths of the program:"], { exact: true })
+  ).toBeVisible();
 
   // ── 5b. Cross-Program leakage: BEED Program Head cannot see BSIT deployment ─
   await loginAs(page, fx.beedPh.email);
@@ -310,7 +330,9 @@ test("ineligible, rejected, inactive, and out-of-scope external accounts cannot 
   await expect(page.getByRole("heading", { name: "Account Inactive" })).toBeVisible();
 });
 
-test("industry partner: profile-based targeting and distinct instrument rules", async ({ page }) => {
+test("industry partner: profile-based targeting and distinct instrument rules", async ({
+  page,
+}) => {
   const fx = fixture();
   const deploymentName = `BSIT Industry Eval (E2E ${Date.now()})`;
 
@@ -325,8 +347,12 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await page.getByRole("option", { name: /2027-2028.*First Semester/ }).click();
   await page.getByLabel("Industry Partners", { exact: true }).click();
   const now = new Date();
-  await page.locator("#activation_at").fill(localDateTimeInputValue(new Date(now.getTime() - 24 * 60 * 60 * 1000)));
-  await page.locator("#deadline_at").fill(localDateTimeInputValue(new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)));
+  await page
+    .locator("#activation_at")
+    .fill(localDateTimeInputValue(new Date(now.getTime() - 24 * 60 * 60 * 1000)));
+  await page
+    .locator("#deadline_at")
+    .fill(localDateTimeInputValue(new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)));
   await page.getByRole("button", { name: "Preview Respondents" }).click();
   await expect(page.getByRole("heading", { name: "Respondent Preview" })).toBeVisible();
   // Distinct targeting: Industry Partner preview resolves via industryPartnerProfile (not invites)
@@ -350,7 +376,10 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await loginAs(page, "demo-industry@cloie.test");
   await page.goto("/industry-partner/dashboard");
   await expect(page.getByText("Verification Pending")).toBeVisible();
-  const card = page.locator("div").filter({ has: page.getByRole("heading", { name: deploymentName }) }).first();
+  const card = page
+    .locator("div")
+    .filter({ has: page.getByRole("heading", { name: deploymentName }) })
+    .first();
   await expect(card.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
   await card.getByRole("button", { name: "Start Evaluation" }).click();
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
@@ -360,7 +389,11 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   // Need to answer all required quantitative items before submitting — answer minimally per section
   // Knowledge section: 3 items
   await rateQuestion(page, "Demonstrates understanding of industry practices", "Very Satisfactory");
-  await rateQuestion(page, "Shows awareness of professional standards and procedures", "Very Satisfactory");
+  await rateQuestion(
+    page,
+    "Shows awareness of professional standards and procedures",
+    "Very Satisfactory"
+  );
   await page.getByRole("button", { name: "Next Section" }).click();
   // Skills: 4 items
   await expect(page.getByRole("heading", { name: "Skills Competence" })).toBeVisible();
@@ -374,7 +407,9 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   }
   await page.getByRole("button", { name: "Next Section" }).click();
   // Professional and Character Traits: 4 items
-  await expect(page.getByRole("heading", { name: "Professional and Character Traits" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Professional and Character Traits" })
+  ).toBeVisible();
   for (const prompt of [
     "Demonstrates professionalism and ethical behavior",
     "Shows initiative and willingness to learn",
@@ -389,9 +424,15 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await page.getByRole("button", { name: "Next Section" }).click();
   await expect(page.getByRole("heading", { name: "Qualitative Feedback" })).toBeVisible();
   // Distinct qualitative + recommendation question (suggestedResponses Yes/No)
-  await page.getByRole("textbox", { name: "Strengths of our interns:" }).fill("Strong technical skills and professional demeanor.");
-  await page.getByRole("textbox", { name: "Areas for improvement:" }).fill("More initiative on complex tasks.");
-  await page.getByRole("textbox", { name: "Recommendations for curriculum or training enhancement:" }).fill("Add enterprise tooling labs.");
+  await page
+    .getByRole("textbox", { name: "Strengths of our interns:" })
+    .fill("Strong technical skills and professional demeanor.");
+  await page
+    .getByRole("textbox", { name: "Areas for improvement:" })
+    .fill("More initiative on complex tasks.");
+  await page
+    .getByRole("textbox", { name: "Recommendations for curriculum or training enhancement:" })
+    .fill("Add enterprise tooling labs.");
   await expect(page.getByText(INDUSTRY_RECOMMENDATION_PROMPT)).toBeVisible();
   // Suggested chips Yes/No are present
   await expect(page.getByText("Yes", { exact: true })).toBeVisible();
@@ -400,7 +441,9 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   const review = page.getByRole("dialog", { name: "Review Your Answers" });
   await expect(review).toBeVisible();
   await review.getByRole("button", { name: "Confirm & Submit" }).click();
-  await expect(page.getByRole("heading", { name: "Evaluation Submitted!", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Evaluation Submitted!", level: 1 })
+  ).toBeVisible();
 
   // Program Head sees scoped evidence with Industry Partner context
   await loginAs(page, fx.demoPh.email);

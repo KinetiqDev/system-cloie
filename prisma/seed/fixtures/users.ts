@@ -241,9 +241,19 @@ export const externalProfiles = [
     program: "BSBA",
     status: VerificationStatus.APPROVED,
   },
-  { userId: U.ALU_REJECTED, graduationYear: 2022, program: "BSIT", status: VerificationStatus.REJECTED },
-  { userId: U.ALU_INACTIVE, graduationYear: 2020, program: "BSIT", status: VerificationStatus.APPROVED },
- ] as const;
+  {
+    userId: U.ALU_REJECTED,
+    graduationYear: 2022,
+    program: "BSIT",
+    status: VerificationStatus.REJECTED,
+  },
+  {
+    userId: U.ALU_INACTIVE,
+    graduationYear: 2020,
+    program: "BSIT",
+    status: VerificationStatus.APPROVED,
+  },
+] as const;
 
 export const industryProfiles = [
   {

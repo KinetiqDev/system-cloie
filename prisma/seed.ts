@@ -42,9 +42,14 @@ async function main() {
   await seedFacultyPublicationTemplate({ cMap });
 
   console.log("[E] Evaluations & deployments...");
-  const evaluationContext = await seedEvaluationsRunner({ pMap, cMap }, outcomeContext.ciloMap, termInstance.id, {
-    assignmentMap,
-  });
+  const evaluationContext = await seedEvaluationsRunner(
+    { pMap, cMap },
+    outcomeContext.ciloMap,
+    termInstance.id,
+    {
+      assignmentMap,
+    }
+  );
 
   console.log("[F] Responses with items...");
   await seedResponsesRunner(evaluationContext);

@@ -1,8 +1,12 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { PublishCentralDeploymentForm } from "@/features/evaluations/components/publish-central-deployment-form";
-import { previewCentralDeploymentRespondentsAction, publishCentralDeploymentAction } from "@/lib/actions/central-deployment-actions";
+import {
+  previewCentralDeploymentRespondentsAction,
+  publishCentralDeploymentAction,
+} from "@/lib/actions/central-deployment-actions";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
+import { listInstitutionalBaselines } from "@/features/instruments/services/list-institutional-baselines";
 import { listProgramHeadTemplates } from "@/features/instruments/services/manage-program-head-templates";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { YearLevel } from "@prisma/client";
@@ -16,9 +20,10 @@ export default async function PublishSelectedProgramToolPage({
 }) {
   const { programId } = await params;
   const { templateId } = await searchParams;
-  const [contextResult, templatesResult, terms, majors] = await Promise.all([
+  const [contextResult, templatesResult, baselines, terms, majors] = await Promise.all([
     resolveProgramHeadContext(programId),
     listProgramHeadTemplates(programId),
+    listInstitutionalBaselines(),
     prisma.academicTermInstance.findMany({
       where: { school_year: { is_archived: false } },
       include: { school_year: true },
@@ -46,9 +51,15 @@ export default async function PublishSelectedProgramToolPage({
     updatedAt: term.updated_at,
   }));
   const activeTermId = termInstances.find((term) => term.status === "ACTIVE")?.id;
-  const templates = templatesResult.data.templates
+  const programWideOwn = templatesResult.data.templates
     .filter((template) => template.template_type === "PROGRAM_WIDE" && template.is_active)
     .map(({ id, name, code }) => ({ id, name, code }));
+  const programWideBaselines = baselines
+    .filter((template) => template.template_type === "PROGRAM_WIDE" && template.is_active)
+    .map(({ id, name, code }) => ({ id, name, code }));
+  const templates = [...programWideOwn, ...programWideBaselines].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 
   return (
     <PublishCentralDeploymentForm
