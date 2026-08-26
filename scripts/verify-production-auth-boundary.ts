@@ -124,6 +124,67 @@ export async function assertDemoCatalogUnavailable(baseUrl: URL): Promise<void> 
   }
 }
 
+export function assertCiTestLoginUnavailable(response: Response): void {
+  if (response.status !== 404) {
+    throw new Error(
+      `POST /api/auth/ci-test-login returned ${response.status}; expected 404 (unavailable outside the disposable CI environment).`
+    );
+  }
+}
+
+export function assertCiTestLoginAvailable(response: Response): string {
+  if (response.status !== 200) {
+    throw new Error(
+      `POST /api/auth/ci-test-login returned ${response.status}; expected 200 in the disposable CI environment.`
+    );
+  }
+
+  const sessionCookie = response.headers.get("set-cookie")?.split(";")[0];
+  const [cookieName, sessionValue] = sessionCookie?.split("=") ?? [];
+  if (cookieName !== "cloie_ci_test_auth" || !sessionValue) {
+    throw new Error("POST /api/auth/ci-test-login did not set the CI test session cookie.");
+  }
+
+  return `${cookieName}=${sessionValue}`;
+}
+
+export async function requestCiTestLogin(baseUrl: URL, identifier: string): Promise<Response> {
+  return fetch(new URL("/api/auth/ci-test-login", baseUrl), {
+    method: "POST",
+    redirect: "manual",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: { "cache-control": "no-cache", "content-type": "application/json" },
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+export async function assertCiTestCatalogUnavailable(baseUrl: URL): Promise<void> {
+  for (const identifier of DEMO_USER_EMAILS) {
+    assertCiTestLoginUnavailable(await requestCiTestLogin(baseUrl, identifier));
+  }
+}
+
+async function assertCiTestSessionAccepted(response: Response, baseUrl: URL): Promise<void> {
+  const sessionCookie = assertCiTestLoginAvailable(response);
+  const body = (await response.clone().json()) as { destination?: unknown };
+  if (typeof body.destination !== "string" || !body.destination.startsWith("/")) {
+    throw new Error(
+      "POST /api/auth/ci-test-login did not return a valid authenticated destination."
+    );
+  }
+
+  const destinationResponse = await fetch(new URL(body.destination, baseUrl), {
+    redirect: "manual",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: { cookie: sessionCookie, "cache-control": "no-cache" },
+  });
+  if (destinationResponse.status < 200 || destinationResponse.status >= 300) {
+    throw new Error(
+      `CI test session could not open ${body.destination}; received ${destinationResponse.status}.`
+    );
+  }
+}
+
 async function assertDedicatedDemoSessionAccepted(response: Response, baseUrl: URL): Promise<void> {
   const sessionCookie = assertDemoLoginAvailable(response);
   const body = (await response.clone().json()) as { destination?: unknown };
@@ -141,6 +202,50 @@ async function assertDedicatedDemoSessionAccepted(response: Response, baseUrl: U
       `Dedicated demo session could not open ${body.destination}; received ${destinationResponse.status}.`
     );
   }
+}
+
+export async function verifyCiTestAuthBoundary(
+  baseUrl: URL = getEvidenceBaseUrl(),
+  environment: Environment = process.env
+): Promise<void> {
+  const allowedUsers = new Set(
+    environment.CLOIE_CI_TEST_ALLOWED_USERS?.split(/[\n,]/)
+      .map((identifier) => identifier.trim().toLowerCase())
+      .filter(Boolean)
+  );
+  if (!allowedUsers.size) {
+    throw new Error("Set CLOIE_CI_TEST_ALLOWED_USERS before verifying the CI test deployment.");
+  }
+  const ciCatalog = new Set<string>(DEMO_USER_EMAILS);
+  if ([...allowedUsers].some((identifier) => !ciCatalog.has(identifier))) {
+    throw new Error(
+      "CLOIE_CI_TEST_ALLOWED_USERS contains an identifier outside the seeded demo catalog."
+    );
+  }
+
+  const devLoginResponse = await fetch(new URL("/api/auth/dev-login", baseUrl), {
+    method: "POST",
+    redirect: "manual",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email: "redacted" }),
+  });
+  if (devLoginResponse.status !== 404) {
+    throw new Error(
+      `POST /api/auth/dev-login returned ${devLoginResponse.status}; expected 404 outside development.`
+    );
+  }
+
+  for (const identifier of DEMO_USER_EMAILS) {
+    const response = await requestCiTestLogin(baseUrl, identifier);
+    if (allowedUsers.has(identifier)) {
+      await assertCiTestSessionAccepted(response, baseUrl);
+    } else {
+      assertCiTestLoginUnavailable(response);
+    }
+  }
+
+  console.log("PASS CI test login accepts only configured catalog fixtures and sessions");
 }
 
 export async function verifyDedicatedDemoAuthBoundary(
@@ -222,6 +327,9 @@ export async function verifyProductionAuthBoundary(
 
   await assertDemoCatalogUnavailable(baseUrl);
   console.log("PASS dedicated demo login endpoint is unavailable for every seeded catalog account");
+
+  await assertCiTestCatalogUnavailable(baseUrl);
+  console.log("PASS CI test login endpoint is unavailable for every seeded catalog account");
 }
 
 if (process.argv[1]?.endsWith("verify-production-auth-boundary.ts")) {
