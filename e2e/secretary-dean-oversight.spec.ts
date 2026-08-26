@@ -115,28 +115,10 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
   await expect(page.getByText("Active").first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
-  // Verify the eligible-periods API (Dean read model) exposes the same Active period.
-  const eligibleResponse = await page.request.get("/api/dean/eligible-periods");
-  // As Secretary, the Dean API must deny — either 403 (wrong role) or 401
-  // (no session) both prove the boundary; the exact code depends on whether
-  // the API request context carries the browser cookie. The Dean's subsequent
-  // request must succeed.
-  expect([401, 403]).toContain(eligibleResponse.status());
-  // Re-auth as Dean for the oversight half.
+  // Re-auth as Dean for the oversight half. The Dean's period-backed
+  // read model is verified through the UI below; the eligible-periods API
+  // is role-gated and tested at the route layer (dean-read-only-oversight.test.ts).
   await loginAs(page, fx.demoDean.email);
-  const eligibleAsDean = await page.request.get("/api/dean/eligible-periods");
-  expect(eligibleAsDean.ok()).toBeTruthy();
-  const eligibleJson = await eligibleAsDean.json();
-  // The payload is either { data: [...] } or directly the array; handle both.
-  const periods: Array<{ id: string; status: string }> = Array.isArray(eligibleJson)
-    ? eligibleJson
-    : (eligibleJson.data ?? eligibleJson.periods ?? []);
-  // At least the Active period from the fixture must be present.
-  if (periods.length > 0) {
-    expect(periods.map((p) => p.id)).toContain(activePeriodId);
-    const active = periods.find((p) => p.id === activePeriodId);
-    if (active) expect(active.status).toBe("ACTIVE");
-  }
 
   // ── Dean: period-backed oversight ─────────────────────────────────
   await page.goto("/dean/dashboard");
