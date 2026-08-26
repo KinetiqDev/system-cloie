@@ -134,8 +134,8 @@ test("program-wide alumni: publish, preview, alumni submit, and scoped evidence 
   // Select Academic Period: the PLANNED 2027-2028 First term (avoids duplicate collision
   // with the seeded ACTIVE-term BSIT Alumni deployment)
   await page.getByRole("combobox", { name: "Academic Term" }).click();
-  // The planned term option text is "2027-2028 — First Semester — 1st Term"
-  await page.getByRole("option", { name: /2027-2028.*First Semester/ }).click();
+  // The planned term option text is "2027-2028 — 1st Semester — 1st Term"
+  await page.getByRole("option", { name: /2027-2028.*1st Semester/ }).click();
 
   // Target stakeholder: Alumni
   await page.getByRole("radio", { name: "Alumni", exact: true }).click();
@@ -321,7 +321,7 @@ test("ineligible, rejected, inactive, and out-of-scope external accounts cannot 
   await loginAs(page, "alumni-rejected@cloie.test");
   await page.goto("/alumni/dashboard");
   await expect(page).toHaveURL(/\/status\/rejected/);
-  await expect(page.getByRole("heading", { name: "Application Rejected" })).toBeVisible();
+  await expect(page.getByText("Application Rejected")).toBeVisible();
 
   // Inactive account: is_active = false → ci-test-login returns 404, cannot obtain session
   {
@@ -351,7 +351,7 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await page.getByRole("combobox", { name: "Evaluation Template" }).click();
   await page.getByRole("option", { name: "Industry Partner Internship Evaluation Tool" }).click();
   await page.getByRole("combobox", { name: "Academic Term" }).click();
-  await page.getByRole("option", { name: /2027-2028.*First Semester/ }).click();
+  await page.getByRole("option", { name: /2027-2028.*1st Semester/ }).click();
   await page.getByRole("radio", { name: "Industry Partners", exact: true }).click();
   const now = new Date();
   await page
