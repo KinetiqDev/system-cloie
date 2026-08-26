@@ -335,6 +335,14 @@ export async function seedEvaluations(
   for (const cd of centralDeploymentDefs) {
     const verId = versionByCode[cd.templateCode]!;
     const pid = programIdByCode[cd.progCode]!;
+    const isRolling = "rollingWindow" in cd && cd.rollingWindow === true;
+    const now = Date.now();
+    const activationAt = isRolling
+      ? new Date(now - 7 * 24 * 60 * 60 * 1000)
+      : new Date("2026-04-15T08:00:00Z");
+    const deadlineAt = isRolling
+      ? new Date(now + 90 * 24 * 60 * 60 * 1000)
+      : new Date("2026-06-01T23:59:00Z");
     await prisma.centralDeployment.upsert({
       where: { id: cd.id },
       update: {
@@ -343,8 +351,8 @@ export async function seedEvaluations(
         program_id: pid,
         major_id: null,
         target_stakeholder: cd.target,
-        activation_at: new Date("2026-04-15T08:00:00Z"),
-        deadline_at: new Date("2026-06-01T23:59:00Z"),
+        activation_at: activationAt,
+        deadline_at: deadlineAt,
         status: DeploymentStatus.ACTIVE,
         year_level: cd.ylId,
         term_instance_id: termInstanceId,
@@ -356,8 +364,8 @@ export async function seedEvaluations(
         program_id: pid,
         major_id: null,
         target_stakeholder: cd.target,
-        activation_at: new Date("2026-04-15T08:00:00Z"),
-        deadline_at: new Date("2026-06-01T23:59:00Z"),
+        activation_at: activationAt,
+        deadline_at: deadlineAt,
         status: DeploymentStatus.ACTIVE,
         year_level: cd.ylId,
         term_instance_id: termInstanceId,

@@ -256,3 +256,120 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
   await expect(page.getByText(/Submitted on /)).toBeVisible();
   await expect(page.getByRole("button", { name: "Next Section" })).toHaveCount(0);
 });
+
+/**
+ * §46/§61: Alumni response lifecycle on mobile (issue #550) — same wizard,
+ * horizontal-overflow freedom, and keyboard-safe interactions as the Student
+ * mobile journey, but through the Alumni respondent flow (program-wide
+ * deployment, distinct AGR5 prompts, and deployment-id-keyed history).
+ *
+ * Runs against the seeded BSIT Alumni (Mobile) zero-response deployment
+ * (demo-alumni@cloie.test). The desktop journey publishes its own deployment;
+ * the mobile journey owns this seeded one so mutations stay isolated across
+ * projects (workers: 1, projects run sequentially but share the DB).
+ */
+test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload", async ({
+  page,
+}) => {
+  await loginAs(page, "demo-alumni@cloie.test");
+
+  await page.goto("/alumni/dashboard");
+  await expect(page.getByText("Alumni Portal")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  // The seeded mobile deployment must be visible on the dashboard.
+  const pendingCard = page
+    .locator("div")
+    .filter({ has: page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)" }) })
+    .first();
+  await expect(pendingCard.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
+  await pendingCard.getByRole("button", { name: "Start Evaluation" }).click();
+
+  await expect(page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Program Learning Experience" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+
+  for (const prompt of [
+    "The program provided a strong foundation in my field of study",
+    "The courses were relevant to real-world applications",
+    "The program developed my critical thinking and problem-solving skills",
+  ]) {
+    await rateQuestion(page, prompt, "Agree");
+  }
+  await page.getByRole("button", { name: "Next Section" }).click();
+  await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Program Learning Experience" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("group", { name: "The program provided a strong foundation in my field of study" })
+      .getByRole("radio", { name: /Agree/ })
+  ).toBeChecked();
+
+  await page.getByRole("button", { name: "Next Section" }).click();
+  await expectQuestionUnanswered(
+    page,
+    "I can apply knowledge and skills acquired from the program in my work"
+  );
+
+  for (const prompt of [
+    "I can apply knowledge and skills acquired from the program in my work",
+    "I can communicate effectively in a professional environment",
+    "I demonstrate ethical and professional behavior",
+    "I can work effectively with teams and stakeholders",
+    "I am capable of independent learning and self-improvement",
+  ]) {
+    await rateQuestion(page, prompt, "Agree");
+  }
+  await page.getByRole("button", { name: "Next Section" }).click();
+  await expect(page.getByRole("heading", { name: "Employment and Readiness" })).toBeVisible();
+  for (const prompt of [
+    "The program adequately prepared me for employment",
+    "The skills I gained are aligned with industry expectations",
+    "I was able to adapt quickly to workplace demands",
+  ]) {
+    await rateQuestion(page, prompt, "Agree");
+  }
+  await page.getByRole("button", { name: "Next Section" }).click();
+  await expect(page.getByRole("heading", { name: "Overall Assessment" })).toBeVisible();
+  for (const prompt of ["Overall satisfaction with the program", "Overall readiness as a graduate"]) {
+    await rateQuestion(page, prompt, "Agree");
+  }
+  await page.getByRole("button", { name: "Next Section" }).click();
+  await expect(page.getByRole("heading", { name: "Qualitative Feedback" })).toBeVisible();
+  const qualitativePrompt = "Strengths of the program:";
+  await page.getByRole("textbox", { name: qualitativePrompt }).fill("Excellent faculty and relevant curriculum.");
+  await page.getByRole("textbox", { name: "Areas for improvement:" }).fill("More internships.");
+  await page.getByRole("textbox", { name: "Suggestions to improve graduate readiness:" }).fill("Add certification prep.");
+
+  const textarea = page.getByRole("textbox", { name: qualitativePrompt });
+  await textarea.focus();
+  await textarea.scrollIntoViewIfNeeded();
+  const box = await textarea.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height);
+
+  await page.getByRole("button", { name: "Review & Submit" }).click();
+  const reviewDialog = page.getByRole("dialog", { name: "Review Your Answers" });
+  await expect(reviewDialog).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await reviewDialog.getByRole("button", { name: "Confirm & Submit" }).click();
+  await expect(page.getByRole("heading", { name: "Evaluation Submitted!", level: 1 })).toBeVisible();
+
+  await page.goto("/alumni/history");
+  await expect(page.getByRole("heading", { name: "Submission History" })).toBeVisible();
+  const submittedCard = page
+    .getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)" })
+    .locator("..")
+    .locator("..")
+    .locator("..")
+    .locator("..");
+  await expect(submittedCard.getByText("Completed", { exact: true })).toBeVisible();
+  const reviewHref = await submittedCard.getByRole("button", { name: "View Answers" }).getAttribute("href");
+  await page.goto(reviewHref! + "?t=" + Date.now(), { waitUntil: "networkidle" });
+  await expect(page.getByText(/Submitted on /)).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});

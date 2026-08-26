@@ -130,6 +130,15 @@ export const centralDeploymentDefs = [
     target: TargetStakeholder.INDUSTRY_PARTNER,
     ylId: null,
   },
+  {
+    id: D.BSIT_ALUMNI_MOBILE,
+    name: "BSIT Alumni Evaluation (Mobile)",
+    templateCode: "ALUMNI_EVAL",
+    progCode: "BSIT",
+    target: TargetStakeholder.ALUMNI,
+    ylId: null,
+    rollingWindow: true as const,
+  },
 ] as const;
 
 export const centralAssignDefs = [
@@ -138,4 +147,5 @@ export const centralAssignDefs = [
   { depId: D.BSIT_IND, respId: "IND_BSIT" },
   { depId: D.BSHM_EXIT, respId: "STU_BSHM_G" },
   { depId: D.BSHM_IND, respId: "IND_BSHM" },
+  { depId: D.BSIT_ALUMNI_MOBILE, respId: "ALU_BSIT" },
 ] as const;
