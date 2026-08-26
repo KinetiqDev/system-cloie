@@ -44,10 +44,10 @@ test.describe("General Education Coordinator Scope Verification", () => {
     await page.getByRole("button", { name: "Add ILO" }).click();
     const dialog = page.getByRole("dialog", { name: /Add Institutional Learning Outcome/i });
     await expect(dialog).toBeVisible();
+
     await dialog.getByLabel("ILO Code").fill(uniqueCode);
     await dialog.getByLabel("Description").fill(uniqueDesc);
-    await dialog.getByRole("button", { name: "Add ILO" }).click();
-
+    await dialog.getByRole("button", { name: "Create ILO" }).click();
     // Confirm UI reflects the new ILO.
     await expect(dialog).toBeHidden({ timeout: 10_000 });
     await expect(page.getByText(uniqueCode).first()).toBeVisible({ timeout: 10_000 });
