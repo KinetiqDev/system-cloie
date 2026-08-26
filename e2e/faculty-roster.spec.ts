@@ -21,11 +21,13 @@ test.describe("Faculty Course roster mutation", () => {
     const fx = fixture();
     await loginAs(page, fx.demoFaculty.email);
 
-    // Discovery lists the owned assignment for the active period.
+    // Discovery lists the owned assignment for the active period. The row
+    // match pins the section so the #546 publication fixture (GESTECH BSBA
+    // EVENING, owned by the same Faculty) cannot make the lookup ambiguous.
     await page.goto("/faculty/course-rosters");
     await expect(page.getByRole("heading", { name: "My Course Rosters" })).toBeVisible();
     const ownedRow = page.getByRole("row", {
-      name: new RegExp(`${fx.gestechBsba.courseCode}.*${fx.gestechBsba.programCode}`),
+      name: new RegExp(`${fx.gestechBsba.courseCode}.*${fx.gestechBsba.programCode}.*Morning`),
     });
     await expect(ownedRow.getByRole("link", { name: "Open roster" })).toBeVisible();
     await ownedRow.getByRole("link", { name: "Open roster" }).click();

@@ -23,6 +23,16 @@ export async function loginAs(page: Page, email: string): Promise<void> {
 
 /** §49 accessibility sweep: no serious/critical WCAG A/AA violations. */
 export async function expectNoAxeViolations(page: Page): Promise<void> {
+  // Let any in-flight RSC, session refresh, or route transition settle before
+  // scanning. The Next.js App Router may set aria-busy on <html> during
+  // transitions, which axe flags as aria-prohibited-attr on :root if scanned
+  // mid-transition; this also ensures the stable page state is scanned instead
+  // of a loading shell (§19 testing decision).
+  await page.waitForLoadState("networkidle");
+  await page.waitForFunction(() => {
+    const root = document.documentElement;
+    return Array.from(root.attributes).every((attribute) => !attribute.name.startsWith("aria-"));
+  });
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
   const blocking = results.violations.filter(
     (violation) => violation.impact === "serious" || violation.impact === "critical"

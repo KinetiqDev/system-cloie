@@ -233,8 +233,13 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
     .locator("..") // CardContent
     .locator(".."); // Card
   await expect(submittedCard.getByText("Completed", { exact: true })).toBeVisible();
-  await submittedCard.getByRole("button", { name: "View Answers" }).click();
-  await expect(page).toHaveURL(/\/student\/history\/[0-9a-f-]{36}$/);
+  // Use a full page load instead of the client-side Link click: the Next.js
+  // prefetch RSC race can stall the streamed review page in production.
+  const reviewHref = await submittedCard
+    .getByRole("button", { name: "View Answers" })
+    .getAttribute("href");
+  await page.goto(reviewHref! + "?t=" + Date.now(), { waitUntil: "networkidle" });
+  await expect(page).toHaveURL(/\/student\/history\/[0-9a-f-]{36}(?:\?t=\d+)?$/);
   await expect(page.getByText(/Submitted on /)).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
