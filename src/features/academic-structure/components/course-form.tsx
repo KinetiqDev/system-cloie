@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/components/ui/toast";
 import { YEAR_LEVEL_OPTIONS } from "@/lib/constants/year-levels";
 import { SEMESTER_OPTIONS, TERM_OPTIONS } from "@/lib/constants/academic";
@@ -40,7 +39,6 @@ type CourseFormProps = {
     id?: string;
     code?: string;
     title?: string;
-    description?: string | null;
     course_scope?: CourseScope;
     program_id?: string | null;
     major_id?: string | null;
@@ -172,17 +170,6 @@ export function CourseForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`course-description-${defaultValues?.id ?? "new"}`}>Description</Label>
-        <Textarea
-          id={`course-description-${defaultValues?.id ?? "new"}`}
-          name="description"
-          rows={3}
-          placeholder="Course notes, scope, or governance context..."
-          defaultValue={defaultValues?.description ?? ""}
-        />
-      </div>
-
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor={`course-scope-${defaultValues?.id ?? "new"}`}>Course Scope</Label>
@@ -198,7 +185,9 @@ export function CourseForm({
             }}
           >
             <SelectTrigger id={`course-scope-${defaultValues?.id ?? "new"}`} className="w-full">
-              <SelectValue />
+              <SelectValue>
+                {scope === CourseScope.GENERAL_EDUCATION ? "General Education" : "Program-Specific"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>

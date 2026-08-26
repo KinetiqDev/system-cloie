@@ -23,7 +23,6 @@ const courses: FacultyCourseWithCiloCount[] = [
     id: "course-1",
     code: "CS101",
     title: "Intro to Computing",
-    description: null,
     courseScope: "PROGRAM_SPECIFIC",
     courseScopeLabel: "Program-Specific",
     programId: "program-1",
@@ -36,11 +35,19 @@ const courses: FacultyCourseWithCiloCount[] = [
 ];
 
 const loadCilosAction = vi.fn<
-  (courseId: string) => Promise<{ success: boolean; cilos?: { id: string; description: string }[]; error?: string }>
+  (courseId: string) => Promise<{
+    success: boolean;
+    cilos?: { id: string; description: string }[];
+    error?: string;
+  }>
 >();
-const saveCilosAction = vi.fn<
-  (courseId: string, cilos: { id?: string; description: string }[]) => Promise<{ success: boolean; error?: string }>
->();
+const saveCilosAction =
+  vi.fn<
+    (
+      courseId: string,
+      cilos: { id?: string; description: string }[]
+    ) => Promise<{ success: boolean; error?: string }>
+  >();
 
 function renderList() {
   return render(
@@ -141,7 +148,6 @@ describe("FacultyCilosCourseList", () => {
             id: "course-ge",
             code: "GESTECH",
             title: "Science, Technology and Society",
-            description: null,
             courseScope: "GENERAL_EDUCATION",
             courseScopeLabel: "General Education",
             programId: null,

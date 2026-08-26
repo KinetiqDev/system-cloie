@@ -8,7 +8,6 @@ export type GenEdCourseItem = {
   id: string;
   code: string;
   title: string;
-  description: string | null;
   course_scope: CourseScope;
   program_id: string | null;
   major_id: string | null;
@@ -38,7 +37,10 @@ export async function listGenEdCourses(): Promise<ServiceResult<GenEdCoursesResu
   }
 
   if (session.activeRole !== ROLES.GEN_ED_COORDINATOR) {
-    return { success: false, error: "You do not have permission to view General Education courses." };
+    return {
+      success: false,
+      error: "You do not have permission to view General Education courses.",
+    };
   }
 
   const courses = await prisma.course.findMany({
@@ -54,7 +56,6 @@ export async function listGenEdCourses(): Promise<ServiceResult<GenEdCoursesResu
     id: c.id,
     code: c.code,
     title: c.title,
-    description: c.description,
     course_scope: c.course_scope,
     program_id: c.program_id,
     major_id: c.major_id,

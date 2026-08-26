@@ -77,42 +77,6 @@ function countCourseEvaluations(course: {
   );
 }
 
-async function listCourses() {
-  return prisma.course.findMany({
-    include: {
-      major: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      program: {
-        select: {
-          id: true,
-          code: true,
-          name: true,
-        },
-      },
-      course_assignments: {
-        select: {
-          _count: {
-            select: {
-              course_bound_evaluations: true,
-            },
-          },
-        },
-      },
-      _count: {
-        select: {
-          cilos: { where: { is_active: true } },
-          curriculum_courses: true,
-        },
-      },
-    },
-    orderBy: [{ course_scope: "asc" }, { code: "asc" }],
-  });
-}
-
 export async function createCourse(
   input: CreateCourseInput
 ): Promise<ServiceResult<{ id: string }>> {
@@ -127,7 +91,6 @@ export async function createCourse(
       data: {
         code: input.code,
         title: input.title,
-        description: input.description ?? null,
         course_scope: input.course_scope,
         default_year_level: input.default_year_level ?? null,
         default_semester: input.default_semester ?? null,
@@ -161,7 +124,6 @@ export async function updateCourse(
   const data = {
     code: input.code,
     title: input.title,
-    description: input.description ?? null,
     course_scope: input.course_scope,
     default_year_level: input.default_year_level ?? null,
     default_semester: input.default_semester ?? null,
@@ -299,7 +261,6 @@ export type CourseEditData = {
     id: string;
     code: string;
     title: string;
-    description: string | null;
     course_scope: CourseScope;
     program_id: string | null;
     major_id: string | null;
@@ -320,7 +281,6 @@ export async function getCourseEditData(courseId: string): Promise<CourseEditDat
         id: true,
         code: true,
         title: true,
-        description: true,
         course_scope: true,
         program_id: true,
         major_id: true,

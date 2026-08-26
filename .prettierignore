@@ -8,6 +8,7 @@ public
 .env.*
 pnpm-lock.yaml
 prisma/*.db
+*.prisma
 *.sh
 *.sql
 **/CONTEXT.md

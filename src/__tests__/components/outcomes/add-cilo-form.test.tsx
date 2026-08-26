@@ -8,9 +8,13 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
-const saveActionMock = vi.fn<
-  (courseId: string, cilos: Array<{ id?: string; description: string }>) => Promise<{ success: boolean; error?: string }>
->();
+const saveActionMock =
+  vi.fn<
+    (
+      courseId: string,
+      cilos: Array<{ id?: string; description: string }>
+    ) => Promise<{ success: boolean; error?: string }>
+  >();
 const loadCilosActionMock = vi.fn<
   (courseId: string) => Promise<{
     success: boolean;
@@ -24,7 +28,6 @@ const courses: FacultyCourseWithCiloCount[] = [
     id: "course-1",
     code: "CS101",
     title: "Intro to Computing",
-    description: null,
     courseScope: "PROGRAM_SPECIFIC" as const,
     courseScopeLabel: "Program-Specific",
     programId: "program-1",
@@ -38,7 +41,6 @@ const courses: FacultyCourseWithCiloCount[] = [
     id: "course-2",
     code: "GE101",
     title: "General Education",
-    description: null,
     courseScope: "GENERAL_EDUCATION" as const,
     courseScopeLabel: "General Education",
     programId: null,
@@ -52,7 +54,11 @@ const courses: FacultyCourseWithCiloCount[] = [
 
 function renderForm() {
   return render(
-    <AddCiloForm courses={courses} saveAction={saveActionMock} loadCilosAction={loadCilosActionMock} />
+    <AddCiloForm
+      courses={courses}
+      saveAction={saveActionMock}
+      loadCilosAction={loadCilosActionMock}
+    />
   );
 }
 
@@ -141,11 +147,11 @@ describe("AddCiloForm", () => {
         { description: "Design instruction" },
       ])
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "1 CILO saved to CS101."
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("1 CILO saved to CS101.");
     // Course stays selected so faculty can keep adding to the same course.
-    expect(screen.getByRole("combobox", { name: "Course" })).toHaveValue("CS101 — Intro to Computing");
+    expect(screen.getByRole("combobox", { name: "Course" })).toHaveValue(
+      "CS101 — Intro to Computing"
+    );
 
     const mapLink = screen.getAllByRole("link", { name: /Map CILOs to PLOs/ });
     expect(mapLink.length).toBeGreaterThan(0);

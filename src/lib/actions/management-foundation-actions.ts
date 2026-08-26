@@ -89,7 +89,6 @@ export async function createCourseAction(formData: FormData): Promise<ActionResu
   const parsed = parseWithSchema(createCourseSchema, {
     code: formData.get("code"),
     title: formData.get("title"),
-    description: formData.get("description"),
     course_scope: formData.get("course_scope"),
     program_id: formData.get("program_id"),
     major_id: formData.get("major_id"),
@@ -126,7 +125,6 @@ export async function updateCourseAction(formData: FormData): Promise<ActionResu
     id: formData.get("id"),
     code: formData.get("code"),
     title: formData.get("title"),
-    description: formData.get("description"),
     course_scope: formData.get("course_scope"),
     program_id: formData.get("program_id"),
     major_id: formData.get("major_id"),
@@ -193,9 +191,7 @@ export async function deleteCourseAction(id: string): Promise<ActionResult> {
   return { success: true };
 }
 
-export async function getCourseEditDataAction(
-  courseId: string
-): Promise<CourseEditData | null> {
+export async function getCourseEditDataAction(courseId: string): Promise<CourseEditData | null> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
     return null;

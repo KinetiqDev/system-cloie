@@ -70,6 +70,39 @@ describe("CourseForm temporal fields", () => {
     });
   });
 
+  describe("course scope select", () => {
+    it("shows the human-readable label, not the raw enum value", () => {
+      renderCourseForm();
+
+      const scopeTrigger = screen.getByLabelText(/course scope/i);
+      expect(scopeTrigger).toHaveTextContent("Program-Specific");
+      expect(scopeTrigger).not.toHaveTextContent("PROGRAM_SPECIFIC");
+    });
+
+    it("switches the label when General Education is selected", async () => {
+      renderCourseForm();
+
+      const scopeTrigger = screen.getByLabelText(/course scope/i);
+      await openAndSelect(/course scope/i, "General Education");
+
+      await waitFor(() => {
+        expect(scopeTrigger).toHaveTextContent("General Education");
+        expect(scopeTrigger).not.toHaveTextContent("GENERAL_EDUCATION");
+      });
+    });
+  });
+
+  describe("course description input removal", () => {
+    it("does not render a Description field", () => {
+      renderCourseForm();
+
+      expect(screen.queryByLabelText(/description/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/course notes, scope, or governance context/i)
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("Summer semester disables Term field", () => {
     it("disables Term select when Summer semester is selected", async () => {
       renderCourseForm();
@@ -210,9 +243,7 @@ describe("CourseForm Zod validation for temporal fields", () => {
   const validUuid = "550e8400-e29b-41d4-a716-446655440000";
 
   it("rejects Summer semester with non-null term via superRefine", async () => {
-    const { createCourseSchema } = await import(
-      "@/features/academic-structure/schemas/course"
-    );
+    const { createCourseSchema } = await import("@/features/academic-structure/schemas/course");
 
     const invalidData = {
       code: "TEST101",
@@ -232,9 +263,7 @@ describe("CourseForm Zod validation for temporal fields", () => {
   });
 
   it("accepts Summer semester with null term", async () => {
-    const { createCourseSchema } = await import(
-      "@/features/academic-structure/schemas/course"
-    );
+    const { createCourseSchema } = await import("@/features/academic-structure/schemas/course");
 
     const validData = {
       code: "SUM101",
@@ -251,9 +280,7 @@ describe("CourseForm Zod validation for temporal fields", () => {
   });
 
   it("accepts regular semester with term", async () => {
-    const { createCourseSchema } = await import(
-      "@/features/academic-structure/schemas/course"
-    );
+    const { createCourseSchema } = await import("@/features/academic-structure/schemas/course");
 
     const validData = {
       code: "TEST101",
@@ -270,9 +297,7 @@ describe("CourseForm Zod validation for temporal fields", () => {
   });
 
   it("accepts all temporal fields as optional (undefined)", async () => {
-    const { createCourseSchema } = await import(
-      "@/features/academic-structure/schemas/course"
-    );
+    const { createCourseSchema } = await import("@/features/academic-structure/schemas/course");
 
     const validData = {
       code: "TEST101",

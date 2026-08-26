@@ -1,5 +1,9 @@
 import { prisma } from "../../../src/lib/db/prisma";
-import { courseDefinitions, majorDefinitions, programDefinitions } from "../fixtures/academic-structure";
+import {
+  courseDefinitions,
+  majorDefinitions,
+  programDefinitions,
+} from "../fixtures/academic-structure";
 import type { CourseSeed, FoundationContext, MajorSeed, ProgramSeed } from "../types";
 
 const ACD_DEMO_CATALOG_SEED_SOURCE = "ACD_DEMO_CATALOG";
@@ -9,10 +13,7 @@ export async function seedFoundation(): Promise<FoundationContext> {
   const unprovenancedCourses = await prisma.course.findMany({
     where: {
       code: { in: courseCodes },
-      OR: [
-        { seed_source: null },
-        { seed_source: { not: ACD_DEMO_CATALOG_SEED_SOURCE } },
-      ],
+      OR: [{ seed_source: null }, { seed_source: { not: ACD_DEMO_CATALOG_SEED_SOURCE } }],
     },
     select: { code: true },
   });
@@ -59,7 +60,6 @@ export async function seedFoundation(): Promise<FoundationContext> {
       update: {
         title: d.title,
         course_scope: d.scope,
-        description: `${d.title} — seeded course.`,
         is_active: true,
         program_id: d.pc ? (pMap.get(d.pc)?.id ?? null) : null,
         major_id: d.mk ? (mMap.get(d.mk)?.id ?? null) : null,
@@ -71,7 +71,6 @@ export async function seedFoundation(): Promise<FoundationContext> {
         code: d.code,
         title: d.title,
         course_scope: d.scope,
-        description: `${d.title} — seeded course.`,
         seed_source: ACD_DEMO_CATALOG_SEED_SOURCE,
         is_active: true,
         program_id: d.pc ? (pMap.get(d.pc)?.id ?? null) : null,
@@ -85,7 +84,7 @@ export async function seedFoundation(): Promise<FoundationContext> {
   }
 
   // Converge the catalog: deactivate seed-managed courses removed from the
-  // fixture since the last run. User-authored course descriptions are ignored.
+  // fixture since the last run.
   await prisma.course.updateMany({
     where: {
       is_active: true,

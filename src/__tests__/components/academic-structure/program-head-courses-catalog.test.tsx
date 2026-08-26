@@ -24,9 +24,8 @@ describe("Program Head Courses catalog", () => {
   });
 
   it("keeps the selected Program as the form authority input", async () => {
-    const { ProgramHeadCoursesCatalog } = await import(
-      "@/features/academic-structure/components/program-head-courses-catalog"
-    );
+    const { ProgramHeadCoursesCatalog } =
+      await import("@/features/academic-structure/components/program-head-courses-catalog");
     const programId = "11111111-1111-4111-8111-111111111111";
     createActionMock.mockResolvedValue({ success: true });
 
@@ -52,14 +51,17 @@ describe("Program Head Courses catalog", () => {
   });
 
   it("submits a Major-Specific Course with the selected major", async () => {
-    const { ProgramHeadCoursesCatalog } = await import(
-      "@/features/academic-structure/components/program-head-courses-catalog"
-    );
+    const { ProgramHeadCoursesCatalog } =
+      await import("@/features/academic-structure/components/program-head-courses-catalog");
     createActionMock.mockResolvedValue({ success: true });
 
     render(
       <ProgramHeadCoursesCatalog
-        program={{ id: "11111111-1111-4111-8111-111111111111", code: "BSED", name: "Secondary Education" }}
+        program={{
+          id: "11111111-1111-4111-8111-111111111111",
+          code: "BSED",
+          name: "Secondary Education",
+        }}
         courses={[]}
         summary={{ total: 0, programWide: 0, majorSpecific: 0, archived: 0 }}
         majors={[
@@ -89,15 +91,13 @@ describe("Program Head Courses catalog", () => {
   });
 
   it("renders status filter and schedule columns without scope tabs", async () => {
-    const { ProgramHeadCoursesCatalog } = await import(
-      "@/features/academic-structure/components/program-head-courses-catalog"
-    );
+    const { ProgramHeadCoursesCatalog } =
+      await import("@/features/academic-structure/components/program-head-courses-catalog");
     const programId = "11111111-1111-4111-8111-111111111111";
     const mockCourse = {
       id: "course-1",
       code: "IT-101",
       title: "Introduction to Computing",
-      description: null,
       course_scope: CourseScope.PROGRAM_SPECIFIC,
       program_id: programId,
       major_id: null,

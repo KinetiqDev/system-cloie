@@ -12,7 +12,6 @@ export type FacultyCourseWithCiloCount = {
   id: string;
   code: string;
   title: string;
-  description: string | null;
   courseScope: CourseScope;
   courseScopeLabel: string;
   programId: string | null;
@@ -94,7 +93,6 @@ export async function listFacultyCoursesWithCilos(
       id: c.id,
       code: c.code,
       title: c.title,
-      description: c.description,
       courseScope: c.course_scope,
       courseScopeLabel: scopeLabel,
       programId: c.program?.id ?? null,

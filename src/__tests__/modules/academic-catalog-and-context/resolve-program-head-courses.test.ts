@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CourseScope } from "@prisma/client";
 
-const { resolveProgramHeadContextMock, courseFindManyMock, majorFindManyMock } =
-  vi.hoisted(() => ({
-    resolveProgramHeadContextMock: vi.fn(),
-    courseFindManyMock: vi.fn(),
-    majorFindManyMock: vi.fn(),
-  }));
+const { resolveProgramHeadContextMock, courseFindManyMock, majorFindManyMock } = vi.hoisted(() => ({
+  resolveProgramHeadContextMock: vi.fn(),
+  courseFindManyMock: vi.fn(),
+  majorFindManyMock: vi.fn(),
+}));
 
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
@@ -28,7 +27,6 @@ function course(overrides: Record<string, unknown> = {}) {
     id: "55555555-5555-4555-8555-555555555555",
     code: "BSED-101",
     title: "Foundations",
-    description: null,
     course_scope: CourseScope.PROGRAM_SPECIFIC,
     program_id: BSED_ID,
     major_id: null,
@@ -51,14 +49,21 @@ describe("resolve-program-head-courses", () => {
     vi.clearAllMocks();
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
-      data: { userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", authorizedPrograms: [BEED, BSED], selectedProgram: BSED },
+      data: {
+        userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        authorizedPrograms: [BEED, BSED],
+        selectedProgram: BSED,
+      },
     });
     courseFindManyMock.mockResolvedValueOnce([course()]);
-    majorFindManyMock.mockResolvedValue([{ id: "77777777-7777-4777-8777-777777777777", name: "English", program_id: BSED_ID }]);
+    majorFindManyMock.mockResolvedValue([
+      { id: "77777777-7777-4777-8777-777777777777", name: "English", program_id: BSED_ID },
+    ]);
   });
 
   it("lists only selected-Program Courses", async () => {
-    const { listProgramHeadCourses } = await import("@/features/academic-structure/services/resolve-program-head-courses");
+    const { listProgramHeadCourses } =
+      await import("@/features/academic-structure/services/resolve-program-head-courses");
 
     const result = await listProgramHeadCourses(BSED_ID);
 
@@ -71,7 +76,9 @@ describe("resolve-program-head-courses", () => {
       },
     });
     expect(result.success && result.data.courses).toHaveLength(1);
-    expect(result.success && result.data.courses[0]?.course_scope).toBe(CourseScope.PROGRAM_SPECIFIC);
+    expect(result.success && result.data.courses[0]?.course_scope).toBe(
+      CourseScope.PROGRAM_SPECIFIC
+    );
     expect(result.success && "isReadOnly" in (result.data.courses[0] ?? {})).toBe(false);
     expect(courseFindManyMock).toHaveBeenCalledTimes(1);
     expect(courseFindManyMock.mock.calls[0]?.[0]).toMatchObject({
@@ -87,7 +94,8 @@ describe("resolve-program-head-courses", () => {
       success: false,
       error: "Selected Program is not assigned.",
     });
-    const { listProgramHeadCourses } = await import("@/features/academic-structure/services/resolve-program-head-courses");
+    const { listProgramHeadCourses } =
+      await import("@/features/academic-structure/services/resolve-program-head-courses");
 
     await expect(listProgramHeadCourses(BEED_ID)).resolves.toEqual({
       success: false,
