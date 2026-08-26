@@ -47,7 +47,9 @@ describe("DemoRoleSwitcher", () => {
     });
 
     expect(screen.getByRole("button", { name: "Switch to Alumni" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Switch to Alumni — Miguel Ong (BSBA)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Switch to Alumni — Miguel Ong (BSBA)" })
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Switch to Student" })).not.toBeInTheDocument();
   });
 
