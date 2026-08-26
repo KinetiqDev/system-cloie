@@ -179,7 +179,9 @@ test("student lifecycle: draft, reload, submit, and second-submission denial", a
     await expect(block.getByText(answer, { exact: true })).toBeVisible();
   }
 
-  // Stable submitted state is axe-clean.
+  // Stable submitted state is axe-clean — wait for the animate-in transition
+  // (motion-safe:animate-in 500ms) to complete so axe sees final colors.
+  await page.waitForTimeout(700);
   await expectNoAxeViolations(page);
 
   // 8. Editing or submitting again is denied: the evaluation route redirects

@@ -29,21 +29,23 @@ export function SubmittedResponseReview({
     <div className="motion-safe:animate-in motion-safe:fade-in space-y-8 motion-safe:duration-500">
       <div>
         <h1 className="font-heading text-2xl font-black">{evaluationTitle}</h1>
-        <p className="text-text-secondary text-sm">
+        <p className="text-foreground text-sm">
           {courseTitle ? `${courseTitle} • ${programLabel}` : programLabel}
         </p>
-        <p className="text-text-secondary mt-1 text-xs">Submitted on {formatDate(submittedAt)}</p>
+        <p className="text-foreground mt-1 text-xs">Submitted on {formatDate(submittedAt)}</p>
       </div>
 
       {sections.map((section) => (
         <section key={section.id} className="space-y-4">
-          <h2 className="border-border border-b pb-2 text-lg font-bold">{section.name}</h2>
+          <h2 className="text-foreground border-border border-b pb-2 text-lg font-bold">
+            {section.name}
+          </h2>
           <div className="space-y-4">
             {section.items.map((item, idx) => {
               const itemKey = item.kind === "quantitative" ? item.itemKey : item.promptKey;
               return (
                 <div key={itemKey ?? idx} className="border-border rounded-xl border p-4">
-                  <p className="text-text-secondary mb-2 text-sm">{item.prompt}</p>
+                  <p className="text-foreground mb-2 text-sm">{item.prompt}</p>
                   <p className="text-text-primary font-bold">
                     {item.answer !== undefined ? String(item.answer) : "—"}
                   </p>
