@@ -34,17 +34,22 @@ async function main() {
   const { assignmentMap } = await seedCourseAssignmentsRunner({ pMap, cMap }, termInstance.id);
 
   console.log("[C] Outcomes (GOs, CILOs, mappings)...");
-  const { ciloMap } = await seedOutcomesRunner({ pMap, cMap });
+  const outcomeContext = await seedOutcomesRunner({ pMap, cMap });
   await persistPeriodReadinessSnapshot(termInstances.ti2026First.id);
 
   console.log("[D] Instrument templates...");
-  await seedInstruments();
+  await seedInstruments(outcomeContext, { pMap });
   await seedFacultyPublicationTemplate({ cMap });
 
   console.log("[E] Evaluations & deployments...");
-  const evaluationContext = await seedEvaluationsRunner({ pMap, cMap }, ciloMap, termInstance.id, {
-    assignmentMap,
-  });
+  const evaluationContext = await seedEvaluationsRunner(
+    { pMap, cMap },
+    outcomeContext.ciloMap,
+    termInstance.id,
+    {
+      assignmentMap,
+    }
+  );
 
   console.log("[F] Responses with items...");
   await seedResponsesRunner(evaluationContext);

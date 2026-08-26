@@ -137,6 +137,18 @@ export const allUsers = [
     role: SystemRole.INDUSTRY_PARTNER,
   },
   {
+    id: U.ALU_REJECTED,
+    email: "alumni-rejected@cloie.test",
+    name: "Rejected Alumni",
+    role: SystemRole.ALUMNI,
+  },
+  {
+    id: U.ALU_INACTIVE,
+    email: "alumni-inactive@cloie.test",
+    name: "Inactive Alumni",
+    role: SystemRole.ALUMNI,
+  },
+  {
     id: U.GENED,
     email: "demo-gened@cloie.test",
     name: "Gen Ed Coordinator",
@@ -227,6 +239,18 @@ export const externalProfiles = [
     userId: U.ALU_BSBA,
     graduationYear: 2021,
     program: "BSBA",
+    status: VerificationStatus.APPROVED,
+  },
+  {
+    userId: U.ALU_REJECTED,
+    graduationYear: 2022,
+    program: "BSIT",
+    status: VerificationStatus.REJECTED,
+  },
+  {
+    userId: U.ALU_INACTIVE,
+    graduationYear: 2020,
+    program: "BSIT",
     status: VerificationStatus.APPROVED,
   },
 ] as const;

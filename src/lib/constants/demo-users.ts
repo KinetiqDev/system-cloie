@@ -75,13 +75,15 @@ export const DEMO_USERS = [
     role: SystemRole.STUDENT,
   },
 
-  // ── New External (2) ──────────────────────────────────────────────────────
+  // ── New External (4) ──────────────────────────────────────────────────────
   { email: "alumni-bsba@cloie.test", label: "Alumni — Miguel Ong (BSBA)", role: SystemRole.ALUMNI },
   {
     email: "industry-bshm@cloie.test",
     label: "Industry — Karen Sy (BSHM)",
     role: SystemRole.INDUSTRY_PARTNER,
   },
+  { email: "alumni-rejected@cloie.test", label: "Alumni — Rejected", role: SystemRole.ALUMNI },
+  { email: "alumni-inactive@cloie.test", label: "Alumni — Inactive", role: SystemRole.ALUMNI },
   {
     email: "demo-gened@cloie.test",
     label: "Gen Ed Coordinator",

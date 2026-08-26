@@ -30,6 +30,11 @@ export async function seedUsers(
       create: { user_id: u.id, role: u.role },
     });
   }
+  // Deactivate the intentionally inactive fixture (alumni-inactive)
+  await prisma.user.updateMany({
+    where: { id: U.ALU_INACTIVE },
+    data: { is_active: false },
+  });
 
   const students = studentDefinitions.map((student) => ({
     uid: student.uid,

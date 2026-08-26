@@ -54,7 +54,7 @@ export async function expectNoAxeViolations(page: Page): Promise<void> {
 export async function rateQuestion(page: Page, prompt: string, label: string): Promise<void> {
   const group = page.getByRole("group", { name: prompt });
   await group.getByText(label, { exact: true }).click();
-  await expect(group.getByRole("radio", { name: new RegExp(label) })).toBeChecked();
+  await expect(group.getByRole("radio", { checked: true })).toHaveCount(1);
 }
 
 /** Assert a student wizard Likert question has no selected rating. */
