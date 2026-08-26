@@ -18,6 +18,7 @@ interface ReviewModalProps {
   sections: StudentEvaluationSection[];
   answers: Record<string, number | string>;
   isSubmitting?: boolean;
+  submissionError?: string | null;
 }
 
 export function ReviewModal({
@@ -27,6 +28,7 @@ export function ReviewModal({
   sections,
   answers,
   isSubmitting = false,
+  submissionError = null,
 }: ReviewModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -84,6 +86,16 @@ export function ReviewModal({
             </AlertDescription>
           </Alert>
         </div>
+
+        {submissionError && (
+          <div className="shrink-0 px-6">
+            <Alert variant="destructive" role="alert">
+              <AlertCircle className="size-4" />
+              <AlertTitle className="sr-only">Submission failed</AlertTitle>
+              <AlertDescription className="font-medium">{submissionError}</AlertDescription>
+            </Alert>
+          </div>
+        )}
 
         <DialogFooter className="bg-surface shrink-0 gap-3 border-t p-6 sm:gap-0">
           <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="font-bold">

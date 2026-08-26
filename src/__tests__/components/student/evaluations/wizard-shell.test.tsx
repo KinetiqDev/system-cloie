@@ -1,6 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { WizardShell } from "@/features/responses/components/wizard-shell";
-import { expect, test, describe, vi } from "vitest";
 
 const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 
@@ -479,5 +478,44 @@ describe("WizardShell", () => {
 
     expect(screen.getByText(/Section 2 of 2/i)).toBeDefined();
     expect(screen.getByText("Section 2 completed")).toBeDefined();
+  });
+
+  test("surfaces submission errors from the review dialog", async () => {
+    const onSubmitResponse = vi.fn().mockResolvedValue({
+      success: false,
+      error: "Missing required answers: section-a:qualitative:remarks",
+    });
+    const sections = [
+      {
+        id: "section-1",
+        name: "Section 1 Name",
+        description: "First part",
+        items: [
+          {
+            kind: "quantitative" as const,
+            itemKey: "q1",
+            prompt: "Question 1",
+            scale: [1, 2, 3, 4, 5],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <WizardShell
+        assignmentId="assignment-1"
+        title="Test Eval"
+        sections={sections}
+        onSubmitResponse={onSubmitResponse}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /4/i }));
+    fireEvent.click(screen.getByRole("button", { name: /review & submit/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Review Your Answers" });
+    fireEvent.click(within(dialog).getByRole("button", { name: /confirm & submit/i }));
+
+    expect(await within(dialog).findByText(/missing required answers/i)).toBeDefined();
   });
 });

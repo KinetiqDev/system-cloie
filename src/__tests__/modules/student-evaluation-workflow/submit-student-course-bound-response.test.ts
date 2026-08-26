@@ -100,6 +100,37 @@ describe("assertSubmissionIsAllowed", () => {
       })
     ).toThrowError("Missing required answers: section-a:qualitative:remarks");
   });
+
+  it("allows optional qualitative items (required: false) to remain blank", () => {
+    const snapshot = [
+      {
+        key: "section-a",
+        title: "Section A",
+        items: [
+          {
+            key: "q1",
+            kind: "quantitative",
+            prompt: "Rate the instructor.",
+            scale: [1, 2, 3, 4, 5],
+            required: true,
+          },
+          {
+            key: "remarks",
+            kind: "qualitative",
+            prompt: "Share your remarks.",
+            required: false,
+          },
+        ],
+      },
+    ];
+
+    expect(() =>
+      assertSubmissionIsAllowed({
+        answers: { "section-a:quantitative:q1": 4 },
+        structureSnapshot: snapshot,
+      })
+    ).not.toThrow();
+  });
 });
 
 describe("buildSubmittedResponsePatch", () => {

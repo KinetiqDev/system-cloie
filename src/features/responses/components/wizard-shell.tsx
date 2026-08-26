@@ -271,6 +271,7 @@ export function WizardShell({
   const [isSaving, setIsSaving] = React.useState(false);
   const [lastSaved, setLastSaved] = React.useState<Date | null>(null);
   const [validationError, setValidationError] = React.useState<string | null>(null);
+  const [submissionError, setSubmissionError] = React.useState<string | null>(null);
 
   const router = useRouter();
   const totalSteps = sections.length;
@@ -377,6 +378,7 @@ export function WizardShell({
         scrollToTop();
       } else {
         setIsReviewOpen(true);
+        setSubmissionError(null);
       }
     } else {
       scrollToTop();
@@ -398,6 +400,7 @@ export function WizardShell({
     }
 
     setIsSaving(true);
+    setSubmissionError(null);
     try {
       const result = await onSubmitResponse({
         assignmentId,
@@ -407,6 +410,8 @@ export function WizardShell({
       if (result.success) {
         setIsReviewOpen(false);
         setIsSubmitted(true);
+      } else {
+        setSubmissionError(result.error ?? "Submission failed. Please try again.");
       }
     } finally {
       setIsSaving(false);
@@ -604,6 +609,7 @@ export function WizardShell({
         onClose={() => setIsReviewOpen(false)}
         onSubmit={handleSubmit}
         isSubmitting={isSaving}
+        submissionError={submissionError}
         sections={sections}
         answers={answers}
       />

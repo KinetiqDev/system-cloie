@@ -15,6 +15,11 @@ import { lockResponseSubmission } from "./lock-response-submission";
 type StructureSnapshotItem = {
   key: string;
   kind?: "quantitative" | "qualitative";
+  /**
+   * Whether the item must be answered for submission. Absent means required:
+   * legacy snapshots never set the flag and have always enforced every item.
+   */
+  required?: boolean;
 };
 
 type StructureSnapshotSection = {
@@ -104,7 +109,13 @@ export function assertSubmissionIsAllowed({
               .filter((answerKey) => !hasAnswerValue("quantitative", answers[answerKey]))),
         ...(Array.isArray(section.items)
           ? section.items
-              .filter((item) => item.kind === "qualitative")
+              .filter(
+                (item) =>
+                  item.kind === "qualitative" &&
+                  // Optional items may stay blank; absent flag keeps the
+                  // legacy behaviour of requiring every qualitative answer.
+                  item.required !== false
+              )
               .map((item) => buildAnswerKey(section.key, "qualitative", item.key))
               .filter((answerKey) => !hasAnswerValue("qualitative", answers[answerKey]))
           : getSnapshotItems(section.qualitative_prompts)
