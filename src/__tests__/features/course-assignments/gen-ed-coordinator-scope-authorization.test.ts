@@ -274,7 +274,9 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       });
       expect(failResult.success).toBe(false);
       if (!failResult.success) {
-        expect(failResult.error).toBe("Coordinators can only manage General Education assignments.");
+        expect(failResult.error).toBe(
+          "Coordinators can only manage General Education assignments."
+        );
       }
     });
 
@@ -320,7 +322,9 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       });
       expect(failResult.success).toBe(false);
       if (!failResult.success) {
-        expect(failResult.error).toBe("Coordinators can only manage General Education assignments.");
+        expect(failResult.error).toBe(
+          "Coordinators can only manage General Education assignments."
+        );
       }
     });
 
@@ -349,7 +353,9 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       const failResult = await deactivateCourseAssignment("ca-ps");
       expect(failResult.success).toBe(false);
       if (!failResult.success) {
-        expect(failResult.error).toBe("Coordinators can only manage General Education assignments.");
+        expect(failResult.error).toBe(
+          "Coordinators can only manage General Education assignments."
+        );
       }
     });
 
@@ -378,7 +384,9 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       const failResult = await activateCourseAssignment({ assignmentId: "ca-ps" });
       expect(failResult.success).toBe(false);
       if (!failResult.success) {
-        expect(failResult.error).toBe("Coordinators can only manage General Education assignments.");
+        expect(failResult.error).toBe(
+          "Coordinators can only manage General Education assignments."
+        );
       }
     });
 
@@ -386,22 +394,24 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       const { prisma } = await import("@/lib/db/prisma");
 
-      vi.mocked(prisma.course.findUnique).mockImplementation(async ({ where }: { where: { id: string } }) => {
-        if (where.id === "course-ge") {
+      vi.mocked(prisma.course.findUnique).mockImplementation(
+        async ({ where }: { where: { id: string } }) => {
+          if (where.id === "course-ge") {
+            return {
+              id: "course-ge",
+              program_id: null,
+              course_scope: CourseScope.GENERAL_EDUCATION,
+              is_active: true,
+            } as never;
+          }
           return {
-            id: "course-ge",
-            program_id: null,
-            course_scope: CourseScope.GENERAL_EDUCATION,
+            id: "course-ps",
+            program_id: "program-bsit",
+            course_scope: CourseScope.PROGRAM_SPECIFIC,
             is_active: true,
           } as never;
         }
-        return {
-          id: "course-ps",
-          program_id: "program-bsit",
-          course_scope: CourseScope.PROGRAM_SPECIFIC,
-          is_active: true,
-        } as never;
-      });
+      );
 
       vi.mocked(prisma.courseAssignment.create).mockResolvedValue({ id: "assignment-ge" } as never);
 
