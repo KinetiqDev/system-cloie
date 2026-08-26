@@ -23,6 +23,7 @@ const {
 
 vi.mock("@/lib/db/prisma", () => {
   const mockTx = {
+    $executeRaw: vi.fn(),
     qualitativeResponseItem: {
       createMany: vi.fn(),
       deleteMany: vi.fn(),

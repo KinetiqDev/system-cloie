@@ -32,6 +32,13 @@ export const courseAssignmentDefinitions = [
   },
   {
     courseCode: "GESTECH",
+    programCode: "BSIT",
+    facultyId: U.FAC_BSIT,
+    yearLevel: YearLevel.FOURTH_YEAR,
+    section: "AFTERNOON",
+  },
+  {
+    courseCode: "GESTECH",
     programCode: "BSBA",
     facultyId: U.FAC_BSIT,
     yearLevel: YearLevel.FIRST_YEAR,
@@ -126,10 +133,10 @@ export const membershipDefinitions = [
   },
   {
     course: "GESTECH",
-    program: "BSBA",
-    year: YearLevel.FIRST_YEAR,
+    program: "BSIT",
+    year: YearLevel.FOURTH_YEAR,
     section: "AFTERNOON",
-    students: [U.STU_BSED],
+    students: [U.GRAD_BSIT],
   },
   {
     course: "MM201",

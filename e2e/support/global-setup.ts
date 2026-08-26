@@ -1,8 +1,7 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { StudentSection, YearLevel } from "@prisma/client";
 import { prisma } from "../../src/lib/db/prisma";
-import { verifyDisposableDatabaseTarget } from "../../src/lib/db/verify-database-target";
 import { E2E_CONTRACT, type FixtureData } from "./contract";
 
 export const FIXTURE_DATA_PATH = join(__dirname, "..", ".fixture-data.json");
@@ -12,28 +11,6 @@ function assertContract(condition: unknown, message: string): asserts condition 
   if (!condition) {
     throw new Error(`Fixture contract violation: ${message}`);
   }
-}
-
-function assertDisposableDatabaseForFixtureReset(): void {
-  const target = verifyDisposableDatabaseTarget(process.env);
-  const isDisposableDbName = (process.env.DATABASE_URL ?? "").includes("/cloie_test");
-  const hasCiIdentity =
-    existsSync("/tmp/cloie-ci-test-marker") ||
-    process.env.CI === "true" ||
-    process.env.CLOIE_CI_TEST_ENABLED === "true";
-  const errors = [...target.errors];
-  if (!isDisposableDbName) {
-    errors.push("DATABASE_URL must target the disposable database cloie_test");
-  }
-  if (!hasCiIdentity) {
-    errors.push(
-      "Disposable CI identity not verified (expected /tmp/cloie-ci-test-marker, CI=true, or CLOIE_CI_TEST_ENABLED=true)"
-    );
-  }
-  assertContract(
-    target.valid && isDisposableDbName && hasCiIdentity,
-    `Refusing to reset GESTECH fixture: ${errors.join("; ")} — global setup must run against a disposable database`
-  );
 }
 
 async function findProgramByCode(code: string) {
@@ -119,11 +96,10 @@ async function verifyIdentities(): Promise<void> {
   await verifySeededIdentity(E2E_CONTRACT.beedPh, "PROGRAM_HEAD");
   await verifySeededIdentity(E2E_CONTRACT.demoFaculty, "FACULTY");
   await verifySeededIdentity(E2E_CONTRACT.demoStudent, "STUDENT");
-  await verifySeededIdentity(E2E_CONTRACT.bsbaStudent, "STUDENT");
+  await verifySeededIdentity(E2E_CONTRACT.mobileStudent, "STUDENT");
 }
 
 /**
- * Student lifecycle
  * Student lifecycle fixture (issue #544): the GESTECH zero-response
  * evaluation and both journey students' assignments. The GESTECH deployment
  * window is rolling by fixture design (see `prisma/seed/fixtures/evaluations.ts`),
@@ -133,14 +109,13 @@ async function verifyIdentities(): Promise<void> {
  * zero-response empty-state journey (empty-states.spec.ts) depends on that
  * initial state.
  *
- * A failed previous run can leave an IN_PROGRESS (or SUBMITTED) response on a
- * journey assignment, so the setup first restores the owned rows to the
- * zero-response contract state before verifying. In CI the database is fresh
- * per job and nothing is deleted; locally this makes re-runs hermetic.
+ * Global setup only verifies this contract. It never deletes response data.
+ * Re-run the deterministic seed before repeating the browser suite against
+ * the same disposable database.
  */
 async function verifyStudentLifecycleFixture(): Promise<{
   gestechAssignment: { id: string };
-  gestechBsbaAssignment: { id: string };
+  gestechMobileAssignment: { id: string };
 }> {
   const contract = E2E_CONTRACT;
 
@@ -177,45 +152,34 @@ async function verifyStudentLifecycleFixture(): Promise<{
     `missing GESTECH assignment for ${contract.demoStudent.email} (${contract.demoStudent.id})`
   );
 
-  // The BSBA GESTECH deployment is the AFTERNOON cohort, isolated from the
-  // faculty's MORNING cohort (issue #545 expects MORNING to stay mutable).
-  // Its id is a runtime handle, not a contract value.
-  const gestechBsbaEval = await prisma.courseBoundEvaluation.findFirst({
-    where: {
-      deployment_name: contract.gestechEval.title,
-      course_assignment: { program: { code: "BSBA" }, section: "AFTERNOON" },
-    },
+  // The second GESTECH deployment is the BSIT AFTERNOON cohort, isolated
+  // from the published MORNING cohort. Its id is a runtime handle.
+  const gestechMobileEval = await prisma.courseBoundEvaluation.findUnique({
+    where: { id: contract.gestechMobileEval.id },
   });
   assertContract(
-    gestechBsbaEval,
-    `missing seeded Course-bound evaluation "${contract.gestechEval.title}" for BSBA`
+    gestechMobileEval,
+    `missing seeded Course-bound evaluation "${contract.gestechEval.title}" for the mobile cohort`
   );
 
-  const gestechBsbaAssignment = await prisma.evaluationAssignment.findFirst({
-    where: { course_bound_id: gestechBsbaEval!.id, respondent_id: contract.bsbaStudent.id },
+  const gestechMobileAssignment = await prisma.evaluationAssignment.findFirst({
+    where: { course_bound_id: gestechMobileEval!.id, respondent_id: contract.mobileStudent.id },
   });
   assertContract(
-    gestechBsbaAssignment,
-    `missing GESTECH assignment for ${contract.bsbaStudent.email} (${contract.bsbaStudent.id})`
+    gestechMobileAssignment,
+    `missing GESTECH assignment for ${contract.mobileStudent.email} (${contract.mobileStudent.id})`
   );
-  assertDisposableDatabaseForFixtureReset();
-
-  // Restore the zero-response fixture contract for the journey-owned
-  // assignments (cascade deletes their answer items).
-  await prisma.response.deleteMany({
-    where: { assignment_id: { in: [gestechAssignment.id, gestechBsbaAssignment.id] } },
-  });
-  const leftoverResponses = await prisma.response.count({
-    where: { assignment_id: { in: [gestechAssignment.id, gestechBsbaAssignment.id] } },
+  const existingResponses = await prisma.response.count({
+    where: { assignment_id: { in: [gestechAssignment.id, gestechMobileAssignment.id] } },
   });
   assertContract(
-    leftoverResponses === 0,
-    `GESTECH assignments must start with no response (zero-response fixture), found ${leftoverResponses} leftover response rows`
+    existingResponses === 0,
+    `GESTECH assignments must start with no response (zero-response fixture), found ${existingResponses} response rows. Re-seed the disposable database before re-running the e2e suite.`
   );
 
   return {
     gestechAssignment: { id: gestechAssignment.id },
-    gestechBsbaAssignment: { id: gestechBsbaAssignment.id },
+    gestechMobileAssignment: { id: gestechMobileAssignment.id },
   };
 }
 
@@ -423,7 +387,7 @@ export default async function globalSetup(): Promise<void> {
 
   await verifyResponseExpectations(courseResponse, bottomUpResponse);
   const ploId = await verifyPloEvidenceLink(bsit.id);
-  const { gestechAssignment, gestechBsbaAssignment } = await verifyStudentLifecycleFixture();
+  const { gestechAssignment, gestechMobileAssignment } = await verifyStudentLifecycleFixture();
 
   const contract = E2E_CONTRACT;
   const fixture: FixtureData = {
@@ -482,10 +446,10 @@ export default async function globalSetup(): Promise<void> {
       email: contract.demoStudent.email,
       name: contract.demoStudent.name,
     },
-    bsbaStudent: {
-      id: contract.bsbaStudent.id,
-      email: contract.bsbaStudent.email,
-      name: contract.bsbaStudent.name,
+    mobileStudent: {
+      id: contract.mobileStudent.id,
+      email: contract.mobileStudent.email,
+      name: contract.mobileStudent.name,
     },
     bsit,
     beed,
@@ -521,7 +485,7 @@ export default async function globalSetup(): Promise<void> {
     },
     gestechEval: { id: contract.gestechEval.id, title: contract.gestechEval.title },
     gestechAssignment,
-    gestechBsbaAssignment,
+    gestechMobileAssignment,
   };
 
   mkdirSync(join(__dirname, ".."), { recursive: true });

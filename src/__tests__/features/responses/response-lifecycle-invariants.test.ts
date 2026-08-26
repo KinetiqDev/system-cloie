@@ -3,6 +3,7 @@ import { DeploymentType, ResponseStatus, SystemRole } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db/prisma";
 import { D } from "../../../../prisma/seed/constants/ids";
+import { lockResponseSubmission } from "@/features/responses/services/lock-response-submission";
 
 /**
  * Response lifecycle invariants: one-response enforcement, atomic submission,
@@ -111,6 +112,7 @@ function simulateSubmissionTransaction(
   items: Array<{ item_key: string; rating_value: number; response_id: string; section_key: string }>
 ) {
   return prisma.$transaction(async (tx) => {
+    await lockResponseSubmission(tx, assignmentId);
     const response = await tx.response.findUnique({
       where: { assignment_id: assignmentId },
     });

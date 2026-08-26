@@ -52,8 +52,6 @@ const QUALITATIVE_ANSWERS = {
     "The classroom projector and online article access should be improved.",
 };
 
-/** Click the descriptor label inside the Likert group for the given prompt. */
-
 test("student lifecycle: draft, reload, submit, and second-submission denial", async ({ page }) => {
   const fx = fixture();
 

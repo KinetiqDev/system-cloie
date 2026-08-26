@@ -75,17 +75,16 @@ export const newCourseBoundDefs = [
     section: "MORNING",
   },
   {
-    // BSBA cohort of the same zero-response GESTECH evaluation: the mobile
-    // Student lifecycle journey (issue #544) runs against this assignment
-    // so desktop (BSIT) and mobile (BSBA) journeys stay isolated from one
-    // another's mutations. No response sequence references it either.
-    id: D.CB_BSBA_GESTECH,
+    // Isolated BSIT AFTERNOON cohort for the mobile Student lifecycle journey.
+    // Demo Graduate's profile and roster membership match this scope, while
+    // the desktop journey continues to own the FIRST_YEAR MORNING cohort.
+    id: D.CB_BSIT_GESTECH_MOBILE,
     courseCode: "GESTECH",
     deployName: "GESTECH Post-Term CILO Evaluation",
     progId: undefined as string | undefined,
-    progCode: "BSBA",
-    progName: "Bachelor of Science in Business Administration",
-    ylId: YearLevel.FIRST_YEAR,
+    progCode: "BSIT",
+    progName: "Bachelor of Science in Information Technology",
+    ylId: YearLevel.FOURTH_YEAR,
     section: "AFTERNOON",
   },
 ] as const;

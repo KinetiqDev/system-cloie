@@ -71,14 +71,14 @@ export const E2E_CONTRACT = {
     suggested: { id: U.STU_BSBA_G, name: "Carlos Santos", email: "student-bsba-grad@cloie.test" },
     /** BSBA Student whose profile mismatches the BSIT ITRES1 assignment → out of scope, not disclosed. */
     outOfScope: { name: "Angela Reyes", email: "student-bsba@cloie.test" },
-    /** BSED Student eligible for a General Education roster; used in the axe review-phase
-     *  scan via "Juan Dela Cruz Jr." (suggested match → READY_CREATE, no write). */
-    axeSuggested: { id: U.STU_BSED, name: "Juan Dela Cruz", email: "student-bsed@cloie.test" },
+    /** BEED Student eligible for a General Education roster; used in the axe review-phase
+     *  scan via "Patricia Luna Jr." (suggested match → READY_CREATE, no write). */
+    axeSuggested: { id: U.STU_BEED, name: "Patricia Luna", email: "student-beed@cloie.test" },
   },
 
   /** Student identities for the lifecycle journey (issue #544). */
   demoStudent: { id: U.STU_BSIT, email: "demo-student@cloie.test", name: "Demo Student" },
-  bsbaStudent: { id: U.STU_BSED, email: "student-bsed@cloie.test", name: "Juan Dela Cruz" },
+  mobileStudent: { id: U.GRAD_BSIT, email: "demo-grad@cloie.test", name: "Demo Graduate" },
 
   /** Deterministic deployment identifiers reused from the Prisma seed. */
   deployments: {
@@ -89,6 +89,7 @@ export const E2E_CONTRACT = {
 
   /** The GESTECH zero-response evaluation used for the Student lifecycle journey (issue #544). */
   gestechEval: { id: D.CB_BSIT_GESTECH, title: "GESTECH Post-Term CILO Evaluation" },
+  gestechMobileEval: { id: D.CB_BSIT_GESTECH_MOBILE },
 
   /** Reviewed expectations for the IT201 course-bound SUBMITTED response (journey A). */
   courseResponse: {
@@ -137,7 +138,7 @@ export type FixtureData = {
     axeSuggested: { id: string; name: string; email: string };
   };
   demoStudent: { id: string; email: string; name: string };
-  bsbaStudent: { id: string; email: string; name: string };
+  mobileStudent: { id: string; email: string; name: string };
   bsit: { id: string; code: string };
   beed: { id: string; code: string };
   courseEvaluation: { id: string; title: string };
@@ -156,5 +157,5 @@ export type FixtureData = {
   };
   gestechEval: { id: string; title: string };
   gestechAssignment: { id: string };
-  gestechBsbaAssignment: { id: string };
+  gestechMobileAssignment: { id: string };
 };

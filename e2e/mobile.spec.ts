@@ -113,9 +113,9 @@ test("faculty roster drawer: same workflow, focus restoration, and dismissal pro
 
 /**
  * §32/§61: the complete Student response lifecycle on a representative mobile
- * viewport (Pixel 7), running against the BSBA cohort of the seeded GESTECH
- * zero-response evaluation (student-bsba@cloie.test). The desktop journey
- * owns the BSIT cohort, so the two journeys' mutations stay isolated.
+ * viewport (Pixel 7), running against the isolated BSIT AFTERNOON cohort of
+ * the seeded GESTECH zero-response evaluation (demo-grad@cloie.test). The
+ * desktop journey owns the BSIT MORNING cohort, so mutations stay isolated.
  *
  * Covers draft save + reload restoration, review, final submission, the
  * second-submission denial redirect, horizontal-overflow freedom on the
@@ -128,7 +128,7 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
 }) => {
   const fx = fixture();
 
-  await loginAs(page, fx.bsbaStudent.email);
+  await loginAs(page, fx.mobileStudent.email);
 
   // Assigned evaluation is visible on the dashboard; open the instrument.
   await page.goto("/student/dashboard");
@@ -240,7 +240,7 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
 
   // Second submission denied: the evaluation route redirects to the frozen
   // submitted review.
-  await page.goto(`/student/evaluations/${fx.gestechBsbaAssignment.id}`);
+  await page.goto(`/student/evaluations/${fx.gestechMobileAssignment.id}`);
   await expect(page).toHaveURL(/\/student\/history\/[0-9a-f-]{36}$/);
   await expect(page.getByText(/Submitted on /)).toBeVisible();
   await expect(page.getByRole("button", { name: "Next Section" })).toHaveCount(0);
