@@ -71,6 +71,9 @@ export const E2E_CONTRACT = {
     suggested: { id: U.STU_BSBA_G, name: "Carlos Santos", email: "student-bsba-grad@cloie.test" },
     /** BSBA Student whose profile mismatches the BSIT ITRES1 assignment → out of scope, not disclosed. */
     outOfScope: { name: "Angela Reyes", email: "student-bsba@cloie.test" },
+    /** BSED Student eligible for a General Education roster; used in the axe review-phase
+     *  scan via "Juan Dela Cruz Jr." (suggested match → READY_CREATE, no write). */
+    axeSuggested: { id: U.STU_BSED, name: "Juan Dela Cruz", email: "student-bsed@cloie.test" },
   },
 
   /** Deterministic deployment identifiers reused from the Prisma seed. */
@@ -124,6 +127,7 @@ export type FixtureData = {
     csvAdd: { id: string; name: string; email: string };
     suggested: { id: string; name: string; email: string };
     outOfScope: { name: string; email: string };
+    axeSuggested: { id: string; name: string; email: string };
   };
   bsit: { id: string; code: string };
   beed: { id: string; code: string };
