@@ -40,7 +40,7 @@ export const courseAssignmentDefinitions = [
   {
     courseCode: "GESTECH",
     programCode: "BSBA",
-    facultyId: U.FAC_BSIT,
+    facultyId: U.FAC_BSBA,
     yearLevel: YearLevel.FIRST_YEAR,
     section: "AFTERNOON",
   },
