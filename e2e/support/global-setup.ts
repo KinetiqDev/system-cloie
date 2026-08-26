@@ -89,8 +89,6 @@ async function verifySeededIdentity(
     userRole?.role === expectedRole,
     `seeded user ${contract.email} role is not ${expectedRole} (got "${userRole?.role}")`
   );
-}
-
 async function verifyIdentities(): Promise<void> {
   await verifySeededIdentity(E2E_CONTRACT.demoPh, "PROGRAM_HEAD");
   await verifySeededIdentity(E2E_CONTRACT.beedPh, "PROGRAM_HEAD");
