@@ -12,13 +12,17 @@ import {
 } from "../fixtures/users";
 import type { FoundationContext } from "../types";
 
-export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" | "mMap">, termInstanceId: string) {
+export async function seedUsers(
+  { pMap, mMap }: Pick<FoundationContext, "pMap" | "mMap">,
+  termInstanceId: string
+) {
   console.log("  → Users & roles...");
   for (const u of allUsers) {
+    const authUserId = "authUserId" in u ? u.authUserId : undefined;
     await prisma.user.upsert({
       where: { id: u.id },
-      update: { email: u.email, name: u.name, is_active: true },
-      create: { id: u.id, email: u.email, name: u.name, is_active: true },
+      update: { email: u.email, name: u.name, is_active: true, auth_user_id: authUserId },
+      create: { id: u.id, email: u.email, name: u.name, is_active: true, auth_user_id: authUserId },
     });
     await prisma.userRole.upsert({
       where: { user_id: u.id },
@@ -42,7 +46,12 @@ export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" |
       create: { user_id: s.uid, program_id: s.pid, major_id: s.mid },
     });
     await prisma.studentEnrollment.upsert({
-      where: { student_user_id_term_instance_id: { student_user_id: s.uid, term_instance_id: termInstanceId } },
+      where: {
+        student_user_id_term_instance_id: {
+          student_user_id: s.uid,
+          term_instance_id: termInstanceId,
+        },
+      },
       update: {
         program_id: s.pid,
         major_id: s.mid,
@@ -68,9 +77,16 @@ export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" |
   for (const affiliation of facultyAffiliations) {
     const programId = pMap.get(affiliation.program)!.id;
     await prisma.facultyProgramAffiliation.upsert({
-      where: { faculty_id_program_id: { faculty_id: affiliation.facultyId, program_id: programId } },
+      where: {
+        faculty_id_program_id: { faculty_id: affiliation.facultyId, program_id: programId },
+      },
       update: { is_active: true, is_primary: true },
-      create: { faculty_id: affiliation.facultyId, program_id: programId, is_active: true, is_primary: true },
+      create: {
+        faculty_id: affiliation.facultyId,
+        program_id: programId,
+        is_active: true,
+        is_primary: true,
+      },
     });
   }
 
@@ -78,7 +94,12 @@ export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" |
   for (const assignment of programHeadAssignments) {
     const programId = pMap.get(assignment.program)!.id;
     await prisma.programHeadAssignment.upsert({
-      where: { program_head_id_program_id: { program_head_id: assignment.programHeadId, program_id: programId } },
+      where: {
+        program_head_id_program_id: {
+          program_head_id: assignment.programHeadId,
+          program_id: programId,
+        },
+      },
       update: { is_active: true },
       create: { program_head_id: assignment.programHeadId, program_id: programId, is_active: true },
     });
@@ -88,8 +109,17 @@ export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" |
   for (const profile of externalProfiles) {
     await prisma.alumniProfile.upsert({
       where: { user_id: profile.userId },
-      update: { graduation_year: profile.graduationYear, program_id: pMap.get(profile.program)!.id, verification_status: profile.status },
-      create: { user_id: profile.userId, graduation_year: profile.graduationYear, program_id: pMap.get(profile.program)!.id, verification_status: profile.status },
+      update: {
+        graduation_year: profile.graduationYear,
+        program_id: pMap.get(profile.program)!.id,
+        verification_status: profile.status,
+      },
+      create: {
+        user_id: profile.userId,
+        graduation_year: profile.graduationYear,
+        program_id: pMap.get(profile.program)!.id,
+        verification_status: profile.status,
+      },
     });
   }
 
@@ -117,7 +147,9 @@ export async function seedUsers({ pMap, mMap }: Pick<FoundationContext, "pMap" |
   for (const invite of inviteDefinitions) {
     const programId = pMap.get(invite.program)!.id;
     await prisma.externalStakeholderInvite.upsert({
-      where: { email_role_program_id: { email: invite.email, role: invite.role, program_id: programId } },
+      where: {
+        email_role_program_id: { email: invite.email, role: invite.role, program_id: programId },
+      },
       update: {
         invitee_name: invite.name,
         company_name: invite.company,

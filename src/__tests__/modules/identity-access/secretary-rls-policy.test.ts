@@ -2,6 +2,12 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
+
+import { prisma } from "@/lib/db/prisma";
+import { RLS_AUTH_UUIDS } from "@/lib/db/rls-test-identities";
+import { runRlsProbe } from "@/lib/db/rls-test-helpers";
+import { U } from "../../../../prisma/seed/constants/ids";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -33,9 +39,7 @@ function readMigrationContent(filename: string): string {
  * the live state: older migrations create the policy, newer migrations DROP+reCREATE
  * it. Only the most recent CREATE definition survives in the live database.
  */
-function latestCreatePolicyBody(
-  table: "school_years" | "academic_term_instances"
-): string {
+function latestCreatePolicyBody(table: "school_years" | "academic_term_instances"): string {
   const files = listMigrationFiles();
   let last: string = "";
   for (const f of files) {
@@ -102,10 +106,9 @@ describe("Secretary RLS policy: migration ledger integrity (always runs)", () =>
   it("fix migration file re-creates both secretary policies with the corrected join", () => {
     const fixFile = "20260618153711_fix_secretary_rls_user_join.sql";
     const expectedPath = join(readSupabaseMigrationsDir(), fixFile);
-    expect(
-      existsSync(expectedPath),
-      `expected the RLS fix migration at ${expectedPath}`
-    ).toBe(true);
+    expect(existsSync(expectedPath), `expected the RLS fix migration at ${expectedPath}`).toBe(
+      true
+    );
 
     const content = readMigrationContent(fixFile);
     expect(content).toContain(
@@ -117,9 +120,7 @@ describe("Secretary RLS policy: migration ledger integrity (always runs)", () =>
     // Inspect just the CREATE POLICY statements (not the SQL comments which
     // legitimately reference the broken pattern they're describing).
     const createStatements =
-      content.match(
-        /CREATE POLICY "Enable write access for secretary only"[\s\S]*?\);/g
-      ) || [];
+      content.match(/CREATE POLICY "Enable write access for secretary only"[\s\S]*?\);/g) || [];
     expect(createStatements.length).toBe(2);
     for (const stmt of createStatements) {
       expect(stmt).not.toContain("u.id = auth.uid()");
@@ -128,23 +129,187 @@ describe("Secretary RLS policy: migration ledger integrity (always runs)", () =>
   });
 });
 
-describe("Secretary RLS Policies (live DB behavior)", () => {
-  // TODO(prd-1 follow-up): These tests are intentionally skipped because verifying RLS
-  // behavior at runtime requires:
-  //   1. An authenticated Supabase client carrying a real JWT with a SECRETARY role claim.
-  //   2. A second authenticated client with a non-SECRETARY role for the negative path.
-  // The anon key does NOT exercise the `TO authenticated` clause — anon gets
-  // `42501 permission denied for schema public` (a Postgres USAGE privilege error,
-  // not an RLS denial).
-  //
-  // The migration-ledger integrity tests above are the currently-meaningful guard.
-  // Restore these as live tests when an authenticated test-user harness is in place.
+describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1")(
+  "Secretary RLS Policies (live DB behavior)",
+  () => {
+    it("SECRETARY can write to school_years (INSERT school_years)", async () => {
+      const code = `RLS-SEC-${crypto.randomUUID()}`;
+      try {
+        await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
+          await tx.$executeRawUnsafe(
+            `INSERT INTO "school_years" ("code", "created_at", "updated_at") VALUES ($1, now(), now())`,
+            code
+          );
+        });
+      } finally {
+        await prisma.schoolYear.deleteMany({ where: { code } });
+      }
+    });
 
-  it.skip("SECRETARY role can write to school_years", async () => {});
+    it("SECRETARY can write to school_years (UPDATE school_years)", async () => {
+      const code = `RLS-SEC-UPD-${crypto.randomUUID()}`;
+      try {
+        const sy = await prisma.schoolYear.create({ data: { code } });
+        const rows = await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
+          return tx.$executeRawUnsafe(
+            `UPDATE "school_years" SET "start_date" = '2026-01-01' WHERE "id" = $1::uuid`,
+            sy.id
+          );
+        });
+        expect(rows).toBe(1);
+      } finally {
+        await prisma.schoolYear.deleteMany({ where: { code } });
+      }
+    });
 
-  it.skip("SECRETARY role can write to academic_term_instances", async () => {});
+    it("SECRETARY can write to academic_term_instances", async () => {
+      const syCode = `RLS-TI-${crypto.randomUUID()}`;
+      try {
+        const sy = await prisma.schoolYear.create({ data: { code: syCode } });
+        try {
+          await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
+            await tx.$executeRawUnsafe(
+              `INSERT INTO "academic_term_instances" ("school_year_id", "semester", "updated_at") VALUES ($1::uuid, '1ST', now())`,
+              sy.id
+            );
+          });
+        } finally {
+          await prisma.academicTermInstance.deleteMany({
+            where: { school_year_id: sy.id },
+          });
+        }
+      } finally {
+        await prisma.schoolYear.deleteMany({ where: { code: syCode } });
+      }
+    });
 
-  it.skip("Non-SECRETARY roles are denied writes to school_years", async () => {});
+    it("SECRETARY can UPDATE academic_term_instances", async () => {
+      const syCode = `RLS-TI-UPD-${crypto.randomUUID()}`;
+      try {
+        const sy = await prisma.schoolYear.create({ data: { code: syCode } });
+        try {
+          const term = await prisma.academicTermInstance.create({
+            data: { school_year_id: sy.id, semester: "FIRST" as const },
+          });
+          const rows = await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
+            return tx.$executeRawUnsafe(
+              `UPDATE "academic_term_instances" SET "status" = 'COMPLETED' WHERE "id" = $1::uuid`,
+              term.id
+            );
+          });
+          expect(rows).toBe(1);
+        } finally {
+          await prisma.academicTermInstance.deleteMany({
+            where: { school_year_id: sy.id },
+          });
+        }
+      } finally {
+        await prisma.schoolYear.deleteMany({ where: { code: syCode } });
+      }
+    });
 
-  it.skip("RLS policy definitions do not contain literal 'ADMIN'", async () => {});
-});
+    it("Non-SECRETARY role is denied INSERT to school_years", async () => {
+      const code = `RLS-DENY-${crypto.randomUUID()}`;
+      await expect(
+        runRlsProbe(RLS_AUTH_UUIDS.FACULTY, async (tx) => {
+          await tx.$executeRawUnsafe(
+            `INSERT INTO "school_years" ("code", "created_at", "updated_at") VALUES ($1, now(), now())`,
+            code
+          );
+        })
+      ).rejects.toMatchObject({ meta: { code: "42501" } });
+      // Verify no row was created (the probe above should have rolled back,
+      // but let's be explicit).
+      const row = await prisma.schoolYear.findUnique({ where: { code } });
+      expect(row).toBeNull();
+    });
+
+    it("Non-SECRETARY role is denied UPDATE to school_years", async () => {
+      const code = `RLS-DENY-UPD-${crypto.randomUUID()}`;
+      try {
+        const sy = await prisma.schoolYear.create({ data: { code } });
+        const rows = await runRlsProbe(RLS_AUTH_UUIDS.FACULTY, async (tx) => {
+          return tx.$executeRawUnsafe(
+            `UPDATE "school_years" SET "start_date" = '2026-01-01' WHERE "id" = $1::uuid`,
+            sy.id
+          );
+        });
+        // RLS makes the row invisible for UPDATE → 0 rows affected, no error.
+        expect(rows).toBe(0);
+      } finally {
+        await prisma.schoolYear.deleteMany({ where: { code } });
+      }
+    });
+
+    it("Non-SECRETARY role is denied INSERT to academic_term_instances", async () => {
+      const syCode = `RLS-DENY-TI-${crypto.randomUUID()}`;
+      let syId: string | undefined;
+      try {
+        const sy = await prisma.schoolYear.create({ data: { code: syCode } });
+        syId = sy.id;
+        await expect(
+          runRlsProbe(RLS_AUTH_UUIDS.FACULTY, async (tx) => {
+            await tx.$executeRawUnsafe(
+              `INSERT INTO "academic_term_instances" ("school_year_id", "semester", "updated_at") VALUES ($1::uuid, '1ST', now())`,
+              sy.id
+            );
+          })
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+      } finally {
+        if (syId) {
+          await prisma.academicTermInstance.deleteMany({
+            where: { school_year_id: syId },
+          });
+        }
+        await prisma.schoolYear.deleteMany({ where: { code: syCode } });
+      }
+    });
+
+    it("Non-SECRETARY role is denied UPDATE to academic_term_instances", async () => {
+      const syCode = `RLS-DENY-TI-UPD-${crypto.randomUUID()}`;
+      try {
+        const sy = await prisma.schoolYear.create({ data: { code: syCode } });
+        try {
+          const term = await prisma.academicTermInstance.create({
+            data: { school_year_id: sy.id, semester: "FIRST" as const },
+          });
+          const rows = await runRlsProbe(RLS_AUTH_UUIDS.FACULTY, async (tx) => {
+            return tx.$executeRawUnsafe(
+              `UPDATE "academic_term_instances" SET "status" = 'COMPLETED' WHERE "id" = $1::uuid`,
+              term.id
+            );
+          });
+          // RLS makes the row invisible for UPDATE → 0 rows affected, no error.
+          expect(rows).toBe(0);
+        } finally {
+          await prisma.academicTermInstance.deleteMany({
+            where: { school_year_id: sy.id },
+          });
+        }
+      } finally {
+        await prisma.schoolYear.deleteMany({ where: { code: syCode } });
+      }
+    });
+
+    it("proves corrected auth_user_id = auth.uid() linkage behaviorally", async () => {
+      // The secretary RLS policy checks `u.auth_user_id = auth.uid()`.
+      // If we set auth.uid() to the public users.id PK (which is a different
+      // UUID generated by gen_random_uuid()), the policy must NOT match.
+      // This proves the corrected join works — the fix fixed the bug.
+      const code = `RLS-LINK-${crypto.randomUUID()}`;
+      // The public PK of the ADMIN/Secretary user — deliberately NOT the
+      // auth UUID. The policy must reject this, proving the correct join.
+      const wrongId = U.ADMIN;
+      await expect(
+        runRlsProbe(wrongId, async (tx) => {
+          await tx.$executeRawUnsafe(
+            `INSERT INTO "school_years" ("code", "created_at", "updated_at") VALUES ($1, now(), now())`,
+            code
+          );
+        })
+      ).rejects.toMatchObject({ meta: { code: "42501" } });
+      const row = await prisma.schoolYear.findUnique({ where: { code } });
+      expect(row).toBeNull();
+    });
+  }
+);

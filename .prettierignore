@@ -8,3 +8,5 @@ public
 .env.*
 pnpm-lock.yaml
 prisma/*.db
+*.sh
+.prettierignore

@@ -7,6 +7,13 @@
 # first; the postgres superuser bypasses RLS, so the stub only needs to make
 # the DDL valid.
 #
+# The auth.uid() stub reads a settable request identity from the
+# `app.test_auth_uid` GUC (see src/lib/db/rls-test-helpers.ts). Unset, it
+# returns NULL — preserving the superuser-bypass behavior for non-RLS tests.
+# RLS probes SET LOCAL the GUC and switch to the `test_authenticated` role
+# (a LOGIN role that inherits `authenticated`), which is exactly how a
+# Supabase request carrying an authenticated JWT behaves.
+#
 # Usage: DATABASE_URL=postgresql://user:pass@host:port/db scripts/ci/apply-migrations.sh
 set -euo pipefail
 
@@ -44,7 +51,9 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
   CREATE ROLE authenticated NOLOGIN;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULL::uuid $$;
+CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
+  SELECT NULLIF(current_setting('app.test_auth_uid', true), '')::uuid
+$$;
 CREATE TABLE IF NOT EXISTS auth.users (
   id uuid PRIMARY KEY,
   raw_app_meta_data jsonb
@@ -59,5 +68,25 @@ for migration in "${REPO_ROOT}"/supabase/migrations/*.sql; do
   echo "Applying $(basename "$migration")"
   "${PSQL[@]}" -f "$migration"
 done
+
+# Supabase applies these default grants at project initialization; the hosted
+# role grants are not part of the migration ledger, so replicate them here for
+# the disposable stack. `authenticated` receives ALL on every public object
+# (matching the hosted default), and the RLS probes connect through the
+# LOGIN role `test_authenticated` which inherits `authenticated`.
+"${PSQL[@]}" <<'SQL'
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT USAGE ON SCHEMA auth TO anon, authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated;
+DO $$ BEGIN
+  CREATE ROLE test_authenticated LOGIN INHERIT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+GRANT authenticated TO test_authenticated;
+SQL
 
 echo "Migrations applied."
