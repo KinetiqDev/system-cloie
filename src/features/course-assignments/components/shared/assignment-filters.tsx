@@ -222,18 +222,18 @@ export function AssignmentFilters({
   return (
     <section
       aria-labelledby="assignment-filter-title"
-      className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs"
+      className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border bg-card p-4 shadow-xs"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="hidden size-8 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border sm:inline-flex" aria-hidden="true">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border sm:inline-flex" aria-hidden="true">
             <ListFilter className="size-4" />
           </span>
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col">
             <h2 id="assignment-filter-title" className="text-title-sm leading-none">
               Filter assignments
             </h2>
-            <p className="text-xs leading-none text-muted-foreground mt-1">
+            <p className="text-xs leading-none text-muted-foreground mt-1 break-words">
               Term, course, class, and faculty — combine filters to narrow the list.
             </p>
           </div>
@@ -249,7 +249,7 @@ export function AssignmentFilters({
           Reset
         </Button>
       </div>
-      <div className="grid gap-3 md:grid-cols-[minmax(16rem,1fr)_minmax(14rem,1fr)]">
+      <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(16rem,1fr)_minmax(14rem,1fr)]">
         <TermInstancePicker
           id="assignment-term-instance"
           termInstances={termInstances}

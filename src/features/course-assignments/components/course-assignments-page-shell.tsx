@@ -138,15 +138,18 @@ export function CourseAssignmentsPageShell({
   const inactiveCount = total > 0 ? total - activeCount : 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6 overflow-hidden">
       {/* Header — institutional, calm, program-aware */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
           {mode === "program-head" && selectedProgram && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border bg-primary/8 px-2.5 py-1 text-xs font-semibold tracking-wide text-primary ring-1 ring-primary/15">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <span
+                className="inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full border bg-primary/8 px-2.5 py-1 text-xs font-semibold tracking-wide text-primary ring-1 ring-primary/15"
+                title={`${selectedProgram.code} — ${selectedProgram.name}`}
+              >
                 <GraduationCap className="size-3.5 shrink-0" aria-hidden="true" />
-                {selectedProgram.code} · {selectedProgram.name}
+                <span className="min-w-0 truncate">{selectedProgram.code} · {selectedProgram.name}</span>
               </span>
               <span className="hidden size-1 rounded-full bg-border sm:block" aria-hidden="true" />
               <span className="text-label-sm text-muted-foreground hidden sm:inline">
@@ -197,16 +200,16 @@ export function CourseAssignmentsPageShell({
       />
 
       {/* Summary strip — count + period context */}
-      <div className="flex flex-col gap-3 rounded-xl border bg-card px-4 py-3 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 rounded-xl border bg-card px-3 py-3 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:px-4">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border">
             <Users className="size-4" aria-hidden="true" />
           </div>
-          <div className="flex flex-col">
-            <p className="text-sm font-semibold tabular-nums leading-none">
+          <div className="flex min-w-0 flex-col">
+            <p className="text-sm font-semibold tabular-nums leading-none truncate">
               {total} {total === 1 ? "assignment" : "assignments"}
             </p>
-            <p className="text-xs text-muted-foreground tabular-nums">
+            <p className="text-xs text-muted-foreground tabular-nums truncate">
               {total === 0 ? (
                 "No records in current view"
               ) : (
@@ -225,13 +228,14 @@ export function CourseAssignmentsPageShell({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 sm:shrink-0">
           <Badge
             variant="outline"
-            className="inline-flex items-center gap-1.5 rounded-full bg-background px-3 py-1.5 text-xs font-medium"
+            className="inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full bg-background px-3 py-1.5 text-xs font-medium"
+            title={periodLabel}
           >
             <CalendarDays className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-            {periodLabel}
+            <span className="min-w-0 truncate">{periodLabel}</span>
           </Badge>
         </div>
       </div>

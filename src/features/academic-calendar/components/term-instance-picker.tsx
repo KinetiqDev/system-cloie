@@ -69,11 +69,24 @@ export function TermInstancePicker({
   });
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-0">
       {label && <Label htmlFor={pickerId}>{label}</Label>}
       <Select value={value} onValueChange={(val) => onChange(val ?? "")} disabled={disabled}>
-        <SelectTrigger id={pickerId} className="w-full">
-          <SelectValue placeholder={placeholder}>
+        <SelectTrigger
+          id={pickerId}
+          className="w-full min-w-0 truncate"
+          title={
+            value === "all"
+              ? "All Academic Periods"
+              : (() => {
+                  const selected = sortedInstances.find((i) => i.id === value);
+                  return selected
+                    ? `${formatTermInstanceLabel(selected.schoolYearCode, selected.semester, selected.term)}${selected.status === "ACTIVE" ? " — Current" : ""}`
+                    : undefined;
+                })()
+          }
+        >
+          <SelectValue placeholder={placeholder} className="min-w-0 truncate block text-left">
             {value === "all"
               ? "All Academic Periods"
               : value
