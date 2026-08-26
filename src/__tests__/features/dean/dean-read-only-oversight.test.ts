@@ -30,7 +30,6 @@ vi.mock("@/lib/cache/academic-periods", async (importOriginal) => {
 });
 vi.mock("@/lib/db/prisma", () => ({ prisma: prismaMock }));
 
-
 import { transitionPeriodStatus } from "@/features/academic-calendar/services/manage-academic-period-lifecycle";
 import { createUserBySecretaryAction } from "@/lib/actions/secretary-user-crud-actions";
 import { requireDean, DEAN_CACHE_CONTROL } from "@/app/api/dean/route-helpers";
@@ -134,7 +133,9 @@ describe("Dean read-only oversight (issue #549)", () => {
 
   it("Dean read model services remain read-only: no mutation export is reachable from the dean feature", () => {
     const exported = Object.keys(deanServices);
-    const mutationNames = exported.filter((name) => /create|update|delete|mutate|write|activate|transition/i.test(name));
+    const mutationNames = exported.filter((name) =>
+      /create|update|delete|mutate|write|activate|transition/i.test(name)
+    );
     expect(mutationNames).toEqual([]);
     expect(exported).toEqual(
       expect.arrayContaining([

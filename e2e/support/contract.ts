@@ -25,7 +25,6 @@ export const E2E_CONTRACT = {
   demoSecretary: { id: U.ADMIN, email: "demo-secretary@cloie.test", name: "Demo Secretary" },
   demoDean: { id: U.DEAN, email: "demo-dean@cloie.test", name: "Demo Dean" },
 
-
   /**
    * Deterministic Course Assignment roster-mutation fixtures (issue #545).
    * Course assignments are located by their seed definition (course code,

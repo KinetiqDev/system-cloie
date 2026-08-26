@@ -108,7 +108,10 @@ async function verifyAcademicPeriods(): Promise<{
 }> {
   const discovered: Record<string, { id: string; schoolYearId: string; status: string }> = {};
   for (const [key, definition] of Object.entries(E2E_CONTRACT.academicPeriods) as Array<
-    [keyof typeof E2E_CONTRACT.academicPeriods, (typeof E2E_CONTRACT.academicPeriods)[keyof typeof E2E_CONTRACT.academicPeriods]]
+    [
+      keyof typeof E2E_CONTRACT.academicPeriods,
+      (typeof E2E_CONTRACT.academicPeriods)[keyof typeof E2E_CONTRACT.academicPeriods],
+    ]
   >) {
     const row = await prisma.academicTermInstance.findFirst({
       where: {
@@ -116,9 +119,19 @@ async function verifyAcademicPeriods(): Promise<{
         semester: definition.semester as never,
         term: definition.term as never,
       },
-      select: { id: true, status: true, school_year_id: true, semester: true, term: true, school_year: { select: { code: true } } },
+      select: {
+        id: true,
+        status: true,
+        school_year_id: true,
+        semester: true,
+        term: true,
+        school_year: { select: { code: true } },
+      },
     });
-    assertContract(row, `missing seeded academic period ${key} (${definition.schoolYearCode} ${definition.semester} ${definition.term})`);
+    assertContract(
+      row,
+      `missing seeded academic period ${key} (${definition.schoolYearCode} ${definition.semester} ${definition.term})`
+    );
     assertContract(
       row?.status === definition.status,
       `academic period ${key} status drift: expected ${definition.status}, got ${row?.status}`
@@ -348,7 +361,10 @@ async function verifyPloEvidenceLink(programId: string): Promise<string> {
 
 export default async function globalSetup(): Promise<void> {
   await verifyIdentities();
-  const [deployments, academicPeriods] = await Promise.all([verifyDeployments(), verifyAcademicPeriods()]);
+  const [deployments, academicPeriods] = await Promise.all([
+    verifyDeployments(),
+    verifyAcademicPeriods(),
+  ]);
 
   const [bsit, beed] = await Promise.all([findProgramByCode("BSIT"), findProgramByCode("BEED")]);
 

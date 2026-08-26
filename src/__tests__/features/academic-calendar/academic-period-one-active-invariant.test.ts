@@ -1,9 +1,15 @@
+// fallow-ignore-file code-duplication
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db/prisma";
 
 function getPrismaCode(error: unknown): string | undefined {
-  if (error && typeof error === "object" && "code" in error && typeof (error as Record<string, unknown>).code === "string") {
+  if (
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof (error as Record<string, unknown>).code === "string"
+  ) {
     // Unchecked cast is safe here: we just verified code is string via typeof guard above, and Prisma error shape is not validated by schema.
     const code = (error as { code: string }).code;
     return code;
@@ -83,9 +89,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         ]);
 
         const fulfilled = results.filter((r) => r.status === "fulfilled");
-        const rejected = results.filter(
-          (r): r is PromiseRejectedResult => r.status === "rejected"
-        );
+        const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
 
         expect(fulfilled).toHaveLength(1);
         expect(rejected).toHaveLength(1);
@@ -101,9 +105,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       } finally {
         // Tear down in dependency order: snapshots block period deletion, so
         // drop the snapshot before removing terms.
-        const createdIds = [firstId, secondId].filter(
-          (id): id is string => id !== null
-        );
+        const createdIds = [firstId, secondId].filter((id): id is string => id !== null);
         if (createdIds.length > 0) {
           await prisma.$executeRawUnsafe(
             'ALTER TABLE "academic_period_readiness_snapshots" DISABLE TRIGGER "academic_period_readiness_snapshots_immutable"'
@@ -137,7 +139,10 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
           // Clear any concurrent ACTIVE that might have been created by the
           // successful promotion before restoring the prior row.
           await prisma.academicTermInstance
-            .updateMany({ where: { status: "ACTIVE", id: { not: priorActive.id } }, data: { status: "COMPLETED" } })
+            .updateMany({
+              where: { status: "ACTIVE", id: { not: priorActive.id } },
+              data: { status: "COMPLETED" },
+            })
             .catch(() => undefined);
           await prisma.academicTermInstance
             .update({ where: { id: priorActive.id }, data: { status: "ACTIVE" } })

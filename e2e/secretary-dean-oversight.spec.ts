@@ -1,10 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
-import {
-  expectNoAxeViolations,
-  expectNoHorizontalOverflow,
-  loginAs,
-} from "./support/helpers";
+import { expectNoAxeViolations, expectNoHorizontalOverflow, loginAs } from "./support/helpers";
 
 /**
  * Secretary setup chain → Dean read-only oversight (issue #549).
@@ -129,8 +125,9 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
   expect(eligibleAsDean.ok()).toBeTruthy();
   const eligibleJson = await eligibleAsDean.json();
   // The payload is either { data: [...] } or directly the array; handle both.
-  const periods: Array<{ id: string; status: string }> =
-    Array.isArray(eligibleJson) ? eligibleJson : eligibleJson.data ?? eligibleJson.periods ?? [];
+  const periods: Array<{ id: string; status: string }> = Array.isArray(eligibleJson)
+    ? eligibleJson
+    : (eligibleJson.data ?? eligibleJson.periods ?? []);
   // At least the Active period from the fixture must be present.
   if (periods.length > 0) {
     expect(periods.map((p) => p.id)).toContain(activePeriodId);
@@ -145,10 +142,14 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
   await expectNoHorizontalOverflow(page);
 
   // Learning Outcomes oversight for the Active period (URL-backed).
-  await page.goto(`/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(activePeriodId)}`);
+  await page.goto(
+    `/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(activePeriodId)}`
+  );
   await expect(page.getByText("Learning Outcomes").first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Selected period").first()).toBeVisible();
-  await expect(page.getByText("Academic Program overview").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Academic Program overview").first()).toBeVisible({
+    timeout: 15_000,
+  });
   await page.waitForLoadState("networkidle");
   await expectNoAxeViolations(page);
   await expectNoHorizontalOverflow(page);
@@ -160,7 +161,9 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
   await expect(page.getByText("Learning Outcomes").first()).toBeVisible();
 
   // Enrollments oversight for the same period.
-  await page.goto(`/dean/college-oversight/enrollments?period=${encodeURIComponent(activePeriodId)}`);
+  await page.goto(
+    `/dean/college-oversight/enrollments?period=${encodeURIComponent(activePeriodId)}`
+  );
   await expect(page.getByText("Academic Program totals").first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Selected period").first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -194,14 +197,20 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
   // since the email is unique per run and no other test counts Faculty rows.
 });
 
-test("dean oversight mobile: no overflow and period selection survives reload", async ({ page }) => {
+test("dean oversight mobile: no overflow and period selection survives reload", async ({
+  page,
+}) => {
   const fx = fixture();
   // Use the mobile viewport explicitly for this test (Playwright's desktop
   // project normally runs 1280x720; we emulate a phone here).
   await page.setViewportSize({ width: 390, height: 844 });
   await loginAs(page, fx.demoDean.email);
-  await page.goto(`/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(fx.academicPeriods.active.id)}`);
-  await expect(page.getByRole("heading", { name: "Learning Outcomes" })).toBeVisible({ timeout: 15_000 });
+  await page.goto(
+    `/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(fx.academicPeriods.active.id)}`
+  );
+  await expect(page.getByRole("heading", { name: "Learning Outcomes" })).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByText("Selected period").first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await expectNoAxeViolations(page);
