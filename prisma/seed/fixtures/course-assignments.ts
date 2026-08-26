@@ -129,7 +129,7 @@ export const membershipDefinitions = [
     program: "BSBA",
     year: YearLevel.FIRST_YEAR,
     section: "AFTERNOON",
-    students: [U.GRAD_BSIT],
+    students: [U.STU_BSED],
   },
   {
     course: "MM201",
