@@ -10,14 +10,14 @@ function readVitestConfig(): string {
 }
 
 function readPackageScripts(): Record<string, string> {
-  const pkg = JSON.parse(
-    readFileSync(join(process.cwd(), "package.json"), "utf8") as string
-  ) as { scripts: Record<string, string> };
+  const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8") as string) as {
+    scripts: Record<string, string>;
+  };
   return pkg.scripts;
 }
 
 function readCiWorkflow(): string {
-  return readFileSync(join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+  return readFileSync(join(process.cwd(), ".depot/workflows/ci.yml"), "utf8");
 }
 
 describe("vitest discovery determinism (537)", () => {
@@ -25,9 +25,7 @@ describe("vitest discovery determinism (537)", () => {
     const source = readVitestConfig();
 
     // effective config value — behavior-preserving refactors remain green
-    expect(vitestConfig.test?.include).toEqual([
-      "src/**/*.{test,spec}.{ts,tsx,js,jsx}",
-    ]);
+    expect(vitestConfig.test?.include).toEqual(["src/**/*.{test,spec}.{ts,tsx,js,jsx}"]);
     // textual guard to catch drift
     expect(source).toContain(`"src/**/*.{test,spec}.{ts,tsx,js,jsx}"`);
   });

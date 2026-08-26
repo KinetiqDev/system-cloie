@@ -12,7 +12,7 @@ const eslintRequire = createRequire(rootRequire.resolve("eslint/package.json"));
 const eslintrcRequire = createRequire(eslintRequire.resolve("@eslint/eslintrc/package.json"));
 const yaml = eslintrcRequire("js-yaml") as { load: (source: string) => unknown };
 
-const WORKFLOW_PATH = join(process.cwd(), ".github", "workflows", "code-intelligence.yml");
+const WORKFLOW_PATH = join(process.cwd(), ".depot", "workflows", "code-intelligence.yml");
 const WORKFLOW_SOURCE = readFileSync(WORKFLOW_PATH, "utf8");
 
 interface Workflow {
@@ -88,24 +88,16 @@ describe("code-intelligence workflow", () => {
   it("runs the audit against the pull request base SHA and rejects an absent base SHA", () => {
     const steps = jobSteps(GATE_JOB);
 
-    const auditStep = steps.find((step) =>
-      String(step.run ?? "").includes("run-fallow-audit.ts")
-    );
+    const auditStep = steps.find((step) => String(step.run ?? "").includes("run-fallow-audit.ts"));
     expect(auditStep).toBeDefined();
     expect((auditStep as { env: Record<string, string> }).env).toMatchObject({
       BASE_SHA: "${{ github.event.pull_request.base.sha }}",
     });
-    expect(String(auditStep?.run)).toBe(
-      'pnpm exec tsx scripts/run-fallow-audit.ts "$BASE_SHA"'
-    );
+    expect(String(auditStep?.run)).toBe('pnpm exec tsx scripts/run-fallow-audit.ts "$BASE_SHA"');
 
-    const guardStep = steps.find(
-      (step) => step.if === "github.event.pull_request.base.sha == ''"
-    );
+    const guardStep = steps.find((step) => step.if === "github.event.pull_request.base.sha == ''");
     expect(guardStep).toBeDefined();
-    expect(String(guardStep?.run)).toBe(
-      'echo "missing pull request base SHA" && exit 2'
-    );
+    expect(String(guardStep?.run)).toBe('echo "missing pull request base SHA" && exit 2');
     expect(guardStep?.name).toMatch(/base SHA/i);
   });
 
@@ -135,9 +127,7 @@ describe("code-intelligence workflow", () => {
       String(step.run ?? "").includes("run-fallow-reports.ts")
     );
     expect(reportStep).toBeDefined();
-    expect(String(reportStep?.run)).toBe(
-      "pnpm exec tsx scripts/run-fallow-reports.ts"
-    );
+    expect(String(reportStep?.run)).toBe("pnpm exec tsx scripts/run-fallow-reports.ts");
   });
 
   it("uploads the reports artifacts with always() in the reports job", () => {
@@ -148,7 +138,9 @@ describe("code-intelligence workflow", () => {
     );
     expect(reportIndex).toBeGreaterThanOrEqual(0);
 
-    const upload = steps.find((step) => String(step.uses ?? "").startsWith("actions/upload-artifact@"));
+    const upload = steps.find((step) =>
+      String(step.uses ?? "").startsWith("actions/upload-artifact@")
+    );
     expect(upload).toBeDefined();
     expect(String(upload?.uses)).toBe("actions/upload-artifact@v4");
     expect(upload?.if).toBe("always()");
@@ -175,7 +167,9 @@ describe("code-intelligence workflow", () => {
     );
     expect(auditIndex).toBeGreaterThanOrEqual(0);
 
-    const upload = steps.find((step) => String(step.uses ?? "").startsWith("actions/upload-artifact@"));
+    const upload = steps.find((step) =>
+      String(step.uses ?? "").startsWith("actions/upload-artifact@")
+    );
     expect(upload).toBeDefined();
     expect(String(upload?.uses)).toBe("actions/upload-artifact@v4");
     expect(upload?.if).toBe("always()");

@@ -37,7 +37,13 @@ function main() {
   console.log(`[prettier:changed] Checking ${filtered.length} changed files with prettier --check`);
   for (const f of filtered) console.log(`  - ${f}`);
 
-  runCheck("prettier:changed", "pnpm", ["exec", "prettier", "--check", ...filtered]);
+  runCheck("prettier:changed", "pnpm", [
+    "exec",
+    "prettier",
+    "--check",
+    "--ignore-unknown",
+    ...filtered,
+  ]);
 }
 
 main();
