@@ -32,66 +32,23 @@ async function findSubmittedResponse(courseBoundEvaluationId: string, deployment
   };
 }
 
+async function verifyUserIdentity(id: string, email: string, expectedRole: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id } });
+  assertContract(user, `missing seeded SystemRole user ${id} (${email})`);
+  assertContract(user?.email === email, `seeded user ${email} email drift: got "${user?.email}"`);
+  const role = await prisma.userRole.findUnique({ where: { user_id: id } });
+  assertContract(
+    role?.role === expectedRole,
+    `seeded user ${email} role is not ${expectedRole} (got "${role?.role}")`
+  );
+}
+
 async function verifyIdentities(): Promise<void> {
   const contract = E2E_CONTRACT;
-  const demoPh = await prisma.user.findUnique({ where: { id: contract.demoPh.id } });
-  assertContract(
-    demoPh,
-    `missing seeded SystemRole user ${contract.demoPh.id} (${contract.demoPh.email})`
-  );
-  assertContract(
-    demoPh?.email === contract.demoPh.email,
-    `seeded user ${contract.demoPh.email} email drift: got "${demoPh?.email}"`
-  );
-  const demoPhRole = await prisma.userRole.findUnique({ where: { user_id: contract.demoPh.id } });
-  assertContract(
-    demoPhRole?.role === "PROGRAM_HEAD",
-    `seeded user ${contract.demoPh.email} role is not PROGRAM_HEAD (got "${demoPhRole?.role}")`
-  );
-
-  const beedPh = await prisma.user.findUnique({ where: { id: contract.beedPh.id } });
-  assertContract(
-    beedPh,
-    `missing seeded SystemRole user ${contract.beedPh.id} (${contract.beedPh.email})`
-  );
-  assertContract(
-    beedPh?.email === contract.beedPh.email,
-    `seeded user ${contract.beedPh.email} email drift: got "${beedPh?.email}"`
-  );
-
-  const demoStudent = await prisma.user.findUnique({ where: { id: contract.demoStudent.id } });
-  assertContract(
-    demoStudent,
-    `missing seeded SystemRole user ${contract.demoStudent.id} (${contract.demoStudent.email})`
-  );
-  assertContract(
-    demoStudent?.email === contract.demoStudent.email,
-    `seeded user ${contract.demoStudent.email} email drift: got "${demoStudent?.email}"`
-  );
-  const demoStudentRole = await prisma.userRole.findUnique({
-    where: { user_id: contract.demoStudent.id },
-  });
-  assertContract(
-    demoStudentRole?.role === "STUDENT",
-    `seeded user ${contract.demoStudent.email} role is not STUDENT (got "${demoStudentRole?.role}")`
-  );
-
-  const bsbaStudent = await prisma.user.findUnique({ where: { id: contract.bsbaStudent.id } });
-  assertContract(
-    bsbaStudent,
-    `missing seeded SystemRole user ${contract.bsbaStudent.id} (${contract.bsbaStudent.email})`
-  );
-  assertContract(
-    bsbaStudent?.email === contract.bsbaStudent.email,
-    `seeded user ${contract.bsbaStudent.email} email drift: got "${bsbaStudent?.email}"`
-  );
-  const bsbaStudentRole = await prisma.userRole.findUnique({
-    where: { user_id: contract.bsbaStudent.id },
-  });
-  assertContract(
-    bsbaStudentRole?.role === "STUDENT",
-    `seeded user ${contract.bsbaStudent.email} role is not STUDENT (got "${bsbaStudentRole?.role}")`
-  );
+  await verifyUserIdentity(contract.demoPh.id, contract.demoPh.email, "PROGRAM_HEAD");
+  await verifyUserIdentity(contract.beedPh.id, contract.beedPh.email, "PROGRAM_HEAD");
+  await verifyUserIdentity(contract.demoStudent.id, contract.demoStudent.email, "STUDENT");
+  await verifyUserIdentity(contract.bsbaStudent.id, contract.bsbaStudent.email, "STUDENT");
 }
 
 /**
