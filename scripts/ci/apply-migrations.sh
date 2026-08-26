@@ -64,16 +64,14 @@ CREATE TABLE IF NOT EXISTS auth.sessions (
 );
 SQL
 
-for migration in "${REPO_ROOT}"/supabase/migrations/*.sql; do
-  echo "Applying $(basename "$migration")"
-  "${PSQL[@]}" -f "$migration"
-done
-
-# Supabase applies these default grants at project initialization; the hosted
-# role grants are not part of the migration ledger, so replicate them here for
-# the disposable stack. `authenticated` receives ALL on every public object
-# (matching the hosted default), and the RLS probes connect through the
-# LOGIN role `test_authenticated` which inherits `authenticated`.
+# Supabase applies these default grants at project initialization: every
+# public-schema object created afterwards receives ALL for anon/authenticated
+# (the hosted default that makes new tables reachable through the Data API).
+# Replicate that ordering HERE, before the migration loop, so REVOKE
+# statements inside migrations take effect exactly as they do on hosted
+# Supabase — table-level revocation is what the server-only access boundary
+# (src/lib/db/table-access-dispositions.ts) verifies. The RLS probes connect
+# through the LOGIN role `test_authenticated` which inherits `authenticated`.
 "${PSQL[@]}" <<'SQL'
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT USAGE ON SCHEMA auth TO anon, authenticated;
@@ -88,5 +86,10 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 GRANT authenticated TO test_authenticated;
 SQL
+
+for migration in "${REPO_ROOT}"/supabase/migrations/*.sql; do
+  echo "Applying $(basename "$migration")"
+  "${PSQL[@]}" -f "$migration"
+done
 
 echo "Migrations applied."

@@ -234,3 +234,23 @@ _Avoid_: Employer record, company account
 **Protected account edit**:
 A Secretary-managed account change that can alter academic history, current student placement, managed program responsibility, or external access; System CLOIE requires an explicit review of the exact changes before saving it.
 _Avoid_: Ordinary profile correction, browser-only confirmation
+
+**Table access disposition**:
+The single declared database access boundary for a Prisma-backed application table: role-aware RLS, authenticated read-only, server-only, or an approved application-layer authorization exception. One table, exactly one disposition; the registry in `src/lib/db/table-access-dispositions.ts` is verified deterministically and against live database probes.
+_Avoid_: Partial RLS coverage, unclassified table access
+
+**Role-aware RLS table**:
+An application table whose rows are gated by row-level security policies keyed to role, with live policy evidence exercised through the disposable RLS harness.
+_Avoid_: RLS table without live probe evidence
+
+**Authenticated read-only table**:
+An application table any authenticated identity may read in full while writes are denied at the database boundary.
+_Avoid_: Public table, unauthenticated read table
+
+**Server-only table**:
+An application table with no direct anon or authenticated access — RLS enabled and privileges revoked — reached only through server-side Prisma under the service role.
+_Avoid_: Direct Data API table, exposed table
+
+**Application-layer authorization exception**:
+An approved waiver of the RLS boundary where server code is the authorization owner; it must name the owning server module and must not weaken existing authorization.
+_Avoid_: Unnamed exception, silent RLS waiver

@@ -9,4 +9,6 @@ public
 pnpm-lock.yaml
 prisma/*.db
 *.sh
+*.sql
+**/CONTEXT.md
 .prettierignore
