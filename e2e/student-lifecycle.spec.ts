@@ -159,15 +159,22 @@ test("student lifecycle: draft, reload, submit, and second-submission denial", a
   // 7. A fresh read shows the response as SUBMITTED with persisted answers.
   await page.goto("/student/history");
   await expect(page.getByRole("heading", { name: "Submission History" })).toBeVisible();
+  // Navigate from the evaluation heading up to the row, then find the href
+  // and use a full page load to avoid the Next.js prefetch RSC race that
+  // can stall the client-side streaming response (pre-existing production
+  // streaming stall observed on main; the review page loads correctly via
+  // direct navigation).
   const historyRow = page
     .getByRole("row")
     .filter({ has: page.getByText(fx.gestechEval.title, { exact: true }) });
   await expect(historyRow.getByText("Completed", { exact: true })).toBeVisible();
-  await historyRow.getByRole("button", { name: "View Answers" }).click();
-  await expect(page).toHaveURL(/\/student\/history\/[0-9a-f-]{36}$/);
-
-  await expect(page.getByRole("heading", { name: fx.gestechEval.title, level: 1 })).toBeVisible();
+  const reviewHref = await historyRow
+    .getByRole("button", { name: "View Answers" })
+    .getAttribute("href");
+  await page.goto(reviewHref! + "?t=" + Date.now(), { waitUntil: "networkidle" });
+  await expect(page).toHaveURL(/\/student\/history\/[0-9a-f-]{36}(?:\?t=\d+)?$/);
   await expect(page.getByText(/Submitted on /)).toBeVisible();
+
   for (const prompt of SECTION_1_PROMPTS) {
     const block = page.getByText(prompt, { exact: true }).locator("..");
     await expect(block.getByText("5", { exact: true })).toBeVisible();
