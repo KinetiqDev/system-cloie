@@ -24,7 +24,8 @@ export const E2E_CONTRACT = {
   /** Secretary and Dean identities for the setup → oversight chain (issue #549). */
   demoSecretary: { id: U.ADMIN, email: "demo-secretary@cloie.test", name: "Demo Secretary" },
   demoDean: { id: U.DEAN, email: "demo-dean@cloie.test", name: "Demo Dean" },
-
+  /** General Education Coordinator identity (issue #547) — no Program assignment. */
+  demoGenEd: { id: U.GENED, email: "demo-gened@cloie.test", name: "Gen Ed Coordinator" },
   /**
    * Deterministic Course Assignment roster-mutation fixtures (issue #545).
    * Course assignments are located by their seed definition (course code,
@@ -153,6 +154,7 @@ export type FixtureData = {
   demoFaculty: { id: string; email: string };
   demoSecretary: { id: string; email: string };
   demoDean: { id: string; email: string };
+  demoGenEd: { id: string; email: string; name: string };
   academicPeriods: {
     active: { id: string; schoolYearId: string; status: string };
     planned: { id: string; schoolYearId: string; status: string };
