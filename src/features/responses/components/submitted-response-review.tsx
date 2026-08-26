@@ -32,7 +32,7 @@ export function SubmittedResponseReview({
         <p className="text-text-secondary text-sm">
           {courseTitle ? `${courseTitle} • ${programLabel}` : programLabel}
         </p>
-        <p className="text-text-muted mt-1 text-xs">Submitted on {formatDate(submittedAt)}</p>
+        <p className="text-text-secondary mt-1 text-xs">Submitted on {formatDate(submittedAt)}</p>
       </div>
 
       {sections.map((section) => (
