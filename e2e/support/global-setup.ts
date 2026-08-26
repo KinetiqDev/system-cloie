@@ -24,9 +24,12 @@ async function findProgramByCode(code: string) {
  * inside the ACTIVE academic period. The assignment id itself is a runtime
  * navigation handle, not an identifier under test.
  */
-async function findCourseAssignmentByDefinition(
-  definition: (typeof E2E_CONTRACT.rosterAssignments)[keyof typeof E2E_CONTRACT.rosterAssignments]
-) {
+async function findCourseAssignmentByDefinition(definition: {
+  courseCode: string;
+  programCode: string;
+  yearLevel: string;
+  section: string;
+}) {
   const assignment = await prisma.courseAssignment.findFirst({
     where: {
       is_active: true,
@@ -89,6 +92,90 @@ async function verifySeededIdentity(
     userRole?.role === expectedRole,
     `seeded user ${contract.email} role is not ${expectedRole} (got "${userRole?.role}")`
   );
+}
+
+/**
+ * Course-bound publication fixture (issue #546): the demo Faculty owns a
+ * Course-bound template bound to GESTECH with every active GESTECH CILO
+ * assigned to one Likert question, and an active unpublished Course
+ * Assignment (GESTECH BSBA EVENING) whose roster carries exactly the two
+ * seeded students. The publication journey writes the deployment through the
+ * real service; the contract only verifies the pristine seed state the
+ * journey depends on (no published evaluation, exact roster, complete
+ * bindings).
+ */
+async function verifyPublicationFixture(): Promise<{
+  publicationTemplate: { id: string; code: string; name: string };
+  publicationTarget: { id: string; courseCode: string; programCode: string };
+}> {
+  const contract = E2E_CONTRACT;
+
+  const template = await prisma.instrumentTemplate.findUnique({
+    where: { code: contract.facultyPublicationTemplate.code },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      is_active: true,
+      template_type: true,
+      faculty_owner_id: true,
+      bound_course: { select: { code: true } },
+    },
+  });
+  assertContract(
+    template,
+    `missing seeded Faculty publication template "${contract.facultyPublicationTemplate.code}"`
+  );
+  assertContract(
+    template?.name === contract.facultyPublicationTemplate.name,
+    `Faculty publication template name drift: expected "${contract.facultyPublicationTemplate.name}", got "${template?.name}"`
+  );
+  assertContract(
+    template?.faculty_owner_id === E2E_CONTRACT.demoFaculty.id,
+    `Faculty publication template must be owned by ${E2E_CONTRACT.demoFaculty.email}`
+  );
+  assertContract(
+    template?.is_active === true && template.bound_course?.code === "GESTECH",
+    `Faculty publication template must be active and bound to GESTECH`
+  );
+  const bindingCount = await prisma.instrumentTemplateCiloQuestionBinding.count({
+    where: { template_id: template!.id },
+  });
+  assertContract(
+    bindingCount === contract.facultyPublicationTemplate.ciloCount,
+    `Faculty publication template binding drift: expected ${contract.facultyPublicationTemplate.ciloCount} CILO bindings, got ${bindingCount}`
+  );
+
+  const target = await findCourseAssignmentByDefinition(contract.publicationTarget);
+  assertContract(
+    target.facultyId === E2E_CONTRACT.demoFaculty.id,
+    `GESTECH BSBA EVENING must be owned by ${E2E_CONTRACT.demoFaculty.email} for the publication journey`
+  );
+  assertContract(
+    !target.hasPublishedEvaluation,
+    "GESTECH BSBA EVENING must have no published evaluation so the publication journey owns the write"
+  );
+
+  const memberships = await prisma.courseAssignmentMembership.findMany({
+    where: { course_assignment_id: target.id, is_active: true },
+    select: { student_user_id: true },
+  });
+  const memberIds = new Set(memberships.map((m) => m.student_user_id));
+  const expectedMemberIds = contract.publicationStudents.map((student) => student.id);
+  assertContract(
+    memberIds.size === expectedMemberIds.length &&
+      expectedMemberIds.every((id) => memberIds.has(id)),
+    `GESTECH BSBA EVENING roster must start from the pristine seed (expected only ${expectedMemberIds.join(", ")}). Re-seed the disposable database before re-running the e2e suite.`
+  );
+
+  return {
+    publicationTemplate: { id: template!.id, code: template!.code, name: template!.name },
+    publicationTarget: {
+      id: target.id,
+      courseCode: target.courseCode,
+      programCode: target.programCode,
+    },
+  };
 }
 
 async function verifyIdentities(): Promise<void> {
@@ -445,6 +532,7 @@ export default async function globalSetup(): Promise<void> {
   await verifyResponseExpectations(courseResponse, bottomUpResponse);
   const ploId = await verifyPloEvidenceLink(bsit.id);
   const { gestechAssignment, gestechMobileAssignment } = await verifyStudentLifecycleFixture();
+  const { publicationTemplate, publicationTarget } = await verifyPublicationFixture();
 
   const contract = E2E_CONTRACT;
   const fixture: FixtureData = {
@@ -551,6 +639,10 @@ export default async function globalSetup(): Promise<void> {
     gestechEval: { id: contract.gestechEval.id, title: contract.gestechEval.title },
     gestechAssignment,
     gestechMobileAssignment,
+    publicationTemplate,
+    publicationTarget,
+    publicationDeploymentName: contract.publicationDeploymentName,
+    publicationStudents: contract.publicationStudents.map((student) => ({ ...student })),
   };
 
   mkdirSync(join(__dirname, ".."), { recursive: true });

@@ -79,6 +79,32 @@ export const E2E_CONTRACT = {
      *  scan via "Patricia Luna Jr." (suggested match → READY_CREATE, no write). */
     axeSuggested: { id: U.STU_BEED, name: "Patricia Luna", email: "student-beed@cloie.test" },
   },
+
+  /**
+   * Course-bound publication fixtures (issue #546): a Faculty-owned template
+   * for the demo Faculty bound to GESTECH, and a published-evaluation-free
+   * owned active assignment (GESTECH BSBA EVENING) whose roster carries two
+   * students. The publication journey publishes through the real service and
+   * then proves the roster lock and the Student's fresh browser read.
+   */
+  facultyPublicationTemplate: {
+    code: "FAC_GESTECH",
+    name: "GESTECH Faculty CILO Evaluation",
+    ciloCount: 3,
+  },
+  publicationTarget: {
+    courseCode: "GESTECH",
+    programCode: "BSBA",
+    yearLevel: "FIRST_YEAR",
+    section: "EVENING",
+  },
+  /** Students on the publication-target roster (issue #546). */
+  publicationStudents: [
+    { id: U.STU_BSED, name: "Juan Dela Cruz", email: "student-bsed@cloie.test" },
+    { id: U.STU_BSHM, name: "Daniel Tan", email: "student-bshm@cloie.test" },
+  ],
+  /** Distinct deployment name the publication journey writes; must not collide with the seeded GESTECH deployments. */
+  publicationDeploymentName: "GESTECH BSBA EVENING Post-Term CILO Evaluation",
   /** Student identities for the lifecycle journey (issue #544). */
   demoStudent: { id: U.STU_BSIT, email: "demo-student@cloie.test", name: "Demo Student" },
   mobileStudent: { id: U.GRAD_BSIT, email: "demo-grad@cloie.test", name: "Demo Graduate" },
@@ -194,4 +220,9 @@ export type FixtureData = {
   gestechEval: { id: string; title: string };
   gestechAssignment: { id: string };
   gestechMobileAssignment: { id: string };
+  /** Issue #546 publication fixtures. */
+  publicationTemplate: { id: string; code: string; name: string };
+  publicationTarget: { id: string; courseCode: string; programCode: string };
+  publicationDeploymentName: string;
+  publicationStudents: Array<{ id: string; name: string; email: string }>;
 };

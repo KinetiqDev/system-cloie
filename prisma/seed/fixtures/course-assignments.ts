@@ -51,6 +51,15 @@ export const courseAssignmentDefinitions = [
     yearLevel: YearLevel.FIRST_YEAR,
     section: "AFTERNOON",
   },
+  // Publication-slice target (issue #546): owned by FAC_BSIT, unpublished,
+  // with a roster the e2e publishes and then verifies is locked.
+  {
+    courseCode: "GESTECH",
+    programCode: "BSBA",
+    facultyId: U.FAC_BSIT,
+    yearLevel: YearLevel.FIRST_YEAR,
+    section: "EVENING",
+  },
   {
     courseCode: "MM201",
     programCode: "BSBA",
@@ -172,5 +181,16 @@ export const membershipDefinitions = [
     year: YearLevel.FOURTH_YEAR,
     section: "EVENING",
     students: [U.STU_BSHM, U.STU_BSHM_G],
+  },
+  // Publication-slice roster (issue #546): Juan Dela Cruz + Daniel Tan. These
+  // two Students are unused by every other e2e journey and have no active
+  // GESTECH+BSBA+term membership, so the active-scope constraint accepts
+  // them and no merged roster journey's name resolution changes.
+  {
+    course: "GESTECH",
+    program: "BSBA",
+    year: YearLevel.FIRST_YEAR,
+    section: "EVENING",
+    students: [U.STU_BSED, U.STU_BSHM],
   },
 ] as const;

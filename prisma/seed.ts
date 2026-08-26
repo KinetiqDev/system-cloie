@@ -7,6 +7,7 @@ import { persistPeriodReadinessSnapshot } from "../src/features/academic-calenda
 import { seedAcademicCalendar as seedAcademicCalendarRunner } from "./seed/runners/seed-academic-calendar";
 import { seedCourseAssignments as seedCourseAssignmentsRunner } from "./seed/runners/seed-course-assignments";
 import { seedEvaluations as seedEvaluationsRunner } from "./seed/runners/seed-evaluations";
+import { seedFacultyPublicationTemplate } from "./seed/runners/seed-faculty-publication-template";
 import { seedFoundation as seedFoundationRunner } from "./seed/runners/seed-foundation";
 import { seedInstruments } from "./seed/runners/seed-instruments";
 import { seedOutcomes as seedOutcomesRunner } from "./seed/runners/seed-outcomes";
@@ -38,6 +39,7 @@ async function main() {
 
   console.log("[D] Instrument templates...");
   await seedInstruments();
+  await seedFacultyPublicationTemplate({ cMap });
 
   console.log("[E] Evaluations & deployments...");
   const evaluationContext = await seedEvaluationsRunner({ pMap, cMap }, ciloMap, termInstance.id, {

@@ -708,7 +708,12 @@ function RosterTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div
+      className="overflow-x-auto rounded-lg border"
+      role="region"
+      aria-label="Course roster members"
+      tabIndex={0}
+    >
       <table className="w-full min-w-[72rem] text-left text-sm">
         <caption className="sr-only">Course roster members and current eligibility</caption>
         <thead className="bg-muted/40 text-foreground border-b text-xs">
