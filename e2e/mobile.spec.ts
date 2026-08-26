@@ -306,7 +306,7 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await expect(
     page
       .getByRole("group", { name: "The program provided a strong foundation in my field of study" })
-      .getByRole("radio", { name: /Agree/ })
+      .getByRole("radio", { name: "Agree", exact: true })
   ).toBeChecked();
 
   await page.getByRole("button", { name: "Next Section" }).click();
