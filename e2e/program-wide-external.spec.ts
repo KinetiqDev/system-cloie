@@ -160,6 +160,19 @@ test("program-wide alumni: publish, preview, alumni submit, and scoped evidence 
   await expect(page.getByRole("cell", { name: "Demo Alumni" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "demo-alumni@cloie.test" })).toBeVisible();
   // Out-of-scope: Miguel Ong (BSBA) must NOT appear in BSIT preview
+  // Be robust to seed variations: if the preview shows more than 1, log and check correctly
+  const previewRows = page.getByRole("row");
+  const previewText = await page.getByRole("table").textContent();
+  // Soft check: Demo Alumni must be present
+  await expect(page.getByRole("cell", { name: "Demo Alumni" })).toBeVisible();
+  // Hard check for out-of-scope: should not be present
+  const miguCount = await page.getByRole("cell", { name: "Miguel Ong" }).count();
+  if (miguCount !== 0) {
+    console.log(
+      "Preview unexpectedly contains Miguel Ong, table text:",
+      previewText?.slice(0, 500)
+    );
+  }
   await expect(page.getByRole("cell", { name: "Miguel Ong" })).toHaveCount(0);
   // Preview does not mutate: still on preview step, no deployment created yet
   // (publication is the next action)
@@ -324,7 +337,7 @@ test("ineligible, rejected, inactive, and out-of-scope external accounts cannot 
   await loginAs(page, "alumni-rejected@cloie.test");
   await page.goto("/alumni/dashboard");
   await expect(page).toHaveURL(/\/status\/rejected/);
-  await expect(page.getByText("Application Rejected")).toBeVisible();
+  await expect(page.getByText(/Application Rejected/i)).toBeVisible();
 
   // Inactive account: is_active = false → ci-test-login returns 404, cannot obtain session
   {
