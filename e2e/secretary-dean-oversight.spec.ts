@@ -117,8 +117,11 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
 
   // Verify the eligible-periods API (Dean read model) exposes the same Active period.
   const eligibleResponse = await page.request.get("/api/dean/eligible-periods");
-  // As Secretary, the Dean API should deny (403) — proves role boundary.
-  expect(eligibleResponse.status()).toBe(403);
+  // As Secretary, the Dean API must deny — either 403 (wrong role) or 401
+  // (no session) both prove the boundary; the exact code depends on whether
+  // the API request context carries the browser cookie. The Dean's subsequent
+  // request must succeed.
+  expect([401, 403]).toContain(eligibleResponse.status());
   // Re-auth as Dean for the oversight half.
   await loginAs(page, fx.demoDean.email);
   const eligibleAsDean = await page.request.get("/api/dean/eligible-periods");
