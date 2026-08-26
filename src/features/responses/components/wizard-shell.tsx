@@ -4,13 +4,76 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, ArrowRight, Save, CheckCircle, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Save,
+  Check,
+  CheckCircle,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ReviewModal } from "./review-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type { StudentEvaluationSection } from "@/features/responses/types";
+
+function hasQuantitativeAnswer(value: number | string | undefined): boolean {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function hasQualitativeAnswer(value: number | string | undefined): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isSectionComplete(
+  section: StudentEvaluationSection,
+  answers: Record<string, number | string>
+): boolean {
+  if (section.items.length === 0) {
+    return true;
+  }
+
+  return section.items.every((item) => {
+    const answerKey =
+      item.kind === "quantitative"
+        ? buildStudentEvaluationAnswerKey(section.id, "quantitative", item.itemKey)
+        : buildStudentEvaluationAnswerKey(section.id, "qualitative", item.promptKey);
+    const answerValue = answers[answerKey];
+
+    return item.kind === "quantitative"
+      ? hasQuantitativeAnswer(answerValue)
+      : hasQualitativeAnswer(answerValue);
+  });
+}
+
+function findFirstIncompleteSectionIndex(
+  sections: StudentEvaluationSection[],
+  answers: Record<string, number | string>
+): number {
+  const index = sections.findIndex((section) => !isSectionComplete(section, answers));
+
+  return index === -1 ? Math.max(0, sections.length - 1) : index;
+}
+
+function buildSectionValidationMessage(
+  quantitativeCount: number,
+  qualitativeCount: number
+): string {
+  const plural = qualitativeCount > 1 ? "s" : "";
+
+  if (quantitativeCount > 0 && qualitativeCount > 0) {
+    return `Please answer all questions, including the written response${plural}, before proceeding (${quantitativeCount + qualitativeCount} remaining).`;
+  }
+
+  if (qualitativeCount > 0) {
+    return `Please complete the written response${plural} in this section before proceeding (${qualitativeCount} remaining).`;
+  }
+
+  return `Please answer all questions in this section before proceeding (${quantitativeCount} remaining).`;
+}
 
 interface WizardShellProps {
   assignmentId: string;
@@ -40,7 +103,9 @@ export function WizardShell({
   onSaveDraft,
   onSubmitResponse,
 }: WizardShellProps) {
-  const [currentStep, setCurrentStep] = React.useState(0);
+  const [currentStep, setCurrentStep] = React.useState(() =>
+    findFirstIncompleteSectionIndex(sections, initialAnswers)
+  );
   const [answers, setAnswers] = React.useState<Record<string, number | string>>(initialAnswers);
   const [isReviewOpen, setIsReviewOpen] = React.useState(false);
   const [isSubmitted, setIsSubmitted] = React.useState(false);
@@ -126,19 +191,33 @@ export function WizardShell({
   };
 
   const validateCurrentSection = React.useCallback(() => {
-    const requiredItems = currentSection.items.filter((item) => item.kind === "quantitative");
-    const unanswered = requiredItems.filter((item) => {
+    const unansweredQuantitative = currentSection.items.filter((item) => {
+      if (item.kind !== "quantitative") {
+        return false;
+      }
       const answerKey = buildStudentEvaluationAnswerKey(
         currentSection.id,
         "quantitative",
         item.itemKey
       );
-      return !answers[answerKey];
+      return !hasQuantitativeAnswer(answers[answerKey]);
+    });
+    const unansweredQualitative = currentSection.items.filter((item) => {
+      if (item.kind !== "qualitative") {
+        return false;
+      }
+      const answerKey = buildStudentEvaluationAnswerKey(
+        currentSection.id,
+        "qualitative",
+        item.promptKey
+      );
+      return !hasQualitativeAnswer(answers[answerKey]);
     });
 
-    if (unanswered.length > 0) {
+    const remaining = unansweredQuantitative.length + unansweredQualitative.length;
+    if (remaining > 0) {
       setValidationError(
-        `Please answer all questions in this section before proceeding (${unanswered.length} remaining).`
+        buildSectionValidationMessage(unansweredQuantitative.length, unansweredQualitative.length)
       );
       return false;
     }
@@ -217,9 +296,14 @@ export function WizardShell({
     }
   };
 
-  const savedTimeText = lastSaved
-    ? lastSaved.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-    : "Not saved";
+  const restoredDraft = Object.keys(initialAnswers).length > 0;
+  const savedTimeText = isSaving
+    ? "Saving..."
+    : lastSaved
+      ? lastSaved.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+      : restoredDraft
+        ? "Draft restored"
+        : "Not saved";
 
   if (isSubmitted) {
     return (
@@ -244,7 +328,12 @@ export function WizardShell({
       {/* Sticky Wizard Header */}
       <div className="bg-background border-border sticky top-0 z-20 mb-6 border-b pb-4">
         <div className="mb-4 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="-ml-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(returnRoute)}
+            className="-ml-2"
+          >
             <ArrowLeft className="mr-2 size-4" /> Back to Dashboard
           </Button>
           <div className="text-text-muted text-label-sm flex items-center gap-2 font-bold tracking-wider uppercase">
@@ -265,6 +354,46 @@ export function WizardShell({
             className="h-2"
             aria-label={`Section progress: ${Math.round(progress)}%`}
           />
+          {totalSteps > 1 && (
+            <div
+              role="list"
+              aria-label="Section completion"
+              className="mt-2 flex flex-wrap items-center gap-1.5"
+            >
+              {sections.map((section, index) => {
+                const complete = isSectionComplete(section, answers);
+                const isCurrent = index === currentStep;
+                const stateLabel = complete
+                  ? "completed"
+                  : isCurrent
+                    ? "in progress"
+                    : "not started";
+
+                return (
+                  <span
+                    key={section.id}
+                    role="listitem"
+                    aria-current={isCurrent ? "step" : undefined}
+                    className={cn(
+                      "text-caption flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium",
+                      complete
+                        ? "border-success/40 bg-success/10 text-success"
+                        : isCurrent
+                          ? "border-primary bg-primary-soft text-selected-fg"
+                          : "border-border text-text-muted"
+                    )}
+                  >
+                    {complete ? (
+                      <Check className="size-3" />
+                    ) : (
+                      <span aria-hidden="true">{index + 1}</span>
+                    )}
+                    <span className="sr-only">{`Section ${index + 1} ${stateLabel}`}</span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -352,7 +481,12 @@ export function WizardShell({
                 return (
                   <fieldset
                     key={item.promptKey}
-                    className="bg-surface border-border rounded-xl border p-4"
+                    className={cn(
+                      "bg-surface rounded-xl border p-4 transition-colors",
+                      validationError && currentValue.trim().length === 0
+                        ? "border-danger bg-danger-soft/30"
+                        : "border-border"
+                    )}
                   >
                     <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
 
