@@ -13,3 +13,4 @@ prisma/*.db
 *.sql
 **/CONTEXT.md
 .prettierignore
+src/types/supabase-database.ts
