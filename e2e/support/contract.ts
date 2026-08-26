@@ -21,6 +21,9 @@ export const E2E_CONTRACT = {
   demoPh: { id: U.PH_BSIT, email: "demo-ph@cloie.test", name: "Demo Program Head" },
   beedPh: { id: U.PH_BEED, email: "ph-beed@cloie.test", name: "Maria Santos" },
   demoFaculty: { id: U.FAC_BSIT, email: "demo-faculty@cloie.test", name: "Demo Faculty" },
+  /** Secretary and Dean identities for the setup → oversight chain (issue #549). */
+  demoSecretary: { id: U.ADMIN, email: "demo-secretary@cloie.test", name: "Demo Secretary" },
+  demoDean: { id: U.DEAN, email: "demo-dean@cloie.test", name: "Demo Dean" },
 
   /**
    * Deterministic Course Assignment roster-mutation fixtures (issue #545).
@@ -75,10 +78,34 @@ export const E2E_CONTRACT = {
      *  scan via "Patricia Luna Jr." (suggested match → READY_CREATE, no write). */
     axeSuggested: { id: U.STU_BEED, name: "Patricia Luna", email: "student-beed@cloie.test" },
   },
-
   /** Student identities for the lifecycle journey (issue #544). */
   demoStudent: { id: U.STU_BSIT, email: "demo-student@cloie.test", name: "Demo Student" },
   mobileStudent: { id: U.GRAD_BSIT, email: "demo-grad@cloie.test", name: "Demo Graduate" },
+
+  /** Deterministic Academic Period fixtures for the Secretary → Dean chain (issue #549). */
+  academicPeriods: {
+    /** The currently ACTIVE period (2026-2027 Second Second → status ACTIVE). */
+    active: {
+      schoolYearCode: "2026-2027",
+      semester: "SECOND",
+      term: "SECOND_TERM",
+      status: "ACTIVE" as const,
+    },
+    /** A PLANNED period eligible for activation (2027-2028 First First → PLANNED). */
+    planned: {
+      schoolYearCode: "2027-2028",
+      semester: "FIRST",
+      term: "FIRST_TERM",
+      status: "PLANNED" as const,
+    },
+    /** A COMPLETED period for historical oversight (2026-2027 First First → COMPLETED). */
+    completed: {
+      schoolYearCode: "2026-2027",
+      semester: "FIRST",
+      term: "FIRST_TERM",
+      status: "COMPLETED" as const,
+    },
+  },
 
   /** Deterministic deployment identifiers reused from the Prisma seed. */
   deployments: {
@@ -124,6 +151,13 @@ export type FixtureData = {
   demoPh: { id: string; email: string };
   beedPh: { id: string; email: string };
   demoFaculty: { id: string; email: string };
+  demoSecretary: { id: string; email: string };
+  demoDean: { id: string; email: string };
+  academicPeriods: {
+    active: { id: string; schoolYearId: string; status: string };
+    planned: { id: string; schoolYearId: string; status: string };
+    completed: { id: string; schoolYearId: string; status: string };
+  };
   /** Runtime handles for the deterministic Course Assignment definitions above. */
   gestechBsba: { id: string; courseCode: string; programCode: string };
   gestechBsit: { id: string; courseCode: string; programCode: string };

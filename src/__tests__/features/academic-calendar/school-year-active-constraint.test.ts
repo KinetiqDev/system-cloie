@@ -1,7 +1,21 @@
+// fallow-ignore-file code-duplication
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
-
 import { prisma } from "@/lib/db/prisma";
+
+function getPrismaCode(error: unknown): string | undefined {
+  if (
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof (error as Record<string, unknown>).code === "string"
+  ) {
+    // Unchecked cast is safe here: we just verified code is string via typeof guard above, and Prisma error shape is not validated by schema.
+    const code = (error as { code: string }).code;
+    return code;
+  }
+  return undefined;
+}
 
 describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1")(
   "SchoolYear one-active constraint",
@@ -72,13 +86,11 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         ]);
 
         const fulfilled = results.filter((r) => r.status === "fulfilled");
-        const rejected = results.filter(
-          (r): r is PromiseRejectedResult => r.status === "rejected"
-        );
+        const rejected = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
 
         expect(fulfilled).toHaveLength(1);
         expect(rejected).toHaveLength(1);
-        expect((rejected[0].reason as { code?: string }).code).toBe("P2002");
+        expect(getPrismaCode(rejected[0].reason)).toBe("P2002");
 
         const activeRows = await prisma.schoolYear.findMany({
           where: { id: { in: [first.id, second.id] }, is_active: true },
