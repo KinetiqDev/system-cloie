@@ -480,6 +480,44 @@ describe("WizardShell", () => {
     expect(screen.getByText("Section 2 completed")).toBeDefined();
   });
 
+  test("blocks forward navigation on legacy qualitative items without required flag", async () => {
+    const onSaveDraft = vi
+      .fn()
+      .mockResolvedValue({ savedAt: "2026-04-20T10:00:00.000Z", success: true });
+    const sections = [
+      mockSections[0],
+      {
+        id: "section-2",
+        name: "Section 2 Name",
+        description: "Second part",
+        items: [
+          {
+            kind: "qualitative" as const,
+            promptKey: "remarks",
+            prompt: "Remarks",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <WizardShell
+        assignmentId="assignment-1"
+        title="Test Eval"
+        sections={sections}
+        onSaveDraft={onSaveDraft}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /4/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next section/i }));
+
+    await screen.findByText("Remarks");
+    fireEvent.click(screen.getByRole("button", { name: /review & submit/i }));
+
+    expect(await screen.findByText(/complete the written response/i)).toBeDefined();
+  });
+
   test("surfaces submission errors from the review dialog", async () => {
     const onSubmitResponse = vi.fn().mockResolvedValue({
       success: false,

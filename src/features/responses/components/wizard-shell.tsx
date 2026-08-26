@@ -29,7 +29,8 @@ function hasQualitativeAnswer(value: number | string | undefined): boolean {
 }
 
 function isItemRequired(item: StudentEvaluationSection["items"][number]): boolean {
-  return item.required ?? (item.kind === "quantitative" ? true : false);
+  // Absent flag means required (legacy snapshots), matching the server default.
+  return item.required !== false;
 }
 
 function isSectionComplete(
