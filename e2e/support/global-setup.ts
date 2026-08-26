@@ -35,14 +35,159 @@ async function findSubmittedResponse(courseBoundEvaluationId: string, deployment
 async function verifyIdentities(): Promise<void> {
   const contract = E2E_CONTRACT;
   const demoPh = await prisma.user.findUnique({ where: { id: contract.demoPh.id } });
-  assertContract(demoPh, `missing seeded SystemRole user ${contract.demoPh.id} (${contract.demoPh.email})`);
-  assertContract(demoPh?.email === contract.demoPh.email, `seeded user ${contract.demoPh.email} email drift: got "${demoPh?.email}"`);
+  assertContract(
+    demoPh,
+    `missing seeded SystemRole user ${contract.demoPh.id} (${contract.demoPh.email})`
+  );
+  assertContract(
+    demoPh?.email === contract.demoPh.email,
+    `seeded user ${contract.demoPh.email} email drift: got "${demoPh?.email}"`
+  );
   const demoPhRole = await prisma.userRole.findUnique({ where: { user_id: contract.demoPh.id } });
-  assertContract(demoPhRole?.role === "PROGRAM_HEAD", `seeded user ${contract.demoPh.email} role is not PROGRAM_HEAD (got "${demoPhRole?.role}")`);
+  assertContract(
+    demoPhRole?.role === "PROGRAM_HEAD",
+    `seeded user ${contract.demoPh.email} role is not PROGRAM_HEAD (got "${demoPhRole?.role}")`
+  );
 
   const beedPh = await prisma.user.findUnique({ where: { id: contract.beedPh.id } });
-  assertContract(beedPh, `missing seeded SystemRole user ${contract.beedPh.id} (${contract.beedPh.email})`);
-  assertContract(beedPh?.email === contract.beedPh.email, `seeded user ${contract.beedPh.email} email drift: got "${beedPh?.email}"`);
+  assertContract(
+    beedPh,
+    `missing seeded SystemRole user ${contract.beedPh.id} (${contract.beedPh.email})`
+  );
+  assertContract(
+    beedPh?.email === contract.beedPh.email,
+    `seeded user ${contract.beedPh.email} email drift: got "${beedPh?.email}"`
+  );
+
+  const demoStudent = await prisma.user.findUnique({ where: { id: contract.demoStudent.id } });
+  assertContract(
+    demoStudent,
+    `missing seeded SystemRole user ${contract.demoStudent.id} (${contract.demoStudent.email})`
+  );
+  assertContract(
+    demoStudent?.email === contract.demoStudent.email,
+    `seeded user ${contract.demoStudent.email} email drift: got "${demoStudent?.email}"`
+  );
+  const demoStudentRole = await prisma.userRole.findUnique({
+    where: { user_id: contract.demoStudent.id },
+  });
+  assertContract(
+    demoStudentRole?.role === "STUDENT",
+    `seeded user ${contract.demoStudent.email} role is not STUDENT (got "${demoStudentRole?.role}")`
+  );
+
+  const bsbaStudent = await prisma.user.findUnique({ where: { id: contract.bsbaStudent.id } });
+  assertContract(
+    bsbaStudent,
+    `missing seeded SystemRole user ${contract.bsbaStudent.id} (${contract.bsbaStudent.email})`
+  );
+  assertContract(
+    bsbaStudent?.email === contract.bsbaStudent.email,
+    `seeded user ${contract.bsbaStudent.email} email drift: got "${bsbaStudent?.email}"`
+  );
+  const bsbaStudentRole = await prisma.userRole.findUnique({
+    where: { user_id: contract.bsbaStudent.id },
+  });
+  assertContract(
+    bsbaStudentRole?.role === "STUDENT",
+    `seeded user ${contract.bsbaStudent.email} role is not STUDENT (got "${bsbaStudentRole?.role}")`
+  );
+}
+
+/**
+ * Student lifecycle fixture (issue #544): the GESTECH zero-response
+ * evaluation and both journey students' assignments. The GESTECH deployment
+ * window is rolling by fixture design (see `prisma/seed/fixtures/evaluations.ts`),
+ * so the contract verifies the window is open at setup time instead of
+ * pinning a calendar date. Both assignments must start with NO response —
+ * the journey owns the draft→submitted mutation, and the Program Head
+ * zero-response empty-state journey (empty-states.spec.ts) depends on that
+ * initial state.
+ *
+ * A failed previous run can leave an IN_PROGRESS (or SUBMITTED) response on a
+ * journey assignment, so the setup first restores the owned rows to the
+ * zero-response contract state before verifying. In CI the database is fresh
+ * per job and nothing is deleted; locally this makes re-runs hermetic.
+ */
+async function verifyStudentLifecycleFixture(): Promise<{
+  gestechAssignment: { id: string };
+  gestechBsbaAssignment: { id: string };
+}> {
+  const contract = E2E_CONTRACT;
+
+  const gestechEval = await prisma.courseBoundEvaluation.findUnique({
+    where: { id: contract.gestechEval.id },
+  });
+  assertContract(
+    gestechEval,
+    `missing seeded Course-bound evaluation "${contract.gestechEval.title}" (${contract.gestechEval.id})`
+  );
+  assertContract(
+    gestechEval?.deployment_name === contract.gestechEval.title,
+    `Course-bound evaluation ${contract.gestechEval.id} title drift: got "${gestechEval?.deployment_name}"`
+  );
+  assertContract(
+    gestechEval?.status === "ACTIVE",
+    `Course-bound evaluation ${contract.gestechEval.id} is not ACTIVE (got "${gestechEval?.status}")`
+  );
+  const now = new Date();
+  assertContract(
+    gestechEval?.activation_at !== null && gestechEval.activation_at.getTime() <= now.getTime(),
+    `Course-bound evaluation ${contract.gestechEval.id} activation window is not open at setup time`
+  );
+  assertContract(
+    gestechEval?.deadline_at !== null && gestechEval.deadline_at.getTime() >= now.getTime(),
+    `Course-bound evaluation ${contract.gestechEval.id} deadline has passed at setup time`
+  );
+
+  const gestechAssignment = await prisma.evaluationAssignment.findFirst({
+    where: { course_bound_id: contract.gestechEval.id, respondent_id: contract.demoStudent.id },
+  });
+  assertContract(
+    gestechAssignment,
+    `missing GESTECH assignment for ${contract.demoStudent.email} (${contract.demoStudent.id})`
+  );
+
+  // The BSBA GESTECH deployment shares the same deployment name and rolling
+  // window; it is created from the same fixture definition (GESTECH/BSBA
+  // course assignment) so its id is a runtime handle, not a contract value.
+  const gestechBsbaEval = await prisma.courseBoundEvaluation.findFirst({
+    where: {
+      deployment_name: contract.gestechEval.title,
+      course_assignment: { program: { code: "BSBA" } },
+    },
+  });
+  assertContract(
+    gestechBsbaEval,
+    `missing seeded Course-bound evaluation "${contract.gestechEval.title}" for BSBA`
+  );
+
+  const gestechBsbaAssignment = await prisma.evaluationAssignment.findFirst({
+    where: { course_bound_id: gestechBsbaEval!.id, respondent_id: contract.bsbaStudent.id },
+  });
+  assertContract(
+    gestechBsbaAssignment,
+    `missing GESTECH assignment for ${contract.bsbaStudent.email} (${contract.bsbaStudent.id})`
+  );
+
+  // Restore the zero-response fixture contract for the journey-owned
+  // assignments (cascade deletes their answer items).
+  await prisma.response.deleteMany({
+    where: { assignment_id: { in: [gestechAssignment.id, gestechBsbaAssignment.id] } },
+  });
+
+  const leftoverResponses = await prisma.response.count({
+    where: { assignment_id: { in: [gestechAssignment.id, gestechBsbaAssignment.id] } },
+  });
+  assertContract(
+    leftoverResponses === 0,
+    `GESTECH assignments must start with no response (zero-response fixture), found ${leftoverResponses} leftover response rows`
+  );
+
+  return {
+    gestechAssignment: { id: gestechAssignment.id },
+    gestechBsbaAssignment: { id: gestechBsbaAssignment.id },
+  };
 }
 
 async function verifyDeployments(): Promise<{
@@ -131,7 +276,11 @@ async function verifyResponseExpectations(
 
   const qualitativeContract = contract.courseResponse.qualitative[0];
   const qualitativeItem = await prisma.qualitativeResponseItem.findFirst({
-    where: { response_id: courseResponse.id, section_key: "qualitative", prompt_key: "qualitative-1" },
+    where: {
+      response_id: courseResponse.id,
+      section_key: "qualitative",
+      prompt_key: "qualitative-1",
+    },
   });
   assertContract(
     qualitativeItem?.text_content === qualitativeContract.text,
@@ -175,23 +324,37 @@ export default async function globalSetup(): Promise<void> {
   await verifyIdentities();
   const deployments = await verifyDeployments();
 
-  const [bsit, beed] = await Promise.all([
-    findProgramByCode("BSIT"),
-    findProgramByCode("BEED"),
-  ]);
+  const [bsit, beed] = await Promise.all([findProgramByCode("BSIT"), findProgramByCode("BEED")]);
 
   const [courseResponse, bottomUpResponse] = await Promise.all([
-    findSubmittedResponse(deployments.courseEvaluation.id, deployments.courseEvaluation.deployment_name),
-    findSubmittedResponse(deployments.bottomUpEvaluation.id, deployments.bottomUpEvaluation.deployment_name),
+    findSubmittedResponse(
+      deployments.courseEvaluation.id,
+      deployments.courseEvaluation.deployment_name
+    ),
+    findSubmittedResponse(
+      deployments.bottomUpEvaluation.id,
+      deployments.bottomUpEvaluation.deployment_name
+    ),
   ]);
 
   await verifyResponseExpectations(courseResponse, bottomUpResponse);
   const ploId = await verifyPloEvidenceLink(bsit.id);
+  const { gestechAssignment, gestechBsbaAssignment } = await verifyStudentLifecycleFixture();
 
   const contract = E2E_CONTRACT;
   const fixture: FixtureData = {
     demoPh: { id: contract.demoPh.id, email: contract.demoPh.email },
     beedPh: { id: contract.beedPh.id, email: contract.beedPh.email },
+    demoStudent: {
+      id: contract.demoStudent.id,
+      email: contract.demoStudent.email,
+      name: contract.demoStudent.name,
+    },
+    bsbaStudent: {
+      id: contract.bsbaStudent.id,
+      email: contract.bsbaStudent.email,
+      name: contract.bsbaStudent.name,
+    },
     bsit,
     beed,
     courseEvaluation: {
@@ -224,6 +387,9 @@ export default async function globalSetup(): Promise<void> {
         ciloLabel: p.ciloLabel,
       })),
     },
+    gestechEval: { id: contract.gestechEval.id, title: contract.gestechEval.title },
+    gestechAssignment,
+    gestechBsbaAssignment,
   };
 
   mkdirSync(join(__dirname, ".."), { recursive: true });
