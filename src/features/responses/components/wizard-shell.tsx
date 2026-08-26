@@ -83,6 +83,157 @@ function buildSectionValidationMessage(
   return `Please answer all questions in this section before proceeding (${quantitativeCount} remaining).`;
 }
 
+type SectionItem = StudentEvaluationSection["items"][number];
+
+type QuantitativeItemFieldProps = {
+  item: Extract<SectionItem, { kind: "quantitative" }>;
+  currentValue: number | string | undefined;
+  validationError: string | null;
+  onValueChange: (itemKey: string, value: number | string) => void;
+};
+
+type QualitativeItemFieldProps = {
+  item: Extract<SectionItem, { kind: "qualitative" }>;
+  currentValue: string;
+  validationError: string | null;
+  onValueChange: (itemKey: string, value: number | string) => void;
+};
+
+function getNormalizedSuggestedResponses(suggestedResponses?: string[]): string[] {
+  if (!suggestedResponses?.length) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+
+  return suggestedResponses.reduce<string[]>((acc, suggestion) => {
+    const normalizedSuggestion = suggestion.trim();
+
+    if (!normalizedSuggestion || seen.has(normalizedSuggestion)) {
+      return acc;
+    }
+
+    seen.add(normalizedSuggestion);
+    acc.push(normalizedSuggestion);
+    return acc;
+  }, []);
+}
+
+function QuantitativeItemField({
+  item,
+  currentValue,
+  validationError,
+  onValueChange,
+}: QuantitativeItemFieldProps) {
+  return (
+    <fieldset
+      className={cn(
+        "bg-surface rounded-xl border p-4 transition-colors",
+        validationError && !currentValue ? "border-danger bg-danger-soft/30" : "border-border"
+      )}
+    >
+      <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
+      <div role="radiogroup" aria-label={item.prompt} className="flex flex-wrap gap-4 sm:gap-6">
+        {item.scale.map((v, idx) => {
+          const descriptorLabel = item.descriptorLabels?.[idx];
+          return (
+            <label key={v} className="group flex cursor-pointer flex-col items-center gap-1">
+              <input
+                type="radio"
+                name={`q-${item.itemKey}`}
+                value={v}
+                checked={currentValue === v}
+                onChange={() => onValueChange(item.itemKey, v)}
+                className="peer sr-only"
+              />
+              <div className="border-border-strong peer-focus-visible:ring-ring peer-checked:bg-primary peer-checked:border-primary hover:bg-primary-soft hover:border-primary peer-checked:text-on-primary flex size-12 touch-manipulation items-center justify-center rounded-full border-2 text-lg font-bold transition-[color,background-color,border-color,box-shadow,transform] peer-focus-visible:ring-3 active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100">
+                {v}
+              </div>
+              {descriptorLabel && (
+                <span className="text-text-muted text-caption mt-0.5 max-w-[80px] text-center leading-tight">
+                  {descriptorLabel}
+                </span>
+              )}
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function QualitativeItemField({
+  item,
+  currentValue,
+  validationError,
+  onValueChange,
+}: QualitativeItemFieldProps) {
+  const handleSuggestedResponseClick = (suggestion: string) => {
+    const trimmedSuggestion = suggestion.trim();
+    if (!trimmedSuggestion) return;
+
+    const tokens = currentValue
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const alreadySelected = tokens.includes(trimmedSuggestion);
+
+    const nextTokens = alreadySelected
+      ? tokens.filter((t) => t !== trimmedSuggestion)
+      : [...tokens, trimmedSuggestion];
+
+    onValueChange(item.promptKey, nextTokens.join(", "));
+  };
+
+  return (
+    <fieldset
+      className={cn(
+        "bg-surface rounded-xl border p-4 transition-colors",
+        validationError && isItemRequired(item) && currentValue.trim().length === 0
+          ? "border-danger bg-danger-soft/30"
+          : "border-border"
+      )}
+    >
+      <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
+
+      {item.suggestedResponses && item.suggestedResponses.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {getNormalizedSuggestedResponses(item.suggestedResponses).map((suggestion, index) => (
+            <button
+              key={`${item.promptKey}:${index}:${suggestion}`}
+              type="button"
+              onClick={() => handleSuggestedResponseClick(suggestion)}
+              className={cn(
+                "text-label-sm touch-manipulation rounded-full border px-3 py-1.5 font-medium transition-[color,background-color,border-color,box-shadow,transform] motion-reduce:transition-none",
+                "hover:bg-primary-soft hover:border-primary hover:text-selected-fg",
+                "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                "active:scale-95 motion-reduce:active:scale-100",
+                currentValue
+                  .split(",")
+                  .map((value) => value.trim())
+                  .includes(suggestion)
+                  ? "bg-primary/10 border-primary text-selected-fg"
+                  : "bg-surface border-border text-text-secondary"
+              )}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <Textarea
+        aria-label={item.prompt}
+        value={currentValue}
+        onChange={(e) => onValueChange(item.promptKey, e.target.value)}
+        placeholder="Enter your response…"
+        className="min-h-[100px]"
+      />
+    </fieldset>
+  );
+}
+
 interface WizardShellProps {
   assignmentId: string;
   title: string;
@@ -139,26 +290,6 @@ export function WizardShell({
     }
   };
 
-  const getNormalizedSuggestedResponses = React.useCallback((suggestedResponses?: string[]) => {
-    if (!suggestedResponses?.length) {
-      return [];
-    }
-
-    const seen = new Set<string>();
-
-    return suggestedResponses.reduce<string[]>((acc, suggestion) => {
-      const normalizedSuggestion = suggestion.trim();
-
-      if (!normalizedSuggestion || seen.has(normalizedSuggestion)) {
-        return acc;
-      }
-
-      seen.add(normalizedSuggestion);
-      acc.push(normalizedSuggestion);
-      return acc;
-    }, []);
-  }, []);
-
   const handleValueChange = (itemKey: string, value: number | string) => {
     const firstItem = currentSection.items.find((item) =>
       item.kind === "quantitative" ? item.itemKey === itemKey : item.promptKey === itemKey
@@ -174,28 +305,6 @@ export function WizardShell({
       [answerKey]: value,
     }));
     setValidationError(null);
-  };
-
-  const handleSuggestedResponseClick = (
-    promptKey: string,
-    suggestion: string,
-    currentValue: string
-  ) => {
-    const trimmedSuggestion = suggestion.trim();
-    if (!trimmedSuggestion) return;
-
-    const tokens = currentValue
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    const alreadySelected = tokens.includes(trimmedSuggestion);
-
-    const nextTokens = alreadySelected
-      ? tokens.filter((t) => t !== trimmedSuggestion)
-      : [...tokens, trimmedSuggestion];
-
-    handleValueChange(promptKey, nextTokens.join(", "));
   };
 
   const validateCurrentSection = React.useCallback(() => {
@@ -425,124 +534,36 @@ export function WizardShell({
 
           <div className="space-y-8">
             {currentSection.items.map((item) => {
-              if (item.kind === "quantitative") {
-                const typedAnswerKey = buildStudentEvaluationAnswerKey(
-                  currentSection.id,
-                  "quantitative",
-                  item.itemKey
-                );
-                const currentValue = answers[typedAnswerKey];
+              const answerKey = buildStudentEvaluationAnswerKey(
+                currentSection.id,
+                item.kind,
+                item.kind === "quantitative" ? item.itemKey : item.promptKey
+              );
+              const rawValue = answers[answerKey];
+              const currentValue =
+                item.kind === "qualitative"
+                  ? typeof rawValue === "string"
+                    ? rawValue
+                    : ""
+                  : rawValue;
 
-                return (
-                  <fieldset
-                    key={item.itemKey}
-                    className={cn(
-                      "bg-surface rounded-xl border p-4 transition-colors",
-                      validationError && !currentValue
-                        ? "border-danger bg-danger-soft/30"
-                        : "border-border"
-                    )}
-                  >
-                    <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
-                    <div
-                      role="radiogroup"
-                      aria-label={item.prompt}
-                      className="flex flex-wrap gap-4 sm:gap-6"
-                    >
-                      {item.scale.map((v, idx) => {
-                        const descriptorLabel = item.descriptorLabels?.[idx];
-                        return (
-                          <label
-                            key={v}
-                            className="group flex cursor-pointer flex-col items-center gap-1"
-                          >
-                            <input
-                              type="radio"
-                              name={`q-${item.itemKey}`}
-                              value={v}
-                              checked={currentValue === v}
-                              onChange={() => handleValueChange(item.itemKey, v)}
-                              className="peer sr-only"
-                            />
-                            <div className="border-border-strong peer-focus-visible:ring-ring peer-checked:bg-primary peer-checked:border-primary hover:bg-primary-soft hover:border-primary peer-checked:text-on-primary flex size-12 touch-manipulation items-center justify-center rounded-full border-2 text-lg font-bold transition-[color,background-color,border-color,box-shadow,transform] peer-focus-visible:ring-3 active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100">
-                              {v}
-                            </div>
-                            {descriptorLabel && (
-                              <span className="text-text-muted text-caption mt-0.5 max-w-[80px] text-center leading-tight">
-                                {descriptorLabel}
-                              </span>
-                            )}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </fieldset>
-                );
-              } else {
-                const answerKey = buildStudentEvaluationAnswerKey(
-                  currentSection.id,
-                  "qualitative",
-                  item.promptKey
-                );
-                const currentValue = (answers[answerKey] as string) || "";
-
-                return (
-                  <fieldset
-                    key={item.promptKey}
-                    className={cn(
-                      "bg-surface rounded-xl border p-4 transition-colors",
-                      validationError && isItemRequired(item) && currentValue.trim().length === 0
-                        ? "border-danger bg-danger-soft/30"
-                        : "border-border"
-                    )}
-                  >
-                    <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
-
-                    {/* Suggestion chips for guided open-ended questions */}
-                    {item.suggestedResponses && item.suggestedResponses.length > 0 && (
-                      <div className="mb-3 flex flex-wrap gap-2">
-                        {getNormalizedSuggestedResponses(item.suggestedResponses).map(
-                          (suggestion, index) => (
-                            <button
-                              key={`${item.promptKey}:${index}:${suggestion}`}
-                              type="button"
-                              onClick={() =>
-                                handleSuggestedResponseClick(
-                                  item.promptKey,
-                                  suggestion,
-                                  currentValue
-                                )
-                              }
-                              className={cn(
-                                "text-label-sm touch-manipulation rounded-full border px-3 py-1.5 font-medium transition-[color,background-color,border-color,box-shadow,transform] motion-reduce:transition-none",
-                                "hover:bg-primary-soft hover:border-primary hover:text-selected-fg",
-                                "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                                "active:scale-95 motion-reduce:active:scale-100",
-                                currentValue
-                                  .split(",")
-                                  .map((value) => value.trim())
-                                  .includes(suggestion)
-                                  ? "bg-primary/10 border-primary text-selected-fg"
-                                  : "bg-surface border-border text-text-secondary"
-                              )}
-                            >
-                              {suggestion}
-                            </button>
-                          )
-                        )}
-                      </div>
-                    )}
-
-                    <Textarea
-                      aria-label={item.prompt}
-                      value={currentValue}
-                      onChange={(e) => handleValueChange(item.promptKey, e.target.value)}
-                      placeholder="Enter your response…"
-                      className="min-h-[100px]"
-                    />
-                  </fieldset>
-                );
-              }
+              return item.kind === "quantitative" ? (
+                <QuantitativeItemField
+                  key={item.itemKey}
+                  item={item}
+                  currentValue={currentValue}
+                  validationError={validationError}
+                  onValueChange={handleValueChange}
+                />
+              ) : (
+                <QualitativeItemField
+                  key={item.promptKey}
+                  item={item}
+                  currentValue={currentValue as string}
+                  validationError={validationError}
+                  onValueChange={handleValueChange}
+                />
+              );
             })}
           </div>
         </div>
