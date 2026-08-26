@@ -131,6 +131,51 @@ describe("assertSubmissionIsAllowed", () => {
       })
     ).not.toThrow();
   });
+
+  it("enforces required items in the questions format", () => {
+    const snapshot = [
+      {
+        key: "section-a",
+        title: "Section A",
+        questions: [
+          { key: "q1", type: "likert", prompt: "Rate the instructor.", required: true },
+          { key: "remarks", type: "guided_open_ended", prompt: "Share your remarks." },
+        ],
+      },
+    ];
+
+    expect(() =>
+      assertSubmissionIsAllowed({
+        answers: { "section-a:quantitative:q1": 4 },
+        structureSnapshot: snapshot,
+      })
+    ).toThrowError("Missing required answers: section-a:qualitative:remarks");
+  });
+
+  it("allows blank optional questions in the questions format", () => {
+    const snapshot = [
+      {
+        key: "section-a",
+        title: "Section A",
+        questions: [
+          { key: "q1", type: "likert", prompt: "Rate the instructor.", required: true },
+          {
+            key: "remarks",
+            type: "guided_open_ended",
+            prompt: "Share your remarks.",
+            required: false,
+          },
+        ],
+      },
+    ];
+
+    expect(() =>
+      assertSubmissionIsAllowed({
+        answers: { "section-a:quantitative:q1": 4 },
+        structureSnapshot: snapshot,
+      })
+    ).not.toThrow();
+  });
 });
 
 describe("buildSubmittedResponsePatch", () => {
