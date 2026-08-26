@@ -101,7 +101,9 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
       <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-heading text-text-primary text-2xl font-black">College-Wide General Education</h1>
+            <h1 className="font-heading text-text-primary text-2xl font-black">
+              College-Wide General Education
+            </h1>
             <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-semibold">
               College-Wide
             </Badge>
@@ -128,7 +130,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             setCurrentPage(1);
           }}
         >
-          <SelectTrigger className="w-full md:w-[160px]">
+          <SelectTrigger aria-label="Filter by course status" className="w-full md:w-[160px]">
             <SelectValue>
               {statusFilter === "__all__"
                 ? "All Statuses"
@@ -214,10 +216,14 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
       {totalPages > 1 && (
         <div className="flex items-center justify-end gap-2 px-4 py-4">
           <span className="text-text-muted text-xs">
-            {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of{" "}
-            {filteredCourses.length}
+            {(safePage - 1) * PAGE_SIZE + 1}–
+            {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length}
           </span>
-          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
     </div>

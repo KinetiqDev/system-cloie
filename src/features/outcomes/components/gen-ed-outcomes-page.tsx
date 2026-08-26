@@ -34,7 +34,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   archiveILOAction,
   reorderILOsAction,
@@ -179,7 +185,7 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
     // Reconcile optimistic drag state after router.refresh() returns authoritative server props.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOrderedILOs(initialILOs);
-  // fallow-ignore-next-line code-duplication
+    // fallow-ignore-next-line code-duplication
   }, [initialILOs]);
 
   const totalILOs = orderedILOs.length;
@@ -323,25 +329,25 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
         <div className="border-border bg-muted mb-6 flex items-center gap-6 rounded-lg border px-5 py-3">
           <div className="flex items-baseline gap-1.5">
             <span className="font-heading text-text-primary text-2xl font-bold">{totalILOs}</span>
-            <span className="text-muted-foreground text-sm">Total ILOs</span>
+            <span className="text-foreground text-sm">Total ILOs</span>
           </div>
           <div className="bg-border h-5 w-px" />
           <div className="flex items-baseline gap-1.5">
             <span className="font-heading text-success text-2xl font-bold">{withMappings}</span>
-            <span className="text-muted-foreground text-sm">Mapped to CILOs</span>
+            <span className="text-foreground text-sm">Mapped to CILOs</span>
           </div>
           {totalILOs - withMappings > 0 && (
             <>
               <div className="bg-border h-5 w-px" />
               <div className="flex items-baseline gap-1.5">
-                <span className="font-heading text-muted-foreground text-2xl font-bold">
+                <span className="font-heading text-foreground text-2xl font-bold">
                   {totalILOs - withMappings}
                 </span>
-                <span className="text-muted-foreground text-sm">Unmapped</span>
+                <span className="text-foreground text-sm">Unmapped</span>
               </div>
             </>
           )}
-          <p className="text-muted-foreground ml-auto hidden text-xs sm:block">Drag rows to reorder</p>
+          <p className="text-foreground ml-auto hidden text-xs sm:block">Drag rows to reorder</p>
         </div>
       )}
 
@@ -349,7 +355,7 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{reorderError}</AlertDescription>
         </Alert>
-      // fallow-ignore-next-line code-duplication
+        // fallow-ignore-next-line code-duplication
       )}
       {/* fallow-ignore-next-line code-duplication */}
       {orderedILOs.length === 0 ? (
@@ -360,7 +366,8 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
             </EmptyMedia>
             <EmptyTitle>No Institutional Learning Outcomes yet</EmptyTitle>
             <EmptyDescription>
-              Add your first Institutional Learning Outcome to the college-wide catalog — college-wide.
+              Add your first Institutional Learning Outcome to the college-wide catalog —
+              college-wide.
             </EmptyDescription>
           </EmptyHeader>
           <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
@@ -395,11 +402,7 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
         </DndContext>
       )}
 
-      <ILOFormDialog
-        mode="create"
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-      />
+      <ILOFormDialog mode="create" open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
 
       {editingILO && (
         <ILOFormDialog

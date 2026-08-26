@@ -97,10 +97,18 @@ async function verifyIdentities(): Promise<void> {
   await verifySeededIdentity(E2E_CONTRACT.demoFaculty, "FACULTY");
   await verifySeededIdentity(E2E_CONTRACT.demoSecretary, "SECRETARY");
   await verifySeededIdentity(E2E_CONTRACT.demoDean, "DEAN");
+  await verifySeededIdentity(E2E_CONTRACT.demoGenEd, "GEN_ED_COORDINATOR");
   await verifySeededIdentity(E2E_CONTRACT.demoStudent, "STUDENT");
   await verifySeededIdentity(E2E_CONTRACT.mobileStudent, "STUDENT");
+  // Coordinator has no Program assignment: the GE scope is college-wide via Course.course_scope, not a portfolio table or nullable program_id.
+  const genEdAssignments = await prisma.programHeadAssignment.findMany({
+    where: { program_head_id: E2E_CONTRACT.demoGenEd.id, is_active: true },
+  });
+  assertContract(
+    genEdAssignments.length === 0,
+    `General Education Coordinator ${E2E_CONTRACT.demoGenEd.email} must have no active ProgramHeadAssignment (college-wide scope via course_scope, not program_id); got ${genEdAssignments.length}`
+  );
 }
-
 async function verifyAcademicPeriods(): Promise<{
   active: { id: string; schoolYearId: string; status: string };
   planned: { id: string; schoolYearId: string; status: string };
@@ -445,6 +453,11 @@ export default async function globalSetup(): Promise<void> {
     demoFaculty: { id: contract.demoFaculty.id, email: contract.demoFaculty.email },
     demoSecretary: { id: contract.demoSecretary.id, email: contract.demoSecretary.email },
     demoDean: { id: contract.demoDean.id, email: contract.demoDean.email },
+    demoGenEd: {
+      id: contract.demoGenEd.id,
+      email: contract.demoGenEd.email,
+      name: contract.demoGenEd.name,
+    },
     academicPeriods,
     gestechBsba: {
       id: gestechBsba.id,
