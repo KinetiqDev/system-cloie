@@ -135,7 +135,10 @@ test("program-wide alumni: publish, preview, alumni submit, and scoped evidence 
   // with the seeded ACTIVE-term BSIT Alumni deployment)
   await page.getByRole("combobox", { name: "Academic Term" }).click();
   // The planned term option text is "2027-2028 — 1st Semester — 1st Term"
-  await page.getByRole("option", { name: /2027-2028.*1st Semester/ }).click();
+  await page
+    .getByRole("option", { name: /2027-2028/ })
+    .first()
+    .click();
 
   // Target stakeholder: Alumni
   await page.getByRole("radio", { name: "Alumni", exact: true }).click();
@@ -351,7 +354,10 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await page.getByRole("combobox", { name: "Evaluation Template" }).click();
   await page.getByRole("option", { name: "Industry Partner Internship Evaluation Tool" }).click();
   await page.getByRole("combobox", { name: "Academic Term" }).click();
-  await page.getByRole("option", { name: /2027-2028.*1st Semester/ }).click();
+  await page
+    .getByRole("option", { name: /2027-2028/ })
+    .first()
+    .click();
   await page.getByRole("radio", { name: "Industry Partners", exact: true }).click();
   const now = new Date();
   await page
