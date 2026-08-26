@@ -60,18 +60,6 @@ test("mobile drawer navigation and filter persistence", async ({ page }) => {
  * database write and stays isolated from the desktop mutation journeys.
  */
 test("faculty roster drawer: same workflow, focus restoration, and dismissal protection", async ({
- * §32/§61: the complete Student response lifecycle on a representative mobile
- * viewport (Pixel 7), running against the BSBA cohort of the seeded GESTECH
- * zero-response evaluation (student-bsba@cloie.test). The desktop journey
- * owns the BSIT cohort, so the two journeys' mutations stay isolated.
- *
- * Covers draft save + reload restoration, review, final submission, the
- * second-submission denial redirect, horizontal-overflow freedom on the
- * wizard and submitted states, and a keyboard-obstruction proxy: the focused
- * open-ended field must be able to scroll fully above the virtual-keyboard
- * zone (fully within the visible viewport).
- */
-test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reload", async ({
   page,
 }) => {
   const fx = fixture();
@@ -121,6 +109,25 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
 
   // Focus returns to the trigger that opened the workspace.
   await expect(manageButton).toBeFocused();
+});
+
+/**
+ * §32/§61: the complete Student response lifecycle on a representative mobile
+ * viewport (Pixel 7), running against the BSBA cohort of the seeded GESTECH
+ * zero-response evaluation (student-bsba@cloie.test). The desktop journey
+ * owns the BSIT cohort, so the two journeys' mutations stay isolated.
+ *
+ * Covers draft save + reload restoration, review, final submission, the
+ * second-submission denial redirect, horizontal-overflow freedom on the
+ * wizard and submitted states, and a keyboard-obstruction proxy: the focused
+ * open-ended field must be able to scroll fully above the virtual-keyboard
+ * zone (fully within the visible viewport).
+ */
+test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reload", async ({
+  page,
+}) => {
+  const fx = fixture();
+
   await loginAs(page, fx.bsbaStudent.email);
 
   // Assigned evaluation is visible on the dashboard; open the instrument.
