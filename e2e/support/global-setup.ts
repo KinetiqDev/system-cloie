@@ -348,6 +348,11 @@ export default async function globalSetup(): Promise<void> {
         name: contract.rosterStudents.outOfScope.name,
         email: contract.rosterStudents.outOfScope.email,
       },
+      axeSuggested: {
+        id: contract.rosterStudents.axeSuggested.id,
+        name: contract.rosterStudents.axeSuggested.name,
+        email: contract.rosterStudents.axeSuggested.email,
+      },
     },
     bsit,
     beed,
