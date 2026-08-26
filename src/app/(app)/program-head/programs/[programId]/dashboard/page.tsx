@@ -5,6 +5,10 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
 import { parseAnalyticsSearchParams } from "@/features/analytics/services/program-head-analytics-state";
+
+export const metadata = {
+  title: "Dashboard | Program Head | System CLOIE",
+};
 import { ProgramHeadDashboardKpiGrid } from "@/features/analytics/components/program-head-dashboard-kpis";
 import { ProgramHeadStakeholderProgress } from "@/features/analytics/components/program-head-stakeholder-progress";
 import { ProgramHeadPloSummary } from "@/features/analytics/components/program-head-plo-summary";
