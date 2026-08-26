@@ -95,8 +95,41 @@ async function verifyIdentities(): Promise<void> {
   await verifySeededIdentity(E2E_CONTRACT.demoPh, "PROGRAM_HEAD");
   await verifySeededIdentity(E2E_CONTRACT.beedPh, "PROGRAM_HEAD");
   await verifySeededIdentity(E2E_CONTRACT.demoFaculty, "FACULTY");
+  await verifySeededIdentity(E2E_CONTRACT.demoSecretary, "SECRETARY");
+  await verifySeededIdentity(E2E_CONTRACT.demoDean, "DEAN");
   await verifySeededIdentity(E2E_CONTRACT.demoStudent, "STUDENT");
   await verifySeededIdentity(E2E_CONTRACT.mobileStudent, "STUDENT");
+}
+
+async function verifyAcademicPeriods(): Promise<{
+  active: { id: string; schoolYearId: string; status: string };
+  planned: { id: string; schoolYearId: string; status: string };
+  completed: { id: string; schoolYearId: string; status: string };
+}> {
+  const discovered: Record<string, { id: string; schoolYearId: string; status: string }> = {};
+  for (const [key, definition] of Object.entries(E2E_CONTRACT.academicPeriods) as Array<
+    [keyof typeof E2E_CONTRACT.academicPeriods, (typeof E2E_CONTRACT.academicPeriods)[keyof typeof E2E_CONTRACT.academicPeriods]]
+  >) {
+    const row = await prisma.academicTermInstance.findFirst({
+      where: {
+        school_year: { code: definition.schoolYearCode },
+        semester: definition.semester as never,
+        term: definition.term as never,
+      },
+      select: { id: true, status: true, school_year_id: true, semester: true, term: true, school_year: { select: { code: true } } },
+    });
+    assertContract(row, `missing seeded academic period ${key} (${definition.schoolYearCode} ${definition.semester} ${definition.term})`);
+    assertContract(
+      row?.status === definition.status,
+      `academic period ${key} status drift: expected ${definition.status}, got ${row?.status}`
+    );
+    discovered[key] = { id: row!.id, schoolYearId: row!.school_year_id, status: row!.status };
+  }
+  return {
+    active: discovered.active,
+    planned: discovered.planned,
+    completed: discovered.completed,
+  };
 }
 
 /**
@@ -315,7 +348,7 @@ async function verifyPloEvidenceLink(programId: string): Promise<string> {
 
 export default async function globalSetup(): Promise<void> {
   await verifyIdentities();
-  const deployments = await verifyDeployments();
+  const [deployments, academicPeriods] = await Promise.all([verifyDeployments(), verifyAcademicPeriods()]);
 
   const [bsit, beed] = await Promise.all([findProgramByCode("BSIT"), findProgramByCode("BEED")]);
 
@@ -394,6 +427,9 @@ export default async function globalSetup(): Promise<void> {
     demoPh: { id: contract.demoPh.id, email: contract.demoPh.email },
     beedPh: { id: contract.beedPh.id, email: contract.beedPh.email },
     demoFaculty: { id: contract.demoFaculty.id, email: contract.demoFaculty.email },
+    demoSecretary: { id: contract.demoSecretary.id, email: contract.demoSecretary.email },
+    demoDean: { id: contract.demoDean.id, email: contract.demoDean.email },
+    academicPeriods,
     gestechBsba: {
       id: gestechBsba.id,
       courseCode: gestechBsba.courseCode,
