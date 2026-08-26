@@ -301,12 +301,20 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await page.getByRole("button", { name: "Next Section" }).click();
   await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
 
-  // Draft save verified via navigation; reload confirms persistence
   await page.reload();
+  // Resume reopens the wizard on the first incomplete section (section 2);
+  // the persisted section 1 draft is verified by navigating back.
   await expect(
     page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })
   ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
+  await page.getByRole("button", { name: "Previous" }).click();
   await expect(page.getByRole("heading", { name: "Program Learning Experience" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("group", { name: "The program provided a strong foundation in my field of study" })
+      .getByRole("radio", { name: "Agree", exact: true })
+  ).toBeChecked();
 
   await page.getByRole("button", { name: "Next Section" }).click();
   await expectQuestionUnanswered(
