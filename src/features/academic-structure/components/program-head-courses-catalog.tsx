@@ -4,7 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { getYearLevelDisplay, YEAR_LEVEL_OPTIONS } from "@/lib/constants/year-levels";
-import { getSemesterLabel, getTermLabel, SEMESTER_OPTIONS, TERM_OPTIONS } from "@/lib/constants/academic";
+import {
+  getSemesterLabel,
+  getTermLabel,
+  SEMESTER_OPTIONS,
+  TERM_OPTIONS,
+} from "@/lib/constants/academic";
 import { AlertCircle, Archive, Edit, Plus, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +39,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
-import { Textarea } from "@/components/ui/textarea";
 import {
   createProgramHeadCourseAction,
   toggleProgramHeadCourseActiveAction,
@@ -151,7 +155,9 @@ function CourseScheduleFields({
           <SelectContent>
             <SelectItem value="">None</SelectItem>
             {YEAR_LEVEL_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -161,7 +167,10 @@ function CourseScheduleFields({
         <Label htmlFor="semester">
           Semester <span className="text-text-muted text-xs font-normal">(default)</span>
         </Label>
-        <Select value={semester} onValueChange={(value) => onSemesterChange(value as AcademicSemester)}>
+        <Select
+          value={semester}
+          onValueChange={(value) => onSemesterChange(value as AcademicSemester)}
+        >
           <SelectTrigger id="semester">
             <SelectValue placeholder="Select semester">
               {semester
@@ -173,7 +182,9 @@ function CourseScheduleFields({
           <SelectContent>
             <SelectItem value="">None</SelectItem>
             {SEMESTER_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -183,14 +194,25 @@ function CourseScheduleFields({
         <Label htmlFor="term">
           Term <span className="text-text-muted text-xs font-normal">(default)</span>
         </Label>
-        <Select value={isSummer ? "" : term} onValueChange={(value) => onTermChange(value as AcademicTerm)} disabled={isSummer}>
+        <Select
+          value={isSummer ? "" : term}
+          onValueChange={(value) => onTermChange(value as AcademicTerm)}
+          disabled={isSummer}
+        >
           <SelectTrigger id="term">
             <SelectValue placeholder={isSummer ? "N/A" : "Select term"}>
-              {term ? (TERM_OPTIONS.find((option) => option.value === term)?.label ?? "Select term") : null}
+              {term
+                ? (TERM_OPTIONS.find((option) => option.value === term)?.label ?? "Select term")
+                : null}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {!isSummer && <><SelectItem value={AcademicTerm.FIRST_TERM}>1st Term</SelectItem><SelectItem value={AcademicTerm.SECOND_TERM}>2nd Term</SelectItem></>}
+            {!isSummer && (
+              <>
+                <SelectItem value={AcademicTerm.FIRST_TERM}>1st Term</SelectItem>
+                <SelectItem value={AcademicTerm.SECOND_TERM}>2nd Term</SelectItem>
+              </>
+            )}
           </SelectContent>
         </Select>
         {isSummer && <p className="text-muted-foreground text-xs">Summer semester has no terms</p>}
@@ -232,7 +254,9 @@ function CourseDialogFooter({
 }) {
   return (
     <div className="flex justify-end gap-2 pt-2">
-      <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+      <Button type="button" variant="outline" onClick={onCancel}>
+        Cancel
+      </Button>
       <Button type="submit" disabled={isPending}>
         {isPending ? "Saving..." : mode === "create" ? "Create Course" : "Save Changes"}
       </Button>
@@ -240,9 +264,7 @@ function CourseDialogFooter({
   );
 }
 
-type CourseAction =
-  | typeof createProgramHeadCourseAction
-  | typeof updateProgramHeadCourseAction;
+type CourseAction = typeof createProgramHeadCourseAction | typeof updateProgramHeadCourseAction;
 
 function getInitialCourseFormValues(course?: ProgramHeadCourseItem): {
   majorId: string;
@@ -378,7 +400,9 @@ function CourseFormDialog({
                 <SelectContent>
                   <SelectItem value="">None — Program-Wide</SelectItem>
                   {majors.map((major) => (
-                    <SelectItem key={major.id} value={major.id}>{major.name}</SelectItem>
+                    <SelectItem key={major.id} value={major.id}>
+                      {major.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -407,17 +431,6 @@ function CourseFormDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (optional)</Label>
-            <Textarea
-              id="description"
-              name="description"
-              placeholder="Brief course description..."
-              defaultValue={course?.description ?? ""}
-              rows={3}
-            />
-          </div>
-
           <CourseScheduleFields
             yearLevel={yearLevel}
             semester={semester}
@@ -430,7 +443,11 @@ function CourseFormDialog({
             onTermChange={setTerm}
           />
 
-          <CourseDialogFooter mode={mode} isPending={isPending} onCancel={() => onOpenChange(false)} />
+          <CourseDialogFooter
+            mode={mode}
+            isPending={isPending}
+            onCancel={() => onOpenChange(false)}
+          />
         </form>
       </DialogContent>
     </Dialog>
@@ -611,7 +628,9 @@ export function ProgramHeadCoursesCatalog({
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{course.title}</TableCell>
-                  <TableCell className="hidden md:table-cell">{course.major?.name ?? "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {course.major?.name ?? "—"}
+                  </TableCell>
                   <TableCell className="hidden md:table-cell">
                     {getYearLevelDisplay(course.default_year_level)}
                   </TableCell>
@@ -664,7 +683,11 @@ export function ProgramHeadCoursesCatalog({
             {(safePage - 1) * PAGE_SIZE + 1}–
             {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length}
           </span>
-          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
       {/* Create Dialog */}

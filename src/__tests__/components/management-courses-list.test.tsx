@@ -22,7 +22,6 @@ vi.mock("@/lib/actions/management-foundation-actions", async (importOriginal) =>
         id: "course-1",
         code: "GE101",
         title: "Introduction to General Education",
-        description: "A foundational course",
         course_scope: "GENERAL_EDUCATION",
         program_id: null,
         major_id: null,
@@ -43,7 +42,6 @@ const mockCourses: ManagementCourseSummaryItem[] = [
     id: "course-1",
     code: "GE101",
     title: "Introduction to General Education",
-    description: "A foundational course",
     courseScope: "GENERAL_EDUCATION",
     courseScopeLabel: "General Education",
     isActive: true,
@@ -59,7 +57,6 @@ const mockCourses: ManagementCourseSummaryItem[] = [
     id: "course-2",
     code: "IT101",
     title: "Introduction to Programming",
-    description: "Basic programming concepts",
     courseScope: "PROGRAM_SPECIFIC",
     courseScopeLabel: "Program-Specific",
     isActive: true,
@@ -197,9 +194,7 @@ describe("ManagementCoursesList", () => {
     );
 
     // DropdownMenuContent renders via Portal only after the trigger opens it.
-    const trigger = container.querySelector(
-      '[data-slot="dropdown-menu-trigger"]'
-    ) as HTMLElement;
+    const trigger = container.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLElement;
     expect(trigger).toBeTruthy();
     fireEvent.click(trigger);
 
@@ -228,9 +223,7 @@ describe("ManagementCoursesList", () => {
       />
     );
 
-    const trigger = container.querySelector(
-      '[data-slot="dropdown-menu-trigger"]'
-    ) as HTMLElement;
+    const trigger = container.querySelector('[data-slot="dropdown-menu-trigger"]') as HTMLElement;
     expect(trigger).toBeTruthy();
     fireEvent.click(trigger);
 

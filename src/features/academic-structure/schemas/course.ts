@@ -7,15 +7,6 @@ const optionalUuidField = z.preprocess(
   z.string().uuid().optional()
 );
 
-const optionalTextField = z.preprocess((value) => {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}, z.string().max(1000).optional());
-
 const courseFields = {
   code: z
     .string()
@@ -28,7 +19,6 @@ const courseFields = {
     .trim()
     .min(3, "Course title must be at least 3 characters.")
     .max(200, "Course title must be 200 characters or fewer."),
-  description: optionalTextField,
   course_scope: z.nativeEnum(CourseScope),
   program_id: optionalUuidField,
   major_id: optionalUuidField,

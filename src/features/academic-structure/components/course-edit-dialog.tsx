@@ -15,7 +15,10 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { showToast } from "@/components/ui/toast";
 import { CourseForm } from "@/features/academic-structure/components/course-form";
-import { getCourseEditDataAction, updateCourseAction } from "@/lib/actions/management-foundation-actions";
+import {
+  getCourseEditDataAction,
+  updateCourseAction,
+} from "@/lib/actions/management-foundation-actions";
 import type { CourseEditData } from "@/features/academic-structure/services/manage-courses";
 import type { ManagementCourseSummaryItem } from "@/features/academic-structure/services/list-management-courses-summary";
 
@@ -130,7 +133,6 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
                 id: data.course.id,
                 code: data.course.code,
                 title: data.course.title,
-                description: data.course.description,
                 course_scope: data.course.course_scope,
                 program_id: data.course.program_id,
                 major_id: data.course.major_id,

@@ -908,7 +908,6 @@ export type Database = {
             | null
           default_term: Database["public"]["Enums"]["academic_term"] | null
           default_year_level: Database["public"]["Enums"]["year_level"] | null
-          description: string | null
           id: string
           is_active: boolean
           major_id: string | null
@@ -926,7 +925,6 @@ export type Database = {
             | null
           default_term?: Database["public"]["Enums"]["academic_term"] | null
           default_year_level?: Database["public"]["Enums"]["year_level"] | null
-          description?: string | null
           id?: string
           is_active?: boolean
           major_id?: string | null
@@ -944,7 +942,6 @@ export type Database = {
             | null
           default_term?: Database["public"]["Enums"]["academic_term"] | null
           default_year_level?: Database["public"]["Enums"]["year_level"] | null
-          description?: string | null
           id?: string
           is_active?: boolean
           major_id?: string | null

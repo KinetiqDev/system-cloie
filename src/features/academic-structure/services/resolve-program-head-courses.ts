@@ -7,7 +7,6 @@ export type ProgramHeadCourseItem = {
   id: string;
   code: string;
   title: string;
-  description: string | null;
   course_scope: CourseScope;
   program_id: string | null;
   major_id: string | null;

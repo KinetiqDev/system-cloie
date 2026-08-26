@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { GenEdCourseItem, GenEdCoursesSummary } from "@/features/academic-structure/services/resolve-gen-ed-courses";
+import type {
+  GenEdCourseItem,
+  GenEdCoursesSummary,
+} from "@/features/academic-structure/services/resolve-gen-ed-courses";
 import { CourseScope } from "@prisma/client";
 
 import { GenEdCoursesCatalog } from "@/features/academic-structure/components/gen-ed-courses-catalog";
@@ -10,7 +13,6 @@ function course(overrides: Partial<GenEdCourseItem> = {}): GenEdCourseItem {
     id: "c-1",
     code: "GEMATH",
     title: "Mathematics in the Modern World",
-    description: null,
     course_scope: CourseScope.GENERAL_EDUCATION,
     program_id: null,
     major_id: null,
@@ -45,7 +47,11 @@ function stubMatchMedia() {
 
 function restoreMatchMedia() {
   if (matchMediaOrig) {
-    Object.defineProperty(window, "matchMedia", { writable: true, configurable: true, value: matchMediaOrig });
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      configurable: true,
+      value: matchMediaOrig,
+    });
   } else {
     delete (window as unknown as Record<string, unknown>).matchMedia;
   }
@@ -123,7 +129,9 @@ describe("GenEdCoursesCatalog", () => {
       const many = Array.from({ length: 16 }, (_, i) =>
         course({ id: `c-${i}`, code: `GE${String(i).padStart(2, "0")}`, title: `Course ${i}` })
       );
-      render(<GenEdCoursesCatalog courses={many} summary={{ total: 16, active: 16, archived: 0 }} />);
+      render(
+        <GenEdCoursesCatalog courses={many} summary={{ total: 16, active: 16, archived: 0 }} />
+      );
 
       expect(screen.getByText(/1–15 of 16/)).toBeInTheDocument();
       expect(screen.queryByText("GE15")).not.toBeInTheDocument();
@@ -138,12 +146,12 @@ describe("GenEdCoursesCatalog", () => {
   });
 
   it("is read-only — no CourseScope/Major/program filters and no mutation controls", () => {
-    const { container } = render(
-      <GenEdCoursesCatalog courses={[course()]} summary={summary} />
-    );
+    const { container } = render(<GenEdCoursesCatalog courses={[course()]} summary={summary} />);
     expect(screen.queryByText(/Course Scope/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Major/i)).not.toBeInTheDocument();
     expect(container.querySelector("form")).toBeFalsy();
-    expect(screen.queryByRole("button", { name: /create course|edit.*course/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /create course|edit.*course/i })
+    ).not.toBeInTheDocument();
   });
 });

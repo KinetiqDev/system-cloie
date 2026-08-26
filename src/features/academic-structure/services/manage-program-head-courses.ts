@@ -81,7 +81,6 @@ export async function createProgramHeadCourse(
           data: {
             code: input.code,
             title: input.title,
-            description: input.description ?? null,
             course_scope: CourseScope.PROGRAM_SPECIFIC,
             program_id: contextResult.data.selectedProgram.id,
             major_id: majorId,
@@ -149,7 +148,6 @@ export async function updateProgramHeadCourse(
           data: {
             code: input.code,
             title: input.title,
-            description: input.description ?? null,
             course_scope: CourseScope.PROGRAM_SPECIFIC,
             program_id: contextResult.data.selectedProgram.id,
             major_id: majorId,

@@ -8,7 +8,9 @@ public
 .env.*
 pnpm-lock.yaml
 prisma/*.db
+*.prisma
 *.sh
 *.sql
 **/CONTEXT.md
 .prettierignore
+src/types/supabase-database.ts
