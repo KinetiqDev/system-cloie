@@ -41,11 +41,9 @@ test.describe("General Education Coordinator Scope Verification", () => {
     // Create a new college-wide ILO.
     const uniqueCode = `ILO-${Date.now().toString(36).slice(-4).toUpperCase()}`;
     const uniqueDesc = `Demonstrate college-wide competency in ${uniqueCode}`;
-
     await page.getByRole("button", { name: "Add ILO" }).click();
-    const dialog = page.getByRole("dialog", { name: /Institutional Outcome/i });
+    const dialog = page.getByRole("dialog", { name: /Add Institutional Learning Outcome/i });
     await expect(dialog).toBeVisible();
-
     await dialog.getByLabel("ILO Code").fill(uniqueCode);
     await dialog.getByLabel("Description").fill(uniqueDesc);
     await dialog.getByRole("button", { name: "Add ILO" }).click();
