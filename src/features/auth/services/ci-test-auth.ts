@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { existsSync } from "node:fs";
 import { cookies } from "next/headers";
 import { DEMO_USER_EMAIL_SET } from "@/lib/constants/demo-users";
 import { verifyDisposableDatabaseTarget } from "@/lib/db/verify-database-target";
-
 export const CI_TEST_AUTH_COOKIE_NAME = "cloie_ci_test_auth";
 // fallow-ignore-next-line unused-export
 export const CI_TEST_DEPLOYMENT_KIND = "ci-test";
@@ -82,6 +82,14 @@ export function getCiTestAuthConfig(
     environment.CLOIE_PRIMARY_SUPABASE_PROJECT_REF ||
     environment.CLOIE_DEMO_SUPABASE_PROJECT_REF
   ) {
+    return null;
+  }
+  // Independently verified CI deployment identity: require a filesystem marker
+  // that is only present in the disposable CI environment (created by the CI
+  // workflow before starting the production server). This cannot be enabled
+  // via ordinary env vars alone on primary production.
+  const markerPath = environment.CLOIE_CI_TEST_MARKER_PATH || "/tmp/cloie-ci-test-marker";
+  if (!existsSync(markerPath)) {
     return null;
   }
 

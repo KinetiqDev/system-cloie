@@ -202,6 +202,9 @@ jobs:
       - name: Seed fixture
         run: pnpm db:seed
 
+      - name: Create CI test marker file (independently verified CI identity)
+        run: mkdir -p /tmp && touch /tmp/cloie-ci-test-marker && ls -l /tmp/cloie-ci-test-marker
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 

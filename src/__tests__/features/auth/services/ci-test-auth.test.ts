@@ -4,6 +4,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getCookieMock = vi.fn();
+const existsSyncMock = vi.fn(() => true);
+
+vi.mock("node:fs", () => ({
+  existsSync: (...args: unknown[]) => existsSyncMock(...args),
+}));
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({ get: getCookieMock })),
@@ -24,13 +29,12 @@ const USER_ID = "11111111-1111-4111-8111-111111111111";
 describe("isolated CI test authentication", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    existsSyncMock.mockReturnValue(true);
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("CLOIE_CI_TEST_ENABLED", "true");
     vi.stubEnv("CLOIE_CI_TEST_SESSION_SECRET", SECRET);
     vi.stubEnv("CLOIE_CI_TEST_ALLOWED_USERS", USER_EMAIL);
     vi.stubEnv("CLOIE_DEPLOYMENT_KIND", "ci-test");
-    vi.stubEnv("CI", "true");
-    vi.stubEnv("GITHUB_ACTIONS", "");
     vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/cloie_test");
     vi.stubEnv("DIRECT_URL", "postgresql://postgres:postgres@localhost:5432/cloie_test");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://localhost:54321");
@@ -73,6 +77,11 @@ describe("isolated CI test authentication", () => {
 
     vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/cloie_test");
     vi.stubEnv("NODE_ENV", "development");
+    expect(getCiTestAuthConfig()).toBeNull();
+  });
+
+  it("fails closed when the CI marker file is absent", () => {
+    existsSyncMock.mockReturnValue(false);
     expect(getCiTestAuthConfig()).toBeNull();
   });
 
