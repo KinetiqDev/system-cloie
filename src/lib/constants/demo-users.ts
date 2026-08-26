@@ -7,6 +7,7 @@ export const DEMO_USERS = [
   { email: "demo-ph@cloie.test", label: "Program Head (BSIT)", role: SystemRole.PROGRAM_HEAD },
   { email: "demo-faculty@cloie.test", label: "Faculty (BSIT)", role: SystemRole.FACULTY },
   { email: "demo-student@cloie.test", label: "Student (BSIT)", role: SystemRole.STUDENT },
+  { email: "demo-grad@cloie.test", label: "Graduating Student (BSIT)", role: SystemRole.STUDENT },
   { email: "demo-alumni@cloie.test", label: "Alumni (BSIT)", role: SystemRole.ALUMNI },
   {
     email: "demo-industry@cloie.test",
