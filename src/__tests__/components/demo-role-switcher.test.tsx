@@ -38,7 +38,7 @@ describe("DemoRoleSwitcher", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /demo/i }));
 
-    expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(24);
+    expect(screen.getAllByRole("button", { name: /switch to/i })).toHaveLength(25);
     expect(screen.getByText("College Dean")).toBeInTheDocument();
     expect(screen.getByText("PH — Maria Santos (BEED)")).toBeInTheDocument();
 
@@ -149,7 +149,7 @@ describe("DemoRoleSwitcher", () => {
   });
 
   it("keeps the dedicated presentation catalog distinct from the broader seed catalog", () => {
-    expect(DEDICATED_DEMO_USERS).toHaveLength(24);
+    expect(DEDICATED_DEMO_USERS).toHaveLength(25);
     expect(DEDICATED_DEMO_USERS.map((user) => user.label)).toEqual([
       "Secretary",
       "College Dean",
@@ -159,6 +159,7 @@ describe("DemoRoleSwitcher", () => {
       "Alumni",
       "Industry Partner",
       "Gen Ed Coordinator",
+      "Graduating Student (BSIT)",
       "PH — Maria Santos (BEED)",
       "PH — Jose Reyes (BSED)",
       "PH — Ana Cruz (BSSW)",
