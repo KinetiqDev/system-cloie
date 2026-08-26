@@ -95,8 +95,10 @@ test.describe("General Education Coordinator Scope Verification", () => {
     ).toBeVisible({
       timeout: 15_000,
     });
+    await expect(page.getByText("GESTECH").first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("IT201")).toHaveCount(0);
+    await expect(page.getByText("IT102")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
-
     // Attempt direct navigation to Program Head route -> denied at server boundary.
     // The route may redirect to /unauthorized or render unauthorized content at the same URL;
     // either way the Coordinator must not see Program Head dashboard content.

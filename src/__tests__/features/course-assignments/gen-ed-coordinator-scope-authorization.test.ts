@@ -255,8 +255,11 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
         section: StudentSection.MORNING,
       });
       expect(successResult.success).toBe(true);
+      expect(prisma.courseAssignment.create).toHaveBeenCalledTimes(1);
 
-      // 2. PS course creation fails
+      // 2. PS course creation fails – no write should occur
+      vi.clearAllMocks();
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
         id: "course-ps",
         program_id: "program-bsit",
@@ -278,6 +281,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
           "Coordinators can only manage General Education assignments."
         );
       }
+      expect(prisma.courseAssignment.create).not.toHaveBeenCalled();
     });
 
     it("updateCourseAssignment: permits Coordinator for GE assignment, denies for PS assignment", async () => {
@@ -301,8 +305,11 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
         facultyId: "faculty-2",
       });
       expect(successResult.success).toBe(true);
+      expect(prisma.courseAssignment.update).toHaveBeenCalledTimes(1);
 
-      // 2. Update PS assignment fails
+      // 2. Update PS assignment fails – no write should occur
+      vi.clearAllMocks();
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
         id: "ca-ps",
         program_id: "program-bsit",
@@ -326,6 +333,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
           "Coordinators can only manage General Education assignments."
         );
       }
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
     });
 
     it("deactivateCourseAssignment: permits Coordinator for GE assignment, denies for PS assignment", async () => {
@@ -342,8 +350,11 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       const successResult = await deactivateCourseAssignment("ca-ge");
       expect(successResult.success).toBe(true);
+      expect(prisma.courseAssignment.update).toHaveBeenCalledTimes(1);
 
-      // 2. Deactivate PS fails
+      // 2. Deactivate PS fails – no write should occur
+      vi.clearAllMocks();
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
         id: "ca-ps",
         program_id: "program-bsit",
@@ -357,8 +368,8 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
           "Coordinators can only manage General Education assignments."
         );
       }
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
     });
-
     it("activateCourseAssignment: permits Coordinator for GE assignment, denies for PS assignment", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       const { prisma } = await import("@/lib/db/prisma");
@@ -373,8 +384,11 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       const successResult = await activateCourseAssignment({ assignmentId: "ca-ge" });
       expect(successResult.success).toBe(true);
+      expect(prisma.courseAssignment.update).toHaveBeenCalledTimes(1);
 
-      // 2. Activate PS fails
+      // 2. Activate PS fails – no write should occur
+      vi.clearAllMocks();
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
         id: "ca-ps",
         program_id: "program-bsit",
@@ -388,6 +402,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
           "Coordinators can only manage General Education assignments."
         );
       }
+      expect(prisma.courseAssignment.update).not.toHaveBeenCalled();
     });
 
     it("bulkCreateCourseAssignments: filters out PS assignments and creates only GE assignments", async () => {
@@ -439,6 +454,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       expect(bulkResult.errors[0].error).toBe(
         "Coordinators can only manage General Education assignments."
       );
+      expect(prisma.courseAssignment.create).toHaveBeenCalledTimes(1);
     });
   });
 });
