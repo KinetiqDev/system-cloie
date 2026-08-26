@@ -1,43 +1,41 @@
-name: Quality Checks
+# Depot CI Migration
+# Source: .github/workflows/ci.yml
+#
+# Changes made:
+# - Changed GitHub runs-on labels to their Depot equivalents
 
+name: Quality Checks
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   quality-checks:
     name: Quality Checks
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
     timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
-
       - name: Setup pnpm
         uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
         with:
           version: 10.30.3
-
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
           cache: "pnpm"
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Cache Next.js build
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
@@ -46,40 +44,35 @@ jobs:
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
-
       - name: Check formatting (Prettier --check, never --write)
         run: pnpm format:check:changed
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
       - name: Lint
         run: pnpm lint
-
       - name: Lint changed production code (no new warnings)
         run: pnpm lint:changed
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-
       - name: Test
         run: pnpm test
         env:
           NODE_ENV: test
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
-
       - name: Build
         run: pnpm build
         env:
           NODE_ENV: production
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
-
   # DB-backed integration suite (§60) against a disposable Postgres: canonical
   # Supabase migration history, then the demo fixture seed, then the opt-in
   # suites behind RUN_DATABASE_INTEGRATION_TESTS=1. Never points at hosted
   # Supabase; the service container is the only database involved.
   database-integration:
     name: Database Integration
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
     timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -94,51 +87,37 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-
       - name: Setup pnpm
         uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
         with:
           version: 10.30.3
-
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
           cache: "pnpm"
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
-
       - name: Verify disposable database target
         run: pnpm verify:database-target
-
       - name: Verify database suite completeness
         run: pnpm verify:database-suites
-
       - name: Apply migrations
         run: bash scripts/ci/apply-migrations.sh
-
       - name: Seed fixture
         run: pnpm db:seed
-
       - name: Run DB integration tests
         run: pnpm test:db
         env:
           NODE_ENV: test
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
-
   # Browser-level user journeys (§61) against the seeded fixture in production
   # mode (next build + next start). Auth is the isolated signed CI test session
   # (cloie_ci_test_auth) restricted to the disposable seeded database — no OAuth
@@ -149,7 +128,7 @@ jobs:
   # POST /api/auth/dev-login remains 404 outside development.
   browser-e2e:
     name: Browser E2E
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
     timeout-minutes: 20
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -171,44 +150,31 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-
       - name: Setup pnpm
         uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
         with:
           version: 10.30.3
-
       - name: Setup Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
           cache: "pnpm"
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
-
       - name: Apply migrations
         run: bash scripts/ci/apply-migrations.sh
-
       - name: Seed fixture
         run: pnpm db:seed
-
       - name: Create CI test marker file (independently verified CI identity)
         run: mkdir -p /tmp && touch /tmp/cloie-ci-test-marker && ls -l /tmp/cloie-ci-test-marker
-
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
-
       - name: Run Playwright journeys (production)
         run: pnpm exec playwright test
         env:
@@ -228,7 +194,6 @@ jobs:
           path: playwright-report/
           if-no-files-found: ignore
           retention-days: 14
-
       - name: Upload Playwright test results on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
