@@ -35,7 +35,7 @@ export function BulkActionBar({
       <p className="text-sm font-semibold tabular-nums" aria-live="polite">
         {selectedCount} {selectedCount === 1 ? itemLabel : `${itemLabel}s`} selected
       </p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 [&_[data-slot=button]]:pointer-coarse:min-h-11">
         {children}
         <Button variant="ghost" size="sm" onClick={onClear}>
           <X aria-hidden="true" className="size-4" />

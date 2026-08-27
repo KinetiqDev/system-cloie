@@ -94,7 +94,7 @@ export async function createCourseAction(formData: FormData): Promise<ActionResu
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
@@ -129,7 +129,7 @@ export async function updateCourseAction(formData: FormData): Promise<ActionResu
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
@@ -169,7 +169,7 @@ export async function toggleCourseActiveAction(
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
@@ -191,7 +191,7 @@ export async function bulkToggleCoursesActiveAction(
   if (invalid) return { succeeded: [], failed: [{ id: "selection", error: invalid }] };
 
   const session = await resolveAuthSession();
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!session?.activeRole || !allowedRoles.includes(session.activeRole)) {
     return { succeeded: [], failed: ids.map((id) => ({ id, error: "Insufficient permissions." })) };
   }
@@ -211,7 +211,7 @@ export async function deleteCourseAction(id: string): Promise<ActionResult> {
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
@@ -231,7 +231,7 @@ export async function getCourseEditDataAction(courseId: string): Promise<CourseE
   if (!session || !session.activeRole) {
     return null;
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return null;
   }

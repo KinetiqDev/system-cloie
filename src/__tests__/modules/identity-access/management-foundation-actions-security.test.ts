@@ -25,6 +25,7 @@ vi.mock("@/lib/db/prisma", () => ({
 }));
 
 import {
+  bulkToggleCoursesActiveAction,
   toggleUserActiveAction,
   assignUserRoleAction,
   revokeUserRoleAction,
@@ -64,6 +65,23 @@ describe("management-foundation-actions security", () => {
     roles: [ROLES.STUDENT],
   });
 
+  const programHeadSession = createAuthSessionSnapshot({
+    userId: "44444444-4444-4444-b444-444444444444",
+    roles: [ROLES.PROGRAM_HEAD],
+  });
+
+  describe("bulkToggleCoursesActiveAction", () => {
+    it("rejects Program Heads because scoped Course writes use the selected-Program action", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(programHeadSession);
+      await expect(
+        bulkToggleCoursesActiveAction(["course-general-education"], false)
+      ).resolves.toEqual({
+        succeeded: [],
+        failed: [{ id: "course-general-education", error: "Insufficient permissions." }],
+      });
+    });
+  });
+
   describe("toggleUserActiveAction", () => {
     it("rejects unauthenticated", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
@@ -101,25 +119,33 @@ describe("management-foundation-actions security", () => {
 
     it("rejects unauthenticated", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await assignUserRoleAction(makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY));
+      const result = await assignUserRoleAction(
+        makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
+      );
       expect(result).toEqual({ success: false, error: "Authentication required." });
     });
 
     it("rejects wrong role", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await assignUserRoleAction(makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY));
+      const result = await assignUserRoleAction(
+        makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
+      );
       expect(result).toEqual({ success: false, error: "Insufficient permissions." });
     });
 
     it("rejects right role + self-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await assignUserRoleAction(makeFormData("11111111-1111-4111-a111-111111111111", ROLES.FACULTY));
+      const result = await assignUserRoleAction(
+        makeFormData("11111111-1111-4111-a111-111111111111", ROLES.FACULTY)
+      );
       expect(result).toEqual({ success: false, error: "Cannot modify own account." });
     });
 
     it("accepts right role + other-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await assignUserRoleAction(makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY));
+      const result = await assignUserRoleAction(
+        makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
+      );
       expect(assignUserRole).toHaveBeenCalledWith({
         user_id: "44444444-4444-4444-b444-444444444444",
         role: ROLES.FACULTY,
@@ -143,7 +169,10 @@ describe("management-foundation-actions security", () => {
 
     it("rejects right role + self-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await revokeUserRoleAction("11111111-1111-4111-a111-111111111111", ROLES.FACULTY);
+      const result = await revokeUserRoleAction(
+        "11111111-1111-4111-a111-111111111111",
+        ROLES.FACULTY
+      );
       expect(result).toEqual({ success: false, error: "Cannot modify own account." });
     });
 
@@ -235,10 +264,7 @@ describe("management-foundation-actions security", () => {
 
     it("rejects a malformed program head id before calling the service", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deactivateProgramHeadAssignmentAction(
-        ASSIGNMENT_ID,
-        "not-a-uuid"
-      );
+      const result = await deactivateProgramHeadAssignmentAction(ASSIGNMENT_ID, "not-a-uuid");
       expect(result.success).toBe(false);
       expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
     });
@@ -272,7 +298,9 @@ describe("management-foundation-actions security", () => {
 
     it("rejects right role + self-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deleteStudentAcademicContextAction("11111111-1111-4111-a111-111111111111");
+      const result = await deleteStudentAcademicContextAction(
+        "11111111-1111-4111-a111-111111111111"
+      );
       expect(result).toEqual({ success: false, error: "Cannot modify own account." });
     });
 
@@ -282,7 +310,6 @@ describe("management-foundation-actions security", () => {
       expect(deleteStudentAcademicContext).toHaveBeenCalledWith("other-user");
       expect(result).toEqual({ success: true });
     });
-
   });
 
   describe("deleteIndustryPartnerProfileAction", () => {
@@ -300,7 +327,9 @@ describe("management-foundation-actions security", () => {
 
     it("rejects right role + self-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deleteIndustryPartnerProfileAction("11111111-1111-4111-a111-111111111111");
+      const result = await deleteIndustryPartnerProfileAction(
+        "11111111-1111-4111-a111-111111111111"
+      );
       expect(result).toEqual({ success: false, error: "Cannot modify own account." });
     });
 
@@ -310,6 +339,5 @@ describe("management-foundation-actions security", () => {
       expect(deleteIndustryPartnerProfile).toHaveBeenCalledWith("other-user");
       expect(result).toEqual({ success: true });
     });
-
   });
 });
