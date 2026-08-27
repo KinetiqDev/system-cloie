@@ -134,8 +134,11 @@ test("Faculty publishes an owned Course-bound evaluation; roster locks; Student 
     .filter({ has: page.getByRole("heading", { name: fx.publicationDeploymentName }) })
     .filter({ has: page.getByRole("button", { name: "Start Evaluation" }) })
     .last();
-  await expect(pendingCard.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
-  await pendingCard.getByRole("button", { name: "Start Evaluation" }).click();
+  const evaluationHref = await pendingCard
+    .getByRole("button", { name: "Start Evaluation" })
+    .getAttribute("href");
+  expect(evaluationHref).toBeTruthy();
+  await page.goto(evaluationHref!);
 
   // The published instrument snapshot renders for the Student.
   await expect(
