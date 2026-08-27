@@ -61,7 +61,8 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     await expect(
       page.getByRole("heading", { name: fx.courseResponse.respondentName })
     ).toBeVisible();
-    await expect(page.getByText("Student context")).toBeVisible();
+    // Respondent context label renders program and year/section (e.g., "BSIT · SECOND_YEAR · MORNING")
+    await expect(page.getByText(/BSIT/)).toBeVisible();
     await expect(page.getByText(qualAnswerText, { exact: true })).toBeVisible();
 
     const phContent = await page.content();
@@ -119,12 +120,10 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     expect(deniedGuessed).not.toContain(fx.courseResponse.respondentName);
     expect(deniedGuessed).not.toContain(fx.demoStudent.email);
     expect(deniedGuessed).not.toContain(qualAnswerText);
-
     // ── 4. De-identified Analytics Payload Verification ───────────────────
     await loginAs(page, fx.demoPh.email);
-    await page.goto(`/program-head/programs/${fx.bsit.id}/analytics?tab=feedback`);
-    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Qualitative feedback" })).toBeVisible();
+    await page.goto(`/program-head/programs/${fx.bsit.id}/analytics?tab=qualitative`);
+    await expect(page.getByRole("heading", { name: "Qualitative Feedback" })).toBeVisible();
 
     const analyticsContent = await page.content();
     expect(analyticsContent).not.toContain(fx.demoStudent.email);

@@ -390,16 +390,14 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
           },
         },
       ]);
-
       const feedback = await getProgramHeadFeedback("prog-bsit", {
-        tab: "feedback",
+        tab: "qualitative",
         termInstanceId: undefined,
         schoolYearId: undefined,
         semester: undefined,
         evidenceSource: "ALL",
         stakeholder: "ALL",
       });
-
       expect(feedback).not.toBeNull();
       expect(feedback!.qualitativeItemCount).toBe(1);
       expect(feedback!.qualitativeResponseCount).toBe(1);
