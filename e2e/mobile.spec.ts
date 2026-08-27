@@ -41,7 +41,12 @@ test("mobile drawer navigation and filter persistence", async ({ page }) => {
   await expect(analyticsDrawer).toBeVisible();
   await analyticsDrawer.getByRole("link", { name: "Analytics" }).click();
   await expect(analyticsDrawer).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+  // The analytics page runs several server reads (frame + tab content); on a
+  // shared CI runner the first load can exceed the 15s default expect timeout
+  // and leave the loading skeleton visible (observed flaky on main).
+  await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible({
+    timeout: 30_000,
+  });
   await page.getByRole("link", { name: "Trends", exact: true }).click();
   await expect(page).toHaveURL(/tab=trends/);
   await page.waitForLoadState("networkidle");

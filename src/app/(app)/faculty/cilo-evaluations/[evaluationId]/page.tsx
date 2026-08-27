@@ -19,10 +19,8 @@ export default async function FacultyCiloEvaluationDetailPage({
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild>
-        <Link href="/faculty/dashboard">
-          <ArrowLeft className="mr-2 size-4" /> Back to Dashboard
-        </Link>
+      <Button variant="ghost" size="sm" render={<Link href="/faculty/dashboard" />}>
+        <ArrowLeft className="mr-2 size-4" /> Back to Dashboard
       </Button>
 
       <section className="space-y-1">

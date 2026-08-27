@@ -19,10 +19,12 @@ export default async function FacultyCiloResponsePage({
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild>
-        <Link href={`/faculty/cilo-evaluations/${evaluationId}`}>
-          <ArrowLeft className="mr-2 size-4" /> Back to Evaluation
-        </Link>
+      <Button
+        variant="ghost"
+        size="sm"
+        render={<Link href={`/faculty/cilo-evaluations/${evaluationId}`} />}
+      >
+        <ArrowLeft className="mr-2 size-4" /> Back to Evaluation
       </Button>
 
       <AnonymizedResponseDetail response={response} />
