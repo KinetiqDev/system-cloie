@@ -116,8 +116,9 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
     await rateQuestion(page, prompt, "Agree");
   }
   await page.getByRole("button", { name: "Next Section" }).click();
+  await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
 
-  // Reload restores draft
+  // Reload restores the committed draft.
   await page.reload();
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
