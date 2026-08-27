@@ -2,7 +2,13 @@
 
 import { YearLevel, StudentSection } from "@prisma/client";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Combobox,
   ComboboxContent,
@@ -73,15 +79,9 @@ export function ClassIdentityFields({
               <ComboboxEmpty>No programs match your search.</ComboboxEmpty>
               <ComboboxList>
                 {(program) => (
-                  <ComboboxItem
-                    key={program.id}
-                    value={program}
-                    className="items-start py-2"
-                  >
+                  <ComboboxItem key={program.id} value={program} className="items-start py-2">
                     <span className="flex min-w-0 flex-col gap-0.5 py-0.5 text-left">
-                      <span className="text-sm font-medium leading-snug">
-                        {program.code}
-                      </span>
+                      <span className="text-sm leading-snug font-medium">{program.code}</span>
                       <span className="text-muted-foreground text-xs leading-normal">
                         {program.name}
                       </span>
@@ -97,7 +97,7 @@ export function ClassIdentityFields({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field className="min-w-0">
           <FieldLabel htmlFor="year-level" className="min-w-0">
-            <span className="flex flex-wrap items-center gap-2 min-w-0">
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="shrink-0">Year Level</span>
               {hasHint && (
                 <Badge
@@ -114,6 +114,7 @@ export function ClassIdentityFields({
             </span>
           </FieldLabel>
           <FieldContent className="min-w-0">
+            {/* fallow-ignore-next-line code-duplication */}
             <Select
               value={yearLevel}
               onValueChange={(value) => onYearLevelChange(value as YearLevel)}

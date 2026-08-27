@@ -129,7 +129,7 @@ function RosterCell({
   const isCoordinator = mode === "general-education";
   if (isCoordinator) {
     return (
-      <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1.5 text-xs font-medium text-muted-foreground ring-1 ring-border">
+      <span className="bg-muted text-muted-foreground ring-border inline-flex items-center rounded-md px-2.5 py-1.5 text-xs font-medium ring-1">
         Roster managed by Program
       </span>
     );
@@ -144,7 +144,7 @@ function RosterCell({
         variant="outline"
         size="sm"
         asChild
-        className="h-8 gap-1.5 rounded-full bg-background px-3 text-xs font-medium shadow-xs hover:bg-accent"
+        className="bg-background hover:bg-accent h-8 gap-1.5 rounded-full px-3 text-xs font-medium shadow-xs"
       >
         <Link href={href}>
           <Users className="size-3.5" aria-hidden="true" />
@@ -155,7 +155,7 @@ function RosterCell({
     );
   }
   return (
-    <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+    <span className="bg-muted text-muted-foreground inline-flex items-center rounded-md px-2.5 py-1 text-xs">
       Roster available in program view
     </span>
   );
@@ -212,12 +212,12 @@ function AssignmentActions({
               onClick={() => onOpenConfirm("deactivate", assignment)}
               disabled={busy}
             >
-              <Power className="size-4 text-warning" />
+              <Power className="text-warning size-4" />
               Deactivate
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem onClick={() => onActivate(assignment.id)} disabled={busy}>
-              <Power className="size-4 text-success" />
+              <Power className="text-success size-4" />
               Activate
             </DropdownMenuItem>
           )}
@@ -273,7 +273,7 @@ function CourseAssignmentsRow({
       </TableCell>
       <TableCell className="py-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-primary/15">
+          <span className="bg-primary/10 text-primary ring-primary/15 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1">
             {(assignment.facultyName ?? "Unknown")
               .split(" ")
               .slice(0, 2)
@@ -283,23 +283,25 @@ function CourseAssignmentsRow({
               .slice(0, 2)}
           </span>
           <div className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-medium leading-none">
+            <span className="truncate text-sm leading-none font-medium">
               {assignment.facultyName ?? "Unknown faculty"}
             </span>
-            <span className="text-muted-foreground truncate text-xs">{assignment.facultyEmail ?? "—"}</span>
+            <span className="text-muted-foreground truncate text-xs">
+              {assignment.facultyEmail ?? "—"}
+            </span>
           </div>
         </div>
       </TableCell>
       {mode !== "program-head" && (
         <TableCell className="py-3">
-          <Badge variant="outline" className="rounded-full bg-background font-medium">
+          <Badge variant="outline" className="bg-background rounded-full font-medium">
             {assignment.programCode}
           </Badge>
         </TableCell>
       )}
       <TableCell className="py-3">
-        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-background px-2.5 py-1 text-xs font-medium">
-          <GraduationCap className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap">
+          <GraduationCap className="text-muted-foreground size-3 shrink-0" aria-hidden="true" />
           {getYearLevelDisplay(assignment.yearLevel)} · {getSectionLabel(assignment.section)}
         </span>
       </TableCell>
@@ -522,13 +524,10 @@ export function CourseAssignmentsTable({
 
   if (assignments.length === 0) {
     return (
-      <Empty
-        className="border bg-card py-10 shadow-xs rounded-xl"
-        data-testid="empty-state"
-      >
+      <Empty className="bg-card rounded-xl border py-10 shadow-xs" data-testid="empty-state">
         <EmptyHeader className="items-center">
-          <EmptyMedia variant="icon" className="bg-muted ring-1 ring-border">
-            <BookOpen className="size-5 text-muted-foreground" />
+          <EmptyMedia variant="icon" className="bg-muted ring-border ring-1">
+            <BookOpen className="text-muted-foreground size-5" />
           </EmptyMedia>
           <EmptyTitle className="text-title-md">
             {mode === "all-program" || mode === "program-head"
@@ -537,7 +536,7 @@ export function CourseAssignmentsTable({
                 ? "No General Education assignments"
                 : "No course assignments found"}
           </EmptyTitle>
-          <EmptyDescription className="max-w-md text-balance text-sm leading-relaxed">
+          <EmptyDescription className="max-w-md text-sm leading-relaxed text-balance">
             {mode === "all-program"
               ? "Assign faculty to a course across any program to get started. Each assignment creates a class and its roster."
               : mode === "general-education"
@@ -552,7 +551,7 @@ export function CourseAssignmentsTable({
           </Button>
         )}
         {!onAssignFaculty && mode === "program-head" && (
-          <p className="text-xs text-muted-foreground">Read-only view for this program.</p>
+          <p className="text-muted-foreground text-xs">Read-only view for this program.</p>
         )}
       </Empty>
     );
@@ -590,7 +589,7 @@ export function CourseAssignmentsTable({
                       </span>
                       <Badge
                         variant={isGeneralEducation ? "secondary" : "outline"}
-                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
                       >
                         {isGeneralEducation ? "GE" : "Program-specific"}
                       </Badge>
@@ -608,7 +607,7 @@ export function CourseAssignmentsTable({
                     <CardDescription className="line-clamp-2 text-sm leading-snug">
                       {assignment.courseTitle}
                     </CardDescription>
-                    <p className="inline-flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
+                    <p className="text-muted-foreground inline-flex items-center gap-1.5 text-xs tabular-nums">
                       <CalendarDays className="size-3 shrink-0" aria-hidden="true" />
                       {assignment.termLabel}
                     </p>
@@ -630,9 +629,9 @@ export function CourseAssignmentsTable({
                   </CardAction>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3 pt-0">
-                  <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3">
+                  <div className="bg-muted/30 grid grid-cols-2 gap-3 rounded-lg border p-3">
                     <div className="col-span-2 flex items-center gap-2.5">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary ring-1 ring-primary/15">
+                      <span className="bg-primary/10 text-primary ring-primary/15 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1">
                         {(assignment.facultyName ?? "Unknown")
                           .split(" ")
                           .slice(0, 2)
@@ -642,7 +641,7 @@ export function CourseAssignmentsTable({
                           .slice(0, 2)}
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium leading-none">
+                        <p className="truncate text-sm leading-none font-medium">
                           {assignment.facultyName ?? "Unknown faculty"}
                         </p>
                         <p className="text-muted-foreground truncate text-xs">
@@ -651,27 +650,30 @@ export function CourseAssignmentsTable({
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      <span className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
                         Class
                       </span>
                       <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-                        <GraduationCap className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                        <GraduationCap
+                          className="text-muted-foreground size-3.5"
+                          aria-hidden="true"
+                        />
                         {classLabel}
                       </span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      <span className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
                         Roster
                       </span>
                       <span className="inline-flex items-center gap-1.5 text-sm font-medium tabular-nums">
-                        <Users className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                        <Users className="text-muted-foreground size-3.5" aria-hidden="true" />
                         {assignment.rosterMembershipCount ?? 0} roster{" "}
                         {(assignment.rosterMembershipCount ?? 0) === 1 ? "member" : "members"}
                       </span>
                     </div>
                   </div>
                   {isGeneralEducation && mode === "program-head" && (
-                    <p className="rounded-md bg-warning-soft px-2.5 py-1.5 text-xs font-medium text-warning-foreground ring-1 ring-warning/20">
+                    <p className="bg-warning-soft text-warning-foreground ring-warning/20 rounded-md px-2.5 py-1.5 text-xs font-medium ring-1">
                       Managed by General Education Coordinator
                     </p>
                   )}
@@ -686,34 +688,34 @@ export function CourseAssignmentsTable({
           })}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
+        <div className="bg-card overflow-x-auto rounded-xl border shadow-xs">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Course
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Faculty
                 </TableHead>
                 {mode !== "program-head" && (
-                  <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                  <TableHead className="text-xs font-semibold tracking-widest uppercase">
                     Program
                   </TableHead>
                 )}
-                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Class
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Term
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Scope
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Status
                 </TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-widest">
+                <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Roster
                 </TableHead>
                 <TableHead className="w-[48px]">
@@ -854,7 +856,7 @@ export function CourseAssignmentsTable({
       )}
 
       {totalPages > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2.5">
+        <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
           <div className="text-muted-foreground text-sm tabular-nums">
             Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total}{" "}
             results

@@ -86,6 +86,16 @@ export function AssignmentFilters({
     filters.hasActiveRosterMembers === false ? "empty-roster" : null,
   ].filter((value) => value !== null).length;
 
+  const drawerSecondaryCount = [
+    drawerFilters.courseId,
+    drawerFilters.facultyId,
+    showProgramFilter ? drawerFilters.programId : null,
+    drawerFilters.yearLevel,
+    drawerFilters.section,
+    drawerFilters.isActive,
+    hideCourseScopeFilter ? null : drawerFilters.courseScope,
+    drawerFilters.hasActiveRosterMembers === false ? "empty-roster" : null,
+  ].filter((value) => value !== null).length;
   const resetFilters = () => {
     const reset = {
       termInstanceId: defaultTermInstanceId,
@@ -222,18 +232,21 @@ export function AssignmentFilters({
   return (
     <section
       aria-labelledby="assignment-filter-title"
-      className="flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border bg-card p-4 shadow-xs"
+      className="bg-card flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border p-4 shadow-xs"
     >
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border sm:inline-flex" aria-hidden="true">
+          <span
+            className="bg-muted text-muted-foreground ring-border hidden size-8 shrink-0 items-center justify-center rounded-lg ring-1 sm:inline-flex"
+            aria-hidden="true"
+          >
             <ListFilter className="size-4" />
           </span>
           <div className="flex min-w-0 flex-col">
             <h2 id="assignment-filter-title" className="text-title-sm leading-none">
               Filter assignments
             </h2>
-            <p className="text-xs leading-none text-muted-foreground mt-1 break-words">
+            <p className="text-muted-foreground mt-1 text-xs leading-none break-words">
               Term, course, class, and faculty — combine filters to narrow the list.
             </p>
           </div>
@@ -261,7 +274,7 @@ export function AssignmentFilters({
           <Label htmlFor="assignment-search">Search</Label>
           <div className="relative">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
@@ -289,7 +302,9 @@ export function AssignmentFilters({
           }}
           showSwipeHandle
         >
-          <DrawerTrigger render={<Button variant="outline" className="w-full justify-center gap-2" />}>
+          <DrawerTrigger
+            render={<Button variant="outline" className="w-full justify-center gap-2" />}
+          >
             <SlidersHorizontal className="size-4" aria-hidden="true" />
             Filters{secondaryCount ? ` (${secondaryCount})` : ""}
             <span className="sr-only">Open additional filters</span>
@@ -314,7 +329,9 @@ export function AssignmentFilters({
                 }}
               >
                 Show results
-                {secondaryCount ? ` · ${secondaryCount} filter${secondaryCount === 1 ? "" : "s"}` : ""}
+                {drawerSecondaryCount
+                  ? ` · ${drawerSecondaryCount} filter${drawerSecondaryCount === 1 ? "" : "s"}`
+                  : ""}
               </Button>
               <Button variant="outline" onClick={resetFilters}>
                 Reset filters
@@ -344,7 +361,7 @@ function FilterSelect({
     <div className="flex min-w-0 flex-col gap-2">
       <Label htmlFor={id}>{label}</Label>
       <Select value={value} onValueChange={(value) => value && onChange(value)}>
-        <SelectTrigger id={id} className="w-full bg-background">
+        <SelectTrigger id={id} className="bg-background w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>{children}</SelectContent>

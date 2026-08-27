@@ -69,7 +69,7 @@ export function TermInstancePicker({
   });
 
   return (
-    <div className="space-y-2 min-w-0">
+    <div className="min-w-0 space-y-2">
       {label && <Label htmlFor={pickerId}>{label}</Label>}
       <Select value={value} onValueChange={(val) => onChange(val ?? "")} disabled={disabled}>
         <SelectTrigger
@@ -86,7 +86,7 @@ export function TermInstancePicker({
                 })()
           }
         >
-          <SelectValue placeholder={placeholder} className="min-w-0 truncate block text-left">
+          <SelectValue placeholder={placeholder} className="block min-w-0 truncate text-left">
             {value === "all"
               ? "All Academic Periods"
               : value
