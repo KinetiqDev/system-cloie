@@ -29,17 +29,15 @@ For every user-facing change:
 
 Before implementation, design, planning, or investigation, orient through:
 
-1. `**openspec/config.yaml**` — canonical architecture, stack, and engineering rules.
-2. `**CONTEXT-MAP.md**` — domain-context index.
-3. `**src/features/<domain>/CONTEXT.md**` — domain terminology, rules, and invariants.
+1. `openspec/config.yaml` — canonical architecture, stack, and engineering rules.
+2. `CONTEXT-MAP.md` — domain-context index.
+3. `src/features/<domain>/CONTEXT.md` — domain terminology, rules, and invariants.
 4. `**docs/adr/**` — architectural decisions.
 
 - Relevant GitHub issues, implementation, and tests.
 - **When sources conflict, surface the conflict. Do not silently choose or invent behavior.**
 - `openspec/config.yaml` rules are binding.
-- cloie-prd.md and cloie-srs.mdare deprecated. They are outdated.
-
-
+- `cloie-prd.md` and `cloie-srs.md` are deprecated and outdated.
 
 ## Core Engineering Principles
 
@@ -57,6 +55,8 @@ Before implementation, design, planning, or investigation, orient through:
 ---
 
 ## Communication and Explanations
+
+Apply the `unslop` skill to every reply before sending it.
 
 When planning, reviewing architecture, proposing changes, or walking through workflows:
 
@@ -84,8 +84,8 @@ During implementation:
 - Use GitHub issues as bounded implementation units/vertical slices.
 - Prefer targeted investigation before broad codebase changes.
 - Do not duplicate detailed skill procedures in this file; follow the applicable `SKILL.md`.
-For large or uncertain work, use the repository's planning skills. For implementation, review, debugging, UI, Supabase, or testing work, use the narrowest applicable project skill.
-Project skills live under `.agents/skills/`; that directory is authoritative.
+  For large or uncertain work, use the repository's planning skills. For implementation, review, debugging, UI, Supabase, or testing work, use the narrowest applicable project skill.
+  Project skills live under `.agents/skills/`; that directory is authoritative.
 
 ---
 
@@ -101,7 +101,7 @@ Project skills live under `.agents/skills/`; that directory is authoritative.
 - **ORM:** Prisma
 - **Authentication:** Supabase Auth / SSR
 - **Testing:** Vitest
-Use `pnpm dev` for the Turbopack development server.
+  Use `pnpm dev` for the Turbopack development server.
 
 ### UI
 
@@ -109,18 +109,14 @@ Use `pnpm dev` for the Turbopack development server.
 - Canonical design tokens live in `src/styles/tokens.css` and `src/app/globals.css`.
 - Add shadcn components with:
 
-    npx shadcn@latest add <component>
+  npx shadcn@latest add <component>
 
 - Do not install `@radix-ui/*` packages.
 - Prefer existing `src/components/ui/` primitives before creating custom equivalents.
 
 ### Forms
 
-Use:
-
-    customZodResolver
-
-## from `src/lib/forms/zod-resolver.ts`.
+Use `customZodResolver` from `src/lib/forms/zod-resolver.ts`.
 
 Do not replace it with `@hookform/resolvers/zod`; the project has a Turbopack + Zod 4 compatibility constraint.
 
@@ -153,7 +149,7 @@ For schema changes:
 
 Typical commands:
 
-    pnpm supabase:migration:diff -- [[ORCA_RICH_MD:a83fbdd940e3068bcfe0bfea465f31b5:inline-html:%3Cchange_name%3E]]
+    pnpm supabase:migration:diff -- <change_name>
     pnpm supabase:push:dry-run
     pnpm supabase:push
     pnpm supabase:types
@@ -185,6 +181,14 @@ Fallow/static-analysis findings are investigation leads, not automatic refactori
 
 ---
 
+## Continuous Integration
+
+CI runs on Depot. Workflows live in `.depot/workflows/`. The `.github/` directory is gitignored; do not add GitHub Actions workflows there.
+
+`ci.yml` gates every push to `main` and pull request with Prettier, ESLint, Vitest, and the production build. `database-integration` replays the migrations and seed against a disposable Postgres and runs the gated DB suites. `browser-e2e` runs the Playwright journeys against a production build and the disposable Postgres, signed in with the isolated CI test session (`CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test`).
+
+---
+
 ## Verification
 
 Use the narrowest relevant verification first, then broaden as appropriate.
@@ -192,10 +196,11 @@ Common commands:
 
     pnpm vitest run <test-path>
     pnpm test
+    pnpm test:e2e
     pnpm lint
     pnpm build
 
-For UI changes, also verify the affected workflow in a running application when practical, including both **desktop and mobile** behavior. 
+For UI changes, also verify the affected workflow in a running application when practical, including both **desktop and mobile** behavior. Browser journeys live in `e2e/` (Playwright, `pnpm test:e2e`). The `mobile` project runs `e2e/mobile.spec.ts` on a Pixel 7 viewport. When you add or change a journey, pin its fixture expectations in `e2e/support/contract.ts`; `e2e/support/global-setup.ts` verifies them before any journey starts. For accepted production evidence, follow `docs/testing/production-browser-evidence.md`.
 
 Do not consider a change complete while failures caused by the change remain unresolved.
 

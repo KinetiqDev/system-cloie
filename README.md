@@ -44,24 +44,24 @@ See `supabase/README.md` for the full Supabase cloud workflow and `AGENTS.md` fo
 
 ## Tech Stack
 
-| Category        | Technology                   |
-| --------------- | ---------------------------- |
-| Framework       | Next.js 16 (App Router, Turbopack) |
-| Language        | TypeScript 5                 |
-| Styling         | Tailwind CSS v4, class-variance-authority |
-| Components       | shadcn/ui (base-nova style, Base UI primitives) |
-| Icons             | lucide-react                 |
-| Forms             | react-hook-form, customZodResolver, Zod 4 |
-| Charts            | Recharts (through shadcn/ui chart primitives) |
-| Drag and Drop     | @dnd-kit (core, sortable) |
-| Qualitative NLP   | winkNLP, stopword |
-| Word Cloud        | @isoterik/react-word-cloud |
-| AI Insights       | OpenAI-compatible API (server-only, bounded; see ADR 0016) |
-| Database          | PostgreSQL 15+ (Supabase) |
-| ORM               | Prisma 6 |
-| Auth              | Supabase Auth (Google OAuth) |
-| Testing           | Vitest, Testing Library |
-| Package Manager   | pnpm 10 |
+| Category        | Technology                                                 |
+| --------------- | ---------------------------------------------------------- |
+| Framework       | Next.js 16 (App Router, Turbopack)                         |
+| Language        | TypeScript 5                                               |
+| Styling         | Tailwind CSS v4, class-variance-authority                  |
+| Components      | shadcn/ui (base-nova style, Base UI primitives)            |
+| Icons           | lucide-react                                               |
+| Forms           | react-hook-form, customZodResolver, Zod 4                  |
+| Charts          | Recharts (through shadcn/ui chart primitives)              |
+| Drag and Drop   | @dnd-kit (core, sortable)                                  |
+| Qualitative NLP | winkNLP, stopword                                          |
+| Word Cloud      | @isoterik/react-word-cloud                                 |
+| AI Insights     | OpenAI-compatible API (server-only, bounded; see ADR 0016) |
+| Database        | PostgreSQL 15+ (Supabase)                                  |
+| ORM             | Prisma 6                                                   |
+| Auth            | Supabase Auth (Google OAuth)                               |
+| Testing         | Vitest, Testing Library, Playwright                        |
+| Package Manager | pnpm 10                                                    |
 
 ## How We Build
 
@@ -79,51 +79,58 @@ See `AGENTS.md` for the full skill inventory and `openspec/config.yaml` for the 
 
 CLOIE operates with three intentionally separated authentication modes, never co-deployed under one instance:
 
-| Mode | Mechanism | Where |
-| ---- | --------- | ----- |
-| **Primary Production** | Supabase Auth with Google OAuth, domain-restricted to `@acd.edu.ph` and `@acdeducation.com` | Primary public deployment |
-| **Local Development** | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails | `NODE_ENV=development` only |
-| **Dedicated Demo** | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration | Separate demo deployment |
+| Mode                   | Mechanism                                                                                                      | Where                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| **Primary Production** | Supabase Auth with Google OAuth, domain-restricted to `@acd.edu.ph` and `@acdeducation.com`                    | Primary public deployment   |
+| **Local Development**  | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails                     | `NODE_ENV=development` only |
+| **Dedicated Demo**     | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration | Separate demo deployment    |
 
 The demo deployment is used for production-build route/rendering evidence, cross-role demonstrations, and performance traces. It never replaces OAuth evidence. See `docs/runbooks/dedicated-demo-deployment.md`, `docs/adr/0008-dedicated-demo-deployment-authentication.md`, and the archived `openspec/changes/archive/2026-07-29-add-dedicated-demo-auth/` artifacts for the full contract.
 
 Key demo scripts:
+
 - `pnpm demo:reset` — destructive reset of the isolated demo database (validates target identity first)
 - `pnpm verify:production-auth-boundary` — confirms primary Production remains OAuth-only
 - `pnpm verify:dedicated-demo-auth-boundary` — confirms demo deployment has signed-session auth active
 
 ## Available Scripts
 
-| Command                                     | Purpose |
-| ------------------------------------------- | ------- |
-| `pnpm dev`                                  | Start Next.js dev server with Turbopack |
-| `pnpm build`                                | Production build (includes Next.js typecheck) |
-| `pnpm lint`                                 | ESLint check |
-| `pnpm format`                               | Prettier formatting (includes Tailwind class sorting) |
-| `pnpm test`                                 | Run Vitest unit suites (DB invariant suites are gated) |
-| `pnpm test:watch`                           | Run Vitest in watch mode |
-| `pnpm test:db`                              | Run opt-in DB invariant suites (requires `RUN_DATABASE_INTEGRATION_TESTS=1`) |
-| `pnpm vitest run src/__tests__/...`         | Run a single test file |
-| `pnpm db:push`                              | Push Prisma schema to dev database |
-| `pnpm db:seed`                               | Seed database with demo data |
-| `pnpm db:studio`                             | Open Prisma Studio GUI |
-| `pnpm supabase:link`                         | Link to remote Supabase project |
-| `pnpm supabase:migration:diff`               | Generate migration SQL from Prisma schema changes |
-| `pnpm supabase:push:dry-run`                 | Preview migrations before applying |
-| `pnpm supabase:push`                         | Push migrations to Supabase |
-| `pnpm supabase:types`                        | Regenerate Supabase database types |
-| `pnpm supabase:login`                        | Log in to the Supabase CLI |
-| `pnpm supabase:migration:baseline`           | Create the baseline migration |
-| `pnpm supabase:migration:list`               | List applied migrations |
-| `pnpm supabase:migration:repair-latest`      | Mark the latest migration as applied |
-| `pnpm demo:reset`                            | Destructive reset of isolated demo DB |
-| `pnpm verify:production-auth-boundary`       | Validate primary Production auth is OAuth-only |
-| `pnpm verify:dedicated-demo-auth-boundary`   | Validate demo deployment auth contracts |
-| `pnpm verify:demo-target-isolation`          | Validate the demo reset target is the isolated demo DB |
-| `pnpm fallow:audit`                          | Run the fallow static-analysis audit |
-| `pnpm fallow:baseline`                       | Refresh fallow baselines |
-| `pnpm curriculum:generate-baseline`          | Generate baseline curricula |
-| `pnpm start`                                 | Run the production build |
+| Command                                    | Purpose                                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `pnpm dev`                                 | Start Next.js dev server with Turbopack                                      |
+| `pnpm build`                               | Production build (includes Next.js typecheck)                                |
+| `pnpm lint`                                | ESLint check                                                                 |
+| `pnpm lint:changed`                        | ESLint on changed files only (CI gate)                                       |
+| `pnpm format`                              | Prettier formatting (includes Tailwind class sorting)                        |
+| `pnpm format:check`                        | Prettier check without writing                                               |
+| `pnpm format:check:changed`                | Prettier check on changed files (CI gate)                                    |
+| `pnpm test`                                | Run Vitest unit suites (DB invariant suites are gated)                       |
+| `pnpm test:watch`                          | Run Vitest in watch mode                                                     |
+| `pnpm test:e2e`                            | Run Playwright browser journeys (`e2e/`)                                     |
+| `pnpm test:db`                             | Run opt-in DB invariant suites (requires `RUN_DATABASE_INTEGRATION_TESTS=1`) |
+| `pnpm verify:database-target`              | Verify `DATABASE_URL` points at a disposable target                          |
+| `pnpm verify:database-suites`              | Verify DB suite discovery completeness                                       |
+| `pnpm vitest run src/__tests__/...`        | Run a single test file                                                       |
+| `pnpm db:push`                             | Push Prisma schema to dev database                                           |
+| `pnpm db:seed`                             | Seed database with demo data                                                 |
+| `pnpm db:studio`                           | Open Prisma Studio GUI                                                       |
+| `pnpm supabase:link`                       | Link to remote Supabase project                                              |
+| `pnpm supabase:migration:diff`             | Generate migration SQL from Prisma schema changes                            |
+| `pnpm supabase:push:dry-run`               | Preview migrations before applying                                           |
+| `pnpm supabase:push`                       | Push migrations to Supabase                                                  |
+| `pnpm supabase:types`                      | Regenerate Supabase database types                                           |
+| `pnpm supabase:login`                      | Log in to the Supabase CLI                                                   |
+| `pnpm supabase:migration:baseline`         | Create the baseline migration                                                |
+| `pnpm supabase:migration:list`             | List applied migrations                                                      |
+| `pnpm supabase:migration:repair-latest`    | Mark the latest migration as applied                                         |
+| `pnpm demo:reset`                          | Destructive reset of isolated demo DB                                        |
+| `pnpm verify:production-auth-boundary`     | Validate primary Production auth is OAuth-only                               |
+| `pnpm verify:dedicated-demo-auth-boundary` | Validate demo deployment auth contracts                                      |
+| `pnpm verify:demo-target-isolation`        | Validate the demo reset target is the isolated demo DB                       |
+| `pnpm fallow:audit`                        | Run the fallow static-analysis audit                                         |
+| `pnpm fallow:baseline`                     | Refresh fallow baselines                                                     |
+| `pnpm curriculum:generate-baseline`        | Generate baseline curricula                                                  |
+| `pnpm start`                               | Run the production build                                                     |
 
 The full list of scripts lives in `package.json`.
 
@@ -183,7 +190,9 @@ src/
 ├── types/               # Global TypeScript types (supabase-database.ts is generated)
 └── __tests__/           # Test files mirroring src/ structure
 ```
+
 Plus, at repo root: `scripts/` holds the Supabase CLI wrappers, demo verification, and fallow baseline scripts; `prisma/` and `supabase/` hold the schema and migrations (see below).
+
 ### Domain Contexts
 
 The domain model is documented through a multi-context layout:
@@ -196,26 +205,26 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 
 ### Architectural Decision Records
 
-| ADR | Title |
-| --- | ----- |
-| 0001 | Complete secretary-created accounts |
-| 0001 | Single-role accounts |
-| 0002 | Separate domain users from auth identities |
-| 0003 | Course catalog and assignment refactor |
-| 0004 | Strict program deletion |
-| 0005 | Outcome ownership and dean oversight |
-| 0006 | Dean PWA offline cache contract |
-| 0007 | Course assignment roster membership |
-| 0008 | Dedicated demo deployment authentication |
-| 0009 | Program head selected program context |
-| 0010 | Unified appearance and protected showcase |
-| 0011 | Fallow code intelligence policy |
-| 0012 | Secretary-controlled academic calendar state |
-| 0013 | Versioned curriculum course placement |
-| 0014 | Google authoritative account names |
+| ADR  | Title                                                      |
+| ---- | ---------------------------------------------------------- |
+| 0001 | Complete secretary-created accounts                        |
+| 0001 | Single-role accounts                                       |
+| 0002 | Separate domain users from auth identities                 |
+| 0003 | Course catalog and assignment refactor                     |
+| 0004 | Strict program deletion                                    |
+| 0005 | Outcome ownership and dean oversight                       |
+| 0006 | Dean PWA offline cache contract                            |
+| 0007 | Course assignment roster membership                        |
+| 0008 | Dedicated demo deployment authentication                   |
+| 0009 | Program head selected program context                      |
+| 0010 | Unified appearance and protected showcase                  |
+| 0011 | Fallow code intelligence policy                            |
+| 0012 | Secretary-controlled academic calendar state               |
+| 0013 | Versioned curriculum course placement                      |
+| 0014 | Google authoritative account names                         |
 | 0015 | Name-based course roster resolution and student ID removal |
-| 0016 | Server-side bounded AI interpretation boundary |
-| 0017 | Program learning outcome canonical terminology |
+| 0016 | Server-side bounded AI interpretation boundary             |
+| 0017 | Program learning outcome canonical terminology             |
 
 ### Key Architectural Patterns
 
@@ -350,27 +359,54 @@ pnpm vitest run src/__tests__/path/file.test.ts  # Single file
 
 ### Database Invariant Tests
 
-Seven suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a hosted database:
+Sixteen suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a hosted database:
 
 ```bash
 RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db
 ```
 
-Point `DATABASE_URL` at a disposable test database — never a shared Supabase project. The gated suites:
+Point `DATABASE_URL` at a disposable test database — never a shared Supabase project. `pnpm test:db` discovers the suites by convention (files gated on `RUN_DATABASE_INTEGRATION_TESTS`); `pnpm verify:database-suites` fails if a gated suite falls outside the convention or a required suite is missing. The gated suites:
 
-- `src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts`
-- `src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts`
-- `src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts`
-- `src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts`
+- `src/__tests__/features/academic-calendar/academic-period-one-active-invariant.test.ts`
 - `src/__tests__/features/academic-calendar/read-period-readiness-totals-parity.test.ts`
-- `src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts`
 - `src/__tests__/features/academic-calendar/school-year-active-constraint.test.ts`
+- `src/__tests__/features/course-assignments/class-identity-uniqueness.test.ts`
+- `src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts`
+- `src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts`
+- `src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts`
+- `src/__tests__/features/curriculum/curriculum-version-program-major-pairing.test.ts`
+- `src/__tests__/features/evaluations/publication-roster-lock-db-invariants.test.ts`
+- `src/__tests__/features/responses/response-lifecycle-invariants.test.ts`
+- `src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts`
+- `src/__tests__/features/users/services/secretary-account-creation-atomicity.test.ts`
+- `src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts`
+- `src/__tests__/modules/curriculum/curriculum-rls-behavior.test.ts`
+- `src/__tests__/modules/identity-access/secretary-rls-policy.test.ts`
+- `src/__tests__/modules/identity-access/table-access-dispositions.test.ts`
 
 The destructive dedicated-demo migration replay has a separate gate. Run it only after confirming that the linked Supabase project is the isolated demo target:
 
 ```bash
 RUN_DEMO_RESET_INTEGRATION_TESTS=1 pnpm vitest run src/__tests__/scripts/demo-reset-fresh-replay.test.ts
 ```
+
+### Browser E2E (Playwright)
+
+`e2e/` holds Playwright journeys over the seeded fixture. Run them with:
+
+```bash
+pnpm test:e2e
+```
+
+Locally, Playwright boots the Next.js dev server on port 3100 and signs in through the dev-auth cookie (`cloie_dev_auth`). In CI, the same suite runs against a production build (`next build` + `next start`) with the isolated signed CI test session (`cloie_ci_test_auth`). See `playwright.config.ts`.
+
+Two projects run: `desktop` (Desktop Chrome) and `mobile` (Pixel 7). `e2e/mobile.spec.ts` matches the mobile project; the rest run on desktop.
+
+`e2e/support/global-setup.ts` verifies the seeded fixture against the pinned expectations in `e2e/support/contract.ts` before any journey starts. The contract is human-reviewed and pinned, not read from the database under test. If a seed row drifts, the contract check fails and names the affected record.
+
+Retries are disabled. A red-then-green run counts as flaky evidence, not a clean pass.
+
+For accepted production evidence (performance traces, no-session boundary), follow `docs/testing/production-browser-evidence.md`.
 
 ### Testing Patterns
 
@@ -386,6 +422,18 @@ const { someFunction } = await import("@/lib/module");
 ```
 
 See `src/__tests__/` for example test implementations.
+
+## Continuous Integration
+
+CI runs on Depot. Workflows live in `.depot/workflows/`. The `.github/` directory is gitignored, so do not add GitHub Actions workflows there.
+
+`ci.yml` runs three jobs on every push to `main` and pull request:
+
+- **quality-checks** — Prettier (`pnpm format:check:changed`), ESLint (`pnpm lint` and `pnpm lint:changed`), Vitest (`pnpm test`), and the production build (`pnpm build`).
+- **database-integration** — applies the Supabase migrations and the fixture seed to a disposable Postgres 16 container, then runs the gated DB suites (`pnpm test:db`). The container is the only database involved; hosted Supabase is never touched.
+- **browser-e2e** — production build plus `pnpm test:e2e` against the same disposable Postgres, signed in with the isolated CI test session (`CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test`). The Playwright report and traces upload as artifacts on failure.
+
+`code-intelligence.yml` runs the fallow audit gate on pull requests and scheduled fallow reports.
 
 ## Database & Migrations
 
