@@ -133,7 +133,7 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
   // Assigned evaluation is visible on the dashboard; open the instrument.
   await page.goto("/student/dashboard");
   const pendingCard = page
-    .locator("div")
+    .locator("div.group")
     .filter({ has: page.getByRole("heading", { name: fx.gestechEval.title }) })
     .first();
   await expect(pendingCard.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
@@ -279,11 +279,11 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
 
   // The seeded mobile deployment must be visible on the dashboard.
   const pendingCard = page
-    .locator("div")
+    .locator("div.group")
     .filter({ has: page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)" }) })
     .first();
-  await expect(pendingCard.getByRole("button", { name: "Start Evaluation" }).first()).toBeVisible();
-  await pendingCard.getByRole("button", { name: "Start Evaluation" }).first().click();
+  await expect(pendingCard.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
+  await pendingCard.getByRole("button", { name: "Start Evaluation" }).click();
 
   await expect(
     page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })

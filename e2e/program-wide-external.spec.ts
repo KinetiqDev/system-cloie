@@ -106,11 +106,11 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await expect(page.getByText("Verification Pending")).toBeVisible();
 
   const card = page
-    .locator("div")
+    .locator("div.group")
     .filter({ has: page.getByRole("heading", { name: deploymentName }) })
     .first();
-  await expect(card.getByRole("button", { name: "Start Evaluation" }).first()).toBeVisible();
-  await card.getByRole("button", { name: "Start Evaluation" }).first().click();
+  await expect(card.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
+  await card.getByRole("button", { name: "Start Evaluation" }).click();
 
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
   for (const prompt of ALUMNI_SECTION_1_PROMPTS) {
@@ -240,11 +240,11 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await loginAs(page, "demo-industry@cloie.test");
   await page.goto("/industry-partner/dashboard");
   const card = page
-    .locator("div")
+    .locator("div.group")
     .filter({ has: page.getByRole("heading", { name: deploymentName }) })
     .first();
-  await expect(card.getByRole("button", { name: "Start Evaluation" }).first()).toBeVisible();
-  await card.getByRole("button", { name: "Start Evaluation" }).first().click();
+  await expect(card.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
+  await card.getByRole("button", { name: "Start Evaluation" }).click();
 
   // Distinct EV5 scale
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
