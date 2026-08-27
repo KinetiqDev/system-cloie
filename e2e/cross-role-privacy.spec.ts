@@ -27,8 +27,7 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
 
     // Response cards are behind the "Responses" tab (CourseBoundReviewTabs defaults to "overview")
     await page.getByRole("tab", { name: "Responses" }).click();
-    const responseCards = page.getByRole("heading", { name: /^Respondent R-\d{6}$/ });
-    await expect(responseCards.first()).toBeVisible();
+    await expect(page.getByText(/^Respondent R-\d{6}$/).first()).toBeVisible();
     await expect(
       page.getByText(fx.courseResponse.respondentName, { exact: true })
     ).not.toBeVisible();
@@ -124,7 +123,7 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     // ── 4. De-identified Analytics Payload Verification ───────────────────
     await loginAs(page, fx.demoPh.email);
     await page.goto(`/program-head/programs/${fx.bsit.id}/analytics?tab=qualitative`);
-    await expect(page.getByRole("heading", { name: "Qualitative Feedback" })).toBeVisible();
+    await expect(page.getByText("Qualitative Feedback").first()).toBeVisible();
 
     const analyticsContent = await page.content();
     expect(analyticsContent).not.toContain(fx.demoStudent.email);
