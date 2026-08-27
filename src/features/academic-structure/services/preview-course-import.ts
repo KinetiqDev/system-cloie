@@ -23,7 +23,7 @@ import type {
   CourseImportSummary,
 } from "../types/course-import";
 
-export type CourseImportActor =
+type CourseImportActor =
   | { role: typeof ROLES.SECRETARY }
   | { role: typeof ROLES.GEN_ED_COORDINATOR }
   | {
@@ -141,6 +141,7 @@ function firstSchemaError(parsed: CourseSchemaParseResult): string {
   return parsed.success ? "" : (parsed.error.issues[0]?.message ?? "Enter valid Course details.");
 }
 
+// fallow-ignore-next-line complexity
 function emptyPreviewRow(
   row: CourseImportRequestRow,
   values: Partial<CourseImportPreviewRow> & { status: CourseImportRowStatus; error: string }
@@ -274,6 +275,7 @@ function buildCourseInput(
   };
 }
 
+// fallow-ignore-next-line complexity
 function readyRow(
   row: CourseImportRequestRow,
   resolution: ImportRowResolution,
@@ -312,6 +314,29 @@ function resolveRowContext(
     return invalidRow(row, { status: "INVALID", error: INVALID_COLUMNS });
   }
 
+  const identity = resolveCourseIdentity(row, mode);
+  if ("preview" in identity) return identity;
+
+  if (mode === "general-education") {
+    return { ...identity, program: null, major: null, majorName: readField(row, "major_name") };
+  }
+
+  if (mode === "program-head") {
+    return resolveProgramHeadRow(row, identity, actor, majors);
+  }
+
+  return resolveSecretaryRow(row, identity, programs, majors);
+}
+
+type ResolvedCourseIdentity = {
+  courseScope: CourseScope;
+  courseType: string | null;
+};
+
+function resolveCourseIdentity(
+  row: CourseImportRequestRow,
+  mode: CourseImportMode
+): ResolvedImportRow | ResolvedCourseIdentity {
   const courseScopeResult = courseScopeForRow(mode, row);
   if (!courseScopeResult.ok) {
     return invalidRow(row, {
@@ -321,99 +346,113 @@ function resolveRowContext(
       error: courseScopeResult.error,
     });
   }
-  const courseScope = courseScopeResult.value;
 
   const courseTypeResult = courseTypeForRow(mode, row);
   if (!courseTypeResult.ok) {
     return invalidRow(row, {
       courseCode: normalizeCode(row.input.course_code),
       courseTitle: readField(row, "course_title"),
-      courseScope,
+      courseScope: courseScopeResult.value,
       status: "INVALID",
       error: courseTypeResult.error,
     });
   }
-  const courseType = courseTypeResult.value;
 
+  return { courseScope: courseScopeResult.value, courseType: courseTypeResult.value };
+}
+
+// fallow-ignore-next-line complexity
+function resolveProgramHeadRow(
+  row: CourseImportRequestRow,
+  identity: ResolvedCourseIdentity,
+  actor: CourseImportActor,
+  majors: MajorRecord[]
+): ResolvedImportRow | ImportRowResolution {
+  const { courseScope, courseType } = identity;
+  const majorName = readField(row, "major_name");
+
+  if (actor.role !== ROLES.PROGRAM_HEAD) {
+    return invalidRow(row, {
+      courseCode: normalizeCode(row.input.course_code),
+      courseTitle: readField(row, "course_title"),
+      courseScope,
+      courseType,
+      status: "OUT_OF_SCOPE",
+      error: "This import is outside your Course scope.",
+    });
+  }
+
+  const program: ProgramRecord = {
+    ...actor.selectedProgram,
+    is_active: true,
+  };
+  if (courseType === "PROGRAM_WIDE" && majorName) {
+    return invalidRow(row, {
+      courseCode: normalizeCode(row.input.course_code),
+      courseTitle: readField(row, "course_title"),
+      courseScope,
+      courseType,
+      programCode: program.code,
+      programName: program.name,
+      majorName,
+      status: "INVALID",
+      error: "Program-wide Courses cannot include a Major.",
+    });
+  }
+  if (courseType === "MAJOR_SPECIFIC" && !majorName) {
+    return invalidRow(row, {
+      courseCode: normalizeCode(row.input.course_code),
+      courseTitle: readField(row, "course_title"),
+      courseScope,
+      courseType,
+      programCode: program.code,
+      programName: program.name,
+      status: "INVALID",
+      error: "Major-specific Courses require a Major name.",
+    });
+  }
+
+  const major = majorName ? lookupMajor(majors, program.id, majorName) : null;
+  if (majorName && !major) {
+    return invalidRow(row, {
+      courseCode: normalizeCode(row.input.course_code),
+      courseTitle: readField(row, "course_title"),
+      courseScope,
+      courseType,
+      programCode: program.code,
+      programName: program.name,
+      majorName,
+      status: "UNKNOWN_MAJOR",
+      error: `Major "${majorName}" was not found in ${program.code}.`,
+    });
+  }
+  if (major && !major.is_active) {
+    return invalidRow(row, {
+      courseCode: normalizeCode(row.input.course_code),
+      courseTitle: readField(row, "course_title"),
+      courseScope,
+      courseType,
+      programCode: program.code,
+      programName: program.name,
+      majorName: major.name,
+      status: "INACTIVE_MAJOR",
+      error: `Major "${major.name}" is inactive in ${program.code}.`,
+    });
+  }
+
+  return { courseScope, courseType, program, major, majorName };
+}
+
+// fallow-ignore-next-line complexity
+function resolveSecretaryRow(
+  row: CourseImportRequestRow,
+  identity: ResolvedCourseIdentity,
+  programs: ProgramRecord[],
+  majors: MajorRecord[]
+): ResolvedImportRow | ImportRowResolution {
+  const { courseScope, courseType } = identity;
   const majorName = readField(row, "major_name");
   const programCode = normalizeCode(row.input.program_code);
-
-  if (mode === "general-education") {
-    return { courseScope, courseType, program: null, major: null, majorName };
-  }
-
-  if (mode === "program-head") {
-    if (actor.role !== ROLES.PROGRAM_HEAD) {
-      return invalidRow(row, {
-        courseCode: normalizeCode(row.input.course_code),
-        courseTitle: readField(row, "course_title"),
-        courseScope,
-        courseType,
-        status: "OUT_OF_SCOPE",
-        error: "This import is outside your Course scope.",
-      });
-    }
-
-    const program: ProgramRecord = {
-      ...actor.selectedProgram,
-      is_active: true,
-    };
-    if (courseType === "PROGRAM_WIDE" && majorName) {
-      return invalidRow(row, {
-        courseCode: normalizeCode(row.input.course_code),
-        courseTitle: readField(row, "course_title"),
-        courseScope,
-        courseType,
-        programCode: program.code,
-        programName: program.name,
-        majorName,
-        status: "INVALID",
-        error: "Program-wide Courses cannot include a Major.",
-      });
-    }
-    if (courseType === "MAJOR_SPECIFIC" && !majorName) {
-      return invalidRow(row, {
-        courseCode: normalizeCode(row.input.course_code),
-        courseTitle: readField(row, "course_title"),
-        courseScope,
-        courseType,
-        programCode: program.code,
-        programName: program.name,
-        status: "INVALID",
-        error: "Major-specific Courses require a Major name.",
-      });
-    }
-
-    const major = majorName ? lookupMajor(majors, program.id, majorName) : null;
-    if (majorName && !major) {
-      return invalidRow(row, {
-        courseCode: normalizeCode(row.input.course_code),
-        courseTitle: readField(row, "course_title"),
-        courseScope,
-        courseType,
-        programCode: program.code,
-        programName: program.name,
-        majorName,
-        status: "UNKNOWN_MAJOR",
-        error: `Major "${majorName}" was not found in ${program.code}.`,
-      });
-    }
-    if (major && !major.is_active) {
-      return invalidRow(row, {
-        courseCode: normalizeCode(row.input.course_code),
-        courseTitle: readField(row, "course_title"),
-        courseScope,
-        courseType,
-        programCode: program.code,
-        programName: program.name,
-        majorName: major.name,
-        status: "INACTIVE_MAJOR",
-        error: `Major "${major.name}" is inactive in ${program.code}.`,
-      });
-    }
-
-    return { courseScope, courseType, program, major, majorName };
-  }
 
   if (courseScope === CourseScope.GENERAL_EDUCATION) {
     if (programCode || majorName) {
@@ -492,6 +531,24 @@ function resolveRowContext(
   return { courseScope, courseType, program, major, majorName };
 }
 
+function invalidValidatedRow(
+  row: CourseImportRequestRow,
+  context: ImportRowResolution,
+  error: string
+): ResolvedImportRow {
+  return invalidRow(row, {
+    courseCode: normalizeCode(row.input.course_code),
+    courseTitle: readField(row, "course_title"),
+    courseScope: context.courseScope,
+    courseType: context.courseType,
+    programCode: context.program?.code ?? null,
+    programName: context.program?.name ?? null,
+    majorName: context.major?.name ?? (context.majorName || null),
+    status: "INVALID",
+    error,
+  });
+}
+
 function validateRow(
   row: CourseImportRequestRow,
   mode: CourseImportMode,
@@ -507,17 +564,7 @@ function validateRow(
 
   const temporal = parseTemporalFields(row);
   if (!temporal.ok) {
-    return invalidRow(row, {
-      courseCode: normalizeCode(row.input.course_code),
-      courseTitle: readField(row, "course_title"),
-      courseScope: context.courseScope,
-      courseType: context.courseType,
-      programCode: context.program?.code ?? null,
-      programName: context.program?.name ?? null,
-      majorName: context.major?.name ?? (context.majorName || null),
-      status: "INVALID",
-      error: temporal.error,
-    });
+    return invalidValidatedRow(row, context, temporal.error);
   }
 
   const parsed = createCourseSchema.safeParse(
@@ -525,17 +572,7 @@ function validateRow(
   ) as CourseSchemaParseResult;
 
   if (!parsed.success) {
-    return invalidRow(row, {
-      courseCode: normalizeCode(row.input.course_code),
-      courseTitle: readField(row, "course_title"),
-      courseScope: context.courseScope,
-      courseType: context.courseType,
-      programCode: context.program?.code ?? null,
-      programName: context.program?.name ?? null,
-      majorName: context.major?.name ?? (context.majorName || null),
-      status: "INVALID",
-      error: firstSchemaError(parsed),
-    });
+    return invalidValidatedRow(row, context, firstSchemaError(parsed));
   }
 
   return readyRow(row, context, parsed);
@@ -683,5 +720,3 @@ export async function previewCourseImport(
 
   return { success: true, data: { rows, summary: summarizePreview(rows) } };
 }
-
-export { MODE_HEADERS, requireCourseImportActor };

@@ -6,7 +6,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
-import type { AuthSessionSnapshot } from "@/features/auth/types";
+import type { AuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
 
 const PROGRAM_ID = "11111111-1111-4111-8111-111111111111";
 const MAJOR_ID = "22222222-2222-4222-8222-222222222222";

@@ -54,4 +54,3 @@ export const courseImportRequestSchema = z
 export type CourseImportRequest = z.infer<typeof courseImportRequestSchema>;
 
 export const courseImportConfirmationRequestSchema = courseImportRequestSchema;
-export type CourseImportConfirmationRequest = CourseImportRequest;

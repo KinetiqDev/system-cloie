@@ -4,11 +4,11 @@ export const COURSE_IMPORT_MAX_ROWS = 100;
 
 export type CourseImportMode = "secretary" | "program-head" | "general-education";
 
-export type CourseImportSourceRow = {
+type CourseImportSourceRow = {
   sourceIndex: number;
 };
 
-export type SecretaryCourseImportRow = CourseImportSourceRow & {
+type SecretaryCourseImportRow = CourseImportSourceRow & {
   course_code: string;
   course_title: string;
   course_scope: string;
@@ -19,7 +19,7 @@ export type SecretaryCourseImportRow = CourseImportSourceRow & {
   term: string;
 };
 
-export type ProgramHeadCourseImportRow = CourseImportSourceRow & {
+type ProgramHeadCourseImportRow = CourseImportSourceRow & {
   course_code: string;
   course_title: string;
   course_type: string;
@@ -29,7 +29,7 @@ export type ProgramHeadCourseImportRow = CourseImportSourceRow & {
   term: string;
 };
 
-export type GeneralEducationCourseImportRow = CourseImportSourceRow & {
+type GeneralEducationCourseImportRow = CourseImportSourceRow & {
   course_code: string;
   course_title: string;
   year_level: string;

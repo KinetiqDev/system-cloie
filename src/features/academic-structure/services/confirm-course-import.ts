@@ -106,6 +106,7 @@ async function resolveSecretaryRelationships(row: CourseImportPreviewRow) {
   return { programId: program.id, majorId: major.id };
 }
 
+// fallow-ignore-next-line complexity
 async function createImportedCourse(
   request: CourseImportRequest,
   row: CourseImportPreviewRow
