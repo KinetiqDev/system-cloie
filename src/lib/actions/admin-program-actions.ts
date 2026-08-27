@@ -16,6 +16,7 @@ import {
   createProgram,
   updateProgram,
   toggleProgramActive,
+  setProgramActive,
   preflightProgramDeletion,
   deleteProgram,
   type ProgramDeletionPreflight,
@@ -139,7 +140,7 @@ export async function bulkToggleProgramsActiveAction(
 
   const result: BulkProgramLifecycleResult = { succeeded: [], failed: [] };
   for (const id of ids) {
-    const item = await toggleProgramActive(id, isActive, !isActive);
+    const item = await setProgramActive(id, isActive);
     if (item.success) result.succeeded.push(id);
     else result.failed.push({ id, error: item.error });
   }

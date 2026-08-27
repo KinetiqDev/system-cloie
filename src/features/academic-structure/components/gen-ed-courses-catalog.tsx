@@ -118,6 +118,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
       const result = await setGenEdCourseActiveAction(id, isActive);
       if (!result.success) showToast(result.error, "error");
       else showToast(isActive ? "Course restored." : "Course archived.");
+      if (result.success) selection.clearSelection();
     });
   }
 

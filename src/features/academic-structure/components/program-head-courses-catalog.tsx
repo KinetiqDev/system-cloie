@@ -489,6 +489,7 @@ export function ProgramHeadCoursesCatalog({
   function handleToggleActive(id: string, currentActive: boolean) {
     startTransition(async () => {
       await toggleProgramHeadCourseActiveAction(program.id, id, !currentActive);
+      selection.clearSelection();
       router.refresh();
     });
   }

@@ -13,8 +13,16 @@ import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 export type ProgramDependencyCounts = {
   academicSetup: { majors: number; courses: number; plos: number };
   peopleAndHistory: { studentProfiles: number; enrollments: number; alumniProfiles: number };
-  teaching: { courseAssignments: number; facultyAffiliations: number; programHeadAssignments: number };
-  evaluation: { evaluationTargets: number; centralDeployments: number; instrumentTemplates: number };
+  teaching: {
+    courseAssignments: number;
+    facultyAffiliations: number;
+    programHeadAssignments: number;
+  };
+  evaluation: {
+    evaluationTargets: number;
+    centralDeployments: number;
+    instrumentTemplates: number;
+  };
   externalLinks: { stakeholderInvites: number; industryPartnerProfiles: number };
 };
 
@@ -38,7 +46,24 @@ async function countProgramDependencies(
   db: typeof prisma | Prisma.TransactionClient,
   programId: string
 ): Promise<ProgramDependencyCounts> {
-  const [majors, courses, plos, studentProfiles, enrollments, alumniProfiles, courseAssignments, facultyAffiliations, programHeadAssignments, evaluationTargets, centralDeployments, templatesByProgram, templatesByBoundProgram, stakeholderInvites, industryPartnerProfiles, industryPartnerAffs] = await Promise.all([
+  const [
+    majors,
+    courses,
+    plos,
+    studentProfiles,
+    enrollments,
+    alumniProfiles,
+    courseAssignments,
+    facultyAffiliations,
+    programHeadAssignments,
+    evaluationTargets,
+    centralDeployments,
+    templatesByProgram,
+    templatesByBoundProgram,
+    stakeholderInvites,
+    industryPartnerProfiles,
+    industryPartnerAffs,
+  ] = await Promise.all([
     db.major.count({ where: { program_id: programId } }),
     db.course.count({ where: { program_id: programId } }),
     db.pLO.count({ where: { program_id: programId } }),
@@ -70,11 +95,17 @@ async function countProgramDependencies(
       centralDeployments,
       instrumentTemplates: templatesByProgram + templatesByBoundProgram - overlappingTemplates,
     },
-    externalLinks: { stakeholderInvites, industryPartnerProfiles: industryPartnerProfiles + industryPartnerAffs },
+    externalLinks: {
+      stakeholderInvites,
+      industryPartnerProfiles: industryPartnerProfiles + industryPartnerAffs,
+    },
   };
 }
 
-function toPreflight(program: { id: string; code: string; name: string; is_active: boolean; updated_at: Date }, dependencies: ProgramDependencyCounts): ProgramDeletionPreflight {
+function toPreflight(
+  program: { id: string; code: string; name: string; is_active: boolean; updated_at: Date },
+  dependencies: ProgramDependencyCounts
+): ProgramDeletionPreflight {
   return {
     id: program.id,
     code: program.code,
@@ -86,7 +117,9 @@ function toPreflight(program: { id: string; code: string; name: string; is_activ
   };
 }
 
-export async function preflightProgramDeletion(id: string): Promise<ServiceResult<ProgramDeletionPreflight>> {
+export async function preflightProgramDeletion(
+  id: string
+): Promise<ServiceResult<ProgramDeletionPreflight>> {
   const program = await prisma.program.findUnique({ where: { id } });
   if (!program) return { success: false, error: "Program not found." };
 
@@ -109,7 +142,8 @@ export async function deleteProgram(input: {
     return await prisma.$transaction(async (tx) => {
       const program = await tx.program.findUnique({ where: { id: input.id } });
       if (!program) return { success: false, error: "Program not found." };
-      if (program.is_active) return { success: false, error: "Program must be inactive before deletion." };
+      if (program.is_active)
+        return { success: false, error: "Program must be inactive before deletion." };
 
       const guardedRevision = await tx.program.updateMany({
         where: {
@@ -119,12 +153,15 @@ export async function deleteProgram(input: {
         },
         data: { updated_at: program.updated_at },
       });
-      if (guardedRevision.count !== 1) return { success: false, error: "Program changed after preflight." };
+      if (guardedRevision.count !== 1)
+        return { success: false, error: "Program changed after preflight." };
 
       const dependencies = await countProgramDependencies(tx, input.id);
       const current = toPreflight(program, dependencies);
-      if (hasDependencies(dependencies)) return { success: false, error: "Program has linked records.", data: current };
-      if (input.confirmationCode.trim() !== program.code) return { success: false, error: "Program code confirmation does not match." };
+      if (hasDependencies(dependencies))
+        return { success: false, error: "Program has linked records.", data: current };
+      if (input.confirmationCode.trim() !== program.code)
+        return { success: false, error: "Program code confirmation does not match." };
 
       await tx.program.delete({ where: { id: input.id } });
       return { success: true, data: { id: input.id } };
@@ -132,7 +169,8 @@ export async function deleteProgram(input: {
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
       const refreshed = await preflightProgramDeletion(input.id);
-      if (refreshed.success) return { success: false, error: "Program gained linked records.", data: refreshed.data };
+      if (refreshed.success)
+        return { success: false, error: "Program gained linked records.", data: refreshed.data };
       return refreshed;
     }
     throw error;
@@ -228,7 +266,11 @@ export async function updateProgram(
   }
 }
 
-export async function toggleProgramActive(id: string, is_active: boolean, expectedIsActive = !is_active): Promise<ServiceResult> {
+export async function toggleProgramActive(
+  id: string,
+  is_active: boolean,
+  expectedIsActive = !is_active
+): Promise<ServiceResult> {
   const result = await prisma.program.updateMany({
     where: { id, is_active: expectedIsActive },
     data: { is_active },
@@ -236,6 +278,15 @@ export async function toggleProgramActive(id: string, is_active: boolean, expect
 
   if (result.count !== 1) return { success: false, error: "Program status changed elsewhere." };
 
+  return { success: true, data: undefined };
+}
+
+export async function setProgramActive(id: string, isActive: boolean): Promise<ServiceResult> {
+  const result = await prisma.program.updateMany({
+    where: { id },
+    data: { is_active: isActive },
+  });
+  if (result.count !== 1) return { success: false, error: "Program not found." };
   return { success: true, data: undefined };
 }
 
@@ -310,8 +361,7 @@ export async function deleteMajor(id: string): Promise<ServiceResult> {
     return { success: false, error: "Major not found." };
   }
 
-  const totalDependents =
-    major._count.courses + major._count.student_profiles;
+  const totalDependents = major._count.courses + major._count.student_profiles;
 
   if (totalDependents > 0) {
     return {

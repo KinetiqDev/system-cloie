@@ -338,6 +338,7 @@ describe("CourseAssignmentsTable", () => {
     expect(screen.getByText("GE")).toBeInTheDocument();
     expect(screen.getByText(/managed by general education coordinator/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/open actions for GE101/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Select GE101" })).not.toBeInTheDocument();
   });
 
   it("renders all-program empty-state copy", () => {

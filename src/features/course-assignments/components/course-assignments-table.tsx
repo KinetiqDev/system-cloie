@@ -273,11 +273,13 @@ function CourseAssignmentsRow({
       className="group hover:bg-muted/40"
     >
       <TableCell>
-        <Checkbox
-          aria-label={`Select ${assignment.courseCode}`}
-          checked={selected}
-          onCheckedChange={(checked) => onSelectedChange(Boolean(checked))}
-        />
+        {readOnlyReason ? null : (
+          <Checkbox
+            aria-label={`Select ${assignment.courseCode}`}
+            checked={selected}
+            onCheckedChange={(checked) => onSelectedChange(Boolean(checked))}
+          />
+        )}
       </TableCell>
       <TableCell className="py-3">
         <div className="flex flex-col gap-1">

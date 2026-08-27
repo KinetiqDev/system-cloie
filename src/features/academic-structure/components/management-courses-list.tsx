@@ -180,6 +180,7 @@ export function ManagementCoursesList({
   const handleToggleActive = (courseId: string, currentActive: boolean) => {
     startTransition(async () => {
       await toggleCourseActiveAction(courseId, !currentActive);
+      selection.clearSelection();
     });
   };
 

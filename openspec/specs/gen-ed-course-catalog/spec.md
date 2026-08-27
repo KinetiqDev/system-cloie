@@ -70,4 +70,4 @@ The catalog UI SHALL reuse `AppShell` (`max-w-[1600px]`, `p-4 sm:p-6`), shadcn `
 
 - **GIVEN** the Coordinator views at 1280px width
 - **WHEN** the table renders
-- **THEN** full columns (`Course`/`Course Title`/`Status`/`Last Updated`) render, `TableHead`/`TableRow` hover uses semantic hover tokens, and stats grid uses `grid-cols-2 md:grid-cols-4`
+- **THEN** full columns (`Course`/`Course Title`/`Status`/`Last Updated`) render, `TableHead`/`TableRow` hover uses semantic hover tokens, and the three catalog metrics use `grid-cols-2 md:grid-cols-3`
