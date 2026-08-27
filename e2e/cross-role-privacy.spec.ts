@@ -25,9 +25,10 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     await page.goto(`/faculty/cilo-evaluations/${fx.courseEvaluation.id}`);
     await expect(page.getByRole("heading", { name: fx.courseEvaluation.title })).toBeVisible();
 
+    // Response cards are behind the "Responses" tab (CourseBoundReviewTabs defaults to "overview")
+    await page.getByRole("tab", { name: "Responses" }).click();
     const responseCards = page.getByRole("heading", { name: /^Respondent R-\d{6}$/ });
     await expect(responseCards.first()).toBeVisible();
-
     await expect(
       page.getByText(fx.courseResponse.respondentName, { exact: true })
     ).not.toBeVisible();
