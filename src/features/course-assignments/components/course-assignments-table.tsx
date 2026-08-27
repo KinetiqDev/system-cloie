@@ -2,7 +2,7 @@
 
 import { CourseScope } from "@prisma/client";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -65,6 +67,7 @@ import {
 import { Pagination } from "@/components/ui/pagination";
 import { showToast } from "@/components/ui/toast";
 import {
+  bulkSetCourseAssignmentsActiveAction,
   deactivateCourseAssignmentAction,
   activateCourseAssignmentAction,
   deleteCourseAssignmentAction,
@@ -80,6 +83,7 @@ import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { getYearLevelDisplay, getSectionLabel } from "@/lib/constants/academic";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { buildProgramHeadCourseRosterPath } from "@/lib/constants/program-head-routes";
+import { useTableSelection } from "@/hooks/use-table-selection";
 
 interface Program {
   id: string;
@@ -112,6 +116,8 @@ interface CourseAssignmentsRowProps {
   canManageAssignments: boolean;
   selectedProgramId?: string;
   processingId: string | null;
+  selected: boolean;
+  onSelectedChange: (checked: boolean) => void;
   onEdit: (assignment: CourseAssignmentItem) => void;
   onOpenConfirm: (type: "deactivate" | "delete", assignment: CourseAssignmentItem) => void;
   onActivate: (assignmentId: string) => void;
@@ -171,7 +177,7 @@ function AssignmentActions({
   onEdit,
   onOpenConfirm,
   onActivate,
-}: Omit<CourseAssignmentsRowProps, "selectedProgramId">) {
+}: Omit<CourseAssignmentsRowProps, "selectedProgramId" | "selected" | "onSelectedChange">) {
   const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
   const readOnlyReason = !canManageAssignments
     ? "View only"
@@ -243,6 +249,8 @@ function CourseAssignmentsRow({
   canManageAssignments,
   selectedProgramId,
   processingId,
+  selected,
+  onSelectedChange,
   onEdit,
   onOpenConfirm,
   onActivate,
@@ -261,8 +269,18 @@ function CourseAssignmentsRow({
   return (
     <TableRow
       data-readonly={readOnlyReason !== null || undefined}
+      data-state={selected ? "selected" : undefined}
       className="group hover:bg-muted/40"
     >
+      <TableCell>
+        {readOnlyReason ? null : (
+          <Checkbox
+            aria-label={`Select ${assignment.courseCode}`}
+            checked={selected}
+            onCheckedChange={(checked) => onSelectedChange(Boolean(checked))}
+          />
+        )}
+      </TableCell>
       <TableCell className="py-3">
         <div className="flex flex-col gap-1">
           <span className="font-semibold tracking-tight tabular-nums">{assignment.courseCode}</span>
@@ -388,6 +406,21 @@ export function CourseAssignmentsTable({
   const deletionRequest = useRef(0);
 
   const totalPages = Math.ceil(total / pageSize);
+  const manageableAssignments = useMemo(
+    () =>
+      assignments.filter((assignment) => {
+        if (!canManageAssignments) return false;
+        const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
+        if (mode === "program-head") return !isGeneralEducation;
+        if (mode === "general-education") return isGeneralEducation;
+        return true;
+      }),
+    [assignments, canManageAssignments, mode]
+  );
+  const selection = useTableSelection(
+    manageableAssignments.map((assignment) => assignment.id),
+    `${page}:${mode}:${selectedProgramId ?? ""}`
+  );
 
   const handleActivate = async (assignmentId: string) => {
     setProcessingId(assignmentId);
@@ -427,6 +460,28 @@ export function CourseAssignmentsTable({
           : "";
       showToast(`${result.error || "Failed to deactivate assignment."}${supportSuffix}`, "error");
     }
+  };
+  const handleBulkStatus = async (isActive: boolean) => {
+    setProcessingId("bulk");
+    const result = await bulkSetCourseAssignmentsActiveAction({
+      assignmentIds: [...selection.selectedIds],
+      isActive,
+      programId: selectedProgramId,
+    });
+    setProcessingId(null);
+    if (result.failed.length > 0) {
+      showToast(
+        `${result.succeeded.length} updated; ${result.failed.length} could not be updated.`,
+        "warning"
+      );
+    } else {
+      showToast(
+        `${result.succeeded.length} assignments ${isActive ? "activated" : "deactivated"}.`,
+        "success"
+      );
+    }
+    selection.clearSelection();
+    onAssignmentUpdated?.();
   };
 
   const handleDelete = async (
@@ -569,6 +624,31 @@ export function CourseAssignmentsTable({
   const isConfirmDialogProcessing = processingId === confirmDialog.assignment?.id;
   return (
     <div className="flex flex-col gap-4">
+      <BulkActionBar
+        selectedCount={selection.selectedCount}
+        itemLabel="assignment"
+        onClear={selection.clearSelection}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={processingId !== null}
+          onClick={() => void handleBulkStatus(true)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Activate
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={processingId !== null}
+          onClick={() => void handleBulkStatus(false)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Deactivate
+        </Button>
+      </BulkActionBar>
+
       {!isDesktop ? (
         <div className="grid gap-3">
           {assignments.map((assignment) => {
@@ -579,9 +659,19 @@ export function CourseAssignmentsTable({
                 key={assignment.id}
                 size="sm"
                 data-testid={`assignment-card-${assignment.id}`}
-                className="overflow-hidden border shadow-xs transition-shadow hover:shadow-sm"
+                data-state={selection.selectedIds.has(assignment.id) ? "selected" : undefined}
+                className="data-[state=selected]:bg-selected-bg overflow-hidden border shadow-xs transition-shadow hover:shadow-sm"
               >
                 <CardHeader className="gap-3 pb-3">
+                  {manageableAssignments.some((item) => item.id === assignment.id) && (
+                    <Checkbox
+                      aria-label={`Select ${assignment.courseCode}`}
+                      checked={selection.selectedIds.has(assignment.id)}
+                      onCheckedChange={(checked) =>
+                        selection.toggleOne(assignment.id, Boolean(checked))
+                      }
+                    />
+                  )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <CardTitle className="flex flex-wrap items-center gap-2 text-[15px] leading-tight">
                       <span className="font-semibold tracking-tight tabular-nums">
@@ -692,6 +782,15 @@ export function CourseAssignmentsTable({
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-12">
+                  <Checkbox
+                    aria-label="Select all manageable assignments on this page"
+                    checked={selection.allVisibleSelected}
+                    indeterminate={selection.someVisibleSelected}
+                    disabled={manageableAssignments.length === 0}
+                    onCheckedChange={(checked) => selection.toggleAllVisible(Boolean(checked))}
+                  />
+                </TableHead>
                 <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Course
                 </TableHead>
@@ -732,6 +831,8 @@ export function CourseAssignmentsTable({
                   canManageAssignments={canManageAssignments}
                   selectedProgramId={selectedProgramId}
                   processingId={processingId}
+                  selected={selection.selectedIds.has(assignment.id)}
+                  onSelectedChange={(checked) => selection.toggleOne(assignment.id, checked)}
                   onEdit={setEditAssignment}
                   onOpenConfirm={(type, target) =>
                     type === "delete"

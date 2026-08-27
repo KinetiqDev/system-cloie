@@ -1851,6 +1851,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/bulk-action-bar.tsx",
+    disposition: "task",
+    taskId: 3,
+    category: "ui_primitive",
+  },
+  {
     path: "src/components/ui/button.tsx",
     disposition: "task",
     taskId: 3,
@@ -2103,6 +2109,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/academic-structure/components/program-form.tsx",
     disposition: "task",
     taskId: 14,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/academic-structure/components/gen-ed-course-dialog.tsx",
+    disposition: "task",
+    taskId: 12,
     category: "feature_component",
   },
   {

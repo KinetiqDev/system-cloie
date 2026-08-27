@@ -52,6 +52,19 @@ import {
 } from "@/features/instruments/services/manage-instruments";
 
 type ActionResult = { success: true } | { success: false; error: string };
+type BulkLifecycleResult = {
+  succeeded: string[];
+  failed: Array<{ id: string; error: string }>;
+};
+
+function validateBulkIds(ids: string[]): string | null {
+  if (ids.length === 0) return "Select at least one record.";
+  if (ids.length > 100) return "Select no more than 100 records.";
+  if (new Set(ids).size !== ids.length || ids.some((id) => !id.trim())) {
+    return "The selection contains invalid records.";
+  }
+  return null;
+}
 
 function parseWithSchema<T>(
   schema: ZodType<T>,
@@ -81,7 +94,7 @@ export async function createCourseAction(formData: FormData): Promise<ActionResu
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
@@ -116,7 +129,7 @@ export async function updateCourseAction(formData: FormData): Promise<ActionResu
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
@@ -156,7 +169,7 @@ export async function toggleCourseActiveAction(
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
@@ -170,13 +183,35 @@ export async function toggleCourseActiveAction(
   revalidateAdminFoundation();
   return { success: true };
 }
+export async function bulkToggleCoursesActiveAction(
+  ids: string[],
+  isActive: boolean
+): Promise<BulkLifecycleResult> {
+  const invalid = validateBulkIds(ids);
+  if (invalid) return { succeeded: [], failed: [{ id: "selection", error: invalid }] };
+
+  const session = await resolveAuthSession();
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!session?.activeRole || !allowedRoles.includes(session.activeRole)) {
+    return { succeeded: [], failed: ids.map((id) => ({ id, error: "Insufficient permissions." })) };
+  }
+
+  const result: BulkLifecycleResult = { succeeded: [], failed: [] };
+  for (const id of ids) {
+    const item = await toggleCourseActive(id, isActive);
+    if (item.success) result.succeeded.push(id);
+    else result.failed.push({ id, error: item.error });
+  }
+  if (result.succeeded.length > 0) revalidateAdminFoundation();
+  return result;
+}
 
 export async function deleteCourseAction(id: string): Promise<ActionResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
     return { error: "Authentication required.", success: false };
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return { error: "Insufficient permissions.", success: false };
   }
@@ -196,7 +231,7 @@ export async function getCourseEditDataAction(courseId: string): Promise<CourseE
   if (!session || !session.activeRole) {
     return null;
   }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
   if (!allowedRoles.includes(session.activeRole)) {
     return null;
   }
@@ -227,6 +262,32 @@ export async function toggleUserActiveAction(
 
   revalidateAdminFoundation();
   return { success: true };
+}
+export async function bulkToggleUsersActiveAction(
+  ids: string[],
+  isActive: boolean
+): Promise<BulkLifecycleResult> {
+  const invalid = validateBulkIds(ids);
+  if (invalid) return { succeeded: [], failed: [{ id: "selection", error: invalid }] };
+
+  const session = await resolveAuthSession();
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!session?.activeRole || !allowedRoles.includes(session.activeRole)) {
+    return { succeeded: [], failed: ids.map((id) => ({ id, error: "Insufficient permissions." })) };
+  }
+
+  const result: BulkLifecycleResult = { succeeded: [], failed: [] };
+  for (const id of ids) {
+    if (id === session.userId) {
+      result.failed.push({ id, error: "Cannot modify own account." });
+      continue;
+    }
+    const item = await toggleUserActive(id, isActive);
+    if (item.success) result.succeeded.push(id);
+    else result.failed.push({ id, error: item.error });
+  }
+  if (result.succeeded.length > 0) revalidateAdminFoundation();
+  return result;
 }
 
 export async function assignUserRoleAction(formData: FormData): Promise<ActionResult> {

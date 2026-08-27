@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
 import { fixture } from "./support/fixture";
 import { expectNoAxeViolations, loginAs, rateQuestion } from "./support/helpers";
 
@@ -122,7 +121,6 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await page.reload();
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
-  await page.getByRole("button", { name: "Next Section" }).click();
   await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
 
   for (const prompt of ALUMNI_SECTION_2_PROMPTS) {

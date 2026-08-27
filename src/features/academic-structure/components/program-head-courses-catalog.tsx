@@ -10,10 +10,12 @@ import {
   SEMESTER_OPTIONS,
   TERM_OPTIONS,
 } from "@/lib/constants/academic";
-import { AlertCircle, Archive, Edit, Plus, Search } from "lucide-react";
+import { AlertCircle, Archive, Edit, Plus, Power, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,7 @@ import {
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
 import {
+  bulkToggleProgramHeadCoursesActiveAction,
   createProgramHeadCourseAction,
   toggleProgramHeadCourseActiveAction,
   updateProgramHeadCourseAction,
@@ -48,6 +51,8 @@ import type {
   ProgramHeadCourseItem,
   ProgramHeadCourseSummary,
 } from "../services/resolve-program-head-courses";
+import { showToast } from "@/components/ui/toast";
+import { useTableSelection } from "@/hooks/use-table-selection";
 
 type ProgramHeadCoursesCatalogProps = {
   program: { id: string; code: string; name: string };
@@ -475,11 +480,36 @@ export function ProgramHeadCoursesCatalog({
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const selection = useTableSelection(
+    paginatedCourses.map((course) => course.id),
+    `${program.id}:${statusFilter}:${search}:${majorFilter}:${safePage}`
+  );
   const programLabel = program.name;
 
   function handleToggleActive(id: string, currentActive: boolean) {
     startTransition(async () => {
       await toggleProgramHeadCourseActiveAction(program.id, id, !currentActive);
+      selection.clearSelection();
+      router.refresh();
+    });
+  }
+
+  function handleBulkStatus(isActive: boolean) {
+    startTransition(async () => {
+      const result = await bulkToggleProgramHeadCoursesActiveAction(
+        program.id,
+        [...selection.selectedIds],
+        isActive
+      );
+      if (result.failed.length > 0) {
+        showToast(
+          `${result.succeeded.length} updated; ${result.failed.length} could not be updated.`,
+          "warning"
+        );
+      } else {
+        showToast(`${result.succeeded.length} courses ${isActive ? "restored" : "archived"}.`);
+      }
+      selection.clearSelection();
       router.refresh();
     });
   }
@@ -525,7 +555,7 @@ export function ProgramHeadCoursesCatalog({
             setCurrentPage(1);
           }}
         >
-          <SelectTrigger className="w-full md:w-[160px]">
+          <SelectTrigger aria-label="Filter by course status" className="w-full md:w-[160px]">
             <SelectValue>
               {statusFilter === "__all__"
                 ? "All Statuses"
@@ -583,11 +613,44 @@ export function ProgramHeadCoursesCatalog({
         </div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selection.selectedCount}
+        itemLabel="course"
+        onClear={selection.clearSelection}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => handleBulkStatus(true)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Restore
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => handleBulkStatus(false)}
+        >
+          <Archive aria-hidden="true" className="size-4" />
+          Archive
+        </Button>
+      </BulkActionBar>
+
       {/* Data Table */}
       <div className="overflow-x-auto rounded-lg border">
         <Table className="min-w-0 md:min-w-[900px]">
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  aria-label="Select all courses on this page"
+                  checked={selection.allVisibleSelected}
+                  indeterminate={selection.someVisibleSelected}
+                  onCheckedChange={(checked) => selection.toggleAllVisible(Boolean(checked))}
+                />
+              </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
               <TableHead className="hidden md:table-cell">Major</TableHead>
@@ -602,7 +665,7 @@ export function ProgramHeadCoursesCatalog({
           <TableBody>
             {paginatedCourses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
+                <TableCell colSpan={10} className="text-muted-foreground h-24 text-center">
                   No courses found.
                 </TableCell>
               </TableRow>
@@ -610,7 +673,20 @@ export function ProgramHeadCoursesCatalog({
               // Render-only row branching is covered through the parent catalog workflow.
               // fallow-ignore-next-line complexity
               paginatedCourses.map((course) => (
-                <TableRow key={course.id} className="group">
+                <TableRow
+                  key={course.id}
+                  className="group"
+                  data-state={selection.selectedIds.has(course.id) ? "selected" : undefined}
+                >
+                  <TableCell>
+                    <Checkbox
+                      aria-label={`Select ${course.code}`}
+                      checked={selection.selectedIds.has(course.id)}
+                      onCheckedChange={(checked) =>
+                        selection.toggleOne(course.id, Boolean(checked))
+                      }
+                    />
+                  </TableCell>
                   <TableCell className="w-[99%] max-w-[200px] align-top md:w-auto md:max-w-none">
                     <div className="flex flex-col gap-1">
                       <span className="text-foreground truncate font-bold">{course.code}</span>

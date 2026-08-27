@@ -42,6 +42,10 @@ import type {
   CourseAssignmentResult,
 } from "@/features/course-assignments/types";
 import { buildProgramHeadCourseAssignmentsPath } from "@/lib/constants/program-head-routes";
+type BulkCourseAssignmentLifecycleResult = {
+  succeeded: string[];
+  failed: Array<{ id: string; error: string; referenceId?: string }>;
+};
 
 function revalidateCourseAssignmentRoutes(programIds?: string | string[]) {
   for (const programId of programIds
@@ -207,6 +211,57 @@ export async function activateCourseAssignmentAction(input: ActivateCourseAssign
     revalidateCourseAssignmentRoutes(result.data?.programIds ?? parsed.data.programId);
   }
 
+  return result;
+}
+async function setCourseAssignmentActive(input: {
+  assignmentId: string;
+  isActive: boolean;
+  programId?: string;
+}) {
+  const lifecycleInput = {
+    assignmentId: input.assignmentId,
+    programId: input.programId,
+  };
+  return input.isActive
+    ? activateCourseAssignment(lifecycleInput)
+    : deactivateCourseAssignment(lifecycleInput);
+}
+
+export async function bulkSetCourseAssignmentsActiveAction(input: {
+  assignmentIds: string[];
+  isActive: boolean;
+  programId?: string;
+}): Promise<BulkCourseAssignmentLifecycleResult> {
+  const ids = input.assignmentIds;
+  if (ids.length === 0 || ids.length > 100 || new Set(ids).size !== ids.length) {
+    return {
+      succeeded: [],
+      failed: [{ id: "selection", error: "Select between 1 and 100 unique assignments." }],
+    };
+  }
+
+  const result: BulkCourseAssignmentLifecycleResult = { succeeded: [], failed: [] };
+  const programIds = new Set<string>();
+  for (const assignmentId of ids) {
+    const item = await setCourseAssignmentActive({
+      assignmentId,
+      isActive: input.isActive,
+      programId: input.programId,
+    });
+    if (item.success) {
+      result.succeeded.push(assignmentId);
+      for (const programId of item.data?.programIds ?? []) programIds.add(programId);
+    } else {
+      result.failed.push({
+        id: assignmentId,
+        error: item.error,
+        referenceId: "referenceId" in item ? item.referenceId : undefined,
+      });
+    }
+  }
+  if (result.succeeded.length > 0) {
+    revalidateCourseAssignmentRoutes([...programIds]);
+  }
   return result;
 }
 

@@ -243,4 +243,21 @@ describe("ManagementCoursesList", () => {
 
     expect(screen.queryByText("Evaluations")).not.toBeInTheDocument();
   });
+
+  test("selects visible courses and exposes bulk lifecycle actions", () => {
+    render(
+      <ManagementCoursesList
+        courses={mockCourses}
+        kpi={mockKPI}
+        programs={mockPrograms}
+        basePath="/secretary/courses"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select GE101" }));
+    expect(screen.getByText("1 course selected")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bulk actions" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(screen.queryByRole("region", { name: "Bulk actions" })).not.toBeInTheDocument();
+  });
 });

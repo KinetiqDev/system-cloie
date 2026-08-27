@@ -10,10 +10,13 @@ import {
   MoreVertical,
   Search,
   Library,
+  Power,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -50,11 +53,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  bulkToggleCoursesActiveAction,
   toggleCourseActiveAction,
   deleteCourseAction,
 } from "@/lib/actions/management-foundation-actions";
 import { getCourseScopeBadgeClass } from "@/features/academic-structure/lib/course-visuals";
 import { CourseEditDialog } from "@/features/academic-structure/components/course-edit-dialog";
+import { showToast } from "@/components/ui/toast";
+import { useTableSelection } from "@/hooks/use-table-selection";
 
 import type {
   ManagementCourseSummaryItem,
@@ -143,6 +149,10 @@ export function ManagementCoursesList({
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const selection = useTableSelection(
+    paginatedCourses.map((course) => course.id),
+    `${scopeFilter}:${programFilter}:${majorFilter}:${searchTerm}:${safePage}`
+  );
 
   // Reset to page 1 when filters change
   const handleScopeChange = (value: string | null) => {
@@ -170,6 +180,7 @@ export function ManagementCoursesList({
   const handleToggleActive = (courseId: string, currentActive: boolean) => {
     startTransition(async () => {
       await toggleCourseActiveAction(courseId, !currentActive);
+      selection.clearSelection();
     });
   };
 
@@ -181,7 +192,21 @@ export function ManagementCoursesList({
       await deleteCourseAction(courseId);
     });
   };
-
+  const handleBulkStatus = (isActive: boolean) => {
+    const ids = [...selection.selectedIds];
+    startTransition(async () => {
+      const result = await bulkToggleCoursesActiveAction(ids, isActive);
+      if (result.failed.length > 0) {
+        showToast(
+          `${result.succeeded.length} updated; ${result.failed.length} could not be updated.`,
+          "warning"
+        );
+      } else {
+        showToast(`${result.succeeded.length} courses ${isActive ? "activated" : "deactivated"}.`);
+      }
+      selection.clearSelection();
+    });
+  };
 
   // ---- Render --------------------------------------------------------------
   return (
@@ -296,11 +321,44 @@ export function ManagementCoursesList({
         </div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selection.selectedCount}
+        itemLabel="course"
+        onClear={selection.clearSelection}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => handleBulkStatus(true)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Activate
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => handleBulkStatus(false)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Deactivate
+        </Button>
+      </BulkActionBar>
+
       {/* Data table */}
       <div className="overflow-x-auto rounded-lg border">
         <Table className="min-w-0 md:min-w-[900px]">
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  aria-label="Select all courses on this page"
+                  checked={selection.allVisibleSelected}
+                  indeterminate={selection.someVisibleSelected}
+                  onCheckedChange={(checked) => selection.toggleAllVisible(Boolean(checked))}
+                />
+              </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
               <TableHead className="hidden md:table-cell">Scope</TableHead>
@@ -318,7 +376,7 @@ export function ManagementCoursesList({
             {paginatedCourses.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={showEvaluationCount ? 9 : 8}
+                  colSpan={showEvaluationCount ? 10 : 9}
                   className="text-muted-foreground h-24 text-center"
                 >
                   No courses found.
@@ -326,7 +384,20 @@ export function ManagementCoursesList({
               </TableRow>
             ) : (
               paginatedCourses.map((course) => (
-                <TableRow key={course.id} className="group">
+                <TableRow
+                  key={course.id}
+                  className="group"
+                  data-state={selection.selectedIds.has(course.id) ? "selected" : undefined}
+                >
+                  <TableCell>
+                    <Checkbox
+                      aria-label={`Select ${course.code}`}
+                      checked={selection.selectedIds.has(course.id)}
+                      onCheckedChange={(checked) =>
+                        selection.toggleOne(course.id, Boolean(checked))
+                      }
+                    />
+                  </TableCell>
                   <TableCell className="w-[99%] max-w-[200px] align-top sm:max-w-[300px] md:w-auto md:max-w-none">
                     <div className="flex flex-col gap-1">
                       <span className="text-foreground truncate font-bold">{course.code}</span>

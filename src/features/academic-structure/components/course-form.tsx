@@ -54,6 +54,8 @@ type CourseFormProps = {
   formId?: string;
   /** Reports the form's pending state to a parent (e.g. a dialog footer button). */
   onPendingChange?: (pending: boolean) => void;
+  /** Locks the form to a role-owned scope and hides irrelevant relationship controls. */
+  fixedScope?: CourseScope;
 };
 
 export function CourseForm({
@@ -65,12 +67,13 @@ export function CourseForm({
   onSuccess,
   formId,
   onPendingChange,
+  fixedScope,
 }: CourseFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [scope, setScope] = useState<CourseScope>(
-    defaultValues?.course_scope ?? CourseScope.PROGRAM_SPECIFIC
+    fixedScope ?? defaultValues?.course_scope ?? CourseScope.PROGRAM_SPECIFIC
   );
   const [programId, setProgramId] = useState(defaultValues?.program_id ?? "");
   const [majorId, setMajorId] = useState(defaultValues?.major_id ?? "");
@@ -170,85 +173,89 @@ export function CourseForm({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="space-y-2">
-          <Label htmlFor={`course-scope-${defaultValues?.id ?? "new"}`}>Course Scope</Label>
-          <Select
-            value={scope}
-            onValueChange={(value) => {
-              const nextScope = value as CourseScope;
-              setScope(nextScope);
-              if (nextScope === CourseScope.GENERAL_EDUCATION) {
-                setProgramId("");
+      {!fixedScope && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor={`course-scope-${defaultValues?.id ?? "new"}`}>Course Scope</Label>
+            <Select
+              value={scope}
+              onValueChange={(value) => {
+                const nextScope = value as CourseScope;
+                setScope(nextScope);
+                if (nextScope === CourseScope.GENERAL_EDUCATION) {
+                  setProgramId("");
+                  setMajorId("");
+                }
+              }}
+            >
+              <SelectTrigger id={`course-scope-${defaultValues?.id ?? "new"}`} className="w-full">
+                <SelectValue>
+                  {scope === CourseScope.GENERAL_EDUCATION
+                    ? "General Education"
+                    : "Program-Specific"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
+                <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-Specific</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`course-program-${defaultValues?.id ?? "new"}`}>Program</Label>
+            <Select
+              value={programId}
+              onValueChange={(value) => {
+                setProgramId(value ?? "");
                 setMajorId("");
-              }
-            }}
-          >
-            <SelectTrigger id={`course-scope-${defaultValues?.id ?? "new"}`} className="w-full">
-              <SelectValue>
-                {scope === CourseScope.GENERAL_EDUCATION ? "General Education" : "Program-Specific"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
-              <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-Specific</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+              }}
+              disabled={scope === CourseScope.GENERAL_EDUCATION}
+            >
+              <SelectTrigger id={`course-program-${defaultValues?.id ?? "new"}`} className="w-full">
+                <SelectValue>
+                  {programId
+                    ? (programs.find((p) => p.id === programId)?.code ?? "No program")
+                    : "No program"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No program</SelectItem>
+                {programs.map((program) => (
+                  <SelectItem key={program.id} value={program.id}>
+                    {program.code} - {program.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor={`course-program-${defaultValues?.id ?? "new"}`}>Program</Label>
-          <Select
-            value={programId}
-            onValueChange={(value) => {
-              setProgramId(value ?? "");
-              setMajorId("");
-            }}
-            disabled={scope === CourseScope.GENERAL_EDUCATION}
-          >
-            <SelectTrigger id={`course-program-${defaultValues?.id ?? "new"}`} className="w-full">
-              <SelectValue>
-                {programId
-                  ? (programs.find((p) => p.id === programId)?.code ?? "No program")
-                  : "No program"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">No program</SelectItem>
-              {programs.map((program) => (
-                <SelectItem key={program.id} value={program.id}>
-                  {program.code} - {program.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label htmlFor={`course-major-${defaultValues?.id ?? "new"}`}>Major</Label>
+            <Select
+              value={majorId}
+              onValueChange={(value) => setMajorId(value ?? "")}
+              disabled={scope === CourseScope.GENERAL_EDUCATION || !programId}
+            >
+              <SelectTrigger id={`course-major-${defaultValues?.id ?? "new"}`} className="w-full">
+                <SelectValue>
+                  {majorId
+                    ? (filteredMajors.find((m) => m.id === majorId)?.name ?? "Program-wide / none")
+                    : "Program-wide / none"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Program-wide / none</SelectItem>
+                {filteredMajors.map((major) => (
+                  <SelectItem key={major.id} value={major.id}>
+                    {major.program_code} - {major.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={`course-major-${defaultValues?.id ?? "new"}`}>Major</Label>
-          <Select
-            value={majorId}
-            onValueChange={(value) => setMajorId(value ?? "")}
-            disabled={scope === CourseScope.GENERAL_EDUCATION || !programId}
-          >
-            <SelectTrigger id={`course-major-${defaultValues?.id ?? "new"}`} className="w-full">
-              <SelectValue>
-                {majorId
-                  ? (filteredMajors.find((m) => m.id === majorId)?.name ?? "Program-wide / none")
-                  : "Program-wide / none"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Program-wide / none</SelectItem>
-              {filteredMajors.map((major) => (
-                <SelectItem key={major.id} value={major.id}>
-                  {major.program_code} - {major.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      )}
 
       <div className="border-border bg-surface-alt grid gap-4 rounded-lg border p-4 md:grid-cols-3">
         <div className="space-y-2">

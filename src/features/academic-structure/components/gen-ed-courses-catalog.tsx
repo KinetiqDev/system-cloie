@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Archive, Edit, Plus, Power, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -20,6 +23,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { GenEdCourseDialog } from "./gen-ed-course-dialog";
+import {
+  bulkSetGenEdCoursesActiveAction,
+  setGenEdCourseActiveAction,
+} from "@/lib/actions/gen-ed-course-actions";
+import { showToast } from "@/components/ui/toast";
+import { useTableSelection } from "@/hooks/use-table-selection";
 import type { GenEdCourseItem, GenEdCoursesSummary } from "../services/resolve-gen-ed-courses";
 
 type GenEdCoursesCatalogProps = {
@@ -89,12 +99,43 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
   const [statusFilter, setStatusFilter] = useState("__all__");
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isPending, startTransition] = useTransition();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<GenEdCourseItem | null>(null);
 
   const filteredCourses = filterCourses(courses, statusFilter, search);
   // fallow-ignore-next-line code-duplication
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const selection = useTableSelection(
+    paginatedCourses.map((course) => course.id),
+    `${statusFilter}:${search}:${safePage}`
+  );
+
+  function handleStatus(id: string, isActive: boolean) {
+    startTransition(async () => {
+      const result = await setGenEdCourseActiveAction(id, isActive);
+      if (!result.success) showToast(result.error, "error");
+      else showToast(isActive ? "Course restored." : "Course archived.");
+      if (result.success) selection.clearSelection();
+    });
+  }
+
+  function handleBulkStatus(isActive: boolean) {
+    startTransition(async () => {
+      const result = await bulkSetGenEdCoursesActiveAction([...selection.selectedIds], isActive);
+      if (result.failed.length > 0) {
+        showToast(
+          `${result.succeeded.length} updated; ${result.failed.length} could not be updated.`,
+          "warning"
+        );
+      } else {
+        showToast(`${result.succeeded.length} courses ${isActive ? "restored" : "archived"}.`);
+      }
+      selection.clearSelection();
+    });
+  }
 
   return (
     <div>
@@ -112,6 +153,10 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             General Education courses only — college-wide catalog
           </p>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus aria-hidden="true" className="size-4" />
+          Add Course
+        </Button>
       </div>
 
       <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-3">
@@ -161,27 +206,74 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
         </div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selection.selectedCount}
+        itemLabel="course"
+        onClear={selection.clearSelection}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => handleBulkStatus(true)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Restore
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => handleBulkStatus(false)}
+        >
+          <Archive aria-hidden="true" className="size-4" />
+          Archive
+        </Button>
+      </BulkActionBar>
+
       <div className="overflow-x-auto rounded-lg border">
         <Table className="min-w-0 md:min-w-[760px]">
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  aria-label="Select all courses on this page"
+                  checked={selection.allVisibleSelected}
+                  indeterminate={selection.someVisibleSelected}
+                  onCheckedChange={(checked) => selection.toggleAllVisible(Boolean(checked))}
+                />
+              </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
               <TableHead className="hidden md:table-cell">Status</TableHead>
               <TableHead className="hidden md:table-cell">Last Updated</TableHead>
+              <TableHead className="w-24 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedCourses.length === 0 ? (
               <TableRow>
                 {/* fallow-ignore-next-line code-duplication */}
-                <TableCell colSpan={4} className="text-muted-foreground h-24 text-center">
+                <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
                   No courses found.
                 </TableCell>
               </TableRow>
             ) : (
               paginatedCourses.map((course) => (
-                <TableRow key={course.id} className="group">
+                <TableRow
+                  key={course.id}
+                  className="group"
+                  data-state={selection.selectedIds.has(course.id) ? "selected" : undefined}
+                >
+                  <TableCell>
+                    <Checkbox
+                      aria-label={`Select ${course.code}`}
+                      checked={selection.selectedIds.has(course.id)}
+                      onCheckedChange={(checked) =>
+                        selection.toggleOne(course.id, Boolean(checked))
+                      }
+                    />
+                  </TableCell>
                   <TableCell className="w-[99%] max-w-[200px] align-top md:w-auto md:max-w-none">
                     <div className="flex flex-col gap-1">
                       <span className="text-foreground truncate font-bold">{course.code}</span>
@@ -205,6 +297,27 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
                   <TableCell className="text-muted-foreground hidden text-xs whitespace-nowrap md:table-cell">
                     {formatDate(course.updated_at)}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        aria-label={`Edit ${course.code}`}
+                        onClick={() => setEditingCourse(course)}
+                      >
+                        <Edit aria-hidden="true" className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        aria-label={`${course.is_active ? "Archive" : "Restore"} ${course.code}`}
+                        disabled={isPending}
+                        onClick={() => handleStatus(course.id, !course.is_active)}
+                      >
+                        <Archive aria-hidden="true" className="size-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -225,6 +338,16 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             onPageChange={setCurrentPage}
           />
         </div>
+      )}
+      <GenEdCourseDialog open={createOpen} onOpenChange={setCreateOpen} />
+      {editingCourse && (
+        <GenEdCourseDialog
+          open
+          course={editingCourse}
+          onOpenChange={(open) => {
+            if (!open) setEditingCourse(null);
+          }}
+        />
       )}
     </div>
   );
