@@ -61,8 +61,9 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     await expect(
       page.getByRole("heading", { name: fx.courseResponse.respondentName })
     ).toBeVisible();
-    // Respondent context label renders program and year/section (e.g., "BSIT · SECOND_YEAR · MORNING")
-    await expect(page.getByText(/BSIT/)).toBeVisible();
+    // Respondent context label renders program and year/section (e.g., "BSIT · SECOND_YEAR · MORNING").
+    // .first() avoids strict-mode violation when "BSIT" also appears in breadcrumbs/shell.
+    await expect(page.getByText(/BSIT/).first()).toBeVisible();
     await expect(page.getByText(qualAnswerText, { exact: true })).toBeVisible();
 
     const phContent = await page.content();

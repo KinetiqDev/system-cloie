@@ -55,7 +55,11 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
       - name: Test
-        run: pnpm test
+        # Bound Vitest concurrency to keep the 403-file suite inside runner memory:
+        # default threads pool spawns one worker per core, each with a multi-GB heap.
+        # 4 workers * 4GB cap bounds peak RSS; raises the flaky SIGABRT (exit 134)
+        # OOM seen since the course-assignments suite grew (#572).
+        run: pnpm vitest run --maxWorkers=4
         env:
           NODE_ENV: test
           NODE_OPTIONS: --max-old-space-size=4096
