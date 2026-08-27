@@ -10,7 +10,7 @@ import {
   SEMESTER_OPTIONS,
   TERM_OPTIONS,
 } from "@/lib/constants/academic";
-import { AlertCircle, Archive, Edit, Plus, Power, Search } from "lucide-react";
+import { AlertCircle, Archive, Edit, FileSpreadsheet, Plus, Power, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,7 @@ import type {
   ProgramHeadCourseSummary,
 } from "../services/resolve-program-head-courses";
 import { showToast } from "@/components/ui/toast";
+import { CourseImportDialog } from "./course-import-dialog";
 import { useTableSelection } from "@/hooks/use-table-selection";
 
 type ProgramHeadCoursesCatalogProps = {
@@ -474,6 +475,7 @@ export function ProgramHeadCoursesCatalog({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDialogKey, setCreateDialogKey] = useState(0);
   const [editingCourse, setEditingCourse] = useState<ProgramHeadCourseItem | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const PAGE_SIZE = 15;
   const filteredCourses = filterCourses(courses, statusFilter, search, majorFilter);
@@ -528,13 +530,23 @@ export function ProgramHeadCoursesCatalog({
             </span>
           </div>
         </div>
-        <Button
-          onClick={() => setCreateDialogOpen(true)}
-          className="inline-flex items-center gap-2"
-        >
-          <Plus className="size-4" data-icon="inline-start" />
-          Add Course
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+            className="inline-flex items-center gap-2"
+          >
+            <FileSpreadsheet className="size-4" data-icon="inline-start" />
+            Import CSV
+          </Button>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="inline-flex items-center gap-2"
+          >
+            <Plus className="size-4" data-icon="inline-start" />
+            Add Course
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -767,6 +779,19 @@ export function ProgramHeadCoursesCatalog({
         </div>
       )}
       {/* Create Dialog */}
+      <CourseImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        config={{
+          mode: "program-head",
+          selectedProgram: program,
+          majors: majors.map((major) => ({
+            id: major.id,
+            code: major.name,
+            name: major.name,
+          })),
+        }}
+      />
       <CourseFormDialog
         key={`create-${createDialogKey}`}
         mode="create"
