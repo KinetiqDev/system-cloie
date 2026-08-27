@@ -42,7 +42,7 @@ import type {
   CourseAssignmentResult,
 } from "@/features/course-assignments/types";
 import { buildProgramHeadCourseAssignmentsPath } from "@/lib/constants/program-head-routes";
-export type BulkCourseAssignmentLifecycleResult = {
+type BulkCourseAssignmentLifecycleResult = {
   succeeded: string[];
   failed: Array<{ id: string; error: string; referenceId?: string }>;
 };
@@ -213,6 +213,20 @@ export async function activateCourseAssignmentAction(input: ActivateCourseAssign
 
   return result;
 }
+async function setCourseAssignmentActive(input: {
+  assignmentId: string;
+  isActive: boolean;
+  programId?: string;
+}) {
+  const lifecycleInput = {
+    assignmentId: input.assignmentId,
+    programId: input.programId,
+  };
+  return input.isActive
+    ? activateCourseAssignment(lifecycleInput)
+    : deactivateCourseAssignment(lifecycleInput);
+}
+
 export async function bulkSetCourseAssignmentsActiveAction(input: {
   assignmentIds: string[];
   isActive: boolean;
@@ -229,9 +243,11 @@ export async function bulkSetCourseAssignmentsActiveAction(input: {
   const result: BulkCourseAssignmentLifecycleResult = { succeeded: [], failed: [] };
   const programIds = new Set<string>();
   for (const assignmentId of ids) {
-    const item = input.isActive
-      ? await activateCourseAssignment({ assignmentId, programId: input.programId })
-      : await deactivateCourseAssignment({ assignmentId, programId: input.programId });
+    const item = await setCourseAssignmentActive({
+      assignmentId,
+      isActive: input.isActive,
+      programId: input.programId,
+    });
     if (item.success) {
       result.succeeded.push(assignmentId);
       for (const programId of item.data?.programIds ?? []) programIds.add(programId);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useCallback, useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -65,18 +65,21 @@ export function SecretaryUsersList({
     `${page}:${query.role ?? ""}:${query.program ?? ""}:${query.major ?? ""}:${query.q ?? ""}:${query.state ?? ""}:${query.verification ?? ""}:${query.sort}:${query.direction}`
   );
 
-  const navigateWithQuery = (next: Partial<SecretaryUsersListQuery>) => {
-    const nextQuery = { ...query, ...next };
-    const search = serializeSecretaryUsersListQuery(nextQuery);
-    startTransition(() => router.replace(search ? `${pathname}?${search}` : pathname));
-  };
+  const navigateWithQuery = useCallback(
+    (next: Partial<SecretaryUsersListQuery>) => {
+      const nextQuery = { ...query, ...next };
+      const search = serializeSecretaryUsersListQuery(nextQuery);
+      startTransition(() => router.replace(search ? `${pathname}?${search}` : pathname));
+    },
+    [pathname, query, router]
+  );
 
   useEffect(() => {
     const nextQ = searchDraft.trim() || undefined;
-    if (nextQ === (query.q || undefined) && query.page === 1) return;
+    if (nextQ === (query.q || undefined)) return;
     const timer = setTimeout(() => navigateWithQuery({ q: nextQ, page: 1 }), 300);
     return () => clearTimeout(timer);
-  }, [searchDraft]);
+  }, [navigateWithQuery, query.q, searchDraft]);
 
   const handleUserUpdated = () => router.refresh();
   const handleToggleActive = (userId: string, currentActive: boolean) => {

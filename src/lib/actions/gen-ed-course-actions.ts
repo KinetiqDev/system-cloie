@@ -16,7 +16,7 @@ import {
 const COURSE_ROUTE = "/gen-ed-coordinator/courses";
 
 type ActionResult = { success: true } | { success: false; error: string };
-export type BulkGenEdCourseResult = {
+type BulkGenEdCourseResult = {
   succeeded: string[];
   failed: Array<{ id: string; error: string }>;
 };

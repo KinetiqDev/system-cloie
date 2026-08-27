@@ -17,7 +17,7 @@ import {
 import { buildProgramHeadCoursesPath } from "@/lib/constants/program-head-routes";
 
 type ActionResult = { success: true } | { success: false; error: string };
-export type BulkProgramHeadCourseResult = {
+type BulkProgramHeadCourseResult = {
   succeeded: string[];
   failed: Array<{ id: string; error: string }>;
 };

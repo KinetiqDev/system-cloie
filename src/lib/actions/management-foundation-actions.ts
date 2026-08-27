@@ -52,7 +52,7 @@ import {
 } from "@/features/instruments/services/manage-instruments";
 
 type ActionResult = { success: true } | { success: false; error: string };
-export type BulkLifecycleResult = {
+type BulkLifecycleResult = {
   succeeded: string[];
   failed: Array<{ id: string; error: string }>;
 };

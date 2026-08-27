@@ -47,6 +47,101 @@ interface UsersDataTableProps {
   onBulkStatus: (isActive: boolean) => void;
 }
 
+type MobileUserCardProps = Pick<
+  UsersDataTableProps,
+  "onViewUser" | "onEditUser" | "onToggleActive" | "onToggleOne" | "isPending"
+> & {
+  user: SecretaryUserSummaryItem;
+  selected: boolean;
+};
+
+function MobileUserBadges({ user }: { user: SecretaryUserSummaryItem }) {
+  return (
+    <div className="mt-1 flex items-center gap-2">
+      {user.activeRole ? (
+        <Badge className={getRoleBadgeClass(user.activeRole)}>{formatRole(user.activeRole)}</Badge>
+      ) : null}
+      <Badge variant={user.isActive ? "success" : "secondary"}>
+        {user.isActive ? "Active" : "Inactive"}
+      </Badge>
+    </div>
+  );
+}
+
+function MobileUserAcademicContext({ user }: { user: SecretaryUserSummaryItem }) {
+  return (
+    <>
+      <div className="flex items-center gap-2 text-sm">
+        <Building2 className="text-muted-foreground size-4" />
+        <span>{user.programLabel}</span>
+        {user.majorLabel && <span className="text-muted-foreground">• {user.majorLabel}</span>}
+      </div>
+      {user.roles.includes(SystemRole.STUDENT) && user.sectionLabel && (
+        <div className="flex items-center gap-2 text-sm">
+          <GraduationCap className="text-muted-foreground size-4" />
+          <span>{user.sectionLabel}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+function MobileUserCard({
+  user,
+  selected,
+  onViewUser,
+  onEditUser,
+  onToggleActive,
+  onToggleOne,
+  isPending,
+}: MobileUserCardProps) {
+  return (
+    <Card
+      data-state={selected ? "selected" : undefined}
+      className="data-[state=selected]:bg-selected-bg overflow-hidden motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm"
+    >
+      <CardHeader className="pb-3">
+        <Checkbox
+          aria-label={`Select ${user.name}`}
+          checked={selected}
+          onCheckedChange={(checked) => onToggleOne(user.id, Boolean(checked))}
+        />
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-heading text-title-sm text-foreground">{user.name}</h3>
+            <MobileUserBadges user={user} />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground -mr-2 inline-flex size-9 items-center justify-center rounded-md transition-colors">
+              <MoreVertical className="size-4" />
+              <span className="sr-only">User actions</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => onViewUser(user)}>View details</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEditUser(user)}>Edit user</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={isPending}
+                onClick={() => onToggleActive(user.id, user.isActive)}
+                className={user.isActive ? "text-destructive" : "text-success"}
+              >
+                {user.isActive ? "Deactivate" : "Activate"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2 pt-0">
+        <div className="flex items-center gap-2 text-sm">
+          <Mail className="text-muted-foreground size-4" />
+          <span className="text-muted-foreground">{user.email}</span>
+        </div>
+        <MobileUserAcademicContext user={user} />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function UsersDataTable({
   users,
   onViewUser,
@@ -189,73 +284,16 @@ export function UsersDataTable({
       {/* Mobile Card View */}
       <div className="flex flex-col gap-3 md:hidden">
         {users.map((user) => (
-          <Card
+          <MobileUserCard
             key={user.id}
-            data-state={selectedIds.has(user.id) ? "selected" : undefined}
-            className="data-[state=selected]:bg-selected-bg overflow-hidden motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm"
-          >
-            <CardHeader className="pb-3">
-              <Checkbox
-                aria-label={`Select ${user.name}`}
-                checked={selectedIds.has(user.id)}
-                onCheckedChange={(checked) => onToggleOne(user.id, Boolean(checked))}
-              />
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-heading text-title-sm text-foreground">{user.name}</h3>
-                  <div className="mt-1 flex items-center gap-2">
-                    {user.activeRole ? (
-                      <Badge className={getRoleBadgeClass(user.activeRole)}>
-                        {formatRole(user.activeRole)}
-                      </Badge>
-                    ) : null}
-                    <Badge variant={user.isActive ? "success" : "secondary"}>
-                      {user.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground -mr-2 inline-flex size-9 items-center justify-center rounded-md transition-colors">
-                    <MoreVertical className="size-4" />
-                    <span className="sr-only">User actions</span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => onViewUser(user)}>
-                      View details
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEditUser(user)}>Edit user</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      disabled={isPending}
-                      onClick={() => onToggleActive(user.id, user.isActive)}
-                      className={user.isActive ? "text-destructive" : "text-success"}
-                    >
-                      {user.isActive ? "Deactivate" : "Activate"}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 pt-0">
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="text-muted-foreground size-4" />
-                <span className="text-muted-foreground">{user.email}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Building2 className="text-muted-foreground size-4" />
-                <span>{user.programLabel}</span>
-                {user.majorLabel && (
-                  <span className="text-muted-foreground">• {user.majorLabel}</span>
-                )}
-              </div>
-              {user.roles.includes(SystemRole.STUDENT) && user.sectionLabel && (
-                <div className="flex items-center gap-2 text-sm">
-                  <GraduationCap className="text-muted-foreground size-4" />
-                  <span>{user.sectionLabel}</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            user={user}
+            selected={selectedIds.has(user.id)}
+            onViewUser={onViewUser}
+            onEditUser={onEditUser}
+            onToggleActive={onToggleActive}
+            onToggleOne={onToggleOne}
+            isPending={isPending}
+          />
         ))}
       </div>
     </div>

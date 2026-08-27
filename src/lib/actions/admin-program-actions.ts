@@ -10,7 +10,6 @@ import {
   updateProgramSchema,
   deleteProgramSchema,
   createMajorSchema,
-  updateMajorSchema,
 } from "@/features/academic-structure/schemas/program";
 import {
   createProgram,
@@ -22,13 +21,12 @@ import {
   type ProgramDeletionPreflight,
   type DeleteProgramResult,
   createMajor,
-  updateMajor,
   toggleMajorActive,
   deleteMajor,
 } from "@/features/academic-structure/services/manage-programs";
 
 type ActionResult = { success: true } | { success: false; error: string };
-export type BulkProgramLifecycleResult = {
+type BulkProgramLifecycleResult = {
   succeeded: string[];
   failed: Array<{ id: string; error: string }>;
 };
@@ -206,26 +204,6 @@ export async function createMajorAction(formData: FormData): Promise<ActionResul
 
   revalidatePath("/secretary/programs");
   revalidatePath("/dean/academic-structure/programs");
-  return { success: true };
-}
-
-async function updateMajorAction(formData: FormData): Promise<ActionResult> {
-  const parsed = updateMajorSchema.safeParse({
-    id: formData.get("id"),
-    name: formData.get("name"),
-  });
-
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
-  }
-
-  const result = await updateMajor(parsed.data);
-
-  if (!result.success) {
-    return { success: false, error: result.error };
-  }
-
-  revalidatePath("/secretary/programs");
   return { success: true };
 }
 

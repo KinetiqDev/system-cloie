@@ -192,6 +192,29 @@ describe("SecretaryUsersList", () => {
     expect(replaceMock).toHaveBeenCalledWith("/secretary/users?q=John");
   });
 
+  it("does not reset pagination when the server search term is unchanged", () => {
+    replaceMock.mockClear();
+    render(
+      <SecretaryUsersList
+        users={mockUsers}
+        total={30}
+        page={2}
+        pageSize={15}
+        query={{ page: 2, q: "John", sort: "name", direction: "asc" }}
+        kpi={mockKPI}
+        programs={mockPrograms}
+        yearLevels={mockYearLevels}
+        currentUserId="admin-1"
+      />
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
   it("supports page-bound selection across desktop and mobile representations", () => {
     render(
       <SecretaryUsersList

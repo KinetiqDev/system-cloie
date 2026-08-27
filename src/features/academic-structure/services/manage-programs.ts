@@ -1,11 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { Prisma } from "@prisma/client";
-import type {
-  CreateMajorInput,
-  CreateProgramInput,
-  UpdateMajorInput,
-  UpdateProgramInput,
-} from "../schemas/program";
+import type { CreateMajorInput, CreateProgramInput, UpdateProgramInput } from "../schemas/program";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
@@ -177,26 +172,6 @@ export async function deleteProgram(input: {
   }
 }
 
-async function listPrograms() {
-  return prisma.program.findMany({
-    include: {
-      majors: {
-        where: { is_active: true },
-        orderBy: { name: "asc" },
-      },
-      _count: {
-        select: {
-          courses: true,
-          plos: true,
-          student_profiles: true,
-          faculty_program_affiliations: true,
-        },
-      },
-    },
-    orderBy: { code: "asc" },
-  });
-}
-
 export async function getProgram(id: string) {
   return prisma.program.findUnique({
     where: { id },
@@ -296,29 +271,6 @@ export async function createMajor(input: CreateMajorInput): Promise<ServiceResul
       data: {
         program_id: input.program_id,
         name: input.name,
-      },
-    });
-
-    return { success: true, data: { id: major.id } };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: `A major named "${input.name}" already exists in this program.`,
-      };
-    }
-
-    throw error;
-  }
-}
-
-export async function updateMajor(input: UpdateMajorInput): Promise<ServiceResult<{ id: string }>> {
-  try {
-    const major = await prisma.major.update({
-      where: { id: input.id },
-      data: {
-        name: input.name,
-        ...(input.is_active !== undefined ? { is_active: input.is_active } : {}),
       },
     });
 
