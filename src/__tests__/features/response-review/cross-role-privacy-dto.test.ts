@@ -176,18 +176,42 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
   it("serialised aggregate payloads never contain the reviewed qualitative fixture text verbatim", () => {
     const rawQualitative =
       "The hands-on coding exercises for linked lists and trees were very effective in solidifying CILO 1.";
-    const redactedTokens: WordCloudToken[] = [{ text: "coding", value: 1 }];
-    const overview: Pick<ProgramHeadOverviewDTO, "scope" | "tokens"> = {
-      scope: {
-        programCode: "BSIT",
-        programName: "BSIT",
-        periodLabel: null,
-      } as unknown as ProgramHeadOverviewDTO["scope"],
-      tokens: redactedTokens as unknown as ProgramHeadOverviewDTO["tokens"],
-    } as unknown as Pick<ProgramHeadOverviewDTO, "scope" | "tokens">;
-    // Even if someone accidentally spreads raw text, this test pins that the
-    // overview aggregate shape never serialises the raw fixture verbatim.
-    expect(JSON.stringify(overview)).not.toContain(rawQualitative);
-    expect(JSON.stringify(redactedTokens)).not.toContain(rawQualitative);
+
+    // The Feedback DTO is the aggregate shape that owns tokens. Build a valid
+    // payload (no type casts) and pin that the browser-serialized form carries
+    // only redacted word-frequency tokens, never the raw fixture text.
+    const feedback: ProgramHeadFeedbackDTO = {
+      scope: { programCode: "BSIT", programName: "BSIT", periodLabel: null },
+      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+      emptyReason: null,
+      tokens: [{ text: "coding", value: 1 }],
+      qualitativeItemCount: 1,
+      qualitativeResponseCount: 1,
+      sourceCounts: [
+        {
+          sourceKey: "COURSE_STUDENT",
+          sourceLabel: "Course-bound student evidence",
+          itemCount: 1,
+          responseCount: 1,
+        },
+      ],
+      promptCounts: [
+        {
+          sourceLabel: "Course-bound student evidence",
+          promptLabel: "Remarks",
+          itemCount: 1,
+          responseCount: 1,
+        },
+      ],
+      evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "IT201 Post-Term" }],
+    };
+
+    const serialized = JSON.stringify(feedback);
+    expect(serialized).not.toContain(rawQualitative);
+    expect(serialized).not.toContain("demo-student@cloie.test");
+    expect(serialized).not.toContain("55555555");
+    for (const token of feedback.tokens) {
+      expect(JSON.stringify(token)).not.toContain(rawQualitative);
+    }
   });
 });
