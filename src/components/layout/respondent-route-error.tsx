@@ -22,19 +22,17 @@ export function RespondentRouteError({ error, reset, returnHref }: RespondentRou
         <div>
           <h2 className="text-base font-medium">We couldn&apos;t load this page</h2>
           <AlertDescription className="mt-1">
-            Please try again or return to your dashboard.
+            Please try again. If it still won&apos;t load, return to your dashboard and try again
+            later.
           </AlertDescription>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button onClick={reset} variant="outline">
+          <Button onClick={reset} variant="default">
             Try Again
           </Button>
-          <Link
-            href={returnHref}
-            className="border-border bg-background hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3"
-          >
+          <Button variant="outline" render={<Link href={returnHref} />}>
             Return to Dashboard
-          </Link>
+          </Button>
         </div>
       </Alert>
     </div>

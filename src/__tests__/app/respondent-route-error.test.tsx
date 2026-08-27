@@ -17,36 +17,60 @@ describe("respondent route error boundaries", () => {
   });
 
   it.each(errorBoundaries)(
-    "offers local recovery without exposing exception details",
+    "explains the failure in plain language and offers retry plus dashboard recovery",
     (ErrorBoundary, returnHref) => {
       const reset = vi.fn();
-      const internalMessage = "database connection details";
-      const digest = "private-error-digest";
-      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-      render(
-        <ErrorBoundary
-          error={Object.assign(new Error(internalMessage), { digest })}
-          reset={reset}
-        />
-      );
+      render(<ErrorBoundary error={new Error("boom")} reset={reset} />);
 
       expect(screen.getByRole("alert")).toBeInTheDocument();
       expect(
         screen.getByRole("heading", { name: "We couldn't load this page" })
       ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Please try again. If it still won't load, return to your dashboard and try again later."
+        )
+      ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "Return to Dashboard" })).toHaveAttribute(
-        "href",
-        returnHref
-      );
-      expect(screen.queryByText(internalMessage)).not.toBeInTheDocument();
-      expect(screen.queryByText(digest)).not.toBeInTheDocument();
-      expect(consoleError).toHaveBeenCalledTimes(1);
-      expect(consoleError).toHaveBeenCalledWith("Respondent route error");
+      const dashboardAction = screen.getByRole("button", { name: "Return to Dashboard" });
+      expect(dashboardAction).toHaveAttribute("href", returnHref);
 
       fireEvent.click(screen.getByRole("button", { name: "Try Again" }));
       expect(reset).toHaveBeenCalledOnce();
     }
   );
+
+  it.each(errorBoundaries)("never exposes internal error or digest details", (ErrorBoundary) => {
+    const reset = vi.fn();
+    const internalMessage = "database connection details";
+    const digest = "private-error-digest";
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    render(
+      <ErrorBoundary error={Object.assign(new Error(internalMessage), { digest })} reset={reset} />
+    );
+
+    expect(screen.queryByText(internalMessage)).not.toBeInTheDocument();
+    expect(screen.queryByText(digest)).not.toBeInTheDocument();
+    expect(screen.queryByText(/database|connection|stack/i)).not.toBeInTheDocument();
+  });
+
+  it.each(errorBoundaries)("logs a bounded, non-diagnostic error", (ErrorBoundary) => {
+    const reset = vi.fn();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    render(
+      <ErrorBoundary
+        error={Object.assign(new Error("database connection details"), {
+          digest: "private-error-digest",
+        })}
+        reset={reset}
+      />
+    );
+
+    expect(consoleError).toHaveBeenCalledTimes(1);
+    expect(consoleError).toHaveBeenCalledWith("Respondent route error");
+  });
 });

@@ -188,6 +188,9 @@ describe("submitCentralDeploymentResponse", () => {
     findResponseMock.mockResolvedValue({ id: "response-1", status: "IN_PROGRESS" });
     updateMock.mockResolvedValue({ id: "response-1" });
 
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-20T12:00:00.000Z"));
+
     const { submitCentralDeploymentResponse } =
       await import("@/features/responses/services/submit-central-deployment-response");
 
@@ -199,18 +202,23 @@ describe("submitCentralDeploymentResponse", () => {
     expect(result).toEqual({
       responseId: "response-1",
       status: "SUBMITTED",
+      submittedAt: "2026-04-20T12:00:00.000Z",
       success: true,
     });
 
-    // Verify response was updated to SUBMITTED status
+    // The returned timestamp is the exact value frozen inside the transaction,
+    // not a second client-side time.
     expect(updateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           status: "SUBMITTED",
+          submitted_at: new Date("2026-04-20T12:00:00.000Z"),
         }),
         where: { id: "response-1" },
       })
     );
+
+    vi.useRealTimers();
   });
 
   it("sets status to SUBMITTED and submitted_at", async () => {
@@ -244,6 +252,9 @@ describe("submitCentralDeploymentResponse", () => {
     createMock.mockResolvedValue({ id: "new-response-1", status: "IN_PROGRESS" });
     updateMock.mockResolvedValue({ id: "new-response-1" });
 
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-20T12:00:00.000Z"));
+
     const { submitCentralDeploymentResponse } =
       await import("@/features/responses/services/submit-central-deployment-response");
 
@@ -255,6 +266,7 @@ describe("submitCentralDeploymentResponse", () => {
     expect(result).toEqual({
       responseId: "new-response-1",
       status: "SUBMITTED",
+      submittedAt: "2026-04-20T12:00:00.000Z",
       success: true,
     });
 
@@ -269,6 +281,8 @@ describe("submitCentralDeploymentResponse", () => {
         }),
       })
     );
+
+    vi.useRealTimers();
   });
 
   it("rejects when assignment has no central deployment", async () => {

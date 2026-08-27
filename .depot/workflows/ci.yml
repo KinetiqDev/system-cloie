@@ -55,11 +55,9 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
       - name: Test
-        # Bound Vitest concurrency to keep the 403-file suite inside runner memory:
-        # default threads pool spawns one worker per core, each with a multi-GB heap.
-        # 4 workers * 4GB cap bounds peak RSS; raises the flaky SIGABRT (exit 134)
-        # OOM seen since the course-assignments suite grew (#572).
-        run: pnpm vitest run --maxWorkers=4
+        # Prisma's native query engine can abort inside worker_threads; forked
+        # processes load it safely while four workers keep the suite bounded.
+        run: pnpm vitest run --pool=forks --maxWorkers=4
         env:
           NODE_ENV: test
           NODE_OPTIONS: --max-old-space-size=4096
