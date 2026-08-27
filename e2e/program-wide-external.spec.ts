@@ -85,7 +85,7 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await page.getByRole("button", { name: "Preview Respondents" }).click();
   await expect(page.getByRole("heading", { name: "Respondent Preview" })).toBeVisible();
   await expect(page.getByText(/respondent\(s\) found/)).toBeVisible();
-  await expect(page.getByRole("cell", { name: "Demo Alumni" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Demo Alumni", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
 
   // Confirm and publish

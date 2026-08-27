@@ -288,7 +288,9 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await expect(
     page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Program Learning Experience" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Program Learning Experience", exact: true })
+  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   for (const prompt of [
@@ -303,10 +305,13 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
 
   // Draft save verified via navigation; reload confirms persistence
   await page.reload();
+  await page.waitForLoadState("networkidle");
   await expect(
     page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Program Learning Experience" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Program Learning Experience", exact: true })
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Next Section" }).click();
   await expectQuestionUnanswered(
