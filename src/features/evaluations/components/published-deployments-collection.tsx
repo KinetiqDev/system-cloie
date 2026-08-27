@@ -56,6 +56,12 @@ type PublishedDeploymentsCollectionProps = {
     item: PublishedDeploymentItem,
     ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
   ) => ReactNode;
+  /** Role-specific inline card actions. When provided, card footers render these
+   *  buttons directly instead of the overflow menu; list rows keep the menu. */
+  renderCardActions?: (
+    item: PublishedDeploymentItem,
+    ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
+  ) => ReactNode;
   /** Optional aria label for the results list; defaults to "Published evaluations". */
   label?: string;
 };
@@ -89,6 +95,7 @@ export function PublishedDeploymentsCollection({
   empty,
   renderExpanded,
   renderMenuItems,
+  renderCardActions,
   label = "Published evaluations",
 }: PublishedDeploymentsCollectionProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
@@ -159,6 +166,7 @@ export function PublishedDeploymentsCollection({
               item={item}
               hasCourse={hasCourseColumn}
               renderMenuItems={renderMenuItems}
+              renderCardActions={renderCardActions}
             />
           ))}
         </div>
@@ -259,10 +267,15 @@ function PublishedCard({
   item,
   hasCourse,
   renderMenuItems,
+  renderCardActions,
 }: {
   item: PublishedDeploymentItem;
   hasCourse: boolean;
   renderMenuItems: (
+    item: PublishedDeploymentItem,
+    ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
+  ) => ReactNode;
+  renderCardActions?: (
     item: PublishedDeploymentItem,
     ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
   ) => ReactNode;
@@ -298,9 +311,15 @@ function PublishedCard({
         </div>
       </CardContent>
       <CardFooter className="justify-end">
-        <OverflowMenu>
-          {renderMenuItems(item, { view: "card", expanded: false, toggle: () => {} })}
-        </OverflowMenu>
+        {renderCardActions ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            {renderCardActions(item, { view: "card", expanded: false, toggle: () => {} })}
+          </div>
+        ) : (
+          <OverflowMenu>
+            {renderMenuItems(item, { view: "card", expanded: false, toggle: () => {} })}
+          </OverflowMenu>
+        )}
       </CardFooter>
     </Card>
   );

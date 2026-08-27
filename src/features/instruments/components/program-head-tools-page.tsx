@@ -13,6 +13,13 @@ import { Copy, Eye, Pencil, Plus, Send, Trash2, XCircle } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   AlertDialog,
   AlertDialogCancel,
   AlertDialogContent,
@@ -32,6 +39,7 @@ import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
 } from "@/features/evaluations/components/published-deployments-collection";
+import { CloseEvaluationDialog } from "@/features/evaluations/components/close-evaluation-dialog";
 import { closeCentralDeploymentAction } from "@/lib/actions/central-deployment-actions";
 import {
   deleteTemplateAction,
@@ -343,7 +351,9 @@ function ProgramHeadPublishedDeployments({
   view: ToolsViewMode;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [closeTargetId, setCloseTargetId] = useState<string | null>(null);
   const [optimisticDeployments, updateDeployment] = useOptimistic(
     deployments,
     (currentDeployments, closedDeploymentId: string) =>
@@ -381,10 +391,11 @@ function ProgramHeadPublishedDeployments({
   }));
 
   return (
-    <PublishedDeploymentsCollection
-      view={view}
-      items={items}
-      label="Published deployments"
+    <>
+      <PublishedDeploymentsCollection
+        view={view}
+        items={items}
+        label="Published deployments"
       empty={
         <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
           <p className="text-muted-foreground">No published tools yet.</p>
@@ -406,10 +417,7 @@ function ProgramHeadPublishedDeployments({
           {item.canClose && (
             <>
               {ctx.view === "list" && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => handleClose(item.id)}
-              >
+              <DropdownMenuItem variant="destructive" onClick={() => setCloseTargetId(item.id)}>
                 <XCircle className="mr-2 size-4" />
                 Close Deployment
               </DropdownMenuItem>
@@ -417,7 +425,48 @@ function ProgramHeadPublishedDeployments({
           )}
         </>
       )}
+      renderCardActions={(item) => (
+        <>
+          <Button variant="outline" size="sm" onClick={() => setDetailId(item.id)}>
+            <Eye data-icon="inline-start" />
+            View Details
+          </Button>
+          {item.canClose && (
+            <Button variant="destructive" size="sm" onClick={() => setCloseTargetId(item.id)}>
+              <XCircle data-icon="inline-start" />
+              Close Deployment
+            </Button>
+          )}
+        </>
+      )}
     />
+
+    <Dialog open={detailId !== null} onOpenChange={(open) => !open && setDetailId(null)}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{detailId ? (byId.get(detailId)?.templateName ?? "") : ""}</DialogTitle>
+          <DialogDescription>Deployment details</DialogDescription>
+        </DialogHeader>
+        {detailId && byId.get(detailId) && (
+          <DeploymentExpandedDetails deployment={byId.get(detailId)!} />
+        )}
+      </DialogContent>
+    </Dialog>
+
+    <CloseEvaluationDialog
+      entityLabel="Deployment"
+      deploymentName={closeTargetId ? (byId.get(closeTargetId)?.templateName ?? "") : ""}
+      open={closeTargetId !== null}
+      onOpenChange={(open) => !open && setCloseTargetId(null)}
+      onConfirm={() => {
+        if (closeTargetId) {
+          handleClose(closeTargetId);
+          setCloseTargetId(null);
+        }
+      }}
+      isPending={isPending}
+    />
+    </>
   );
 }
 

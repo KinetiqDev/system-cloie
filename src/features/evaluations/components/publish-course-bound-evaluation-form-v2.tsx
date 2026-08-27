@@ -26,6 +26,11 @@ import type {
 } from "@/features/evaluations/types";
 import type { TemplateStructure } from "@/features/instruments/types";
 import { isNeutralOtherExplanation } from "../exclusion-text";
+import {
+  EXCLUSION_CATEGORY_OPTIONS,
+  getExclusionCategoryLabel,
+} from "../exclusion-categories";
+import type { CourseBoundEvaluationExclusionCategory } from "@prisma/client";
 import { AssignmentPicker, type AssignmentOption } from "./assignment-picker";
 import { Info } from "lucide-react";
 
@@ -51,11 +56,7 @@ export type PublicationContext = {
 };
 
 type Step = "configure" | "preview";
-type ExclusionCategory =
-  | "APPROVED_ACCOMMODATION"
-  | "NOT_TAKING_ASSESSMENT"
-  | "ADMINISTRATIVE_EXCEPTION"
-  | "OTHER";
+type ExclusionCategory = CourseBoundEvaluationExclusionCategory;
 
 type ExclusionDraft = {
   category: ExclusionCategory;
@@ -590,20 +591,19 @@ export function PublishCourseBoundEvaluationFormV2({
                               id={`exclusion-category-${respondent.membershipId}`}
                               className="w-full"
                             >
-                              <SelectValue />
+                              <SelectValue>
+                                {getExclusionCategoryLabel(
+                                  exclusion?.category ?? "ADMINISTRATIVE_EXCEPTION"
+                                )}
+                              </SelectValue>
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="APPROVED_ACCOMMODATION">
-                                Approved accommodation
-                              </SelectItem>
-                              <SelectItem value="NOT_TAKING_ASSESSMENT">
-                                Not taking this assessment
-                              </SelectItem>
-                              <SelectItem value="ADMINISTRATIVE_EXCEPTION">
-                                Administrative exception
-                              </SelectItem>
-                              <SelectItem value="OTHER">Other</SelectItem>
-                            </SelectContent>
+                              <SelectContent>
+                                {EXCLUSION_CATEGORY_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
                           </Select>
                           {exclusion?.category === "OTHER" && (
                             <div className="flex flex-col gap-1">

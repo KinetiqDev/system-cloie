@@ -1765,8 +1765,11 @@ function QuestionCard({
                   }
                 }}
               >
-                <SelectTrigger id={`cilo-binding-${question.key}`}>
-                  <SelectValue placeholder="Select a CILO">
+                <SelectTrigger
+                  id={`cilo-binding-${question.key}`}
+                  className="h-auto min-h-8 w-full whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-none *:data-[slot=select-value]:items-start *:data-[slot=select-value]:whitespace-normal"
+                >
+                  <SelectValue placeholder="Select a CILO…">
                     {selectedCiloId ? selectedCiloLabel : undefined}
                   </SelectValue>
                 </SelectTrigger>
