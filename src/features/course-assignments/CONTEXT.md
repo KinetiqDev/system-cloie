@@ -39,7 +39,7 @@ A Course owned by one academic program. Its course assignments are created for t
 _Avoid_: Department subject, program offering
 
 **General Education Course**:
-A shared institutional Course that is not owned by a single academic program. The General Education Coordinator stewards General Education course assignments college-wide; Deans retain all-program authority over them; Program Heads and Secretaries are read-only.
+A shared institutional Course that is not owned by a single academic program. The General Education Coordinator stewards the college-wide General Education catalog and General Education course assignments; Deans retain all-program authority over them; Program Heads and Secretaries are read-only.
 _Avoid_: Shared program course, merged course
 
 **Catalog default**:

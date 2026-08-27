@@ -17,6 +17,10 @@ import {
 import { buildProgramHeadCoursesPath } from "@/lib/constants/program-head-routes";
 
 type ActionResult = { success: true } | { success: false; error: string };
+export type BulkProgramHeadCourseResult = {
+  succeeded: string[];
+  failed: Array<{ id: string; error: string }>;
+};
 
 function parseWithSchema<T>(
   schema: ZodType<T>,
@@ -133,4 +137,30 @@ export async function toggleProgramHeadCourseActiveAction(
 
   revalidateProgramHeadCourses(parsed.data.programId);
   return { success: true };
+}
+
+export async function bulkToggleProgramHeadCoursesActiveAction(
+  programId: string,
+  ids: string[],
+  isActive: boolean
+): Promise<BulkProgramHeadCourseResult> {
+  const session = await resolveAuthSession();
+  if (session?.activeRole !== ROLES.PROGRAM_HEAD) {
+    return { succeeded: [], failed: ids.map((id) => ({ id, error: "Insufficient permissions." })) };
+  }
+  if (ids.length === 0 || ids.length > 100 || new Set(ids).size !== ids.length) {
+    return {
+      succeeded: [],
+      failed: [{ id: "selection", error: "Select between 1 and 100 unique courses." }],
+    };
+  }
+
+  const result: BulkProgramHeadCourseResult = { succeeded: [], failed: [] };
+  for (const id of ids) {
+    const item = await toggleProgramHeadCourseActive({ programId, id, is_active: isActive });
+    if (item.success) result.succeeded.push(id);
+    else result.failed.push({ id, error: item.error });
+  }
+  if (result.succeeded.length > 0) revalidateProgramHeadCourses(programId);
+  return result;
 }

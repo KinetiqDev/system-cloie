@@ -7,6 +7,13 @@ import type {
 import { CourseScope } from "@prisma/client";
 
 import { GenEdCoursesCatalog } from "@/features/academic-structure/components/gen-ed-courses-catalog";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("@/lib/actions/gen-ed-course-actions", () => ({
+  createGenEdCourseAction: vi.fn(),
+  updateGenEdCourseAction: vi.fn(),
+  setGenEdCourseActiveAction: vi.fn().mockResolvedValue({ success: true }),
+  bulkSetGenEdCoursesActiveAction: vi.fn().mockResolvedValue({ succeeded: ["c-1"], failed: [] }),
+}));
 
 function course(overrides: Partial<GenEdCourseItem> = {}): GenEdCourseItem {
   return {
@@ -78,7 +85,7 @@ describe("GenEdCoursesCatalog", () => {
     expect(screen.getByText("GEMATH")).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Course" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /edit|archive|create/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Course" })).toBeInTheDocument();
   });
 
   it("filters by search code/title", () => {
@@ -145,13 +152,18 @@ describe("GenEdCoursesCatalog", () => {
     }
   });
 
-  it("is read-only — no CourseScope/Major/program filters and no mutation controls", () => {
-    const { container } = render(<GenEdCoursesCatalog courses={[course()]} summary={summary} />);
-    expect(screen.queryByText(/Course Scope/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Major/i)).not.toBeInTheDocument();
-    expect(container.querySelector("form")).toBeFalsy();
-    expect(
-      screen.queryByRole("button", { name: /create course|edit.*course/i })
-    ).not.toBeInTheDocument();
+  it("offers fixed-scope CRUD and page-bound bulk actions", () => {
+    render(<GenEdCoursesCatalog courses={[course()]} summary={summary} />);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select GEMATH" }));
+    expect(screen.getByText("1 course selected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Archive" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Restore" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit GEMATH" }));
+    expect(screen.getByText("Edit General Education Course")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Course Scope")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Program")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Major")).not.toBeInTheDocument();
   });
 });

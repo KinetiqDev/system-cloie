@@ -2,17 +2,21 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createActionMock, updateActionMock, toggleActionMock } = vi.hoisted(() => ({
-  createActionMock: vi.fn(),
-  updateActionMock: vi.fn(),
-  toggleActionMock: vi.fn(),
-}));
+const { createActionMock, updateActionMock, toggleActionMock, bulkToggleActionMock } = vi.hoisted(
+  () => ({
+    createActionMock: vi.fn(),
+    updateActionMock: vi.fn(),
+    toggleActionMock: vi.fn(),
+    bulkToggleActionMock: vi.fn(),
+  })
+);
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/lib/actions/program-head-course-actions", () => ({
   createProgramHeadCourseAction: createActionMock,
   updateProgramHeadCourseAction: updateActionMock,
   toggleProgramHeadCourseActiveAction: toggleActionMock,
+  bulkToggleProgramHeadCoursesActiveAction: bulkToggleActionMock,
 }));
 vi.mock("@/features/academic-calendar/components/term-instance-picker", () => ({
   TermInstancePicker: () => null,
@@ -132,5 +136,42 @@ describe("Program Head Courses catalog", () => {
     expect(screen.queryByText("Type")).toBeNull();
     expect(screen.queryByText("Gen Ed")).toBeNull();
     expect(screen.queryByRole("button", { name: "Program-Wide" })).toBeNull();
+  });
+
+  it("selects visible Program courses and exposes archive and restore actions", async () => {
+    const { ProgramHeadCoursesCatalog } =
+      await import("@/features/academic-structure/components/program-head-courses-catalog");
+    const programId = "11111111-1111-4111-8111-111111111111";
+    render(
+      <ProgramHeadCoursesCatalog
+        program={{ id: programId, code: "BSIT", name: "Information Technology" }}
+        courses={[
+          {
+            id: "course-1",
+            code: "IT-101",
+            title: "Introduction to Computing",
+            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            program_id: programId,
+            major_id: null,
+            default_year_level: null,
+            default_semester: null,
+            default_term: null,
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            program: { id: programId, code: "BSIT", name: "Information Technology" },
+            major: null,
+            _count: { cilos: 0, course_bound_evaluations: 0 },
+          },
+        ]}
+        summary={{ total: 1, programWide: 1, majorSpecific: 0, archived: 0 }}
+        majors={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select IT-101" }));
+    expect(screen.getByText("1 course selected")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Archive" }).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: "Restore" })).toBeInTheDocument();
   });
 });
