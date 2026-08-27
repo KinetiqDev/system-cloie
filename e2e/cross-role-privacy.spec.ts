@@ -28,12 +28,14 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     const responseCards = page.getByRole("heading", { name: /^Respondent R-\d{6}$/ });
     await expect(responseCards.first()).toBeVisible();
 
-    await expect(page.getByText(fx.courseResponse.respondentName, { exact: true })).not.toBeVisible();
+    await expect(
+      page.getByText(fx.courseResponse.respondentName, { exact: true })
+    ).not.toBeVisible();
     await expect(page.getByText(fx.demoStudent.email, { exact: true })).not.toBeVisible();
     await expect(page.getByText(fx.demoStudent.id, { exact: true })).not.toBeVisible();
 
     await page.goto(
-      `/faculty/cilo-evaluations/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`,
+      `/faculty/cilo-evaluations/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`
     );
     await expect(page.getByText(/^Respondent R-\d{6}$/)).toBeVisible();
     await expect(page.getByText("Section Responses (Read-only)")).toBeVisible();
@@ -54,10 +56,10 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     await loginAs(page, fx.demoPh.email);
 
     await page.goto(
-      `/program-head/programs/${fx.bsit.id}/responses/course/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`,
+      `/program-head/programs/${fx.bsit.id}/responses/course/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`
     );
     await expect(
-      page.getByRole("heading", { name: fx.courseResponse.respondentName }),
+      page.getByRole("heading", { name: fx.courseResponse.respondentName })
     ).toBeVisible();
     await expect(page.getByText("Student context")).toBeVisible();
     await expect(page.getByText(qualAnswerText, { exact: true })).toBeVisible();
@@ -70,7 +72,7 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     await loginAs(page, fx.beedPh.email);
 
     await page.goto(
-      `/program-head/programs/${fx.beed.id}/responses/course/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`,
+      `/program-head/programs/${fx.beed.id}/responses/course/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`
     );
     await expect(page.getByText("Not Found", { exact: false })).toBeVisible();
 
@@ -83,7 +85,7 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     await expectNoAxeViolations(page);
 
     await page.goto(
-      `/program-head/programs/${fx.bsit.id}/responses/course/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`,
+      `/program-head/programs/${fx.bsit.id}/responses/course/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`
     );
     await expect(page.getByText("Not Found", { exact: false })).toBeVisible();
     const deniedBeedBsitLeak = await page.content();
@@ -99,7 +101,7 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     await expectNoAxeViolations(page);
 
     await page.goto(
-      `/faculty/cilo-evaluations/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`,
+      `/faculty/cilo-evaluations/${fx.courseEvaluation.id}/responses/${fx.courseResponse.id}`
     );
     await expect(page.getByText("Not Found", { exact: false })).toBeVisible();
 
@@ -110,7 +112,7 @@ test.describe("Cross-role response privacy (§36, §37, §38, §40, #548)", () =
     expect(deniedFacultyContent).not.toContain(fx.courseEvaluation.title);
 
     await page.goto(
-      `/faculty/cilo-evaluations/${fx.courseEvaluation.id}/responses/00000000-0000-0000-0000-000000000000`,
+      `/faculty/cilo-evaluations/${fx.courseEvaluation.id}/responses/00000000-0000-0000-0000-000000000000`
     );
     await expect(page.getByText("Not Found", { exact: false })).toBeVisible();
     const deniedGuessed = await page.content();

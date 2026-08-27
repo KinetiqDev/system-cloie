@@ -1,10 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import type { CourseBoundResponseReview } from "@/features/analytics/types";
-import type {
-  FacultyAnalyticsData,
-  WordCloudToken,
-} from "@/features/analytics/types";
+import type { FacultyAnalyticsData, WordCloudToken } from "@/features/analytics/types";
 import type {
   GeneralEducationAnalyticsDTO,
   GeneralEducationFeedbackDTO,
@@ -45,7 +42,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
     // The anonymized review boundary intentionally includes raw qualitative text
     // keyed by promptKey/text, but the token stays out of analytics aggregates.
     expectTypeOf<CourseBoundResponseReview["sections"][number]>().toHaveProperty(
-      "qualitativeResponses",
+      "qualitativeResponses"
     );
     expectTypeOf<
       CourseBoundResponseReview["sections"][number]["qualitativeResponses"][number]
@@ -181,7 +178,11 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
       "The hands-on coding exercises for linked lists and trees were very effective in solidifying CILO 1.";
     const redactedTokens: WordCloudToken[] = [{ text: "coding", value: 1 }];
     const overview: Pick<ProgramHeadOverviewDTO, "scope" | "tokens"> = {
-      scope: { programCode: "BSIT", programName: "BSIT", periodLabel: null } as unknown as ProgramHeadOverviewDTO["scope"],
+      scope: {
+        programCode: "BSIT",
+        programName: "BSIT",
+        periodLabel: null,
+      } as unknown as ProgramHeadOverviewDTO["scope"],
       tokens: redactedTokens as unknown as ProgramHeadOverviewDTO["tokens"],
     } as unknown as Pick<ProgramHeadOverviewDTO, "scope" | "tokens">;
     // Even if someone accidentally spreads raw text, this test pins that the

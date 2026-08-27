@@ -97,7 +97,11 @@ const MOCK_COURSE_BOUND_RESPONSE = {
       course_assignment: {
         faculty: { name: "Demo Faculty" },
         course: { code: "IT201", title: "Systems Analysis", major: null },
-        program: { id: "prog-bsit", code: "BSIT", name: "Bachelor of Science in Information Technology" },
+        program: {
+          id: "prog-bsit",
+          code: "BSIT",
+          name: "Bachelor of Science in Information Technology",
+        },
         term_instance: {
           id: "term-2025-2",
           semester: "SECOND",
@@ -369,7 +373,8 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
       responseCountMock.mockResolvedValue(5);
       qualitativeResponseItemFindManyMock.mockResolvedValue([
         {
-          text_content: "Student student-548@cloie.test said Professor Maria Santos had great teaching.",
+          text_content:
+            "Student student-548@cloie.test said Professor Maria Santos had great teaching.",
           section_key: "teaching",
           prompt_key: "remarks",
           response: {
@@ -405,7 +410,9 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
       // Explicit person names removed
       expect(serialized).not.toContain("Maria Santos");
       // Raw string not leaked verbatim
-      expect(serialized).not.toContain("Student student-548@cloie.test said Professor Maria Santos had great teaching.");
+      expect(serialized).not.toContain(
+        "Student student-548@cloie.test said Professor Maria Santos had great teaching."
+      );
     });
 
     it("Faculty analytics data returns de-identified word cloud without respondent identities", async () => {

@@ -140,7 +140,7 @@ jobs:
       CLOIE_CI_TEST_ENABLED: "true"
       CLOIE_DEPLOYMENT_KIND: "ci-test"
       CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
-      CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+      CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
     services:
       postgres:
         image: postgres:16-alpine
@@ -185,7 +185,7 @@ jobs:
           CLOIE_CI_TEST_ENABLED: "true"
           CLOIE_DEPLOYMENT_KIND: "ci-test"
           CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
-          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
