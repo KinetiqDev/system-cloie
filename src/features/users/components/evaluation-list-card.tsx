@@ -37,10 +37,7 @@ export function EvaluationListCard({
             </Badge>
           </div>
 
-          <h4
-            className="group-hover:text-primary mb-1 line-clamp-2 text-title-lg font-semibold transition-colors"
-            title={evaluationTitle}
-          >
+          <h4 className="group-hover:text-primary mb-1 line-clamp-2 text-title-lg font-semibold transition-colors">
             {evaluationTitle}
           </h4>
 

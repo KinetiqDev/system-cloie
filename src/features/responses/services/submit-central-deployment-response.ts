@@ -22,6 +22,7 @@ export type SubmitCentralDeploymentResponseResult =
   | {
       responseId: string;
       status: "SUBMITTED";
+      submittedAt: string;
       success: true;
     };
 
@@ -173,12 +174,12 @@ export async function submitCentralDeploymentResponse({
         await tx.qualitativeResponseItem.createMany({ data: qualitativeItems });
       }
 
-      const submittedAt = new Date();
+      const submittedAt = new Date().toISOString();
 
       await tx.response.update({
         data: {
           status: ResponseStatus.SUBMITTED,
-          submitted_at: submittedAt,
+          submitted_at: new Date(submittedAt),
         },
         where: {
           id: response.id,
@@ -187,12 +188,14 @@ export async function submitCentralDeploymentResponse({
 
       return {
         responseId: response.id,
+        submittedAt,
       };
     });
 
     return {
       responseId: result.responseId,
       status: ResponseStatus.SUBMITTED,
+      submittedAt: result.submittedAt,
       success: true,
     };
   } catch (error) {

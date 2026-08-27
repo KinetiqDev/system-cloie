@@ -39,6 +39,7 @@ export default async function IndustryPartnerEvaluationPage({
         sections={evalSession.sections}
         initialAnswers={evalSession.savedAnswers}
         returnRoute="/industry-partner/dashboard"
+        submittedReviewHref={`/industry-partner/evaluations/${deploymentId}/submitted`}
         onSaveDraft={saveCentralDeploymentDraftAction}
         onSubmitResponse={submitCentralDeploymentResponseAction}
       />

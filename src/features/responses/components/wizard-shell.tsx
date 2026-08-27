@@ -84,6 +84,41 @@ function buildSectionValidationMessage(
   return `Please answer all questions in this section before proceeding (${quantitativeCount} remaining).`;
 }
 
+const SUBMISSION_ERROR_FALLBACK = "We couldn't submit your response right now. Please try again.";
+
+function isTechnicalErrorText(message: string): boolean {
+  return (
+    /\b(Error|TypeError|RangeError|ReferenceError|SyntaxError)\b/i.test(message) ||
+    /\[object Object\]/i.test(message) ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(message) ||
+    /\bat\s+[^\n]+\s+\(?[^\n]*\d+:\d+\)?/.test(message) ||
+    /\b(violation|constraint|digest|traceback|stack trace)\b/i.test(message)
+  );
+}
+
+function toSafeSubmissionError(rawError: string | undefined): string {
+  const message = rawError?.trim();
+
+  if (!message || isTechnicalErrorText(message)) {
+    return SUBMISSION_ERROR_FALLBACK;
+  }
+
+  return message;
+}
+
+function formatServerTimestamp(isoTimestamp: string | undefined): string | null {
+  if (!isoTimestamp) {
+    return null;
+  }
+
+  const date = new Date(isoTimestamp);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+}
+
 type SectionItem = StudentEvaluationSection["items"][number];
 
 type QuantitativeItemFieldProps = {
@@ -206,7 +241,7 @@ function QualitativeItemField({
               type="button"
               onClick={() => handleSuggestedResponseClick(suggestion)}
               className={cn(
-                "text-label-sm touch-manipulation rounded-full border px-3 py-1.5 font-medium transition-[color,background-color,border-color,box-shadow,transform] motion-reduce:transition-none",
+                "text-label-sm touch-manipulation rounded-full border px-3 py-1.5 font-medium transition-[color,background-color,border-color,box-shadow,transform] pointer-coarse:min-h-11 pointer-coarse:px-4 motion-reduce:transition-none",
                 "hover:bg-primary-soft hover:border-primary hover:text-selected-fg",
                 "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                 "active:scale-95 motion-reduce:active:scale-100",
@@ -234,7 +269,6 @@ function QualitativeItemField({
     </fieldset>
   );
 }
-
 interface WizardShellProps {
   assignmentId: string;
   title: string;
@@ -242,6 +276,8 @@ interface WizardShellProps {
   sections: StudentEvaluationSection[];
   initialAnswers?: Record<string, number | string>;
   returnRoute?: string;
+  submittedHistoryRoute?: string;
+  submittedReviewHref?: string;
   onSaveDraft?: (input: {
     assignmentId: string;
     sectionKey: string;
@@ -250,7 +286,7 @@ interface WizardShellProps {
   onSubmitResponse?: (input: {
     assignmentId: string;
     answers: Record<string, number | string>;
-  }) => Promise<{ success: boolean; responseId?: string; error?: string }>;
+  }) => Promise<{ success: boolean; responseId?: string; submittedAt?: string; error?: string }>;
 }
 
 export function WizardShell({
@@ -260,6 +296,8 @@ export function WizardShell({
   sections,
   initialAnswers = {},
   returnRoute = "/",
+  submittedHistoryRoute,
+  submittedReviewHref,
   onSaveDraft,
   onSubmitResponse,
 }: WizardShellProps) {
@@ -273,6 +311,10 @@ export function WizardShell({
   const [lastSaved, setLastSaved] = React.useState<Date | null>(null);
   const [validationError, setValidationError] = React.useState<string | null>(null);
   const [submissionError, setSubmissionError] = React.useState<string | null>(null);
+  const [submittedReceipt, setSubmittedReceipt] = React.useState<{
+    responseId?: string;
+    submittedAt?: string;
+  } | null>(null);
 
   const router = useRouter();
   const totalSteps = sections.length;
@@ -411,9 +453,15 @@ export function WizardShell({
       if (result.success) {
         setIsReviewOpen(false);
         setIsSubmitted(true);
+        setSubmittedReceipt({
+          responseId: result.responseId,
+          submittedAt: result.submittedAt,
+        });
       } else {
-        setSubmissionError(result.error ?? "Submission failed. Please try again.");
+        setSubmissionError(toSafeSubmissionError(result.error));
       }
+    } catch {
+      setSubmissionError(SUBMISSION_ERROR_FALLBACK);
     } finally {
       setIsSaving(false);
     }
@@ -429,6 +477,15 @@ export function WizardShell({
         : "Not saved";
 
   if (isSubmitted) {
+    const receiptResponseId = submittedReceipt?.responseId;
+    const formattedSubmittedAt = formatServerTimestamp(submittedReceipt?.submittedAt);
+    const hasReceiptData = Boolean(receiptResponseId || formattedSubmittedAt);
+    const historyHref =
+      submittedReviewHref ??
+      (submittedHistoryRoute && receiptResponseId
+        ? `${submittedHistoryRoute}/${receiptResponseId}`
+        : null);
+
     return (
       <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in flex min-h-[60vh] flex-col items-center justify-center text-center motion-safe:duration-500">
         <div className="bg-success/10 mb-6 flex size-20 items-center justify-center rounded-full">
@@ -439,9 +496,47 @@ export function WizardShell({
           Thank you for completing the {title}. Your feedback has been recorded and will help us
           improve our quality of service.
         </p>
-        <Button onClick={() => router.push(returnRoute)} className="px-8 font-bold">
-          Return to Dashboard
-        </Button>
+
+        {hasReceiptData && (
+          <div className="bg-surface border-border mx-auto mb-8 w-full max-w-md rounded-xl border p-4 text-left sm:p-5">
+            <p className="text-text-muted text-label-sm font-bold tracking-wider uppercase">
+              Submission receipt
+            </p>
+            <dl className="mt-3 space-y-2">
+              {receiptResponseId && (
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-text-secondary text-body-sm shrink-0">Reference</dt>
+                  <dd className="text-text-primary text-body-sm font-semibold break-all text-right tabular-nums">
+                    {receiptResponseId}
+                  </dd>
+                </div>
+              )}
+              {formattedSubmittedAt && (
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-text-secondary text-body-sm shrink-0">Submitted</dt>
+                  <dd className="text-text-primary text-body-sm font-semibold text-right">
+                    {formattedSubmittedAt}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
+
+        <div className="flex w-full max-w-xs flex-col items-stretch gap-3">
+          {historyHref && (
+            <Button
+              variant="outline"
+              onClick={() => router.push(historyHref)}
+              className="min-h-11 font-bold"
+            >
+              View Submitted Response
+            </Button>
+          )}
+          <Button onClick={() => router.push(returnRoute)} className="min-h-11 px-8 font-bold">
+            Return to Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
@@ -449,8 +544,8 @@ export function WizardShell({
   return (
     <div className="relative flex min-h-[calc(100vh-8rem)] flex-col">
       {/* Sticky Wizard Header */}
-      <div className="bg-background border-border sticky top-0 z-20 mb-6 border-b pb-4">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="bg-background border-border sticky top-0 z-20 mb-4 border-b pb-3 sm:mb-6 sm:pb-4">
+        <div className="mb-3 flex items-center justify-between sm:mb-4">
           <Button
             variant="ghost"
             size="sm"
@@ -463,8 +558,10 @@ export function WizardShell({
             <Save className="size-4" /> {isSaving ? "Saving..." : savedTimeText}
           </div>
         </div>
-        <h1 className="font-heading text-heading-md mb-3 font-black">{title}</h1>
-        {courseTitle && <p className="text-text-secondary text-body-md mb-3">{courseTitle}</p>}
+        <h1 className="font-heading text-heading-md mb-2 font-black sm:mb-3">{title}</h1>
+        {courseTitle && (
+          <p className="text-text-secondary text-body-md mb-2 sm:mb-3">{courseTitle}</p>
+        )}
         <div className="space-y-1.5">
           <div className="text-text-muted text-label-sm flex justify-between font-bold uppercase">
             <span>
@@ -535,8 +632,21 @@ export function WizardShell({
             </Alert>
           )}
 
+          {currentStep === 0 && (
+            <div className="bg-surface border-border mb-6 rounded-xl border p-4 sm:p-5">
+              <h2 className="text-title-md mb-2 font-bold">How to answer</h2>
+              <ul className="text-text-secondary text-body-sm list-disc space-y-1.5 pl-5">
+                <li>Rate each statement on the scale provided.</li>
+                <li>Written-response questions must be answered before you can continue.</li>
+                <li>Suggested response chips are optional — tap one to add it, or type your own.</li>
+              </ul>
+            </div>
+          )}
+
           <h2 className="text-title-lg mb-4 font-bold">{currentSection.name}</h2>
-          <p className="text-text-secondary text-body-sm mb-8">{currentSection.description}</p>
+          <p className="text-text-secondary text-body-sm mb-6 sm:mb-8">
+            {currentSection.description}
+          </p>
 
           <div className="space-y-8">
             {currentSection.items.map((item) => {
@@ -576,7 +686,7 @@ export function WizardShell({
       </div>
 
       {/* Sticky Wizard Footer */}
-      <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-[60] border-t p-4 lg:left-64">
+      <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-[60] border-t px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:left-64">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between">
           <Button
             variant="outline"

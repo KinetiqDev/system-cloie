@@ -556,4 +556,129 @@ describe("WizardShell", () => {
 
     expect(await within(dialog).findByText(/missing required answers/i)).toBeDefined();
   });
+
+  type WizardShellProps = Parameters<typeof WizardShell>[0];
+
+  async function completeAndSubmit(overrides: Partial<WizardShellProps> = {}) {
+    render(
+      <WizardShell
+        assignmentId="assignment-1"
+        title="Test Eval"
+        sections={mockSections}
+        {...overrides}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: /4/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next section/i }));
+    await screen.findByText("Question 2");
+    fireEvent.click(screen.getByRole("radio", { name: /2/i }));
+    fireEvent.click(screen.getByRole("button", { name: /review & submit/i }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Review Your Answers" });
+    fireEvent.click(within(dialog).getByRole("button", { name: /confirm & submit/i }));
+  }
+
+  test("shows first-section guidance explaining the rating scale, written responses, and chips", () => {
+    render(<WizardShell assignmentId="test" title="Test Eval" sections={mockSections} />);
+
+    expect(screen.getByText("How to answer")).toBeDefined();
+    expect(screen.getByText(/rate each statement on the scale provided/i)).toBeDefined();
+    expect(screen.getByText(/written-response questions must be answered/i)).toBeDefined();
+    expect(screen.getByText(/suggested response chips are optional/i)).toBeDefined();
+  });
+
+  test("hides first-section guidance on later sections", async () => {
+    render(<WizardShell assignmentId="test" title="Test Eval" sections={mockSections} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: /4/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next section/i }));
+
+    await screen.findByText("Question 2");
+    expect(screen.queryByText("How to answer")).not.toBeInTheDocument();
+  });
+
+  test("shows a submission receipt with response reference and server timestamp", async () => {
+    await completeAndSubmit({
+      onSubmitResponse: vi.fn().mockResolvedValue({
+        success: true,
+        responseId: "resp-abc-123",
+        submittedAt: "2026-04-20T12:00:00.000Z",
+      }),
+    });
+
+    expect(await screen.findByText("Evaluation Submitted!")).toBeDefined();
+    expect(screen.getByText("Submission receipt")).toBeDefined();
+    expect(screen.getByText("resp-abc-123")).toBeDefined();
+    expect(screen.getByText("Submitted")).toBeDefined();
+    expect(screen.getByText(/2026/)).toBeDefined();
+    expect(screen.getByText(/\d{1,2}:\d{2}/)).toBeDefined();
+  });
+
+  test("renders a view-submission link from the submitted history route", async () => {
+    await completeAndSubmit({
+      submittedHistoryRoute: "/student/history",
+      onSubmitResponse: vi.fn().mockResolvedValue({
+        success: true,
+        responseId: "resp-abc-123",
+      }),
+    });
+
+    const viewButton = await screen.findByRole("button", {
+      name: /view submitted response/i,
+    });
+    fireEvent.click(viewButton);
+
+    expect(pushMock).toHaveBeenCalledWith("/student/history/resp-abc-123");
+  });
+
+  test("omits the view-submission link when no history route is provided", async () => {
+    await completeAndSubmit({
+      onSubmitResponse: vi.fn().mockResolvedValue({
+        success: true,
+        responseId: "resp-abc-123",
+      }),
+    });
+
+    expect(await screen.findByText("Evaluation Submitted!")).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: /view submitted response/i })
+    ).not.toBeInTheDocument();
+  });
+
+  test("renders the success state safely without receipt data and no client timestamp", async () => {
+    await completeAndSubmit({
+      onSubmitResponse: vi.fn().mockResolvedValue({ success: true }),
+    });
+
+    expect(await screen.findByText("Evaluation Submitted!")).toBeDefined();
+    expect(screen.queryByText("Submission receipt")).not.toBeInTheDocument();
+    expect(screen.queryByText("Submitted")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /return to dashboard/i })).toBeDefined();
+  });
+
+  test("does not surface raw technical error text from submission failures", async () => {
+    await completeAndSubmit({
+      onSubmitResponse: vi.fn().mockResolvedValue({
+        success: false,
+        error: "Error: constraint violation on responses table",
+      }),
+    });
+
+    const dialog = await screen.findByRole("dialog", { name: "Review Your Answers" });
+    expect(await within(dialog).findByText(/couldn't submit your response/i)).toBeDefined();
+    expect(within(dialog).queryByText(/constraint violation/i)).not.toBeInTheDocument();
+  });
+
+  test("falls back to a generic message when submission throws", async () => {
+    await completeAndSubmit({
+      onSubmitResponse: vi
+        .fn()
+        .mockRejectedValue(new Error("PrismaClientKnownRequestError: unique constraint")),
+    });
+
+    const dialog = await screen.findByRole("dialog", { name: "Review Your Answers" });
+    expect(await within(dialog).findByText(/couldn't submit your response/i)).toBeDefined();
+    expect(within(dialog).queryByText(/unique constraint/i)).not.toBeInTheDocument();
+  });
 });

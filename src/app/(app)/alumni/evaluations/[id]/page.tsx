@@ -39,6 +39,7 @@ export default async function AlumniEvaluationPage({
         sections={evalSession.sections}
         initialAnswers={evalSession.savedAnswers}
         returnRoute="/alumni/dashboard"
+        submittedReviewHref={`/alumni/evaluations/${deploymentId}/submitted`}
         onSaveDraft={saveCentralDeploymentDraftAction}
         onSubmitResponse={submitCentralDeploymentResponseAction}
       />

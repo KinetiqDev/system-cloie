@@ -291,6 +291,9 @@ describe("submitStudentCourseBoundResponse", () => {
     findResponseByAssignmentMock.mockResolvedValue({ id: "response-1" });
     updateMock.mockResolvedValue({ id: "response-1" });
 
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-20T12:00:00.000Z"));
+
     await expect(
       submitStudentCourseBoundResponse({
         answers: {
@@ -302,8 +305,21 @@ describe("submitStudentCourseBoundResponse", () => {
     ).resolves.toEqual({
       responseId: "response-1",
       status: "SUBMITTED",
+      submittedAt: "2026-04-20T12:00:00.000Z",
       success: true,
     });
+
+    // The returned timestamp is the exact value frozen inside the transaction.
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "SUBMITTED",
+          submitted_at: new Date("2026-04-20T12:00:00.000Z"),
+        }),
+      })
+    );
+
+    vi.useRealTimers();
   });
 
   it("rejects a second submission when a submitted response already exists", async () => {

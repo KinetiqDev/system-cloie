@@ -40,6 +40,7 @@ export default async function EvaluationPage({ params }: { params: Promise<{ id:
         sections={session.sections}
         initialAnswers={session.savedAnswers}
         returnRoute="/student/dashboard"
+        submittedHistoryRoute="/student/history"
         onSaveDraft={saveStudentEvaluationDraftAction}
         onSubmitResponse={submitStudentEvaluationResponseAction}
       />

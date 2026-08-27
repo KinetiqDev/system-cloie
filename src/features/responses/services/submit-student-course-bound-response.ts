@@ -51,6 +51,7 @@ export type SubmitStudentCourseBoundResponseResult =
   | {
       responseId: string;
       status: "SUBMITTED";
+      submittedAt: string;
       success: true;
     };
 
@@ -354,12 +355,14 @@ export async function submitStudentCourseBoundResponse({
 
       return {
         responseId: response.id,
+        submittedAt,
       };
     });
 
     return {
       responseId: result.responseId,
       status: ResponseStatus.SUBMITTED,
+      submittedAt: result.submittedAt,
       success: true,
     };
   } catch (error) {

@@ -50,6 +50,7 @@ describe("student evaluation server actions", () => {
     const successPayload = {
       responseId: "response-1",
       status: "SUBMITTED",
+      submittedAt: "2026-05-01T10:00:00.000Z",
       success: true,
     } as const;
 
