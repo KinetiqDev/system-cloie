@@ -358,6 +358,11 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
           }
         }}
       />
+      <CourseImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        config={{ mode: "general-education" }}
+      />
     </div>
   );
 }
