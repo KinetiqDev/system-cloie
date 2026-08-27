@@ -42,23 +42,20 @@ describe("respondent route error boundaries", () => {
     }
   );
 
-  it.each(errorBoundaries)(
-    "never exposes internal error or digest details",
-    (ErrorBoundary) => {
-      const reset = vi.fn();
-      const internalMessage = "database connection details";
-      const digest = "private-error-digest";
-      vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it.each(errorBoundaries)("never exposes internal error or digest details", (ErrorBoundary) => {
+    const reset = vi.fn();
+    const internalMessage = "database connection details";
+    const digest = "private-error-digest";
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-      render(
-        <ErrorBoundary error={Object.assign(new Error(internalMessage), { digest })} reset={reset} />
-      );
+    render(
+      <ErrorBoundary error={Object.assign(new Error(internalMessage), { digest })} reset={reset} />
+    );
 
-      expect(screen.queryByText(internalMessage)).not.toBeInTheDocument();
-      expect(screen.queryByText(digest)).not.toBeInTheDocument();
-      expect(screen.queryByText(/database|connection|stack/i)).not.toBeInTheDocument();
-    }
-  );
+    expect(screen.queryByText(internalMessage)).not.toBeInTheDocument();
+    expect(screen.queryByText(digest)).not.toBeInTheDocument();
+    expect(screen.queryByText(/database|connection|stack/i)).not.toBeInTheDocument();
+  });
 
   it.each(errorBoundaries)("logs a bounded, non-diagnostic error", (ErrorBoundary) => {
     const reset = vi.fn();

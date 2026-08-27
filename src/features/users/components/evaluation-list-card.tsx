@@ -37,21 +37,25 @@ export function EvaluationListCard({
             </Badge>
           </div>
 
-          <h4 className="group-hover:text-primary mb-1 line-clamp-2 text-title-lg font-semibold transition-colors">
+          <h4 className="group-hover:text-primary text-title-lg mb-1 line-clamp-2 font-semibold transition-colors">
             {evaluationTitle}
           </h4>
 
           {deploymentType === "COURSE_BOUND" && courseTitle ? (
             <>
-              <p className="text-body-sm text-muted-foreground truncate font-medium">{courseTitle}</p>
+              <p className="text-body-sm text-muted-foreground truncate font-medium">
+                {courseTitle}
+              </p>
               {facultyName && (
                 <p className="text-muted-foreground mt-0.5 text-sm">Published by {facultyName}</p>
               )}
             </>
           ) : (
-            <p className="text-body-sm text-muted-foreground truncate font-medium">{programLabel}</p>
+            <p className="text-body-sm text-muted-foreground truncate font-medium">
+              {programLabel}
+            </p>
           )}
-          <p className="text-muted-foreground mt-1 text-label-sm font-semibold tracking-wide uppercase">
+          <p className="text-muted-foreground text-label-sm mt-1 font-semibold tracking-wide uppercase">
             {deploymentType === "CENTRAL" ? "Central Deployment" : "Course-Bound Evaluation"}
           </p>
         </div>
@@ -59,7 +63,7 @@ export function EvaluationListCard({
         <div className="flex shrink-0 flex-col justify-center gap-2 md:items-end">
           {isResuming && (
             <div className="w-full space-y-1.5 md:w-48">
-              <div className="text-muted-foreground flex items-center justify-between text-label-sm font-bold">
+              <div className="text-muted-foreground text-label-sm flex items-center justify-between font-bold">
                 <span className="text-body-sm text-muted-foreground">{progress}% Complete</span>
               </div>
               <Progress

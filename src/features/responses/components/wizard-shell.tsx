@@ -241,7 +241,7 @@ function QualitativeItemField({
               type="button"
               onClick={() => handleSuggestedResponseClick(suggestion)}
               className={cn(
-                "text-label-sm touch-manipulation rounded-full border px-3 py-1.5 font-medium transition-[color,background-color,border-color,box-shadow,transform] pointer-coarse:min-h-11 pointer-coarse:px-4 motion-reduce:transition-none",
+                "text-label-sm touch-manipulation rounded-full border px-3 py-1.5 font-medium transition-[color,background-color,border-color,box-shadow,transform] motion-reduce:transition-none pointer-coarse:min-h-11 pointer-coarse:px-4",
                 "hover:bg-primary-soft hover:border-primary hover:text-selected-fg",
                 "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                 "active:scale-95 motion-reduce:active:scale-100",
@@ -289,6 +289,8 @@ interface WizardShellProps {
   }) => Promise<{ success: boolean; responseId?: string; submittedAt?: string; error?: string }>;
 }
 
+// Keep the evaluation state machine and its guarded transitions together so validation, autosave, and submission cannot drift apart.
+// fallow-ignore-next-line complexity
 export function WizardShell({
   assignmentId,
   title,
@@ -506,7 +508,7 @@ export function WizardShell({
               {receiptResponseId && (
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="text-text-secondary text-body-sm shrink-0">Reference</dt>
-                  <dd className="text-text-primary text-body-sm font-semibold break-all text-right tabular-nums">
+                  <dd className="text-text-primary text-body-sm text-right font-semibold break-all tabular-nums">
                     {receiptResponseId}
                   </dd>
                 </div>
@@ -514,7 +516,7 @@ export function WizardShell({
               {formattedSubmittedAt && (
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="text-text-secondary text-body-sm shrink-0">Submitted</dt>
-                  <dd className="text-text-primary text-body-sm font-semibold text-right">
+                  <dd className="text-text-primary text-body-sm text-right font-semibold">
                     {formattedSubmittedAt}
                   </dd>
                 </div>
@@ -638,7 +640,9 @@ export function WizardShell({
               <ul className="text-text-secondary text-body-sm list-disc space-y-1.5 pl-5">
                 <li>Rate each statement on the scale provided.</li>
                 <li>Written-response questions must be answered before you can continue.</li>
-                <li>Suggested response chips are optional — tap one to add it, or type your own.</li>
+                <li>
+                  Suggested response chips are optional — tap one to add it, or type your own.
+                </li>
               </ul>
             </div>
           )}
