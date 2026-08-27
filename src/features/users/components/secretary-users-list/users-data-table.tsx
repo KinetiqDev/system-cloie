@@ -1,9 +1,11 @@
 "use client";
 
 import { SystemRole } from "@prisma/client";
-import { MoreVertical, Mail, Building2, GraduationCap, Users } from "lucide-react";
+import { MoreVertical, Mail, Building2, GraduationCap, Power, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +38,13 @@ interface UsersDataTableProps {
   onEditUser: (user: SecretaryUserSummaryItem) => void;
   onToggleActive: (userId: string, currentActive: boolean) => void;
   isPending: boolean;
+  selectedIds: Set<string>;
+  allSelected: boolean;
+  someSelected: boolean;
+  onToggleOne: (id: string, checked: boolean) => void;
+  onToggleAll: (checked: boolean) => void;
+  onClearSelection: () => void;
+  onBulkStatus: (isActive: boolean) => void;
 }
 
 export function UsersDataTable({
@@ -44,6 +53,13 @@ export function UsersDataTable({
   onEditUser,
   onToggleActive,
   isPending,
+  selectedIds,
+  allSelected,
+  someSelected,
+  onToggleOne,
+  onToggleAll,
+  onClearSelection,
+  onBulkStatus,
 }: UsersDataTableProps) {
   if (users.length === 0) {
     return (
@@ -62,12 +78,35 @@ export function UsersDataTable({
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-3">
+      <BulkActionBar selectedCount={selectedIds.size} itemLabel="user" onClear={onClearSelection}>
+        <Button size="sm" variant="outline" disabled={isPending} onClick={() => onBulkStatus(true)}>
+          <Power aria-hidden="true" className="size-4" />
+          Activate
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => onBulkStatus(false)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Deactivate
+        </Button>
+      </BulkActionBar>
       {/* Desktop Table View */}
       <div className="hidden overflow-x-auto rounded-lg border md:block">
         <Table className="min-w-[900px]">
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="w-12">
+                <Checkbox
+                  aria-label="Select all users on this page"
+                  checked={allSelected}
+                  indeterminate={someSelected}
+                  onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
+                />
+              </TableHead>
               <TableHead className="w-[200px]">Name</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Program</TableHead>
@@ -82,8 +121,16 @@ export function UsersDataTable({
             {users.map((user) => (
               <TableRow
                 key={user.id}
+                data-state={selectedIds.has(user.id) ? "selected" : undefined}
                 className="motion-safe:transition-colors motion-safe:duration-150"
               >
+                <TableCell>
+                  <Checkbox
+                    aria-label={`Select ${user.name}`}
+                    checked={selectedIds.has(user.id)}
+                    onCheckedChange={(checked) => onToggleOne(user.id, Boolean(checked))}
+                  />
+                </TableCell>
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>
                   {user.activeRole ? (
@@ -144,9 +191,15 @@ export function UsersDataTable({
         {users.map((user) => (
           <Card
             key={user.id}
-            className="overflow-hidden motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm"
+            data-state={selectedIds.has(user.id) ? "selected" : undefined}
+            className="data-[state=selected]:bg-selected-bg overflow-hidden motion-safe:transition-shadow motion-safe:duration-200 motion-safe:hover:shadow-sm"
           >
             <CardHeader className="pb-3">
+              <Checkbox
+                aria-label={`Select ${user.name}`}
+                checked={selectedIds.has(user.id)}
+                onCheckedChange={(checked) => onToggleOne(user.id, Boolean(checked))}
+              />
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-heading text-title-sm text-foreground">{user.name}</h3>
@@ -205,6 +258,6 @@ export function UsersDataTable({
           </Card>
         ))}
       </div>
-    </>
+    </div>
   );
 }

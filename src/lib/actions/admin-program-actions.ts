@@ -27,16 +27,20 @@ import {
 } from "@/features/academic-structure/services/manage-programs";
 
 type ActionResult = { success: true } | { success: false; error: string };
-type ProgramDeletionResult =
-  | ServiceResult<ProgramDeletionPreflight>
-  | DeleteProgramResult;
+export type BulkProgramLifecycleResult = {
+  succeeded: string[];
+  failed: Array<{ id: string; error: string }>;
+};
+
+type ProgramDeletionResult = ServiceResult<ProgramDeletionPreflight> | DeleteProgramResult;
 
 const PROGRAM_LIFECYCLE_ROLES: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
 
 async function requireProgramLifecycleSteward(): Promise<ActionResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) return { error: "Authentication required.", success: false };
-  if (!PROGRAM_LIFECYCLE_ROLES.includes(session.activeRole)) return { error: "Insufficient permissions.", success: false };
+  if (!PROGRAM_LIFECYCLE_ROLES.includes(session.activeRole))
+    return { error: "Insufficient permissions.", success: false };
   return { success: true };
 }
 
@@ -116,6 +120,34 @@ export async function toggleProgramActiveAction(
   revalidatePath("/secretary/programs");
   revalidatePath("/dean/academic-structure/programs");
   return { success: true };
+}
+export async function bulkToggleProgramsActiveAction(
+  ids: string[],
+  isActive: boolean
+): Promise<BulkProgramLifecycleResult> {
+  if (ids.length === 0 || ids.length > 100 || new Set(ids).size !== ids.length) {
+    return {
+      succeeded: [],
+      failed: [{ id: "selection", error: "Select between 1 and 100 unique programs." }],
+    };
+  }
+
+  const authorization = await requireProgramLifecycleSteward();
+  if (!authorization.success) {
+    return { succeeded: [], failed: ids.map((id) => ({ id, error: authorization.error })) };
+  }
+
+  const result: BulkProgramLifecycleResult = { succeeded: [], failed: [] };
+  for (const id of ids) {
+    const item = await toggleProgramActive(id, isActive, !isActive);
+    if (item.success) result.succeeded.push(id);
+    else result.failed.push({ id, error: item.error });
+  }
+  if (result.succeeded.length > 0) {
+    revalidatePath("/secretary/programs");
+    revalidatePath("/dean/academic-structure/programs");
+  }
+  return result;
 }
 
 export async function preflightProgramDeletionAction(id: string): Promise<ProgramDeletionResult> {

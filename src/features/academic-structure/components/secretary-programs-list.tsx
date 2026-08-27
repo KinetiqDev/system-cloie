@@ -10,6 +10,7 @@ import {
   Layers,
   MoreVertical,
   Plus,
+  Power,
   Search,
   Users,
 } from "lucide-react";
@@ -17,6 +18,8 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -52,6 +55,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  bulkToggleProgramsActiveAction,
   deleteProgramAction,
   preflightProgramDeletionAction,
   toggleProgramActiveAction,
@@ -60,6 +64,7 @@ import { showToast } from "@/components/ui/toast";
 import { CreateProgramDialog } from "./create-program-dialog";
 import { ManageMajorsDialog } from "./manage-majors-dialog";
 import type { ProgramDeletionPreflight } from "../services/manage-programs";
+import { useTableSelection } from "@/hooks/use-table-selection";
 
 import type {
   SecretaryProgramSummaryItem,
@@ -140,6 +145,10 @@ export function SecretaryProgramsList({
     (safePage - 1) * PAGE_SIZE,
     safePage * PAGE_SIZE
   );
+  const selection = useTableSelection(
+    paginatedPrograms.map((program) => program.id),
+    `${statusFilter}:${searchTerm}:${safePage}`
+  );
 
   const handleStatusChange = (value: string | null) => {
     setStatusFilter(value ?? "__all__");
@@ -211,6 +220,22 @@ export function SecretaryProgramsList({
       closeLifecycleDialog();
       router.refresh();
       showToast(`Program ${preflight.code} deleted.`);
+    });
+  };
+  const handleBulkStatus = (isActive: boolean) => {
+    const ids = [...selection.selectedIds];
+    startTransition(async () => {
+      const result = await bulkToggleProgramsActiveAction(ids, isActive);
+      if (result.failed.length > 0) {
+        showToast(
+          `${result.succeeded.length} updated; ${result.failed.length} could not be updated.`,
+          "warning"
+        );
+      } else {
+        showToast(`${result.succeeded.length} programs ${isActive ? "activated" : "deactivated"}.`);
+      }
+      selection.clearSelection();
+      router.refresh();
     });
   };
 
@@ -329,6 +354,31 @@ export function SecretaryProgramsList({
         </div>
       </div>
 
+      <BulkActionBar
+        selectedCount={selection.selectedCount}
+        itemLabel="program"
+        onClear={selection.clearSelection}
+      >
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => handleBulkStatus(true)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Activate
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => handleBulkStatus(false)}
+        >
+          <Power aria-hidden="true" className="size-4" />
+          Deactivate
+        </Button>
+      </BulkActionBar>
+
       {/* ---- Mobile card list (hidden md+) -------------------------------- */}
       <div className="flex flex-col gap-3 md:hidden">
         {paginatedPrograms.length === 0 ? (
@@ -337,8 +387,14 @@ export function SecretaryProgramsList({
           paginatedPrograms.map((program) => (
             <div
               key={program.id}
-              className="bg-surface border-border flex items-start justify-between gap-3 rounded-xl border p-4 shadow-xs"
+              data-state={selection.selectedIds.has(program.id) ? "selected" : undefined}
+              className="bg-surface border-border data-[state=selected]:bg-selected-bg flex items-start gap-3 rounded-xl border p-4 shadow-xs"
             >
+              <Checkbox
+                aria-label={`Select ${program.code}`}
+                checked={selection.selectedIds.has(program.id)}
+                onCheckedChange={(checked) => selection.toggleOne(program.id, Boolean(checked))}
+              />
               {/* Left: info */}
               <div className="min-w-0 flex-1 space-y-2">
                 {/* Code + status */}
@@ -388,6 +444,14 @@ export function SecretaryProgramsList({
           <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    aria-label="Select all programs on this page"
+                    checked={selection.allVisibleSelected}
+                    indeterminate={selection.someVisibleSelected}
+                    onCheckedChange={(checked) => selection.toggleAllVisible(Boolean(checked))}
+                  />
+                </TableHead>
                 <TableHead>Code</TableHead>
                 <TableHead>Program Name</TableHead>
                 <TableHead>Majors</TableHead>
@@ -402,13 +466,25 @@ export function SecretaryProgramsList({
             <TableBody>
               {paginatedPrograms.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
+                  <TableCell colSpan={10} className="text-muted-foreground h-24 text-center">
                     No programs found.
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedPrograms.map((program) => (
-                  <TableRow key={program.id}>
+                  <TableRow
+                    key={program.id}
+                    data-state={selection.selectedIds.has(program.id) ? "selected" : undefined}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        aria-label={`Select ${program.code}`}
+                        checked={selection.selectedIds.has(program.id)}
+                        onCheckedChange={(checked) =>
+                          selection.toggleOne(program.id, Boolean(checked))
+                        }
+                      />
+                    </TableCell>
                     <TableCell className="font-bold">{program.code}</TableCell>
                     <TableCell>{program.name}</TableCell>
                     <TableCell className="max-w-[200px] truncate">

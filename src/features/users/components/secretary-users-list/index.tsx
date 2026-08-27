@@ -18,6 +18,9 @@ import { UsersDataTable } from "./users-data-table";
 import { Pagination } from "@/components/ui/pagination";
 import { UserDialogs, useToggleUserActive } from "./user-dialogs";
 import { EditUserDialog } from "./edit-user-dialog";
+import { bulkToggleUsersActiveAction } from "@/lib/actions/management-foundation-actions";
+import { showToast } from "@/components/ui/toast";
+import { useTableSelection } from "@/hooks/use-table-selection";
 
 interface SecretaryUsersListProps {
   users: SecretaryUserSummaryItem[];
@@ -57,6 +60,10 @@ export function SecretaryUsersList({
   const [searchDraft, setSearchDraft] = useState(query.q ?? "");
 
   const totalPages = Math.ceil(total / pageSize);
+  const selection = useTableSelection(
+    users.map((user) => user.id),
+    `${page}:${query.role ?? ""}:${query.program ?? ""}:${query.major ?? ""}:${query.q ?? ""}:${query.state ?? ""}:${query.verification ?? ""}:${query.sort}:${query.direction}`
+  );
 
   const navigateWithQuery = (next: Partial<SecretaryUsersListQuery>) => {
     const nextQuery = { ...query, ...next };
@@ -75,6 +82,23 @@ export function SecretaryUsersList({
   const handleToggleActive = (userId: string, currentActive: boolean) => {
     toggleActive(userId, currentActive, handleUserUpdated);
   };
+  const handleBulkStatus = (isActive: boolean) => {
+    const ids = [...selection.selectedIds];
+    startTransition(async () => {
+      const result = await bulkToggleUsersActiveAction(ids, isActive);
+      if (result.failed.length > 0) {
+        showToast(
+          `${result.succeeded.length} updated; ${result.failed.length} could not be updated.`,
+          "warning"
+        );
+      } else {
+        showToast(`${result.succeeded.length} users ${isActive ? "activated" : "deactivated"}.`);
+      }
+      selection.clearSelection();
+      router.refresh();
+    });
+  };
+
   const handleAttentionChange = (value: string | null) => {
     const nextAttention = value === "__all__" ? undefined : value;
     navigateWithQuery({
@@ -175,6 +199,13 @@ export function SecretaryUsersList({
         onEditUser={(user) => setEditUserId(user.id)}
         onToggleActive={handleToggleActive}
         isPending={isMutating}
+        selectedIds={selection.selectedIds}
+        allSelected={selection.allVisibleSelected}
+        someSelected={selection.someVisibleSelected}
+        onToggleOne={selection.toggleOne}
+        onToggleAll={selection.toggleAllVisible}
+        onClearSelection={selection.clearSelection}
+        onBulkStatus={handleBulkStatus}
       />
 
       <Pagination

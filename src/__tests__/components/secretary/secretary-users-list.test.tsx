@@ -191,4 +191,25 @@ describe("SecretaryUsersList", () => {
 
     expect(replaceMock).toHaveBeenCalledWith("/secretary/users?q=John");
   });
+
+  it("supports page-bound selection across desktop and mobile representations", () => {
+    render(
+      <SecretaryUsersList
+        users={mockUsers}
+        total={2}
+        page={1}
+        pageSize={15}
+        query={{ page: 1, sort: "name", direction: "asc" }}
+        kpi={mockKPI}
+        programs={mockPrograms}
+        yearLevels={mockYearLevels}
+        currentUserId="admin-1"
+      />
+    );
+
+    const johnCheckboxes = screen.getAllByRole("checkbox", { name: "Select John Doe" });
+    fireEvent.click(johnCheckboxes[0]);
+    expect(screen.getByText("1 user selected")).toBeInTheDocument();
+    expect(johnCheckboxes[1]).toBeChecked();
+  });
 });
