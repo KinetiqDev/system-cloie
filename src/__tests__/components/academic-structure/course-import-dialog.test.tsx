@@ -138,4 +138,40 @@ describe("CourseImportDialog", () => {
     expect(showToast).toHaveBeenCalledWith("1 created. 0 not created.", "success");
     expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
   });
+
+  it("renders a per-mode column guide in the file step", () => {
+    render(
+      <CourseImportDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        config={{ mode: "general-education" }}
+      />
+    );
+
+    expect(screen.getByText("Column guide")).toBeInTheDocument();
+    expect(screen.getByText("Course code")).toBeInTheDocument();
+    expect(screen.getByText("Year level")).toBeInTheDocument();
+    expect(screen.getByText(/1, 2, 3, or 4/)).toBeInTheDocument();
+    // General Education template has no Course type or Program code columns.
+    expect(screen.queryByText("Course type")).not.toBeInTheDocument();
+    expect(screen.queryByText("Program code")).not.toBeInTheDocument();
+  });
+
+  it("renders program-head columns in the guide", () => {
+    render(
+      <CourseImportDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        config={{
+          mode: "program-head",
+          selectedProgram: { id: "p1", code: "BSIT", name: "Information Technology" },
+          majors: [],
+        }}
+      />
+    );
+
+    expect(screen.getByText("Course type")).toBeInTheDocument();
+    expect(screen.getByText('"Program Wide" or "Major Specific".')).toBeInTheDocument();
+    expect(screen.getByText("Major name")).toBeInTheDocument();
+  });
 });

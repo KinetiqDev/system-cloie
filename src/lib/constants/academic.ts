@@ -10,6 +10,9 @@ export {
   getSemesterTermLabel,
   getSemesterShortLabel,
   getTermShortLabel,
+  normalizeFriendlyInput,
+  parseSemesterInput,
+  parseTermInput,
 } from "./academic-period";
 
 export const SEMESTER_OPTIONS = [
@@ -30,7 +33,7 @@ export const STUDENT_SECTION_OPTIONS = [
 ] as const;
 
 // Re-export year level constants for convenience
-export { YEAR_LEVEL_OPTIONS, getYearLevelDisplay } from "./year-levels";
+export { YEAR_LEVEL_OPTIONS, getYearLevelDisplay, parseYearLevelInput } from "./year-levels";
 
 export function getSectionLabel(section: StudentSection | null | undefined): string {
   if (!section) return "—";

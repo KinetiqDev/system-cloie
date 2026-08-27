@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { CourseScope } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { previewCourseImport } from "@/features/academic-structure/services/preview-course-import";
 import { confirmCourseImport } from "@/features/academic-structure/services/confirm-course-import";
 import { ROLES } from "@/lib/constants/roles";
@@ -271,6 +271,170 @@ describe("Course Import Services", () => {
         expect(result.data.rows[0].status).toBe("READY");
         expect(result.data.rows[1].status).toBe("READY");
         expect(result.data.rows[2].status).toBe("UNKNOWN_MAJOR");
+      }
+    });
+
+    it("accepts friendly year, semester, and term values for Secretary imports", async () => {
+      vi.mocked(resolveAuthSession).mockResolvedValue({
+        userId: "sec-1",
+        activeRole: ROLES.SECRETARY,
+      } as unknown as AuthSessionSnapshot);
+
+      vi.mocked(prisma.course.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.program.findMany).mockResolvedValue([
+        { id: PROGRAM_ID, code: "BSIT", name: "Information Technology", is_active: true } as never,
+      ]);
+      vi.mocked(prisma.major.findMany).mockResolvedValue([]);
+
+      const result = await previewCourseImport({
+        mode: "secretary",
+        rows: [
+          {
+            sourceIndex: 2,
+            input: {
+              course_code: "IT 101",
+              course_title: "Intro to Computing",
+              course_scope: "General Education",
+              program_code: "",
+              major_name: "",
+              year_level: "1",
+              semester: "1st Semester",
+              term: "1st Term",
+            },
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.summary.ready).toBe(1);
+        expect(result.data.rows[0].courseScope).toBe(CourseScope.GENERAL_EDUCATION);
+        expect(result.data.rows[0].yearLevel).toBe(YearLevel.FIRST_YEAR);
+        expect(result.data.rows[0].semester).toBe(AcademicSemester.FIRST);
+        expect(result.data.rows[0].term).toBe(AcademicTerm.FIRST_TERM);
+      }
+    });
+
+    it("flags an unrecognized year level with a friendly fix-step message", async () => {
+      vi.mocked(resolveAuthSession).mockResolvedValue({
+        userId: "sec-1",
+        activeRole: ROLES.SECRETARY,
+      } as unknown as AuthSessionSnapshot);
+
+      vi.mocked(prisma.course.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.program.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.major.findMany).mockResolvedValue([]);
+
+      const result = await previewCourseImport({
+        mode: "secretary",
+        rows: [
+          {
+            sourceIndex: 2,
+            input: {
+              course_code: "GEMATH",
+              course_title: "Mathematics",
+              course_scope: "GENERAL_EDUCATION",
+              program_code: "",
+              major_name: "",
+              year_level: "9",
+              semester: "FIRST",
+              term: "FIRST_TERM",
+            },
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.rows[0].status).toBe("INVALID");
+        expect(result.data.rows[0].error).toContain("1, 2, 3, or 4");
+      }
+    });
+
+    it("accepts friendly course type and numeric periods for Program Head imports", async () => {
+      vi.mocked(resolveAuthSession).mockResolvedValue({
+        userId: "ph-1",
+        activeRole: ROLES.PROGRAM_HEAD,
+      } as unknown as AuthSessionSnapshot);
+      vi.mocked(resolveProgramHeadContext).mockResolvedValue({
+        success: true,
+        data: {
+          userId: "ph-1",
+          selectedProgram: { id: PROGRAM_ID, code: "BSIT", name: "Information Technology" },
+        },
+      } as never);
+
+      vi.mocked(prisma.course.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.major.findMany).mockResolvedValue([]);
+
+      const result = await previewCourseImport({
+        mode: "program-head",
+        selectedProgramId: PROGRAM_ID,
+        rows: [
+          {
+            sourceIndex: 2,
+            input: {
+              course_code: "IT 101",
+              course_title: "Computing",
+              course_type: "Program Wide",
+              major_name: "",
+              year_level: "2",
+              semester: "2",
+              term: "2",
+            },
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.rows[0].status).toBe("READY");
+        expect(result.data.rows[0].courseType).toBe("PROGRAM_WIDE");
+        expect(result.data.rows[0].yearLevel).toBe(YearLevel.SECOND_YEAR);
+        expect(result.data.rows[0].semester).toBe(AcademicSemester.SECOND);
+        expect(result.data.rows[0].term).toBe(AcademicTerm.SECOND_TERM);
+      }
+    });
+
+    it("flags an unrecognized course type with a friendly fix-step message", async () => {
+      vi.mocked(resolveAuthSession).mockResolvedValue({
+        userId: "ph-1",
+        activeRole: ROLES.PROGRAM_HEAD,
+      } as unknown as AuthSessionSnapshot);
+      vi.mocked(resolveProgramHeadContext).mockResolvedValue({
+        success: true,
+        data: {
+          userId: "ph-1",
+          selectedProgram: { id: PROGRAM_ID, code: "BSIT", name: "Information Technology" },
+        },
+      } as never);
+
+      vi.mocked(prisma.course.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.major.findMany).mockResolvedValue([]);
+
+      const result = await previewCourseImport({
+        mode: "program-head",
+        selectedProgramId: PROGRAM_ID,
+        rows: [
+          {
+            sourceIndex: 2,
+            input: {
+              course_code: "IT 101",
+              course_title: "Computing",
+              course_type: "Lab",
+              major_name: "",
+              year_level: "FIRST_YEAR",
+              semester: "FIRST",
+              term: "FIRST_TERM",
+            },
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.rows[0].status).toBe("INVALID");
+        expect(result.data.rows[0].error).toContain('"Program Wide" or "Major Specific"');
       }
     });
   });

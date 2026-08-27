@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import { CheckCircle2, Download, FileSpreadsheet, Upload, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  Download,
+  FileSpreadsheet,
+  Upload,
+  XCircle,
+} from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -28,9 +35,11 @@ import {
   confirmCourseImportAction,
   previewCourseImportAction,
 } from "@/lib/actions/course-import-actions";
+import { getSemesterLabel, getTermLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import {
   COURSE_IMPORT_MODE_LABELS,
   type CourseImportConfirmation,
+  type CourseImportConfirmationOutcome,
   type CourseImportMode,
   type CourseImportModeConfig,
   type CourseImportPreview,
@@ -71,6 +80,164 @@ const STATUS_LABELS: Record<CourseImportPreviewRow["status"], string> = {
   OUT_OF_SCOPE: "Outside scope",
 };
 
+const OUTCOME_LABELS: Record<CourseImportConfirmationOutcome, string> = {
+  CREATED: "Created",
+  INVALID: "Needs attention",
+  DUPLICATE_IN_FILE: "Duplicate in file",
+  DUPLICATE_EXISTING: "Already exists",
+  UNKNOWN_PROGRAM: "Unknown Program",
+  INACTIVE_PROGRAM: "Inactive Program",
+  UNKNOWN_MAJOR: "Unknown Major",
+  INACTIVE_MAJOR: "Inactive Major",
+  MAJOR_PROGRAM_MISMATCH: "Major mismatch",
+  OUT_OF_SCOPE: "Outside scope",
+  UNEXPECTED_FAILURE: "Failed",
+  UNPROCESSED: "Not processed",
+};
+
+function outcomeVariant(outcome: CourseImportConfirmationOutcome) {
+  if (outcome === "CREATED") return "success" as const;
+  if (
+    outcome === "DUPLICATE_EXISTING" ||
+    outcome === "DUPLICATE_IN_FILE" ||
+    outcome === "UNPROCESSED"
+  )
+    return "warning" as const;
+  return "destructive" as const;
+}
+
+const COURSE_TYPE_LABELS: Record<string, string> = {
+  PROGRAM_WIDE: "Program-wide",
+  MAJOR_SPECIFIC: "Major-specific",
+};
+
+type ColumnGuideEntry = { name: string; required: string; values: string };
+
+const COLUMN_GUIDES: Record<CourseImportMode, ColumnGuideEntry[]> = {
+  secretary: [
+    { name: "Course code", required: "Required", values: 'Unique code, e.g. "IT 101".' },
+    {
+      name: "Course title",
+      required: "Required",
+      values: 'Full title, e.g. "Intro to Computing".',
+    },
+    {
+      name: "Course scope",
+      required: "Required",
+      values: '"General Education" or "Program Specific".',
+    },
+    {
+      name: "Program code",
+      required: "Program-specific only",
+      values: 'Active Program code, e.g. "BSIT". Leave blank for General Education.',
+    },
+    {
+      name: "Major name",
+      required: "Optional",
+      values: 'Major within the Program, e.g. "Software Engineering".',
+    },
+    {
+      name: "Year level",
+      required: "Optional",
+      values: '1, 2, 3, or 4 (for example "1" or "1st Year"). Leave blank to skip.',
+    },
+    {
+      name: "Semester",
+      required: "Optional",
+      values: '1, 2, or 3 (for example "1st Semester" or "Summer"). Leave blank to skip.',
+    },
+    {
+      name: "Term",
+      required: "Optional",
+      values: '1 or 2 (for example "1st Term"). Leave blank for Summer sessions.',
+    },
+  ],
+  "program-head": [
+    { name: "Course code", required: "Required", values: 'Unique code, e.g. "IT 101".' },
+    {
+      name: "Course title",
+      required: "Required",
+      values: 'Full title, e.g. "Intro to Computing".',
+    },
+    { name: "Course type", required: "Required", values: '"Program Wide" or "Major Specific".' },
+    {
+      name: "Major name",
+      required: "Major-specific only",
+      values:
+        'Active Major in the selected Program, e.g. "Network Security". Leave blank for Program-wide.',
+    },
+    {
+      name: "Year level",
+      required: "Optional",
+      values: '1, 2, 3, or 4 (for example "1" or "1st Year"). Leave blank to skip.',
+    },
+    {
+      name: "Semester",
+      required: "Optional",
+      values: '1, 2, or 3 (for example "1st Semester" or "Summer"). Leave blank to skip.',
+    },
+    {
+      name: "Term",
+      required: "Optional",
+      values: '1 or 2 (for example "1st Term"). Leave blank for Summer sessions.',
+    },
+  ],
+  "general-education": [
+    { name: "Course code", required: "Required", values: 'Unique code, e.g. "GEMATH".' },
+    {
+      name: "Course title",
+      required: "Required",
+      values: 'Full title, e.g. "Mathematics in the Modern World".',
+    },
+    {
+      name: "Year level",
+      required: "Optional",
+      values: '1, 2, 3, or 4 (for example "1" or "1st Year"). Leave blank to skip.',
+    },
+    {
+      name: "Semester",
+      required: "Optional",
+      values: '1, 2, or 3 (for example "1st Semester" or "Summer"). Leave blank to skip.',
+    },
+    {
+      name: "Term",
+      required: "Optional",
+      values: '1 or 2 (for example "1st Term"). Leave blank for Summer sessions.',
+    },
+  ],
+};
+
+function ColumnGuide({ mode }: { mode: CourseImportMode }) {
+  const columns = COLUMN_GUIDES[mode];
+  return (
+    <details open className="group border-border rounded-lg border">
+      <summary className="text-label-md flex cursor-pointer items-center justify-between px-3 py-2.5 select-none">
+        <span>Column guide</span>
+        <ChevronDown
+          aria-hidden="true"
+          className="text-muted-foreground size-4 transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <dl className="divide-border divide-y border-t">
+        {columns.map((column) => (
+          <div
+            key={column.name}
+            className="grid gap-0.5 px-3 py-2 sm:grid-cols-[11rem_1fr] sm:gap-3"
+          >
+            <dt className="text-label-sm">
+              {column.name}
+              <span className="text-muted-foreground block text-xs font-normal">
+                {column.required}
+              </span>
+            </dt>
+            <dd className="text-body-sm text-muted-foreground">{column.values}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
+}
+
 function modeOf(config: CourseImportModeConfig): CourseImportMode {
   return config.mode;
 }
@@ -110,12 +277,12 @@ function contextDescription(config: CourseImportModeConfig): string {
 
 function fieldHint(config: CourseImportModeConfig): string {
   if (config.mode === "secretary") {
-    return "Program-specific rows need an active Program code. General Education rows leave Program and Major blank.";
+    return 'Set Course scope to "General Education" or "Program Specific". Program-specific rows need an active Program code; General Education rows leave Program and Major blank.';
   }
   if (config.mode === "program-head") {
-    return "Use PROGRAM_WIDE or MAJOR_SPECIFIC. Major-specific rows need an active Major in the selected Program.";
+    return 'Set Course type to "Program Wide" or "Major Specific". Major-specific rows need an active Major in the selected Program.';
   }
-  return "Program and Major are not part of this template. The server keeps every row college-wide.";
+  return "Program and Major are not part of this template. Every row is added to the college-wide General Education catalog.";
 }
 
 function previewMessage(preview: CourseImportPreview): string {
@@ -257,7 +424,9 @@ function FileStep({
         >
           <Upload aria-hidden="true" className="text-muted-foreground size-6" />
           <span className="text-body-sm font-medium">Drop CSV here or choose a file</span>
-          <span className="text-body-sm text-muted-foreground">{fieldHint(config)}</span>
+          <span className="text-body-sm text-muted-foreground">
+            One Course per row. See the column guide below for accepted values.
+          </span>
         </div>
         <input
           ref={inputRef}
@@ -268,6 +437,7 @@ function FileStep({
           onChange={(event) => acceptFile(event.target.files?.[0])}
         />
       </div>
+      <ColumnGuide mode={config.mode} />
       {error && (
         <Alert variant="destructive">
           <XCircle aria-hidden="true" />
@@ -326,7 +496,14 @@ function PreviewRows({ rows }: { rows: CourseImportPreviewRow[] }) {
           </div>
           {(row.semester || row.yearLevel || row.courseType) && (
             <p className="text-muted-foreground mt-2 text-xs">
-              {[row.courseType, row.yearLevel, row.semester, row.term].filter(Boolean).join(" · ")}
+              {[
+                row.courseType ? (COURSE_TYPE_LABELS[row.courseType] ?? row.courseType) : null,
+                row.yearLevel ? getYearLevelDisplay(row.yearLevel) : null,
+                row.semester ? getSemesterLabel(row.semester) : null,
+                row.term ? getTermLabel(row.term) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           )}
           {row.error && <p className="text-danger mt-2 text-sm">{row.error}</p>}
@@ -351,7 +528,9 @@ function ResultsRows({ result }: { result: CourseImportConfirmation }) {
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-label-md">{row.courseCode || "Unnamed Course"}</span>
-                <Badge variant={successful ? "success" : "destructive"}>{row.outcome}</Badge>
+                <Badge variant={outcomeVariant(row.outcome)}>
+                  {OUTCOME_LABELS[row.outcome] ?? row.outcome}
+                </Badge>
                 <span className="text-muted-foreground text-xs">Row {row.sourceIndex}</span>
               </div>
               <p className="text-body-sm text-muted-foreground mt-1 break-words">
@@ -569,13 +748,14 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
             </div>
           )}
         </div>
-        <DialogFooter className="border-border bg-background shrink-0 flex-col border-t px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6">
+        <DialogFooter className="border-border bg-background mx-0 mb-0 shrink-0 flex-col border-t px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6">
           {step === "file" && (
             <Button
               type="button"
               onClick={previewFile}
               disabled={!file || isPending}
               loading={isPending}
+              className="w-full sm:w-auto"
             >
               Check file
             </Button>
@@ -587,6 +767,7 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
                 variant="outline"
                 onClick={() => setStep("file")}
                 disabled={isPending}
+                className="w-full sm:w-auto"
               >
                 Back
               </Button>
@@ -595,6 +776,7 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
                 onClick={confirm}
                 disabled={preview.summary.ready === 0 || isPending}
                 loading={isPending}
+                className="w-full sm:w-auto"
               >
                 Create {preview.summary.ready} Course{preview.summary.ready === 1 ? "" : "s"}
               </Button>
@@ -603,15 +785,20 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
           {step === "results" && result && (
             <>
               {result.summary.notCreated > 0 && (
-                <Button type="button" variant="outline" onClick={downloadFailures}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={downloadFailures}
+                  className="w-full sm:w-auto"
+                >
                   <Download data-icon="inline-start" />
                   Download rows to fix
                 </Button>
               )}
-              <Button type="button" variant="outline" onClick={reset}>
+              <Button type="button" variant="outline" onClick={reset} className="w-full sm:w-auto">
                 Import another file
               </Button>
-              <Button type="button" onClick={() => close(false)}>
+              <Button type="button" onClick={() => close(false)} className="w-full sm:w-auto">
                 Done
               </Button>
             </>

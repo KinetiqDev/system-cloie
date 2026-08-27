@@ -1,9 +1,15 @@
-import { CourseScope } from "@prisma/client";
+import { CourseScope, AcademicSemester, AcademicTerm, YearLevel } from "@prisma/client";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
+import {
+  normalizeFriendlyInput,
+  parseSemesterInput,
+  parseTermInput,
+} from "@/lib/constants/academic-period";
+import { parseYearLevelInput } from "@/lib/constants/year-levels";
 import type { ServiceResult } from "@/lib/utils/service-result";
 
 import { createCourseSchema, type CreateCourseInput } from "../schemas/course";
@@ -82,6 +88,33 @@ const MODE_HEADERS: Record<CourseImportMode, readonly string[]> = {
 
 const INVALID_COLUMNS = "This row does not match the selected Course import template.";
 
+/**
+ * Friendly alias map for CourseScope. Keyed by normalizeFriendlyInput output.
+ * "GENERAL_EDUCATION", "General Education", "GE", "gen ed" → GENERAL_EDUCATION.
+ * "PROGRAM_SPECIFIC", "Program Specific", "program" → PROGRAM_SPECIFIC.
+ */
+const COURSE_SCOPE_ALIASES: Record<string, CourseScope> = {
+  generaleducation: CourseScope.GENERAL_EDUCATION,
+  gened: CourseScope.GENERAL_EDUCATION,
+  ge: CourseScope.GENERAL_EDUCATION,
+  general: CourseScope.GENERAL_EDUCATION,
+  programspecific: CourseScope.PROGRAM_SPECIFIC,
+  program: CourseScope.PROGRAM_SPECIFIC,
+  ps: CourseScope.PROGRAM_SPECIFIC,
+};
+
+/**
+ * Friendly alias map for Course type (program-head only).
+ * "PROGRAM_WIDE", "Program Wide", "program-wide" → PROGRAM_WIDE.
+ * "MAJOR_SPECIFIC", "Major Specific", "major-specific" → MAJOR_SPECIFIC.
+ */
+const COURSE_TYPE_ALIASES: Record<string, string> = {
+  programwide: "PROGRAM_WIDE",
+  program: "PROGRAM_WIDE",
+  majorspecific: "MAJOR_SPECIFIC",
+  major: "MAJOR_SPECIFIC",
+};
+
 function normalizeText(value: string | undefined): string {
   return (value ?? "").normalize("NFKC").trim().replace(/\s+/gu, " ");
 }
@@ -137,23 +170,44 @@ function invalidRow(
   return { preview: emptyPreviewRow(row, values), input: null };
 }
 
-function courseScopeForRow(
-  mode: CourseImportMode,
-  row: CourseImportRequestRow
-): CourseScope | null {
-  if (mode === "general-education") return CourseScope.GENERAL_EDUCATION;
-  if (mode === "program-head") return CourseScope.PROGRAM_SPECIFIC;
+type ScopeParseResult = { ok: true; value: CourseScope } | { ok: false; error: string };
 
-  const scope = readField(row, "course_scope").toUpperCase();
-  return scope === CourseScope.GENERAL_EDUCATION || scope === CourseScope.PROGRAM_SPECIFIC
-    ? scope
-    : null;
+type CourseTypeParseResult = { ok: true; value: string | null } | { ok: false; error: string };
+
+function courseScopeForRow(mode: CourseImportMode, row: CourseImportRequestRow): ScopeParseResult {
+  if (mode === "general-education") return { ok: true, value: CourseScope.GENERAL_EDUCATION };
+  if (mode === "program-head") return { ok: true, value: CourseScope.PROGRAM_SPECIFIC };
+
+  const raw = readField(row, "course_scope");
+  const key = normalizeFriendlyInput(raw);
+  const parsed = COURSE_SCOPE_ALIASES[key];
+  if (parsed) return { ok: true, value: parsed };
+  return {
+    ok: false,
+    error:
+      raw === ""
+        ? 'Course scope is required. Use "General Education" or "Program Specific".'
+        : `Course scope "${raw}" is not recognized. Use "General Education" or "Program Specific".`,
+  };
 }
 
-function courseTypeForRow(mode: CourseImportMode, row: CourseImportRequestRow): string | null {
-  if (mode !== "program-head") return null;
-  const type = readField(row, "course_type").toUpperCase();
-  return type || null;
+function courseTypeForRow(
+  mode: CourseImportMode,
+  row: CourseImportRequestRow
+): CourseTypeParseResult {
+  if (mode !== "program-head") return { ok: true, value: null };
+
+  const raw = readField(row, "course_type");
+  const key = normalizeFriendlyInput(raw);
+  const parsed = COURSE_TYPE_ALIASES[key];
+  if (parsed) return { ok: true, value: parsed };
+  return {
+    ok: false,
+    error:
+      raw === ""
+        ? 'Course type is required. Use "Program Wide" or "Major Specific".'
+        : `Course type "${raw}" is not recognized. Use "Program Wide" or "Major Specific".`,
+  };
 }
 
 function lookupProgram(programs: ProgramRecord[], code: string): ProgramRecord | null {
@@ -169,11 +223,44 @@ function lookupMajor(majors: MajorRecord[], programId: string, name: string): Ma
   );
 }
 
+type ParsedTemporalFields = {
+  yearLevel: YearLevel | undefined;
+  semester: AcademicSemester | undefined;
+  term: AcademicTerm | undefined;
+};
+
+/**
+ * Parse and validate the year_level, semester, and term CSV cells into their
+ * enum values. Friendly inputs ("1", "1st Year", "Summer") are accepted
+ * alongside exact enum spellings. Blank cells parse to undefined (defaults are
+ * optional). Any unrecognized value fails the whole row with a fix-step error.
+ */
+function parseTemporalFields(
+  row: CourseImportRequestRow
+): { ok: true; values: ParsedTemporalFields } | { ok: false; error: string } {
+  const yearLevel = parseYearLevelInput(readField(row, "year_level"));
+  if (!yearLevel.ok) return { ok: false, error: yearLevel.error };
+  const semester = parseSemesterInput(readField(row, "semester"));
+  if (!semester.ok) return { ok: false, error: semester.error };
+  const term = parseTermInput(readField(row, "term"));
+  if (!term.ok) return { ok: false, error: term.error };
+
+  return {
+    ok: true,
+    values: {
+      yearLevel: yearLevel.value ?? undefined,
+      semester: semester.value ?? undefined,
+      term: term.value ?? undefined,
+    },
+  };
+}
+
 function buildCourseInput(
   row: CourseImportRequestRow,
   resolution: ImportRowResolution,
   programId: string | null,
-  majorId: string | null
+  majorId: string | null,
+  temporal: ParsedTemporalFields
 ) {
   return {
     code: readField(row, "course_code"),
@@ -181,9 +268,9 @@ function buildCourseInput(
     course_scope: resolution.courseScope,
     program_id: programId ?? undefined,
     major_id: majorId ?? undefined,
-    default_year_level: readField(row, "year_level") || undefined,
-    default_semester: readField(row, "semester") || undefined,
-    default_term: readField(row, "term") || undefined,
+    default_year_level: temporal.yearLevel,
+    default_semester: temporal.semester,
+    default_term: temporal.term,
   };
 }
 
@@ -225,37 +312,37 @@ function resolveRowContext(
     return invalidRow(row, { status: "INVALID", error: INVALID_COLUMNS });
   }
 
-  const courseScope = courseScopeForRow(mode, row);
-  const courseType = courseTypeForRow(mode, row);
-  const majorName = readField(row, "major_name");
-  const programCode = normalizeCode(row.input.program_code);
-
-  if (!courseScope) {
+  const courseScopeResult = courseScopeForRow(mode, row);
+  if (!courseScopeResult.ok) {
     return invalidRow(row, {
       courseCode: normalizeCode(row.input.course_code),
       courseTitle: readField(row, "course_title"),
-      courseType,
       status: "INVALID",
-      error: "Course scope must be GENERAL_EDUCATION or PROGRAM_SPECIFIC.",
+      error: courseScopeResult.error,
     });
   }
+  const courseScope = courseScopeResult.value;
+
+  const courseTypeResult = courseTypeForRow(mode, row);
+  if (!courseTypeResult.ok) {
+    return invalidRow(row, {
+      courseCode: normalizeCode(row.input.course_code),
+      courseTitle: readField(row, "course_title"),
+      courseScope,
+      status: "INVALID",
+      error: courseTypeResult.error,
+    });
+  }
+  const courseType = courseTypeResult.value;
+
+  const majorName = readField(row, "major_name");
+  const programCode = normalizeCode(row.input.program_code);
 
   if (mode === "general-education") {
     return { courseScope, courseType, program: null, major: null, majorName };
   }
 
   if (mode === "program-head") {
-    if (courseType !== "PROGRAM_WIDE" && courseType !== "MAJOR_SPECIFIC") {
-      return invalidRow(row, {
-        courseCode: normalizeCode(row.input.course_code),
-        courseTitle: readField(row, "course_title"),
-        courseScope,
-        courseType,
-        status: "INVALID",
-        error: "Course type must be PROGRAM_WIDE or MAJOR_SPECIFIC.",
-      });
-    }
-
     if (actor.role !== ROLES.PROGRAM_HEAD) {
       return invalidRow(row, {
         courseCode: normalizeCode(row.input.course_code),
@@ -417,8 +504,24 @@ function validateRow(
 
   const programId = context.program?.id ?? null;
   const majorId = context.major?.id ?? null;
+
+  const temporal = parseTemporalFields(row);
+  if (!temporal.ok) {
+    return invalidRow(row, {
+      courseCode: normalizeCode(row.input.course_code),
+      courseTitle: readField(row, "course_title"),
+      courseScope: context.courseScope,
+      courseType: context.courseType,
+      programCode: context.program?.code ?? null,
+      programName: context.program?.name ?? null,
+      majorName: context.major?.name ?? (context.majorName || null),
+      status: "INVALID",
+      error: temporal.error,
+    });
+  }
+
   const parsed = createCourseSchema.safeParse(
-    buildCourseInput(row, context, programId, majorId)
+    buildCourseInput(row, context, programId, majorId, temporal.values)
   ) as CourseSchemaParseResult;
 
   if (!parsed.success) {

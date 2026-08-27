@@ -36,6 +36,37 @@ const GENERAL_EDUCATION_HEADERS = [
   "term",
 ] as const;
 
+/** User-facing mode names for import error messages. */
+const MODE_NAMES: Record<CourseImportMode, string> = {
+  secretary: "Secretary",
+  "program-head": "Program Head",
+  "general-education": "General Education",
+};
+
+/** Humanized column labels per mode for import error messages. */
+const HEADER_LABELS: Record<CourseImportMode, readonly string[]> = {
+  secretary: [
+    "Course code",
+    "Course title",
+    "Course scope",
+    "Program code",
+    "Major name",
+    "Year level",
+    "Semester",
+    "Term",
+  ],
+  "program-head": [
+    "Course code",
+    "Course title",
+    "Course type",
+    "Major name",
+    "Year level",
+    "Semester",
+    "Term",
+  ],
+  "general-education": ["Course code", "Course title", "Year level", "Semester", "Term"],
+};
+
 export const COURSE_IMPORT_TEMPLATES: Record<CourseImportMode, string> = {
   secretary: `${SECRETARY_HEADERS.join(",")}\n`,
   "program-head": `${PROGRAM_HEAD_HEADERS.join(",")}\n`,
@@ -181,7 +212,7 @@ export function parseCourseImportCsv(
     actualHeaders.some((value, index) => value !== expectedHeaders[index])
   ) {
     return invalidStructure(
-      `Use the ${mode} Course import template with these columns: ${expectedHeaders.join(", ")}.`
+      `Use the ${MODE_NAMES[mode]} import template. Expected columns: ${HEADER_LABELS[mode].join(", ")}.`
     );
   }
 

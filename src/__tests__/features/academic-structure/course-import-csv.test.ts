@@ -73,6 +73,22 @@ describe("course import CSV", () => {
     ).toEqual({ success: false, error: expect.stringContaining("100") });
   });
 
+  it("reports header mismatches with humanized mode names and column labels", () => {
+    const result = parseCourseImportCsv(
+      "course_code,course_title\nIT101,Computing\n",
+      "program-head"
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("Program Head");
+      expect(result.error).toContain("Course code");
+      expect(result.error).toContain("Course type");
+      expect(result.error).toContain("columns");
+      expect(result.error).not.toContain("course_type");
+    }
+  });
+
   it("ships templates with role-specific headers", () => {
     expect(COURSE_IMPORT_TEMPLATES.secretary).toContain("program_code");
     expect(COURSE_IMPORT_TEMPLATES["program-head"]).toContain("course_type");
