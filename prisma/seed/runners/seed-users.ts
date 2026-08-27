@@ -148,6 +148,24 @@ export async function seedUsers(
     });
   }
 
+  console.log("  → Industry partner program affiliations...");
+  for (const profile of industryProfiles) {
+    const programId = pMap.get(profile.program)!.id;
+    await prisma.industryPartnerProgramAffiliation.upsert({
+      where: {
+        industry_partner_id_program_id: {
+          industry_partner_id: profile.userId,
+          program_id: programId,
+        },
+      },
+      update: {},
+      create: {
+        industry_partner_id: profile.userId,
+        program_id: programId,
+      },
+    });
+  }
+
   console.log("  → External stakeholder invites...");
   for (const invite of inviteDefinitions) {
     const programId = pMap.get(invite.program)!.id;
