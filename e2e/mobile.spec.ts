@@ -133,7 +133,7 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
   // Assigned evaluation is visible on the dashboard; open the instrument.
   await page.goto("/student/dashboard");
   const pendingCard = page
-    .locator("div")
+    .locator("div.group")
     .filter({ has: page.getByRole("heading", { name: fx.gestechEval.title }) })
     .first();
   await expect(pendingCard.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
@@ -279,7 +279,7 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
 
   // The seeded mobile deployment must be visible on the dashboard.
   const pendingCard = page
-    .locator("div")
+    .locator("div.group")
     .filter({ has: page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)" }) })
     .first();
   await expect(pendingCard.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
@@ -303,15 +303,20 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await page.getByRole("button", { name: "Next Section" }).click();
   await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
 
-  // Draft save verified via navigation; reload confirms persistence
   await page.reload();
-  await page.waitForLoadState("networkidle");
+  // Resume reopens the wizard on the first incomplete section (section 2);
+  // the persisted section 1 draft is verified by navigating back.
   await expect(
     page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })
   ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
+  await page.getByRole("button", { name: "Previous" }).click();
+  await expect(page.getByRole("heading", { name: "Program Learning Experience" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Program Learning Experience", exact: true })
-  ).toBeVisible();
+    page
+      .getByRole("group", { name: "The program provided a strong foundation in my field of study" })
+      .getByRole("radio", { checked: true })
+  ).toHaveCount(1);
 
   await page.getByRole("button", { name: "Next Section" }).click();
   await expectQuestionUnanswered(

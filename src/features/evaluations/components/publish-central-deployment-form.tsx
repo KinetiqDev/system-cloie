@@ -45,7 +45,9 @@ interface PublishCentralDeploymentFormProps {
   preselectedTemplateId?: string;
   termInstances: TermInstanceItem[];
   activeTermId?: string;
-  previewAction: (payload: PreviewCentralDeploymentInput) => Promise<PreviewCentralDeploymentResult>;
+  previewAction: (
+    payload: PreviewCentralDeploymentInput
+  ) => Promise<PreviewCentralDeploymentResult>;
   publishAction: (formData: FormData) => Promise<ActionResult>;
 }
 
@@ -84,7 +86,9 @@ export function PublishCentralDeploymentForm({
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   // Preview state
-  const [previewRespondents, setPreviewRespondents] = useState<PreviewCentralDeploymentRespondent[]>([]);
+  const [previewRespondents, setPreviewRespondents] = useState<
+    PreviewCentralDeploymentRespondent[]
+  >([]);
   const [excludedRespondentIds, setExcludedRespondentIds] = useState<string[]>([]);
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
@@ -113,9 +117,8 @@ export function PublishCentralDeploymentForm({
 
     const formData = new FormData(event.currentTarget);
     formData.set("programId", programId);
-    const yearLevelValue = selectedYearLevel.length > 0
-      ? (selectedYearLevel as YearLevel)
-      : undefined;
+    const yearLevelValue =
+      selectedYearLevel.length > 0 ? (selectedYearLevel as YearLevel) : undefined;
     const majorId = selectedMajorId || undefined;
 
     // Phase 7: Validate term instance selection
@@ -235,7 +238,9 @@ export function PublishCentralDeploymentForm({
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{selectedTemplate.name}</p>
                   </div>
-                  <Badge variant="outline" className="shrink-0 text-xs">Pre-selected</Badge>
+                  <Badge variant="outline" className="shrink-0 text-xs">
+                    Pre-selected
+                  </Badge>
                 </div>
                 <input type="hidden" name="template_id" value={selectedTemplateId} />
               </>
@@ -443,16 +448,12 @@ export function PublishCentralDeploymentForm({
         {step === "configure" && (
           <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
             <a
-               href={`/program-head/programs/${encodeURIComponent(programId)}/tools`}
+              href={`/program-head/programs/${encodeURIComponent(programId)}/tools`}
               className="text-muted-foreground hover:text-foreground text-sm font-medium"
             >
               Cancel
             </a>
-            <Button
-              type="submit"
-              loading={isLoadingPreview}
-              disabled={templates.length === 0}
-            >
+            <Button type="submit" loading={isLoadingPreview} disabled={templates.length === 0}>
               {isLoadingPreview ? "Loading preview..." : "Preview Respondents"}
             </Button>
           </div>
@@ -484,8 +485,8 @@ export function PublishCentralDeploymentForm({
             <div className="max-h-[400px] overflow-auto rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="bg-muted sticky top-0">
-                  <tr className="text-muted-foreground text-left text-xs font-semibold uppercase">
-                    <th className="px-3 py-2">
+                  <tr className="text-foreground text-left text-xs font-semibold uppercase">
+                    <th scope="col" className="px-3 py-2">
                       <Checkbox
                         aria-label="Select all respondents"
                         checked={excludedRespondentIds.length === 0}
@@ -493,24 +494,34 @@ export function PublishCentralDeploymentForm({
                           if (checked === true) {
                             setExcludedRespondentIds([]);
                           } else if (checked === false) {
-                            setExcludedRespondentIds(
-                              previewRespondents.map((r) => r.userId)
-                            );
+                            setExcludedRespondentIds(previewRespondents.map((r) => r.userId));
                           }
                         }}
                       />
                     </th>
-                    <th className="px-3 py-2">Name</th>
-                    <th className="px-3 py-2">Email</th>
+                    <th scope="col" className="px-3 py-2">
+                      Name
+                    </th>
+                    <th scope="col" className="px-3 py-2">
+                      Email
+                    </th>
                     {targetStakeholder === "STUDENT" && (
                       <>
-                        <th className="px-3 py-2">Program</th>
-                        <th className="px-3 py-2">Year Level</th>
-                        <th className="px-3 py-2">Section</th>
+                        <th scope="col" className="px-3 py-2">
+                          Program
+                        </th>
+                        <th scope="col" className="px-3 py-2">
+                          Year Level
+                        </th>
+                        <th scope="col" className="px-3 py-2">
+                          Section
+                        </th>
                       </>
                     )}
                     {targetStakeholder === "INDUSTRY_PARTNER" && (
-                      <th className="px-3 py-2">Program</th>
+                      <th scope="col" className="px-3 py-2">
+                        Program
+                      </th>
                     )}
                   </tr>
                 </thead>
@@ -531,14 +542,16 @@ export function PublishCentralDeploymentForm({
                             }
                           />
                         </td>
-                        <td className="px-3 py-2">
-                          {respondent.name}
-                        </td>
+                        <td className="px-3 py-2">{respondent.name}</td>
                         <td className="px-3 py-2">{respondent.email}</td>
                         {targetStakeholder === "STUDENT" && (
                           <>
                             <td className="px-3 py-2">{respondent.programCode ?? "—"}</td>
-                            <td className="px-3 py-2">{respondent.yearLevel ? getYearLevelDisplay(respondent.yearLevel as YearLevel) : "—"}</td>
+                            <td className="px-3 py-2">
+                              {respondent.yearLevel
+                                ? getYearLevelDisplay(respondent.yearLevel as YearLevel)
+                                : "—"}
+                            </td>
                           </>
                         )}
                         {targetStakeholder === "INDUSTRY_PARTNER" && (

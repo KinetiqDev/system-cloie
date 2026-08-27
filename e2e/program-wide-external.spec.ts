@@ -106,7 +106,7 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await expect(page.getByText("Verification Pending")).toBeVisible();
 
   const card = page
-    .locator("div")
+    .locator("div.group")
     .filter({ has: page.getByRole("heading", { name: deploymentName }) })
     .first();
   await expect(card.getByRole("button", { name: "Start Evaluation" })).toBeVisible();
@@ -240,7 +240,7 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await loginAs(page, "demo-industry@cloie.test");
   await page.goto("/industry-partner/dashboard");
   const card = page
-    .locator("div")
+    .locator("div.group")
     .filter({ has: page.getByRole("heading", { name: deploymentName }) })
     .first();
   await expect(card.getByRole("button", { name: "Start Evaluation" })).toBeVisible();

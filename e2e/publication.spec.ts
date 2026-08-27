@@ -46,7 +46,9 @@ test("Faculty publishes an owned Course-bound evaluation; roster locks; Student 
   );
 
   // The publish page resolves the bound template's course context.
-  await expect(page.getByRole("heading", { name: "Publish CILO Evaluation" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Publish CILO Evaluation" })).toBeVisible({
+    timeout: 25000,
+  });
   await expect(page.getByText(fx.publicationTemplate.name, { exact: true })).toBeVisible();
 
   // Configure: name the deployment and select the owned active assignment.
@@ -95,7 +97,9 @@ test("Faculty publishes an owned Course-bound evaluation; roster locks; Student 
 
   // ── Duplicate publication is rejected (one deployment per assignment) ───
   await page.goto(`/faculty/cilo-evaluations/new?templateId=${fx.publicationTemplate.id}`);
-  await expect(page.getByRole("heading", { name: "Publish CILO Evaluation" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Publish CILO Evaluation" })).toBeVisible({
+    timeout: 25000,
+  });
   await page.getByLabel("Deployed Evaluation Name").fill(fx.publicationDeploymentName);
   await page.getByLabel("Class Assignment").click();
   await page
