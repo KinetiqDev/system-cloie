@@ -56,6 +56,12 @@ type PublishedDeploymentsCollectionProps = {
     item: PublishedDeploymentItem,
     ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
   ) => ReactNode;
+  /** Role-specific inline card actions. When provided, card footers render these
+   *  buttons directly instead of the overflow menu; list rows keep the menu. */
+  renderCardActions?: (
+    item: PublishedDeploymentItem,
+    ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
+  ) => ReactNode;
   /** Optional aria label for the results list; defaults to "Published evaluations". */
   label?: string;
 };
@@ -89,6 +95,7 @@ export function PublishedDeploymentsCollection({
   empty,
   renderExpanded,
   renderMenuItems,
+  renderCardActions,
   label = "Published evaluations",
 }: PublishedDeploymentsCollectionProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
@@ -159,6 +166,7 @@ export function PublishedDeploymentsCollection({
               item={item}
               hasCourse={hasCourseColumn}
               renderMenuItems={renderMenuItems}
+              renderCardActions={renderCardActions}
             />
           ))}
         </div>
@@ -188,8 +196,9 @@ export function PublishedDeploymentsCollection({
 
       {/* Result count */}
       <p className="text-muted-foreground pt-2 text-center text-xs">
-        Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredItems.length)}{" "}
-        of {filteredItems.length} deployment{filteredItems.length !== 1 ? "s" : ""}
+        Showing {(safePage - 1) * PAGE_SIZE + 1}–
+        {Math.min(safePage * PAGE_SIZE, filteredItems.length)} of {filteredItems.length} deployment
+        {filteredItems.length !== 1 ? "s" : ""}
       </p>
     </div>
   );
@@ -224,7 +233,7 @@ function StatusBadge({ status }: { status: DeploymentStatus }) {
 
 function TargetBadge({ label }: { label: string }) {
   return (
-    <Badge className="bg-brand-accent-soft text-brand-accent text-xs dark:text-brand-accent-highlight">
+    <Badge className="bg-brand-accent-soft text-brand-accent dark:text-brand-accent-highlight text-xs">
       {label}
     </Badge>
   );
@@ -259,10 +268,15 @@ function PublishedCard({
   item,
   hasCourse,
   renderMenuItems,
+  renderCardActions,
 }: {
   item: PublishedDeploymentItem;
   hasCourse: boolean;
   renderMenuItems: (
+    item: PublishedDeploymentItem,
+    ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
+  ) => ReactNode;
+  renderCardActions?: (
     item: PublishedDeploymentItem,
     ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
   ) => ReactNode;
@@ -298,9 +312,15 @@ function PublishedCard({
         </div>
       </CardContent>
       <CardFooter className="justify-end">
-        <OverflowMenu>
-          {renderMenuItems(item, { view: "card", expanded: false, toggle: () => {} })}
-        </OverflowMenu>
+        {renderCardActions ? (
+          <div className="flex flex-wrap justify-end gap-2">
+            {renderCardActions(item, { view: "card", expanded: false, toggle: () => {} })}
+          </div>
+        ) : (
+          <OverflowMenu>
+            {renderMenuItems(item, { view: "card", expanded: false, toggle: () => {} })}
+          </OverflowMenu>
+        )}
       </CardFooter>
     </Card>
   );
@@ -400,11 +420,7 @@ function PublishedRow({
       <TableRow className="cursor-pointer" onClick={onToggle}>
         <TableCell className="p-2">
           <Button variant="ghost" size="sm" className="size-8 p-0">
-            {isExpanded ? (
-              <ChevronDown className="size-4" />
-            ) : (
-              <ChevronRight className="size-4" />
-            )}
+            {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
           </Button>
         </TableCell>
         <TableCell className="font-medium">

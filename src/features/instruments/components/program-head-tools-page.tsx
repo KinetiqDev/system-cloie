@@ -13,6 +13,13 @@ import { Copy, Eye, Pencil, Plus, Send, Trash2, XCircle } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   AlertDialog,
   AlertDialogCancel,
   AlertDialogContent,
@@ -23,15 +30,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { showToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import type { ProgramHeadDeploymentItem } from "@/features/evaluations/services/list-program-head-deployments";
 import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
 } from "@/features/evaluations/components/published-deployments-collection";
+import { CloseEvaluationDialog } from "@/features/evaluations/components/close-evaluation-dialog";
 import { closeCentralDeploymentAction } from "@/lib/actions/central-deployment-actions";
 import {
   deleteTemplateAction,
@@ -40,11 +45,12 @@ import {
 } from "@/lib/actions/program-head-template-actions";
 import type { ProgramHeadTemplateItem } from "@/features/instruments/services/manage-program-head-templates";
 import type { InstitutionalBaselineItem } from "@/features/instruments/services/list-institutional-baselines";
-import { EvaluationToolsTabs, updateToolsUrl, type EvaluationToolsTab } from "./evaluation-tools-tabs";
 import {
-  TemplateCollection,
-  type TemplateCollectionItem,
-} from "./template-collection";
+  EvaluationToolsTabs,
+  updateToolsUrl,
+  type EvaluationToolsTab,
+} from "./evaluation-tools-tabs";
+import { TemplateCollection, type TemplateCollectionItem } from "./template-collection";
 import { ToolsViewSelector, type ToolsViewMode } from "./tools-view-selector";
 
 type ProgramHeadToolsPageProps = {
@@ -219,7 +225,11 @@ export function ProgramHeadToolsPage({
           />
         }
         published={
-          <ProgramHeadPublishedDeployments deployments={deployments} programId={program.id} view={view} />
+          <ProgramHeadPublishedDeployments
+            deployments={deployments}
+            programId={program.id}
+            view={view}
+          />
         }
       />
 
@@ -343,7 +353,9 @@ function ProgramHeadPublishedDeployments({
   view: ToolsViewMode;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [closeTargetId, setCloseTargetId] = useState<string | null>(null);
   const [optimisticDeployments, updateDeployment] = useOptimistic(
     deployments,
     (currentDeployments, closedDeploymentId: string) =>
@@ -363,6 +375,9 @@ function ProgramHeadPublishedDeployments({
         return;
       }
       router.refresh();
+      // Close the confirmation dialog only after the action settles, so a
+      // failed close keeps the context available for retry.
+      setCloseTargetId(null);
     });
   }
 
@@ -381,43 +396,79 @@ function ProgramHeadPublishedDeployments({
   }));
 
   return (
-    <PublishedDeploymentsCollection
-      view={view}
-      items={items}
-      label="Published deployments"
-      empty={
-        <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
-          <p className="text-muted-foreground">No published tools yet.</p>
-        </div>
-      }
-      renderExpanded={(item) => {
-        const deployment = byId.get(item.id);
-        if (!deployment) return null;
-        return <DeploymentExpandedDetails deployment={deployment} />;
-      }}
-      renderMenuItems={(item, ctx) => (
-        <>
-          {ctx.view === "list" && (
-            <DropdownMenuItem onClick={ctx.toggle}>
-              <Eye className="mr-2 size-4" />
-              View Details
-            </DropdownMenuItem>
-          )}
-          {item.canClose && (
-            <>
-              {ctx.view === "list" && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => handleClose(item.id)}
-              >
-                <XCircle className="mr-2 size-4" />
-                Close Deployment
+    <>
+      <PublishedDeploymentsCollection
+        view={view}
+        items={items}
+        label="Published deployments"
+        empty={
+          <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
+            <p className="text-muted-foreground">No published tools yet.</p>
+          </div>
+        }
+        renderExpanded={(item) => {
+          const deployment = byId.get(item.id);
+          if (!deployment) return null;
+          return <DeploymentExpandedDetails deployment={deployment} />;
+        }}
+        renderMenuItems={(item, ctx) => (
+          <>
+            {ctx.view === "list" && (
+              <DropdownMenuItem onClick={ctx.toggle}>
+                <Eye className="mr-2 size-4" />
+                View Details
               </DropdownMenuItem>
-            </>
+            )}
+            {item.canClose && (
+              <>
+                {ctx.view === "list" && <DropdownMenuSeparator />}
+                <DropdownMenuItem variant="destructive" onClick={() => setCloseTargetId(item.id)}>
+                  <XCircle className="mr-2 size-4" />
+                  Close Deployment
+                </DropdownMenuItem>
+              </>
+            )}
+          </>
+        )}
+        renderCardActions={(item) => (
+          <>
+            <Button variant="outline" size="sm" onClick={() => setDetailId(item.id)}>
+              <Eye data-icon="inline-start" />
+              View Details
+            </Button>
+            {item.canClose && (
+              <Button variant="destructive" size="sm" onClick={() => setCloseTargetId(item.id)}>
+                <XCircle data-icon="inline-start" />
+                Close Deployment
+              </Button>
+            )}
+          </>
+        )}
+      />
+
+      <Dialog open={detailId !== null} onOpenChange={(open) => !open && setDetailId(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{detailId ? (byId.get(detailId)?.templateName ?? "") : ""}</DialogTitle>
+            <DialogDescription>Deployment details</DialogDescription>
+          </DialogHeader>
+          {detailId && byId.get(detailId) && (
+            <DeploymentExpandedDetails deployment={byId.get(detailId)!} />
           )}
-        </>
-      )}
-    />
+        </DialogContent>
+      </Dialog>
+
+      <CloseEvaluationDialog
+        entityLabel="Deployment"
+        deploymentName={closeTargetId ? (byId.get(closeTargetId)?.templateName ?? "") : ""}
+        open={closeTargetId !== null}
+        onOpenChange={(open) => !open && setCloseTargetId(null)}
+        onConfirm={() => {
+          if (closeTargetId) handleClose(closeTargetId);
+        }}
+        isPending={isPending}
+      />
+    </>
   );
 }
 

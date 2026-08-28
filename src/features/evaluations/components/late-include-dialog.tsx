@@ -21,6 +21,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { showToast } from "@/components/ui/toast";
 import type { CourseBoundEvaluationExclusionReversalCategory } from "@prisma/client";
+import {
+  EXCLUSION_CATEGORY_LABELS,
+  REVERSAL_CATEGORY_OPTIONS,
+  getReversalCategoryLabel,
+} from "../exclusion-categories";
 import type {
   FacultyEvaluationDetail,
   LateIncludeCourseBoundEvaluationInput,
@@ -28,16 +33,6 @@ import type {
 } from "../types";
 
 type Exclusion = FacultyEvaluationDetail["exclusions"][number];
-
-const reversalReasons: Array<{
-  value: CourseBoundEvaluationExclusionReversalCategory;
-  label: string;
-}> = [
-  { value: "EXCLUDED_IN_ERROR", label: "Excluded in error" },
-  { value: "ELIGIBILITY_CORRECTED", label: "Eligibility corrected" },
-  { value: "APPROVED_LATE_PARTICIPATION", label: "Approved late participation" },
-  { value: "OTHER", label: "Other" },
-];
 
 type LateIncludeDialogProps = {
   action: (
@@ -117,7 +112,7 @@ export function LateIncludeDialog({
               <div>
                 <p className="font-medium">{exclusion.studentName}</p>
                 <p className="text-muted-foreground text-xs">
-                  {exclusion.category.replaceAll("_", " ").toLowerCase()}
+                  {EXCLUSION_CATEGORY_LABELS[exclusion.category]}
                 </p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => openFor(exclusion)}>
@@ -147,10 +142,10 @@ export function LateIncludeDialog({
                 }
               >
                 <SelectTrigger id="late-inclusion-reason" className="w-full">
-                  <SelectValue />
+                  <SelectValue>{getReversalCategoryLabel(category)}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {reversalReasons.map((reason) => (
+                  {REVERSAL_CATEGORY_OPTIONS.map((reason) => (
                     <SelectItem key={reason.value} value={reason.value}>
                       {reason.label}
                     </SelectItem>

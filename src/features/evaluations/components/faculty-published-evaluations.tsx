@@ -5,10 +5,8 @@ import { Eye, XCircle } from "lucide-react";
 import { YearLevel } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
@@ -83,6 +81,15 @@ export function FacultyPublishedEvaluations({
     setDetailDialogOpen(true);
   }
 
+  function handleRequestClose(evaluationId: string) {
+    const target = localEvaluations.find((e) => e.evaluationId === evaluationId);
+
+    if (target) {
+      setEvaluationToClose(target);
+      setCloseDialogOpen(true);
+    }
+  }
+
   function handleConfirmClose() {
     if (!evaluationToClose) return;
 
@@ -135,20 +142,25 @@ export function FacultyPublishedEvaluations({
             {item.canClose && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onClick={() => {
-                    const target = localEvaluations.find((e) => e.evaluationId === item.id);
-                    if (target) {
-                      setEvaluationToClose(target);
-                      setCloseDialogOpen(true);
-                    }
-                  }}
-                >
+                <DropdownMenuItem variant="destructive" onClick={() => handleRequestClose(item.id)}>
                   <XCircle className="mr-2 size-4" />
                   Close Evaluation
                 </DropdownMenuItem>
               </>
+            )}
+          </>
+        )}
+        renderCardActions={(item) => (
+          <>
+            <Button variant="outline" size="sm" onClick={() => handleView(item.id)}>
+              <Eye data-icon="inline-start" />
+              View Details
+            </Button>
+            {item.canClose && (
+              <Button variant="destructive" size="sm" onClick={() => handleRequestClose(item.id)}>
+                <XCircle data-icon="inline-start" />
+                Close Evaluation
+              </Button>
             )}
           </>
         )}
