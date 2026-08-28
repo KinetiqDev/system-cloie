@@ -39,10 +39,7 @@ export function getExclusionCategoryLabel(
  * Display mapping for exclusion reversal categories.
  * Internal: consumed by REVERSAL_CATEGORY_OPTIONS and getReversalCategoryLabel.
  */
-const REVERSAL_CATEGORY_LABELS: Record<
-  CourseBoundEvaluationExclusionReversalCategory,
-  string
-> = {
+const REVERSAL_CATEGORY_LABELS: Record<CourseBoundEvaluationExclusionReversalCategory, string> = {
   [CourseBoundEvaluationExclusionReversalCategory.EXCLUDED_IN_ERROR]: "Excluded in error",
   [CourseBoundEvaluationExclusionReversalCategory.ELIGIBILITY_CORRECTED]: "Eligibility corrected",
   [CourseBoundEvaluationExclusionReversalCategory.APPROVED_LATE_PARTICIPATION]:
