@@ -2094,6 +2094,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/academic-structure/components/course-import-dialog.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "feature_component",
+  },
+  {
     path: "src/features/academic-structure/components/manage-majors-dialog.tsx",
     disposition: "task",
     taskId: 14,

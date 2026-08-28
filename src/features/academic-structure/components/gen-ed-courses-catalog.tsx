@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Archive, Edit, Plus, Power, Search } from "lucide-react";
+import { Archive, Edit, FileSpreadsheet, Plus, Power, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
@@ -30,6 +30,8 @@ import {
 } from "@/lib/actions/gen-ed-course-actions";
 import { showToast } from "@/components/ui/toast";
 import { useTableSelection } from "@/hooks/use-table-selection";
+import { CourseImportDialog } from "./course-import-dialog";
+
 import type { GenEdCourseItem, GenEdCoursesSummary } from "../services/resolve-gen-ed-courses";
 
 type GenEdCoursesCatalogProps = {
@@ -102,6 +104,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<GenEdCourseItem | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const filteredCourses = filterCourses(courses, statusFilter, search);
   // fallow-ignore-next-line code-duplication
@@ -153,10 +156,16 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             General Education courses only — college-wide catalog
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus aria-hidden="true" className="size-4" />
-          Add Course
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <FileSpreadsheet aria-hidden="true" />
+            Import CSV
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus aria-hidden="true" className="size-4" />
+            Add Course
+          </Button>
+        </div>
       </div>
 
       <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-3">
@@ -339,16 +348,21 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
           />
         </div>
       )}
-      <GenEdCourseDialog open={createOpen} onOpenChange={setCreateOpen} />
-      {editingCourse && (
-        <GenEdCourseDialog
-          open
-          course={editingCourse}
-          onOpenChange={(open) => {
-            if (!open) setEditingCourse(null);
-          }}
-        />
-      )}
+      <GenEdCourseDialog
+        open={createOpen || !!editingCourse}
+        course={editingCourse ?? undefined}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreateOpen(false);
+            setEditingCourse(null);
+          }
+        }}
+      />
+      <CourseImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        config={{ mode: "general-education" }}
+      />
     </div>
   );
 }

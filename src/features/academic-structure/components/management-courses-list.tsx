@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CourseScope } from "@prisma/client";
 import {
   BookOpen,
+  FileSpreadsheet,
   GraduationCap,
   Layers,
   MoreVertical,
@@ -12,6 +13,8 @@ import {
   Library,
   Power,
 } from "lucide-react";
+
+import { CourseImportDialog } from "@/features/academic-structure/components/course-import-dialog";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,6 +102,7 @@ export function ManagementCoursesList({
   const showEvaluationCount = !basePath.startsWith("/dean/");
   // Secretary edits in place via modal; dean keeps the dedicated edit page.
   const editInModal = basePath === "/secretary/courses";
+  const canImportCourses = editInModal;
   // ---- Filter state -------------------------------------------------------
   const [scopeFilter, setScopeFilter] = useState<string>("__all__");
   const [programFilter, setProgramFilter] = useState<string>("__all__");
@@ -108,6 +112,7 @@ export function ManagementCoursesList({
   const [isPending, startTransition] = useTransition();
   const [courseToDelete, setCourseToDelete] = useState<{ id: string; code: string } | null>(null);
   const [courseToEdit, setCourseToEdit] = useState<ManagementCourseSummaryItem | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   // ---- Derived: majors for selected program --------------------------------
   const selectedProgram = programs.find((p) => p.id === programFilter);
@@ -245,7 +250,13 @@ export function ManagementCoursesList({
       </div>
 
       {/* Action bar */}
-      <div className="flex items-center justify-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {canImportCourses && (
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <FileSpreadsheet aria-hidden="true" />
+            Import CSV
+          </Button>
+        )}
         <Button render={<Link href={`${basePath}/new`} />}>Create Course</Button>
       </div>
 
@@ -516,6 +527,21 @@ export function ManagementCoursesList({
             }
           }}
           course={courseToEdit}
+        />
+      )}
+
+      {canImportCourses && (
+        <CourseImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          config={{
+            mode: "secretary",
+            programs: programs.map((program) => ({
+              id: program.id,
+              code: program.code,
+              name: program.name,
+            })),
+          }}
         />
       )}
 
