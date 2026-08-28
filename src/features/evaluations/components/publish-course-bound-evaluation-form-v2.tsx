@@ -26,10 +26,7 @@ import type {
 } from "@/features/evaluations/types";
 import type { TemplateStructure } from "@/features/instruments/types";
 import { isNeutralOtherExplanation } from "../exclusion-text";
-import {
-  EXCLUSION_CATEGORY_OPTIONS,
-  getExclusionCategoryLabel,
-} from "../exclusion-categories";
+import { EXCLUSION_CATEGORY_OPTIONS, getExclusionCategoryLabel } from "../exclusion-categories";
 import type { CourseBoundEvaluationExclusionCategory } from "@prisma/client";
 import { AssignmentPicker, type AssignmentOption } from "./assignment-picker";
 import { Info } from "lucide-react";
@@ -95,7 +92,7 @@ function PublicationErrorAlert({
             {" "}
             <Link
               href={`/faculty/cilos/${alignmentCourseId}/alignment`}
-              className="underline underline-offset-2 hover:text-text-primary"
+              className="hover:text-text-primary underline underline-offset-2"
             >
               Open Course alignment
             </Link>
@@ -564,9 +561,7 @@ export function PublishCourseBoundEvaluationFormV2({
                         className="cursor-pointer"
                         htmlFor={`respondent-${respondent.membershipId}`}
                       >
-                        <p className="font-medium">
-                          {respondent.name}
-                        </p>
+                        <p className="font-medium">{respondent.name}</p>
                         <p className="text-muted-foreground text-sm">{respondent.email}</p>
                         <p className="text-muted-foreground text-xs">
                           {respondent.programCode} —{" "}
@@ -597,13 +592,13 @@ export function PublishCourseBoundEvaluationFormV2({
                                 )}
                               </SelectValue>
                             </SelectTrigger>
-                              <SelectContent>
-                                {EXCLUSION_CATEGORY_OPTIONS.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
+                            <SelectContent>
+                              {EXCLUSION_CATEGORY_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
                           </Select>
                           {exclusion?.category === "OTHER" && (
                             <div className="flex flex-col gap-1">

@@ -6,10 +6,7 @@ import { YearLevel } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";

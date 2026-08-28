@@ -37,8 +37,9 @@ export function getExclusionCategoryLabel(
 
 /**
  * Display mapping for exclusion reversal categories.
+ * Internal: consumed by REVERSAL_CATEGORY_OPTIONS and getReversalCategoryLabel.
  */
-export const REVERSAL_CATEGORY_LABELS: Record<
+const REVERSAL_CATEGORY_LABELS: Record<
   CourseBoundEvaluationExclusionReversalCategory,
   string
 > = {

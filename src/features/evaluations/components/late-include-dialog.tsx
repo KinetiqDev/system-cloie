@@ -34,7 +34,6 @@ import type {
 
 type Exclusion = FacultyEvaluationDetail["exclusions"][number];
 
-
 type LateIncludeDialogProps = {
   action: (
     payload: LateIncludeCourseBoundEvaluationInput

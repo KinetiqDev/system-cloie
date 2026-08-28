@@ -44,11 +44,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Combobox,
   ComboboxContent,
@@ -274,10 +270,8 @@ export const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event
     .getEnabled()
     .filter(
       (container) =>
-        !container.disabled &&
-        container.data.current?.sortable?.containerId === containerId
+        !container.disabled && container.data.current?.sortable?.containerId === containerId
     );
-
 
   const activeIndex = sameContainer.findIndex((container) => container.id === active.id);
   if (activeIndex < 0) {
@@ -871,7 +865,9 @@ export function TemplateBuilder({
     if (programWideMode) {
       formData.set(
         "program_question_plo_bindings",
-        JSON.stringify(collectPloBindings(normalizeTemplateStructure(sections), ploQuestionBindings))
+        JSON.stringify(
+          collectPloBindings(normalizeTemplateStructure(sections), ploQuestionBindings)
+        )
       );
     }
 
@@ -943,7 +939,17 @@ export function TemplateBuilder({
     showToast("Template saved as program copy successfully.", "success");
     onSaveResult?.({ success: true, id: result.data!.id });
     router.push(toolsHref ?? "/");
-  }, [templateId, onSaveAsCopy, copyName, sections, toolsHref, router, onSaveResult, programWideMode, ploQuestionBindings]);
+  }, [
+    templateId,
+    onSaveAsCopy,
+    copyName,
+    sections,
+    toolsHref,
+    router,
+    onSaveResult,
+    programWideMode,
+    ploQuestionBindings,
+  ]);
 
   const handleSave = useCallback(() => {
     // If editing an institutional baseline, show copy name dialog
@@ -1014,7 +1020,7 @@ export function TemplateBuilder({
     <div className="mx-auto max-w-4xl space-y-6">
       <Link
         href={toolsHref}
-        className="text-link inline-flex items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-ring focus-visible:ring-3 focus-visible:outline-none"
+        className="text-link focus-visible:ring-ring inline-flex items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none"
       >
         <ArrowLeft className="size-4" />
         Back to Tools
@@ -1118,7 +1124,9 @@ export function TemplateBuilder({
             )}
           </div>
           {!facultyMode && effectiveTemplateType !== "COURSE_BOUND" && (
-            <p className="text-muted-foreground text-xs">Faculty access is available only for course-bound templates.</p>
+            <p className="text-muted-foreground text-xs">
+              Faculty access is available only for course-bound templates.
+            </p>
           )}
           {facultyMode && (
             <div className="border-border space-y-2 rounded-lg border p-4">
@@ -1135,7 +1143,14 @@ export function TemplateBuilder({
                 }}
                 filter={(ctx: FacultyCourseContext, query: string) =>
                   !query ||
-                  [ctx.courseCode, ctx.courseTitle, ctx.scopeLabel, ctx.programCode, ctx.programName, ctx.majorName]
+                  [
+                    ctx.courseCode,
+                    ctx.courseTitle,
+                    ctx.scopeLabel,
+                    ctx.programCode,
+                    ctx.programName,
+                    ctx.majorName,
+                  ]
                     .filter((v): v is string => Boolean(v))
                     .some((v) => v.toLowerCase().includes(query.toLowerCase()))
                 }
@@ -1146,7 +1161,11 @@ export function TemplateBuilder({
                 <ComboboxInput
                   id="faculty-course-context"
                   className="w-full"
-                  placeholder={facultyCourseContexts.length === 0 ? "No courses available" : "Search by code or title..."}
+                  placeholder={
+                    facultyCourseContexts.length === 0
+                      ? "No courses available"
+                      : "Search by code or title..."
+                  }
                   disabled={facultyCourseContexts.length === 0}
                 />
                 <ComboboxContent>
@@ -1159,8 +1178,12 @@ export function TemplateBuilder({
                         className="items-start py-2"
                       >
                         <span className="flex min-w-0 flex-col gap-0.5 py-0.5 text-left">
-                          <span className="text-sm leading-snug">{formatCourseContextLabel(ctx)}</span>
-                          <span className="text-caption text-muted-foreground">{ctx.programName}</span>
+                          <span className="text-sm leading-snug">
+                            {formatCourseContextLabel(ctx)}
+                          </span>
+                          <span className="text-caption text-muted-foreground">
+                            {ctx.programName}
+                          </span>
                         </span>
                       </ComboboxItem>
                     )}
@@ -1284,51 +1307,51 @@ export function TemplateBuilder({
                 questionIds={section.questions.map((question) =>
                   toSortableId("question", section.key, question.key)
                 )}
-            onUpdateSection={updateSection}
-            onRemoveSection={removeSection}
-            onAddQuestion={addQuestion}
-            onRemoveQuestion={removeQuestion}
-            onUpdateQuestion={updateQuestion}
-            onChangeQuestionType={changeQuestionType}
-            onUpdateLikertDescriptor={updateLikertDescriptor}
-            onAddSuggestedResponse={addSuggestedResponse}
-            onRemoveSuggestedResponse={removeSuggestedResponse}
-            ciloOptions={loadedCilos}
-            ciloQuestionBindings={ciloQuestionBindings}
-            selectedCiloLabels={selectedCiloLabels}
-            facultyMode={facultyMode}
-            onCiloBindingChange={(questionKey, ciloId) =>
-              setCiloQuestionBindings((current) => ({
-                ...current,
-                [questionKey]: ciloId,
-              }))
-            }
-            ploOptions={programPloOptions}
-            ploQuestionBindings={ploQuestionBindings}
-            programWideMode={programWideMode}
-            archivedPloLookup={archivedPloLookup}
-            onPloBindingsChange={(questionKey, ploIds) =>
-              setPloQuestionBindings((current) => ({
-                ...current,
-                [questionKey]: ploIds,
-              }))
-            }
-            selectedCiloIds={selectedCiloIds}
-            canRemove={sections.length > 1}
-          />
-          {sectionIndex < sections.length - 1 && (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => addSection(sectionIndex + 1)}
-                className="text-muted-foreground hover:text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
-              >
-                <Plus className="size-4" />
-                Insert Section
-              </button>
+                onUpdateSection={updateSection}
+                onRemoveSection={removeSection}
+                onAddQuestion={addQuestion}
+                onRemoveQuestion={removeQuestion}
+                onUpdateQuestion={updateQuestion}
+                onChangeQuestionType={changeQuestionType}
+                onUpdateLikertDescriptor={updateLikertDescriptor}
+                onAddSuggestedResponse={addSuggestedResponse}
+                onRemoveSuggestedResponse={removeSuggestedResponse}
+                ciloOptions={loadedCilos}
+                ciloQuestionBindings={ciloQuestionBindings}
+                selectedCiloLabels={selectedCiloLabels}
+                facultyMode={facultyMode}
+                onCiloBindingChange={(questionKey, ciloId) =>
+                  setCiloQuestionBindings((current) => ({
+                    ...current,
+                    [questionKey]: ciloId,
+                  }))
+                }
+                ploOptions={programPloOptions}
+                ploQuestionBindings={ploQuestionBindings}
+                programWideMode={programWideMode}
+                archivedPloLookup={archivedPloLookup}
+                onPloBindingsChange={(questionKey, ploIds) =>
+                  setPloQuestionBindings((current) => ({
+                    ...current,
+                    [questionKey]: ploIds,
+                  }))
+                }
+                selectedCiloIds={selectedCiloIds}
+                canRemove={sections.length > 1}
+              />
+              {sectionIndex < sections.length - 1 && (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => addSection(sectionIndex + 1)}
+                    className="text-muted-foreground hover:text-primary hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
+                  >
+                    <Plus className="size-4" />
+                    Insert Section
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-          </div>
           ))}
         </SortableContext>
       </DndContext>
@@ -1519,25 +1542,25 @@ function SectionCard({
               listeners={listeners}
             />
             <div className="min-w-0 flex-1 space-y-3">
-            <input
-              type="text"
-              className="placeholder:text-muted-foreground/50 hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent py-1 text-lg font-semibold transition-colors focus:outline-none"
-              placeholder={`Section ${sectionIndex + 1} title`}
-              value={section.title}
-              onChange={(e) => onUpdateSection(section.key, { title: e.target.value })}
-            />
-            <Textarea
-              rows={2}
-              placeholder="Section description (optional)"
-              className="resize-none text-sm"
-              value={section.description ?? ""}
-              onChange={(e) =>
-                onUpdateSection(section.key, {
-                  description: e.target.value || undefined,
-                })
-              }
-            />
-          </div>
+              <input
+                type="text"
+                className="placeholder:text-muted-foreground/50 hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent py-1 text-lg font-semibold transition-colors focus:outline-none"
+                placeholder={`Section ${sectionIndex + 1} title`}
+                value={section.title}
+                onChange={(e) => onUpdateSection(section.key, { title: e.target.value })}
+              />
+              <Textarea
+                rows={2}
+                placeholder="Section description (optional)"
+                className="resize-none text-sm"
+                value={section.description ?? ""}
+                onChange={(e) =>
+                  onUpdateSection(section.key, {
+                    description: e.target.value || undefined,
+                  })
+                }
+              />
+            </div>
           </div>
           <div className="flex shrink-0 items-center justify-end gap-2">
             {canRemove && (
@@ -1593,7 +1616,9 @@ function SectionCard({
                   ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
                 }
                 ploOptions={ploOptions}
-                selectedPloIds={ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []}
+                selectedPloIds={
+                  ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []
+                }
                 programWideMode={programWideMode}
                 archivedPloLookup={archivedPloLookup}
                 onPloBindingsChange={onPloBindingsChange}
@@ -1601,17 +1626,17 @@ function SectionCard({
               />
             ))}
 
-          {/* Add Question Button */}
-          <div className="flex justify-center pt-2">
-            <button
-              type="button"
-              onClick={() => onAddQuestion(section.key)}
-              className="text-link hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
-            >
-              <Plus className="size-4" />
-              Add Question
-            </button>
-          </div>
+            {/* Add Question Button */}
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => onAddQuestion(section.key)}
+                className="text-link hover:bg-primary/5 focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
+              >
+                <Plus className="size-4" />
+                Add Question
+              </button>
+            </div>
           </div>
         </SortableContext>
       </CardContent>
@@ -1806,8 +1831,8 @@ function QuestionCard({
               />
               {selectedPloIds.length === 0 && (
                 <p role="status" className="text-muted-foreground text-xs">
-                  Not bound to a PLO yet. Drafts save without bindings, but this Likert
-                  question must be bound to at least one PLO before publishing.
+                  Not bound to a PLO yet. Drafts save without bindings, but this Likert question
+                  must be bound to at least one PLO before publishing.
                 </p>
               )}
             </div>
@@ -2012,9 +2037,7 @@ function PloMultiSelect({
   const toggle = useCallback(
     (ploId: string) => {
       onChange(
-        selectedSet.has(ploId)
-          ? selectedIds.filter((id) => id !== ploId)
-          : [...selectedIds, ploId]
+        selectedSet.has(ploId) ? selectedIds.filter((id) => id !== ploId) : [...selectedIds, ploId]
       );
     },
     [onChange, selectedIds, selectedSet]
@@ -2053,7 +2076,7 @@ function PloMultiSelect({
           ? "Select PLOs…"
           : `${selectedIds.length} PLO${selectedIds.length === 1 ? "" : "s"} selected`}
       </span>
-      <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
+      <SearchIcon className="text-muted-foreground size-4 shrink-0" />
     </Button>
   );
 
@@ -2088,13 +2111,16 @@ function PloMultiSelect({
           {filteredOptions.map((plo) => {
             const isSelected = selectedSet.has(plo.id);
             return (
-              <li key={plo.id} className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+              <li
+                key={plo.id}
+                className="hover:bg-accent flex items-start gap-2 rounded-md px-2 py-1.5"
+              >
                 <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggle(plo.id)}
-                    className="mt-0.5 size-4 shrink-0 accent-primary"
+                    className="accent-primary mt-0.5 size-4 shrink-0"
                     aria-label={`${plo.code}: ${plo.description}`}
                   />
                   <span className="min-w-0 flex-1">
@@ -2111,7 +2137,7 @@ function PloMultiSelect({
   );
 
   const footer = (
-    <div className="flex items-center justify-between border-t border-border pt-2">
+    <div className="border-border flex items-center justify-between border-t pt-2">
       <span className="text-muted-foreground text-xs">{selectedIds.length} selected</span>
       <Button
         type="button"
@@ -2134,7 +2160,7 @@ function PloMultiSelect({
             <div className="flex h-[24rem] flex-col overflow-hidden">
               <div className="shrink-0 px-1 pt-2">{searchField}</div>
               <div className="min-h-0 flex-1 overflow-hidden px-1">{optionList}</div>
-              <div className="shrink-0 border-t border-border px-3 py-2">{footer}</div>
+              <div className="border-border shrink-0 border-t px-3 py-2">{footer}</div>
             </div>
           </PopoverContent>
         </Popover>
@@ -2150,13 +2176,7 @@ function PloMultiSelect({
                 </DrawerDescription>
               </div>
               <DrawerClose
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Close PLO binding"
-                  />
-                }
+                render={<Button variant="ghost" size="icon-sm" aria-label="Close PLO binding" />}
               >
                 <XIcon aria-hidden="true" />
               </DrawerClose>

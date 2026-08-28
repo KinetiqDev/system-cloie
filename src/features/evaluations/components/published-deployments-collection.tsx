@@ -196,8 +196,9 @@ export function PublishedDeploymentsCollection({
 
       {/* Result count */}
       <p className="text-muted-foreground pt-2 text-center text-xs">
-        Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredItems.length)}{" "}
-        of {filteredItems.length} deployment{filteredItems.length !== 1 ? "s" : ""}
+        Showing {(safePage - 1) * PAGE_SIZE + 1}–
+        {Math.min(safePage * PAGE_SIZE, filteredItems.length)} of {filteredItems.length} deployment
+        {filteredItems.length !== 1 ? "s" : ""}
       </p>
     </div>
   );
@@ -232,7 +233,7 @@ function StatusBadge({ status }: { status: DeploymentStatus }) {
 
 function TargetBadge({ label }: { label: string }) {
   return (
-    <Badge className="bg-brand-accent-soft text-brand-accent text-xs dark:text-brand-accent-highlight">
+    <Badge className="bg-brand-accent-soft text-brand-accent dark:text-brand-accent-highlight text-xs">
       {label}
     </Badge>
   );
@@ -419,11 +420,7 @@ function PublishedRow({
       <TableRow className="cursor-pointer" onClick={onToggle}>
         <TableCell className="p-2">
           <Button variant="ghost" size="sm" className="size-8 p-0">
-            {isExpanded ? (
-              <ChevronDown className="size-4" />
-            ) : (
-              <ChevronRight className="size-4" />
-            )}
+            {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
           </Button>
         </TableCell>
         <TableCell className="font-medium">
