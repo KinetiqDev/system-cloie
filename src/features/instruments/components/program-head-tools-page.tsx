@@ -375,6 +375,9 @@ function ProgramHeadPublishedDeployments({
         return;
       }
       router.refresh();
+      // Close the confirmation dialog only after the action settles, so a
+      // failed close keeps the context available for retry.
+      setCloseTargetId(null);
     });
   }
 
@@ -461,10 +464,7 @@ function ProgramHeadPublishedDeployments({
         open={closeTargetId !== null}
         onOpenChange={(open) => !open && setCloseTargetId(null)}
         onConfirm={() => {
-          if (closeTargetId) {
-            handleClose(closeTargetId);
-            setCloseTargetId(null);
-          }
+          if (closeTargetId) handleClose(closeTargetId);
         }}
         isPending={isPending}
       />
