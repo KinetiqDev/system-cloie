@@ -1,24 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { listFacultyPublishedEvaluations } from "@/features/evaluations/services/list-faculty-published-evaluations";
-import { getFacultyEvaluationDetail } from "@/features/evaluations/services/get-faculty-evaluation-detail";
 import { closeFacultyEvaluation } from "@/features/evaluations/services/close-faculty-evaluation";
-import type {
-  ListFacultyPublishedEvaluationsResult,
-  GetFacultyEvaluationDetailResult,
-  CloseFacultyEvaluationResult,
-} from "@/features/evaluations/types";
-
-async function listFacultyPublishedEvaluationsAction(): Promise<ListFacultyPublishedEvaluationsResult> {
-  return listFacultyPublishedEvaluations();
-}
-
-export async function getFacultyEvaluationDetailAction(
-  evaluationId: string
-): Promise<GetFacultyEvaluationDetailResult> {
-  return getFacultyEvaluationDetail(evaluationId);
-}
+import type { CloseFacultyEvaluationResult } from "@/features/evaluations/types";
 
 export async function closeFacultyEvaluationAction(
   evaluationId: string

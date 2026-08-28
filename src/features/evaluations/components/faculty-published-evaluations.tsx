@@ -1,27 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Eye, XCircle } from "lucide-react";
 import { YearLevel } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
+import { cn } from "@/lib/utils";
 import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
-import {
-  closeFacultyEvaluationAction,
-  getFacultyEvaluationDetailAction,
-} from "@/lib/actions/faculty-evaluation-actions";
-import { lateIncludeCourseBoundEvaluationAction } from "@/lib/actions/course-bound-evaluation-actions";
+import { closeFacultyEvaluationAction } from "@/lib/actions/faculty-evaluation-actions";
 import { CloseEvaluationDialog } from "./close-evaluation-dialog";
-import { EvaluationDetailDialog } from "./evaluation-detail-dialog";
 import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
 } from "./published-deployments-collection";
-import type { FacultyEvaluationDetail, FacultyPublishedEvaluationItem } from "../types";
+import type { FacultyPublishedEvaluationItem } from "../types";
 
 type FacultyPublishedEvaluationsProps = {
   evaluations: FacultyPublishedEvaluationItem[];
@@ -50,8 +47,6 @@ export function FacultyPublishedEvaluations({
   view,
 }: FacultyPublishedEvaluationsProps) {
   const [localEvaluations, setLocalEvaluations] = useState(evaluations);
-  const [selectedDetail, setSelectedDetail] = useState<FacultyEvaluationDetail | null>(null);
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [evaluationToClose, setEvaluationToClose] = useState<FacultyPublishedEvaluationItem | null>(
     null
@@ -70,16 +65,6 @@ export function FacultyPublishedEvaluations({
     publishedDate: evalItem.publishedAt,
     canClose: evalItem.status === "ACTIVE" || evalItem.status === "SCHEDULED",
   }));
-
-  async function handleView(evaluationId: string) {
-    const result = await getFacultyEvaluationDetailAction(evaluationId);
-    if (!result.success) {
-      showToast(result.error, "error");
-      return;
-    }
-    setSelectedDetail(result.data);
-    setDetailDialogOpen(true);
-  }
 
   function handleRequestClose(evaluationId: string) {
     const target = localEvaluations.find((e) => e.evaluationId === evaluationId);
@@ -135,7 +120,7 @@ export function FacultyPublishedEvaluations({
         }}
         renderMenuItems={(item) => (
           <>
-            <DropdownMenuItem onClick={() => handleView(item.id)}>
+            <DropdownMenuItem render={<Link href={`/faculty/tools/published/${item.id}`} />}>
               <Eye className="mr-2 size-4" />
               View Details
             </DropdownMenuItem>
@@ -152,10 +137,13 @@ export function FacultyPublishedEvaluations({
         )}
         renderCardActions={(item) => (
           <>
-            <Button variant="outline" size="sm" onClick={() => handleView(item.id)}>
+            <Link
+              href={`/faculty/tools/published/${item.id}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
               <Eye data-icon="inline-start" />
               View Details
-            </Button>
+            </Link>
             {item.canClose && (
               <Button variant="destructive" size="sm" onClick={() => handleRequestClose(item.id)}>
                 <XCircle data-icon="inline-start" />
@@ -164,13 +152,6 @@ export function FacultyPublishedEvaluations({
             )}
           </>
         )}
-      />
-
-      <EvaluationDetailDialog
-        detail={selectedDetail}
-        open={detailDialogOpen}
-        onOpenChange={setDetailDialogOpen}
-        lateIncludeAction={lateIncludeCourseBoundEvaluationAction}
       />
 
       <CloseEvaluationDialog

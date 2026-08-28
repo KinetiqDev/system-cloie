@@ -4,6 +4,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { canViewCourseRoster } from "@/features/course-assignments/policies";
 import { CourseScope } from "@prisma/client";
 import type { FacultyEvaluationDetail, GetFacultyEvaluationDetailResult } from "../types";
+import { parsePublishedInstrument } from "@/features/instruments/services/parse-published-instrument";
 
 export async function getFacultyEvaluationDetail(
   evaluationId: string
@@ -67,6 +68,13 @@ export async function getFacultyEvaluationDetail(
           question_prompt_snapshot: true,
         },
       },
+      instrument: {
+        select: {
+          structure_snapshot: true,
+          version_number: true,
+          template: { select: { name: true } },
+        },
+      },
       _count: {
         select: {
           assignments: true,
@@ -78,13 +86,13 @@ export async function getFacultyEvaluationDetail(
         },
       },
       assignments: {
-        where: {
-          response: {
-            status: "SUBMITTED",
-          },
-        },
+        orderBy: [{ respondent: { name: "asc" } }, { assigned_at: "asc" }],
         select: {
+          assigned_at: true,
           id: true,
+          respondent_id: true,
+          respondent: { select: { email: true, name: true } },
+          response: { select: { status: true, submitted_at: true } },
         },
       },
       exclusions: {
@@ -158,6 +166,22 @@ export async function getFacultyEvaluationDetail(
     : `${ti.school_year.code} — ${ti.semester}`;
 
   const ca = evaluation.course_assignment;
+  const parsedSections = parsePublishedInstrument(evaluation.instrument.structure_snapshot);
+  const respondents = evaluation.assignments.map((assignment) => ({
+    assignedAt: assignment.assigned_at,
+    assignmentId: assignment.id,
+    email: assignment.respondent.email,
+    name: assignment.respondent.name,
+    respondentId: assignment.respondent_id,
+    status: assignment.response?.status ?? ("NOT_STARTED" as const),
+    submittedAt: assignment.response?.submitted_at ?? null,
+  }));
+  const responseCount = respondents.filter(
+    (respondent) => respondent.status === "SUBMITTED"
+  ).length;
+  const inProgressCount = respondents.filter(
+    (respondent) => respondent.status === "IN_PROGRESS"
+  ).length;
 
   const detail: FacultyEvaluationDetail = {
     termInstanceLabel,
@@ -181,7 +205,7 @@ export async function getFacultyEvaluationDetail(
     deploymentName: evaluation.deployment_name,
     evaluationId: evaluation.id,
     publishedAt: evaluation.published_at,
-    responseCount: evaluation.assignments.length,
+    responseCount,
     status: evaluation.status,
     targets: evaluation.targets.map((target) => ({
       programCode: target.program.code,
@@ -196,6 +220,26 @@ export async function getFacultyEvaluationDetail(
       sectionKey: binding.section_key,
     })),
     totalAssignments: evaluation._count.assignments,
+    inProgressCount,
+    notStartedCount: respondents.length - responseCount - inProgressCount,
+    respondents,
+    instrument: {
+      name: evaluation.instrument.template.name,
+      versionNumber: evaluation.instrument.version_number,
+      sections: parsedSections.map((section) => ({
+        description: section.description,
+        sectionKey: section.key,
+        title: section.title,
+        questions: section.questions.map((question) => ({
+          itemKey: question.key,
+          likertDescriptors: question.likertDescriptors,
+          prompt: question.prompt,
+          required: question.required,
+          suggestedResponses: question.suggestedResponses,
+          type: question.type,
+        })),
+      })),
+    },
     exclusions: evaluation.exclusions.map((exclusion) => ({
       category: exclusion.category,
       membershipId: exclusion.course_assignment_membership_id,
