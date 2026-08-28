@@ -6,6 +6,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectGroup,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -50,7 +51,7 @@ export function ClassIdentityFields({
   const hintMatches = hasHint && yearLevel === suggestedYearLevel;
 
   return (
-    <div className="space-y-5">
+    <div className="flex min-w-0 flex-col gap-5">
       <Field className="min-w-0">
         <FieldLabel htmlFor="program">Program</FieldLabel>
         <FieldContent className="min-w-0">
@@ -75,14 +76,14 @@ export function ClassIdentityFields({
               placeholder="Search program…"
               disabled={disabled || programDisabled}
             />
-            <ComboboxContent>
+            <ComboboxContent className="max-w-[calc(100vw-2rem)]">
               <ComboboxEmpty>No programs match your search.</ComboboxEmpty>
               <ComboboxList>
                 {(program) => (
                   <ComboboxItem key={program.id} value={program} className="items-start py-2">
                     <span className="flex min-w-0 flex-col gap-0.5 py-0.5 text-left">
                       <span className="text-sm leading-snug font-medium">{program.code}</span>
-                      <span className="text-muted-foreground text-xs leading-normal">
+                      <span className="text-muted-foreground text-xs leading-normal break-words">
                         {program.name}
                       </span>
                     </span>
@@ -128,11 +129,13 @@ export function ClassIdentityFields({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {YEAR_LEVEL_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {YEAR_LEVEL_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </FieldContent>
@@ -154,11 +157,13 @@ export function ClassIdentityFields({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {STUDENT_SECTION_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {STUDENT_SECTION_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </FieldContent>

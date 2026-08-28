@@ -14,60 +14,81 @@ interface WizardStepperProps {
 }
 
 export function WizardStepper({ steps, currentStep, className }: WizardStepperProps) {
-  const currentIndex = steps.findIndex((s) => s.key === currentStep);
+  const currentIndex = Math.max(
+    0,
+    steps.findIndex((step) => step.key === currentStep)
+  );
+  const currentLabel = steps[currentIndex]?.label ?? "Current step";
 
   return (
-    <div
-      className={cn("flex flex-wrap items-center gap-0", className)}
-      aria-label="Wizard progress"
-      role="group"
-    >
-      {steps.map((step, i) => {
-        const isCompleted = i < currentIndex;
-        const isActive = i === currentIndex;
-        const isLast = i === steps.length - 1;
+    <div className={cn("min-w-0", className)} aria-label="Wizard progress" role="group">
+      <div className="flex min-w-0 flex-col gap-2 md:hidden">
+        <div className="flex min-w-0 items-baseline justify-between gap-3">
+          <span className="text-muted-foreground text-xs font-medium tabular-nums">
+            Step {currentIndex + 1} of {steps.length}
+          </span>
+          <span className="text-foreground truncate text-sm font-semibold" aria-current="step">
+            {currentLabel}
+          </span>
+        </div>
+        <div className="grid grid-flow-col gap-1.5" aria-hidden="true">
+          {steps.map((step, index) => (
+            <span
+              key={step.key}
+              className={cn(
+                "h-1.5 rounded-full",
+                index <= currentIndex ? "bg-primary" : "bg-border"
+              )}
+            />
+          ))}
+        </div>
+      </div>
 
-        return (
-          <div
-            key={step.key}
-            className="flex min-w-0 items-center"
-            style={{ flex: isLast ? "0 0 auto" : "1" }}
-          >
-            <div className="flex flex-col items-center gap-1 px-1">
-              <div
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors motion-reduce:transition-none",
-                  isCompleted && "bg-primary text-primary-foreground",
-                  isActive &&
-                    "bg-primary text-primary-foreground ring-primary ring-2 ring-offset-2",
-                  !isCompleted && !isActive && "bg-muted text-muted-foreground"
-                )}
-                aria-current={isActive ? "step" : undefined}
-              >
-                {isCompleted ? <CheckIcon className="h-3.5 w-3.5" /> : <span>{i + 1}</span>}
+      <div className="hidden min-w-0 items-start md:flex">
+        {steps.map((step, index) => {
+          const isCompleted = index < currentIndex;
+          const isActive = index === currentIndex;
+          const isLast = index === steps.length - 1;
+
+          return (
+            <div key={step.key} className={cn("flex min-w-0 items-start", !isLast && "flex-1")}>
+              <div className="flex shrink-0 flex-col items-center gap-1 px-1">
+                <div
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-full text-xs font-semibold transition-colors motion-reduce:transition-none",
+                    isCompleted && "bg-primary text-primary-foreground",
+                    isActive &&
+                      "bg-primary text-primary-foreground ring-primary ring-2 ring-offset-2",
+                    !isCompleted && !isActive && "bg-muted text-muted-foreground"
+                  )}
+                  aria-current={isActive ? "step" : undefined}
+                >
+                  {isCompleted ? <CheckIcon aria-hidden="true" /> : <span>{index + 1}</span>}
+                </div>
+                <span
+                  className={cn(
+                    "text-xs leading-none font-medium",
+                    isActive && "text-link",
+                    isCompleted && "text-foreground",
+                    !isActive && !isCompleted && "text-muted-foreground"
+                  )}
+                >
+                  {step.label}
+                </span>
               </div>
-              <span
-                className={cn(
-                  "text-xs leading-none font-medium",
-                  isActive && "text-link",
-                  isCompleted && "text-foreground",
-                  !isActive && !isCompleted && "text-muted-foreground"
-                )}
-              >
-                {step.label}
-              </span>
+              {!isLast && (
+                <div
+                  className={cn(
+                    "mx-1 mt-3.5 h-px min-w-0 flex-1 transition-colors motion-reduce:transition-none",
+                    index < currentIndex ? "bg-primary" : "bg-border"
+                  )}
+                  aria-hidden="true"
+                />
+              )}
             </div>
-            {!isLast && (
-              <div
-                className={cn(
-                  "mx-1 mb-4 h-px flex-1 transition-colors motion-reduce:transition-none",
-                  i < currentIndex ? "bg-primary" : "bg-border"
-                )}
-              />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
