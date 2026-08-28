@@ -7,6 +7,7 @@ import {
   Download,
   FileSpreadsheet,
   Upload,
+  X,
   XCircle,
 } from "lucide-react";
 
@@ -15,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -652,14 +654,23 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="flex max-h-[calc(100dvh-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[calc(100dvh-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl"
+      >
         <DialogHeader className="border-border shrink-0 border-b px-4 py-4 sm:px-6">
           <CourseImportSteps current={step} />
-          <div className="mt-4">
-            <DialogTitle>Import Courses</DialogTitle>
-            <DialogDescription className="mt-1">
-              {COURSE_IMPORT_MODE_LABELS[mode]}
-            </DialogDescription>
+          <div className="mt-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <DialogTitle>Import Courses</DialogTitle>
+              <DialogDescription className="mt-1">
+                {COURSE_IMPORT_MODE_LABELS[mode]}
+              </DialogDescription>
+            </div>
+            <DialogClose render={<Button size="icon" variant="ghost" />}>
+              <X />
+              <span className="sr-only">Close</span>
+            </DialogClose>
           </div>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
