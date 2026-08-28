@@ -219,7 +219,7 @@ function CourseStep({
             className="w-full"
             placeholder="Search by code or title…"
           />
-          <ComboboxContent>
+          <ComboboxContent className="max-w-[calc(100vw-2rem)]">
             <ComboboxEmpty>No courses match your search.</ComboboxEmpty>
             <ComboboxList>
               {(course) => (
@@ -260,15 +260,17 @@ function FacultyStep({
         </FieldContent>
       </Field>
       {selectedFaculty && (
-        <div className="bg-muted/40 flex items-start gap-3 rounded-xl border p-4">
-          <div className="bg-primary/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
-            <UserIcon className="text-primary h-4 w-4" />
+        <div className="bg-muted/40 flex min-w-0 items-start gap-3 rounded-xl border p-4">
+          <div className="bg-primary/10 flex size-8 shrink-0 items-center justify-center rounded-full">
+            <UserIcon className="text-primary" aria-hidden="true" />
           </div>
-          <div className="min-w-0 space-y-0.5">
-            <p className="text-sm leading-snug font-medium">{selectedFaculty.name}</p>
-            <p className="text-muted-foreground text-xs">{selectedFaculty.email}</p>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <p className="text-sm leading-snug font-medium break-words">{selectedFaculty.name}</p>
+            <p className="text-muted-foreground text-xs break-all">{selectedFaculty.email}</p>
             {selectedFaculty.primaryAffiliation && (
-              <p className="text-muted-foreground text-xs">{selectedFaculty.primaryAffiliation}</p>
+              <p className="text-muted-foreground text-xs break-words">
+                {selectedFaculty.primaryAffiliation}
+              </p>
             )}
           </div>
         </div>
@@ -303,7 +305,7 @@ function ConfirmStep({
         </AlertDescription>
       </Alert>
       <AssignmentSummaryBlock title="Assignment Summary">
-        <div className="space-y-1.5 text-sm">
+        <div className="flex flex-col gap-1.5 text-sm">
           <div className="flex gap-2">
             <span className="text-muted-foreground w-16 shrink-0">Course</span>
             <span className="font-medium">
@@ -542,9 +544,9 @@ export function CourseAssignmentFormDialog({
   ];
 
   const stepContent = (
-    <>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <WizardStepper steps={STEPS} currentStep={step} />
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain py-1">
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain py-1">
         <AssignmentStepContent
           step={step}
           termInstances={termInstances}
@@ -570,10 +572,10 @@ export function CourseAssignmentFormDialog({
           selectedCourse={selectedCourse}
         />
       </div>
-    </>
+    </div>
   );
   const footer = (
-    <div className="flex w-full items-center justify-between gap-2">
+    <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
       <div>
         {step !== "term" && (
           <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
@@ -581,8 +583,8 @@ export function CourseAssignmentFormDialog({
           </Button>
         )}
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+      <div className="flex min-w-0 justify-end gap-2">
+        <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
           Cancel
         </Button>
         {step === "confirm" ? (
@@ -601,14 +603,12 @@ export function CourseAssignmentFormDialog({
   if (!isDesktop) {
     return (
       <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>
-        <DrawerContent className="flex max-h-[min(92dvh,48rem)] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <DrawerContent className="flex max-h-[min(92dvh,48rem)] min-w-0 flex-col overflow-x-clip px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <DrawerHeader className="px-0 pt-4 text-left">
             <DrawerTitle>Assign Faculty to Course</DrawerTitle>
             <DrawerDescription>Complete the class assignment details.</DrawerDescription>
           </DrawerHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden py-3">
-            {stepContent}
-          </div>
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden py-3">{stepContent}</div>
           <DrawerFooter className="px-0 pt-3">{footer}</DrawerFooter>
         </DrawerContent>
       </Drawer>

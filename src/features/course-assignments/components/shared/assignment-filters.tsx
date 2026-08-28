@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -364,7 +365,9 @@ function FilterSelect({
         <SelectTrigger id={id} className="bg-background w-full">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>{children}</SelectContent>
+        <SelectContent>
+          <SelectGroup>{children}</SelectGroup>
+        </SelectContent>
       </Select>
     </div>
   );

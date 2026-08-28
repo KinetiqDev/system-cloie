@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -146,18 +146,19 @@ function RosterCell({
         ? `/course-rosters/${assignment.id}`
         : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id);
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        asChild
-        className="bg-background hover:bg-accent h-8 gap-1.5 rounded-full px-3 text-xs font-medium shadow-xs"
+      <Link
+        href={href}
+        className={buttonVariants({
+          variant: "outline",
+          size: "sm",
+          className:
+            "bg-background hover:bg-accent h-8 gap-1.5 rounded-full px-3 text-xs font-medium shadow-xs",
+        })}
       >
-        <Link href={href}>
-          <Users className="size-3.5" aria-hidden="true" />
-          Open roster
-          <ExternalLink className="size-3 opacity-60" aria-hidden="true" />
-        </Link>
-      </Button>
+        <Users aria-hidden="true" />
+        Open roster
+        <ExternalLink className="opacity-60" aria-hidden="true" />
+      </Link>
     );
   }
   return (
@@ -338,7 +339,7 @@ function CourseAssignmentsRow({
             {scopeLabel}
           </Badge>
           {isGeneralEducation && mode === "program-head" && (
-            <span className="text-muted-foreground block text-[10px] leading-none">
+            <span className="text-muted-foreground block text-xs leading-snug">
               Managed by General Education Coordinator
             </span>
           )}
@@ -650,7 +651,7 @@ export function CourseAssignmentsTable({
       </BulkActionBar>
 
       {!isDesktop ? (
-        <div className="grid gap-3">
+        <div className="grid min-w-0 gap-3">
           {assignments.map((assignment) => {
             const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
             const classLabel = `${getYearLevelDisplay(assignment.yearLevel)} · ${getSectionLabel(assignment.section)}`;
@@ -660,9 +661,9 @@ export function CourseAssignmentsTable({
                 size="sm"
                 data-testid={`assignment-card-${assignment.id}`}
                 data-state={selection.selectedIds.has(assignment.id) ? "selected" : undefined}
-                className="data-[state=selected]:bg-selected-bg overflow-hidden border shadow-xs transition-shadow hover:shadow-sm"
+                className="data-[state=selected]:bg-selected-bg min-w-0 overflow-hidden border shadow-xs transition-shadow hover:shadow-sm"
               >
-                <CardHeader className="gap-3 pb-3">
+                <CardHeader className="min-w-0 gap-3 pb-3">
                   {manageableAssignments.some((item) => item.id === assignment.id) && (
                     <Checkbox
                       aria-label={`Select ${assignment.courseCode}`}
@@ -672,20 +673,20 @@ export function CourseAssignmentsTable({
                       }
                     />
                   )}
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                     <CardTitle className="flex flex-wrap items-center gap-2 text-[15px] leading-tight">
                       <span className="font-semibold tracking-tight tabular-nums">
                         {assignment.courseCode}
                       </span>
                       <Badge
                         variant={isGeneralEducation ? "secondary" : "outline"}
-                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
+                        className="rounded-full px-2 py-0.5 text-xs font-semibold"
                       >
                         {isGeneralEducation ? "GE" : "Program-specific"}
                       </Badge>
                       <Badge
                         variant={assignment.isActive ? "success" : "outline"}
-                        className="rounded-full px-2 py-0.5 text-[10px]"
+                        className="rounded-full px-2 py-0.5 text-xs"
                       >
                         <span
                           className={`mr-1 size-1 rounded-full ${assignment.isActive ? "bg-success" : "bg-muted-foreground"}`}
@@ -697,9 +698,9 @@ export function CourseAssignmentsTable({
                     <CardDescription className="line-clamp-2 text-sm leading-snug">
                       {assignment.courseTitle}
                     </CardDescription>
-                    <p className="text-muted-foreground inline-flex items-center gap-1.5 text-xs tabular-nums">
-                      <CalendarDays className="size-3 shrink-0" aria-hidden="true" />
-                      {assignment.termLabel}
+                    <p className="text-muted-foreground flex min-w-0 items-start gap-1.5 text-xs leading-relaxed tabular-nums">
+                      <CalendarDays className="mt-0.5 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 break-words">{assignment.termLabel}</span>
                     </p>
                   </div>
                   <CardAction className="self-start">
@@ -718,19 +719,19 @@ export function CourseAssignmentsTable({
                     />
                   </CardAction>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-3 pt-0">
-                  <div className="bg-muted/30 grid grid-cols-2 gap-3 rounded-lg border p-3">
-                    <div className="col-span-2 flex items-center gap-2.5">
-                      <span className="bg-primary/10 text-primary ring-primary/15 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1">
+                <CardContent className="flex min-w-0 flex-col gap-3 pt-0">
+                  <div className="bg-muted/30 grid min-w-0 grid-cols-1 gap-3 rounded-lg border p-3 min-[380px]:grid-cols-2">
+                    <div className="flex min-w-0 items-center gap-2.5 min-[380px]:col-span-2">
+                      <span className="bg-primary text-primary-foreground ring-primary/20 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1">
                         {(assignment.facultyName ?? "Unknown")
                           .split(" ")
                           .slice(0, 2)
-                          .map((p) => p[0] ?? "")
+                          .map((part) => part[0] ?? "")
                           .join("")
                           .toUpperCase()
                           .slice(0, 2)}
                       </span>
-                      <div className="min-w-0">
+                      <div className="flex min-w-0 flex-col gap-1">
                         <p className="truncate text-sm leading-none font-medium">
                           {assignment.facultyName ?? "Unknown faculty"}
                         </p>
@@ -739,31 +740,36 @@ export function CourseAssignmentsTable({
                         </p>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                         Class
                       </span>
-                      <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+                      <span className="inline-flex min-w-0 items-start gap-1.5 text-sm font-medium">
                         <GraduationCap
-                          className="text-muted-foreground size-3.5"
+                          className="text-muted-foreground mt-0.5 shrink-0"
                           aria-hidden="true"
                         />
-                        {classLabel}
+                        <span className="break-words">{classLabel}</span>
                       </span>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                         Roster
                       </span>
-                      <span className="inline-flex items-center gap-1.5 text-sm font-medium tabular-nums">
-                        <Users className="text-muted-foreground size-3.5" aria-hidden="true" />
-                        {assignment.rosterMembershipCount ?? 0} roster{" "}
-                        {(assignment.rosterMembershipCount ?? 0) === 1 ? "member" : "members"}
+                      <span className="inline-flex min-w-0 items-start gap-1.5 text-sm font-medium tabular-nums">
+                        <Users
+                          className="text-muted-foreground mt-0.5 shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span className="break-words">
+                          {assignment.rosterMembershipCount ?? 0} roster{" "}
+                          {(assignment.rosterMembershipCount ?? 0) === 1 ? "member" : "members"}
+                        </span>
                       </span>
                     </div>
                   </div>
                   {isGeneralEducation && mode === "program-head" && (
-                    <p className="bg-warning-soft text-warning-foreground ring-warning/20 rounded-md px-2.5 py-1.5 text-xs font-medium ring-1">
+                    <p className="bg-warning-soft text-warning-foreground ring-warning/20 rounded-md px-2.5 py-2 text-xs font-medium ring-1">
                       Managed by General Education Coordinator
                     </p>
                   )}

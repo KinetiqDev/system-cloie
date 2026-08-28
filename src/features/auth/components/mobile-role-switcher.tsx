@@ -33,13 +33,12 @@ export function MobileRoleSwitcher({
   description,
 }: MobileRoleSwitcherProps) {
   const [open, setOpen] = useState(false);
-  const { search, setSearch, error, isSubmitting, filteredUsers, handleRoleClick } =
-    useRoleSwitch({
-      endpoint,
-      requestKey,
-      users,
-      onSwitchSuccess: () => setOpen(false),
-    });
+  const { search, setSearch, error, isSubmitting, filteredUsers, handleRoleClick } = useRoleSwitch({
+    endpoint,
+    requestKey,
+    users,
+    onSwitchSuccess: () => setOpen(false),
+  });
 
   const searchInputId = `mobile-${title.toLowerCase().replaceAll(" ", "-")}`;
 
@@ -49,12 +48,12 @@ export function MobileRoleSwitcher({
         <DrawerTrigger
           render={
             <Button
-              size="sm"
-              className={`fixed right-4 bottom-20 z-40 gap-1.5 rounded-full px-3 shadow-lg transition-opacity ${open ? "opacity-0" : ""}`}
+              variant="outline"
+              size="icon"
+              className="rounded-full shadow-xs"
               aria-label={`Open ${title} switcher`}
             >
-              <Users className="size-3.5" />
-              <span className="text-xs font-semibold">{title}</span>
+              <Users aria-hidden="true" />
             </Button>
           }
         />

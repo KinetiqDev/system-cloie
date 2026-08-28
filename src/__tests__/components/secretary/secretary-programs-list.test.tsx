@@ -120,14 +120,14 @@ describe("SecretaryProgramsList", () => {
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
 
     expect(screen.queryByText("Delete program")).not.toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Actions" })[1]);
+    fireEvent.click(screen.getAllByRole("button", { name: /Actions for/ })[1]);
     expect(await screen.findByText("Delete program")).toBeInTheDocument();
     expect(preflightMock).not.toHaveBeenCalled();
   });
 
   it("preflights on demand and requires exact code before deletion", async () => {
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Actions" })[1]);
+    fireEvent.click(screen.getAllByRole("button", { name: /Actions for/ })[1]);
     fireEvent.click(await screen.findByText("Delete program"));
 
     await waitFor(() => expect(preflightMock).toHaveBeenCalledWith("prog-2"));
@@ -139,19 +139,25 @@ describe("SecretaryProgramsList", () => {
     fireEvent.change(input, { target: { value: " BSEE " } });
     expect(deleteButton).toBeEnabled();
     fireEvent.click(deleteButton);
-    await waitFor(() => expect(deleteMock).toHaveBeenCalledWith({
-      id: "prog-2",
-      confirmationCode: " BSEE ",
-      revision: "2026-07-11T00:00:00.000Z",
-    }));
+    await waitFor(() =>
+      expect(deleteMock).toHaveBeenCalledWith({
+        id: "prog-2",
+        confirmationCode: " BSEE ",
+        revision: "2026-07-11T00:00:00.000Z",
+      })
+    );
   });
 
   it("ignores preflight results from a closed dialog", async () => {
     let resolvePreflight!: (value: unknown) => void;
-    preflightMock.mockReturnValueOnce(new Promise((resolve) => { resolvePreflight = resolve; }));
+    preflightMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePreflight = resolve;
+      })
+    );
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Actions" })[1]);
+    fireEvent.click(screen.getAllByRole("button", { name: /Actions for/ })[1]);
     fireEvent.click(await screen.findByText("Delete program"));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
@@ -190,6 +196,13 @@ describe("SecretaryProgramsList", () => {
     expect(within(dialog).getByLabelText("Program Name")).toBeInTheDocument();
   });
 
+  it("keeps the primary create action visible and specifically named", () => {
+    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
+
+    const createButton = screen.getByRole("button", { name: "Create Program" });
+    expect(createButton).toHaveTextContent("Create Program");
+  });
+
   it("creates a program from the dialog and refreshes the list", async () => {
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
     fireEvent.click(screen.getByRole("button", { name: /Create Program/ }));
@@ -213,7 +226,10 @@ describe("SecretaryProgramsList", () => {
   });
 
   it("keeps the dialog open and shows the error when creation fails", async () => {
-    createMock.mockResolvedValue({ success: false, error: "A program with code \"BSIT\" already exists." });
+    createMock.mockResolvedValue({
+      success: false,
+      error: 'A program with code "BSIT" already exists.',
+    });
     render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
     fireEvent.click(screen.getByRole("button", { name: /Create Program/ }));
     const dialog = await screen.findByRole("dialog");

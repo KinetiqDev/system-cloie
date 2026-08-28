@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -42,6 +43,7 @@ import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -243,10 +245,18 @@ export function SecretaryProgramsList({
   function renderRowActions(program: SecretaryProgramSummaryItem) {
     return (
       <DropdownMenu>
-        <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-9 items-center justify-center rounded-md transition-colors">
-          <MoreVertical className="size-4" />
-          <span className="sr-only">Actions</span>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Actions for ${program.code}`}
+              className="text-text-muted hover:text-text-primary rounded-full"
+            >
+              <MoreVertical aria-hidden="true" />
+            </Button>
+          }
+        />
         <DropdownMenuContent align="end">
           <DropdownMenuItem render={<Link href={`${basePath}/${program.id}/edit`} />}>
             Edit
@@ -285,18 +295,19 @@ export function SecretaryProgramsList({
   return (
     <div className="flex flex-col gap-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-heading-lg">Academic Programs</h1>
-          <p className="text-body-sm text-text-secondary hidden sm:block">
+          <h1 className="text-heading-lg text-balance">Academic Programs</h1>
+          <p className="text-body-sm text-text-secondary hidden max-w-2xl text-pretty sm:block">
             Manage academic programs, their majors, and program metadata across the college.
           </p>
         </div>
-        {/* CTA — always visible, top-right; opens the create dialog */}
-        <Button onClick={() => setCreateDialogOpen(true)} className="shrink-0">
-          <Plus className="size-4 sm:hidden" data-icon="inline-start" />
-          <span className="hidden sm:inline">Create Program</span>
-          <span className="sr-only sm:hidden">Create Program</span>
+        <Button
+          onClick={() => setCreateDialogOpen(true)}
+          className="w-full shrink-0 shadow-sm sm:w-auto"
+        >
+          <Plus data-icon="inline-start" aria-hidden="true" />
+          Create Program
         </Button>
       </div>
 
@@ -325,32 +336,46 @@ export function SecretaryProgramsList({
       </div>
 
       {/* Filter bar — stacks on mobile, inline on sm+ */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Select value={statusFilter} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-full sm:w-[160px]">
-            <SelectValue>
-              {statusFilter === "__all__"
-                ? "All Statuses"
-                : statusFilter === "active"
-                  ? "Active"
-                  : "Inactive"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,20rem)] sm:items-end">
+        <div className="flex min-w-0 flex-col gap-2">
+          <Label htmlFor="program-status-filter">Status</Label>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
+            <SelectTrigger id="program-status-filter" className="w-full">
+              <SelectValue>
+                {statusFilter === "__all__"
+                  ? "All Statuses"
+                  : statusFilter === "active"
+                    ? "Active"
+                    : "Inactive"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="__all__">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-          <Input
-            placeholder="Search by code or name..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full pl-8"
-          />
+        <div className="flex min-w-0 flex-col gap-2">
+          <Label htmlFor="program-search">Search Programs</Label>
+          <div className="relative">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              id="program-search"
+              name="program-search"
+              placeholder="Search by code or name…"
+              value={searchTerm}
+              onChange={(event) => handleSearchChange(event.target.value)}
+              className="w-full pl-9"
+              autoComplete="off"
+            />
+          </div>
         </div>
       </div>
 
@@ -396,7 +421,7 @@ export function SecretaryProgramsList({
                 onCheckedChange={(checked) => selection.toggleOne(program.id, Boolean(checked))}
               />
               {/* Left: info */}
-              <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
                 {/* Code + status */}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-label-md text-text-primary font-bold">{program.code}</span>
@@ -416,18 +441,19 @@ export function SecretaryProgramsList({
                 <div className="text-text-muted flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs">
                   <span>
                     <span className="text-text-secondary font-medium">{program.courseCount}</span>{" "}
-                    courses
+                    {program.courseCount === 1 ? "course" : "courses"}
                   </span>
                   <span>
                     <span className="text-text-secondary font-medium">{program.studentCount}</span>{" "}
-                    students
+                    {program.studentCount === 1 ? "student" : "students"}
                   </span>
                   <span>
                     <span className="text-text-secondary font-medium">{program.facultyCount}</span>{" "}
                     faculty
                   </span>
                   <span>
-                    <span className="text-text-secondary font-medium">{program.ploCount}</span> PLOs
+                    <span className="text-text-secondary font-medium">{program.ploCount}</span>{" "}
+                    {program.ploCount === 1 ? "PLO" : "PLOs"}
                   </span>
                 </div>
               </div>
@@ -711,13 +737,15 @@ export function SecretaryProgramsList({
 
 function KPICard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
-    <Card>
-      <CardHeader className="p-4 sm:p-6">
-        <div className="flex items-center justify-between gap-2">
-          <CardDescription className="text-label-sm text-muted-foreground truncate tracking-wider uppercase">
+    <Card className="min-w-0 overflow-hidden">
+      <CardHeader className="min-w-0 gap-2 p-3 sm:p-5">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <CardDescription className="text-label-sm text-muted-foreground min-w-0 leading-snug tracking-wide uppercase">
             {label}
           </CardDescription>
-          <div className="shrink-0">{icon}</div>
+          <div className="shrink-0" aria-hidden="true">
+            {icon}
+          </div>
         </div>
         <CardTitle className="font-heading text-heading-xl text-foreground tabular-nums">
           {value.toLocaleString()}

@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 
 import { ClassIdentityFields } from "@/features/course-assignments/components/shared/class-identity-fields";
 import { CourseAssignmentFormDialog } from "@/features/course-assignments/components/course-assignment-form-dialog";
+import { WizardStepper } from "@/features/course-assignments/components/shared/wizard-stepper";
 import { createCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import type { FacultySearchResult } from "@/features/course-assignments/types";
@@ -362,6 +363,34 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     if (!trigger) throw new Error(`Course combobox trigger not found`);
     fireEvent.click(trigger);
   }
+
+  it("keeps mobile progress and drawer content within the viewport", () => {
+    render(<Wrapper />);
+
+    expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveClass("min-w-0");
+    expect(screen.getByText("Step 2 of 5")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toHaveClass("min-w-0", "overflow-x-clip");
+  });
+
+  it("announces the active wizard step without requiring the full horizontal stepper", () => {
+    render(
+      <WizardStepper
+        steps={[
+          { key: "term", label: "Term" },
+          { key: "course", label: "Course" },
+          { key: "class", label: "Class" },
+        ]}
+        currentStep="class"
+      />
+    );
+
+    expect(screen.getByText("Step 3 of 3")).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByText("Class")
+        .some((element) => element.getAttribute("aria-current") === "step")
+    ).toBe(true);
+  });
 
   it("excludes General Education courses from the create picker", async () => {
     render(

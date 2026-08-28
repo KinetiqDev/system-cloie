@@ -72,12 +72,12 @@ function AssignmentSummaryStrip({
   const showStatusBreakdown = isSinglePage && total > 0;
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-xl border px-3 py-3 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:px-4">
+    <div className="bg-card flex min-w-0 items-center gap-3 rounded-xl border px-3 py-3 shadow-xs sm:justify-between sm:px-4">
       <div className="flex min-w-0 items-center gap-3">
         <div className="bg-muted text-muted-foreground ring-border flex size-9 shrink-0 items-center justify-center rounded-lg ring-1">
-          <Users className="size-4" aria-hidden="true" />
+          <Users aria-hidden="true" />
         </div>
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-col gap-1">
           <p className="truncate text-sm leading-none font-semibold tabular-nums">
             {total} {total === 1 ? "assignment" : "assignments"}
           </p>
@@ -102,16 +102,14 @@ function AssignmentSummaryStrip({
           </p>
         </div>
       </div>
-      <div className="flex min-w-0 items-center gap-2 sm:shrink-0">
-        <Badge
-          variant="outline"
-          className="bg-background inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
-          title={periodLabel}
-        >
-          <CalendarDays className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 truncate">{periodLabel}</span>
-        </Badge>
-      </div>
+      <Badge
+        variant="outline"
+        className="bg-background ml-auto hidden max-w-[55%] min-w-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium sm:inline-flex"
+        title={periodLabel}
+      >
+        <CalendarDays aria-hidden="true" />
+        <span className="min-w-0 truncate">{periodLabel}</span>
+      </Badge>
     </div>
   );
 }
@@ -137,10 +135,10 @@ function CourseAssignmentsHeader({
         {mode === "program-head" && selectedProgram && (
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <span
-              className="bg-primary/8 text-primary ring-primary/15 inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide ring-1"
+              className="bg-primary-soft text-selected-fg ring-primary/15 inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide ring-1"
               title={`${selectedProgram.code} — ${selectedProgram.name}`}
             >
-              <GraduationCap className="size-3.5 shrink-0" aria-hidden="true" />
+              <GraduationCap aria-hidden="true" />
               <span className="min-w-0 truncate">
                 {selectedProgram.code} · {selectedProgram.name}
               </span>
@@ -151,29 +149,22 @@ function CourseAssignmentsHeader({
             </span>
           </div>
         )}
-        {mode === "program-head" && !selectedProgram && (
-          <p className="text-label-sm text-muted-foreground font-medium tracking-widest uppercase">
-            Program assignments
-          </p>
-        )}
-        <h1 className="text-heading-lg tracking-tight">{pageTitle}</h1>
-        <p className="text-body-sm text-text-secondary max-w-2xl leading-relaxed">
+        <h1 className="text-heading-lg tracking-tight text-balance">{pageTitle}</h1>
+        <p className="text-body-sm text-text-secondary max-w-2xl leading-relaxed text-pretty">
           {pageDescription}
         </p>
         {mode === "program-head" && (
-          <p className="text-muted-foreground max-w-2xl text-xs leading-relaxed">
-            Each assignment connects a faculty member to a course and class section for a term. The
-            class roster unlocks evaluations and attainment evidence.
+          <p className="text-muted-foreground hidden max-w-2xl text-sm leading-relaxed text-pretty sm:block">
+            Each assignment links a faculty member to a course, class section, and Academic Term.
+            Opening its roster enables evaluation and attainment evidence workflows.
           </p>
         )}
       </div>
       {canManageAssignments && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Button onClick={onCreate} className="min-h-11 w-full shadow-sm sm:w-auto" size="default">
-            <Plus aria-hidden="true" className="size-4" />
-            Assign Faculty
-          </Button>
-        </div>
+        <Button onClick={onCreate} className="w-full shrink-0 shadow-sm sm:w-auto" size="default">
+          <Plus data-icon="inline-start" aria-hidden="true" />
+          Assign Faculty
+        </Button>
       )}
     </div>
   );
@@ -262,7 +253,7 @@ export function CourseAssignmentsPageShell({
     : null;
 
   return (
-    <div className="flex min-w-0 flex-col gap-6 overflow-hidden">
+    <div className="flex min-w-0 flex-col gap-5 overflow-x-clip sm:gap-6">
       <CourseAssignmentsHeader
         mode={mode}
         selectedProgram={selectedProgram}

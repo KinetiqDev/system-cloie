@@ -6,7 +6,7 @@ vi.mock("@/components/layout/sidebar", () => ({
   Sidebar: () => null,
 }));
 vi.mock("@/components/layout/topbar", () => ({
-  Topbar: () => null,
+  Topbar: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/components/layout/mobile-nav", () => ({
   MobileNav: () => null,
@@ -41,7 +41,9 @@ describe("AppShell dedicated demo experience", () => {
       </AppShell>
     );
 
-    expect(screen.queryByRole("status", { name: "Dedicated demo environment" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "Dedicated demo environment" })
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Demo role switcher")).not.toBeInTheDocument();
   });
 });
