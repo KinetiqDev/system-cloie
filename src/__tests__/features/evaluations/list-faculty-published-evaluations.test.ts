@@ -50,8 +50,8 @@ const publishedEvaluation = {
   _count: { assignments: 12 },
   assignments: [{ id: "assignment-1" }, { id: "assignment-2" }],
   term_instance: {
-    semester: "FIRST",
-    term: null,
+    semester: "SECOND",
+    term: "SECOND_TERM",
     school_year: { code: "2025-2026" },
   },
 };
@@ -98,6 +98,9 @@ describe("listFacultyPublishedEvaluations – historical visibility", () => {
       responseCount: 2,
       totalAssignments: 12,
     });
+    expect(result.success && result.data.evaluations[0].termInstanceLabel).toBe(
+      "2025-2026 — 2nd Semester — 2nd Term"
+    );
     expect(prismaMocks.courseBoundEvaluationFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { course_assignment_id: { in: ["assignment-1"] } },

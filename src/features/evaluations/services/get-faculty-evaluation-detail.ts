@@ -5,6 +5,7 @@ import { canViewCourseRoster } from "@/features/course-assignments/policies";
 import { CourseScope } from "@prisma/client";
 import type { FacultyEvaluationDetail, GetFacultyEvaluationDetailResult } from "../types";
 import { parsePublishedInstrument } from "@/features/instruments/services/parse-published-instrument";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 
 export async function getFacultyEvaluationDetail(
   evaluationId: string
@@ -160,10 +161,11 @@ export async function getFacultyEvaluationDetail(
   }> | null;
 
   const ti = evaluation.term_instance;
-  const termLabel = ti.term ? `${ti.term}` : "";
-  const termInstanceLabel = termLabel
-    ? `${ti.school_year.code} — ${ti.semester} — ${termLabel}`
-    : `${ti.school_year.code} — ${ti.semester}`;
+  const termInstanceLabel = formatTermInstanceLabel(
+    ti.school_year.code,
+    ti.semester,
+    ti.term
+  );
 
   const ca = evaluation.course_assignment;
   const parsedSections = parsePublishedInstrument(evaluation.instrument.structure_snapshot);

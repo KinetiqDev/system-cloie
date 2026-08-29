@@ -92,11 +92,9 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
             {statusLabel(safeDetail.status)}
           </Badge>
         </div>
-        <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
-          <span>{safeDetail.termInstanceLabel}</span>
-          <span aria-hidden="true" className="hidden sm:inline">
-            ·
-          </span>
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          <span>{safeDetail.courseInfo.courseCode}</span>
+          <span aria-hidden="true">·</span>
           <span>
             {instrument?.name ?? "Instrument"}{" "}
             {typeof instrument?.versionNumber === "number" ? `v${instrument.versionNumber}` : ""}
@@ -109,9 +107,7 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
         {/* Course Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold tracking-wide uppercase">
-              Course Information
-            </CardTitle>
+            <CardTitle className="text-base">Course Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
@@ -144,9 +140,8 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
         {/* Deployment / Timeline */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold tracking-wide uppercase">
-              Timeline
-            </CardTitle>
+            <CardTitle className="text-base">Schedule</CardTitle>
+            <CardDescription>Publication window and academic period.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
@@ -154,9 +149,11 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
               <span className="font-medium tabular-nums">{formatDate(safeDetail.publishedAt)}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Activation</span>
-              <span className="font-medium tabular-nums">
-                {safeDetail.activationAt ? formatDate(safeDetail.activationAt) : "Immediate"}
+              <span className="text-muted-foreground">Available from</span>
+              <span className="text-right font-medium tabular-nums">
+                {safeDetail.activationAt
+                  ? formatDate(safeDetail.activationAt)
+                  : "Immediately after publication"}
               </span>
             </div>
             <div className="flex justify-between gap-4">
@@ -165,9 +162,9 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
                 {safeDetail.deadlineAt ? formatDate(safeDetail.deadlineAt) : "No deadline"}
               </span>
             </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Period</span>
-              <span className="text-right font-medium">{safeDetail.termInstanceLabel}</span>
+            <div className="flex flex-col gap-1 border-t pt-3 sm:flex-row sm:justify-between sm:gap-4">
+              <span className="text-muted-foreground">Academic Period</span>
+              <span className="font-medium sm:text-right">{safeDetail.termInstanceLabel}</span>
             </div>
           </CardContent>
         </Card>
@@ -175,12 +172,12 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
         {/* Targets */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-semibold tracking-wide uppercase">Targets</CardTitle>
-            <CardDescription>Year levels for program deployment.</CardDescription>
+            <CardTitle className="text-base">Target Students</CardTitle>
+            <CardDescription>Students included by program and year level.</CardDescription>
           </CardHeader>
           <CardContent>
             {safeDetail.targets.length === 0 ? (
-              <span className="text-muted-foreground text-sm">No specific targets</span>
+              <span className="text-muted-foreground text-sm">All eligible year levels</span>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {safeDetail.targets.map((target, index) => (

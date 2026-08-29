@@ -51,7 +51,11 @@ const evaluation = {
   },
   cilo_question_bindings: [],
   _count: { assignments: 5 },
-  term_instance: { semester: "FIRST", term: null, school_year: { code: "2025-2026" } },
+  term_instance: {
+    semester: "SECOND",
+    term: "SECOND_TERM",
+    school_year: { code: "2025-2026" },
+  },
   assignments: [],
   exclusions: [],
 };
@@ -80,6 +84,9 @@ describe("getFacultyEvaluationDetail – historical visibility", () => {
         totalAssignments: 5,
       },
     });
+    expect(result.success && result.data.termInstanceLabel).toBe(
+      "2025-2026 — 2nd Semester — 2nd Term"
+    );
   });
 
   it("returns an indistinguishable not-found response for a non-owning faculty member", async () => {

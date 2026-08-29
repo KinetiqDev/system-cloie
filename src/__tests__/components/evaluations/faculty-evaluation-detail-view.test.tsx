@@ -14,7 +14,7 @@ vi.mock("@/lib/actions/course-bound-evaluation-actions", () => ({
 
 function makeDetail(overrides: Partial<FacultyEvaluationDetail> = {}): FacultyEvaluationDetail {
   const base: FacultyEvaluationDetail = {
-    termInstanceLabel: "2025-2026 — FIRST — Alpha",
+    termInstanceLabel: "2025-2026 — 2nd Semester — 2nd Term",
     activationAt: new Date("2026-08-01T00:00:00.000Z"),
     cilos: [
       { id: "cilo-1", label: "CILO 1", description: "Demonstrate mastery" },
@@ -155,7 +155,10 @@ describe("FacultyEvaluationDetailView – DTO contract", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Capstone CILO Evaluation" })
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/2025-2026 — FIRST — Alpha/).length).toBeGreaterThan(0);
+    expect(screen.getByText("2025-2026 — 2nd Semester — 2nd Term")).toBeInTheDocument();
+    expect(screen.queryByText(/SECOND_TERM| — SECOND — /)).not.toBeInTheDocument();
+    expect(screen.getByText("Academic Period")).toBeInTheDocument();
+    expect(screen.getByText("Publication window and academic period.")).toBeInTheDocument();
     expect(screen.getByText(/CS101 — Intro to Computing/)).toBeInTheDocument();
     expect(screen.getByText(/Information Technology/)).toBeInTheDocument();
   });
