@@ -28,8 +28,8 @@ export async function confirmPLOImport(
   if (!preview.success) return preview;
   const programId = context.data.selectedProgram.id;
 
-  try {
-    return await prisma.$transaction(
+  const runImport = (): Promise<ServiceResult<PLOImportResult>> =>
+    prisma.$transaction(
       async (tx) => {
         const assignment = await revalidateProgramHeadAssignment(tx, {
           userId: context.data.userId,
@@ -109,6 +109,16 @@ export async function confirmPLOImport(
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
+
+  try {
+    try {
+      return await runImport();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        return await runImport();
+      }
+      throw error;
+    }
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
       return {
