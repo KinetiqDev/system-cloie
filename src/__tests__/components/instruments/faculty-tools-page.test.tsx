@@ -91,6 +91,20 @@ describe("FacultyToolsPage", () => {
     expect(screen.getByText("My CILO Evaluation")).toBeInTheDocument();
   });
 
+  test("right-aligns the shared view selector on templates and published tabs", () => {
+    renderPage();
+
+    const viewToolbar = screen.getByRole("toolbar", { name: "Evaluation tools view" });
+    expect(viewToolbar.parentElement).toHaveClass("w-full", "justify-end", "sm:w-auto");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Published" }));
+    expect(screen.getByRole("toolbar", { name: "Evaluation tools view" }).parentElement).toHaveClass(
+      "w-full",
+      "justify-end",
+      "sm:w-auto"
+    );
+  });
+
   test("deletes an own copy through the confirmation dialog", async () => {
     deleteFacultyTemplateActionMock.mockResolvedValue({ success: true });
     renderPage();

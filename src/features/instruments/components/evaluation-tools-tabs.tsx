@@ -13,7 +13,7 @@ type EvaluationToolsTabsProps = {
   templates: ReactNode;
   published: ReactNode;
   action?: ReactNode;
-  /** List/Card view toggle rendered next to the action button. */
+  /** List/Card view toggle rendered in the right-aligned tab toolbar. */
   viewControl?: ReactNode;
 };
 
@@ -75,7 +75,7 @@ export function EvaluationToolsTabs({
         </TabsList>
 
         {(action || viewControl) && (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
             {action}
             {viewControl}
           </div>
