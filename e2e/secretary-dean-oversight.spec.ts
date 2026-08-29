@@ -131,6 +131,7 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
     `/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(activePeriodId)}`
   );
   await expect(page.getByText("Learning Outcomes").first()).toBeVisible({ timeout: 15_000 });
+  await page.waitForLoadState("networkidle");
   await expect(page.getByText("Selected period").first()).toBeVisible();
   await expect(page.getByText("Academic Program overview").first()).toBeVisible({
     timeout: 15_000,
@@ -138,7 +139,6 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
   await page.waitForLoadState("networkidle");
   await expectNoAxeViolations(page);
   await expectNoHorizontalOverflow(page);
-
   // URL-backed selection survives reload.
   const urlBefore = page.url();
   await page.reload();

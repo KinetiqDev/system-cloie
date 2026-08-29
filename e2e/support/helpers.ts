@@ -21,18 +21,24 @@ export async function loginAs(page: Page, email: string): Promise<void> {
   expect(response.ok(), `${endpoint} failed for ${email}`).toBeTruthy();
 }
 
-/** §49 accessibility sweep: no serious/critical WCAG A/AA violations. */
-export async function expectNoAxeViolations(page: Page): Promise<void> {
-  // Let any in-flight RSC, session refresh, or route transition settle before
-  // scanning. The Next.js App Router may set aria-busy on <html> during
-  // transitions, which axe flags as aria-prohibited-attr on :root if scanned
-  // mid-transition; this also ensures the stable page state is scanned instead
-  // of a loading shell (§19 testing decision).
+/**
+ * Wait until the App Router transition settles: network idle and no aria-*
+ * attributes on <html> (Next.js sets aria-busy during transitions, which axe
+ * flags on :root and visual shots would catch mid-transition).
+ */
+export async function waitForStableState(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
   await page.waitForFunction(() => {
     const root = document.documentElement;
     return Array.from(root.attributes).every((attribute) => !attribute.name.startsWith("aria-"));
   });
+}
+
+/** §49 accessibility sweep: no serious/critical WCAG A/AA violations. */
+export async function expectNoAxeViolations(page: Page): Promise<void> {
+  // Scan only the stable page state, never a loading shell or a transition
+  // (§19 testing decision).
+  await waitForStableState(page);
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
   const blocking = results.violations.filter(
     (violation) => violation.impact === "serious" || violation.impact === "critical"

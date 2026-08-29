@@ -1,0 +1,17 @@
+/* fallow-ignore-file unused-file */
+/* Deterministic curated visual baselines (issue #551).
+ *
+ * Paired with the config's `animations: "disabled"`, `caret: "hide"`, and the
+ * tests' reduced-motion emulation: neutralizes any remaining
+ * transition/animation timing so CI scheduling cannot produce false diffs.
+ * No masking here — masking is per-shot and minimal. */
+
+*,
+*::before,
+*::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  caret-color: transparent !important;
+}
