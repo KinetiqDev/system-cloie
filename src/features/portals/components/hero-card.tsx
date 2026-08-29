@@ -12,7 +12,7 @@ export function HeroCard({ name, contextLabel }: HeroCardProps) {
             Welcome, {name}
           </h2>
           <p className="text-on-primary font-medium">{contextLabel}</p>
-          <p className="text-body-sm text-primary mt-4 inline-block rounded-full border border-white/20 bg-white px-3 py-1.5">
+          <p className="text-body-sm text-primary border-on-primary/20 bg-on-primary mt-4 inline-block rounded-full border px-3 py-1.5">
             Complete your assigned evaluations before their deadlines.
           </p>
         </div>
