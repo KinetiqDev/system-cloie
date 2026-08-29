@@ -196,7 +196,6 @@ export function FacultyEvaluationRespondents({ respondents }: Props) {
           </div>
         ) : (
           <>
-            {/* Desktop table */}
             <div
               className="hidden overflow-x-auto md:block"
               role="region"
@@ -236,7 +235,6 @@ export function FacultyEvaluationRespondents({ respondents }: Props) {
               </Table>
             </div>
 
-            {/* Mobile cards */}
             <div className="grid gap-3 md:hidden">
               {filtered.map((row) => (
                 <div

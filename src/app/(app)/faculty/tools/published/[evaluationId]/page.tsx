@@ -9,7 +9,6 @@ export default async function FacultyPublishedEvaluationDetailPage({
 }) {
   const { evaluationId } = await params;
 
-  // Basic UUID guard mirrors other detail routes; invalid shape is indistinguishable from unauthorized.
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
     evaluationId
   );

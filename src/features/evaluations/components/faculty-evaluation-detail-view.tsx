@@ -45,8 +45,6 @@ function statusLabel(status: string): string {
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
-// The detail surface intentionally keeps its frozen instrument, progress, roster, and exclusion
-// states together so one DTO controls a single read-only evidence view.
 // fallow-ignore-next-line complexity
 export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluationDetail }) {
   const safeDetail = detail;
@@ -85,7 +83,6 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
           Back to Evaluation Tools
         </Link>
       </div>
-      {/* Header */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-heading text-text-primary text-xl font-semibold tracking-tight sm:text-2xl">
@@ -105,9 +102,7 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
         </div>
       </div>
 
-      {/* Summary grid: deployment / timeline */}
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* Course Information */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Course Information</CardTitle>
@@ -140,7 +135,6 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
           </CardContent>
         </Card>
 
-        {/* Deployment / Timeline */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Schedule</CardTitle>
@@ -172,7 +166,6 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
           </CardContent>
         </Card>
 
-        {/* Targets */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Target Students</CardTitle>
@@ -197,7 +190,6 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
         </Card>
       </div>
 
-      {/* Accessible progress */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Response Progress</CardTitle>
@@ -254,10 +246,8 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
         </CardContent>
       </Card>
 
-      {/* Respondents – responsive table/cards with local filter */}
       <FacultyEvaluationRespondents respondents={safeDetail.respondents ?? []} />
 
-      {/* Instrument – frozen questions */}
       <div className="space-y-4">
         <div className="space-y-1">
           <h2 className="font-heading text-base font-semibold">Instrument</h2>
@@ -298,7 +288,6 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
                   {section.questions.length === 0 ? (
                     <p className="text-muted-foreground text-sm">No questions in this section.</p>
                   ) : (
-                    // Question metadata, descriptors, and binding snapshots form one atomic row.
                     // fallow-ignore-next-line complexity
                     section.questions.map((question) => {
                       const binding = bindingByKey.get(
@@ -399,7 +388,6 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
         )}
       </div>
 
-      {/* Exclusions & late inclusion */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Exclusions & late inclusion</CardTitle>
