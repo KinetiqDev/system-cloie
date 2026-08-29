@@ -36,7 +36,11 @@ test("keyboard completion of a Student wizard section persists the draft", async
   // A re-run resumes on the first incomplete section; section 1 is behind a
   // Previous step in that case. Only click when the control is enabled (section 2+).
   const previous = page.getByRole("button", { name: "Previous" });
-  if ((await previous.count()) > 0 && (await previous.isVisible()) && (await previous.isEnabled())) {
+  if (
+    (await previous.count()) > 0 &&
+    (await previous.isVisible()) &&
+    (await previous.isEnabled())
+  ) {
     await previous.click();
   }
   await expect(
