@@ -121,11 +121,7 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
     } | null;
 
     const ti = evalItem.term_instance;
-    const termInstanceLabel = formatTermInstanceLabel(
-      ti.school_year.code,
-      ti.semester,
-      ti.term
-    );
+    const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
 
     const ca = evalItem.course_assignment;
 

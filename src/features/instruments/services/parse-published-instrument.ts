@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { LikertDescriptor, QuestionType } from "../types";
 
-export type PublishedInstrumentQuestion = {
+type PublishedInstrumentQuestion = {
   key: string;
   prompt: string;
   type: QuestionType;
@@ -11,7 +11,7 @@ export type PublishedInstrumentQuestion = {
   suggestedResponses: string[];
 };
 
-export type PublishedInstrumentSection = {
+type PublishedInstrumentSection = {
   key: string;
   title: string;
   description: string | null;

@@ -59,22 +59,17 @@ describe("FacultyPublishedEvaluations", () => {
     expect(table.getByText("Closed")).toHaveClass("bg-secondary");
   });
 
-  it.each(["card", "list"] as const)(
-    "shows a readable academic period in %s view",
-    (view) => {
-      render(
-        <FacultyPublishedEvaluations
-          view={view}
-          evaluations={[
-            makeItem({ termInstanceLabel: "2026-2027 — 2nd Semester — 2nd Term" }),
-          ]}
-        />
-      );
+  it.each(["card", "list"] as const)("shows a readable academic period in %s view", (view) => {
+    render(
+      <FacultyPublishedEvaluations
+        view={view}
+        evaluations={[makeItem({ termInstanceLabel: "2026-2027 — 2nd Semester — 2nd Term" })]}
+      />
+    );
 
-      expect(screen.getByText("2026-2027 — 2nd Semester — 2nd Term")).toBeVisible();
-      expect(screen.queryByText(/SECOND/)).not.toBeInTheDocument();
-    }
-  );
+    expect(screen.getByText("2026-2027 — 2nd Semester — 2nd Term")).toBeVisible();
+    expect(screen.queryByText(/SECOND/)).not.toBeInTheDocument();
+  });
 
   it("renders an empty state when nothing is published", () => {
     render(<FacultyPublishedEvaluations view="list" evaluations={[]} />);

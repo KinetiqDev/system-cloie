@@ -22,13 +22,7 @@ type EvaluationToolsTabsProps = {
  * toggle never wipes the other parameter; the default value is omitted to keep
  * shareable URLs canonical.
  */
-export function updateToolsUrl({
-  tab,
-  view,
-}: {
-  tab?: EvaluationToolsTab;
-  view?: ToolsViewMode;
-}) {
+export function updateToolsUrl({ tab, view }: { tab?: EvaluationToolsTab; view?: ToolsViewMode }) {
   if (typeof window === "undefined") return;
 
   const url = new URL(window.location.href);

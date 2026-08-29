@@ -194,7 +194,7 @@ export type FacultyEvaluationRespondent = {
   submittedAt: Date | null;
 };
 
-export type FacultyPublishedInstrumentQuestion = {
+type FacultyPublishedInstrumentQuestion = {
   itemKey: string;
   likertDescriptors: Array<{ label: string; value: number }>;
   prompt: string;
@@ -203,7 +203,7 @@ export type FacultyPublishedInstrumentQuestion = {
   type: "likert" | "guided_open_ended";
 };
 
-export type FacultyPublishedInstrumentSection = {
+type FacultyPublishedInstrumentSection = {
   description: string | null;
   questions: FacultyPublishedInstrumentQuestion[];
   sectionKey: string;

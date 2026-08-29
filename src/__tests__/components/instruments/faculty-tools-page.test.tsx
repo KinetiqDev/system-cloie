@@ -15,12 +15,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/components/ui/toast", () => ({ showToast: showToastMock }));
 
-const { duplicateFacultyTemplateActionMock, deleteFacultyTemplateActionMock } = vi.hoisted(
-  () => ({
-    duplicateFacultyTemplateActionMock: vi.fn(),
-    deleteFacultyTemplateActionMock: vi.fn(),
-  })
-);
+const { duplicateFacultyTemplateActionMock, deleteFacultyTemplateActionMock } = vi.hoisted(() => ({
+  duplicateFacultyTemplateActionMock: vi.fn(),
+  deleteFacultyTemplateActionMock: vi.fn(),
+}));
 
 vi.mock("@/lib/actions/faculty-template-actions", () => ({
   deleteFacultyTemplateAction: deleteFacultyTemplateActionMock,
@@ -98,11 +96,9 @@ describe("FacultyToolsPage", () => {
     expect(viewToolbar.parentElement).toHaveClass("w-full", "justify-end", "sm:w-auto");
 
     fireEvent.click(screen.getByRole("tab", { name: "Published" }));
-    expect(screen.getByRole("toolbar", { name: "Evaluation tools view" }).parentElement).toHaveClass(
-      "w-full",
-      "justify-end",
-      "sm:w-auto"
-    );
+    expect(
+      screen.getByRole("toolbar", { name: "Evaluation tools view" }).parentElement
+    ).toHaveClass("w-full", "justify-end", "sm:w-auto");
   });
 
   test("deletes an own copy through the confirmation dialog", async () => {

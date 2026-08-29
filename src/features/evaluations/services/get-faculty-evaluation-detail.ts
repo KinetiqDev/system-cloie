@@ -161,11 +161,7 @@ export async function getFacultyEvaluationDetail(
   }> | null;
 
   const ti = evaluation.term_instance;
-  const termInstanceLabel = formatTermInstanceLabel(
-    ti.school_year.code,
-    ti.semester,
-    ti.term
-  );
+  const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
 
   const ca = evaluation.course_assignment;
   const parsedSections = parsePublishedInstrument(evaluation.instrument.structure_snapshot);
