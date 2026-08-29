@@ -1,5 +1,7 @@
+// fallow-ignore-next-line unused-type
 export type CsvRecord = { cells: string[]; sourceIndex: number };
 
+// fallow-ignore-next-line unused-type
 export type CsvParseResult =
   | { success: true; records: CsvRecord[] }
   | { success: false; reason: "encoding" | "structure" };

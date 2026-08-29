@@ -5,6 +5,7 @@ export { PLO_IMPORT_MAX_ROWS } from "../types/plo-import";
 
 export const PLO_IMPORT_TEMPLATE = "\uFEFFPLO Code,Description\r\n";
 
+// fallow-ignore-next-line unused-type
 export type PLOImportParseResult =
   | { success: true; rows: PLOImportSourceRow[] }
   | { success: false; error: string };
