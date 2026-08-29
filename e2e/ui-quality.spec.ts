@@ -69,6 +69,9 @@ test("keyboard completion of a Student wizard section persists the draft", async
     });
     if (isNext) {
       await page.keyboard.press("Enter");
+      await expect(
+        page.getByRole("heading", { name: "Overall Course Outcome Attainment" })
+      ).toBeVisible();
       advanced = true;
       break;
     }
