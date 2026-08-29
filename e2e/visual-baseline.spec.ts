@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { fixture } from "./support/fixture";
-import { loginAs } from "./support/helpers";
+import { loginAs, waitForStableState } from "./support/helpers";
 import { gotoStable, screenshotStable, useReducedMotion } from "./support/visual";
 
 /**
@@ -114,8 +114,9 @@ test.describe("@visual curated baseline (desktop)", () => {
     const fx = fixture();
     await useReducedMotion(page);
     await loginAs(page, fx.demoPh.email);
-    await page.goto("/program-head");
+    await gotoStable(page, "/program-head");
     await page.getByRole("link", { name: "Responses", exact: true }).click();
+    await waitForStableState(page);
     await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
     await page.getByPlaceholder(/Course, title, evaluation or faculty/).fill("zzzz-no-match");
     await page.getByRole("button", { name: "Apply filters" }).click();
