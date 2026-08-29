@@ -20,6 +20,7 @@ const yaml = eslintrcRequire("js-yaml") as { load: (source: string) => unknown }
 interface WorkflowStep {
   name?: string;
   run?: string;
+  uses?: string;
   env?: Record<string, string>;
   if?: string;
   with?: Record<string, unknown>;
@@ -195,6 +196,20 @@ describe("scheduled deep verification matrix (551)", () => {
       for (const step of artifactSteps) {
         expect(step.if).toBe("failure()");
         expect(step.with?.["retention-days"]).toBe(14);
+      }
+    }
+  });
+
+  it("keeps every workflow step executable in both workflows", () => {
+    for (const source of [CI, SCHEDULED]) {
+      const jobs = readWorkflow(source).jobs;
+      for (const [name, job] of Object.entries(jobs)) {
+        for (const step of job.steps ?? []) {
+          expect(
+            step.run ?? step.uses,
+            `${source} job ${name} step "${step.name}" must define run or uses`
+          ).toBeTruthy();
+        }
       }
     }
   });

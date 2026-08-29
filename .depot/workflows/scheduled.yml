@@ -80,6 +80,7 @@ jobs:
       - name: Verify database suite completeness
         run: pnpm verify:database-suites
       - name: Apply migrations
+        run: bash scripts/ci/apply-migrations.sh
       - name: Seed fixture
         run: pnpm db:seed
       - name: Run DB integration tests
