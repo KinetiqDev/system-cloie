@@ -83,7 +83,10 @@ export default defineConfig({
   retries: 0,
   timeout: 90_000,
   expect: {
-    timeout: 15_000,
+    // Shared runners can stall client-side commits and renders for up to
+    // ~18s while the app itself stays healthy; retries stay disabled, so
+    // assertions wait out the stall instead of expiring at the old 15s mark.
+    timeout: 30_000,
     // Curated visual baseline (#551): deterministic rendering — animations are
     // fast-forwarded, the caret hidden, and the visual.css sheet neutralizes
     // transitions so reduced-motion emulation and CI timing cannot produce
