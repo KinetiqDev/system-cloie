@@ -38,6 +38,16 @@ const summary = {
 describe("PLOImportDialog", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  async function uploadCsv(content: string, filename = "plos.csv") {
+    render(<PLOImportDialog open onOpenChange={vi.fn()} program={program} />);
+    const input = screen.getByLabelText("PLO CSV file");
+    await act(async () =>
+      fireEvent.change(input, {
+        target: { files: [new File([content], filename, { type: "text/csv" })] },
+      })
+    );
+  }
+
   it("shows the selected Program, two-column guide, and twenty-row limit", () => {
     render(<PLOImportDialog open onOpenChange={vi.fn()} program={program} />);
     expect(
@@ -61,19 +71,7 @@ describe("PLOImportDialog", () => {
         summary: { ...summary, ready: 0, created: 1 },
       },
     });
-    render(<PLOImportDialog open onOpenChange={vi.fn()} program={program} />);
-    const input = screen.getByLabelText("PLO CSV file");
-    await act(async () =>
-      fireEvent.change(input, {
-        target: {
-          files: [
-            new File(["PLO Code,Description\nPLO-20,Apply computing knowledge"], "plos.csv", {
-              type: "text/csv",
-            }),
-          ],
-        },
-      })
-    );
+    await uploadCsv("PLO Code,Description\nPLO-20,Apply computing knowledge");
     fireEvent.click(screen.getByRole("button", { name: "Check file" }));
     expect(await screen.findByRole("heading", { name: "Review PLOs" })).toBeInTheDocument();
     expect(screen.getByText(/may show incomplete CILO mappings/i)).toBeInTheDocument();
@@ -85,17 +83,47 @@ describe("PLOImportDialog", () => {
   });
 
   it("keeps parser errors beside the file step", async () => {
-    render(<PLOImportDialog open onOpenChange={vi.fn()} program={program} />);
-    const input = screen.getByLabelText("PLO CSV file");
-    await act(async () =>
-      fireEvent.change(input, {
-        target: { files: [new File(["wrong,headers\na,b"], "bad.csv", { type: "text/csv" })] },
-      })
-    );
+    await uploadCsv("wrong,headers\na,b", "bad.csv");
     fireEvent.click(screen.getByRole("button", { name: "Check file" }));
     expect(
       await screen.findByText(/Use the Program Learning Outcome import template/i)
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Review PLOs" })).not.toBeInTheDocument();
+  });
+
+  it("keeps failed rows addressable on the results step", async () => {
+    const invalidRow = {
+      ...readyRow,
+      sourceIndex: 3,
+      ploCode: "PLO-21",
+      input: { plo_code: "PLO-21", description: "Nope" },
+      status: "INVALID" as const,
+      error: "Description must be 3 to 1,000 characters.",
+    };
+    vi.mocked(previewPLOImportAction).mockResolvedValue({
+      success: true,
+      data: {
+        rows: [readyRow, invalidRow],
+        summary: { ...summary, total: 2, ready: 1, attention: 1 },
+      },
+    });
+    vi.mocked(confirmPLOImportAction).mockResolvedValue({
+      success: true,
+      data: {
+        rows: [
+          { ...readyRow, outcome: "CREATED" as const },
+          { ...invalidRow, outcome: "INVALID" as const },
+        ],
+        summary: { total: 2, ready: 0, attention: 1, existing: 0, created: 1, notCreated: 1 },
+      },
+    });
+    await uploadCsv("PLO Code,Description\nPLO-20,Apply computing knowledge\nPLO-21,Nope");
+    fireEvent.click(screen.getByRole("button", { name: "Check file" }));
+    const createButton = await screen.findByRole("button", { name: "Create 1 PLO" });
+    await waitFor(() => expect(createButton).toBeEnabled());
+    fireEvent.click(createButton);
+    expect(await screen.findByRole("button", { name: "Download rows to fix" })).toBeInTheDocument();
+    expect(screen.getByText("Description must be 3 to 1,000 characters.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Review CILO mappings" })).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { parseCsvRecords } from "@/lib/csv/parse-csv-records";
+import { parseCsvRecords, type CsvRecord } from "@/lib/csv/parse-csv-records";
 import { PLO_IMPORT_MAX_ROWS, type PLOImportSourceRow } from "../types/plo-import";
 
 export { PLO_IMPORT_MAX_ROWS } from "../types/plo-import";
@@ -37,6 +37,27 @@ function csvCell(value: string): string {
   return /[",\n\r]/u.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 
+function mappedHeaderNames(cells: string[]): ImportHeader[] | null {
+  const headers = cells.map((cell) => HEADER_ALIASES[normalizedHeader(cell)]);
+  const uniqueHeaders = new Set(headers);
+  const valid =
+    headers.every((headerName) => headerName !== undefined) &&
+    uniqueHeaders.size === headers.length &&
+    headers.includes("plo_code") &&
+    headers.includes("description") &&
+    (headers.length === 2 || (headers.length === 3 && headers.includes("error")));
+  return valid ? headers : null;
+}
+
+function toImportRow(record: CsvRecord, headers: ImportHeader[]): PLOImportSourceRow {
+  const inputValues = Object.fromEntries(
+    headers.flatMap((headerName, index) =>
+      headerName === "error" ? [] : [[headerName, record.cells[index] ?? ""]]
+    )
+  ) as PLOImportSourceRow["input"];
+  return { sourceIndex: record.sourceIndex, input: inputValues };
+}
+
 export function parsePLOImportCsv(input: string | Uint8Array): PLOImportParseResult {
   const empty = typeof input === "string" ? input.length === 0 : input.byteLength === 0;
   if (empty) {
@@ -53,18 +74,8 @@ export function parsePLOImportCsv(input: string | Uint8Array): PLOImportParseRes
     };
   }
   const [header, ...records] = parsed.records;
-  if (!header || (header.cells.length !== 2 && header.cells.length !== 3)) {
-    return { success: false, error: EXPECTED_COLUMNS };
-  }
-  const mappedHeaders = header.cells.map((cell) => HEADER_ALIASES[normalizedHeader(cell)]);
-  const uniqueHeaders = new Set(mappedHeaders);
-  if (
-    mappedHeaders.some((headerName) => !headerName) ||
-    uniqueHeaders.size !== mappedHeaders.length ||
-    !mappedHeaders.includes("plo_code") ||
-    !mappedHeaders.includes("description") ||
-    (mappedHeaders.length === 3 && !mappedHeaders.includes("error"))
-  ) {
+  const headers = header && mappedHeaderNames(header.cells);
+  if (!headers) {
     return { success: false, error: EXPECTED_COLUMNS };
   }
 
@@ -79,21 +90,11 @@ export function parsePLOImportCsv(input: string | Uint8Array): PLOImportParseRes
       error: `This file contains ${dataRecords.length} PLO rows. Each import can contain up to ${PLO_IMPORT_MAX_ROWS}. Remove ${excess} row${excess === 1 ? "" : "s"} or split the file into smaller files, then try again.`,
     };
   }
-  if (dataRecords.some((record) => record.cells.length !== mappedHeaders.length)) {
+  if (dataRecords.some((record) => record.cells.length !== headers.length)) {
     return { success: false, error: EXPECTED_COLUMNS };
   }
 
-  return {
-    success: true,
-    rows: dataRecords.map((record) => {
-      const inputValues = Object.fromEntries(
-        mappedHeaders.flatMap((headerName, index) =>
-          headerName === "error" ? [] : [[headerName, record.cells[index] ?? ""]]
-        )
-      ) as PLOImportSourceRow["input"];
-      return { sourceIndex: record.sourceIndex, input: inputValues };
-    }),
-  };
+  return { success: true, rows: dataRecords.map((record) => toImportRow(record, headers)) };
 }
 
 export function exportFailedPLOImportRows(

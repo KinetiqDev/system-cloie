@@ -1,4 +1,3 @@
-// fallow-ignore-next-line unused-type
 export type CsvRecord = { cells: string[]; sourceIndex: number };
 
 // fallow-ignore-next-line unused-type
@@ -45,6 +44,25 @@ function parseQuotedCell(input: string, startIndex: number): CsvCell | null {
   return null;
 }
 
+type CsvRow = { cells: string[]; nextIndex: number; line: number };
+
+function parseRecordCells(input: string, startIndex: number, startLine: number): CsvRow | null {
+  const cells: string[] = [];
+  let index = startIndex;
+  let line = startLine;
+  while (true) {
+    const cell =
+      input[index] === '"' ? parseQuotedCell(input, index) : parsePlainCell(input, index);
+    if (!cell) return null;
+    cells.push(cell.value);
+    index = cell.nextIndex;
+    line += cell.lineBreaks;
+    if (input[index] !== ",") break;
+    index += 1;
+  }
+  return { cells, nextIndex: index, line };
+}
+
 function parseRecords(input: string): CsvRecord[] | null {
   const records: CsvRecord[] = [];
   let index = 0;
@@ -52,18 +70,11 @@ function parseRecords(input: string): CsvRecord[] | null {
 
   while (index < input.length) {
     const sourceIndex = line;
-    const cells: string[] = [];
-    while (true) {
-      const cell =
-        input[index] === '"' ? parseQuotedCell(input, index) : parsePlainCell(input, index);
-      if (!cell) return null;
-      cells.push(cell.value);
-      index = cell.nextIndex;
-      line += cell.lineBreaks;
-      if (input[index] !== ",") break;
-      index += 1;
-    }
-    records.push({ cells, sourceIndex });
+    const row = parseRecordCells(input, index, line);
+    if (!row) return null;
+    records.push({ cells: row.cells, sourceIndex });
+    index = row.nextIndex;
+    line = row.line;
     if (index === input.length) break;
     if (input[index] !== "\n") return null;
     index += 1;
