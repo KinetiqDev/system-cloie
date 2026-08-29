@@ -42,6 +42,8 @@ const BROWSER_PREFIXES = ["src/", "e2e/", "playwright.config.ts"];
 const BUILD_PREFIXES = [
   "src/",
   "prisma/",
+  "instrumentation.ts",
+  "instrumentation-client.ts",
   "next.config.",
   "tsconfig.json",
   "package.json",

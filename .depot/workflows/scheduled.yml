@@ -77,8 +77,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
       - name: Verify disposable database target
         run: pnpm verify:database-target
+      - name: Verify database suite completeness
+        run: pnpm verify:database-suites
       - name: Apply migrations
-        run: bash scripts/ci/apply-migrations.sh
       - name: Seed fixture
         run: pnpm db:seed
       - name: Run DB integration tests

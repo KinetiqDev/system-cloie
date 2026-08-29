@@ -97,6 +97,8 @@ describe("risk-domain check selection (551)", () => {
   it("selects build for production configuration and dependency changes", () => {
     for (const file of [
       "next.config.ts",
+      "instrumentation.ts",
+      "instrumentation-client.ts",
       "package.json",
       "pnpm-lock.yaml",
       "tsconfig.json",
