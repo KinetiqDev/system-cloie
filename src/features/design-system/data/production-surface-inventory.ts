@@ -2888,6 +2888,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/outcomes/components/plo-import-dialog.tsx",
+    disposition: "task",
+    taskId: 17,
+    category: "feature_component",
+  },
+  {
     path: "src/features/portals/components/hero-card.tsx",
     disposition: "task",
     taskId: 23,

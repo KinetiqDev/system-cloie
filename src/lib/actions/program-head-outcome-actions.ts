@@ -12,6 +12,7 @@ import {
   reorderPLOsSchema,
   updatePLOSchema,
 } from "@/features/outcomes/schemas/plo";
+import { ploImportRequestSchema } from "@/features/outcomes/schemas/plo-import";
 import {
   createPLO,
   deletePLO,
@@ -19,6 +20,10 @@ import {
   restorePLO,
   updatePLO,
 } from "@/features/outcomes/services/manage-program-head-outcomes";
+import { previewPLOImport } from "@/features/outcomes/services/preview-plo-import";
+import { confirmPLOImport } from "@/features/outcomes/services/confirm-plo-import";
+import type { PLOImportPreview, PLOImportResult } from "@/features/outcomes/types/plo-import";
+import type { ServiceResult } from "@/lib/utils/service-result";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -41,6 +46,27 @@ function parseWithSchema<T>(
 function revalidateOutcomes(programId: string) {
   revalidatePath(buildProgramHeadOutcomesPath(programId));
   revalidatePath(buildProgramHeadOutcomeMappingPath(programId));
+}
+function firstImportIssue(error: { issues: Array<{ message?: string }> }): string {
+  return error.issues[0]?.message ?? "Enter a valid PLO import.";
+}
+
+export async function previewPLOImportAction(
+  input: unknown
+): Promise<ServiceResult<PLOImportPreview>> {
+  const parsed = ploImportRequestSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: firstImportIssue(parsed.error) };
+  return previewPLOImport(parsed.data);
+}
+
+export async function confirmPLOImportAction(
+  input: unknown
+): Promise<ServiceResult<PLOImportResult>> {
+  const parsed = ploImportRequestSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: firstImportIssue(parsed.error) };
+  const result = await confirmPLOImport(parsed.data);
+  if (result.success && result.data.summary.created > 0) revalidateOutcomes(parsed.data.programId);
+  return result;
 }
 
 export async function createPLOAction(formData: FormData): Promise<ActionResult> {

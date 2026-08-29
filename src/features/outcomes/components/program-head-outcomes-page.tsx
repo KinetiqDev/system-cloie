@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Edit, GripVertical, ListChecks, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Edit, FileUp, GripVertical, ListChecks, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -33,11 +33,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { deletePLOAction, reorderPLOsAction, restorePLOAction } from "@/lib/actions/program-head-outcome-actions";
+import {
+  deletePLOAction,
+  reorderPLOsAction,
+  restorePLOAction,
+} from "@/lib/actions/program-head-outcome-actions";
 import { showToast } from "@/components/ui/toast";
 import { PLOFormDialog } from "./plo-form-dialog";
+import { PLOImportDialog } from "./plo-import-dialog";
 import type { ProgramPLOItem } from "../services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
 import { cn } from "@/lib/utils";
@@ -79,7 +90,7 @@ function SortablePLORow({
     >
       <button
         type="button"
-        className="text-muted-foreground hover:text-foreground inline-flex size-8 shrink-0 cursor-grab touch-manipulation touch-none items-center justify-center pointer-coarse:size-11 active:cursor-grabbing"
+        className="text-muted-foreground hover:text-foreground inline-flex size-8 shrink-0 cursor-grab touch-manipulation touch-none items-center justify-center active:cursor-grabbing pointer-coarse:size-11"
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
@@ -100,7 +111,8 @@ function SortablePLORow({
             )}
             {plo._count.cilo_mappings > 0 ? (
               <Badge variant="success" className="shrink-0">
-                {plo._count.cilo_mappings} {plo._count.cilo_mappings === 1 ? "CILO" : "CILOs"} mapped
+                {plo._count.cilo_mappings} {plo._count.cilo_mappings === 1 ? "CILO" : "CILOs"}{" "}
+                mapped
               </Badge>
             ) : (
               <Badge variant="outline" className="text-muted-foreground shrink-0">
@@ -142,7 +154,7 @@ function SortablePLORow({
             )}
           </div>
         </div>
-        <p className="text-body-md text-muted-foreground mt-2 text-pretty break-words leading-relaxed">
+        <p className="text-body-md text-muted-foreground mt-2 leading-relaxed text-pretty break-words">
           {plo.description}
         </p>
       </div>
@@ -158,6 +170,7 @@ export function ProgramHeadOutcomesPage({
   const [isPending, startTransition] = useTransition();
   const [orderedPLOs, setOrderedPLOs] = useState<ProgramPLOItem[]>(initialPLOs);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingPLO, setEditingPLO] = useState<ProgramPLOItem | null>(null);
   const [deletingPLO, setDeletingPLO] = useState<ProgramPLOItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -281,7 +294,19 @@ export function ProgramHeadOutcomesPage({
             <ListChecks className="size-4" aria-hidden="true" />
             CILO Mappings
           </Button>
-          <Button onClick={() => setCreateDialogOpen(true)} className="w-full justify-center sm:w-auto">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-center sm:w-auto"
+            onClick={() => setImportDialogOpen(true)}
+          >
+            <FileUp className="size-4" aria-hidden="true" />
+            Import CSV
+          </Button>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="w-full justify-center sm:w-auto"
+          >
             <Plus className="size-4" aria-hidden="true" />
             Add PLO
           </Button>
@@ -302,7 +327,9 @@ export function ProgramHeadOutcomesPage({
                   <CardTitle className="text-title-sm">{stat.label}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className={cn("font-heading text-heading-xl tabular-nums", stat.valueClassName)}>
+                  <p
+                    className={cn("font-heading text-heading-xl tabular-nums", stat.valueClassName)}
+                  >
                     {stat.value}
                   </p>
                 </CardContent>
@@ -332,6 +359,10 @@ export function ProgramHeadOutcomesPage({
           <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
             <Plus className="size-4" aria-hidden="true" />
             Add PLO
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => setImportDialogOpen(true)}>
+            <FileUp className="size-4" aria-hidden="true" />
+            Import CSV
           </Button>
         </Empty>
       ) : (
@@ -366,6 +397,11 @@ export function ProgramHeadOutcomesPage({
         programId={program.id}
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+      />
+      <PLOImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        program={program}
       />
 
       {editingPLO && (

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const ploFields = {
+export const ploDetailsSchema = z.object({
   code: z
     .string()
     .trim()
@@ -12,7 +12,9 @@ const ploFields = {
     .trim()
     .min(3, "Description must be at least 3 characters.")
     .max(1000, "Description must be 1000 characters or fewer."),
-};
+});
+
+const ploFields = ploDetailsSchema.shape;
 
 export const createPLOSchema = z.object({
   programId: z.string().uuid("Invalid Program ID."),
