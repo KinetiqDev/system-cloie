@@ -156,7 +156,7 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
   it("groups direct PLO results by plo_id ?? plo_code_snapshot", async () => {
     centralDeploymentFindFirstMock.mockResolvedValue(MOCK_DEPLOYMENT);
     evaluationAssignmentFindManyMock.mockResolvedValue([
-      { respondent_id: "user-s1", response: { status: "SUBMITTED" } },
+      { id: "assignment-1", assigned_at: new Date("2026-01-02T08:00:00.000Z"), respondent_id: "user-s1", respondent: { name: "Juan dela Cruz" }, response: { id: "response-1", status: "SUBMITTED", submitted_at: new Date("2026-01-05T08:00:00.000Z") } },
     ]);
     responseFindManyMock.mockResolvedValue([
       {
@@ -205,6 +205,71 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     expect(result!.respondents[0].name).toBe("Juan dela Cruz");
   });
 
+  it("returns every assigned respondent while linking only submitted responses", async () => {
+    centralDeploymentFindFirstMock.mockResolvedValue(MOCK_DEPLOYMENT);
+    evaluationAssignmentFindManyMock.mockResolvedValue([
+      {
+        id: "assignment-submitted",
+        assigned_at: new Date("2026-01-02T08:00:00.000Z"),
+        respondent_id: "user-s1",
+        respondent: { name: "Juan dela Cruz" },
+        response: {
+          id: "response-1",
+          status: "SUBMITTED",
+          submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+        },
+      },
+      {
+        id: "assignment-progress",
+        assigned_at: new Date("2026-01-02T08:00:00.000Z"),
+        respondent_id: "user-s2",
+        respondent: { name: "Ana Reyes" },
+        response: { id: "response-2", status: "IN_PROGRESS", submitted_at: null },
+      },
+      {
+        id: "assignment-new",
+        assigned_at: new Date("2026-01-02T08:00:00.000Z"),
+        respondent_id: "user-s3",
+        respondent: { name: "Leo Santos" },
+        response: null,
+      },
+    ]);
+    responseFindManyMock.mockResolvedValue([
+      {
+        id: "response-1",
+        submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+        respondent_id: "user-s1",
+        respondent: { name: "Juan dela Cruz" },
+        quant_items: [],
+        qual_items: [],
+      },
+    ]);
+    studentEnrollmentFindManyMock.mockResolvedValue([]);
+
+    const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
+
+    expect(result?.respondents).toEqual([
+      expect.objectContaining({
+        assignmentId: "assignment-progress",
+        name: "Ana Reyes",
+        status: "IN_PROGRESS",
+        responseId: null,
+      }),
+      expect.objectContaining({
+        assignmentId: "assignment-submitted",
+        name: "Juan dela Cruz",
+        status: "SUBMITTED",
+        responseId: "response-1",
+      }),
+      expect.objectContaining({
+        assignmentId: "assignment-new",
+        name: "Leo Santos",
+        status: "NOT_STARTED",
+        responseId: null,
+      }),
+    ]);
+  });
+
   it("labels unbound central questions as General evaluation items", async () => {
     const deploymentWithoutBindings = {
       ...MOCK_DEPLOYMENT,
@@ -212,7 +277,7 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     };
     centralDeploymentFindFirstMock.mockResolvedValue(deploymentWithoutBindings);
     evaluationAssignmentFindManyMock.mockResolvedValue([
-      { respondent_id: "user-s1", response: { status: "SUBMITTED" } },
+      { id: "assignment-1", assigned_at: new Date("2026-01-02T08:00:00.000Z"), respondent_id: "user-s1", respondent: { name: "Juan dela Cruz" }, response: { id: "response-1", status: "SUBMITTED", submitted_at: new Date("2026-01-05T08:00:00.000Z") } },
     ]);
     responseFindManyMock.mockResolvedValue([
       {
@@ -244,7 +309,7 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
       plo_snapshots: [],
     });
     evaluationAssignmentFindManyMock.mockResolvedValue([
-      { respondent_id: "user-alum1", response: { status: "SUBMITTED" } },
+      { id: "assignment-alum", assigned_at: new Date("2026-01-02T08:00:00.000Z"), respondent_id: "user-alum1", respondent: { name: "Maria Gomez" }, response: { id: "response-alum", status: "SUBMITTED", submitted_at: new Date("2026-01-05T08:00:00.000Z") } },
     ]);
     responseFindManyMock.mockResolvedValue([
       {

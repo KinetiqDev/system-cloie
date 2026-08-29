@@ -10,6 +10,7 @@ import {
 import {
   buildProgramHeadAnalyticsPath,
   buildProgramHeadResponsesProgramWideResponsePath,
+  buildProgramHeadToolsPath,
 } from "@/lib/constants/program-head-routes";
 
 export default async function CentralEvaluationDetailPage({
@@ -24,6 +25,8 @@ export default async function CentralEvaluationDetailPage({
     searchParams ?? Promise.resolve({}),
   ]);
   const state = parseProgramHeadResponsesSearchParams(rawSearchParams);
+  const openedFromTools = "from" in rawSearchParams && rawSearchParams.from === "tools";
+  const toolsHref = `${buildProgramHeadToolsPath(programId)}?tab=published`;
   const detail = await getProgramHeadCentralEvaluationDetail(programId, deploymentId);
 
   if (!detail) {
@@ -46,11 +49,19 @@ export default async function CentralEvaluationDetailPage({
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs
-        items={[
-          { label: "Responses", href: responsesHref },
-          { label: "Program-wide evaluations", href: responsesHref },
-          { label: detail.evaluation.title },
-        ]}
+        items={
+          openedFromTools
+            ? [
+                { label: "Evaluation Tools", href: toolsHref },
+                { label: "Published", href: toolsHref },
+                { label: detail.evaluation.title },
+              ]
+            : [
+                { label: "Responses", href: responsesHref },
+                { label: "Program-wide evaluations", href: responsesHref },
+                { label: detail.evaluation.title },
+              ]
+        }
       />
       <CentralEvaluationDetail
         detail={detail}
@@ -61,6 +72,7 @@ export default async function CentralEvaluationDetailPage({
             deploymentId,
             responseId
           );
+          if (openedFromTools) return `${path}?from=tools`;
           return upwardQuery ? `${path}?${upwardQuery}` : path;
         }}
       />

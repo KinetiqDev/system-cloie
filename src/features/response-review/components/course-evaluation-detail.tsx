@@ -302,7 +302,12 @@ export function CourseEvaluationDetail({
       </Card>
 
       {/* Submitted respondents (§25.5) */}
-      <IdentifiedRespondentsTable respondents={respondents} responseHref={responseHref} />
+      <IdentifiedRespondentsTable
+        respondents={respondents}
+        responseHrefs={Object.fromEntries(
+          respondents.map((respondent) => [respondent.responseId, responseHref(respondent.responseId)])
+        )}
+      />
     </div>
   );
 }

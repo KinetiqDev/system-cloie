@@ -12,7 +12,7 @@ import { getSnapshotSectionItems, isSnapshotSection } from "@/features/analytics
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildQualitativeSummary } from "./qualitative-summary";
 import { buildPeriodLabel } from "./period-label";
-import type { ProgramHeadCentralEvaluationDetail, ProgramHeadCentralQuestionResult, ProgramHeadRespondentRow, ProgramWidePloBinding } from "../types";
+import type { ProgramHeadAssignmentRespondentRow, ProgramHeadCentralEvaluationDetail, ProgramHeadCentralQuestionResult, ProgramWidePloBinding } from "../types";
 
 // ---------------------------------------------------------------------------
 // Program Head program-wide evaluation detail (spec §26)
@@ -58,8 +58,11 @@ export async function getProgramHeadCentralEvaluationDetail(
     prisma.evaluationAssignment.findMany({
       where: { central_deployment_id: deploymentId },
       select: {
+        id: true,
+        assigned_at: true,
         respondent_id: true,
-        response: { select: { status: true } },
+        respondent: { select: { name: true } },
+        response: { select: { id: true, status: true, submitted_at: true } },
       },
     }),
     prisma.response.findMany({
@@ -81,7 +84,7 @@ export async function getProgramHeadCentralEvaluationDetail(
     deployment.plo_snapshots
   );
 
-  const { ratingRows, centralPloRows, meanByResponse, submittedRespondentIds } = buildCentralRatingRows(
+  const { ratingRows, centralPloRows, meanByResponse } = buildCentralRatingRows(
     submittedResponses,
     snapshot,
     snapshotItems,
@@ -108,26 +111,37 @@ export async function getProgramHeadCentralEvaluationDetail(
   const qualitative = buildQualitativeSummary(submittedResponses, snapshotItems);
 
   const identityContexts = await loadRespondentIdentityContexts(
-    submittedRespondentIds,
+    assignmentRows.map((row) => row.respondent_id),
     deployment.target_stakeholder,
     deployment.term_instance.id
   );
 
-  const respondents: ProgramHeadRespondentRow[] = submittedResponses
-    .map((response) => {
-      const identity = identityContexts.get(response.respondent_id);
+  const respondents: ProgramHeadAssignmentRespondentRow[] = assignmentRows
+    .map((assignment) => {
+      const identity = identityContexts.get(assignment.respondent_id);
+      const response = assignment.response;
+      const status: ProgramHeadAssignmentRespondentRow["status"] =
+        response?.status === ResponseStatus.SUBMITTED
+          ? "SUBMITTED"
+          : response?.status === ResponseStatus.IN_PROGRESS
+            ? "IN_PROGRESS"
+            : "NOT_STARTED";
       return {
-        responseId: response.id,
-        name: response.respondent.name,
+        assignmentId: assignment.id,
+        responseId: status === "SUBMITTED" ? response?.id ?? null : null,
+        name: assignment.respondent.name,
         stakeholder: deployment.target_stakeholder,
+        status,
         majorLabel: identity?.kind === "STUDENT" ? identity.majorLabel : null,
         yearLevel: identity?.kind === "STUDENT" ? identity.yearLevel : null,
         section: identity?.kind === "STUDENT" ? identity.section : null,
-        submittedAt: response.submitted_at ?? new Date(0),
-        quantitativeMean: meanByResponse.get(response.id) ?? null,
+        assignedAt: assignment.assigned_at,
+        submittedAt: status === "SUBMITTED" ? response?.submitted_at ?? null : null,
+        quantitativeMean:
+          status === "SUBMITTED" && response ? meanByResponse.get(response.id) ?? null : null,
       };
     })
-    .sort((left, right) => left.submittedAt.getTime() - right.submittedAt.getTime());
+    .sort((left, right) => left.name.localeCompare(right.name));
 
   const participation = buildParticipationSummary(
     assignmentRows.map((row) => ({
@@ -176,14 +190,16 @@ function buildCentralRatingRows(
   snapshot: unknown,
   snapshotItems: Map<string, { prompt: string }>,
   ploByQuestionKey: Map<string, CentralPloRatingRow["ploBindings"]>
-): { ratingRows: OutcomeItemRatingRow[]; centralPloRows: CentralPloRatingRow[]; meanByResponse: Map<string, number | null>; submittedRespondentIds: string[] } {
+): {
+  ratingRows: OutcomeItemRatingRow[];
+  centralPloRows: CentralPloRatingRow[];
+  meanByResponse: Map<string, number | null>;
+} {
   const ratingRows: OutcomeItemRatingRow[] = [];
   const centralPloRows: CentralPloRatingRow[] = [];
-  const submittedRespondentIds: string[] = [];
   const meanByResponse = new Map<string, number | null>();
 
   for (const response of submittedResponses) {
-    submittedRespondentIds.push(response.respondent_id);
     const scaleKeys = new Set<string>();
     const validRatings = response.quant_items.flatMap((item) => {
       const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
@@ -220,7 +236,7 @@ function buildCentralRatingRows(
     );
   }
 
-  return { ratingRows, centralPloRows, meanByResponse, submittedRespondentIds };
+  return { ratingRows, centralPloRows, meanByResponse };
 }
 
 function buildCentralIndexes(
