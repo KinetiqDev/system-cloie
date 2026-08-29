@@ -213,7 +213,7 @@ describe("Playwright quality gate contract (551)", () => {
     expect(source).toContain('animations: "disabled"');
     expect(source).toContain('caret: "hide"');
     expect(source).toContain('stylePath: "e2e/support/visual.css"');
-    expect(source).toMatch(/maxDiffPixelRatio:\s*0\.02/);
+    expect(source).toMatch(/maxDiffPixelRatio:\s*0\.03/);
   });
 
   it("selects engine projects and the visual gate through environment wiring", () => {

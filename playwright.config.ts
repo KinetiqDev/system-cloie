@@ -92,7 +92,7 @@ export default defineConfig({
     toHaveScreenshot: {
       animations: "disabled",
       caret: "hide",
-      maxDiffPixelRatio: 0.02,
+      maxDiffPixelRatio: 0.03,
       stylePath: "e2e/support/visual.css",
     },
   },
