@@ -1,3 +1,4 @@
+import { parseCsvRecords } from "@/lib/csv/parse-csv-records";
 import type {
   CourseImportMode,
   CourseImportParseResult,
@@ -77,94 +78,6 @@ const INVALID_STRUCTURE =
   "The CSV must use the downloaded template and contain 1 to 100 Course rows.";
 const INVALID_ENCODING = "The CSV could not be read. Save it as a UTF-8 CSV file and try again.";
 
-type CsvCell = { value: string; nextIndex: number; lineBreaks: number };
-type CsvRecord = { cells: string[]; sourceIndex: number };
-
-function decodeCsv(input: string | Uint8Array): string | null {
-  if (typeof input === "string") return input;
-
-  try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(input);
-  } catch {
-    return null;
-  }
-}
-
-function parsePlainCsvCell(input: string, startIndex: number): CsvCell | null {
-  const endIndex = input.slice(startIndex).search(/[\n,]/u);
-  const nextIndex = endIndex === -1 ? input.length : startIndex + endIndex;
-  const value = input.slice(startIndex, nextIndex);
-
-  return value.includes('"') ? null : { value, nextIndex, lineBreaks: 0 };
-}
-
-function parseQuotedCsvCell(input: string, startIndex: number): CsvCell | null {
-  let value = "";
-  let lineBreaks = 0;
-
-  for (let index = startIndex + 1; index < input.length; index += 1) {
-    if (input[index] !== '"') {
-      if (input[index] === "\n") lineBreaks += 1;
-      value += input[index];
-      continue;
-    }
-
-    if (input[index + 1] === '"') {
-      value += '"';
-      index += 1;
-      continue;
-    }
-
-    const nextIndex = index + 1;
-    if (nextIndex < input.length && ![",", "\n"].includes(input[nextIndex] ?? "")) {
-      return null;
-    }
-
-    return { value, nextIndex, lineBreaks };
-  }
-
-  return null;
-}
-
-function parseCsvCell(input: string, startIndex: number): CsvCell | null {
-  return input[startIndex] === '"'
-    ? parseQuotedCsvCell(input, startIndex)
-    : parsePlainCsvCell(input, startIndex);
-}
-
-function parseRecords(input: string): CsvRecord[] | null {
-  const records: CsvRecord[] = [];
-  let index = 0;
-  let line = 1;
-
-  while (index < input.length) {
-    const sourceIndex = line;
-    const cells: string[] = [];
-
-    while (true) {
-      const cell = parseCsvCell(input, index);
-      if (!cell) return null;
-
-      cells.push(cell.value);
-      index = cell.nextIndex;
-      line += cell.lineBreaks;
-
-      if (input[index] !== ",") break;
-      index += 1;
-    }
-
-    records.push({ cells, sourceIndex });
-
-    if (index === input.length) break;
-    if (input[index] !== "\n") return null;
-
-    index += 1;
-    line += 1;
-  }
-
-  return records;
-}
-
 function normalize(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/gu, " ");
 }
@@ -192,16 +105,12 @@ export function parseCourseImportCsv(
   input: string | Uint8Array,
   mode: CourseImportMode
 ): CourseImportParseResult {
-  const decoded = decodeCsv(input);
-  if (decoded === null) return invalidStructure(INVALID_ENCODING);
-
-  const withoutBom = decoded.startsWith("\uFEFF") ? decoded.slice(1) : decoded;
-  if (withoutBom.includes("\r") && !withoutBom.includes("\r\n")) {
-    return invalidStructure();
+  const parsed = parseCsvRecords(input);
+  if (!parsed.success) {
+    return invalidStructure(parsed.reason === "encoding" ? INVALID_ENCODING : INVALID_STRUCTURE);
   }
-
-  const records = parseRecords(withoutBom.replaceAll("\r\n", "\n"));
-  if (!records || records.length === 0) return invalidStructure();
+  const records = parsed.records;
+  if (records.length === 0) return invalidStructure();
 
   const expectedHeaders = headersForMode(mode);
   const [header, ...sourceRecords] = records;

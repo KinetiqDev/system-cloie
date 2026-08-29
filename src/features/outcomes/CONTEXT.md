@@ -100,6 +100,10 @@ _Avoid_: Program-wide faculty mapping, role-only mapping access
 The General Education Coordinator college-wide owns the Institutional Learning Outcome catalog (college-wide `code @unique`, `order`, `is_active`) and holds correction authority for institutional outcomes (create, edit, reorder, archive, restore) via exact before/after review, explicit confirmation, freshness recheck, and atomic save. The Secretary has no ILO access; `/secretary/learning-outcomes/**` redirects to `/secretary/dashboard`. `GEN_ED_COORDINATOR college-wide owns ILO`.
 _Avoid_: Secretary as ILO owner, unconfirmed administrative write, Secretary ILO write
 
+**Program Learning Outcome CSV import**:
+Program Heads may create up to 20 active PLOs at once for the deliberately Selected Program from a two-column CSV (`PLO Code`, `Description`). Import is create-only: matching active or archived codes are reported and never updated, restored, archived, or reordered. The server revalidates Program authority and current catalog state before an atomic append in file order. Every imported active PLO immediately enters the exhaustive Program-specific readiness rule, so Faculty may need to classify new CILO-to-PLO mappings before publication.
+_Avoid_: Spreadsheet overwrite, archived-PLO restoration, cross-Program import, partial unexpected batch
+
 **Program Head read-only mapping review**:
 Program Heads retain PLO ownership but may only inspect valid typed mappings and readiness gaps for their assigned Program; they cannot create or remove mapping rows through the UI or crafted server requests.
 _Avoid_: Program Head mapping mutation, mapping bookmarks with edit controls
