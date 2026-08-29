@@ -44,9 +44,18 @@ const evaluation = {
     program: { id: "program-1", code: "BSIT", name: "BS Information Technology" },
   },
   targets: [],
+  instrument: {
+    structure_snapshot: [],
+    version_number: 1,
+    template: { name: "Course-Bound CILO Evaluation" },
+  },
   cilo_question_bindings: [],
   _count: { assignments: 5 },
-  term_instance: { semester: "FIRST", term: null, school_year: { code: "2025-2026" } },
+  term_instance: {
+    semester: "SECOND",
+    term: "SECOND_TERM",
+    school_year: { code: "2025-2026" },
+  },
   assignments: [],
   exclusions: [],
 };
@@ -75,6 +84,9 @@ describe("getFacultyEvaluationDetail – historical visibility", () => {
         totalAssignments: 5,
       },
     });
+    expect(result.success && result.data.termInstanceLabel).toBe(
+      "2025-2026 — 2nd Semester — 2nd Term"
+    );
   });
 
   it("returns an indistinguishable not-found response for a non-owning faculty member", async () => {
@@ -139,6 +151,105 @@ describe("getFacultyEvaluationDetail – historical visibility", () => {
       ]);
       expect(result.data.exclusions[0]).not.toHaveProperty("firstName");
       expect(result.data.exclusions[0]).not.toHaveProperty("lastName");
+    }
+  });
+
+  it("projects assignment status and frozen questions without response answers", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    prismaMocks.courseBoundEvaluationFindFirst.mockResolvedValue({
+      ...evaluation,
+      instrument: {
+        version_number: 3,
+        template: { name: "Course Outcomes Evaluation" },
+        structure_snapshot: [
+          {
+            key: "section-1",
+            title: "Course Outcomes",
+            order: 0,
+            questions: [
+              {
+                key: "q1",
+                prompt: "I achieved the intended outcome.",
+                type: "likert",
+                order: 0,
+                required: true,
+                likertDescriptors: [{ value: 1, label: "Strongly Disagree" }],
+              },
+              {
+                key: "q2",
+                prompt: "Which activity helped most?",
+                type: "guided_open_ended",
+                order: 1,
+                required: false,
+                suggestedResponses: ["Laboratory exercise"],
+              },
+            ],
+          },
+        ],
+      },
+      _count: { assignments: 3 },
+      assignments: [
+        {
+          id: "assignment-1",
+          respondent_id: "student-1",
+          assigned_at: new Date("2026-07-01T00:00:00.000Z"),
+          respondent: { name: "Student One", email: "one@acd.edu.ph" },
+          response: { status: "SUBMITTED", submitted_at: new Date("2026-07-02T00:00:00.000Z") },
+        },
+        {
+          id: "assignment-2",
+          respondent_id: "student-2",
+          assigned_at: new Date("2026-07-01T00:00:00.000Z"),
+          respondent: { name: "Student Two", email: "two@acd.edu.ph" },
+          response: { status: "IN_PROGRESS", submitted_at: null },
+        },
+        {
+          id: "assignment-3",
+          respondent_id: "student-3",
+          assigned_at: new Date("2026-07-01T00:00:00.000Z"),
+          respondent: { name: "Student Three", email: "three@acd.edu.ph" },
+          response: null,
+        },
+      ],
+    });
+
+    const result = await getFacultyEvaluationDetail("evaluation-1");
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toMatchObject({
+        responseCount: 1,
+        inProgressCount: 1,
+        notStartedCount: 1,
+        instrument: {
+          name: "Course Outcomes Evaluation",
+          versionNumber: 3,
+          sections: [
+            {
+              title: "Course Outcomes",
+              questions: [
+                { itemKey: "q1", type: "likert" },
+                {
+                  itemKey: "q2",
+                  type: "guided_open_ended",
+                  suggestedResponses: ["Laboratory exercise"],
+                },
+              ],
+            },
+          ],
+        },
+      });
+      expect(result.data.respondents.map((respondent) => respondent.status)).toEqual([
+        "SUBMITTED",
+        "IN_PROGRESS",
+        "NOT_STARTED",
+      ]);
+      expect(result.data.respondents[0]).not.toHaveProperty("responseItems");
     }
   });
 });

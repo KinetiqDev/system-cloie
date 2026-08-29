@@ -5,20 +5,12 @@ import type { FacultyPublishedEvaluationItem } from "@/features/evaluations/type
 
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
 
-const { getFacultyEvaluationDetailActionMock, closeFacultyEvaluationActionMock } = vi.hoisted(
-  () => ({
-    getFacultyEvaluationDetailActionMock: vi.fn(),
-    closeFacultyEvaluationActionMock: vi.fn(),
-  })
-);
-
-vi.mock("@/lib/actions/faculty-evaluation-actions", () => ({
-  getFacultyEvaluationDetailAction: getFacultyEvaluationDetailActionMock,
-  closeFacultyEvaluationAction: closeFacultyEvaluationActionMock,
+const { closeFacultyEvaluationActionMock } = vi.hoisted(() => ({
+  closeFacultyEvaluationActionMock: vi.fn(),
 }));
 
-vi.mock("@/lib/actions/course-bound-evaluation-actions", () => ({
-  lateIncludeCourseBoundEvaluationAction: vi.fn(),
+vi.mock("@/lib/actions/faculty-evaluation-actions", () => ({
+  closeFacultyEvaluationAction: closeFacultyEvaluationActionMock,
 }));
 
 function makeItem(
@@ -67,6 +59,18 @@ describe("FacultyPublishedEvaluations", () => {
     expect(table.getByText("Closed")).toHaveClass("bg-secondary");
   });
 
+  it.each(["card", "list"] as const)("shows a readable academic period in %s view", (view) => {
+    render(
+      <FacultyPublishedEvaluations
+        view={view}
+        evaluations={[makeItem({ termInstanceLabel: "2026-2027 — 2nd Semester — 2nd Term" })]}
+      />
+    );
+
+    expect(screen.getByText("2026-2027 — 2nd Semester — 2nd Term")).toBeVisible();
+    expect(screen.queryByText(/SECOND/)).not.toBeInTheDocument();
+  });
+
   it("renders an empty state when nothing is published", () => {
     render(<FacultyPublishedEvaluations view="list" evaluations={[]} />);
     expect(screen.getByText(/no published evaluations yet/i)).toBeInTheDocument();
@@ -86,6 +90,41 @@ describe("FacultyPublishedEvaluations", () => {
     fireEvent.click(screen.getByRole("button", { name: /closed/i }));
     expect(screen.getByText("Closed Eval")).toBeInTheDocument();
     expect(screen.queryByText("Active Eval")).not.toBeInTheDocument();
+  });
+
+  it("renders View Details as semantic links to the detail route", async () => {
+    render(
+      <FacultyPublishedEvaluations
+        view="list"
+        evaluations={[makeItem({ evaluationId: "eval-123", deploymentName: "Detail Link Eval" })]}
+      />
+    );
+
+    // Card actions (when in card view) and menu items both expose links; list view menu is accessible via actions button.
+    const row = screen.getByText("Detail Link Eval").closest("tr");
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row as HTMLTableRowElement).getByRole("button", { name: /actions/i }));
+    const menuItem = await screen.findByRole("menuitem", { name: /view details/i });
+    expect(menuItem.closest("a")).toHaveAttribute("href", "/faculty/tools/published/eval-123");
+  });
+
+  it("renders View Details link in card view with href supporting new tabs", () => {
+    render(
+      <FacultyPublishedEvaluations
+        view="card"
+        evaluations={[makeItem({ evaluationId: "eval-card-1", deploymentName: "Card Link Eval" })]}
+      />
+    );
+
+    const link = screen.getByRole("link", { name: /view details/i });
+    expect(link).toHaveAttribute("href", "/faculty/tools/published/eval-card-1");
+    expect(link.tagName.toLowerCase()).toBe("a");
+  });
+
+  it("does not retain client fetch for detail dialog", () => {
+    // Ensures the legacy dialog flow is gone: no dialog with EvaluationDetailDialog copy exists.
+    render(<FacultyPublishedEvaluations view="list" evaluations={[makeItem()]} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("confirms closing an evaluation and updates the row status", async () => {

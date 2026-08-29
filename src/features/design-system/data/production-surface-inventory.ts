@@ -622,6 +622,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/faculty/tools/published/[evaluationId]/loading.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/faculty/tools/published/[evaluationId]/page.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/faculty/tools/loading.tsx",
     disposition: "task",
     taskId: 20,
@@ -2696,7 +2708,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/evaluations/components/evaluation-detail-dialog.tsx",
+    path: "src/features/evaluations/components/faculty-evaluation-detail-view.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/evaluations/components/faculty-evaluation-respondents.tsx",
     disposition: "task",
     taskId: 22,
     category: "feature_component",

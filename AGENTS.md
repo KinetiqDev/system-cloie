@@ -43,6 +43,7 @@ Before implementation, design, planning, or investigation, orient through:
 
 - Make the **smallest complete change** that satisfies the requirement.
 - Reuse existing patterns and abstractions before introducing new ones.
+- Write self-explanatory code: implement the requirement cleanly, and comment only what the code cannot say for itself — no comments that restate or narrate the code.
 - Preserve domain boundaries and the modular-monolith architecture.
 - Preserve server-side authorization, role scoping, program scoping, and academic-context scoping.
 - Preserve confidential-response, one-response, and finalized-submission invariants.
@@ -66,6 +67,8 @@ When planning, reviewing architecture, proposing changes, or walking through wor
 - Explain important architectural decisions and tradeoffs in both technical and practical terms when useful.
 - Do not oversimplify away security constraints, invariants, or important implementation details.
 - Keep explanation depth proportional to the task.
+
+After implementing, close with a short digest of what was just built: a plain-terms run-through (explain it to a five-year-old) followed by the technical version. Keep it brief — someone who never saw the code should follow what changed and why.
 
 ---
 

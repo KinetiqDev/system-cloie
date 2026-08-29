@@ -13,7 +13,7 @@ type EvaluationToolsTabsProps = {
   templates: ReactNode;
   published: ReactNode;
   action?: ReactNode;
-  /** List/Card view toggle rendered next to the action button. */
+  /** List/Card view toggle rendered in the right-aligned tab toolbar. */
   viewControl?: ReactNode;
 };
 
@@ -22,13 +22,7 @@ type EvaluationToolsTabsProps = {
  * toggle never wipes the other parameter; the default value is omitted to keep
  * shareable URLs canonical.
  */
-export function updateToolsUrl({
-  tab,
-  view,
-}: {
-  tab?: EvaluationToolsTab;
-  view?: ToolsViewMode;
-}) {
+export function updateToolsUrl({ tab, view }: { tab?: EvaluationToolsTab; view?: ToolsViewMode }) {
   if (typeof window === "undefined") return;
 
   const url = new URL(window.location.href);
@@ -75,7 +69,7 @@ export function EvaluationToolsTabs({
         </TabsList>
 
         {(action || viewControl) && (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
             {action}
             {viewControl}
           </div>

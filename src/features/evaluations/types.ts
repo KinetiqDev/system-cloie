@@ -182,6 +182,34 @@ export type FacultyPublishedEvaluationTarget = {
   yearLevel: YearLevel | null;
 };
 
+export type FacultyEvaluationRespondentStatus = "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED";
+
+export type FacultyEvaluationRespondent = {
+  assignedAt: Date;
+  assignmentId: string;
+  email: string;
+  name: string;
+  respondentId: string;
+  status: FacultyEvaluationRespondentStatus;
+  submittedAt: Date | null;
+};
+
+type FacultyPublishedInstrumentQuestion = {
+  itemKey: string;
+  likertDescriptors: Array<{ label: string; value: number }>;
+  prompt: string;
+  required: boolean;
+  suggestedResponses: string[];
+  type: "likert" | "guided_open_ended";
+};
+
+type FacultyPublishedInstrumentSection = {
+  description: string | null;
+  questions: FacultyPublishedInstrumentQuestion[];
+  sectionKey: string;
+  title: string;
+};
+
 export type FacultyEvaluationDetail = {
   termInstanceLabel: string;
   activationAt: Date | null;
@@ -207,6 +235,14 @@ export type FacultyEvaluationDetail = {
   targets: FacultyPublishedEvaluationTarget[];
   templateBindings: FacultyPublishedEvaluationCiloBinding[];
   totalAssignments: number;
+  inProgressCount: number;
+  notStartedCount: number;
+  respondents: FacultyEvaluationRespondent[];
+  instrument: {
+    name: string;
+    sections: FacultyPublishedInstrumentSection[];
+    versionNumber: number;
+  };
   exclusions: Array<{
     category: CourseBoundEvaluationExclusionCategory;
     membershipId: string;
