@@ -133,6 +133,22 @@ describe("Tabs", () => {
     });
   });
 
+  describe("touch targets", () => {
+    it("expands horizontal lists and triggers to the 44px floor on coarse pointers", () => {
+      render(
+        <Tabs defaultValue="one">
+          <TabsList>
+            <TabsTrigger value="one">One</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      );
+      expect(screen.getByRole("tablist")).toHaveClass(
+        "pointer-coarse:group-data-horizontal/tabs:h-auto"
+      );
+      expect(screen.getByRole("tab")).toHaveClass("pointer-coarse:min-h-11");
+    });
+  });
+
   describe("variant support", () => {
     it("supports the line variant on the list and removes the default list surface", () => {
       render(
