@@ -94,6 +94,76 @@ describe("demo target isolation validation", () => {
     expect(result.errors.some((e) => e.includes("backend identities must differ"))).toBe(true);
   });
 
+  it("fails closed when the running backend identity is missing", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({ CLOIE_BACKEND_ID: undefined })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(
+      result.errors.some((e) => e.includes("CLOIE_BACKEND_ID must identify the running backend"))
+    ).toBe(true);
+  });
+
+  it("fails closed when the running backend identity is malformed", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({ CLOIE_BACKEND_ID: "has space" })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(
+      result.errors.some((e) => e.includes("CLOIE_BACKEND_ID must identify the running backend"))
+    ).toBe(true);
+  });
+
+  it("fails closed when the demo backend identity is missing", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({ CLOIE_DEMO_BACKEND_ID: "" })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("CLOIE_DEMO_BACKEND_ID must identify"))).toBe(true);
+  });
+
+  it("fails closed when the primary backend identity is missing", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({ CLOIE_PRIMARY_BACKEND_ID: undefined })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("CLOIE_PRIMARY_BACKEND_ID must identify"))).toBe(
+      true
+    );
+  });
+
+  it("rejects malformed identities without producing mismatch errors", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({
+        CLOIE_BACKEND_ID: "bad id",
+        CLOIE_DEMO_BACKEND_ID: 'quote"id',
+        CLOIE_PRIMARY_BACKEND_ID: "",
+      })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.filter((e) => e.includes("must identify")).length).toBe(3);
+    expect(
+      result.errors.some((e) => e.includes("expected the dedicated demo backend identity"))
+    ).toBe(false);
+    expect(result.errors.some((e) => e.includes("identities must differ"))).toBe(false);
+  });
+
+  it("accepts backend identities using the full allowed charset", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({
+        CLOIE_BACKEND_ID: "cloie-demo.01-backend",
+        CLOIE_DEMO_BACKEND_ID: "cloie-demo.01-backend",
+      })
+    );
+
+    expect(result.valid).toBe(true);
+  });
+
   it("rejects a missing demo database identity", () => {
     const result = validateDemoTargetIsolation(
       dedicatedDemoEnvironment({ CLOIE_DEMO_DATABASE_ID: "" })

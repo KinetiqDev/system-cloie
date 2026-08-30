@@ -56,13 +56,12 @@ describe("Supabase CLI config", () => {
     expect(envExample).toContain("DIRECT_URL");
   });
 
-  it("keeps local OAuth callbacks path-scoped while allowing ephemeral Quick Tunnels", async () => {
+  it("keeps local OAuth callbacks path-scoped and fail-closed", async () => {
     const config = await readFile(path.join(process.cwd(), "supabase", "config.toml"), "utf8");
 
     expect(config).toContain('site_url = "http://localhost:3000"');
     expect(config).toContain('"http://localhost:3000/api/auth/callback"');
     expect(config).toContain('"http://127.0.0.1:3000/api/auth/callback"');
-    expect(config).toContain('"https://*.trycloudflare.com/api/auth/callback?intent=*"');
-    expect(config).not.toContain('"https://**.trycloudflare.com/**"');
+    expect(config).not.toContain("*.trycloudflare.com");
   });
 });

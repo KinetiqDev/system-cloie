@@ -85,48 +85,50 @@ export function parseDemoTargetMarkerOutput(output: string): DemoTargetMarker | 
     return null;
   }
 
-  if (trimmed.startsWith("[")) {
-    try {
-      const rows = JSON.parse(trimmed) as unknown;
-      if (!Array.isArray(rows) || rows.length !== 1) {
-        return null;
-      }
-      const row = rows[0] as Record<string, unknown>;
-      const backendId = typeof row.backend_id === "string" ? row.backend_id.trim() : "";
-      const databaseId = typeof row.database_id === "string" ? row.database_id.trim() : "";
-      const supabaseUrl = typeof row.supabase_url === "string" ? row.supabase_url.trim() : "";
-      if (!backendId || !databaseId || !supabaseUrl) {
-        return null;
-      }
-      return { backendId, databaseId, supabaseUrl };
-    } catch {
+  return trimmed.startsWith("[")
+    ? parseJsonMarkerRows(trimmed)
+    : parseCsvMarkerRows(
+        trimmed
+          .split(/\r?\n/)
+          .map(splitCsvLine)
+          .filter((fields) => fields.some((field) => field.trim() !== ""))
+      );
+}
+
+function toMarker(row: Record<string, unknown>): DemoTargetMarker | null {
+  const backendId = typeof row.backend_id === "string" ? row.backend_id.trim() : "";
+  const databaseId = typeof row.database_id === "string" ? row.database_id.trim() : "";
+  const supabaseUrl = typeof row.supabase_url === "string" ? row.supabase_url.trim() : "";
+  if (!backendId || !databaseId || !supabaseUrl) {
+    return null;
+  }
+  return { backendId, databaseId, supabaseUrl };
+}
+
+function parseJsonMarkerRows(trimmed: string): DemoTargetMarker | null {
+  try {
+    const rows: unknown = JSON.parse(trimmed);
+    if (!Array.isArray(rows) || rows.length !== 1) {
       return null;
     }
+    return toMarker(rows[0] as Record<string, unknown>);
+  } catch {
+    return null;
   }
+}
 
-  const rows = trimmed
-    .split(/\r?\n/)
-    .map(splitCsvLine)
-    .filter((fields) => fields.some((field) => field.trim() !== ""));
-
+function parseCsvMarkerRows(rows: string[][]): DemoTargetMarker | null {
   // Header row plus exactly one data row.
   if (rows.length !== 2) {
     return null;
   }
   const header = rows[0].map((name) => name.trim().toLowerCase());
-  const backendIdIndex = header.indexOf("backend_id");
-  const databaseIdIndex = header.indexOf("database_id");
-  const supabaseUrlIndex = header.indexOf("supabase_url");
-  if (backendIdIndex === -1 || databaseIdIndex === -1 || supabaseUrlIndex === -1) {
-    return null;
-  }
-  const backendId = rows[1][backendIdIndex]?.trim();
-  const databaseId = rows[1][databaseIdIndex]?.trim();
-  const supabaseUrl = rows[1][supabaseUrlIndex]?.trim();
-  if (!backendId || !databaseId || !supabaseUrl) {
-    return null;
-  }
-  return { backendId, databaseId, supabaseUrl };
+  // A column missing from the header yields undefined and fails closed.
+  return toMarker({
+    backend_id: rows[1][header.indexOf("backend_id")],
+    database_id: rows[1][header.indexOf("database_id")],
+    supabase_url: rows[1][header.indexOf("supabase_url")],
+  });
 }
 
 /**

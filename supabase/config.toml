@@ -151,13 +151,16 @@ max_indexes = 5
 enabled = true
 # The stable local URL used as the default when an OAuth request omits redirect_to.
 site_url = "http://localhost:3000"
-# OAuth redirect allowlist. Keep callbacks path-scoped. The trycloudflare wildcard is for ephemeral
-# local-development Quick Tunnels only and includes System CLOIE's required role-intent query;
-# production must use an exact System CLOIE HTTPS origin.
+# OAuth redirect allowlist. Keep this shared configuration fail-closed: exact
+# application origins only, no public wildcard callback hosts. Quick Tunnel
+# callbacks are per-developer, per-session entries added locally (uncommitted);
+# see supabase/README.md for the required flow.
 additional_redirect_urls = [
   "http://localhost:3000/api/auth/callback",
   "http://127.0.0.1:3000/api/auth/callback",
-  "https://*.trycloudflare.com/api/auth/callback?intent=*",
+  # Quick Tunnel session: append the session's exact callback URL here, one
+  # generated hostname at a time. Example:
+  # "https://<tunnel-subdomain>.trycloudflare.com/api/auth/callback?intent=*",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600

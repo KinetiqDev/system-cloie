@@ -46,6 +46,12 @@ export function isValidBackendId(value: string | undefined): value is string {
   return !!value && BACKEND_ID_PATTERN.test(value);
 }
 
+const BACKEND_ID_FIELDS = [
+  { name: "CLOIE_BACKEND_ID", role: "the running backend" },
+  { name: "CLOIE_DEMO_BACKEND_ID", role: "the dedicated demo backend" },
+  { name: "CLOIE_PRIMARY_BACKEND_ID", role: "the primary Production backend" },
+] as const;
+
 function validateBackendIdentity(
   env: Record<string, string | undefined>,
   errors: string[]
@@ -54,24 +60,16 @@ function validateBackendIdentity(
   demoBackendId: string | undefined;
   primaryBackendId: string | undefined;
 } {
-  const backendId = env.CLOIE_BACKEND_ID;
-  const demoBackendId = env.CLOIE_DEMO_BACKEND_ID;
-  const primaryBackendId = env.CLOIE_PRIMARY_BACKEND_ID;
+  const [backendId, demoBackendId, primaryBackendId] = BACKEND_ID_FIELDS.map(
+    ({ name }) => env[name]
+  );
 
-  if (!isValidBackendId(backendId)) {
-    errors.push(
-      "CLOIE_BACKEND_ID must identify the running backend (non-empty, no whitespace, characters [A-Za-z0-9._-])."
-    );
-  }
-  if (!isValidBackendId(demoBackendId)) {
-    errors.push(
-      "CLOIE_DEMO_BACKEND_ID must identify the dedicated demo backend (non-empty, no whitespace, characters [A-Za-z0-9._-])."
-    );
-  }
-  if (!isValidBackendId(primaryBackendId)) {
-    errors.push(
-      "CLOIE_PRIMARY_BACKEND_ID must identify the primary Production backend (non-empty, no whitespace, characters [A-Za-z0-9._-])."
-    );
+  for (const { name, role } of BACKEND_ID_FIELDS) {
+    if (!isValidBackendId(env[name])) {
+      errors.push(
+        `${name} must identify ${role} (non-empty, no whitespace, characters [A-Za-z0-9._-]).`
+      );
+    }
   }
 
   if (

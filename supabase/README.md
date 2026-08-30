@@ -43,14 +43,24 @@ pnpm supabase:stop               # Stop the local stack
 Local OAuth is configured in `supabase/config.toml`:
 
 - `[auth.external.google]` is enabled with `client_id = "env(GOOGLE_CLIENT_ID)"` and `secret = "env(GOOGLE_CLIENT_SECRET)"`. Provide both values in an ignored env file; never commit them.
-- `[auth]` allowlists the exact localhost and `127.0.0.1` System CLOIE callbacks. It also allows `https://*.trycloudflare.com/api/auth/callback?intent=*` for ephemeral local-development Quick Tunnels. The wildcard covers one generated tunnel hostname and the required role-intent value; it does not allow other callback paths. Do not copy it into production.
+- `[auth]` allowlists the exact localhost and `127.0.0.1` System CLOIE callbacks. The shared
+  configuration is fail-closed: it never contains public wildcard callback hosts. Quick Tunnel
+  callbacks are added locally per session (see below) and must not be committed.
 
 The two-stage flow needs two callbacks registered:
 
 1. **Google Cloud Console** — create an OAuth client and set the authorized redirect URI to the local Supabase Auth callback: `http://127.0.0.1:54321/auth/v1/callback`.
-2. **System CLOIE** — after Supabase Auth completes, the browser redirects to `/api/auth/callback` on the origin that initiated sign-in. `supabase/config.toml` allows localhost, `127.0.0.1`, and one generated `trycloudflare.com` subdomain.
+2. **System CLOIE** — after Supabase Auth completes, the browser redirects to `/api/auth/callback`
+   on the origin that initiated sign-in. `supabase/config.toml` allows localhost and `127.0.0.1`
+   by default.
 
-For a Quick Tunnel session, leave `NEXT_PUBLIC_SITE_URL` unset before starting System CLOIE. The browser then supplies the current tunnel origin. A fixed localhost value overrides the tunnel origin and sends the OAuth callback back to localhost. Restart System CLOIE after changing this public environment value. Restart the local Supabase stack after changing `supabase/config.toml`.
+For a Quick Tunnel session, append the session's exact callback URL — one generated hostname at a
+time, for example `"https://<tunnel-subdomain>.trycloudflare.com/api/auth/callback?intent=*"` — to
+`additional_redirect_urls` in your local `supabase/config.toml`, and keep that edit uncommitted.
+Leave `NEXT_PUBLIC_SITE_URL` unset before starting System CLOIE so the browser supplies the current
+tunnel origin. A fixed localhost value overrides the tunnel origin and sends the OAuth callback
+back to localhost. Restart System CLOIE after changing this public environment value. Restart the
+local Supabase stack after changing `supabase/config.toml`.
 
 After changing backend targets, clear stale Auth cookies (`cloie_dev_auth`, `sb-*` session cookies) and re-authenticate; sessions are not portable between instances because issuers and signing keys differ.
 
