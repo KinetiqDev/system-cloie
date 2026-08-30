@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { getSupabaseCommand } from "../../../scripts/supabase-cli";
+import { getSupabaseCommand, requireDirectUrl } from "../../../scripts/supabase-cli";
 import {
   buildMigrationArgs,
   buildMigrationFilePath,
@@ -12,34 +12,96 @@ import {
 } from "../../../scripts/create-supabase-migration";
 import { buildTypegenArgs, OUTPUT_PATH } from "../../../scripts/generate-supabase-types";
 import {
-  assertBaselineRepairSafe,
-  getLatestMigrationVersion,
-  getLatestMigrationVersionFromDirectory,
-  parseRemoteMigrationVersions,
-} from "../../../scripts/repair-latest-supabase-migration";
-import { buildLoginArgs } from "../../../scripts/supabase-login";
-import { buildLinkArgs } from "../../../scripts/supabase-link";
+  buildLocalCommandArgs,
+  buildRemoteCommandArgs,
+  describeCommand,
+  parseTarget,
+} from "../../../scripts/run-supabase-command";
 
 describe("supabase workflow helpers", () => {
-  it("builds login args from the personal access token", () => {
-    expect(buildLoginArgs("sbp_token")).toEqual(["login", "--token", "sbp_token"]);
-  });
-
   it("resolves the local Supabase CLI binary when available", () => {
     const resolvedCommand = getSupabaseCommand();
 
     expect(resolvedCommand.toLowerCase()).toContain("supabase");
   });
 
-  it("builds link args from project ref and optional password", () => {
-    expect(buildLinkArgs("abcd1234")).toEqual(["link", "--project-ref", "abcd1234"]);
-    expect(buildLinkArgs("abcd1234", "secret")).toEqual([
-      "link",
-      "--project-ref",
-      "abcd1234",
-      "--password",
-      "secret",
+  it("requires DIRECT_URL for remote commands and fails clearly without it", () => {
+    const previous = process.env.DIRECT_URL;
+    delete process.env.DIRECT_URL;
+    try {
+      expect(() => requireDirectUrl()).toThrow(/DIRECT_URL is required/);
+    } finally {
+      if (previous !== undefined) process.env.DIRECT_URL = previous;
+    }
+  });
+
+  it("returns the configured DIRECT_URL when present", () => {
+    const previous = process.env.DIRECT_URL;
+    process.env.DIRECT_URL = "postgresql://direct-url";
+    try {
+      expect(requireDirectUrl()).toBe("postgresql://direct-url");
+    } finally {
+      if (previous !== undefined) process.env.DIRECT_URL = previous;
+      else delete process.env.DIRECT_URL;
+    }
+  });
+
+  it("parses the local and remote targets", () => {
+    expect(parseTarget("local")).toBe("local");
+    expect(parseTarget("remote")).toBe("remote");
+    expect(() => parseTarget(undefined)).toThrow(/local|remote/);
+    expect(() => parseTarget("linked")).toThrow(/local|remote/);
+  });
+
+  it("builds local lifecycle args that always target the local stack", () => {
+    expect(buildLocalCommandArgs("start")).toEqual(["start"]);
+    expect(buildLocalCommandArgs("stop")).toEqual(["stop"]);
+    expect(buildLocalCommandArgs("status")).toEqual(["status"]);
+    expect(buildLocalCommandArgs("migration-list")).toEqual(["migration", "list", "--local"]);
+  });
+
+  it("builds a local destructive reset that is unconditionally --local", () => {
+    expect(buildLocalCommandArgs("reset")).toEqual(["db", "reset", "--local", "--yes"]);
+    expect(buildLocalCommandArgs("reset")).not.toContain("--db-url");
+    expect(buildLocalCommandArgs("reset")).not.toContain("--linked");
+  });
+
+  it("rejects unknown local commands", () => {
+    expect(() => buildLocalCommandArgs("push")).toThrow(/Unsupported local command/);
+  });
+
+  it("builds remote args from the direct database url with no linked flag", () => {
+    expect(buildRemoteCommandArgs("migration-list", "postgresql://direct-url")).toEqual([
+      "migration",
+      "list",
+      "--db-url",
+      "postgresql://direct-url",
     ]);
+    expect(buildRemoteCommandArgs("push", "postgresql://direct-url")).toEqual([
+      "db",
+      "push",
+      "--db-url",
+      "postgresql://direct-url",
+    ]);
+    expect(buildRemoteCommandArgs("push", "postgresql://direct-url", ["--dry-run"])).toEqual([
+      "db",
+      "push",
+      "--db-url",
+      "postgresql://direct-url",
+      "--dry-run",
+    ]);
+  });
+
+  it("rejects unknown remote commands and never supports a generic remote reset", () => {
+    expect(() => buildRemoteCommandArgs("reset", "postgresql://direct-url")).toThrow(
+      /Unsupported remote command/
+    );
+  });
+
+  it("identifies local and remote targets without printing the url", () => {
+    expect(describeCommand("local", "start")).toBe("Supabase CLI: local start");
+    expect(describeCommand("remote", "push")).toBe("Supabase CLI: remote push (DIRECT_URL target)");
+    expect(describeCommand("remote", "push")).not.toContain("postgresql://");
   });
 
   it("generates deterministic baseline diff args", () => {
@@ -110,68 +172,34 @@ describe("supabase workflow helpers", () => {
     expect(migrationPath).not.toContain("\\");
   });
 
-  it("finds the latest migration version from local filenames", () => {
-    expect(
-      getLatestMigrationVersion([
-        "20260419000100_init_public_schema.sql",
-        "20260419001000_add_student_profile_columns.sql",
-      ])
-    ).toBe("20260419001000");
-  });
-
-  it("fails clearly when no local sql migrations exist", () => {
-    expect(() => getLatestMigrationVersion([])).toThrow(
-      "No Supabase SQL migrations were found in supabase/migrations. Run pnpm supabase:migration:baseline or pnpm supabase:migration:diff first."
-    );
-  });
-
-  it("fails clearly when the migrations directory does not exist", () => {
-    expect(() =>
-      getLatestMigrationVersionFromDirectory("supabase/migrations", () => {
-        const error = new Error("ENOENT") as NodeJS.ErrnoException;
-
-        error.code = "ENOENT";
-        throw error;
-      })
-    ).toThrow(
-      "Supabase migrations directory was not found at supabase/migrations. Run pnpm supabase:init and create a migration first."
-    );
-  });
-
-  it("treats an empty remote migration history as baseline-safe", () => {
-    const remoteVersions = parseRemoteMigrationVersions(`
-   Local          | Remote         | Time (UTC)
-  ----------------|----------------|---------------------
-   20260419000100 |                | 2026-04-19 00:01:00
-    `);
-
-    expect(remoteVersions).toEqual([]);
-    expect(() => assertBaselineRepairSafe(remoteVersions)).not.toThrow();
-  });
-
-  it("blocks repair when the linked project already has remote migrations", () => {
-    const remoteVersions = parseRemoteMigrationVersions(`
-   Local          | Remote         | Time (UTC)
-  ----------------|----------------|---------------------
-   20260419000100 | 20260419000100 | 2026-04-19 00:01:00
-    `);
-
-    expect(remoteVersions).toEqual(["20260419000100"]);
-    expect(() => assertBaselineRepairSafe(remoteVersions)).toThrow(
-      "The linked project already has remote migration history (latest remote version: 20260419000100). `pnpm supabase:migration:repair-latest` is only for an empty remote history during baseline setup or recovery."
-    );
-  });
-
-  it("uses the linked type generation command and output path", () => {
-    expect(buildTypegenArgs()).toEqual([
+  it("builds local typegen args from the local stack", () => {
+    expect(buildTypegenArgs("local")).toEqual([
       "gen",
       "types",
       "typescript",
-      "--linked",
+      "--local",
       "--schema",
       "public",
     ]);
     expect(OUTPUT_PATH).toBe("src/types/supabase-database.ts");
+  });
+
+  it("builds remote typegen args from the direct database url", () => {
+    expect(buildTypegenArgs("remote", "postgresql://direct-url")).toEqual([
+      "gen",
+      "types",
+      "typescript",
+      "--db-url",
+      "postgresql://direct-url",
+      "--schema",
+      "public",
+    ]);
+  });
+
+  it("fails clearly when remote typegen lacks a direct url", () => {
+    expect(() => buildTypegenArgs("remote")).toThrow(/DIRECT_URL is required/);
+    expect(buildTypegenArgs("local")).not.toContain("--linked");
+    expect(buildTypegenArgs("remote", "postgresql://direct-url")).not.toContain("--linked");
   });
 
   it("cleans duplicate responses before enforcing assignment uniqueness", async () => {

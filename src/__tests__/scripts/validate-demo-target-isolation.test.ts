@@ -2,27 +2,29 @@ import { describe, expect, it } from "vitest";
 import { validateDemoTargetIsolation } from "../../../scripts/validate-demo-target-isolation";
 
 const DEMO_SECRET = "a".repeat(32);
+const DEMO_BACKEND_ID = "demo-backend-id";
+const PRIMARY_BACKEND_ID = "primary-backend-id";
 
 function dedicatedDemoEnvironment(overrides: Record<string, string | undefined> = {}) {
-  const projectRef = "demoprojectref";
   return {
     CLOIE_DEPLOYMENT_KIND: "dedicated-demo",
     CLOIE_DEMO_ENABLED: "true",
     CLOIE_DEMO_SESSION_SECRET: DEMO_SECRET,
     CLOIE_DEMO_ALLOWED_USERS: "demo-faculty@cloie.test",
-    CLOIE_DEMO_SUPABASE_PROJECT_REF: projectRef,
-    CLOIE_PRIMARY_SUPABASE_PROJECT_REF: "primaryprojectref",
-    SUPABASE_PROJECT_REF: projectRef,
-    NEXT_PUBLIC_SUPABASE_URL: `https://${projectRef}.supabase.co`,
-    DATABASE_URL: `postgresql://postgres.${projectRef}:secret@aws-1.pooler.supabase.com:6543/postgres?pgbouncer=true`,
-    DIRECT_URL: `postgresql://postgres.${projectRef}:secret@aws-1.pooler.supabase.com:5432/postgres`,
+    CLOIE_BACKEND_ID: DEMO_BACKEND_ID,
+    CLOIE_DEMO_BACKEND_ID: DEMO_BACKEND_ID,
+    CLOIE_PRIMARY_BACKEND_ID: PRIMARY_BACKEND_ID,
+    CLOIE_DEMO_DATABASE_ID: "demo-database-id",
+    NEXT_PUBLIC_SUPABASE_URL: "https://demo.cloie.example.test",
+    DATABASE_URL: "postgresql://postgres:secret@db-demo.cloie.example.test:5432/postgres",
+    DIRECT_URL: "postgresql://postgres:secret@db-demo.cloie.example.test:5432/postgres",
     NODE_ENV: "production",
     ...overrides,
   };
 }
 
 describe("demo target isolation validation", () => {
-  it("passes for a valid dedicated demo configuration", () => {
+  it("passes for a valid dedicated demo configuration with custom self-hosted URLs", () => {
     const result = validateDemoTargetIsolation(dedicatedDemoEnvironment());
 
     expect(result.valid).toBe(true);
@@ -65,28 +67,65 @@ describe("demo target isolation validation", () => {
     expect(result.errors.some((e) => e.includes("CLOIE_DEMO_ALLOWED_USERS"))).toBe(true);
   });
 
-  it("errors when DATABASE_URL identifies the primary Production project", () => {
+  it("fails when the running backend identity is primary Production", () => {
     const result = validateDemoTargetIsolation(
-      dedicatedDemoEnvironment({
-        DATABASE_URL:
-          "postgresql://postgres.primaryprojectref:secret@aws-1.pooler.supabase.com:6543/postgres",
-      })
+      dedicatedDemoEnvironment({ CLOIE_BACKEND_ID: PRIMARY_BACKEND_ID })
     );
 
     expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.includes("identifies the primary Production project"))).toBe(
-      true
-    );
+    expect(result.errors.some((e) => e.includes("CLOIE_BACKEND_ID"))).toBe(true);
   });
 
-  it("accepts a standard direct Supabase connection URL", () => {
+  it("fails when the running backend identity differs from the demo identity", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({ CLOIE_BACKEND_ID: "some-other-backend" })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("CLOIE_BACKEND_ID"))).toBe(true);
+  });
+
+  it("rejects a demo identity colliding with primary Production", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({ CLOIE_DEMO_BACKEND_ID: PRIMARY_BACKEND_ID })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("backend identities must differ"))).toBe(true);
+  });
+
+  it("rejects a missing demo database identity", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({ CLOIE_DEMO_DATABASE_ID: "" })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((error) => error.includes("CLOIE_DEMO_DATABASE_ID"))).toBe(true);
+  });
+
+  it("accepts arbitrary custom self-hosted URLs without hostname heuristics", () => {
     const result = validateDemoTargetIsolation(
       dedicatedDemoEnvironment({
-        DIRECT_URL: "postgresql://postgres:secret@db.demoprojectref.supabase.co:5432/postgres",
+        NEXT_PUBLIC_SUPABASE_URL: "https://supabase.internal.cloie.test:8443",
+        DATABASE_URL: "postgresql://postgres:secret@supabase-db:5432/postgres",
+        DIRECT_URL: "postgresql://postgres:secret@supabase-db:5432/postgres",
       })
     );
 
     expect(result.valid).toBe(true);
+  });
+
+  it("fails when URL/database evidence is missing", () => {
+    const result = validateDemoTargetIsolation(
+      dedicatedDemoEnvironment({
+        NEXT_PUBLIC_SUPABASE_URL: "",
+        DIRECT_URL: undefined,
+      })
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("NEXT_PUBLIC_SUPABASE_URL"))).toBe(true);
+    expect(result.errors.some((e) => e.includes("DIRECT_URL"))).toBe(true);
   });
 
   it("fails with multiple errors when several conditions are invalid", () => {

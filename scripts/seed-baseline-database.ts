@@ -2,19 +2,29 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { loadEnvConfig } from "@next/env";
 import { resolveLocalBin } from "./resolve-local-bin";
-import { readLinkedProjectRef, validateDemoResetTarget } from "./reset-demo-database";
+import {
+  readDemoTargetMarker,
+  validateDemoResetTarget,
+  verifyConfiguredDemoDatabaseTargets,
+  writeDemoTargetMarker,
+} from "./reset-demo-database";
+
+loadEnvConfig(process.cwd());
 
 /**
  * Baseline database reset + seed for the dedicated dev/demo Supabase project.
  *
- * Mirrors `pnpm demo:reset`'s safety contract: refuses to run unless every
- * configured project identifier (and the CLI's linked project) identifies
- * CLOIE_DEMO_SUPABASE_PROJECT_REF, which must differ from the primary
- * Production project. Then resets the isolated database through the linked
- * migration history, regenerates Prisma, and runs the baseline seed
- * (`prisma/seed-baseline.ts`): programs, majors, courses, institutional
- * evaluation templates, and school years. No users, outcomes, assignments,
- * evaluations, or responses.
+ * Mirrors `pnpm demo:reset`'s safety contract: refuses to run unless the
+ * configured backend identity is the dedicated demo identity (differing from
+ * primary Production), the URL/database evidence is present, and the target
+ * carries a persisted marker matching the demo backend identity and public
+ * Supabase URL. Then resets the isolated database through the explicit direct
+ * database URL (migration history, including SQL-only triggers and policies),
+ * regenerates Prisma, runs the baseline seed (`prisma/seed-baseline.ts`):
+ * programs, majors, courses, institutional evaluation templates, and school
+ * years. No users, outcomes, assignments, evaluations, or responses. The
+ * marker is re-persisted after seeding so the target stays positively
+ * identified for the next destructive reset.
  *
  * Requires NODE_ENV=production in the caller environment:
  *   NODE_ENV=production pnpm seed:baseline
@@ -32,21 +42,19 @@ function seedBaselineDatabase(): void {
   if (!validation.valid) {
     throw new Error(`Baseline seed target isolation FAILED:\n${validation.errors.join("\n")}`);
   }
-
-  const linkedProjectRef = readLinkedProjectRef();
-  if (linkedProjectRef !== process.env.CLOIE_DEMO_SUPABASE_PROJECT_REF) {
-    throw new Error(
-      [
-        "Baseline seed target isolation FAILED:",
-        `Supabase linked project is "${linkedProjectRef ?? "<unlinked>"}"; expected the configured dev project.`,
-        "Run pnpm supabase:link with SUPABASE_PROJECT_REF set to the dev project before seeding.",
-      ].join("\n")
-    );
+  const markerError = verifyConfiguredDemoDatabaseTargets(process.env, (databaseUrl) =>
+    readDemoTargetMarker(databaseUrl)
+  );
+  if (markerError) {
+    throw new Error(`Baseline seed target isolation FAILED:\n${markerError}`);
   }
 
-  runCommand("supabase", ["db", "reset", "--linked", "--no-seed", "--yes"]);
+  const directUrl = process.env.DIRECT_URL ?? "";
+
+  runCommand("supabase", ["db", "reset", "--db-url", directUrl, "--no-seed", "--yes"]);
   runCommand("prisma", ["generate", "--schema", "prisma"]);
   runCommand("tsx", ["prisma/seed-baseline.ts"]);
+  writeDemoTargetMarker(directUrl, process.env);
   console.log("Dev database reset and baseline fixtures seeded.");
 }
 

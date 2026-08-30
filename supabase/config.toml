@@ -150,10 +150,13 @@ max_indexes = 5
 [auth]
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
-# in emails.
+# in emails. Local development serves System CLOIE at http://127.0.0.1:3000.
 site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# The System CLOIE OAuth callback route must be allowlisted for the local flow:
+# Google redirects back to Supabase Auth (http://127.0.0.1:54321/auth/v1/callback), then Supabase
+# redirects the browser to this application callback with the role intent.
+additional_redirect_urls = ["http://127.0.0.1:3000/api/auth/callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).
@@ -312,6 +315,25 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+[auth.external.google]
+# Local Google OAuth through the Supabase CLI Docker stack. Client id and secret are read from the
+# environment via substitution (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET); never commit them. Create
+# a Google Cloud OAuth client with authorized redirect URI http://127.0.0.1:54321/auth/v1/callback
+# (the local Supabase Auth callback), then set the two values in an ignored env file.
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+secret = "env(GOOGLE_CLIENT_SECRET)"
+# Overrides the default auth redirectUrl.
+redirect_uri = ""
+# Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
+# or any other third-party OIDC providers.
+url = ""
+# If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
+skip_nonce_check = true
+# If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
+email_optional = false
+
 [auth.external.apple]
 enabled = false
 client_id = ""

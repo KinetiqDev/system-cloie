@@ -18,7 +18,7 @@ The application permits one reviewed test-only authentication mechanism for prod
 ## Disposable Environment Setup
 
 1. Create or select an isolated Supabase project and disposable database dataset. Never point DB integration tests or demo resets at a shared hosted database.
-2. Choose one evidence mode. For signed demo-session evidence, configure the dedicated demo deployment marker, demo enable flag, session secret, and allowlist through server-only environment variables. For OAuth evidence, configure the isolated project's OAuth redirect URL for the exact production origin.
+2. Choose one evidence mode. For signed demo-session evidence, configure the dedicated demo deployment marker, demo enable flag, backend identity (`CLOIE_BACKEND_ID` equal to `CLOIE_DEMO_BACKEND_ID` and distinct from `CLOIE_PRIMARY_BACKEND_ID`), session secret, and allowlist through server-only environment variables. For OAuth evidence, configure the isolated instance's OAuth redirect URL for the exact production origin.
 3. Provision representative accounts with the required active role, complete role requirements, active account status, and any role-specific scope required by the route. The signed demo-session path uses seeded Prisma identities; the OAuth path uses real Supabase-authenticated accounts.
 4. Set runtime variables in an ignored env file or deployment environment, including the normal Supabase/database variables and, only for the dedicated demo deployment, the `CLOIE_DEMO_*` variables. Do not place values in this document or an evidence record.
 5. Build and start the production server:
@@ -45,11 +45,11 @@ Use a fresh browser context for each role. Clear site data or sign out before ch
 3. Authenticate using the selected evidence mode. For signed demo sessions, use the server-rendered role switcher and record only `signed demo session`; for OAuth, use the normal role-aware Google OAuth flow and record only `Supabase OAuth via existing Google callback`. Never record account emails, credentials, authorization codes, cookies, or session values.
 4. Navigate to the representative route for the role:
 
-| Role | Account state | Representative route |
-| --- | --- | --- |
-| Secretary | active, complete | `/secretary/dashboard` |
-| College Dean | active, complete | `/dean/dashboard` |
-| Faculty Member | active, complete, active program affiliation | `/faculty/dashboard` |
+| Role           | Account state                                | Representative route   |
+| -------------- | -------------------------------------------- | ---------------------- |
+| Secretary      | active, complete                             | `/secretary/dashboard` |
+| College Dean   | active, complete                             | `/dean/dashboard`      |
+| Faculty Member | active, complete, active program affiliation | `/faculty/dashboard`   |
 
 5. Capture a performance trace with reload. Use Chrome DevTools **Performance** rather than Lighthouse as the performance proof.
 6. Inspect the trace's LCP insight and record the selected LCP element and all four breakdown values: TTFB, resource load delay, resource load duration, and element render delay.

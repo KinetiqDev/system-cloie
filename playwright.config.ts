@@ -119,8 +119,6 @@ export default defineConfig({
       ? {
           ...process.env,
           NODE_ENV: "production",
-          CLOIE_PRIMARY_SUPABASE_PROJECT_REF: "",
-          CLOIE_DEMO_SUPABASE_PROJECT_REF: "",
         }
       : undefined,
   },

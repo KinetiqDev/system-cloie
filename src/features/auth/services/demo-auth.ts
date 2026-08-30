@@ -1,10 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { DEMO_USER_EMAIL_SET } from "@/lib/constants/demo-users";
-import {
-  getProjectRefFromDatabaseUrl,
-  getProjectRefFromSupabaseUrl,
-} from "@/lib/supabase/project-identity";
 
 export const DEMO_AUTH_COOKIE_NAME = "cloie_demo_auth";
 export const DEMO_DEPLOYMENT_KIND = "dedicated-demo";
@@ -22,20 +18,20 @@ export type DemoAuthConfig = {
   allowedUsers: ReadonlySet<string>;
 };
 
-function hasDedicatedDemoProjectIdentity(environment: NodeJS.ProcessEnv): boolean {
-  const demoProjectRef = environment.CLOIE_DEMO_SUPABASE_PROJECT_REF;
-  const primaryProjectRef = environment.CLOIE_PRIMARY_SUPABASE_PROJECT_REF;
-  const runningProjectRef = environment.SUPABASE_PROJECT_REF;
-  const supabaseUrlProjectRef = getProjectRefFromSupabaseUrl(environment.NEXT_PUBLIC_SUPABASE_URL);
-  const databaseProjectRef = getProjectRefFromDatabaseUrl(environment.DATABASE_URL);
+function hasDedicatedDemoBackendIdentity(environment: NodeJS.ProcessEnv): boolean {
+  const backendId = environment.CLOIE_BACKEND_ID;
+  const demoBackendId = environment.CLOIE_DEMO_BACKEND_ID;
+  const primaryBackendId = environment.CLOIE_PRIMARY_BACKEND_ID;
 
+  // The running backend must positively declare the dedicated demo identity
+  // and differ from primary Production. Identifiers are opaque server-only
+  // values compared by exact equality — never derived from URL hostnames.
   return !!(
-    demoProjectRef &&
-    primaryProjectRef &&
-    runningProjectRef === demoProjectRef &&
-    supabaseUrlProjectRef === demoProjectRef &&
-    databaseProjectRef === demoProjectRef &&
-    demoProjectRef !== primaryProjectRef
+    backendId &&
+    demoBackendId &&
+    primaryBackendId &&
+    backendId === demoBackendId &&
+    demoBackendId !== primaryBackendId
   );
 }
 
@@ -94,7 +90,7 @@ export function getDemoAuthConfig(): DemoAuthConfig | null {
     return null;
   }
 
-  if (!hasDedicatedDemoProjectIdentity(process.env)) {
+  if (!hasDedicatedDemoBackendIdentity(process.env)) {
     return null;
   }
 

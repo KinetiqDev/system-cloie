@@ -148,18 +148,16 @@ describe("supabase client typing", () => {
       readFile(path.join(process.cwd(), "supabase/README.md"), "utf8"),
     ]);
 
-    expect(supabaseReadme).toContain(
-      "If you need to initialize a fresh clone of the repo metadata, run `pnpm supabase:init` once."
-    );
     expect(supabaseReadme).toContain("`NEXT_PUBLIC_SUPABASE_URL`");
     expect(supabaseReadme).toContain("`NEXT_PUBLIC_SUPABASE_ANON_KEY`");
-    expect(supabaseReadme).toContain("`SUPABASE_PROJECT_REF`");
-    expect(supabaseReadme).toContain("`SUPABASE_ACCESS_TOKEN`");
-    expect(supabaseReadme).toContain("`SUPABASE_DB_PASSWORD`");
+    expect(supabaseReadme).toContain("`CLOIE_BACKEND_ID`");
+    expect(supabaseReadme).toContain("`GOOGLE_CLIENT_ID`");
+    expect(supabaseReadme).toContain("`DIRECT_URL`");
 
     expect(projectReadme).toContain("`NEXT_PUBLIC_SUPABASE_URL`");
     expect(projectReadme).toContain("`NEXT_PUBLIC_SUPABASE_ANON_KEY`");
-    expect(projectReadme).toContain("`SUPABASE_PROJECT_REF`");
+    expect(projectReadme).toContain("`CLOIE_BACKEND_ID`");
+    expect(projectReadme).toContain("`GOOGLE_CLIENT_ID`");
   });
 
   it("keeps the generated database file aligned with the sectionless MVP schema", async () => {
@@ -174,7 +172,7 @@ describe("supabase client typing", () => {
     expect(databaseTypes).toContain("industry_partner_profiles:");
     expect(databaseTypes).toContain("is_faculty_accessible: boolean");
     expect(databaseTypes).toContain("major_id: string | null");
-    expect(databaseTypes).toContain("year_level: Database[\"public\"][\"Enums\"][\"year_level\"]");
+    expect(databaseTypes).toContain('year_level: Database["public"]["Enums"]["year_level"]');
     expect(databaseTypes).not.toContain("section_id:");
     expect(databaseTypes).not.toContain("course_types:");
     expect(databaseTypes).not.toContain("plos:");

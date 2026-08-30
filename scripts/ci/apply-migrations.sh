@@ -2,10 +2,9 @@
 # Apply the canonical Supabase migration history to a disposable PostgreSQL
 # database (CI Postgres service, local test container).
 #
-# The migration files are authored against the hosted Supabase stack and
-# reference auth.* helpers (RLS policies). A minimal auth stub is created
-# first; the postgres superuser bypasses RLS, so the stub only needs to make
-# the DDL valid.
+# The migration files target the Supabase PostgreSQL contract and reference
+# auth.* helpers in RLS policies. A minimal auth stub is created first; the
+# postgres superuser bypasses RLS, so the stub only needs to make the DDL valid.
 #
 # The auth.uid() stub reads a settable request identity from the
 # `app.test_auth_uid` GUC (see src/lib/db/rls-test-helpers.ts). Unset, it
@@ -22,10 +21,10 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 2
 fi
 
-# Target safety: refuse hosted Supabase before any mutation.
+# Target safety: reject legacy Supabase Cloud hosts before any mutation.
 # Keep in sync with src/lib/db/verify-database-target.ts allowlist.
 if [[ "$DATABASE_URL" == *"supabase.co"* ]] || [[ "$DATABASE_URL" == *"pooler.supabase.com"* ]]; then
-  echo "Refusing to apply migrations against hosted Supabase target: DATABASE_URL looks like a hosted Supabase connection." >&2
+  echo "Refusing to apply migrations against a legacy Supabase Cloud target." >&2
   exit 2
 fi
 # Extract hostname from DATABASE_URL for disposable host check (best-effort bash).
