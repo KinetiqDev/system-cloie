@@ -72,7 +72,7 @@ describe("CourseCreateDialog", () => {
   });
 
   it("locks dismissal while a create is in flight", async () => {
-    const { promise } = Promise.withResolvers<{ success: boolean }>();
+    const { promise, resolve } = Promise.withResolvers<{ success: boolean }>();
     createCourseActionMock.mockReturnValue(promise);
     const onOpenChange = renderDialog();
 
@@ -85,6 +85,40 @@ describe("CourseCreateDialog", () => {
     await waitFor(() => expect(cancel).toBeDisabled());
     fireEvent.click(cancel);
     expect(onOpenChange).not.toHaveBeenCalled();
+    // Settle the in-flight action before unmount: a transition left suspended
+    // across cleanup poisons the next test's pending-state propagation.
+    resolve({ success: true });
+    await waitFor(() =>
+      expect(showToastMock).toHaveBeenCalledWith("Course GE9 created.", "success")
+    );
+  });
+
+  it("rejects a same-turn duplicate submit and releases the lock when settled", async () => {
+    const { promise, resolve } = Promise.withResolvers<{ success: boolean }>();
+    createCourseActionMock.mockReturnValue(promise);
+    const onOpenChange = renderDialog();
+
+    await fillRequiredFields();
+    const submitButton = screen.getByRole("button", { name: "Create Course" });
+    fireEvent.click(submitButton);
+    fireEvent.click(submitButton);
+
+    // The synchronous re-entry guard rejects the second activation: exactly
+    // one action call, and the dismissal guard still holds.
+    await waitFor(() => expect(createCourseActionMock).toHaveBeenCalledTimes(1));
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    resolve({ success: true });
+    await waitFor(() =>
+      expect(showToastMock).toHaveBeenCalledWith("Course GE9 created.", "success")
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    // The lock releases with the settled submission: the footer control
+    // returns to its enabled idle label.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Create Course" })).toBeEnabled()
+    );
   });
 
   it("flattens nested majors with their parent program for the Major select", async () => {
