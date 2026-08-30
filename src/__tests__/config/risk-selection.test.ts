@@ -8,8 +8,10 @@ import { selectChecks } from "../../../scripts/ci/lib/risk-domains.mjs";
  * PR CI selects browser, database, build, and UI checks from changed risk
  * domains. Shared auth, role, schema, navigation, response, publication, and
  * design-system changes expand the selection instead of receiving a narrow
- * run. The classifier is a pure function so the mapping itself is unit-tested
- * and the CI workflow only consumes its outputs.
+ * run. CI verification machinery (workflow definitions, the selector itself)
+ * fails closed to the full matrix: a change there could otherwise disable the
+ * gates meant to validate it. The classifier is a pure function so the
+ * mapping itself is unit-tested and the CI workflow only consumes its outputs.
  */
 describe("risk-domain check selection (551)", () => {
   it("selects nothing beyond quality checks for documentation-only changes", () => {
@@ -121,11 +123,26 @@ describe("risk-domain check selection (551)", () => {
   });
 
   it("keeps repository scripts out of the production build", () => {
-    const selection = selectChecks([
-      "scripts/run-database-tests.ts",
-      "scripts/ci/apply-migrations.sh",
-    ]);
+    const selection = selectChecks(["scripts/run-database-tests.ts"]);
     expect(selection.run_build).toBe(false);
+  });
+
+  it("fails closed to the full matrix when CI verification machinery changes", () => {
+    const ciFiles = [
+      ".depot/workflows/ci.yml",
+      ".github/workflows/ci.yml",
+      "scripts/ci/select-checks.mjs",
+      "scripts/ci/lib/risk-domains.mjs",
+      "scripts/ci/lib/changed-files.mjs",
+    ];
+    for (const file of ciFiles) {
+      const selection = selectChecks([file]);
+      expect(selection.run_build, file).toBe(true);
+      expect(selection.run_database, file).toBe(true);
+      expect(selection.run_browser, file).toBe(true);
+      expect(selection.run_visual, file).toBe(true);
+      expect(selection.domains, file).toContain("ci-infrastructure");
+    }
   });
 
   it("selects everything when the caller forces the full matrix", () => {
