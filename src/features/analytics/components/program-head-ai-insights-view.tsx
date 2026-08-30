@@ -4,13 +4,7 @@ import { useState, useTransition } from "react";
 import { AlertTriangle, RefreshCw, ShieldAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
@@ -86,10 +80,10 @@ export function ProgramHeadAIInsightsView({
         <CardHeader>
           <CardTitle>On-demand interpretation</CardTitle>
           <CardDescription>
-            Request a supplementary, bounded interpretation of the current deterministic
-            evidence scope. The system rebuilds and re-authorizes the evidence server-side, sends
-            only de-identified aggregates to a deliberately configured provider, and returns
-            validated findings for your review. Results are never saved.
+            Request a supplementary, bounded interpretation of the current deterministic evidence
+            scope. The system rebuilds and re-authorizes the evidence server-side, sends only
+            de-identified aggregates to a deliberately configured provider, and returns validated
+            findings for your review. Results are never saved.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -143,8 +137,12 @@ function FailureState({ result }: { result: Extract<GenerateAIInsightResult, { o
   }
 
   if (result.state === "insufficient-evidence") {
-    const { submittedResponseCount, minimumSubmittedResponses, qualitativeItemCount, minimumQualitativeItems } =
-      result.detail;
+    const {
+      submittedResponseCount,
+      minimumSubmittedResponses,
+      qualitativeItemCount,
+      minimumQualitativeItems,
+    } = result.detail;
     return (
       <Alert variant="warning">
         <AlertTriangle aria-hidden="true" />
@@ -225,7 +223,9 @@ function InterpretationResult({
         <Card size="sm">
           <CardHeader>
             <CardTitle>Themes</CardTitle>
-            <CardDescription>{data.themes.length} bounded theme(s) over aggregate evidence.</CardDescription>
+            <CardDescription>
+              {data.themes.length} bounded theme(s) over aggregate evidence.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="flex flex-col gap-3">
@@ -271,12 +271,15 @@ function InterpretationResult({
               </TableBody>
             </Table>
             <div>
-              <p className="text-label-md font-semibold mb-2">Classification basis</p>
+              <p className="text-label-md mb-2 font-semibold">Classification basis</p>
               <ul className="flex flex-col gap-2">
                 {sentimentClassifications.map((classification) => (
-                  <li key={`${classification.evidenceCategory}-${classification.sentiment}-${classification.rationale}`}>
+                  <li
+                    key={`${classification.evidenceCategory}-${classification.sentiment}-${classification.rationale}`}
+                  >
                     <span className="text-body-md font-medium">
-                      {classification.evidenceCategory}: {SENTIMENT_LABELS[classification.sentiment]}
+                      {classification.evidenceCategory}:{" "}
+                      {SENTIMENT_LABELS[classification.sentiment]}
                     </span>
                     <span className="text-body-md text-muted-foreground block">
                       {classification.rationale}
@@ -317,8 +320,8 @@ function InterpretationResult({
         <CardHeader>
           <CardTitle>Human CQI decision remains authoritative</CardTitle>
           <CardDescription>
-            This interpretation is supplementary. Return to the deterministic evidence before
-            making a quality improvement decision.
+            This interpretation is supplementary. Return to the deterministic evidence before making
+            a quality improvement decision.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">

@@ -43,7 +43,7 @@ export function ProgramHeadNeedsAttention({ items }: { items: NeedsAttentionItem
                 <li key={item.id} className="border-border/60 border-b last:border-b-0">
                   <Link
                     href={item.href}
-                    className="focus-visible:ring-ring -mx-2 flex items-start gap-3 rounded-lg px-2 py-2.5 pointer-coarse:min-h-11 focus-visible:ring-2 focus-visible:outline-none"
+                    className="focus-visible:ring-ring -mx-2 flex items-start gap-3 rounded-lg px-2 py-2.5 focus-visible:ring-2 focus-visible:outline-none pointer-coarse:min-h-11"
                   >
                     <span className="mt-0.5 shrink-0">
                       <span
@@ -62,7 +62,7 @@ export function ProgramHeadNeedsAttention({ items }: { items: NeedsAttentionItem
                       <span className="text-label-md block truncate font-bold" title={item.title}>
                         {item.title}
                       </span>
-                      <span className="text-muted-foreground mt-0.5 block text-label-sm">
+                      <span className="text-muted-foreground text-label-sm mt-0.5 block">
                         {RULE_LABELS[item.rule]}
                         {item.note ? ` · ${item.note}` : ""}
                       </span>
@@ -72,7 +72,7 @@ export function ProgramHeadNeedsAttention({ items }: { items: NeedsAttentionItem
               ))}
             </ul>
             {remaining > 0 && (
-              <p className="text-muted-foreground mt-2 text-label-sm">
+              <p className="text-muted-foreground text-label-sm mt-2">
                 +{remaining} more across sources and evaluations
               </p>
             )}

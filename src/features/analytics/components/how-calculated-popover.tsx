@@ -27,11 +27,16 @@ export function HowCalculatedPopover({
   label: string;
 }) {
   const countRows: Array<{ label: string; value: number }> = [];
-  if (metric.ratingCount !== undefined) countRows.push({ label: "Ratings", value: metric.ratingCount });
-  if (metric.responseCount !== undefined) countRows.push({ label: "Responses", value: metric.responseCount });
-  if (metric.assignmentCount !== undefined) countRows.push({ label: "Assignments", value: metric.assignmentCount });
-  if (metric.evaluationCount !== undefined) countRows.push({ label: "Evaluations", value: metric.evaluationCount });
-  if (metric.questionCount !== undefined) countRows.push({ label: "Questions", value: metric.questionCount });
+  if (metric.ratingCount !== undefined)
+    countRows.push({ label: "Ratings", value: metric.ratingCount });
+  if (metric.responseCount !== undefined)
+    countRows.push({ label: "Responses", value: metric.responseCount });
+  if (metric.assignmentCount !== undefined)
+    countRows.push({ label: "Assignments", value: metric.assignmentCount });
+  if (metric.evaluationCount !== undefined)
+    countRows.push({ label: "Evaluations", value: metric.evaluationCount });
+  if (metric.questionCount !== undefined)
+    countRows.push({ label: "Questions", value: metric.questionCount });
 
   return (
     <Popover>
@@ -40,7 +45,7 @@ export function HowCalculatedPopover({
           <button
             type="button"
             aria-label={`How calculated: ${label}`}
-            className="text-muted-foreground hover:text-foreground inline-flex size-7 items-center justify-center rounded-md transition-colors pointer-coarse:size-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-7 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none pointer-coarse:size-11"
           >
             <Info aria-hidden="true" className="size-4" />
           </button>
@@ -61,7 +66,7 @@ export function HowCalculatedPopover({
             {countRows.map((row) => (
               <div key={row.label} className="flex items-baseline justify-between gap-2">
                 <dt className="text-muted-foreground">{row.label}</dt>
-                <dd className="tabular-nums font-semibold">{row.value.toLocaleString()}</dd>
+                <dd className="font-semibold tabular-nums">{row.value.toLocaleString()}</dd>
               </div>
             ))}
           </dl>

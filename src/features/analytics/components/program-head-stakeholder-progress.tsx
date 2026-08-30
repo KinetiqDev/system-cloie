@@ -43,16 +43,13 @@ export function ProgramHeadStakeholderProgress({
             <Link
               key={row.stakeholder}
               href={stakeholdersHref}
-              className="focus-visible:ring-ring -mx-2 grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-1.5 pointer-coarse:min-h-11 focus-visible:ring-2 focus-visible:outline-none"
+              className="focus-visible:ring-ring -mx-2 grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none pointer-coarse:min-h-11"
               aria-label={`${STAKEHOLDER_LABELS[row.stakeholder]}: ${row.submitted} of ${row.assigned} submitted, ${Math.round((row.completionRate ?? 0) * 100)} percent complete, ${row.inProgress} in progress, ${row.notStarted} not started`}
             >
               <span className="text-label-md truncate font-semibold">
                 {STAKEHOLDER_LABELS[row.stakeholder]}
               </span>
-              <span
-                aria-hidden="true"
-                className="bg-muted flex h-3 overflow-hidden rounded-full"
-              >
+              <span aria-hidden="true" className="bg-muted flex h-3 overflow-hidden rounded-full">
                 <span
                   className="h-full"
                   style={{
@@ -73,23 +70,31 @@ export function ProgramHeadStakeholderProgress({
                 />
               </span>
               <span className="text-label-sm text-right leading-tight">
-                <span className="tabular-nums block font-bold">
+                <span className="block font-bold tabular-nums">
                   {Math.round((row.completionRate ?? 0) * 100)}%
                 </span>
-                <span className="tabular-nums text-muted-foreground block">
+                <span className="text-muted-foreground block tabular-nums">
                   {row.submitted} / {row.assigned}
                 </span>
               </span>
             </Link>
           ))
         )}
-        <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1 text-label-sm">
+        <div className="text-muted-foreground text-label-sm mt-1 flex flex-wrap gap-x-4 gap-y-1">
           <span className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2 rounded-sm" style={{ backgroundColor: "var(--chart-1)" }} />
+            <span
+              aria-hidden="true"
+              className="size-2 rounded-sm"
+              style={{ backgroundColor: "var(--chart-1)" }}
+            />
             Submitted
           </span>
           <span className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="size-2 rounded-sm" style={{ backgroundColor: "var(--chart-2)" }} />
+            <span
+              aria-hidden="true"
+              className="size-2 rounded-sm"
+              style={{ backgroundColor: "var(--chart-2)" }}
+            />
             In progress
           </span>
           <span className="flex items-center gap-1.5">

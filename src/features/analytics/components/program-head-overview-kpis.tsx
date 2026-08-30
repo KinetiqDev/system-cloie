@@ -24,7 +24,11 @@ type ProgramHeadOverviewKPIsProps = {
 
 const resetLinkClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
-export function ProgramHeadOverviewKPIs({ kpi, emptyReason, resetHref }: ProgramHeadOverviewKPIsProps) {
+export function ProgramHeadOverviewKPIs({
+  kpi,
+  emptyReason,
+  resetHref,
+}: ProgramHeadOverviewKPIsProps) {
   const cards = [
     { label: "Submitted Responses", value: String(kpi.submittedResponseCount) },
     { label: "Evaluation Opportunities", value: String(kpi.evaluationOpportunityCount) },
