@@ -336,6 +336,7 @@ Rules:
 - Reuse existing Base UI/shadcn input, textarea, select, checkbox, radio, switch, label, helper, and error components.
 - Every field has a visible label; errors/helper text appear beside the field.
 - Checked controls use primary, not semantic success.
+- Switch states: off = muted track with foreground knob; on = primary track with primary-foreground knob. Knob/track and track/page boundaries hold ≥3:1 in both themes.
 - Dark fields use the semantic input surface and dedicated ring.
 - Continue using `customZodResolver`.
 - No placeholder-only labels.

@@ -4,11 +4,11 @@ import { Switch } from "@/components/ui/switch";
 
 describe("Switch", () => {
   describe("semantic retokening", () => {
-    it("renders with the semantic input surface for the unchecked state", () => {
+    it("renders the muted track for the unchecked state", () => {
       render(<Switch aria-label="Email me about new courses" />);
       const sw = screen.getByRole("switch");
-      expect(sw).toHaveClass("bg-surface-input");
-      expect(sw).toHaveClass("data-unchecked:bg-surface-input");
+      expect(sw).toHaveClass("bg-muted");
+      expect(sw).toHaveClass("data-unchecked:bg-muted");
     });
 
     it("does not retain raw-theme dark palette selectors that bypass the semantic tokens on the root", () => {
@@ -18,12 +18,12 @@ describe("Switch", () => {
       expect(rootClasses).not.toMatch(/\bdark:/);
     });
 
-    it("keeps the thumb visually distinct from the track through semantic surface contrast", () => {
+    it("keeps the knob inverted against the track so the off state stays visible in both themes", () => {
       render(<Switch aria-label="Notify" />);
       const sw = screen.getByRole("switch");
       const thumb = sw.querySelector('[data-slot="switch-thumb"]');
       expect(thumb).toBeInTheDocument();
-      expect(thumb).toHaveClass("bg-background");
+      expect(thumb).toHaveClass("bg-foreground");
       expect(thumb).toHaveClass("shadow-sm");
     });
   });
@@ -34,6 +34,8 @@ describe("Switch", () => {
       const sw = screen.getByRole("switch", { checked: true });
       expect(sw).toHaveClass("data-checked:bg-primary");
       expect(sw).toHaveAttribute("data-checked");
+      const thumb = sw.querySelector('[data-slot="switch-thumb"]');
+      expect(thumb).toHaveClass("data-checked:bg-primary-foreground");
     });
 
     it("exposes the checked state via aria-checked", () => {
