@@ -51,7 +51,12 @@ test("top-down journey: dashboard to exact answers", async ({ page }) => {
 
   // Evaluation detail → named respondent.
   await expect(page.getByRole("heading", { name: fx.courseEvaluation.title })).toBeVisible();
-  await page.getByRole("link", { name: fx.courseResponse.respondentName, exact: true }).click();
+  // #586: the respondent's name is a plain cell; evidence opens through the
+  // row's View Response action.
+  await page
+    .getByRole("row", { name: new RegExp(fx.courseResponse.respondentName) })
+    .getByRole("link", { name: "View Response" })
+    .click();
 
   // Individual response: exact quantitative answer.
   await expect(page.getByRole("heading", { name: fx.courseResponse.respondentName })).toBeVisible();

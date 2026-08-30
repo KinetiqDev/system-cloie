@@ -165,7 +165,11 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await loginAs(page, fx.demoPh.email);
   await page.goto(`/program-head/programs/${fx.bsit.id}/responses/program-wide/${deploymentId}`);
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Demo Alumni" })).toBeVisible();
+  // #586: the respondent's name is a plain cell; evidence opens through the
+  // row's View Response action.
+  await expect(
+    page.getByRole("row", { name: "Demo Alumni" }).getByRole("link", { name: "View Response" })
+  ).toBeVisible();
 
   // Cross-Program leakage: BEED Program Head gets Not Found
   await loginAs(page, fx.beedPh.email);
@@ -309,5 +313,9 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await loginAs(page, fx.demoPh.email);
   await page.goto(`/program-head/programs/${fx.bsit.id}/responses/program-wide/${deploymentId}`);
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Demo Industry" })).toBeVisible();
+  // #586: the respondent's name is a plain cell; evidence opens through the
+  // row's View Response action.
+  await expect(
+    page.getByRole("row", { name: "Demo Industry" }).getByRole("link", { name: "View Response" })
+  ).toBeVisible();
 });
