@@ -158,14 +158,30 @@ export type QualitativeSummary = {
   topTerms: WordCloudToken[];
 };
 
-/** One identified submitted respondent row (§25.5, §26). */
-export type ProgramHeadRespondentRow = {  responseId: string;
+/** One identified submitted respondent row (§25.5). */
+export type ProgramHeadRespondentRow = {
+  responseId: string;
   name: string;
   stakeholder: TargetStakeholder;
   majorLabel: string | null;
   yearLevel: YearLevel | null;
   section: StudentSection | null;
   submittedAt: Date;
+  quantitativeMean: number | null;
+};
+
+/** One identified assignment row in a Program Head-only evaluation roster. */
+export type ProgramHeadAssignmentRespondentRow = {
+  assignmentId: string;
+  responseId: string | null;
+  name: string;
+  stakeholder: TargetStakeholder;
+  status: "SUBMITTED" | "IN_PROGRESS" | "NOT_STARTED";
+  majorLabel: string | null;
+  yearLevel: YearLevel | null;
+  section: StudentSection | null;
+  assignedAt: Date;
+  submittedAt: Date | null;
   quantitativeMean: number | null;
 };
 
@@ -234,9 +250,8 @@ export type ProgramHeadCentralEvaluationDetail = {
     qualitativeRespondentCount: number;
   };
   participation: ParticipationSummary;
-  /** Direct PLO results grouped by `plo_id ?? plo_code_snapshot` (§26). */
+  respondents: ProgramHeadAssignmentRespondentRow[];
   ploResults: PloMetric[];
   questionResults: ProgramHeadCentralQuestionResult[];
   qualitative: QualitativeSummary;
-  respondents: ProgramHeadRespondentRow[];
 };

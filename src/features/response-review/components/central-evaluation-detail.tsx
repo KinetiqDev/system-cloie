@@ -14,6 +14,7 @@ import { describeScale } from "@/features/analytics/aggregators/scale-identity";
 import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics/aggregators/types";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
+import { STAKEHOLDER_LABELS } from "@/features/analytics/program-head-dashboard-labels";
 import type { ProgramHeadCentralEvaluationDetail } from "../types";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
@@ -51,7 +52,9 @@ export function CentralEvaluationDetail({
         </div>
         <h1 className="text-heading-lg text-balance">{evaluation.title}</h1>
         <p className="text-body-md text-text-secondary text-pretty">
-          <span className="text-foreground font-semibold">{evaluation.stakeholder}</span>
+          <span className="text-foreground font-semibold">
+            {STAKEHOLDER_LABELS[evaluation.stakeholder] ?? evaluation.stakeholder}
+          </span>
           {" · "}
           {evaluation.periodLabel}
         </p>
@@ -109,6 +112,18 @@ export function CentralEvaluationDetail({
         </div>
       )}
 
+      {/* The Program Head's operational path comes before aggregate evidence. */}
+      <IdentifiedRespondentsTable
+        respondents={respondents}
+        responseHrefs={Object.fromEntries(
+          respondents.flatMap((respondent) =>
+            respondent.responseId
+              ? [[respondent.responseId, responseHref(respondent.responseId)]]
+              : []
+          )
+        )}
+      />
+
       {/* Direct PLO results (§26) */}
       <Card>
         <CardHeader>
@@ -149,7 +164,9 @@ export function CentralEvaluationDetail({
                   return (
                     <TableRow key={plo.ploId}>
                       <TableCell className="font-medium">{plo.ploCode}</TableCell>
-                      <TableCell>{plo.ploDescription}</TableCell>
+                      <TableCell className="min-w-72 break-words whitespace-normal">
+                        {plo.ploDescription}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{plo.ratingCount}</TableCell>
                       <TableCell className="text-right tabular-nums">{plo.responseCount}</TableCell>
                       <TableCell className="text-right tabular-nums">
@@ -198,8 +215,10 @@ export function CentralEvaluationDetail({
                   return (
                     <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
                       <TableCell>{question.itemKey}</TableCell>
-                      <TableCell>{question.prompt}</TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-72 break-words whitespace-normal">
+                        {question.prompt}
+                      </TableCell>
+                      <TableCell className="min-w-40 whitespace-normal">
                         {question.ploBindings.length > 0
                           ? question.ploBindings.map((binding) => binding.code).join(", ")
                           : "General evaluation item"}
@@ -298,9 +317,6 @@ export function CentralEvaluationDetail({
           </p>
         </CardContent>
       </Card>
-
-      {/* Submitted respondents (§26) */}
-      <IdentifiedRespondentsTable respondents={respondents} responseHref={responseHref} />
     </div>
   );
 }

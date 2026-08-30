@@ -60,23 +60,18 @@ export function ResponseDetail({
         </p>
       </header>
 
-      {/* Evaluation context */}
       <Card>
         <CardHeader>
           <CardTitle>{evaluation.title}</CardTitle>
           <CardDescription>Evaluation context and submitted response summary.</CardDescription>
         </CardHeader>
-        <CardContent className="text-body-sm flex flex-col gap-1">
-          <p>
-            <span className="text-text-muted">Submitted: </span>
-            {dateTimeFormatter.format(response.submittedAt)}
-          </p>
-          <p>
-            <span className="text-text-muted">Response mean: </span>
-            <span className="font-semibold tabular-nums">
-              {formatMean(response.quantitativeMean)}
-            </span>
-          </p>
+        <CardContent className="text-body-sm grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ContextFact label="Submitted" value={dateTimeFormatter.format(response.submittedAt)} />
+          <ContextFact
+            label="Response Quantitative Mean"
+            value={formatMean(response.quantitativeMean)}
+            description="Calculated from all valid quantitative answers in this submitted response."
+          />
           {evaluation.type === "COURSE_BOUND" ? (
             <CourseBoundContext context={evaluation.context} />
           ) : (
@@ -206,6 +201,26 @@ function QualitativeAnswerCard({
   );
 }
 
+function ContextFact({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: string;
+  description?: string;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-label-sm text-muted-foreground">{label}</span>
+      <span className="font-semibold break-words tabular-nums">{value}</span>
+      {description ? (
+        <span className="text-caption text-muted-foreground text-pretty">{description}</span>
+      ) : null}
+    </div>
+  );
+}
+
 function CourseBoundContext({
   context,
 }: {
@@ -218,20 +233,9 @@ function CourseBoundContext({
 }) {
   return (
     <>
-      <p>
-        <span className="text-text-muted">Course: </span>
-        {context.courseCode} — {context.courseTitle}
-      </p>
-      {context.facultyName && (
-        <p>
-          <span className="text-text-muted">Faculty: </span>
-          {context.facultyName}
-        </p>
-      )}
-      <p>
-        <span className="text-text-muted">Period: </span>
-        {context.periodLabel}
-      </p>
+      <ContextFact label="Course" value={`${context.courseCode} — ${context.courseTitle}`} />
+      {context.facultyName ? <ContextFact label="Faculty" value={context.facultyName} /> : null}
+      <ContextFact label="Academic Period" value={context.periodLabel} />
     </>
   );
 }
@@ -241,22 +245,17 @@ function ProgramWideContext({
 }: {
   context: { stakeholder: string; targetProgramLabel: string | null; periodLabel: string };
 }) {
+  const stakeholder = context.stakeholder
+    .replaceAll("_", " ")
+    .toLocaleLowerCase()
+    .replace(/\b\w/g, (character) => character.toLocaleUpperCase());
   return (
     <>
-      <p>
-        <span className="text-text-muted">Stakeholder: </span>
-        {context.stakeholder}
-      </p>
-      {context.targetProgramLabel && (
-        <p>
-          <span className="text-text-muted">Target program: </span>
-          {context.targetProgramLabel}
-        </p>
-      )}
-      <p>
-        <span className="text-text-muted">Period: </span>
-        {context.periodLabel}
-      </p>
+      <ContextFact label="Stakeholder" value={stakeholder} />
+      {context.targetProgramLabel ? (
+        <ContextFact label="Target Program" value={context.targetProgramLabel} />
+      ) : null}
+      <ContextFact label="Academic Period" value={context.periodLabel} />
     </>
   );
 }

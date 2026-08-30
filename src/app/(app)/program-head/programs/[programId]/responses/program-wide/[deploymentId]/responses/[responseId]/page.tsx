@@ -14,7 +14,10 @@ import {
   STAKEHOLDER_EVIDENCE_SOURCE,
   buildAnalyticsUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
-import { buildProgramHeadResponsesProgramWideDeploymentPath } from "@/lib/constants/program-head-routes";
+import {
+  buildProgramHeadResponsesProgramWideDeploymentPath,
+  buildProgramHeadToolsPath,
+} from "@/lib/constants/program-head-routes";
 
 export default async function CentralResponseDetailPage({
   params,
@@ -28,6 +31,7 @@ export default async function CentralResponseDetailPage({
     searchParams ?? Promise.resolve({}),
   ]);
   const state = parseProgramHeadResponsesSearchParams(rawSearchParams);
+  const openedFromTools = "from" in rawSearchParams && rawSearchParams.from === "tools";
   const response = await getProgramHeadResponseDetail(programId, responseId);
 
   if (
@@ -56,22 +60,37 @@ export default async function CentralResponseDetailPage({
     deploymentId
   );
   const upwardQuery = programHeadResponsesQuery(upwardState);
-  const evaluationHref = upwardQuery ? `${evaluationPath}?${upwardQuery}` : evaluationPath;
+  const toolsHref = `${buildProgramHeadToolsPath(programId)}?tab=published`;
+  const evaluationHref = openedFromTools
+    ? `${evaluationPath}?from=tools`
+    : upwardQuery
+      ? `${evaluationPath}?${upwardQuery}`
+      : evaluationPath;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs
-        items={[
-          { label: "Responses", href: responsesHref },
-          { label: "Program-wide evaluations", href: responsesHref },
-          { label: response.evaluation.title, href: evaluationHref },
-          { label: response.respondent.name },
-        ]}
+        items={
+          openedFromTools
+            ? [
+                { label: "Evaluation Tools", href: toolsHref },
+                { label: response.evaluation.title, href: evaluationHref },
+                { label: response.respondent.name },
+              ]
+            : [
+                { label: "Responses", href: responsesHref },
+                { label: "Program-wide evaluations", href: responsesHref },
+                { label: response.evaluation.title, href: evaluationHref },
+                { label: response.respondent.name },
+              ]
+        }
       />
-      <Button render={<Link href={evaluationHref} />} variant="outline">
-        <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-        Back to evaluation
-      </Button>
+      <div>
+        <Button render={<Link href={evaluationHref} />} variant="outline" size="sm">
+          <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+          Back to Evaluation
+        </Button>
+      </div>
       <ResponseDetail
         response={response}
         evaluationHref={evaluationHref}

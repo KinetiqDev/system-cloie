@@ -119,6 +119,25 @@ describe("ProgramHeadToolsPage", () => {
     expect(within(publishedPanel).getByText("Term 1")).toBeVisible();
   });
 
+  test("opens published deployment details through the canonical response route", () => {
+    render(
+      <ProgramHeadToolsPage
+        templates={[template]}
+        deployments={[deployment]}
+        baselines={[baseline]}
+        program={{ id: "program-1", code: "BSIT", name: "Information Technology" }}
+        initialTab="published"
+      />
+    );
+
+    const detailsLink = screen.getByRole("link", { name: "View Details" });
+    expect(detailsLink).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/responses/program-wide/deployment-1?from=tools"
+    );
+    expect(screen.queryByRole("dialog", { name: "BSIT Tool" })).not.toBeInTheDocument();
+  });
+
   test("does not surface a stale operation error inside the delete confirmation", async () => {
     duplicateTemplateActionMock.mockResolvedValue({ success: false, error: "Duplicate failed." });
 

@@ -8,17 +8,11 @@ import {
   buildProgramHeadNewCiloEvaluationPath,
   buildProgramHeadNewToolPath,
   buildProgramHeadPublishToolPath,
+  buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
 import { Copy, Eye, Pencil, Plus, Send, Trash2, XCircle } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -29,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { showToast } from "@/components/ui/toast";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import type { ProgramHeadDeploymentItem } from "@/features/evaluations/services/list-program-head-deployments";
 import {
@@ -43,6 +37,7 @@ import {
   duplicateTemplateAction,
   toggleTemplateActiveAction,
 } from "@/lib/actions/program-head-template-actions";
+import { cn } from "@/lib/utils";
 import type { ProgramHeadTemplateItem } from "@/features/instruments/services/manage-program-head-templates";
 import type { InstitutionalBaselineItem } from "@/features/instruments/services/list-institutional-baselines";
 import {
@@ -61,16 +56,6 @@ type ProgramHeadToolsPageProps = {
   initialTab?: EvaluationToolsTab;
   initialView?: ToolsViewMode;
 };
-
-function formatDate(date: Date | string | null): string {
-  if (!date) return "--";
-  const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function formatStakeholder(stakeholder: string): string {
   return stakeholder
@@ -354,7 +339,6 @@ function ProgramHeadPublishedDeployments({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [detailId, setDetailId] = useState<string | null>(null);
   const [closeTargetId, setCloseTargetId] = useState<string | null>(null);
   const [optimisticDeployments, updateDeployment] = useOptimistic(
     deployments,
@@ -406,16 +390,17 @@ function ProgramHeadPublishedDeployments({
             <p className="text-muted-foreground">No published tools yet.</p>
           </div>
         }
-        renderExpanded={(item) => {
-          const deployment = byId.get(item.id);
-          if (!deployment) return null;
-          return <DeploymentExpandedDetails deployment={deployment} />;
-        }}
         renderMenuItems={(item, ctx) => (
           <>
             {ctx.view === "list" && (
-              <DropdownMenuItem onClick={ctx.toggle}>
-                <Eye className="mr-2 size-4" />
+              <DropdownMenuItem
+                render={
+                  <Link
+                    href={`${buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id)}?from=tools`}
+                  />
+                }
+              >
+                <Eye data-icon="inline-start" aria-hidden="true" />
                 View Details
               </DropdownMenuItem>
             )}
@@ -432,10 +417,13 @@ function ProgramHeadPublishedDeployments({
         )}
         renderCardActions={(item) => (
           <>
-            <Button variant="outline" size="sm" onClick={() => setDetailId(item.id)}>
-              <Eye data-icon="inline-start" />
+            <Link
+              href={`${buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id)}?from=tools`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              <Eye data-icon="inline-start" aria-hidden="true" />
               View Details
-            </Button>
+            </Link>
             {item.canClose && (
               <Button variant="destructive" size="sm" onClick={() => setCloseTargetId(item.id)}>
                 <XCircle data-icon="inline-start" />
@@ -445,18 +433,6 @@ function ProgramHeadPublishedDeployments({
           </>
         )}
       />
-
-      <Dialog open={detailId !== null} onOpenChange={(open) => !open && setDetailId(null)}>
-        <DialogContent className="sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{detailId ? (byId.get(detailId)?.templateName ?? "") : ""}</DialogTitle>
-            <DialogDescription>Deployment details</DialogDescription>
-          </DialogHeader>
-          {detailId && byId.get(detailId) && (
-            <DeploymentExpandedDetails deployment={byId.get(detailId)!} />
-          )}
-        </DialogContent>
-      </Dialog>
 
       <CloseEvaluationDialog
         entityLabel="Deployment"
@@ -469,95 +445,5 @@ function ProgramHeadPublishedDeployments({
         isPending={isPending}
       />
     </>
-  );
-}
-
-function DeploymentExpandedDetails({ deployment }: { deployment: ProgramHeadDeploymentItem }) {
-  const responseRate =
-    deployment.assignmentCount > 0
-      ? (deployment.responseCount / deployment.assignmentCount) * 100
-      : 0;
-
-  return (
-    <div className="grid gap-6 md:grid-cols-3">
-      {/* Column 1: Deployment Details */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold">Deployment Details</h4>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Program</span>
-            <span>
-              {deployment.programCode} - {deployment.programName}
-            </span>
-          </div>
-          {deployment.majorName && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Major</span>
-              <span>{deployment.majorName}</span>
-            </div>
-          )}
-          {deployment.yearLevelName && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Year Level</span>
-              <span>{deployment.yearLevelName}</span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Target</span>
-            <span>{formatStakeholder(deployment.target_stakeholder)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Column 2: Response Summary */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold">Response Summary</h4>
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Total Assignments</span>
-            <span className="font-medium">{deployment.assignmentCount}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Responses</span>
-            <span className="font-medium">{deployment.responseCount}</span>
-          </div>
-          <div className="space-y-1">
-            <div className="text-muted-foreground flex justify-between text-xs">
-              <span>Response Rate</span>
-              <span>{responseRate.toFixed(0)}%</span>
-            </div>
-            <div className="bg-muted h-2 overflow-hidden rounded-full">
-              <div
-                className="bg-primary h-full transition-all"
-                style={{ width: `${responseRate}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Column 3: Timeline */}
-      <div className="space-y-3">
-        <h4 className="text-sm font-semibold">Timeline</h4>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Published</span>
-            <span>{formatDate(deployment.created_at)}</span>
-          </div>
-          {deployment.activation_at && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Activation</span>
-              <span>{formatDate(deployment.activation_at)}</span>
-            </div>
-          )}
-          {deployment.deadline_at && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Deadline</span>
-              <span>{formatDate(deployment.deadline_at)}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
