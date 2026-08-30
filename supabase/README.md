@@ -43,12 +43,14 @@ pnpm supabase:stop               # Stop the local stack
 Local OAuth is configured in `supabase/config.toml`:
 
 - `[auth.external.google]` is enabled with `client_id = "env(GOOGLE_CLIENT_ID)"` and `secret = "env(GOOGLE_CLIENT_SECRET)"`. Provide both values in an ignored env file; never commit them.
-- `[auth]` allowlists the local System CLOIE OAuth callback (`http://127.0.0.1:3000/api/auth/callback`).
+- `[auth]` allowlists the exact localhost and `127.0.0.1` System CLOIE callbacks. It also allows `https://*.trycloudflare.com/api/auth/callback?intent=*` for ephemeral local-development Quick Tunnels. The wildcard covers one generated tunnel hostname and the required role-intent value; it does not allow other callback paths. Do not copy it into production.
 
 The two-stage flow needs two callbacks registered:
 
 1. **Google Cloud Console** — create an OAuth client and set the authorized redirect URI to the local Supabase Auth callback: `http://127.0.0.1:54321/auth/v1/callback`.
-2. **System CLOIE** — after Supabase Auth completes, the browser redirects to the application callback `http://127.0.0.1:3000/api/auth/callback` with the role intent. This URL is already allowlisted in `supabase/config.toml`.
+2. **System CLOIE** — after Supabase Auth completes, the browser redirects to `/api/auth/callback` on the origin that initiated sign-in. `supabase/config.toml` allows localhost, `127.0.0.1`, and one generated `trycloudflare.com` subdomain.
+
+For a Quick Tunnel session, leave `NEXT_PUBLIC_SITE_URL` unset before starting System CLOIE. The browser then supplies the current tunnel origin. A fixed localhost value overrides the tunnel origin and sends the OAuth callback back to localhost. Restart System CLOIE after changing this public environment value. Restart the local Supabase stack after changing `supabase/config.toml`.
 
 After changing backend targets, clear stale Auth cookies (`cloie_dev_auth`, `sb-*` session cookies) and re-authenticate; sessions are not portable between instances because issuers and signing keys differ.
 

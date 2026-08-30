@@ -149,14 +149,16 @@ max_indexes = 5
 
 [auth]
 enabled = true
-# The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
-# in emails. Local development serves System CLOIE at http://127.0.0.1:3000.
-site_url = "http://127.0.0.1:3000"
-# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-# The System CLOIE OAuth callback route must be allowlisted for the local flow:
-# Google redirects back to Supabase Auth (http://127.0.0.1:54321/auth/v1/callback), then Supabase
-# redirects the browser to this application callback with the role intent.
-additional_redirect_urls = ["http://127.0.0.1:3000/api/auth/callback"]
+# The stable local URL used as the default when an OAuth request omits redirect_to.
+site_url = "http://localhost:3000"
+# OAuth redirect allowlist. Keep callbacks path-scoped. The trycloudflare wildcard is for ephemeral
+# local-development Quick Tunnels only and includes System CLOIE's required role-intent query;
+# production must use an exact System CLOIE HTTPS origin.
+additional_redirect_urls = [
+  "http://localhost:3000/api/auth/callback",
+  "http://127.0.0.1:3000/api/auth/callback",
+  "https://*.trycloudflare.com/api/auth/callback?intent=*",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to the local API URL (http://127.0.0.1:<port>/auth/v1).

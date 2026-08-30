@@ -314,7 +314,7 @@ Required in `.env.local` (local development) or the deployment environment (see 
 # Supabase (client, browser-safe public contract)
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321  # local CLI Docker stack
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key      # from pnpm supabase:status
-NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000        # unset for trycloudflare Quick Tunnels
 
 # Database (Prisma)
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
