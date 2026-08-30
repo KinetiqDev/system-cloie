@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -176,6 +177,62 @@ describe("confirmPLOImport", () => {
       existing: 0,
       created: 2,
       notCreated: 0,
+    });
+  });
+
+  it("reports a concurrently created code as a duplicate instead of aborting the import", async () => {
+    transactionMock
+      .mockImplementationOnce(() => {
+        throw new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+          code: "P2002",
+          clientVersion: "test",
+        });
+      })
+      .mockImplementationOnce(async (callback) =>
+        callback({
+          programHeadAssignment: { findFirst: vi.fn() },
+          program: { findUnique: programFindMock },
+          pLO: { findMany: ploFindManyMock, createMany: createManyMock },
+        })
+      );
+    ploFindManyMock.mockResolvedValue([
+      { code: "OLD", order: 4, is_active: true },
+      { code: "PLO-1", order: 5, is_active: true },
+    ]);
+    createManyMock.mockResolvedValue({ count: 1 });
+    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
+    const result = await confirmPLOImport(request);
+
+    expect(transactionMock).toHaveBeenCalledTimes(2);
+    expect(createManyMock).toHaveBeenCalledWith({
+      data: [{ code: "PLO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID }],
+    });
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        rows: [
+          { ploCode: "PLO-1", outcome: "DUPLICATE_EXISTING_ACTIVE" },
+          { ploCode: "PLO-2", outcome: "CREATED" },
+        ],
+        summary: { created: 1, notCreated: 1 },
+      },
+    });
+  });
+
+  it("gives up after one retry when the uniqueness conflict persists", async () => {
+    transactionMock.mockImplementation(() => {
+      throw new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+        code: "P2002",
+        clientVersion: "test",
+      });
+    });
+    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
+    const result = await confirmPLOImport(request);
+
+    expect(transactionMock).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      success: false,
+      error: "Program Learning Outcomes could not be imported. No PLOs were created. Try again.",
     });
   });
 });

@@ -4,7 +4,7 @@
  * Uses --check and never mutates files.
  */
 
-import { getBaseRef, getChangedFiles, runCheck } from "./lib/changed-files.mjs";
+import { existingFiles, getBaseRef, getChangedFiles, runCheck } from "./lib/changed-files.mjs";
 
 // fallow-ignore-next-line complexity
 function main() {
@@ -17,17 +17,10 @@ function main() {
     return;
   }
 
-  // fallow-ignore-next-line complexity
-  const filtered = changed.filter((f) => {
-    if (
-      f.startsWith(".next/") ||
-      f.startsWith("node_modules/") ||
-      f.startsWith("playwright-report/") ||
-      f.startsWith("test-results/")
-    )
-      return false;
-    return true;
-  });
+  const excludedPrefixes = [".next/", "node_modules/", "playwright-report/", "test-results/"];
+  const filtered = existingFiles(
+    changed.filter((f) => !excludedPrefixes.some((prefix) => f.startsWith(prefix)))
+  );
 
   if (filtered.length === 0) {
     console.log("[prettier:changed] No relevant changed files.");

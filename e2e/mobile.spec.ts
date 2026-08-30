@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
 import {
+  expectNoAxeViolations,
   expectNoHorizontalOverflow,
   expectQuestionUnanswered,
   loginAs,
@@ -18,12 +19,21 @@ test("mobile drawer navigation and filter persistence", async ({ page }) => {
   await page.goto("/program-head");
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
+  // Touch alternatives: primary controls are tappable button/link roles with
+  // visible labels — nothing essential is hidden behind hover-only behavior.
+  const navTrigger = page.getByRole("button", { name: "Open navigation menu" });
+  await expect(navTrigger).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link").first()).toBeVisible();
+  await expectNoAxeViolations(page);
+
   // Mobile drawer navigation to Responses.
-  await page.getByRole("button", { name: "Open navigation menu" }).click();
+  await navTrigger.click();
   const drawer = page.getByRole("dialog", { name: "Navigation menu" });
   await expect(drawer).toBeVisible();
+  await expectNoAxeViolations(page);
   await drawer.getByRole("link", { name: "Responses", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
+  await expectNoAxeViolations(page);
 
   // Apply a filter; it must land in the URL and survive a reload.
   await page.getByLabel("Completion").selectOption("zero");
@@ -77,6 +87,7 @@ test("faculty roster drawer: same workflow, focus restoration, and dismissal pro
   await manageButton.click();
   const drawer = page.getByRole("dialog", { name: "Manage roster" });
   await expect(drawer).toBeVisible();
+  await expectNoAxeViolations(page);
 
   // Same workflow as desktop: scoped name search with a safe already-active
   // result (no write, no duplicate membership).
@@ -146,6 +157,7 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
 
   await expect(page.getByRole("heading", { name: fx.gestechEval.title, level: 1 })).toBeVisible();
   await expectNoHorizontalOverflow(page);
+  await expectNoAxeViolations(page);
 
   // Answer section 1, navigate (auto-save), reload, and verify the draft
   // restored while the next section stayed untouched.
@@ -253,6 +265,7 @@ test("mobile student lifecycle: no overflow, keyboard-safe, draft survives reloa
   await expect(page).toHaveURL(/\/student\/history\/[0-9a-f-]{36}(?:\?t=\d+)?$/);
   await expect(page.getByText(/Submitted on /)).toBeVisible();
   await expectNoHorizontalOverflow(page);
+  await expectNoAxeViolations(page);
 
   // Second submission denied: the evaluation route redirects to the frozen
   // submitted review.
@@ -281,7 +294,7 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await page.goto("/alumni/dashboard");
   await expect(page.getByText("Alumni Portal")).toBeVisible();
   await expectNoHorizontalOverflow(page);
-
+  await expectNoAxeViolations(page);
   // The seeded mobile deployment must be visible on the dashboard.
   const pendingCard = page
     .locator("div.group")
@@ -399,4 +412,5 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await page.goto(reviewHref! + "?t=" + Date.now(), { waitUntil: "networkidle" });
   await expect(page.getByText(/Submitted on /)).toBeVisible();
   await expectNoHorizontalOverflow(page);
+  await expectNoAxeViolations(page);
 });

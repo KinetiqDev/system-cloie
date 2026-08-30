@@ -1,0 +1,397 @@
+# Scheduled deep verification (issue #551).
+#
+# The full role, live RLS, visual, demo-reset gate, production-boundary, and
+# cross-browser matrix runs on a bounded schedule instead of every small PR.
+# PR CI (.depot/workflows/ci.yml) keeps the fast risk-selected gate; this
+# workflow always runs the complete matrix, in parallel jobs, each with an
+# explicit timeout and its own disposable database service.
+
+name: Scheduled Deep Verification
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+jobs:
+  unit:
+    name: Unit Suites
+    runs-on: depot-ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test
+        run: pnpm vitest run --pool=forks --maxWorkers=4
+        env:
+          NODE_ENV: test
+          NODE_OPTIONS: --max-old-space-size=4096
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+  database-integration:
+    name: Database Integration (live RLS)
+    runs-on: depot-ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RUN_DATABASE_INTEGRATION_TESTS: "1"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cloie_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Verify disposable database target
+        run: pnpm verify:database-target
+      - name: Verify database suite completeness
+        run: pnpm verify:database-suites
+      - name: Apply migrations
+        run: bash scripts/ci/apply-migrations.sh
+      - name: Seed fixture
+        run: pnpm db:seed
+      - name: Run DB integration tests
+        run: pnpm test:db
+        env:
+          NODE_ENV: test
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+  # The full critical role/workflow matrix including the curated visual
+  # baseline, on chromium (desktop + mobile projects).
+  browser-chromium:
+    name: Browser Matrix (chromium + visual)
+    runs-on: depot-ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+      CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+      CLOIE_CI_TEST_ENABLED: "true"
+      CLOIE_DEPLOYMENT_KIND: "ci-test"
+      CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
+      CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+      CLOIE_E2E_VISUAL: "true"
+      CLOIE_E2E_BROWSERS: chromium
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cloie_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Apply migrations
+        run: bash scripts/ci/apply-migrations.sh
+      - name: Seed fixture
+        run: pnpm db:seed
+      - name: Create CI test marker file (independently verified CI identity)
+        run: mkdir -p /tmp && touch /tmp/cloie-ci-test-marker
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run Playwright journeys (production)
+        run: pnpm exec playwright test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+          CLOIE_CI_TEST_ENABLED: "true"
+          CLOIE_DEPLOYMENT_KIND: "ci-test"
+          CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
+          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-report-chromium
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload Playwright test results on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-test-results-chromium
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+  # Cross-browser matrix: the full critical suite (excluding the @visual
+  # baseline, which is a chromium gate) on firefox and webkit, in parallel
+  # jobs with isolated databases.
+  browser-firefox:
+    name: Cross-Browser (firefox)
+    runs-on: depot-ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOIE_E2E_BROWSERS: firefox
+      CLOIE_E2E_VISUAL: "false"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+      CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+      CLOIE_CI_TEST_ENABLED: "true"
+      CLOIE_DEPLOYMENT_KIND: "ci-test"
+      CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
+      CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cloie_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Apply migrations
+        run: bash scripts/ci/apply-migrations.sh
+      - name: Seed fixture
+        run: pnpm db:seed
+      - name: Create CI test marker file (independently verified CI identity)
+        run: mkdir -p /tmp && touch /tmp/cloie-ci-test-marker
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps firefox
+      - name: Run Playwright journeys (production)
+        run: pnpm exec playwright test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+          CLOIE_CI_TEST_ENABLED: "true"
+          CLOIE_DEPLOYMENT_KIND: "ci-test"
+          CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
+          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-report-firefox
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload Playwright test results on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-test-results-firefox
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+  browser-webkit:
+    name: Cross-Browser (webkit)
+    runs-on: depot-ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOIE_E2E_BROWSERS: webkit
+      CLOIE_E2E_VISUAL: "false"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+      CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+      CLOIE_CI_TEST_ENABLED: "true"
+      CLOIE_DEPLOYMENT_KIND: "ci-test"
+      CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
+      CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cloie_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Apply migrations
+        run: bash scripts/ci/apply-migrations.sh
+      - name: Seed fixture
+        run: pnpm db:seed
+      - name: Create CI test marker file (independently verified CI identity)
+        run: mkdir -p /tmp && touch /tmp/cloie-ci-test-marker
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps webkit
+      - name: Run Playwright journeys (production)
+        run: pnpm exec playwright test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+          CLOIE_CI_TEST_ENABLED: "true"
+          CLOIE_DEPLOYMENT_KIND: "ci-test"
+          CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
+          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-report-webkit
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload Playwright test results on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-test-results-webkit
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+  # Production authentication boundary: the dev-login endpoint and protected
+  # routes are verified against a real production-mode server (§63/§64).
+  production-boundary:
+    name: Production Auth Boundary
+    runs-on: depot-ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+        env:
+          NODE_ENV: production
+      - name: Start production server
+        run: |
+          nohup pnpm start -p 3000 > /tmp/cloie-server.log 2>&1 &
+          echo $! > /tmp/cloie-server.pid
+      - name: Wait for the server
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3000/login > /dev/null; then
+              echo "Server is up after ${i} polls."; exit 0
+            fi
+            sleep 2
+          done
+          echo "Server did not become ready:"; cat /tmp/cloie-server.log; exit 1
+      - name: Verify the production authentication boundary
+        run: |
+          PRODUCTION_EVIDENCE_BASE_URL=http://127.0.0.1:3000 pnpm verify:production-auth-boundary
+      - name: Stop the server
+        if: always()
+        run: |
+          if [ -f /tmp/cloie-server.pid ]; then kill "$(cat /tmp/cloie-server.pid)" || true; fi
+  # Demo reset gate: the isolation validator must refuse shared/hosted and
+  # primary Production targets and accept only a self-consistent
+  # dedicated-demo configuration. The reset itself never runs in CI.
+  demo-reset-gate:
+    name: Demo Reset Isolation Gate
+    runs-on: depot-ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify demo reset isolation gate
+        run: pnpm exec tsx scripts/ci/verify-demo-reset-gate.ts

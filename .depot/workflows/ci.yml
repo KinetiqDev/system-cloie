@@ -3,6 +3,11 @@
 #
 # Changes made:
 # - Changed GitHub runs-on labels to their Depot equivalents
+#
+# Risk-based check selection (issue #551): the `select` job classifies the
+# changed files into risk domains (scripts/ci/lib/risk-domains.mjs) and the
+# database, build, and browser jobs run only when a matching domain changed.
+# Prettier, ESLint, and the repository-owned Vitest suites always run.
 
 name: Quality Checks
 on:
@@ -14,9 +19,78 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  select:
+    name: Risk Selection
+    runs-on: depot-ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run_build: ${{ steps.select.outputs.run_build }}
+      run_database: ${{ steps.select.outputs.run_database }}
+      run_browser: ${{ steps.select.outputs.run_browser }}
+      run_visual: ${{ steps.select.outputs.run_visual }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Select checks from changed risk domains
+        id: select
+        run: node scripts/ci/select-checks.mjs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
   quality-checks:
     name: Quality Checks
     runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check formatting (Prettier --check, never --write)
+        run: pnpm format:check:changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      - name: Lint
+        run: pnpm lint
+      - name: Lint changed production code (no new warnings)
+        run: pnpm lint:changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      - name: Test
+        # Prisma's native query engine can abort inside worker_threads; forked
+        # processes load it safely while four workers keep the suite bounded.
+        run: pnpm vitest run --pool=forks --maxWorkers=4
+        env:
+          NODE_ENV: test
+          NODE_OPTIONS: --max-old-space-size=4096
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+  production-build:
+    name: Production Build
+    # The production build remains the authoritative compilation and
+    # route-generation gate; it is selected from changed risk domains
+    # (application code, schema, or production configuration).
+    needs: select
+    if: needs.select.outputs.run_build == 'true'
+    runs-on: depot-ubuntu-latest
     timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -44,25 +118,6 @@ jobs:
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
-      - name: Check formatting (Prettier --check, never --write)
-        run: pnpm format:check:changed
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-      - name: Lint
-        run: pnpm lint
-      - name: Lint changed production code (no new warnings)
-        run: pnpm lint:changed
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-      - name: Test
-        # Prisma's native query engine can abort inside worker_threads; forked
-        # processes load it safely while four workers keep the suite bounded.
-        run: pnpm vitest run --pool=forks --maxWorkers=4
-        env:
-          NODE_ENV: test
-          NODE_OPTIONS: --max-old-space-size=4096
-          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
       - name: Build
         run: pnpm build
         env:
@@ -71,10 +126,15 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
   # DB-backed integration suite (§60) against a disposable Postgres: canonical
   # Supabase migration history, then the demo fixture seed, then the opt-in
-  # suites behind RUN_DATABASE_INTEGRATION_TESTS=1. Never points at hosted
-  # Supabase; the service container is the only database involved.
+  # suites behind RUN_DATABASE_INTEGRATION_TESTS=1 (including live RLS).
+  # Never points at hosted Supabase; the service container is the only
+  # database involved. Selected from changed risk domains: schema/persistence
+  # paths and every shared auth/role/response/publication domain expand the
+  # selection to this suite.
   database-integration:
     name: Database Integration
+    needs: select
+    if: needs.select.outputs.run_database == 'true'
     runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
     timeout-minutes: 15
     env:
@@ -121,16 +181,20 @@ jobs:
           NODE_ENV: test
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
-  # Browser-level user journeys (§61) against the seeded fixture in production
-  # mode (next build + next start). Auth is the isolated signed CI test session
-  # (cloie_ci_test_auth) restricted to the disposable seeded database — no OAuth
-  # UI automation. Normal account state, SystemRole, Authorized Program, Course
-  # Assignment, roster, and respondent-eligibility checks still execute. Retries
-  # are disabled for required checks; a red-then-green run is treated as flaky
-  # evidence, not a clean pass. The production-mode verification checks that
-  # POST /api/auth/dev-login remains 404 outside development.
+  # Browser-level user journeys (§61) plus the desktop and mobile axe sweeps
+  # and the curated visual baseline (@visual, issue #551) against the seeded
+  # fixture in production mode (next build + next start). Auth is the isolated
+  # signed CI test session (cloie_ci_test_auth) restricted to the disposable
+  # seeded database — no OAuth UI automation. Retries are disabled for
+  # required checks; a red-then-green run is treated as flaky evidence, not a
+  # clean pass. Selected from changed risk domains; the visual gate is a
+  # separate output so it can be forced off (cross-browser scheduled runs).
+  # Cross-browser (firefox/webkit) and the full matrix run on the bounded
+  # schedule in scheduled.yml, not on every small PR.
   browser-e2e:
     name: Browser E2E
+    needs: select
+    if: needs.select.outputs.run_browser == 'true'
     runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
     timeout-minutes: 20
     env:
@@ -143,7 +207,8 @@ jobs:
       CLOIE_CI_TEST_ENABLED: "true"
       CLOIE_DEPLOYMENT_KIND: "ci-test"
       CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
-      CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+      CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+      CLOIE_E2E_VISUAL: ${{ needs.select.outputs.run_visual }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -188,7 +253,7 @@ jobs:
           CLOIE_CI_TEST_ENABLED: "true"
           CLOIE_DEPLOYMENT_KIND: "ci-test"
           CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
-          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
+          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

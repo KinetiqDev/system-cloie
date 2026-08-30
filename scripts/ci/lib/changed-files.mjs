@@ -1,4 +1,5 @@
 import { execSync, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 function run(cmd) {
   return execSync(cmd, { encoding: "utf8", stdio: "pipe" }).trim();
@@ -38,17 +39,17 @@ export function getChangedFiles(baseRef) {
   }
 
   if (baseRef) {
-    collect(`git diff --name-only --diff-filter=ACMRT ${baseRef}...HEAD`, committed);
+    collect(`git diff --name-only --diff-filter=ACDMRT ${baseRef}...HEAD`, committed);
   }
-  collect("git diff --name-only --diff-filter=ACMRT HEAD", working);
-  collect("git diff --cached --name-only --diff-filter=ACMRT", working);
+  collect("git diff --name-only --diff-filter=ACDMRT HEAD", working);
+  collect("git diff --cached --name-only --diff-filter=ACDMRT", working);
   collect("git ls-files --others --exclude-standard", working);
 
   const combined = [...new Set([...committed, ...working])];
   if (combined.length === 0) {
     // Push to main: no PR base, no working tree changes – diff against previous commit.
     try {
-      const out = run("git diff --name-only --diff-filter=ACMRT HEAD~1...HEAD");
+      const out = run("git diff --name-only --diff-filter=ACDMRT HEAD~1...HEAD");
       if (out)
         return out
           .split("\n")
@@ -57,6 +58,16 @@ export function getChangedFiles(baseRef) {
     } catch {}
   }
   return combined;
+}
+
+/**
+ * Keep only paths that still exist on disk. getChangedFiles deliberately
+ * collects Git's D status so risk selection expands gates on deletions,
+ * but content tools (Prettier, ESLint) exit 2 when handed a path that
+ * no longer exists.
+ */
+export function existingFiles(paths) {
+  return paths.filter((f) => existsSync(f));
 }
 
 export function runCheck(label, cmd, args) {
