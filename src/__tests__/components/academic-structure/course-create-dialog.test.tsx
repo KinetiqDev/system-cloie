@@ -79,10 +79,11 @@ describe("CourseCreateDialog", () => {
     await fillRequiredFields();
     fireEvent.click(screen.getByRole("button", { name: "Create Course" }));
 
+    // Same-turn Escape is the race window: pending state has not flipped yet.
+    fireEvent.keyDown(document, { key: "Escape" });
     const cancel = screen.getByRole("button", { name: "Cancel" });
     await waitFor(() => expect(cancel).toBeDisabled());
     fireEvent.click(cancel);
-    fireEvent.keyDown(document, { key: "Escape" });
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
