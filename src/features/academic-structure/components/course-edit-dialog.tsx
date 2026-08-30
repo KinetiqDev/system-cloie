@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { showToast } from "@/components/ui/toast";
 import { CourseForm } from "@/features/academic-structure/components/course-form";
 import {
   getCourseEditDataAction,
@@ -84,7 +83,6 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
   const handleSuccess = () => {
     onOpenChange(false);
     router.refresh();
-    showToast("Course updated successfully!");
   };
 
   return (

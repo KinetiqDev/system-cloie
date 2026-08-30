@@ -9,6 +9,7 @@ import {
   GraduationCap,
   Layers,
   MoreVertical,
+  Plus,
   Search,
   Library,
   Power,
@@ -61,6 +62,7 @@ import {
   deleteCourseAction,
 } from "@/lib/actions/management-foundation-actions";
 import { getCourseScopeBadgeClass } from "@/features/academic-structure/lib/course-visuals";
+import { CourseCreateDialog } from "@/features/academic-structure/components/course-create-dialog";
 import { CourseEditDialog } from "@/features/academic-structure/components/course-edit-dialog";
 import { showToast } from "@/components/ui/toast";
 import { useTableSelection } from "@/hooks/use-table-selection";
@@ -112,6 +114,7 @@ export function ManagementCoursesList({
   const [isPending, startTransition] = useTransition();
   const [courseToDelete, setCourseToDelete] = useState<{ id: string; code: string } | null>(null);
   const [courseToEdit, setCourseToEdit] = useState<ManagementCourseSummaryItem | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   // ---- Derived: majors for selected program --------------------------------
@@ -257,7 +260,10 @@ export function ManagementCoursesList({
             Import CSV
           </Button>
         )}
-        <Button render={<Link href={`${basePath}/new`} />}>Create Course</Button>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus aria-hidden="true" />
+          Add Course
+        </Button>
       </div>
 
       {/* Filter bar */}
@@ -517,6 +523,18 @@ export function ManagementCoursesList({
         {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length} course
         {filteredCourses.length !== 1 ? "s" : ""}
       </p>
+
+      {createOpen && (
+        <CourseCreateDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setCreateOpen(false);
+            }
+          }}
+          programs={programs}
+        />
+      )}
 
       {editInModal && (
         <CourseEditDialog

@@ -70,6 +70,9 @@ export function CourseForm({
   fixedScope,
 }: CourseFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
+  // Set synchronously at submit entry; a second same-turn activation of a
+  // submit control fires while `isPending` still reads false.
+  const submitLockRef = useRef(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [scope, setScope] = useState<CourseScope>(
@@ -104,6 +107,11 @@ export function CourseForm({
   }, [majors, programId]);
 
   async function handleSubmit(formData: FormData) {
+    // Reject re-entry before the microtask boundary: two same-turn activations
+    // of a submit control both reach this handler while the transition's
+    // `isPending` still reads false, and both would otherwise invoke the action.
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     setError(null);
 
     // Wait one tick to ensure state is flushed (React batching issue with form submissions)
@@ -113,23 +121,40 @@ export function CourseForm({
     formData.set("default_semester", semester);
     formData.set("default_term", isSummer ? "" : term);
 
+    const code = String(formData.get("code") ?? "").trim();
+    const isEdit = Boolean(defaultValues?.id);
     startTransition(async () => {
-      const result = await action(formData);
+      try {
+        let result: { success: boolean; error?: string };
+        try {
+          result = await action(formData);
+        } catch {
+          const message = "Something went wrong while saving the course. Please try again.";
+          setError(message);
+          showToast(message, "error");
+          return;
+        }
 
-      if (!result.success) {
-        setError(result.error ?? "Unable to save course.");
-        return;
+        if (!result.success) {
+          const message = result.error ?? "Unable to save course.";
+          setError(message);
+          showToast(message, "error");
+          return;
+        }
+
+        if (!isEdit) {
+          setYearLevel("");
+          setSemester("");
+          setTerm("");
+          setMajorId("");
+        }
+        const subject = code ? `Course ${code}` : "Course";
+        showToast(`${subject} ${isEdit ? "updated" : "created"}.`, "success");
+
+        onSuccess?.();
+      } finally {
+        submitLockRef.current = false;
       }
-
-      if (!defaultValues?.id) {
-        setYearLevel("");
-        setSemester("");
-        setTerm("");
-        setMajorId("");
-      }
-      showToast(defaultValues?.id ? "Course updated." : "Course created.");
-
-      onSuccess?.();
     });
   }
 

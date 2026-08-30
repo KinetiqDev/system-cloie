@@ -13,6 +13,9 @@
  * - Shared risk domains — auth, role, schema, navigation, response,
  *   publication, design-system — expand the selection so a narrow file change
  *   inside a shared module still receives the broader check set.
+ * - CI verification machinery (workflow definitions, the selector itself)
+ *   fails closed: it selects every production gate, because a change there
+ *   could otherwise disable the checks meant to validate it.
  * - The curated visual baseline runs with the browser suite: its representative
  *   screens can be affected by any application change. The output stays a
  *   separate flag so CI can force-disable it (scheduled cross-browser runs)
@@ -37,6 +40,12 @@ const SHARED_DATABASE_DOMAINS = ["schema", "auth", "role", "response", "publicat
 
 // Paths that select the browser suite: application code and browser-test infra.
 const BROWSER_PREFIXES = ["src/", "e2e/", "playwright.config.ts"];
+
+// Fail-closed: the CI verification machinery itself — workflow definitions and
+// the check-selection implementation — decides which gates run. A PR that
+// touches it selects every production gate instead of trusting the mechanism
+// being modified.
+const CI_INFRASTRUCTURE_PREFIXES = [".depot/workflows/", ".github/workflows/", "scripts/ci/"];
 
 // Paths that select the production build.
 const BUILD_PREFIXES = [
@@ -78,9 +87,17 @@ export function selectChecks(changedFiles, options = {}) {
   }
   if (files.some((file) => matchesAny(file, ["src/"]))) domains.push("application");
 
-  const runBrowser = files.some((file) => matchesAny(file, BROWSER_PREFIXES));
-  const runDatabase = SHARED_DATABASE_DOMAINS.some((domain) => domains.includes(domain));
-  const runBuild = files.some((file) => matchesAny(file, BUILD_PREFIXES));
+  const touchesCiInfrastructure = files.some((file) =>
+    matchesAny(file, CI_INFRASTRUCTURE_PREFIXES)
+  );
+  if (touchesCiInfrastructure) domains.push("ci-infrastructure");
+
+  const runBrowser =
+    touchesCiInfrastructure || files.some((file) => matchesAny(file, BROWSER_PREFIXES));
+  const runDatabase =
+    touchesCiInfrastructure || SHARED_DATABASE_DOMAINS.some((domain) => domains.includes(domain));
+  const runBuild =
+    touchesCiInfrastructure || files.some((file) => matchesAny(file, BUILD_PREFIXES));
 
   return {
     run_build: runBuild,
