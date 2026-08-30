@@ -4,6 +4,7 @@ import {
   TABLE_ACCESS_DISPOSITIONS,
   checkTableAccessDispositions,
   listPrismaTableNames,
+  type TableAccessDisposition,
 } from "@/lib/db/table-access-dispositions";
 
 describe("table access dispositions (542)", () => {
@@ -32,7 +33,9 @@ describe("table access dispositions (542)", () => {
     // The four-disposition vocabulary is the security model: role-aware RLS,
     // authenticated read-only, server-only, application-layer exception.
     expect(kinds.size).toBeGreaterThan(0);
-    for (const disposition of Object.values(TABLE_ACCESS_DISPOSITIONS)) {
+    for (const disposition of Object.values(
+      TABLE_ACCESS_DISPOSITIONS
+    ) as TableAccessDisposition[]) {
       if (disposition.kind === "application-layer-exception") {
         expect(disposition.owner.length).toBeGreaterThan(0);
         expect(disposition.justification.length).toBeGreaterThan(0);

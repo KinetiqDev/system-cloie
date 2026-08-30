@@ -17,6 +17,7 @@ vi.mock("@/features/academic-calendar/services/read-period-readiness", () => ({
   readPeriodReadinessTotals: readinessTotalsMock,
 }));
 
+import type { PeriodReadiness } from "@/features/academic-calendar/services/read-period-readiness";
 import {
   DeanReadModelNotFoundError,
   getDeanDashboard,
@@ -74,7 +75,7 @@ function generalEducationAssignment() {
   });
 }
 
-function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE") {
+function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE"): PeriodReadiness {
   return {
     period: { id: PERIOD_ID, status },
     schemaVersion: 2,
@@ -516,10 +517,7 @@ describe("Dean oversight read model", () => {
       },
     });
     if (result.state !== "ready") throw new Error("expected ready state");
-    expect(result.data.programs[0]?.plos.map((outcome) => outcome.code)).toEqual([
-      "GO1",
-      "GO2",
-    ]);
+    expect(result.data.programs[0]?.plos.map((outcome) => outcome.code)).toEqual(["GO1", "GO2"]);
     expect(prismaMock.institutionalOutcome.findMany).not.toHaveBeenCalled();
   });
 

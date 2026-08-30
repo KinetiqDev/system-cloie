@@ -395,8 +395,8 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
         termInstanceId: undefined,
         schoolYearId: undefined,
         semester: undefined,
-        evidenceSource: "ALL",
-        stakeholder: "ALL",
+        evidenceSource: undefined,
+        stakeholder: undefined,
       });
       expect(feedback).not.toBeNull();
       expect(feedback!.qualitativeItemCount).toBe(1);

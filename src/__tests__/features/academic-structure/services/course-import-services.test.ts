@@ -60,7 +60,9 @@ describe("Course Import Services", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("Authentication is required");
+      if (!result.success) {
+        expect(result.error).toContain("Authentication is required");
+      }
     });
 
     it("fails when role does not match mode", async () => {
@@ -75,7 +77,9 @@ describe("Course Import Services", () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain("General Education Coordinator access is required");
+      if (!result.success) {
+        expect(result.error).toContain("General Education Coordinator access is required");
+      }
     });
 
     it("previews Secretary General Education and Program-Specific rows successfully", async () => {

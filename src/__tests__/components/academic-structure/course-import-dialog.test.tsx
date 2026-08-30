@@ -165,7 +165,9 @@ describe("CourseImportDialog", () => {
     // Every preview row must reach confirmation, including rejected ones, so
     // the confirmation service can report them as not-created outcomes.
     expect(confirmCourseImportAction).toHaveBeenCalledTimes(1);
-    const confirmInput = vi.mocked(confirmCourseImportAction).mock.calls[0][0];
+    const confirmInput = vi.mocked(confirmCourseImportAction).mock.calls[0][0] as {
+      rows: Array<{ sourceIndex: number }>;
+    };
     expect(confirmInput.rows.map((row) => row.sourceIndex)).toEqual([2, 3]);
 
     expect(showToast).toHaveBeenCalledWith("1 created. 1 not created.", "warning");
