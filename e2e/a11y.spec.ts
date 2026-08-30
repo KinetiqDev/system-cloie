@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
-import { expectNoAxeViolations, loginAs, waitForStableState } from "./support/helpers";
+import {
+  expectNoAxeViolations,
+  loginAs,
+  respondentRow,
+  waitForStableState,
+} from "./support/helpers";
 
 /**
  * §49 accessibility sweep on the evidence-workflow surfaces, run against the
@@ -55,7 +60,9 @@ test.describe("accessibility sweep", () => {
     await expectNoAxeViolations(page);
 
     // Individual response detail (submitted answers).
-    await page.getByRole("link", { name: fx.courseResponse.respondentName, exact: true }).click();
+    await respondentRow(page, fx.courseResponse.respondentName)
+      .getByRole("link", { name: "View Response" })
+      .click();
     await expect(
       page.getByRole("heading", { name: fx.courseResponse.respondentName })
     ).toBeVisible();

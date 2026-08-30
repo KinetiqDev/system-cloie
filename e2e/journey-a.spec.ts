@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
-import { loginAs } from "./support/helpers";
+import { loginAs, respondentRow } from "./support/helpers";
 
 /**
  * §61 Journey A (top-down):
@@ -51,7 +51,9 @@ test("top-down journey: dashboard to exact answers", async ({ page }) => {
 
   // Evaluation detail → named respondent.
   await expect(page.getByRole("heading", { name: fx.courseEvaluation.title })).toBeVisible();
-  await page.getByRole("link", { name: fx.courseResponse.respondentName, exact: true }).click();
+  await respondentRow(page, fx.courseResponse.respondentName)
+    .getByRole("link", { name: "View Response" })
+    .click();
 
   // Individual response: exact quantitative answer.
   await expect(page.getByRole("heading", { name: fx.courseResponse.respondentName })).toBeVisible();

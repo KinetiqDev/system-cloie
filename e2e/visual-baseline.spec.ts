@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { fixture } from "./support/fixture";
-import { loginAs, waitForStableState } from "./support/helpers";
+import { loginAs, respondentRow, waitForStableState } from "./support/helpers";
 import { gotoStable, screenshotStable, useReducedMotion } from "./support/visual";
 
 /**
@@ -103,7 +103,9 @@ test.describe("@visual curated baseline (desktop)", () => {
     await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
     await page.getByRole("link", { name: fx.courseEvaluation.title, exact: true }).click();
     await expect(page.getByRole("heading", { name: fx.courseEvaluation.title })).toBeVisible();
-    await page.getByRole("link", { name: fx.courseResponse.respondentName, exact: true }).click();
+    await respondentRow(page, fx.courseResponse.respondentName)
+      .getByRole("link", { name: "View Response" })
+      .click();
     await expect(
       page.getByRole("heading", { name: fx.courseResponse.respondentName })
     ).toBeVisible();

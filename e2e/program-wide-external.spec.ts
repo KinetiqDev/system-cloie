@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
-import { expectNoAxeViolations, loginAs, rateQuestion } from "./support/helpers";
+import { expectNoAxeViolations, loginAs, rateQuestion, respondentRow } from "./support/helpers";
 
 /**
  * §40/§46/§47: Program-wide external respondent evidence (issue #550).
@@ -165,7 +165,9 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await loginAs(page, fx.demoPh.email);
   await page.goto(`/program-head/programs/${fx.bsit.id}/responses/program-wide/${deploymentId}`);
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Demo Alumni" })).toBeVisible();
+  await expect(
+    respondentRow(page, "Demo Alumni").getByRole("link", { name: "View Response" })
+  ).toBeVisible();
 
   // Cross-Program leakage: BEED Program Head gets Not Found
   await loginAs(page, fx.beedPh.email);
@@ -309,5 +311,7 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await loginAs(page, fx.demoPh.email);
   await page.goto(`/program-head/programs/${fx.bsit.id}/responses/program-wide/${deploymentId}`);
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Demo Industry" })).toBeVisible();
+  await expect(
+    respondentRow(page, "Demo Industry").getByRole("link", { name: "View Response" })
+  ).toBeVisible();
 });
