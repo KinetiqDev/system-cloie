@@ -102,7 +102,7 @@ describe("ManagementCoursesList", () => {
     expect(screen.getAllByText("Introduction to General Education")).toHaveLength(2);
     expect(screen.getByText("IT101")).toBeInTheDocument();
     expect(screen.getAllByText("Introduction to Programming")).toHaveLength(2);
-    expect(screen.getByText("Create Course")).toHaveAttribute("href", "/secretary/courses/new");
+    expect(screen.getByRole("button", { name: "Add Course" })).toBeInTheDocument();
   });
 
   test("renders courses list for Dean dashboard with correct basePath", () => {
@@ -118,7 +118,23 @@ describe("ManagementCoursesList", () => {
     expect(screen.getByText("Courses")).toBeInTheDocument();
     expect(screen.getByText("GE101")).toBeInTheDocument();
     expect(screen.getByText("IT101")).toBeInTheDocument();
-    expect(screen.getByText("Create Course")).toHaveAttribute("href", "/dean/courses/new");
+    expect(screen.getByRole("button", { name: "Add Course" })).toBeInTheDocument();
+  });
+
+  test("opens the Add New Course dialog from the Add Course button", async () => {
+    render(
+      <ManagementCoursesList
+        courses={mockCourses}
+        kpi={mockKPI}
+        programs={mockPrograms}
+        basePath="/secretary/courses"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Course" }));
+
+    await waitFor(() => expect(screen.getByText("Add New Course")).toBeInTheDocument());
+    expect(screen.getByLabelText("Course Code")).toBeInTheDocument();
   });
 
   test("displays KPI cards with correct values", () => {

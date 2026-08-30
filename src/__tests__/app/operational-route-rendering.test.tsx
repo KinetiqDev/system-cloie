@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import SecretaryDashboardLoading from "@/app/(app)/secretary/dashboard/loading";
 import SecretaryCoursesLoading from "@/app/(app)/secretary/courses/loading";
-import SecretaryCourseNewLoading from "@/app/(app)/secretary/courses/new/loading";
 import SecretaryProgramsLoading from "@/app/(app)/secretary/programs/loading";
 import SecretaryProgramEditLoading from "@/app/(app)/secretary/programs/[id]/edit/loading";
 import SecretaryUsersLoading from "@/app/(app)/secretary/users/loading";
@@ -37,7 +36,6 @@ import ProgramHeadToolsLoading from "@/app/(app)/program-head/tools/loading";
 import ProgramHeadToolsNewLoading from "@/app/(app)/program-head/tools/new/loading";
 import ProgramHeadToolEditLoading from "@/app/(app)/program-head/tools/[id]/edit/loading";
 import ProgramHeadToolsPublishLoading from "@/app/(app)/program-head/tools/publish/loading";
-import DeanCreateCourseLoading from "@/app/(app)/dean/academic-structure/courses/new/loading";
 import DeanEditCourseLoading from "@/app/(app)/dean/academic-structure/courses/[id]/edit/loading";
 import DeanCreateInstrumentLoading from "@/app/(app)/dean/academic-structure/instruments/new/loading";
 import DeanEditInstrumentLoading from "@/app/(app)/dean/academic-structure/instruments/[id]/edit/loading";
@@ -74,7 +72,6 @@ const loadingRoutes = [
   [SecretaryCoursesLoading, "Loading records"],
   [SecretaryProgramsLoading, "Loading records"],
   [SecretaryProgramEditLoading, "Loading form"],
-  [SecretaryCourseNewLoading, "Loading form"],
   [SecretaryUsersLoading, "Loading users"],
   [SecretaryUsersNewLoading, "Loading form"],
   [SecretaryInstrumentsLoading, "Loading records"],
@@ -106,7 +103,6 @@ const loadingRoutes = [
   [ProgramHeadToolsNewLoading, "Loading form"],
   [ProgramHeadToolEditLoading, "Loading form"],
   [ProgramHeadToolsPublishLoading, "Loading form"],
-  [DeanCreateCourseLoading, "Loading form"],
   [DeanEditCourseLoading, "Loading form"],
   [DeanCreateInstrumentLoading, "Loading form"],
   [DeanEditInstrumentLoading, "Loading form"],
@@ -179,14 +175,6 @@ describe("operational route loading boundaries", () => {
 
     expect(kpiGrid).toBeInTheDocument();
     expect(kpiGrid?.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(8);
-  });
-
-  it("matches the centered course form container for the new Course route", () => {
-    render(<SecretaryCourseNewLoading />);
-
-    const status = screen.getByRole("status", { name: "Loading form" });
-
-    expect(status.firstElementChild).toHaveClass("mx-auto", "max-w-3xl");
   });
 });
 

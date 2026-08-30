@@ -113,21 +113,35 @@ export function CourseForm({
     formData.set("default_semester", semester);
     formData.set("default_term", isSummer ? "" : term);
 
-    startTransition(async () => {
-      const result = await action(formData);
+    const code = String(formData.get("code") ?? "").trim();
+    const isEdit = Boolean(defaultValues?.id);
 
-      if (!result.success) {
-        setError(result.error ?? "Unable to save course.");
+    startTransition(async () => {
+      let result: { success: boolean; error?: string };
+      try {
+        result = await action(formData);
+      } catch {
+        const message = "Something went wrong while saving the course. Please try again.";
+        setError(message);
+        showToast(message, "error");
         return;
       }
 
-      if (!defaultValues?.id) {
+      if (!result.success) {
+        const message = result.error ?? "Unable to save course.";
+        setError(message);
+        showToast(message, "error");
+        return;
+      }
+
+      if (!isEdit) {
         setYearLevel("");
         setSemester("");
         setTerm("");
         setMajorId("");
       }
-      showToast(defaultValues?.id ? "Course updated." : "Course created.");
+      const subject = code ? `Course ${code}` : "Course";
+      showToast(`${subject} ${isEdit ? "updated" : "created"}.`, "success");
 
       onSuccess?.();
     });

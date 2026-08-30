@@ -17,11 +17,27 @@ import CiloReviewsPage from "../../app/(app)/dean/cilo-reviews/page";
 import AcademicStructurePage from "../../app/(app)/dean/academic-structure/page";
 import CollegeOversightPage from "../../app/(app)/dean/college-oversight/page";
 
-const redirectMock = vi.hoisted(() => vi.fn((path: string) => { throw new Error(`REDIRECT:${path}`); }));
-const permanentRedirectMock = vi.hoisted(() => vi.fn((path: string) => { throw new Error(`PERMANENT:${path}`); }));
-const notFoundMock = vi.hoisted(() => vi.fn(() => { throw new Error("NOT_FOUND"); }));
+const redirectMock = vi.hoisted(() =>
+  vi.fn((path: string) => {
+    throw new Error(`REDIRECT:${path}`);
+  })
+);
+const permanentRedirectMock = vi.hoisted(() =>
+  vi.fn((path: string) => {
+    throw new Error(`PERMANENT:${path}`);
+  })
+);
+const notFoundMock = vi.hoisted(() =>
+  vi.fn(() => {
+    throw new Error("NOT_FOUND");
+  })
+);
 
-vi.mock("next/navigation", () => ({ redirect: redirectMock, permanentRedirect: permanentRedirectMock, notFound: notFoundMock }));
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+  permanentRedirect: permanentRedirectMock,
+  notFound: notFoundMock,
+}));
 
 describe("Dean canonical routes", () => {
   it("redirects Dean index to dashboard", async () => {
@@ -29,16 +45,36 @@ describe("Dean canonical routes", () => {
   });
 
   it("permanently redirects old authorized-operation routes", async () => {
-    await expect(async () => OldProgramsPage()).rejects.toThrow("PERMANENT:/dean/academic-structure/programs");
-    await expect(async () => OldCoursesPage()).rejects.toThrow("PERMANENT:/dean/academic-structure/courses");
-    await expect(async () => OldAssignmentsPage()).rejects.toThrow("PERMANENT:/dean/academic-structure/course-assignments");
-    await expect(async () => OldInstrumentsPage()).rejects.toThrow("PERMANENT:/dean/academic-structure/instruments");
-    await expect(Promise.resolve().then(() => OldProgramNewPage())).rejects.toThrow("PERMANENT:/dean/academic-structure/programs");
-    await expect(Promise.resolve().then(() => OldCourseNewPage())).rejects.toThrow("PERMANENT:/dean/academic-structure/courses/new");
-    await expect(Promise.resolve().then(() => OldInstrumentNewPage())).rejects.toThrow("PERMANENT:/dean/academic-structure/instruments/new");
-    await expect(OldProgramEditPage({ params: Promise.resolve({ id: "program-1" }) })).rejects.toThrow("PERMANENT:/dean/academic-structure/programs/program-1/edit");
-    await expect(OldCourseEditPage({ params: Promise.resolve({ id: "course-1" }) })).rejects.toThrow("PERMANENT:/dean/academic-structure/courses/course-1/edit");
-    await expect(OldInstrumentEditPage({ params: Promise.resolve({ id: "instrument-1" }) })).rejects.toThrow("PERMANENT:/dean/academic-structure/instruments/instrument-1/edit");
+    await expect(async () => OldProgramsPage()).rejects.toThrow(
+      "PERMANENT:/dean/academic-structure/programs"
+    );
+    await expect(async () => OldCoursesPage()).rejects.toThrow(
+      "PERMANENT:/dean/academic-structure/courses"
+    );
+    await expect(async () => OldAssignmentsPage()).rejects.toThrow(
+      "PERMANENT:/dean/academic-structure/course-assignments"
+    );
+    await expect(async () => OldInstrumentsPage()).rejects.toThrow(
+      "PERMANENT:/dean/academic-structure/instruments"
+    );
+    await expect(Promise.resolve().then(() => OldProgramNewPage())).rejects.toThrow(
+      "PERMANENT:/dean/academic-structure/programs"
+    );
+    await expect(Promise.resolve().then(() => OldCourseNewPage())).rejects.toThrow(
+      "PERMANENT:/dean/academic-structure/courses"
+    );
+    await expect(Promise.resolve().then(() => OldInstrumentNewPage())).rejects.toThrow(
+      "PERMANENT:/dean/academic-structure/instruments/new"
+    );
+    await expect(
+      OldProgramEditPage({ params: Promise.resolve({ id: "program-1" }) })
+    ).rejects.toThrow("PERMANENT:/dean/academic-structure/programs/program-1/edit");
+    await expect(
+      OldCourseEditPage({ params: Promise.resolve({ id: "course-1" }) })
+    ).rejects.toThrow("PERMANENT:/dean/academic-structure/courses/course-1/edit");
+    await expect(
+      OldInstrumentEditPage({ params: Promise.resolve({ id: "instrument-1" }) })
+    ).rejects.toThrow("PERMANENT:/dean/academic-structure/instruments/instrument-1/edit");
   });
 
   it("returns 404 for deferred routes", async () => {
@@ -50,14 +86,20 @@ describe("Dean canonical routes", () => {
   it("renders thin Academic Structure landing", async () => {
     render(<AcademicStructurePage />);
     expect(screen.getByRole("heading", { name: "Academic Structure" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Programs/ })).toHaveAttribute("href", "/dean/academic-structure/programs");
+    expect(screen.getByRole("link", { name: /Programs/ })).toHaveAttribute(
+      "href",
+      "/dean/academic-structure/programs"
+    );
     expect(screen.queryByText(/active contexts|risk|student/i)).not.toBeInTheDocument();
   });
 
   it("renders thin College Oversight landing", async () => {
     render(<CollegeOversightPage />);
     expect(screen.getByRole("heading", { name: "College Oversight" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Learning Outcomes/ })).toHaveAttribute("href", "/dean/college-oversight/learning-outcomes");
+    expect(screen.getByRole("link", { name: /Learning Outcomes/ })).toHaveAttribute(
+      "href",
+      "/dean/college-oversight/learning-outcomes"
+    );
     expect(screen.getByText(/read-only/i)).toBeInTheDocument();
   });
 });

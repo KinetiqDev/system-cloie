@@ -190,16 +190,10 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/dean/academic-structure/courses/new/loading.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/dean/academic-structure/courses/new/page.tsx",
-    disposition: "task",
-    taskId: 14,
+    disposition: "redirect",
     category: "route",
+    notes: "Dean course creation moved to a modal on the course catalog; redirects to the catalog",
   },
   {
     path: "src/app/(app)/dean/academic-structure/courses/loading.tsx",
@@ -1228,22 +1222,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/secretary/courses/new/client-wrapper.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/secretary/courses/new/loading.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/secretary/courses/new/page.tsx",
-    disposition: "task",
-    taskId: 14,
+    disposition: "redirect",
     category: "route",
+    notes:
+      "Secretary course creation moved to a modal on the course catalog; redirects to the catalog",
   },
   {
     path: "src/app/(app)/secretary/courses/page.tsx",
@@ -2089,6 +2072,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/academic-structure/components/create-program-dialog.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/academic-structure/components/course-create-dialog.tsx",
     disposition: "task",
     taskId: 14,
     category: "feature_component",
