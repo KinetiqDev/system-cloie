@@ -57,7 +57,6 @@ type ProgramHeadToolsPageProps = {
   initialView?: ToolsViewMode;
 };
 
-
 function formatStakeholder(stakeholder: string): string {
   return stakeholder
     .replace(/_/g, " ")
@@ -434,7 +433,6 @@ function ProgramHeadPublishedDeployments({
           </>
         )}
       />
-
 
       <CloseEvaluationDialog
         entityLabel="Deployment"

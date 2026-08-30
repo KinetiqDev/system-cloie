@@ -59,9 +59,9 @@ describe("IdentifiedRespondentsTable", () => {
     expect(screen.getAllByTestId("respondent-card")).toHaveLength(3);
     expect(screen.getAllByRole("link", { name: "View Response" })).toHaveLength(2);
 
-    const bobRow = screen.getAllByTestId("respondent-row").find((row) =>
-      within(row).queryByText("Bob Cruz")
-    );
+    const bobRow = screen
+      .getAllByTestId("respondent-row")
+      .find((row) => within(row).queryByText("Bob Cruz"));
     expect(bobRow).toBeDefined();
     expect(within(bobRow!).queryByRole("link")).not.toBeInTheDocument();
     expect(within(bobRow!).getByText("In Progress")).toBeInTheDocument();

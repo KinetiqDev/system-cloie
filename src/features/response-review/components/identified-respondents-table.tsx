@@ -7,16 +7,26 @@ import { Search, UsersRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { cn } from "@/lib/utils";
 import { formatMean } from "./format";
-import type {
-  ProgramHeadAssignmentRespondentRow,
-  ProgramHeadRespondentRow,
-} from "../types";
+import type { ProgramHeadAssignmentRespondentRow, ProgramHeadRespondentRow } from "../types";
 
 type StatusFilter = "ALL" | ProgramHeadAssignmentRespondentRow["status"];
 
@@ -42,9 +52,11 @@ function statusVariant(
 }
 
 function respondentContext(row: ProgramHeadAssignmentRespondentRow): string {
-  return [row.majorLabel, getYearLevelDisplay(row.yearLevel), getSectionLabel(row.section)]
-    .filter((part) => part && part !== "—")
-    .join(" · ") || "No additional academic context";
+  return (
+    [row.majorLabel, getYearLevelDisplay(row.yearLevel), getSectionLabel(row.section)]
+      .filter((part) => part && part !== "—")
+      .join(" · ") || "No additional academic context"
+  );
 }
 
 type IdentifiedRespondentsTableProps = {
@@ -139,7 +151,11 @@ export function IdentifiedRespondentsTable({
               className="pl-9"
             />
           </div>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter respondents by status">
+          <div
+            className="flex flex-wrap gap-2"
+            role="group"
+            aria-label="Filter respondents by status"
+          >
             {STATUS_FILTERS.map((filter) => (
               <Button
                 key={filter}

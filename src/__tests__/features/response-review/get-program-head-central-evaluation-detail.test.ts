@@ -124,7 +124,11 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     });
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
-      data: { userId: "head-1", selectedProgram: { id: "prog-beed", code: "BEED", name: "BEED" }, authorizedPrograms: [] },
+      data: {
+        userId: "head-1",
+        selectedProgram: { id: "prog-beed", code: "BEED", name: "BEED" },
+        authorizedPrograms: [],
+      },
     });
   });
 
@@ -135,7 +139,9 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
       userId: "dean-1",
     });
 
-    await expect(getProgramHeadCentralEvaluationDetail("prog-beed", "central-1")).resolves.toBeNull();
+    await expect(
+      getProgramHeadCentralEvaluationDetail("prog-beed", "central-1")
+    ).resolves.toBeNull();
     expect(centralDeploymentFindFirstMock).not.toHaveBeenCalled();
   });
 
@@ -156,7 +162,17 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
   it("groups direct PLO results by plo_id ?? plo_code_snapshot", async () => {
     centralDeploymentFindFirstMock.mockResolvedValue(MOCK_DEPLOYMENT);
     evaluationAssignmentFindManyMock.mockResolvedValue([
-      { id: "assignment-1", assigned_at: new Date("2026-01-02T08:00:00.000Z"), respondent_id: "user-s1", respondent: { name: "Juan dela Cruz" }, response: { id: "response-1", status: "SUBMITTED", submitted_at: new Date("2026-01-05T08:00:00.000Z") } },
+      {
+        id: "assignment-1",
+        assigned_at: new Date("2026-01-02T08:00:00.000Z"),
+        respondent_id: "user-s1",
+        respondent: { name: "Juan dela Cruz" },
+        response: {
+          id: "response-1",
+          status: "SUBMITTED",
+          submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+        },
+      },
     ]);
     responseFindManyMock.mockResolvedValue([
       {
@@ -165,8 +181,18 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
         respondent_id: "user-s1",
         respondent: { name: "Juan dela Cruz" },
         quant_items: [
-          { cilo_question_binding_id: null, section_key: "plo-items", item_key: "q-plo-a", rating_value: 4 },
-          { cilo_question_binding_id: null, section_key: "plo-items", item_key: "q-plo-b", rating_value: 5 },
+          {
+            cilo_question_binding_id: null,
+            section_key: "plo-items",
+            item_key: "q-plo-a",
+            rating_value: 4,
+          },
+          {
+            cilo_question_binding_id: null,
+            section_key: "plo-items",
+            item_key: "q-plo-b",
+            rating_value: 5,
+          },
         ],
         qual_items: [],
       },
@@ -277,7 +303,17 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     };
     centralDeploymentFindFirstMock.mockResolvedValue(deploymentWithoutBindings);
     evaluationAssignmentFindManyMock.mockResolvedValue([
-      { id: "assignment-1", assigned_at: new Date("2026-01-02T08:00:00.000Z"), respondent_id: "user-s1", respondent: { name: "Juan dela Cruz" }, response: { id: "response-1", status: "SUBMITTED", submitted_at: new Date("2026-01-05T08:00:00.000Z") } },
+      {
+        id: "assignment-1",
+        assigned_at: new Date("2026-01-02T08:00:00.000Z"),
+        respondent_id: "user-s1",
+        respondent: { name: "Juan dela Cruz" },
+        response: {
+          id: "response-1",
+          status: "SUBMITTED",
+          submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+        },
+      },
     ]);
     responseFindManyMock.mockResolvedValue([
       {
@@ -286,7 +322,12 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
         respondent_id: "user-s1",
         respondent: { name: "Juan dela Cruz" },
         quant_items: [
-          { cilo_question_binding_id: null, section_key: "plo-items", item_key: "q-plo-a", rating_value: 4 },
+          {
+            cilo_question_binding_id: null,
+            section_key: "plo-items",
+            item_key: "q-plo-a",
+            rating_value: 4,
+          },
         ],
         qual_items: [],
       },
@@ -309,7 +350,17 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
       plo_snapshots: [],
     });
     evaluationAssignmentFindManyMock.mockResolvedValue([
-      { id: "assignment-alum", assigned_at: new Date("2026-01-02T08:00:00.000Z"), respondent_id: "user-alum1", respondent: { name: "Maria Gomez" }, response: { id: "response-alum", status: "SUBMITTED", submitted_at: new Date("2026-01-05T08:00:00.000Z") } },
+      {
+        id: "assignment-alum",
+        assigned_at: new Date("2026-01-02T08:00:00.000Z"),
+        respondent_id: "user-alum1",
+        respondent: { name: "Maria Gomez" },
+        response: {
+          id: "response-alum",
+          status: "SUBMITTED",
+          submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+        },
+      },
     ]);
     responseFindManyMock.mockResolvedValue([
       {
@@ -322,7 +373,12 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
       },
     ]);
     alumniProfileFindManyMock.mockResolvedValue([
-      { user_id: "user-alum1", graduation_year: 2024, program: { name: "BEED" }, major: { name: "Mathematics" } },
+      {
+        user_id: "user-alum1",
+        graduation_year: 2024,
+        program: { name: "BEED" },
+        major: { name: "Mathematics" },
+      },
     ]);
 
     const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");

@@ -1,18 +1,35 @@
-import { ResponseStatus } from "@prisma/client";
+import { ResponseStatus, TargetStakeholder } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
-import { buildQuestionMetrics, type OutcomeItemRatingRow } from "@/features/analytics/aggregators/cilo";
-import { buildProgramWidePloMetrics, type CentralPloRatingRow } from "@/features/analytics/aggregators/plo";
+import {
+  buildQuestionMetrics,
+  type OutcomeItemRatingRow,
+} from "@/features/analytics/aggregators/cilo";
+import {
+  buildProgramWidePloMetrics,
+  type CentralPloRatingRow,
+} from "@/features/analytics/aggregators/plo";
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
-import { getSnapshotSectionItems, isSnapshotSection } from "@/features/analytics/services/snapshot-structure";
-import { loadRespondentIdentityContexts } from "./respondent-context";
+import {
+  getSnapshotSectionItems,
+  isSnapshotSection,
+} from "@/features/analytics/services/snapshot-structure";
+import {
+  loadRespondentIdentityContexts,
+  type RespondentIdentityContext,
+} from "./respondent-context";
 import { buildQualitativeSummary } from "./qualitative-summary";
 import { buildPeriodLabel } from "./period-label";
-import type { ProgramHeadAssignmentRespondentRow, ProgramHeadCentralEvaluationDetail, ProgramHeadCentralQuestionResult, ProgramWidePloBinding } from "../types";
+import type {
+  ProgramHeadAssignmentRespondentRow,
+  ProgramHeadCentralEvaluationDetail,
+  ProgramHeadCentralQuestionResult,
+  ProgramWidePloBinding,
+} from "../types";
 
 // ---------------------------------------------------------------------------
 // Program Head program-wide evaluation detail (spec §26)
@@ -66,7 +83,10 @@ export async function getProgramHeadCentralEvaluationDetail(
       },
     }),
     prisma.response.findMany({
-      where: { status: ResponseStatus.SUBMITTED, assignment: { central_deployment_id: deploymentId } },
+      where: {
+        status: ResponseStatus.SUBMITTED,
+        assignment: { central_deployment_id: deploymentId },
+      },
       select: {
         id: true,
         submitted_at: true,
@@ -117,30 +137,14 @@ export async function getProgramHeadCentralEvaluationDetail(
   );
 
   const respondents: ProgramHeadAssignmentRespondentRow[] = assignmentRows
-    .map((assignment) => {
-      const identity = identityContexts.get(assignment.respondent_id);
-      const response = assignment.response;
-      const status: ProgramHeadAssignmentRespondentRow["status"] =
-        response?.status === ResponseStatus.SUBMITTED
-          ? "SUBMITTED"
-          : response?.status === ResponseStatus.IN_PROGRESS
-            ? "IN_PROGRESS"
-            : "NOT_STARTED";
-      return {
-        assignmentId: assignment.id,
-        responseId: status === "SUBMITTED" ? response?.id ?? null : null,
-        name: assignment.respondent.name,
+    .map((assignment) =>
+      buildAssignmentRespondentRow({
+        assignment,
+        identity: identityContexts.get(assignment.respondent_id),
+        meanByResponse,
         stakeholder: deployment.target_stakeholder,
-        status,
-        majorLabel: identity?.kind === "STUDENT" ? identity.majorLabel : null,
-        yearLevel: identity?.kind === "STUDENT" ? identity.yearLevel : null,
-        section: identity?.kind === "STUDENT" ? identity.section : null,
-        assignedAt: assignment.assigned_at,
-        submittedAt: status === "SUBMITTED" ? response?.submitted_at ?? null : null,
-        quantitativeMean:
-          status === "SUBMITTED" && response ? meanByResponse.get(response.id) ?? null : null,
-      };
-    })
+      })
+    )
     .sort((left, right) => left.name.localeCompare(right.name));
 
   const participation = buildParticipationSummary(
@@ -181,6 +185,69 @@ export async function getProgramHeadCentralEvaluationDetail(
     respondents,
   };
 }
+
+type AssignmentWithResponse = {
+  id: string;
+  assigned_at: Date;
+  respondent_id: string;
+  respondent: { name: string };
+  response: { id: string; status: string; submitted_at: Date | null } | null;
+};
+
+function buildAssignmentRespondentRow({
+  assignment,
+  identity,
+  meanByResponse,
+  stakeholder,
+}: {
+  assignment: AssignmentWithResponse;
+  identity: RespondentIdentityContext | undefined;
+  meanByResponse: Map<string, number | null>;
+  stakeholder: TargetStakeholder;
+}): ProgramHeadAssignmentRespondentRow {
+  const status = resolveAssignmentStatus(assignment.response);
+  const response = status === "SUBMITTED" ? assignment.response : null;
+  const student = studentIdentityFields(identity);
+  return {
+    assignmentId: assignment.id,
+    responseId: response?.id ?? null,
+    name: assignment.respondent.name,
+    stakeholder,
+    status,
+    majorLabel: student.majorLabel,
+    yearLevel: student.yearLevel,
+    section: student.section,
+    assignedAt: assignment.assigned_at,
+    submittedAt: response?.submitted_at ?? null,
+    quantitativeMean: response ? (meanByResponse.get(response.id) ?? null) : null,
+  };
+}
+
+function studentIdentityFields(
+  identity: RespondentIdentityContext | undefined
+): Pick<ProgramHeadAssignmentRespondentRow, "majorLabel" | "yearLevel" | "section"> {
+  if (identity?.kind === "STUDENT") {
+    return {
+      majorLabel: identity.majorLabel,
+      yearLevel: identity.yearLevel,
+      section: identity.section,
+    };
+  }
+  return { majorLabel: null, yearLevel: null, section: null };
+}
+
+function resolveAssignmentStatus(
+  response: AssignmentWithResponse["response"]
+): ProgramHeadAssignmentRespondentRow["status"] {
+  if (response?.status === ResponseStatus.SUBMITTED) {
+    return "SUBMITTED";
+  }
+  if (response?.status === ResponseStatus.IN_PROGRESS) {
+    return "IN_PROGRESS";
+  }
+  return "NOT_STARTED";
+}
+
 function buildCentralRatingRows(
   submittedResponses: Array<{
     id: string;
@@ -248,7 +315,11 @@ function buildCentralIndexes(
     section_key: string;
     item_key: string;
   }>
-): { snapshotItems: Map<string, { prompt: string }>; ploByQuestionKey: Map<string, CentralPloRatingRow["ploBindings"]>; ploDisplayByQuestionKey: Map<string, ProgramWidePloBinding[]> } {
+): {
+  snapshotItems: Map<string, { prompt: string }>;
+  ploByQuestionKey: Map<string, CentralPloRatingRow["ploBindings"]>;
+  ploDisplayByQuestionKey: Map<string, ProgramWidePloBinding[]>;
+} {
   const snapshotItems = new Map<string, { prompt: string }>();
   for (const section of Array.isArray(snapshot) ? snapshot.filter(isSnapshotSection) : []) {
     for (const item of getSnapshotSectionItems(section)) {
@@ -259,12 +330,28 @@ function buildCentralIndexes(
   const ploDisplayByQuestionKey = new Map<string, ProgramWidePloBinding[]>();
   for (const sb of ploSnapshots) {
     const key = `${sb.section_key}|${sb.item_key}`;
-    const entry = { ploId: sb.plo_id ?? sb.plo_code_snapshot, ploCode: sb.plo_code_snapshot, ploDescription: sb.plo_description_snapshot };
+    const entry = {
+      ploId: sb.plo_id ?? sb.plo_code_snapshot,
+      ploCode: sb.plo_code_snapshot,
+      ploDescription: sb.plo_description_snapshot,
+    };
     const group = ploByQuestionKey.get(key);
-    if (group) { group.push(entry); } else { ploByQuestionKey.set(key, [entry]); }
-    const displayEntry: ProgramWidePloBinding = { key: sb.plo_id ?? sb.plo_code_snapshot, code: sb.plo_code_snapshot, description: sb.plo_description_snapshot };
+    if (group) {
+      group.push(entry);
+    } else {
+      ploByQuestionKey.set(key, [entry]);
+    }
+    const displayEntry: ProgramWidePloBinding = {
+      key: sb.plo_id ?? sb.plo_code_snapshot,
+      code: sb.plo_code_snapshot,
+      description: sb.plo_description_snapshot,
+    };
     const displayGroup = ploDisplayByQuestionKey.get(key);
-    if (displayGroup) { displayGroup.push(displayEntry); } else { ploDisplayByQuestionKey.set(key, [displayEntry]); }
+    if (displayGroup) {
+      displayGroup.push(displayEntry);
+    } else {
+      ploDisplayByQuestionKey.set(key, [displayEntry]);
+    }
   }
   return { snapshotItems, ploByQuestionKey, ploDisplayByQuestionKey };
 }

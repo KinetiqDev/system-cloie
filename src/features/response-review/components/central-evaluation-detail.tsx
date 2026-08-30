@@ -164,7 +164,9 @@ export function CentralEvaluationDetail({
                   return (
                     <TableRow key={plo.ploId}>
                       <TableCell className="font-medium">{plo.ploCode}</TableCell>
-                      <TableCell className="min-w-72 whitespace-normal break-words">{plo.ploDescription}</TableCell>
+                      <TableCell className="min-w-72 break-words whitespace-normal">
+                        {plo.ploDescription}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{plo.ratingCount}</TableCell>
                       <TableCell className="text-right tabular-nums">{plo.responseCount}</TableCell>
                       <TableCell className="text-right tabular-nums">
@@ -213,7 +215,9 @@ export function CentralEvaluationDetail({
                   return (
                     <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
                       <TableCell>{question.itemKey}</TableCell>
-                      <TableCell className="min-w-72 whitespace-normal break-words">{question.prompt}</TableCell>
+                      <TableCell className="min-w-72 break-words whitespace-normal">
+                        {question.prompt}
+                      </TableCell>
                       <TableCell className="min-w-40 whitespace-normal">
                         {question.ploBindings.length > 0
                           ? question.ploBindings.map((binding) => binding.code).join(", ")
@@ -313,7 +317,6 @@ export function CentralEvaluationDetail({
           </p>
         </CardContent>
       </Card>
-
     </div>
   );
 }

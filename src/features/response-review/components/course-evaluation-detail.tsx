@@ -305,7 +305,10 @@ export function CourseEvaluationDetail({
       <IdentifiedRespondentsTable
         respondents={respondents}
         responseHrefs={Object.fromEntries(
-          respondents.map((respondent) => [respondent.responseId, responseHref(respondent.responseId)])
+          respondents.map((respondent) => [
+            respondent.responseId,
+            responseHref(respondent.responseId),
+          ])
         )}
       />
     </div>

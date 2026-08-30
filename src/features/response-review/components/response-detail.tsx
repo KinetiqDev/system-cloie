@@ -214,7 +214,9 @@ function ContextFact({
     <div className="flex min-w-0 flex-col gap-1">
       <span className="text-label-sm text-muted-foreground">{label}</span>
       <span className="font-semibold break-words tabular-nums">{value}</span>
-      {description ? <span className="text-caption text-muted-foreground text-pretty">{description}</span> : null}
+      {description ? (
+        <span className="text-caption text-muted-foreground text-pretty">{description}</span>
+      ) : null}
     </div>
   );
 }
