@@ -63,12 +63,27 @@ describe("CourseCreateDialog", () => {
     expect(formData.get("code")).toBe("GE9");
     expect(formData.get("title")).toBe("Ethics");
     expect(formData.get("course_scope")).toBe("PROGRAM_SPECIFIC");
-
     await waitFor(() =>
       expect(showToastMock).toHaveBeenCalledWith("Course GE9 created.", "success")
     );
+    expect(showToastMock).toHaveBeenCalledTimes(1);
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it("locks dismissal while a create is in flight", async () => {
+    const { promise } = Promise.withResolvers<{ success: boolean }>();
+    createCourseActionMock.mockReturnValue(promise);
+    const onOpenChange = renderDialog();
+
+    await fillRequiredFields();
+    fireEvent.click(screen.getByRole("button", { name: "Create Course" }));
+
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    await waitFor(() => expect(cancel).toBeDisabled());
+    fireEvent.click(cancel);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
   it("flattens nested majors with their parent program for the Major select", async () => {

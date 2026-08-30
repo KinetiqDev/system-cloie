@@ -38,7 +38,17 @@ export function CourseCreateDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // A mutation in flight still creates the course server-side; dismissing
+        // mid-submit would signal a cancellation that did not actually happen.
+        if (!next && pending) {
+          return;
+        }
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[min(85vh,720px)] sm:max-w-xl">
         <DialogHeader className="px-5 pt-5 pr-12 pb-1">
           <DialogTitle>Add New Course</DialogTitle>
@@ -64,7 +74,7 @@ export function CourseCreateDialog({
         </div>
 
         <div className="bg-muted/50 flex flex-col-reverse gap-2 rounded-b-xl border-t px-5 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button form={FORM_ID} type="submit" disabled={pending}>
