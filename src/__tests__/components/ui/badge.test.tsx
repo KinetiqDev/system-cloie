@@ -23,11 +23,14 @@ describe("Badge", () => {
     ["success", "border-success/30", "bg-success-soft", "text-success"],
     ["warning", "border-warning/30", "bg-warning-soft", "text-warning"],
     ["information", "border-info/30", "bg-info-soft", "text-info"],
-  ] as const)("retokenizes the %s variant with semantic status tokens", (variant, border, bg, text) => {
-    render(<Badge variant={variant}>Label</Badge>);
+  ] as const)(
+    "retokenizes the %s variant with semantic status tokens",
+    (variant, border, bg, text) => {
+      render(<Badge variant={variant}>Label</Badge>);
 
-    const badge = screen.getByText("Label");
-    expect(badge).toHaveClass(border, bg, text);
-    expect(badge.className).not.toMatch(/\b(?:bg|border|text)-(?:red|green|yellow|amber)-\d+/);
-  });
+      const badge = screen.getByText("Label");
+      expect(badge).toHaveClass(border, bg, text);
+      expect(badge.className).not.toMatch(/\b(?:bg|border|text)-(?:red|green|yellow|amber)-\d+/);
+    }
+  );
 });

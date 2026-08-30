@@ -27,9 +27,7 @@ describe("Card", () => {
 
   it("applies sm size attribute", () => {
     render(<Card size="sm">Small card</Card>);
-    const card = screen
-      .getByText("Small card")
-      .closest("[data-slot=card]");
+    const card = screen.getByText("Small card").closest("[data-slot=card]");
     expect(card).toHaveAttribute("data-size", "sm");
   });
 });
@@ -37,9 +35,7 @@ describe("Card", () => {
 describe("CardHeader", () => {
   it("renders with data-slot=card-header", () => {
     render(<CardHeader>Header</CardHeader>);
-    expect(
-      screen.getByText("Header").closest("[data-slot=card-header]")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Header").closest("[data-slot=card-header]")).toBeInTheDocument();
   });
 });
 
@@ -64,18 +60,14 @@ describe("CardDescription", () => {
 describe("CardContent", () => {
   it("renders with data-slot=card-content", () => {
     render(<CardContent>Body</CardContent>);
-    expect(
-      screen.getByText("Body").closest("[data-slot=card-content]")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Body").closest("[data-slot=card-content]")).toBeInTheDocument();
   });
 });
 
 describe("CardFooter", () => {
   it("renders with data-slot=card-footer and muted surface", () => {
     render(<CardFooter>Footer actions</CardFooter>);
-    const footer = screen
-      .getByText("Footer actions")
-      .closest("[data-slot=card-footer]");
+    const footer = screen.getByText("Footer actions").closest("[data-slot=card-footer]");
     expect(footer).toBeInTheDocument();
     expect(footer).toHaveClass("bg-muted/50");
   });
@@ -93,9 +85,7 @@ describe("CardAction", () => {
 
   it("renders with data-slot=card-action and grid placement classes", () => {
     render(<CardAction>Action button</CardAction>);
-    const action = screen
-      .getByText("Action button")
-      .closest("[data-slot=card-action]");
+    const action = screen.getByText("Action button").closest("[data-slot=card-action]");
     expect(action).toBeInTheDocument();
     expect(action).toHaveClass("col-start-2");
   });

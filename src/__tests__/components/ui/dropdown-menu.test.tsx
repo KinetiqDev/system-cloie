@@ -38,7 +38,9 @@ describe("DropdownMenu", () => {
     trigger.focus();
     fireEvent.keyDown(trigger, { key: "ArrowDown" });
     await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Item one" })).toHaveAttribute("data-highlighted"));
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "Item one" })).toHaveAttribute("data-highlighted")
+    );
 
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());

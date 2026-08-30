@@ -74,7 +74,7 @@ describe("Pagination", () => {
     render(<Pagination currentPage={10} totalPages={20} onPageChange={() => {}} />);
     expect(screen.getByRole("navigation", { name: "Pagination" })).toHaveClass(
       "flex-wrap",
-      "justify-center",
+      "justify-center"
     );
   });
 });

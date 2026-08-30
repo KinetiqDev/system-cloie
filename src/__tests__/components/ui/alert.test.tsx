@@ -26,11 +26,14 @@ describe("Alert", () => {
     ["success", "border-success/50", "bg-success-soft", "text-success"],
     ["warning", "border-warning/50", "bg-warning-soft", "text-warning"],
     ["information", "border-info/50", "bg-info-soft", "text-info"],
-  ] as const)("retokenizes the %s variant with semantic status tokens", (variant, border, bg, text) => {
-    renderAlert(variant);
+  ] as const)(
+    "retokenizes the %s variant with semantic status tokens",
+    (variant, border, bg, text) => {
+      renderAlert(variant);
 
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveClass(border, bg, text);
-    expect(alert.className).not.toMatch(/\b(?:bg|border|text)-(?:red|green|yellow|amber)-\d+/);
-  });
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveClass(border, bg, text);
+      expect(alert.className).not.toMatch(/\b(?:bg|border|text)-(?:red|green|yellow|amber)-\d+/);
+    }
+  );
 });
