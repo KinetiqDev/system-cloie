@@ -1,8 +1,3 @@
-import {
-  getProjectRefFromDatabaseUrl,
-  getProjectRefFromSupabaseUrl,
-} from "../supabase/project-identity";
-
 // fallow-ignore-next-line unused-type
 export type DatabaseTargetValidationResult = {
   valid: boolean;
@@ -40,10 +35,7 @@ function isHostedSupabaseHostname(hostname: string): boolean {
   );
 }
 
-function collectDatabaseUrlErrors(
-  databaseUrl: string,
-  errors: string[]
-): string | null {
+function collectDatabaseUrlErrors(databaseUrl: string, errors: string[]): string | null {
   const hostname = parseHostname(databaseUrl);
   if (!hostname) {
     errors.push("DATABASE_URL is not a valid URL.");
@@ -54,19 +46,10 @@ function collectDatabaseUrlErrors(
       `DATABASE_URL hostname "${hostname}" looks like a hosted Supabase target — refusing to run against hosted Supabase. Use a disposable Postgres service (e.g. localhost:5432).`
     );
   }
-  const projectRef = getProjectRefFromDatabaseUrl(databaseUrl);
-  if (projectRef) {
-    errors.push(
-      `DATABASE_URL resolves to hosted Supabase project "${projectRef}" — refusing to run against hosted Supabase. Use a disposable Postgres target.`
-    );
-  }
   return hostname;
 }
 
-function collectDirectUrlErrors(
-  directUrl: string | undefined,
-  errors: string[]
-): void {
+function collectDirectUrlErrors(directUrl: string | undefined, errors: string[]): void {
   if (!directUrl) return;
   const hostname = parseHostname(directUrl);
   if (hostname && isHostedSupabaseHostname(hostname)) {
@@ -74,18 +57,9 @@ function collectDirectUrlErrors(
       `DIRECT_URL hostname "${hostname}" looks like a hosted Supabase target — refusing to run against hosted Supabase.`
     );
   }
-  const ref = getProjectRefFromDatabaseUrl(directUrl);
-  if (ref) {
-    errors.push(
-      `DIRECT_URL resolves to hosted Supabase project "${ref}" — refusing to run against hosted Supabase.`
-    );
-  }
 }
 
-function collectSupabaseUrlErrors(
-  supabaseUrl: string | undefined,
-  errors: string[]
-): void {
+function collectSupabaseUrlErrors(supabaseUrl: string | undefined, errors: string[]): void {
   if (!supabaseUrl) return;
   const hostname = parseHostname(supabaseUrl);
   if (hostname && isHostedSupabaseHostname(hostname)) {
@@ -93,18 +67,9 @@ function collectSupabaseUrlErrors(
       `NEXT_PUBLIC_SUPABASE_URL hostname "${hostname}" looks like a hosted Supabase target — disposable database verification must not point at hosted Supabase.`
     );
   }
-  const ref = getProjectRefFromSupabaseUrl(supabaseUrl);
-  if (ref) {
-    errors.push(
-      `NEXT_PUBLIC_SUPABASE_URL resolves to hosted Supabase project "${ref}" — refusing to run against hosted Supabase.`
-    );
-  }
 }
 
-function collectDisposableHostError(
-  hostname: string | null,
-  errors: string[]
-): void {
+function collectDisposableHostError(hostname: string | null, errors: string[]): void {
   if (hostname && !DISPOSABLE_HOST_ALLOWLIST[hostname]) {
     errors.push(
       `DATABASE_URL must target a disposable database (allowed hosts: ${Object.keys(DISPOSABLE_HOST_ALLOWLIST).join(", ")}); got "${hostname}". Set DATABASE_URL to the disposable Postgres service (e.g. postgresql://postgres:postgres@localhost:5432/cloie_test).`
@@ -120,8 +85,7 @@ export function verifyDisposableDatabaseTarget(
 
   const databaseUrl = env.DATABASE_URL?.trim();
   const directUrl = env.DIRECT_URL?.trim();
-  const supabaseUrl =
-    env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? env.SUPABASE_URL?.trim();
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? env.SUPABASE_URL?.trim();
 
   if (!databaseUrl) {
     errors.push("DATABASE_URL is required for database verification.");
@@ -142,8 +106,6 @@ export function assertDisposableDatabaseTarget(
 ): void {
   const result = verifyDisposableDatabaseTarget(env);
   if (!result.valid) {
-    throw new Error(
-      `Disposable database target validation FAILED:\n${result.errors.join("\n")}`
-    );
+    throw new Error(`Disposable database target validation FAILED:\n${result.errors.join("\n")}`);
   }
 }

@@ -1,8 +1,8 @@
 /**
  * Scheduled demo-reset gate (issue #551).
  *
- * The real `pnpm demo:reset` requires a linked dedicated-demo Supabase
- * project and must never run in CI. What CI can and should prove on a
+ * The real `pnpm demo:reset` requires a marker persisted on the dedicated-demo
+ * database target and must never run in CI. What CI can and should prove on a
  * schedule is that the reset gate itself refuses unsafe targets before any
  * destructive command: this script executes
  * `validateDemoTargetIsolation` (the same function the reset path calls)
@@ -12,8 +12,8 @@ import { pathToFileURL } from "node:url";
 
 import { validateDemoTargetIsolation } from "../validate-demo-target-isolation";
 
-const DEMO_REF = "refdemo000000000000000000000001";
-const PRIMARY_REF = "refprimary0000000000000000000002";
+const DEMO_BACKEND_ID = "demo-backend";
+const PRIMARY_BACKEND_ID = "primary-backend";
 
 function dedicatedDemoEnv(overrides: Record<string, string | undefined> = {}) {
   return {
@@ -22,12 +22,13 @@ function dedicatedDemoEnv(overrides: Record<string, string | undefined> = {}) {
     CLOIE_DEMO_ENABLED: "true",
     CLOIE_DEMO_SESSION_SECRET: "scheduled-gate-session-secret-must-be-32-chars!!",
     CLOIE_DEMO_ALLOWED_USERS: "demo-secretary@cloie.test",
-    CLOIE_DEMO_SUPABASE_PROJECT_REF: DEMO_REF,
-    CLOIE_PRIMARY_SUPABASE_PROJECT_REF: PRIMARY_REF,
-    SUPABASE_PROJECT_REF: DEMO_REF,
-    NEXT_PUBLIC_SUPABASE_URL: `https://${DEMO_REF}.supabase.co`,
-    DATABASE_URL: `postgresql://postgres.${DEMO_REF}:password@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`,
-    DIRECT_URL: `postgresql://postgres.${DEMO_REF}:password@aws-0-eu-central-1.pooler.supabase.com:5432/postgres`,
+    CLOIE_BACKEND_ID: DEMO_BACKEND_ID,
+    CLOIE_DEMO_BACKEND_ID: DEMO_BACKEND_ID,
+    CLOIE_PRIMARY_BACKEND_ID: PRIMARY_BACKEND_ID,
+    CLOIE_DEMO_DATABASE_ID: "demo-database",
+    NEXT_PUBLIC_SUPABASE_URL: "https://demo.cloie.example.test",
+    DATABASE_URL: "postgresql://postgres:password@db.demo.cloie.example.test:5432/postgres",
+    DIRECT_URL: "postgresql://postgres:password@db.demo.cloie.example.test:5432/postgres",
     ...overrides,
   } as Record<string, string | undefined>;
 }
@@ -37,23 +38,24 @@ type GateResult = { valid: boolean; failures: string[] };
 export function verifyDemoResetGate(log: (message: string) => void = () => {}): GateResult {
   const failures: string[] = [];
 
-  // 1. A hosted/shared target without the dedicated-demo identity is refused.
+  // 1. A shared target without the dedicated-demo identity is refused.
   const shared = validateDemoTargetIsolation({
     NODE_ENV: "production",
-    DATABASE_URL: `postgresql://postgres.${PRIMARY_REF}:password@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`,
+    DATABASE_URL: "postgresql://postgres:password@db.example.test:5432/postgres",
   });
   log(`shared target: ${shared.valid ? "ACCEPTED" : "refused"}`);
-  if (shared.valid) failures.push("hosted target without dedicated-demo identity must be refused");
+  if (shared.valid) failures.push("target without dedicated-demo identity must be refused");
 
-  // 2. A URL that identifies the primary Production project is refused even
-  //    when every other demo variable is present.
+  // 2. A backend identity attached to primary Production is refused even when
+  //    every other demo variable is present.
   const primary = validateDemoTargetIsolation(
     dedicatedDemoEnv({
-      DATABASE_URL: `postgresql://postgres.${PRIMARY_REF}:password@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`,
+      CLOIE_BACKEND_ID: PRIMARY_BACKEND_ID,
+      CLOIE_DEMO_BACKEND_ID: PRIMARY_BACKEND_ID,
     })
   );
-  log(`primary-ref target: ${primary.valid ? "ACCEPTED" : "refused"}`);
-  if (primary.valid) failures.push("primary Production project reference must be refused");
+  log(`primary-identity target: ${primary.valid ? "ACCEPTED" : "refused"}`);
+  if (primary.valid) failures.push("primary Production backend identity must be refused");
 
   // 3. A weak demo session secret is refused.
   const weakSecret = validateDemoTargetIsolation(

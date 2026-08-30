@@ -19,8 +19,8 @@ When disabled, the bootstrap forces Light before paint, ignores stored preferenc
 ## Target Identity Checks
 
 1. Confirm the hosting-project name, deployment URL, and deployment environment identify the intended primary Production target. Do not activate a preview, local, or dedicated demo deployment.
-2. Confirm the deployment uses the primary Production Supabase project reference. If `CLOIE_PRIMARY_SUPABASE_PROJECT_REF` is available to the operator, compare it through the hosting secret manager without recording its value.
-3. Confirm any configured `CLOIE_DEMO_SUPABASE_PROJECT_REF` differs from the primary Production reference. Do not treat an isolated-demo project reference as an activation target.
+2. Confirm the deployment sets `CLOIE_BACKEND_ID` to the operator-recorded primary Production backend identity.
+3. Confirm `CLOIE_DEMO_BACKEND_ID` differs from the primary Production identity. Do not treat the dedicated demo backend as an activation target.
 4. Confirm no `CLOIE_DEMO_*` configuration is present on the primary Production deployment. The primary Production authentication boundary remains OAuth-only.
 5. Run the boundary check against the verified primary Production origin. Do not continue if it fails.
 
@@ -43,7 +43,7 @@ PRODUCTION_EVIDENCE_BASE_URL="<verified-primary-production-origin>" \
 
 ## Post-Activation Verification
 
-1. Reconfirm the deployment URL and primary Production project identity after the redeploy.
+1. Reconfirm the deployment URL and primary Production backend identity after the redeploy.
 2. In fresh Light, Dark, and System browser contexts, verify the avatar-menu selector and Settings Appearance route appear for an authenticated eligible account, and explicit Light/Dark/System behavior matches the accepted matrix.
 3. In an OS-Dark System context, verify first paint and hydrated state resolve Dark without a Light flash. Verify a stored explicit Light preference takes precedence over OS Dark.
 4. Verify representative public, operational, and respondent routes retain their existing URLs and behavior. The protected Design System Showcase must still return not-found UI in primary Production.

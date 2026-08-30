@@ -77,10 +77,11 @@ export function getCiTestAuthConfig(
 
   // Fail closed on primary production and dedicated demo deployments even if
   // CI test variables are present. CI test auth is restricted to the
-  // disposable CI environment with a dedicated CI target identity.
+  // disposable CI environment, which must not declare a backend identity.
   if (
-    environment.CLOIE_PRIMARY_SUPABASE_PROJECT_REF ||
-    environment.CLOIE_DEMO_SUPABASE_PROJECT_REF
+    environment.CLOIE_BACKEND_ID ||
+    environment.CLOIE_PRIMARY_BACKEND_ID ||
+    environment.CLOIE_DEMO_BACKEND_ID
   ) {
     return null;
   }

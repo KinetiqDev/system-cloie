@@ -13,19 +13,19 @@
  *  - CLOIE_DEMO_ENABLED        Must be "true".
  *  - CLOIE_DEMO_SESSION_SECRET Must be present and at least 32 chars.
  *  - CLOIE_DEMO_ALLOWED_USERS  Must be non-empty.
- *  - CLOIE_DEMO_SUPABASE_PROJECT_REF
- *                            Explicit identity of the dedicated demo project.
- *  - CLOIE_PRIMARY_SUPABASE_PROJECT_REF
- *                            Explicit identity of the primary Production project.
- *  - SUPABASE_PROJECT_REF, NEXT_PUBLIC_SUPABASE_URL, DATABASE_URL, DIRECT_URL
- *                            Must all resolve to the dedicated demo project.
+ *  - CLOIE_BACKEND_ID          Explicit identity of the running backend;
+ *                              must equal the dedicated demo identity.
+ *  - CLOIE_DEMO_BACKEND_ID     Explicit identity of the dedicated demo backend.
+ *  - CLOIE_PRIMARY_BACKEND_ID  Explicit identity of the primary Production backend.
+ *  - CLOIE_DEMO_DATABASE_ID    Opaque identity persisted on the demo database.
+ *  - NEXT_PUBLIC_SUPABASE_URL, DATABASE_URL, DIRECT_URL
+ *                            Must be present so the destructive reset can be
+ *                            bound to positive target evidence (the
+ *                            target-persisted marker verified by the reset
+ *                            script). No hostname heuristics are used.
  */
 
 import { loadEnvConfig } from "@next/env";
-import {
-  getProjectRefFromDatabaseUrl,
-  getProjectRefFromSupabaseUrl,
-} from "../src/lib/supabase/project-identity";
 
 loadEnvConfig(process.cwd());
 
@@ -34,6 +34,86 @@ export type ValidationResult = {
   errors: string[];
   warnings: string[];
 };
+
+/**
+ * Backend identities are opaque operator-assigned identifiers. The restricted
+ * charset keeps them embeddable in SQL literals and log output without
+ * quoting concerns, and forbids whitespace and quote characters outright.
+ */
+const BACKEND_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+export function isValidBackendId(value: string | undefined): value is string {
+  return !!value && BACKEND_ID_PATTERN.test(value);
+}
+
+const BACKEND_ID_FIELDS = [
+  { name: "CLOIE_BACKEND_ID", role: "the running backend" },
+  { name: "CLOIE_DEMO_BACKEND_ID", role: "the dedicated demo backend" },
+  { name: "CLOIE_PRIMARY_BACKEND_ID", role: "the primary Production backend" },
+] as const;
+
+function validateBackendIdentity(
+  env: Record<string, string | undefined>,
+  errors: string[]
+): {
+  backendId: string | undefined;
+  demoBackendId: string | undefined;
+  primaryBackendId: string | undefined;
+} {
+  const [backendId, demoBackendId, primaryBackendId] = BACKEND_ID_FIELDS.map(
+    ({ name }) => env[name]
+  );
+
+  for (const { name, role } of BACKEND_ID_FIELDS) {
+    if (!isValidBackendId(env[name])) {
+      errors.push(
+        `${name} must identify ${role} (non-empty, no whitespace, characters [A-Za-z0-9._-]).`
+      );
+    }
+  }
+
+  if (
+    isValidBackendId(backendId) &&
+    isValidBackendId(demoBackendId) &&
+    backendId !== demoBackendId
+  ) {
+    errors.push(
+      `CLOIE_BACKEND_ID is "${backendId}"; expected the dedicated demo backend identity "${demoBackendId}".`
+    );
+  }
+  if (
+    isValidBackendId(demoBackendId) &&
+    isValidBackendId(primaryBackendId) &&
+    demoBackendId === primaryBackendId
+  ) {
+    errors.push("The dedicated demo and primary Production backend identities must differ.");
+  }
+
+  return { backendId, demoBackendId, primaryBackendId };
+}
+
+function validateUrlEvidence(env: Record<string, string | undefined>, errors: string[]): void {
+  for (const name of ["NEXT_PUBLIC_SUPABASE_URL", "DATABASE_URL", "DIRECT_URL"] as const) {
+    const value = env[name];
+    if (!value) {
+      errors.push(`${name} must be present so the demo reset can verify positive target evidence.`);
+      continue;
+    }
+    try {
+      new URL(value);
+    } catch {
+      errors.push(`${name} is not a valid URL.`);
+    }
+  }
+}
+
+function validateDatabaseIdentity(env: Record<string, string | undefined>, errors: string[]): void {
+  if (!isValidBackendId(env.CLOIE_DEMO_DATABASE_ID)) {
+    errors.push(
+      "CLOIE_DEMO_DATABASE_ID must identify the dedicated demo database (non-empty, no whitespace, characters [A-Za-z0-9._-])."
+    );
+  }
+}
 
 export function validateDemoTargetIsolation(
   env: Record<string, string | undefined> = process.env
@@ -72,37 +152,12 @@ export function validateDemoTargetIsolation(
     );
   }
 
-  // The reset target must be positively identified rather than inferred from
-  // a URL name, because Supabase project references are opaque identifiers.
-  const demoProjectRef = env.CLOIE_DEMO_SUPABASE_PROJECT_REF;
-  const primaryProjectRef = env.CLOIE_PRIMARY_SUPABASE_PROJECT_REF;
-  if (!demoProjectRef) {
-    errors.push("CLOIE_DEMO_SUPABASE_PROJECT_REF must identify the dedicated demo project.");
-  }
-  if (!primaryProjectRef) {
-    errors.push("CLOIE_PRIMARY_SUPABASE_PROJECT_REF must identify the primary Production project.");
-  }
-  if (demoProjectRef && primaryProjectRef && demoProjectRef === primaryProjectRef) {
-    errors.push("The dedicated demo and primary Production project references must differ.");
-  }
-
-  const targetRefs = [
-    ["SUPABASE_PROJECT_REF", env.SUPABASE_PROJECT_REF],
-    ["NEXT_PUBLIC_SUPABASE_URL", getProjectRefFromSupabaseUrl(env.NEXT_PUBLIC_SUPABASE_URL)],
-    ["DATABASE_URL", getProjectRefFromDatabaseUrl(env.DATABASE_URL)],
-    ["DIRECT_URL", getProjectRefFromDatabaseUrl(env.DIRECT_URL)],
-  ] as const;
-
-  for (const [source, projectRef] of targetRefs) {
-    if (!projectRef) {
-      errors.push(`${source} must identify the configured dedicated demo project.`);
-    } else if (demoProjectRef && projectRef !== demoProjectRef) {
-      errors.push(`${source} does not identify the configured dedicated demo project.`);
-    }
-    if (primaryProjectRef && projectRef === primaryProjectRef) {
-      errors.push(`${source} identifies the primary Production project.`);
-    }
-  }
+  // The demo target must be positively identified by explicit backend
+  // identity rather than inferred from URL names. The reset also compares an
+  // operator-assigned database identity with a marker stored on that database.
+  validateBackendIdentity(env, errors);
+  validateDatabaseIdentity(env, errors);
+  validateUrlEvidence(env, errors);
 
   return { valid: errors.length === 0, errors, warnings };
 }

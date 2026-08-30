@@ -10,7 +10,8 @@ A college-level digital evaluation, monitoring, and reporting platform for Assum
 
 - Node.js 22 (see `.nvmrc`)
 - pnpm 10 (`npm install -g pnpm`)
-- A Supabase project (for database, auth, and migrations)
+- Docker (for the local Supabase CLI Docker stack)
+- Supabase CLI (installed as a dev dependency; resolved locally via `scripts/resolve-local-bin.ts`)
 
 ### Setup
 
@@ -20,27 +21,30 @@ git clone <repository-url>
 cd project-cloie
 pnpm install
 
-# 2. Environment variables
-cp .env.example .env
-# Edit .env with your credentials.
-# See .env.example for the full variable reference.
-# The essentials: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-# `DATABASE_URL`, `DIRECT_URL`, `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`,
-# and `SUPABASE_DB_PASSWORD`.
+# 2. Start the local Supabase CLI Docker stack (canonical development backend)
+pnpm supabase:start
 
-# 3. Link and push database
-pnpm supabase:link       # Link to your Supabase project
-pnpm supabase:push       # Push migrations to Supabase
-pnpm supabase:types        # Regenerate Supabase database types
+# 3. Environment variables
+cp .env.example .env.local
+# Edit .env.local with your credentials.
+# See .env.example for the full variable reference.
+# The essentials: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+# (from `pnpm supabase:status`), `DATABASE_URL`, `DIRECT_URL`, and the local
+# OAuth values `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+
+# 4. Reset the local database from committed migrations and seed data
+pnpm supabase:reset
 pnpm db:seed             # Optional: seed demo data
 
-# 4. Run development server
+# 5. Run development server
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+Open [http://127.0.0.1:3000](http://127.0.0.1:3000) to view the application.
 
-See `supabase/README.md` for the full Supabase cloud workflow and `AGENTS.md` for the Prisma + Supabase migration cycle.
+For deployed self-hosted targets, set the server-only `CLOIE_BACKEND_ID` and the other backend identity values described in `.env.example`. Local development and disposable CI leave `CLOIE_BACKEND_ID` unset.
+
+See `supabase/README.md` for the full local and remote self-hosted Supabase workflow and `AGENTS.md` for the Prisma + Supabase migration cycle. Supabase Cloud is not supported; see ADR 0020 for the target-neutral self-hosted contract.
 
 ## Tech Stack
 
@@ -114,15 +118,19 @@ Key demo scripts:
 | `pnpm db:push`                             | Push Prisma schema to dev database                                           |
 | `pnpm db:seed`                             | Seed database with demo data                                                 |
 | `pnpm db:studio`                           | Open Prisma Studio GUI                                                       |
-| `pnpm supabase:link`                       | Link to remote Supabase project                                              |
+| `pnpm supabase:start`                      | Start the local Supabase CLI Docker stack                                    |
+| `pnpm supabase:stop`                       | Stop the local Supabase CLI Docker stack                                     |
+| `pnpm supabase:status`                     | Inspect local endpoints and generated credentials                            |
+| `pnpm supabase:reset`                      | Destructive reset of the local database (explicit --local)                   |
+| `pnpm supabase:migration:list:local`       | List migrations against the local stack                                      |
+| `pnpm supabase:migration:list`             | List migrations of a remote self-hosted target (--db-url DIRECT_URL)         |
 | `pnpm supabase:migration:diff`             | Generate migration SQL from Prisma schema changes                            |
-| `pnpm supabase:push:dry-run`               | Preview migrations before applying                                           |
-| `pnpm supabase:push`                       | Push migrations to Supabase                                                  |
-| `pnpm supabase:types`                      | Regenerate Supabase database types                                           |
-| `pnpm supabase:login`                      | Log in to the Supabase CLI                                                   |
+| `pnpm supabase:push:dry-run`               | Preview migrations before applying to remote target                          |
+| `pnpm supabase:push`                       | Push migrations to a remote self-hosted target                               |
+| `pnpm supabase:types:local`                | Regenerate Supabase types from the local stack                               |
+| `pnpm supabase:types`                      | Regenerate Supabase types from a remote self-hosted target                   |
 | `pnpm supabase:migration:baseline`         | Create the baseline migration                                                |
-| `pnpm supabase:migration:list`             | List applied migrations                                                      |
-| `pnpm supabase:migration:repair-latest`    | Mark the latest migration as applied                                         |
+| `pnpm supabase:init`                       | Initialize the Supabase CLI project config                                   |
 | `pnpm demo:reset`                          | Destructive reset of isolated demo DB                                        |
 | `pnpm verify:production-auth-boundary`     | Validate primary Production auth is OAuth-only                               |
 | `pnpm verify:dedicated-demo-auth-boundary` | Validate demo deployment auth contracts                                      |
@@ -300,22 +308,28 @@ Uses the glossary in `src/features/<domain>/CONTEXT.md` and design tokens from `
 
 ## Environment Variables
 
-Required in `.env` (see `.env.example` for complete set):
+Required in `.env.local` (local development) or the deployment environment (see `.env.example` for the complete set):
 
 ```bash
-# Supabase (client)
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-NEXT_PUBLIC_SITE_URL=https://your-app.example.com
+# Supabase (client, browser-safe public contract)
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321  # local CLI Docker stack
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key      # from pnpm supabase:status
+NEXT_PUBLIC_SITE_URL=http://localhost:3000        # unset for trycloudflare Quick Tunnels
 
 # Database (Prisma)
-DATABASE_URL=postgresql://postgres:password@your-project-pooler.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1
-DIRECT_URL=postgresql://postgres:password@your-project.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+DIRECT_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 
-# Supabase CLI cloud workflow
-SUPABASE_PROJECT_REF=your-project-ref
-SUPABASE_ACCESS_TOKEN=your-access-token
-SUPABASE_DB_PASSWORD=your-db-password
+# Backend identity (server-only opaque identifiers; unset for local development)
+CLOIE_BACKEND_ID=
+CLOIE_DEPLOYMENT_KIND=
+CLOIE_PRIMARY_BACKEND_ID=
+CLOIE_DEMO_BACKEND_ID=
+CLOIE_DEMO_DATABASE_ID=
+
+# Local Google OAuth (consumed by supabase/config.toml via env substitution)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
 
 # Bootstrap
 BOOTSTRAP_SECRETARY_EMAIL=secretary@acd.edu.ph
@@ -328,11 +342,8 @@ NEXT_PUBLIC_DEMO_MODE=false
 
 # Demo deployment (server-only, never set on primary Production)
 CLOIE_DEMO_ENABLED=
-CLOIE_DEPLOYMENT_KIND=
 CLOIE_DEMO_SESSION_SECRET=
 CLOIE_DEMO_ALLOWED_USERS=
-CLOIE_DEMO_SUPABASE_PROJECT_REF=
-CLOIE_PRIMARY_SUPABASE_PROJECT_REF=
 
 # Legal acknowledgement ticket (server-only HMAC secret)
 CLOIE_LEGAL_TICKET_SECRET=
@@ -357,15 +368,13 @@ pnpm test:watch                               # Watch mode
 pnpm vitest run src/__tests__/path/file.test.ts  # Single file
 ```
 
-### Database Invariant Tests
-
-Sixteen suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a hosted database:
+Sixteen suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a shared backend:
 
 ```bash
 RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db
 ```
 
-Point `DATABASE_URL` at a disposable test database — never a shared Supabase project. `pnpm test:db` discovers the suites by convention (files gated on `RUN_DATABASE_INTEGRATION_TESTS`); `pnpm verify:database-suites` fails if a gated suite falls outside the convention or a required suite is missing. The gated suites:
+Point `DATABASE_URL` at a disposable test database, never a shared backend. `pnpm test:db` discovers the suites by convention (files gated on `RUN_DATABASE_INTEGRATION_TESTS`); `pnpm verify:database-suites` fails if a gated suite falls outside the convention or a required suite is missing. The gated suites:
 
 - `src/__tests__/features/academic-calendar/academic-period-one-active-invariant.test.ts`
 - `src/__tests__/features/academic-calendar/read-period-readiness-totals-parity.test.ts`
@@ -384,7 +393,7 @@ Point `DATABASE_URL` at a disposable test database — never a shared Supabase p
 - `src/__tests__/modules/identity-access/secretary-rls-policy.test.ts`
 - `src/__tests__/modules/identity-access/table-access-dispositions.test.ts`
 
-The destructive dedicated-demo migration replay has a separate gate. Run it only after confirming that the linked Supabase project is the isolated demo target:
+The destructive dedicated-demo migration replay has a separate gate. Run it only after confirming that the configured backend identity, database identity, and private target marker identify the isolated demo target:
 
 ```bash
 RUN_DEMO_RESET_INTEGRATION_TESTS=1 pnpm vitest run src/__tests__/scripts/demo-reset-fresh-replay.test.ts
@@ -430,7 +439,7 @@ CI runs on Depot. Workflows live in `.depot/workflows/`. The `.github/` director
 `ci.yml` runs three jobs on every push to `main` and pull request:
 
 - **quality-checks** — Prettier (`pnpm format:check:changed`), ESLint (`pnpm lint` and `pnpm lint:changed`), Vitest (`pnpm test`), and the production build (`pnpm build`).
-- **database-integration** — applies the Supabase migrations and the fixture seed to a disposable Postgres 16 container, then runs the gated DB suites (`pnpm test:db`). The container is the only database involved; hosted Supabase is never touched.
+- **database-integration** — applies the Supabase migrations and the fixture seed to a disposable Postgres 16 container, then runs the gated DB suites (`pnpm test:db`). The container is the only database involved; no shared backend is touched.
 - **browser-e2e** — production build plus `pnpm test:e2e` against the same disposable Postgres, signed in with the isolated CI test session (`CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test`). The Playwright report and traces upload as artifacts on failure.
 
 `code-intelligence.yml` runs the fallow audit gate on pull requests and scheduled fallow reports.
@@ -439,24 +448,26 @@ CI runs on Depot. Workflows live in `.depot/workflows/`. The `.github/` director
 
 Canonical schema source is `prisma/schema.prisma` (split across `prisma/models/` by domain). Some uniqueness rules rely on Postgres features Prisma cannot express (e.g. `NULLS NOT DISTINCT` indexes), enforced in `supabase/migrations/*` and mirrored as `@@index` in Prisma.
 
-### Migration Workflow (No Docker)
+### Migration Workflow (Local Or Explicit Remote)
 
 ```bash
 # 1. Edit prisma/schema.prisma or prisma/models/*.prisma
 # 2. Generate migration SQL
 pnpm supabase:migration:diff -- your_change_name
 # 3. Review the SQL in supabase/migrations/
-# 4. Dry-run before applying
+# 4. Local stack: reset/apply through the committed migration history
+pnpm supabase:reset
+# 5. Remote self-hosted target: dry-run, then push via DIRECT_URL
 pnpm supabase:push:dry-run
-# 5. Apply to Supabase
 pnpm supabase:push
-# 6. Regenerate types
+# 6. Regenerate types (local stack or remote target)
+pnpm supabase:types:local
 pnpm supabase:types
 ```
 
-Avoid Docker-backed commands: `supabase db pull` and `supabase db diff --linked`. `src/types/supabase-database.ts` is generated and should never be hand-edited.
+Local commands always target the local CLI Docker stack explicitly; remote commands always use `DIRECT_URL` through `--db-url`. There is no linked-project state, and `src/types/supabase-database.ts` is generated and should never be hand-edited.
 
-See `supabase/README.md` for the complete cloud-only workflow and baseline recovery instructions.
+See `supabase/README.md` for the complete local and remote self-hosted workflow and ADR 0020 for the target-neutral contract.
 
 ## Code Style & Conventions
 

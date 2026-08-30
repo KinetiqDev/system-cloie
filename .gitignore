@@ -46,6 +46,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# supabase CLI local artifacts
+supabase/.temp/
+supabase/volumes/
+
 # env files
 .env
 .env*.local

@@ -12,8 +12,8 @@ import { resolveAppearanceAvailability } from "@/features/design-system/services
 
 const SECRET = "a".repeat(32);
 const USER_EMAIL = "demo-faculty@cloie.test";
-const DEMO_PROJECT_REF = "demoprojectref";
-const PRIMARY_PROJECT_REF = "primaryprojectref";
+const DEMO_BACKEND_ID = "demo-backend-id";
+const PRIMARY_BACKEND_ID = "primary-backend-id";
 
 function stubValidDedicatedDemoEnvironment() {
   vi.stubEnv("NODE_ENV", "production");
@@ -21,14 +21,9 @@ function stubValidDedicatedDemoEnvironment() {
   vi.stubEnv("CLOIE_DEPLOYMENT_KIND", DEMO_DEPLOYMENT_KIND);
   vi.stubEnv("CLOIE_DEMO_SESSION_SECRET", SECRET);
   vi.stubEnv("CLOIE_DEMO_ALLOWED_USERS", USER_EMAIL);
-  vi.stubEnv("CLOIE_DEMO_SUPABASE_PROJECT_REF", DEMO_PROJECT_REF);
-  vi.stubEnv("CLOIE_PRIMARY_SUPABASE_PROJECT_REF", PRIMARY_PROJECT_REF);
-  vi.stubEnv("SUPABASE_PROJECT_REF", DEMO_PROJECT_REF);
-  vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", `https://${DEMO_PROJECT_REF}.supabase.co`);
-  vi.stubEnv(
-    "DATABASE_URL",
-    `postgresql://postgres.${DEMO_PROJECT_REF}:secret@aws-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
-  );
+  vi.stubEnv("CLOIE_BACKEND_ID", DEMO_BACKEND_ID);
+  vi.stubEnv("CLOIE_DEMO_BACKEND_ID", DEMO_BACKEND_ID);
+  vi.stubEnv("CLOIE_PRIMARY_BACKEND_ID", PRIMARY_BACKEND_ID);
   vi.stubEnv("CLOIE_APPEARANCE_ENABLED", "");
 }
 
@@ -55,7 +50,7 @@ describe("resolveAppearanceAvailability", () => {
     expect(resolveAppearanceAvailability()).toBe(false);
 
     vi.stubEnv("CLOIE_DEMO_ENABLED", "true");
-    vi.stubEnv("SUPABASE_PROJECT_REF", PRIMARY_PROJECT_REF);
+    vi.stubEnv("CLOIE_BACKEND_ID", PRIMARY_BACKEND_ID);
     expect(resolveAppearanceAvailability()).toBe(false);
   });
 
@@ -99,11 +94,9 @@ describe("resolveAppearanceAvailability", () => {
     delete process.env.CLOIE_DEPLOYMENT_KIND;
     delete process.env.CLOIE_DEMO_SESSION_SECRET;
     delete process.env.CLOIE_DEMO_ALLOWED_USERS;
-    delete process.env.CLOIE_DEMO_SUPABASE_PROJECT_REF;
-    delete process.env.CLOIE_PRIMARY_SUPABASE_PROJECT_REF;
-    delete process.env.SUPABASE_PROJECT_REF;
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.DATABASE_URL;
+    delete process.env.CLOIE_BACKEND_ID;
+    delete process.env.CLOIE_DEMO_BACKEND_ID;
+    delete process.env.CLOIE_PRIMARY_BACKEND_ID;
     delete process.env.CLOIE_APPEARANCE_ENABLED;
     expect(resolveAppearanceAvailability()).toBe(false);
   });

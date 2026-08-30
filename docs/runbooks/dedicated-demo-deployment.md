@@ -32,35 +32,38 @@ The implementation issues reference this seam:
 
 The signed session supplies identity only. Every request re-resolves the current Prisma user and applies the existing role, account-state, profile-gate, program scope, Course Assignment ownership, respondent eligibility, and mutation authorization rules. The client never supplies the authorization role or scope as authority.
 
-The authenticated shell renders a visible, non-sensitive demo-environment indicator only when the server-derived dedicated-demo capability is valid. It never exposes the signing secret, allowlist, or project-reference controls.
+The authenticated shell renders a visible, non-sensitive demo-environment indicator only when the server-derived dedicated-demo capability is valid. It never exposes the signing secret, allowlist, or backend identity values.
 
 ## Environment Contract
 
 Set these values only in the dedicated demo deployment's server environment:
 
-| Variable                             | Contract                                                                  |
-| ------------------------------------ | ------------------------------------------------------------------------- |
-| `CLOIE_DEMO_ENABLED`                 | Explicit enable flag; absent or false disables the flow.                  |
-| `CLOIE_DEPLOYMENT_KIND`              | Must identify the dedicated isolated demo deployment.                     |
-| `CLOIE_DEMO_SESSION_SECRET`          | Long random server-only HMAC signing secret.                              |
-| `CLOIE_DEMO_ALLOWED_USERS`           | Non-empty server-side allowlist of seeded demo catalog identifiers.       |
-| `CLOIE_DEMO_SUPABASE_PROJECT_REF`    | Exact Supabase project ref allowed for the destructive demo reset.        |
-| `CLOIE_PRIMARY_SUPABASE_PROJECT_REF` | Exact primary Production Supabase project ref that the reset must reject. |
+| Variable                    | Contract                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `CLOIE_DEMO_ENABLED`        | Explicit enable flag; absent or false disables the flow.                       |
+| `CLOIE_DEPLOYMENT_KIND`     | Must be `dedicated-demo` on the dedicated isolated demo deployment.            |
+| `CLOIE_BACKEND_ID`          | Opaque identity of the running deployment; must equal `CLOIE_DEMO_BACKEND_ID`. |
+| `CLOIE_DEMO_BACKEND_ID`     | Opaque identity of the dedicated demo deployment.                              |
+| `CLOIE_PRIMARY_BACKEND_ID`  | Opaque identity of primary Production; must differ from the demo identity.     |
+| `CLOIE_DEMO_DATABASE_ID`    | Opaque identity recorded in the target's private marker.                       |
+| `CLOIE_DEMO_SESSION_SECRET` | Long random server-only HMAC signing secret.                                   |
+| `CLOIE_DEMO_ALLOWED_USERS`  | Non-empty server-side allowlist of seeded demo catalog identifiers.            |
 
-The configuration loader must fail closed when any required value is absent, malformed, or attached to the primary Production deployment. Runtime demo authentication requires `SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_SUPABASE_URL`, and `DATABASE_URL` to identify `CLOIE_DEMO_SUPABASE_PROJECT_REF`, which must differ from `CLOIE_PRIMARY_SUPABASE_PROJECT_REF`. Do not expose the signing secret, allowlist, or project-reference controls through `NEXT_PUBLIC_*`, browser bundles, logs, or evidence. `CLOIE_DEMO_ALLOWED_USERS` must contain only the intended seeded demo catalog. The demo cookie is separate from `cloie_dev_auth`, httpOnly, secure for HTTPS, same-site, path-scoped, short-lived, and HMAC-SHA256 signed.
+The configuration loader must fail closed when any required value is absent, malformed, or attached to the primary Production deployment. Runtime demo authentication requires `CLOIE_BACKEND_ID` to equal `CLOIE_DEMO_BACKEND_ID` and differ from `CLOIE_PRIMARY_BACKEND_ID`, together with `NEXT_PUBLIC_SUPABASE_URL` and `DATABASE_URL`. Backend identity is an opaque operator-assigned string (`[A-Za-z0-9._-]`), compared by strict equality, never derived from hostnames or URLs, and never logged. Do not expose the signing secret, allowlist, or backend identity through `NEXT_PUBLIC_*`, browser bundles, logs, or evidence. `CLOIE_DEMO_ALLOWED_USERS` must contain only the intended seeded demo catalog. The demo cookie is separate from `cloie_dev_auth`, httpOnly, secure for HTTPS, same-site, path-scoped, short-lived, and HMAC-SHA256 signed.
 
 Before accepting an authenticated trace, verify the deployment marker, database target, seed state, and production build. Use the procedure in [`docs/testing/production-browser-evidence.md`](../testing/production-browser-evidence.md) and label the authentication mode exactly as `signed demo session`.
 
 ## Provision And Reset
 
-1. Create or select the isolated demo Supabase project or disposable PostgreSQL database. Confirm that its database URL is not the primary Production target.
-2. Configure the normal application environment plus the four server-only `CLOIE_DEMO_*` values. Do not configure them on primary Production.
-3. Confirm `SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_SUPABASE_URL`, `DATABASE_URL`, and `DIRECT_URL` all identify `CLOIE_DEMO_SUPABASE_PROJECT_REF`, and that it differs from `CLOIE_PRIMARY_SUPABASE_PROJECT_REF`.
-4. Run `pnpm supabase:link` with `SUPABASE_PROJECT_REF` set to the dedicated demo project, then run `pnpm demo:reset`. The reset validates that the CLI's linked project matches the configured demo identity before it can invoke Supabase, resets the isolated database through the linked migration history (including SQL-only triggers and policies), generates Prisma, and seeds known fixtures.
-5. Build and start the production server with `pnpm build` and `pnpm start`.
-6. Verify the deployment boundary before browser work: run `pnpm verify:production-auth-boundary` against primary Production and `pnpm verify:dedicated-demo-auth-boundary` against the dedicated demo deployment.
+1. Create or select the isolated demo Supabase Docker instance or disposable PostgreSQL database. Confirm that its database URL is not the primary Production target.
+2. Configure the normal application environment plus the server-only `CLOIE_DEMO_*` values and the demo backend identity. Do not configure them on primary Production.
+3. Confirm `CLOIE_BACKEND_ID` equals `CLOIE_DEMO_BACKEND_ID` and differs from `CLOIE_PRIMARY_BACKEND_ID`, and that `NEXT_PUBLIC_SUPABASE_URL`, `DATABASE_URL`, and `DIRECT_URL` all point at the dedicated demo instance.
+4. Before the first reset, create the private `cloie_ops.demo_target` marker on the demo database. Record the demo backend identity, `CLOIE_DEMO_DATABASE_ID`, and the configured public Supabase URL. Revoke schema and table access from `PUBLIC`, `anon`, and `authenticated`, and enable RLS. The marker is independent of the active environment, so environment mistakes alone cannot authorize destruction. Later successful resets recreate it automatically.
+5. Run `pnpm demo:reset`. The reset verifies deployment kind, backend identity, database identity, separation from primary Production, and the persisted target marker before it invokes Supabase; it resets the isolated database through the migration history (including SQL-only triggers and policies), generates Prisma, and seeds known fixtures. Reset and baseline seed use `--db-url`; no generic command resets whichever database happens to be configured.
+6. Build and start the production server with `pnpm build` and `pnpm start`.
+7. Verify the deployment boundary before browser work: run `pnpm verify:production-auth-boundary` against primary Production and `pnpm verify:dedicated-demo-auth-boundary` against the dedicated demo deployment.
 
-Reset before repeatable traces and after demonstrations with `pnpm demo:reset`. Do not use `pnpm db:push` or `pnpm db:seed` as a demo reset procedure: they do not establish target identity and do not remove arbitrary mutations. The reset command fails before running Supabase or Prisma unless every configured project identifier and the CLI's linked project agree with the dedicated demo project; it also rejects the configured primary Production project.
+Reset before repeatable traces and after demonstrations with `pnpm demo:reset`. Do not use `pnpm db:push` or `pnpm db:seed` as a demo reset procedure: they do not establish target identity and do not remove arbitrary mutations. The reset command fails before running Supabase or Prisma unless deployment kind, backend identity, expected database identity, primary Production separation, and the persisted target marker all agree with the dedicated demo instance.
 
 ## Rollback And Incident Disable
 
