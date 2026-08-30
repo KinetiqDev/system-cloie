@@ -646,7 +646,7 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
 
     const programTrigger = screen.getByLabelText("Program");
     expect(programTrigger).not.toBeDisabled();
-    expect(programTrigger).not.toHaveValue(/bscs/i);
+    expect((programTrigger as HTMLSelectElement).value).not.toMatch(/bscs/i);
 
     await openAndSelect(/program/i, /BS Education/);
 

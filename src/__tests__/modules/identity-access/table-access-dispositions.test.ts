@@ -32,9 +32,15 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       expect(result.ok, result.errors.join("\n")).toBe(true);
     });
 
+    type DispositionEntry =
+      (typeof TABLE_ACCESS_DISPOSITIONS)[keyof typeof TABLE_ACCESS_DISPOSITIONS];
+    type EvidenceBearingDisposition = Extract<
+      DispositionEntry,
+      { kind: "role-aware-rls" } | { kind: "authenticated-read" }
+    >;
     const roleAwareTables = Object.entries(TABLE_ACCESS_DISPOSITIONS).filter(
-      ([, disposition]) =>
-        disposition.kind === "role-aware-rls" || disposition.kind === "authenticated-read"
+      (entry): entry is [string, EvidenceBearingDisposition] =>
+        entry[1].kind === "role-aware-rls" || entry[1].kind === "authenticated-read"
     );
     const serverOnlyTables = Object.entries(TABLE_ACCESS_DISPOSITIONS).filter(
       ([, disposition]) => disposition.kind === "server-only"

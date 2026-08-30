@@ -67,35 +67,30 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
     userId: "coordinator-1",
     email: "demo-gened@cloie.test",
     roles: [ROLES.GEN_ED_COORDINATOR],
-    activeRole: ROLES.GEN_ED_COORDINATOR,
   });
 
   const secretarySession = createAuthSessionSnapshot({
     userId: "secretary-1",
     email: "demo-secretary@cloie.test",
     roles: [ROLES.SECRETARY],
-    activeRole: ROLES.SECRETARY,
   });
 
   const deanSession = createAuthSessionSnapshot({
     userId: "dean-1",
     email: "demo-dean@cloie.test",
     roles: [ROLES.DEAN],
-    activeRole: ROLES.DEAN,
   });
 
   const phSession = createAuthSessionSnapshot({
     userId: "ph-1",
     email: "demo-ph@cloie.test",
     roles: [ROLES.PROGRAM_HEAD],
-    activeRole: ROLES.PROGRAM_HEAD,
   });
 
   const facultySession = createAuthSessionSnapshot({
     userId: "faculty-1",
     email: "demo-faculty@cloie.test",
     roles: [ROLES.FACULTY],
-    activeRole: ROLES.FACULTY,
   });
 
   beforeEach(() => {
@@ -410,7 +405,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       const { prisma } = await import("@/lib/db/prisma");
 
       vi.mocked(prisma.course.findUnique).mockImplementation(
-        async ({ where }: { where: { id: string } }) => {
+        ({ where }: { where: { id?: string } }) => {
           if (where.id === "course-ge") {
             return {
               id: "course-ge",

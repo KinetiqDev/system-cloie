@@ -469,7 +469,9 @@ describe("resolveAuthSession", () => {
       findUniqueStudentEnrollmentMock.mockResolvedValue(null);
       findFirstFacultyAffiliationMock.mockResolvedValue(null);
 
-      await expect(resolveAuthSessionFromDevUser({ id: "dev-fixture-user", email })).resolves.toMatchObject({
+      await expect(
+        resolveAuthSessionFromDevUser({ id: "dev-fixture-user", email })
+      ).resolves.toMatchObject({
         userId: "dev-fixture-user",
         email,
         name: "Fixture Canonical Name",
@@ -693,9 +695,7 @@ describe("dedicated demo authorization boundaries", () => {
   it("denies program scope to a dedicated demo Program Head outside their assignments", async () => {
     const { resolveAuthSessionFromDemoUser } =
       await import("@/features/auth/services/resolve-auth-session");
-    const { canManageCourseAssignment } = await import(
-      "@/features/course-assignments/policies"
-    );
+    const { canManageCourseAssignment } = await import("@/features/course-assignments/policies");
     findUniqueMock.mockResolvedValue({
       id: "demo-ph",
       email: "demo-faculty@cloie.test",
@@ -713,16 +713,18 @@ describe("dedicated demo authorization boundaries", () => {
     expect(session!.activeRole).toBe(ROLES.PROGRAM_HEAD);
     expect(session!.profileGate.status).toBe("COMPLETE");
 
-    const decision = canManageCourseAssignment(session!, "program-other", []);
+    const decision = canManageCourseAssignment(
+      session!,
+      CourseScope.PROGRAM_SPECIFIC,
+      "program-other"
+    );
     expect(decision).toEqual({ allowed: false, reason: "Course is outside your program scope." });
   });
 
   it("denies course roster view to a dedicated demo Faculty without matching assignment", async () => {
     const { resolveAuthSessionFromDemoUser } =
       await import("@/features/auth/services/resolve-auth-session");
-    const { canViewCourseRoster } = await import(
-      "@/features/course-assignments/policies"
-    );
+    const { canViewCourseRoster } = await import("@/features/course-assignments/policies");
     findUniqueMock.mockResolvedValue({
       id: "demo-faculty",
       email: "demo-faculty@cloie.test",
@@ -751,9 +753,7 @@ describe("dedicated demo authorization boundaries", () => {
   it("denies course assignment creation to a dedicated demo Faculty", async () => {
     const { resolveAuthSessionFromDemoUser } =
       await import("@/features/auth/services/resolve-auth-session");
-    const { canManageCourseAssignment } = await import(
-      "@/features/course-assignments/policies"
-    );
+    const { canManageCourseAssignment } = await import("@/features/course-assignments/policies");
     findUniqueMock.mockResolvedValue({
       id: "demo-faculty",
       email: "demo-faculty@cloie.test",
@@ -769,7 +769,7 @@ describe("dedicated demo authorization boundaries", () => {
     expect(session).not.toBeNull();
     expect(session!.activeRole).toBe(ROLES.FACULTY);
 
-    const decision = canManageCourseAssignment(session!, "program-1", []);
+    const decision = canManageCourseAssignment(session!, CourseScope.PROGRAM_SPECIFIC, "program-1");
     expect(decision).toEqual({ allowed: false, reason: "Insufficient permissions." });
   });
 });
