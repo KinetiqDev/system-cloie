@@ -1,8 +1,14 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartPatternDefs,
+  ChartSwatch,
+  chartFill,
+} from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
@@ -65,16 +71,10 @@ export function MeanBarChart({ title, data }: MeanBarChartProps) {
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis domain={[0, 5]} tickCount={6} tickLine={false} axisLine={false} />
-            <Tooltip
+            <ChartTooltip
               formatter={(_value, _name, item) => {
                 const original = (item?.payload as MeanDatum | undefined)?.value;
                 return [original == null ? "N/A" : original.toFixed(2), "Mean"];
-              }}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                fontSize: "13px",
               }}
             />
             <Bar dataKey="chartValue" radius={[6, 6, 0, 0]} isAnimationActive={false}>

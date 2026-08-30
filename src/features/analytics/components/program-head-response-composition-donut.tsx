@@ -1,8 +1,14 @@
 "use client";
 
 import { useId } from "react";
-import { Cell, Pie, PieChart, Tooltip } from "recharts";
-import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { Cell, Pie, PieChart } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartPatternDefs,
+  ChartSwatch,
+  chartFill,
+} from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
@@ -84,18 +90,12 @@ export function ProgramHeadResponseCompositionDonut({
         >
           <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <ChartPatternDefs chartId={chartId} categoryCount={data.length} />
-            <Tooltip
+            <ChartTooltip
               formatter={(value, _name, item) => {
                 const payload = item?.payload as ProgramHeadResponseCompositionDatum | undefined;
                 const share =
                   payload && total > 0 ? ` · ${((payload.count / total) * 100).toFixed(1)}%` : "";
                 return [`${value}${share}`, "Submitted responses"];
-              }}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                fontSize: "13px",
               }}
             />
             <Pie

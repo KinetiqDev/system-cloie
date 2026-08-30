@@ -134,12 +134,6 @@ export function FacultyCiloAnalyticsChart({ data }: FacultyCiloAnalyticsChartPro
                 const item = chartData.find((d) => d.name === name);
                 return [`Mean: ${value}`, item?.description || name];
               }}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                fontSize: "13px",
-              }}
             />
             <ChartLegend verticalAlign="bottom" content={<ChartLegendContent nameKey="name" />} />
           </PieChart>

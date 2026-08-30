@@ -1,8 +1,8 @@
 "use client";
 
 import { useId } from "react";
-import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartSwatch, chartFill } from "@/components/ui/chart";
 import { splitComparableRuns } from "@/features/analytics/services/program-head-analytics-aggregators";
 import type {
   ProgramHeadTrendBreakDTO,
@@ -105,14 +105,8 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
               tick={{ fontSize: 12 }}
             />
             <YAxis domain={[0, "auto"]} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
-            <Tooltip
+            <ChartTooltip
               formatter={(value) => [typeof value === "number" ? value.toFixed(2) : value, "Mean"]}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                fontSize: "13px",
-              }}
             />
             {breakLabels.map((label) => (
               <ReferenceLine
@@ -168,7 +162,7 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
       {breaks.length > 0 ? (
         <div className="rounded-lg border border-dashed p-3">
           <h4 className="text-label-md text-foreground">Comparability breaks</h4>
-          <ul className="mt-1.5 list-disc space-y-1 pl-5 text-body-sm text-text-secondary">
+          <ul className="text-body-sm text-text-secondary mt-1.5 list-disc space-y-1 pl-5">
             {breaks.map((breakInfo, index) => (
               <li key={index}>
                 {breakInfo.fromPeriodLabel} → {breakInfo.toPeriodLabel}: {breakInfo.reason}

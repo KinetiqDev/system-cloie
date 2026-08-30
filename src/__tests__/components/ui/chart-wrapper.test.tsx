@@ -6,6 +6,8 @@ import {
   ChartLegendContent,
   ChartPatternDefs,
   chartFill,
+  chartTooltipContentStyle,
+  chartTooltipItemStyle,
 } from "@/components/ui/chart";
 
 describe("chartFill", () => {
@@ -136,5 +138,20 @@ describe("ChartLegendContent", () => {
     );
 
     expect(screen.getByText("Student")).toBeInTheDocument();
+  });
+});
+
+describe("ChartTooltip", () => {
+  it("ships the themed content and item styles for the Recharts tooltip", () => {
+    expect(chartTooltipContentStyle).toMatchObject({
+      borderRadius: "8px",
+      border: "1px solid var(--color-border)",
+      backgroundColor: "var(--color-surface)",
+      color: "var(--color-text-primary)",
+      fontSize: "13px",
+    });
+    expect(chartTooltipItemStyle).toMatchObject({
+      color: "var(--color-text-primary)",
+    });
   });
 });

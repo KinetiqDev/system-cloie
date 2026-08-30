@@ -1,9 +1,15 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartPatternDefs,
+  ChartSwatch,
+  chartFill,
+} from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
@@ -109,26 +115,18 @@ export function StakeholderMeanComparison({ data }: StakeholderMeanComparisonPro
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip
+              <ChartTooltip
                 formatter={(value, _name, item) => {
-                  const original = (item?.payload as
-                    | StakeholderMeanComparisonData
-                    | undefined)?.mean;
-                  const responses = (item?.payload as
-                    | StakeholderMeanComparisonData
-                    | undefined)?.responseCount;
+                  const original = (item?.payload as StakeholderMeanComparisonData | undefined)
+                    ?.mean;
+                  const responses = (item?.payload as StakeholderMeanComparisonData | undefined)
+                    ?.responseCount;
                   return [
                     `${original == null ? "N/A" : original.toFixed(2)} · ${responses ?? 0} ${
                       responses === 1 ? "response" : "responses"
                     }`,
                     "Mean Rating",
                   ];
-                }}
-                contentStyle={{
-                  borderRadius: "8px",
-                  border: "1px solid var(--color-border)",
-                  backgroundColor: "var(--color-surface)",
-                  fontSize: "13px",
                 }}
               />
               <Bar dataKey="mean" radius={[0, 6, 6, 0]} isAnimationActive={false}>
@@ -153,7 +151,8 @@ export function StakeholderMeanComparison({ data }: StakeholderMeanComparisonPro
             <span role="listitem" key={item.label} className="flex items-center gap-1.5">
               <ChartSwatch fill={chartFill(chartId, index)} />
               <span className="text-muted-foreground text-xs">
-                {item.label} ({item.responseCount} {item.responseCount === 1 ? "response" : "responses"})
+                {item.label} ({item.responseCount}{" "}
+                {item.responseCount === 1 ? "response" : "responses"})
               </span>
             </span>
           ))}

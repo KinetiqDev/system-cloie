@@ -1,8 +1,14 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartPatternDefs,
+  ChartSwatch,
+  chartFill,
+} from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
@@ -41,14 +47,17 @@ export function ProgramHeadOutcomeRankingChart({
   const insightId = `${chartId}-insight`;
 
   const ranked = outcomes
-    .filter((outcome): outcome is ProgramHeadOutcomeDTO & { meanRating: number } =>
-      outcome.meanRating !== null
+    .filter(
+      (outcome): outcome is ProgramHeadOutcomeDTO & { meanRating: number } =>
+        outcome.meanRating !== null
     )
-    .map((outcome): RankedOutcomeDatum => ({
-      label: `${outcome.code} — ${outcome.name}`,
-      code: outcome.code,
-      value: outcome.meanRating,
-    }))
+    .map(
+      (outcome): RankedOutcomeDatum => ({
+        label: `${outcome.code} — ${outcome.name}`,
+        code: outcome.code,
+        value: outcome.meanRating,
+      })
+    )
     .sort((left, right) => right.value - left.value);
 
   if (ranked.length === 0) {
@@ -58,8 +67,8 @@ export function ProgramHeadOutcomeRankingChart({
           {title}
         </h3>
         <p className="text-body-sm text-text-secondary">
-          Only Program Learning Outcomes with at least one valid rating can be ranked; rows without a
-          mean carry no defensible central tendency.
+          Only Program Learning Outcomes with at least one valid rating can be ranked; rows without
+          a mean carry no defensible central tendency.
         </p>
         <Empty className="h-64">
           <EmptyTitle>No rated outcome evidence yet</EmptyTitle>
@@ -100,16 +109,10 @@ export function ProgramHeadOutcomeRankingChart({
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="code" tickLine={false} axisLine={false} />
             <YAxis domain={domain} tickLine={false} axisLine={false} />
-            <Tooltip
+            <ChartTooltip
               formatter={(_value, _name, item) => {
                 const original = (item?.payload as RankedOutcomeDatum | undefined)?.value;
                 return [original == null ? "N/A" : original.toFixed(2), "Mean Rating"];
-              }}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                fontSize: "13px",
               }}
             />
             <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false}>
@@ -158,9 +161,7 @@ export function ProgramHeadOutcomeRankingChart({
                     <TableCell className="text-right tabular-nums">
                       {entry.value.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {outcome.ratingCount}
-                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{outcome.ratingCount}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {outcome.submittedResponseCount}
                     </TableCell>

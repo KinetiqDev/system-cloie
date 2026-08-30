@@ -1,8 +1,14 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartPatternDefs,
+  ChartSwatch,
+  chartFill,
+} from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
@@ -22,11 +28,7 @@ type ProgramHeadInstrumentBreakdownChartProps = {
 };
 
 /** Exact per-source values shared by the chart and its unrated empty state. */
-function InstrumentExactValuesTable({
-  rows,
-}: {
-  rows: ProgramHeadInstrumentBreakdownRowDTO[];
-}) {
+function InstrumentExactValuesTable({ rows }: { rows: ProgramHeadInstrumentBreakdownRowDTO[] }) {
   return (
     <details>
       <summary className="text-label-sm text-text-secondary cursor-pointer pointer-coarse:min-h-11">
@@ -101,7 +103,10 @@ export function ProgramHeadInstrumentBreakdownChart({
   });
 
   const rated = rows.flatMap((row) =>
-    row.sources.map((source) => ({ label: `${row.instrumentLabel} — ${source.sourceLabel}`, meanRating: source.meanRating }))
+    row.sources.map((source) => ({
+      label: `${row.instrumentLabel} — ${source.sourceLabel}`,
+      meanRating: source.meanRating,
+    }))
   );
   const ranked = rated
     .filter((entry): entry is { label: string; meanRating: number } => entry.meanRating !== null)
@@ -120,7 +125,9 @@ export function ProgramHeadInstrumentBreakdownChart({
         : "No rated instrument evidence in this scope.";
 
   const sourceLabelByKey = new Map<string, string>(
-    rows.flatMap((row) => row.sources.map((source) => [source.sourceKey, source.sourceLabel] as const))
+    rows.flatMap((row) =>
+      row.sources.map((source) => [source.sourceKey, source.sourceLabel] as const)
+    )
   );
 
   if (ranked.length === 0) {
@@ -177,18 +184,12 @@ export function ProgramHeadInstrumentBreakdownChart({
               axisLine={false}
               tickFormatter={(value: number) => value.toFixed(1)}
             />
-            <Tooltip
+            <ChartTooltip
               formatter={(value, name) => {
                 // `value` is the hovered datum for this Bar's dataKey; `name`
                 // is the Bar's display label (the evidence source).
                 const label = sourceLabelByKey.get(String(name)) ?? String(name);
                 return [value == null ? "No ratings" : Number(value).toFixed(2), label];
-              }}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                fontSize: "13px",
               }}
             />
             {sourceKeys.map((sourceKey, sourceIndex) => (
@@ -200,7 +201,10 @@ export function ProgramHeadInstrumentBreakdownChart({
                 isAnimationActive={false}
               >
                 {rows.map((row) => (
-                  <Cell key={`${row.instrumentVersionId}-${sourceKey}`} fill={chartFill(chartId, sourceIndex)} />
+                  <Cell
+                    key={`${row.instrumentVersionId}-${sourceKey}`}
+                    fill={chartFill(chartId, sourceIndex)}
+                  />
                 ))}
               </Bar>
             ))}

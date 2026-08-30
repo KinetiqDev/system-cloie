@@ -391,6 +391,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 
 ### 8.9 Data Visualization
 
+- Render tooltips through the shared themed `ChartTooltip`; do not restyle per chart.
 - Use Recharts; do not add another chart library.
 - New/reworked charts should use shared shadcn-style wrappers when available.
 - Prepare and authorize data on the server; keep chart client boundaries narrow.
