@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { fixture } from "./support/fixture";
-import { loginAs, waitForStableState } from "./support/helpers";
+import { loginAs, respondentRow, waitForStableState } from "./support/helpers";
 import { gotoStable, screenshotStable, useReducedMotion } from "./support/visual";
 
 /**
@@ -103,10 +103,7 @@ test.describe("@visual curated baseline (desktop)", () => {
     await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
     await page.getByRole("link", { name: fx.courseEvaluation.title, exact: true }).click();
     await expect(page.getByRole("heading", { name: fx.courseEvaluation.title })).toBeVisible();
-    // #586: the respondent's name is a plain cell; evidence opens through the
-    // row's View Response action.
-    await page
-      .getByRole("row", { name: new RegExp(fx.courseResponse.respondentName) })
+    await respondentRow(page, fx.courseResponse.respondentName)
       .getByRole("link", { name: "View Response" })
       .click();
     await expect(

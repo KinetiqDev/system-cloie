@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
-import { expectNoAxeViolations, loginAs, waitForStableState } from "./support/helpers";
+import {
+  expectNoAxeViolations,
+  loginAs,
+  respondentRow,
+  waitForStableState,
+} from "./support/helpers";
 
 /**
  * §49 accessibility sweep on the evidence-workflow surfaces, run against the
@@ -55,10 +60,7 @@ test.describe("accessibility sweep", () => {
     await expectNoAxeViolations(page);
 
     // Individual response detail (submitted answers).
-    // #586: the respondent's name is a plain cell; evidence opens through the
-    // row's View Response action.
-    await page
-      .getByRole("row", { name: new RegExp(fx.courseResponse.respondentName) })
+    await respondentRow(page, fx.courseResponse.respondentName)
       .getByRole("link", { name: "View Response" })
       .click();
     await expect(

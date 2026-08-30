@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
-import { loginAs } from "./support/helpers";
+import { loginAs, respondentRow } from "./support/helpers";
 
 /**
  * §61 Journey A (top-down):
@@ -51,10 +51,7 @@ test("top-down journey: dashboard to exact answers", async ({ page }) => {
 
   // Evaluation detail → named respondent.
   await expect(page.getByRole("heading", { name: fx.courseEvaluation.title })).toBeVisible();
-  // #586: the respondent's name is a plain cell; evidence opens through the
-  // row's View Response action.
-  await page
-    .getByRole("row", { name: new RegExp(fx.courseResponse.respondentName) })
+  await respondentRow(page, fx.courseResponse.respondentName)
     .getByRole("link", { name: "View Response" })
     .click();
 

@@ -78,3 +78,13 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   });
   expect(overflow, `horizontal overflow of ${overflow}px`).toBeLessThanOrEqual(0);
 }
+
+/**
+ * Locate a table row by its respondent cell, matching the display name as
+ * literal text so names containing regex metacharacters cannot mis-select.
+ */
+export function respondentRow(page: Page, name: string) {
+  return page.getByRole("row").filter({
+    has: page.getByRole("cell", { name, exact: true }),
+  });
+}
