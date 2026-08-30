@@ -1,4 +1,5 @@
 import { execSync, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 function run(cmd) {
   return execSync(cmd, { encoding: "utf8", stdio: "pipe" }).trim();
@@ -57,6 +58,16 @@ export function getChangedFiles(baseRef) {
     } catch {}
   }
   return combined;
+}
+
+/**
+ * Keep only paths that still exist on disk. getChangedFiles deliberately
+ * collects Git's D status so risk selection expands gates on deletions,
+ * but content tools (Prettier, ESLint) exit 2 when handed a path that
+ * no longer exists.
+ */
+export function existingFiles(paths) {
+  return paths.filter((f) => existsSync(f));
 }
 
 export function runCheck(label, cmd, args) {

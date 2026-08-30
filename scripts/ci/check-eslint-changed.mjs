@@ -4,7 +4,7 @@
  * Fails when any changed production file introduces a warning or error.
  */
 
-import { getBaseRef, getChangedFiles, runCheck } from "./lib/changed-files.mjs";
+import { existingFiles, getBaseRef, getChangedFiles, runCheck } from "./lib/changed-files.mjs";
 
 // fallow-ignore-next-line complexity
 function isProductionFile(f) {
@@ -29,7 +29,7 @@ function main() {
     return;
   }
 
-  const production = changed.filter(isProductionFile);
+  const production = existingFiles(changed.filter(isProductionFile));
 
   if (production.length === 0) {
     console.log("[lint:changed] No changed production files — skipping.");
