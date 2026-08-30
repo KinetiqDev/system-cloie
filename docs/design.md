@@ -178,12 +178,12 @@ Secondary buttons and neutral controls. Remains neutral in both themes; distinct
 
 ### 5.4 Status Tokens
 
-| Status      | Meaning              | Usage                                                        |
-| ----------- | -------------------- | ------------------------------------------------------------ |
-| Success     | completed, valid     | confirmation without replacing selection                     |
-| Warning     | attention required   | soft surfaces for alerts and badges                          |
-| Danger      | error, destructive   | soft danger for routine controls; filled reserved for confirmed destructive action |
-| Information | neutral information  | indigo; separate from links, focus, primary, and cyan        |
+| Status      | Meaning             | Usage                                                                              |
+| ----------- | ------------------- | ---------------------------------------------------------------------------------- |
+| Success     | completed, valid    | confirmation without replacing selection                                           |
+| Warning     | attention required  | soft surfaces for alerts and badges                                                |
+| Danger      | error, destructive  | soft danger for routine controls; filled reserved for confirmed destructive action |
+| Information | neutral information | indigo; separate from links, focus, primary, and cyan                              |
 
 Use soft surfaces for alerts and badges. Every status pairs color with text, icon, shape, or pattern.
 
@@ -300,17 +300,17 @@ The installable PWA shell exists. Offline data caching and mutation queues remai
 
 ### 8.1 Required States
 
-| State    | Requirement                              |
-| -------- | ---------------------------------------- |
-| Default  | canonical semantic tokens                |
-| Hover    | subtle color/surface change              |
-| Focus    | visible `ring-ring`                      |
-| Pressed  | optional 1 px translation                |
-| Selected | semantic surface plus accessible state   |
-| Disabled | noninteractive but readable              |
-| Loading  | preserve width; spinner and/or label     |
-| Error    | adjacent semantic message                |
-| Success  | confirmation without replacing selection |
+| State    | Requirement                                                           |
+| -------- | --------------------------------------------------------------------- |
+| Default  | canonical semantic tokens                                             |
+| Hover    | subtle color/surface change                                           |
+| Focus    | visible `ring-ring`                                                   |
+| Pressed  | optional 1 px translation                                             |
+| Selected | semantic surface plus accessible state                                |
+| Disabled | noninteractive but readable; opacity unified at 60% across primitives |
+| Loading  | preserve width; spinner and/or label                                  |
+| Error    | adjacent semantic message                                             |
+| Success  | confirmation without replacing selection                              |
 
 ### 8.2 Buttons
 
@@ -384,7 +384,8 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Reuse `showToast` and root `ToastProvider`; do not add another toast system.
 - Approved kinds: success, warning, error/danger, information.
 - Use route skeletons, local spinners, actionable empty states, and adjacent `role="alert"` errors.
-- Preserve current URL-toast consumption and cleanup.
+- Loading stays perceivable under reduced motion: spinner pairs a pulse fallback with text or skeleton context.
+- Preserve current URL-toast consumption and cleanup; toasts are dismissible with a keyboard- and touch-operable control.
 - Use Dialog on desktop and Drawer on mobile where established.
 - Use `AlertDialog` for destructive confirmation.
 - Overlays use semantic surface, border, and scrim tokens; strong shadows are overlay-only.

@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, showToast } from "@/components/ui/toast";
 
@@ -44,6 +44,16 @@ describe("ToastProvider", () => {
     expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
 
     act(() => vi.advanceTimersByTime(4500));
+    expect(screen.queryByText("Saved successfully")).not.toBeInTheDocument();
+  });
+
+  it("dismisses a toast from its labeled dismiss control", () => {
+    render(<ToastProvider />);
+
+    act(() => showToast("Saved successfully"));
+    expect(screen.getByRole("button", { name: "Dismiss notification" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss notification" }));
     expect(screen.queryByText("Saved successfully")).not.toBeInTheDocument();
   });
 

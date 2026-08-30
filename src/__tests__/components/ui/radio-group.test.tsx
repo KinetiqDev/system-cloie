@@ -74,7 +74,7 @@ describe("RadioGroup", () => {
       const radio = screen.getByRole("radio");
       expect(radio).toHaveAttribute("data-disabled");
       expect(radio).toHaveClass("disabled:cursor-not-allowed");
-      expect(radio).toHaveClass("disabled:opacity-50");
+      expect(radio).toHaveClass("disabled:opacity-60");
     });
   });
 

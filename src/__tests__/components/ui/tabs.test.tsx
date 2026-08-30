@@ -129,7 +129,7 @@ describe("Tabs", () => {
       );
       const trigger = screen.getByText("One");
       expect(trigger).toHaveClass("disabled:pointer-events-none");
-      expect(trigger).toHaveClass("disabled:opacity-50");
+      expect(trigger).toHaveClass("disabled:opacity-60");
     });
   });
 
