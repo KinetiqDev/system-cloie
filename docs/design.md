@@ -374,6 +374,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 ### 8.7 Tabs, Badges, and Progress
 
 - Supported tabs: pill and line.
+- Honor the 44 px touch target on coarse pointers: horizontal lists grow to fit and triggers floor at `min-h-11`; desktop density is unchanged.
 - Primary marks active tabs and progress.
 - Cyan badges are categorical; semantic badges indicate status.
 - Progress includes a text/count/percentage.
