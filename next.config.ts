@@ -22,6 +22,7 @@ function resolveTailwindcssPackagePath(): string {
 }
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   devIndicators: {
     position: "bottom-right",
   },

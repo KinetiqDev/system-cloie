@@ -57,6 +57,8 @@ const BUILD_PREFIXES = [
   "tsconfig.json",
   "package.json",
   "pnpm-lock.yaml",
+  "Dockerfile",
+  ".dockerignore",
   "postcss.config.",
 ];
 

@@ -358,6 +358,64 @@ RUN_DATABASE_INTEGRATION_TESTS=
 # CLOIE_AI_BASE_URL, CLOIE_AI_MODEL, corpus gates, and bounds. See ADR 0016.
 ```
 
+## Production Docker Deployment
+
+System CLOIE ships as one portable Next.js application image. Self-hosted Supabase, Supavisor, and PostgreSQL are separate resources and are not bundled in this image or an application Docker Compose stack.
+
+### Build and run locally
+
+The three `NEXT_PUBLIC_*` values are browser-safe build inputs. Next.js embeds them in client bundles, so changing any of them requires rebuilding the image. Server-only credentials remain runtime configuration.
+
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.test \
+  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key \
+  -t system-cloie:production .
+
+docker run --rm -p 3000:3000 \
+  -e NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
+  -e NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.test \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key \
+  -e DATABASE_URL=postgresql://user:password@supavisor:6543/postgres \
+  -e CLOIE_DEPLOYMENT_KIND=production \
+  -e CLOIE_BACKEND_ID=cloie-primary \
+  -e CLOIE_PRIMARY_BACKEND_ID=cloie-primary \
+  -e CONFIRMATION_SECRET=your-long-confirmation-secret \
+  -e CLOIE_LEGAL_TICKET_SECRET=your-long-legal-ticket-secret \
+  system-cloie:production
+```
+
+The container listens on `0.0.0.0:3000`, runs as a non-root user, and exposes `GET /api/health`. The liveness endpoint does not contact PostgreSQL or Supabase. The image health check calls this endpoint with Node's built-in `fetch`.
+
+### Coolify settings
+
+Configure the application resource as follows:
+
+| Setting                      | Value                                              |
+| ---------------------------- | -------------------------------------------------- |
+| Build pack                   | Dockerfile                                         |
+| Base directory               | `/`                                                |
+| Dockerfile                   | `/Dockerfile`                                      |
+| Internal port                | `3000`                                             |
+| Health check                 | Enabled, path `/api/health`, expected status `200` |
+| Persistent storage           | None                                               |
+| Initial replicas             | `1`                                                |
+| Pre/post-deployment commands | None                                               |
+
+Set `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for both build time and runtime. Primary Production also requires runtime `DATABASE_URL`, `CLOIE_DEPLOYMENT_KIND=production`, `CLOIE_BACKEND_ID`, `CLOIE_PRIMARY_BACKEND_ID`, `CONFIRMATION_SECRET`, and `CLOIE_LEGAL_TICKET_SECRET`. Configure `DIRECT_URL` only where repository migration and schema commands run. Optional runtime features keep using the variables documented in `.env.example`.
+
+Attach the System CLOIE resource to the private Coolify network that can resolve the configured Supavisor or PostgreSQL hostname. Do not use `localhost` in `DATABASE_URL`; inside the container it refers to the System CLOIE container. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` belong to the separate Supabase Auth deployment. Do not configure a privileged Supabase key in this application.
+
+Apply database migrations before deploying the application image:
+
+```bash
+pnpm supabase:push:dry-run
+pnpm supabase:push
+```
+
+Run these commands from a trusted operator or deployment environment with `DIRECT_URL`. Do not run migrations in the container startup command; rolling deployments may start multiple application containers concurrently.
+
 ## Testing
 
 ### Running Tests

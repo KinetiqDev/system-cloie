@@ -90,7 +90,7 @@ export function getCiTestAuthConfig(
   // workflow before starting the production server). This cannot be enabled
   // via ordinary env vars alone on primary production.
   const markerPath = environment.CLOIE_CI_TEST_MARKER_PATH || "/tmp/cloie-ci-test-marker";
-  if (!existsSync(markerPath)) {
+  if (!existsSync(/* turbopackIgnore: true */ markerPath)) {
     return null;
   }
 

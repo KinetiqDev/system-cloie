@@ -105,6 +105,8 @@ describe("risk-domain check selection (551)", () => {
       "pnpm-lock.yaml",
       "tsconfig.json",
       "postcss.config.mjs",
+      "Dockerfile",
+      ".dockerignore",
     ]) {
       const selection = selectChecks([file]);
       expect(selection.run_build, file).toBe(true);
