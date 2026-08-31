@@ -48,7 +48,7 @@ describe("Checkbox", () => {
       const checkbox = screen.getByRole("checkbox");
       expect(checkbox).toHaveAttribute("data-disabled");
       expect(checkbox).toHaveClass("disabled:cursor-not-allowed");
-      expect(checkbox).toHaveClass("disabled:opacity-50");
+      expect(checkbox).toHaveClass("disabled:opacity-60");
     });
   });
 

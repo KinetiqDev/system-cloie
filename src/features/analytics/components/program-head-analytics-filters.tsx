@@ -60,7 +60,7 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
             aria-disabled={activeCount === 0}
             className={cn(
               buttonVariants({ variant: "ghost" }),
-              activeCount === 0 && "pointer-events-none opacity-50"
+              activeCount === 0 && "pointer-events-none opacity-60"
             )}
           >
             <X data-icon="inline-start" aria-hidden="true" />

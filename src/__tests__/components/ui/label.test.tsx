@@ -61,7 +61,7 @@ describe("Label", () => {
       );
       const label = screen.getByText("Field");
       expect(label).toHaveClass("group-data-[disabled=true]:pointer-events-none");
-      expect(label).toHaveClass("group-data-[disabled=true]:opacity-50");
+      expect(label).toHaveClass("group-data-[disabled=true]:opacity-60");
     });
 
     it("dims the label when the peer input is disabled (peer state)", () => {
@@ -73,7 +73,7 @@ describe("Label", () => {
       );
       const label = screen.getByText("Field");
       expect(label).toHaveClass("peer-disabled:cursor-not-allowed");
-      expect(label).toHaveClass("peer-disabled:opacity-50");
+      expect(label).toHaveClass("peer-disabled:opacity-60");
     });
   });
 });

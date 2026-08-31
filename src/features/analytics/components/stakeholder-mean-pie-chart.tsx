@@ -105,15 +105,7 @@ export function StakeholderMeanPieChart({ data }: StakeholderMeanPieChartProps) 
                 <Cell key={`cell-${index}`} fill={chartFill(chartId, index)} />
               ))}
             </Pie>
-            <ChartTooltip
-              formatter={(value, name) => [`Mean: ${value}`, name]}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                fontSize: "13px",
-              }}
-            />
+            <ChartTooltip formatter={(value, name) => [`Mean: ${value}`, name]} />
             <ChartLegend verticalAlign="bottom" content={<ChartLegendContent nameKey="label" />} />
           </PieChart>
         </ChartContainer>

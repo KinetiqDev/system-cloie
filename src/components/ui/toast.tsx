@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ToastKind = "success" | "error" | "warning" | "information";
@@ -14,6 +14,10 @@ type ToastMessage = {
 };
 
 const TOAST_EVENT = "cloie-toast";
+
+// Monotonic id: toasts pushed in the same millisecond must still be
+// independently dismissible, so wall-clock time cannot identify them.
+let nextToastId = 1;
 
 export function showToast(message: string, kind: ToastKind = "success") {
   if (typeof window === "undefined") {
@@ -29,12 +33,16 @@ export function showToast(message: string, kind: ToastKind = "success") {
 
 export function ToastProvider() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  function dismissToast(id: number) {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     function pushToast(message: string, kind: ToastKind) {
-      const id = Date.now();
+      const id = nextToastId++;
       setToasts((current) => [...current, { id, kind, message }]);
       window.setTimeout(() => {
         setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -119,6 +127,14 @@ export function ToastProvider() {
           >
             <Icon className="mt-0.5 size-4 shrink-0" />
             <p className="font-medium">{toast.message}</p>
+            <button
+              type="button"
+              onClick={() => dismissToast(toast.id)}
+              aria-label="Dismiss notification"
+              className="focus-visible:ring-ring hover:bg-muted -mr-1 flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none pointer-coarse:size-11"
+            >
+              <X aria-hidden className="size-4" />
+            </button>
           </div>
         );
       })}

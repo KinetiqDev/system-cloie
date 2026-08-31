@@ -129,7 +129,23 @@ describe("Tabs", () => {
       );
       const trigger = screen.getByText("One");
       expect(trigger).toHaveClass("disabled:pointer-events-none");
-      expect(trigger).toHaveClass("disabled:opacity-50");
+      expect(trigger).toHaveClass("disabled:opacity-60");
+    });
+  });
+
+  describe("touch targets", () => {
+    it("expands horizontal lists and triggers to the 44px floor on coarse pointers", () => {
+      render(
+        <Tabs defaultValue="one">
+          <TabsList>
+            <TabsTrigger value="one">One</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      );
+      expect(screen.getByRole("tablist")).toHaveClass(
+        "pointer-coarse:group-data-horizontal/tabs:h-auto"
+      );
+      expect(screen.getByRole("tab")).toHaveClass("pointer-coarse:min-h-11");
     });
   });
 

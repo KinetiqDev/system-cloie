@@ -12,7 +12,7 @@ export function buildPageItems(
   currentPage: number,
   totalPages: number,
   siblingCount = 1,
-  boundaryCount = 1,
+  boundaryCount = 1
 ): PageItem[] {
   const range = (start: number, end: number): number[] =>
     Array.from({ length: Math.max(end - start + 1, 0) }, (_, i) => start + i);
@@ -23,18 +23,15 @@ export function buildPageItems(
   }
 
   const startPages = range(1, Math.min(boundaryCount, totalPages));
-  const endPages = range(
-    Math.max(totalPages - boundaryCount + 1, boundaryCount + 1),
-    totalPages,
-  );
+  const endPages = range(Math.max(totalPages - boundaryCount + 1, boundaryCount + 1), totalPages);
 
   const siblingsStart = Math.max(
     Math.min(currentPage - siblingCount, totalPages - boundaryCount - siblingCount * 2 - 1),
-    boundaryCount + 2,
+    boundaryCount + 2
   );
   const siblingsEnd = Math.min(
     Math.max(currentPage + siblingCount, boundaryCount + siblingCount * 2 + 2),
-    endPages.length > 0 ? endPages[0] - 2 : totalPages - 1,
+    endPages.length > 0 ? endPages[0] - 2 : totalPages - 1
   );
 
   const middle: PageItem[] = [
@@ -72,7 +69,7 @@ function useMinWidthSm(): boolean {
   return useSyncExternalStore(
     subscribe,
     () => window.matchMedia("(min-width: 640px)").matches,
-    () => false,
+    () => false
   );
 }
 
@@ -120,7 +117,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
           >
             {item}
           </Button>
-        ),
+        )
       )}
 
       <Button

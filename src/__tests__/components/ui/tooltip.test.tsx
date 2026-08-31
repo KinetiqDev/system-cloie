@@ -14,7 +14,9 @@ describe("Tooltip", () => {
     );
 
     fireEvent.mouseEnter(screen.getByText("Hover me"));
-    await waitFor(() => expect(document.querySelector('[data-slot="tooltip-content"]')).not.toBeNull());
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="tooltip-content"]')).not.toBeNull()
+    );
 
     const tooltip = document.querySelector('[data-slot="tooltip-content"]') as HTMLElement;
     expect(tooltip).toHaveClass("bg-foreground", "text-background");

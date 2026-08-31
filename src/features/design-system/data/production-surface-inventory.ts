@@ -2363,13 +2363,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "Slice #519 qualitative pulse; slider re-slices server-capped redacted tokens only",
   },
   {
-    path: "src/features/analytics/components/stakeholder-mean-comparison.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-    notes:
-      "New client chart replacing mean pie for independent stakeholder means; semantic tokens, exact-value table, reduced-motion safe",
-  },
-  {
     path: "src/features/analytics/components/program-head-analytics-shell.tsx",
     disposition: "already_compliant",
     category: "feature_component",
@@ -2388,12 +2381,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
     notes:
       "Client-only dynamic visualization boundary with semantic Skeleton fallbacks for Recharts and the qualitative word cloud",
-  },
-  {
-    path: "src/features/analytics/components/program-head-overview-kpis.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-    notes: "New server component using semantic tokens and shadcn Card primitives",
   },
   {
     path: "src/features/analytics/components/program-head-analytics-filters.tsx",

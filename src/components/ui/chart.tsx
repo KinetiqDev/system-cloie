@@ -194,7 +194,34 @@ ${colorConfig
   );
 };
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+type ChartTooltipProps = React.ComponentProps<typeof RechartsPrimitive.Tooltip>;
+
+const chartTooltipContentStyle: React.CSSProperties = {
+  borderRadius: "8px",
+  border: "1px solid var(--color-border)",
+  backgroundColor: "var(--color-surface)",
+  color: "var(--color-text-primary)",
+  fontSize: "13px",
+};
+
+const chartTooltipItemStyle: React.CSSProperties = {
+  color: "var(--color-text-primary)",
+};
+
+/**
+ * Themed chart tooltip: bakes the semantic surface, border, and text tokens
+ * into Recharts' default tooltip so entries stay legible in both themes
+ * (Recharts' own item defaults are hard black). Passed styles win.
+ */
+function ChartTooltip({ contentStyle, itemStyle, ...props }: ChartTooltipProps) {
+  return (
+    <RechartsPrimitive.Tooltip
+      contentStyle={{ ...chartTooltipContentStyle, ...contentStyle }}
+      itemStyle={{ ...chartTooltipItemStyle, ...itemStyle }}
+      {...props}
+    />
+  );
+}
 
 const ChartLegend = RechartsPrimitive.Legend;
 
@@ -294,4 +321,11 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
   return labelKey in config ? config[labelKey] : config[key];
 }
 
-export { ChartContainer, ChartTooltip, ChartLegend, ChartLegendContent };
+export {
+  ChartContainer,
+  ChartTooltip,
+  ChartLegend,
+  ChartLegendContent,
+  chartTooltipContentStyle,
+  chartTooltipItemStyle,
+};

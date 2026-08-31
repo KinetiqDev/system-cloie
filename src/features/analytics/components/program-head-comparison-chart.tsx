@@ -2,8 +2,14 @@
 
 import { useId } from "react";
 import Link from "next/link";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, Tooltip, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartPatternDefs, ChartSwatch, chartFill } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartPatternDefs,
+  ChartSwatch,
+  chartFill,
+} from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
@@ -44,11 +50,7 @@ type ProgramHeadComparisonChartProps = {
 };
 
 /** Exact-value disclosure shared by the chart and its unrated empty state. */
-function ComparisonExactValuesTable({
-  rows,
-}: {
-  rows: ProgramHeadComparisonDatum[];
-}) {
+function ComparisonExactValuesTable({ rows }: { rows: ProgramHeadComparisonDatum[] }) {
   const showsContext = rows.some((row) => row.context != null);
   const showsLinks = rows.some((row) => (row.links?.length ?? 0) > 0);
 
@@ -89,7 +91,7 @@ function ComparisonExactValuesTable({
                           <li key={link.href}>
                             <Link
                               href={link.href}
-                              className="text-link underline underline-offset-3 hover:text-foreground pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+                              className="text-link hover:text-foreground underline underline-offset-3 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
                             >
                               {link.label}
                             </Link>
@@ -122,8 +124,8 @@ export function ProgramHeadComparisonChart({
   const insightId = `${chartId}-insight`;
 
   const ranked = rows
-    .filter((row): row is ProgramHeadComparisonDatum & { meanRating: number } =>
-      row.meanRating !== null
+    .filter(
+      (row): row is ProgramHeadComparisonDatum & { meanRating: number } => row.meanRating !== null
     )
     .sort((left, right) => right.meanRating - left.meanRating);
 
@@ -197,20 +199,16 @@ export function ProgramHeadComparisonChart({
                 label.length > 18 ? `${label.slice(0, 17)}…` : label
               }
             />
-            <Tooltip
+            <ChartTooltip
               formatter={(_value, _name, item) => {
-                const original = (item?.payload as ProgramHeadComparisonDatum | undefined)?.meanRating;
-                const responses = (item?.payload as ProgramHeadComparisonDatum | undefined)?.submittedResponseCount;
+                const original = (item?.payload as ProgramHeadComparisonDatum | undefined)
+                  ?.meanRating;
+                const responses = (item?.payload as ProgramHeadComparisonDatum | undefined)
+                  ?.submittedResponseCount;
                 return [
                   `${original == null ? "N/A" : original.toFixed(2)} · ${responses ?? 0} ${responses === 1 ? "response" : "responses"}`,
                   "Mean Rating",
                 ];
-              }}
-              contentStyle={{
-                borderRadius: "8px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                fontSize: "13px",
               }}
             />
             <Bar dataKey="meanRating" radius={[0, 6, 6, 0]} isAnimationActive={false}>

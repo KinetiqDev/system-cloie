@@ -24,23 +24,26 @@ function mergeCatalogRows(
   evidenceRows: DashboardPloSummaryRow[]
 ): DashboardPloSummaryRow[] {
   const byPloId = new Map(evidenceRows.map((row) => [row.ploId, row]));
-  const merged = catalog.map((entry) =>
-    byPloId.get(entry.id) ?? {
-      ploId: entry.id,
-      ploCode: entry.code,
-      mean: null,
-      ratingCount: 0,
-      responseCount: 0,
-      evaluationCount: 0,
-      contributorCount: 0,
-      contributorKind: sourceKey === "COURSE_STUDENT" ? ("cilos" as const) : ("questions" as const),
-      spansMultipleScales: false,
-      scaleMax: null,
-      hasEvidence: false,
-      evidenceSummary: {
-        explanation: "No evidence from this source for this Program Learning Outcome in the selected period.",
-      },
-    }
+  const merged = catalog.map(
+    (entry) =>
+      byPloId.get(entry.id) ?? {
+        ploId: entry.id,
+        ploCode: entry.code,
+        mean: null,
+        ratingCount: 0,
+        responseCount: 0,
+        evaluationCount: 0,
+        contributorCount: 0,
+        contributorKind:
+          sourceKey === "COURSE_STUDENT" ? ("cilos" as const) : ("questions" as const),
+        spansMultipleScales: false,
+        scaleMax: null,
+        hasEvidence: false,
+        evidenceSummary: {
+          explanation:
+            "No evidence from this source for this Program Learning Outcome in the selected period.",
+        },
+      }
   );
   const catalogIds = new Set(catalog.map((entry) => entry.id));
   // Historical evidence may reference PLOs no longer active in the catalog.
@@ -84,7 +87,9 @@ export function ProgramHeadPloSummary({
     <Card>
       <CardHeader>
         <CardTitle className="text-base font-bold">Program Learning Outcome summary</CardTitle>
-        <CardDescription>One evidence source at a time; select a PLO to open Analytics.</CardDescription>
+        <CardDescription>
+          One evidence source at a time; select a PLO to open Analytics.
+        </CardDescription>
         <div role="group" aria-label="Evidence source" className="mt-1 flex flex-wrap gap-1">
           {DASHBOARD_SOURCE_ORDER.map((key) => (
             <button
@@ -92,7 +97,7 @@ export function ProgramHeadPloSummary({
               type="button"
               aria-pressed={sourceKey === key}
               onClick={() => setSourceKey(key)}
-              className={`rounded-lg px-2.5 py-1.5 pointer-coarse:min-h-11 text-label-md font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+              className={`text-label-md focus-visible:ring-ring rounded-lg px-2.5 py-1.5 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none pointer-coarse:min-h-11 ${
                 sourceKey === key
                   ? "bg-primary-soft text-selected-fg"
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -114,8 +119,8 @@ export function ProgramHeadPloSummary({
         ) : (
           rows.map((row) => (
             <div key={row.ploId} className="border-border/60 border-b py-2 last:border-b-0">
-              <div className="-mx-2 grid grid-cols-[3.5rem_minmax(0,1fr)_5rem] items-center gap-3 rounded-lg px-2 focus-within:ring-2 focus-within:ring-ring">
-                <span className="truncate text-label-md font-bold" title={row.ploCode}>
+              <div className="focus-within:ring-ring -mx-2 grid grid-cols-[3.5rem_minmax(0,1fr)_5rem] items-center gap-3 rounded-lg px-2 focus-within:ring-2">
+                <span className="text-label-md truncate font-bold" title={row.ploCode}>
                   <Link href={rowHref(row.ploId)} className="hover:underline">
                     {row.ploCode}
                   </Link>
@@ -137,9 +142,11 @@ export function ProgramHeadPloSummary({
                     />
                   ) : null}
                 </Link>
-                <span className="tabular-nums flex items-center justify-end gap-1 text-label-md font-bold">
+                <span className="text-label-md flex items-center justify-end gap-1 font-bold tabular-nums">
                   {row.spansMultipleScales ? (
-                    <span className="text-muted-foreground text-label-sm font-semibold">Multiple scales</span>
+                    <span className="text-muted-foreground text-label-sm font-semibold">
+                      Multiple scales
+                    </span>
                   ) : row.mean === null ? (
                     <span className="text-muted-foreground">—</span>
                   ) : (
@@ -152,43 +159,53 @@ export function ProgramHeadPloSummary({
                 </span>
               </div>
               <details className="mt-1">
-                <summary className="text-muted-foreground hover:text-foreground inline-flex cursor-pointer list-none text-label-sm font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                <summary className="text-muted-foreground hover:text-foreground text-label-sm focus-visible:ring-ring inline-flex cursor-pointer list-none font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none">
                   Evidence details
                 </summary>
-                <dl className="text-muted-foreground mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 text-label-sm sm:grid-cols-4">
+                <dl className="text-muted-foreground text-label-sm mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
                   <div>
                     <dt className="sr-only">Rating count</dt>
                     <dd className="tabular-nums">
-                      <strong className="text-foreground">{row.ratingCount.toLocaleString()}</strong>{" "}
+                      <strong className="text-foreground">
+                        {row.ratingCount.toLocaleString()}
+                      </strong>{" "}
                       ratings
                     </dd>
                   </div>
                   <div>
                     <dt className="sr-only">Response count</dt>
                     <dd className="tabular-nums">
-                      <strong className="text-foreground">{row.responseCount.toLocaleString()}</strong>{" "}
+                      <strong className="text-foreground">
+                        {row.responseCount.toLocaleString()}
+                      </strong>{" "}
                       responses
                     </dd>
                   </div>
                   <div>
                     <dt className="sr-only">Evaluation count</dt>
                     <dd className="tabular-nums">
-                      <strong className="text-foreground">{row.evaluationCount.toLocaleString()}</strong>{" "}
+                      <strong className="text-foreground">
+                        {row.evaluationCount.toLocaleString()}
+                      </strong>{" "}
                       evaluations
                     </dd>
                   </div>
                   <div>
                     <dt className="sr-only">
-                      {row.contributorKind === "cilos" ? "Contributing CILO count" : "Bound question count"}
+                      {row.contributorKind === "cilos"
+                        ? "Contributing CILO count"
+                        : "Bound question count"}
                     </dt>
                     <dd className="tabular-nums">
-                      <strong className="text-foreground">{row.contributorCount.toLocaleString()}</strong>{" "}
+                      <strong className="text-foreground">
+                        {row.contributorCount.toLocaleString()}
+                      </strong>{" "}
                       {row.contributorKind === "cilos" ? "contributing CILOs" : "bound questions"}
                     </dd>
                   </div>
                 </dl>
                 {!row.hasEvidence && (
-                  <p className="text-muted-foreground mt-1 text-label-sm">
+                  <p className="text-muted-foreground text-label-sm mt-1">
                     No mapped quantitative evidence for this source in the selected period.
                   </p>
                 )}
@@ -196,7 +213,7 @@ export function ProgramHeadPloSummary({
             </div>
           ))
         )}
-        <p className="text-muted-foreground mt-2 text-label-sm">
+        <p className="text-muted-foreground text-label-sm mt-2">
           {sourceKey === "COURSE_STUDENT"
             ? "Only quantitative answers bound to a CILO flow through CILO-to-PLO mappings into course-derived PLO means."
             : "Directly bound questions on published deployments feed this source's PLO means."}

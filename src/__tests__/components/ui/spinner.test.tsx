@@ -30,6 +30,10 @@ describe("Spinner", () => {
     render(<Spinner />);
     expect(screen.getByRole("status")).toHaveClass("animate-spin");
     expect(screen.getByRole("status")).toHaveClass("motion-reduce:animate-none");
+    const reducedMotionArcs = screen
+      .getByRole("status")
+      .querySelectorAll("[class*='motion-reduce:animate-pulse']");
+    expect(reducedMotionArcs.length).toBe(2);
   });
 
   it("accepts additional className without losing core classes", () => {

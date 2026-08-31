@@ -32,7 +32,7 @@ export function CompletionBreakdownPopover({
           <button
             type="button"
             aria-label="Completion by stakeholder"
-            className="text-muted-foreground hover:text-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors pointer-coarse:size-11 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-8 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none pointer-coarse:size-11"
           >
             <Info aria-hidden="true" className="size-4" />
           </button>
@@ -66,10 +66,10 @@ export function CompletionBreakdownPopover({
                 <th scope="row" className="py-1.5 font-medium normal-case">
                   {STAKEHOLDER_LABELS[row.stakeholder] ?? row.stakeholder}
                 </th>
-                <td className="tabular-nums py-1.5 text-right">
+                <td className="py-1.5 text-right tabular-nums">
                   {row.submitted} / {row.assigned}
                 </td>
-                <td className="tabular-nums py-1.5 text-right font-semibold">
+                <td className="py-1.5 text-right font-semibold tabular-nums">
                   {formatPercentage(row.completionRate)}
                 </td>
               </tr>

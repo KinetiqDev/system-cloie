@@ -40,9 +40,9 @@ function Spinner({
       {...props}
     >
       {/* Full circle track */}
-      <circle cx={12} cy={12} r={10} className="opacity-20" />
+      <circle cx={12} cy={12} r={10} className="opacity-20 motion-reduce:animate-pulse" />
       {/* Active arc — quarter circle */}
-      <path d="M12 2a10 10 0 0 1 10 10" className="opacity-80" />
+      <path d="M12 2a10 10 0 0 1 10 10" className="opacity-80 motion-reduce:animate-pulse" />
     </svg>
   );
 }

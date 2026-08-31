@@ -34,11 +34,7 @@ describe("Field", () => {
 
 describe("FieldLabel", () => {
   it("renders the Label primitive with the field-label slot", () => {
-    render(
-      <FieldLabel htmlFor="title">
-        Title
-      </FieldLabel>
-    );
+    render(<FieldLabel htmlFor="title">Title</FieldLabel>);
     const label = screen.getByText("Title");
     expect(label.tagName.toLowerCase()).toBe("label");
     expect(label).toHaveAttribute("data-slot", "field-label");
@@ -50,9 +46,7 @@ describe("FieldLabel", () => {
         <FieldLabel htmlFor="x">Field</FieldLabel>
       </div>
     );
-    expect(screen.getByText("Field")).toHaveClass(
-      "group-data-[disabled=true]/field:opacity-50"
-    );
+    expect(screen.getByText("Field")).toHaveClass("group-data-[disabled=true]/field:opacity-60");
   });
 });
 
@@ -104,11 +98,7 @@ describe("FieldError", () => {
   it("merges multiple errors into a list and de-duplicates by message", () => {
     render(
       <FieldError
-        errors={[
-          { message: "Required" },
-          { message: "Required" },
-          { message: "Too short" },
-        ]}
+        errors={[{ message: "Required" }, { message: "Required" }, { message: "Too short" }]}
       />
     );
     const alert = screen.getByRole("alert");
@@ -123,11 +113,7 @@ describe("FieldError", () => {
   });
 
   it("prefers explicit children over errors prop", () => {
-    render(
-      <FieldError errors={[{ message: "ignored" }]}>
-        Custom message
-      </FieldError>
-    );
+    render(<FieldError errors={[{ message: "ignored" }]}>Custom message</FieldError>);
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Custom message");
     expect(alert).not.toHaveTextContent("ignored");
@@ -165,16 +151,12 @@ describe("FieldSet and FieldLegend", () => {
 describe("FieldSeparator", () => {
   it("renders an absolute-positioned separator without text", () => {
     const { container } = render(<FieldSeparator />);
-    expect(
-      container.querySelector('[data-slot="field-separator"]')
-    ).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="field-separator"]')).toBeInTheDocument();
   });
 
   it("renders an optional content label with semantic surface background", () => {
     render(<FieldSeparator>or</FieldSeparator>);
-    const separator = screen
-      .getByText("or")
-      .closest('[data-slot="field-separator"]');
+    const separator = screen.getByText("or").closest('[data-slot="field-separator"]');
     expect(separator).toBeInTheDocument();
     const content = screen.getByText("or");
     expect(content).toHaveClass("bg-background");

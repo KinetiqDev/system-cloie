@@ -43,7 +43,11 @@ export function AnonymizedResponseCards({
                   {formatMean(response.overallMean)}
                 </span>
               </p>
-              <Button render={<Link href={`${responseBasePath}/responses/${response.responseId}`} />} size="sm" variant="outline">
+              <Button
+                render={<Link href={`${responseBasePath}/responses/${response.responseId}`} />}
+                size="sm"
+                variant="outline"
+              >
                 View Response
               </Button>
             </CardContent>

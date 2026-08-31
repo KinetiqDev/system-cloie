@@ -97,11 +97,7 @@ function downloadCsv(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
-function resultMessage(result: {
-  success: boolean;
-  error?: string;
-  data?: { message: string };
-}) {
+function resultMessage(result: { success: boolean; error?: string; data?: { message: string } }) {
   if (result.success) return result.data?.message ?? "Roster updated.";
   return result.error ?? "The roster request could not be completed.";
 }
@@ -212,9 +208,7 @@ function rowIsPrepared(row: CourseRosterPreviewRow) {
   );
 }
 
-function preparedCandidate(
-  row: CourseRosterPreviewRow
-): CourseRosterPreviewCandidate | undefined {
+function preparedCandidate(row: CourseRosterPreviewRow): CourseRosterPreviewCandidate | undefined {
   if (!rowIsPrepared(row)) return undefined;
   const candidateId = row.resolution.candidateIds[0];
   return row.candidates.find((candidate) => candidate.userId === candidateId);
@@ -222,8 +216,7 @@ function preparedCandidate(
 
 function hasSuggestedRow(preview: CourseRosterPreview | null, sourceIndex: number) {
   return (
-    preview?.rows.some((row) => row.sourceIndex === sourceIndex && rowIsSuggested(row)) ??
-    false
+    preview?.rows.some((row) => row.sourceIndex === sourceIndex && rowIsSuggested(row)) ?? false
   );
 }
 
@@ -299,9 +292,7 @@ export function buildReviewGuards({
     indexes.push(Number(sourceIndex));
     selectedIdsByUser.set(candidate.userId, indexes);
   }
-  const duplicateGroups = [...selectedIdsByUser.values()].filter(
-    (indexes) => indexes.length > 1
-  );
+  const duplicateGroups = [...selectedIdsByUser.values()].filter((indexes) => indexes.length > 1);
 
   const unresolvedRows =
     preview?.rows.filter(
@@ -378,7 +369,7 @@ function CandidateContext({ candidate }: { candidate: CourseRosterPreviewCandida
     : null;
   const section = candidate.section ? getSectionLabel(candidate.section as StudentSection) : null;
   return (
-    <div className="flex flex-col gap-0.5 text-body-sm">
+    <div className="text-body-sm flex flex-col gap-0.5">
       <p className="font-medium">{candidate.name}</p>
       <p className="text-muted-foreground">{candidate.email}</p>
       <p className="text-muted-foreground">
@@ -474,7 +465,9 @@ function RowSearchPanel({
   onSelect: (candidate: CourseRosterPreviewCandidate) => void;
 }) {
   if (!open || skipped) return null;
-  return <RowCandidateSearch assignmentId={assignmentId} programId={programId} onSelect={onSelect} />;
+  return (
+    <RowCandidateSearch assignmentId={assignmentId} programId={programId} onSelect={onSelect} />
+  );
 }
 
 function RowStatusBadges({
@@ -545,14 +538,10 @@ function ReviewRowCard({
   const isAlreadyActive = row.disposition === "ALREADY_ACTIVE";
 
   return (
-    <div
-      className={`flex flex-col gap-3 rounded-lg border p-3 ${
-        skipped ? "opacity-60" : ""
-      }`}
-    >
+    <div className={`flex flex-col gap-3 rounded-lg border p-3 ${skipped ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-label-md text-muted-foreground">#{row.sourceIndex}</span>
-        <p className="min-w-0 flex-1 truncate text-body-sm font-medium">{row.submittedName}</p>
+        <p className="text-body-sm min-w-0 flex-1 truncate font-medium">{row.submittedName}</p>
         <RowStatusBadges
           skipped={skipped}
           selected={selectedCandidate !== undefined}
@@ -562,7 +551,6 @@ function ReviewRowCard({
       </div>
 
       <RowCandidateDisplay candidate={selectedCandidate} candidates={row.candidates} />
-
 
       {!isAlreadyActive && (
         <ReviewRowControls
@@ -673,7 +661,7 @@ function ReviewPreviewBlock({
             checked={suggestionsAcknowledged}
             onCheckedChange={(checked) => onAcknowledgeSuggestions(checked === true)}
           />
-          <Label htmlFor="acknowledge-suggested" className="cursor-pointer text-body-sm leading-6">
+          <Label htmlFor="acknowledge-suggested" className="text-body-sm cursor-pointer leading-6">
             I acknowledge {suggestedCount} suggested {suggestedCount === 1 ? "match" : "matches"} —
             review each suggested account before confirming.
           </Label>
@@ -682,7 +670,7 @@ function ReviewPreviewBlock({
 
       <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {visibleRows.length === 0 ? (
-          <li className="p-4 text-center text-body-sm text-muted-foreground">
+          <li className="text-body-sm text-muted-foreground p-4 text-center">
             No rows in this group.
           </li>
         ) : (
@@ -747,7 +735,13 @@ function outcomeGroup(outcome: CourseRosterConfirmationOutcome) {
   return "blocked";
 }
 
-type ResultsGroupKey = "created" | "restored" | "already-active" | "blocked" | "skipped" | "unprocessed";
+type ResultsGroupKey =
+  | "created"
+  | "restored"
+  | "already-active"
+  | "blocked"
+  | "skipped"
+  | "unprocessed";
 
 const RESULTS_GROUPS: Array<{ key: ResultsGroupKey; label: string }> = [
   { key: "created", label: "Added" },
@@ -768,9 +762,7 @@ function ConfirmationResultsBlock({
   skippedIndexes: ReadonlySet<number>;
 }) {
   const skipped = skippedIndexes;
-  const outcomeByIndex = new Map(
-    confirmation.rows.map((row) => [row.sourceIndex, row])
-  );
+  const outcomeByIndex = new Map(confirmation.rows.map((row) => [row.sourceIndex, row]));
   const counts: Record<ResultsGroupKey, number> = {
     created: 0,
     restored: 0,
@@ -840,10 +832,8 @@ function ConfirmationResultsBlock({
           return (
             <li key={row.sourceIndex} className="rounded-lg border p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-label-md text-muted-foreground">
-                  #{row.sourceIndex}
-                </span>
-                <p className="min-w-0 flex-1 truncate text-body-sm font-medium">
+                <span className="text-label-md text-muted-foreground">#{row.sourceIndex}</span>
+                <p className="text-body-sm min-w-0 flex-1 truncate font-medium">
                   {row.submittedName}
                 </p>
                 {skipped.has(row.sourceIndex) ? (
@@ -857,7 +847,7 @@ function ConfirmationResultsBlock({
                 )}
               </div>
               {result?.error && (
-                <p className="mt-1 text-body-sm text-muted-foreground">{result.error}</p>
+                <p className="text-body-sm text-muted-foreground mt-1">{result.error}</p>
               )}
             </li>
           );
@@ -1068,7 +1058,6 @@ function ManagementBody({
   );
 }
 
-
 export function RosterManagementDialog({
   assignment,
   assignmentId,
@@ -1103,8 +1092,6 @@ export function RosterManagementDialog({
     selectedCandidateByIndex,
     suggestionsAcknowledged,
   });
-
-
 
   function resetWorkspace() {
     setMethod("import");
@@ -1257,11 +1244,7 @@ export function RosterManagementDialog({
   }
 
   const primaryLabel =
-    phase === "add"
-      ? "Prepare preview"
-      : phase === "review"
-        ? "Review complete"
-        : "Done";
+    phase === "add" ? "Prepare preview" : phase === "review" ? "Review complete" : "Done";
   const primaryDisabled = isPending || (phase === "review" && reviewBlockers.length > 0);
 
   const body = (
@@ -1389,7 +1372,9 @@ export function RosterManagementDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDiscardOpen(false)}>Keep editing</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setDiscardOpen(false)}>
+              Keep editing
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -1527,7 +1512,8 @@ function CsvImportMethod({
       <div className="flex flex-col gap-1">
         <h2 className="text-title-md">Import Students from CSV</h2>
         <p className="text-body-sm text-muted-foreground">
-          Upload official Student names to prepare a roster preview. No roster membership changes yet.
+          Upload official Student names to prepare a roster preview. No roster membership changes
+          yet.
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
@@ -1557,7 +1543,7 @@ function CsvImportMethod({
           if (!isPending) event.preventDefault();
         }}
         onDrop={onDrop}
-        className="focus-visible:ring-ring flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center transition-colors outline-none focus-visible:ring-3 aria-disabled:pointer-events-none aria-disabled:opacity-50"
+        className="focus-visible:ring-ring flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center transition-colors outline-none focus-visible:ring-3 aria-disabled:pointer-events-none aria-disabled:opacity-60"
       >
         <FileSpreadsheet aria-hidden="true" className="shrink-0" />
         <p className="text-body-sm font-medium">Drop CSV here or click to browse</p>
@@ -1578,7 +1564,7 @@ function CsvImportMethod({
       {file && (
         <div className="flex items-center gap-2 rounded-md border p-2">
           <FileSpreadsheet data-icon="inline-start" />
-          <span className="min-w-0 flex-1 truncate text-body-sm">{file.name}</span>
+          <span className="text-body-sm min-w-0 flex-1 truncate">{file.name}</span>
           <Button
             type="button"
             variant="ghost"

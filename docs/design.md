@@ -178,12 +178,12 @@ Secondary buttons and neutral controls. Remains neutral in both themes; distinct
 
 ### 5.4 Status Tokens
 
-| Status      | Meaning              | Usage                                                        |
-| ----------- | -------------------- | ------------------------------------------------------------ |
-| Success     | completed, valid     | confirmation without replacing selection                     |
-| Warning     | attention required   | soft surfaces for alerts and badges                          |
-| Danger      | error, destructive   | soft danger for routine controls; filled reserved for confirmed destructive action |
-| Information | neutral information  | indigo; separate from links, focus, primary, and cyan        |
+| Status      | Meaning             | Usage                                                                              |
+| ----------- | ------------------- | ---------------------------------------------------------------------------------- |
+| Success     | completed, valid    | confirmation without replacing selection                                           |
+| Warning     | attention required  | soft surfaces for alerts and badges                                                |
+| Danger      | error, destructive  | soft danger for routine controls; filled reserved for confirmed destructive action |
+| Information | neutral information | indigo; separate from links, focus, primary, and cyan                              |
 
 Use soft surfaces for alerts and badges. Every status pairs color with text, icon, shape, or pattern.
 
@@ -300,17 +300,17 @@ The installable PWA shell exists. Offline data caching and mutation queues remai
 
 ### 8.1 Required States
 
-| State    | Requirement                              |
-| -------- | ---------------------------------------- |
-| Default  | canonical semantic tokens                |
-| Hover    | subtle color/surface change              |
-| Focus    | visible `ring-ring`                      |
-| Pressed  | optional 1 px translation                |
-| Selected | semantic surface plus accessible state   |
-| Disabled | noninteractive but readable              |
-| Loading  | preserve width; spinner and/or label     |
-| Error    | adjacent semantic message                |
-| Success  | confirmation without replacing selection |
+| State    | Requirement                                                           |
+| -------- | --------------------------------------------------------------------- |
+| Default  | canonical semantic tokens                                             |
+| Hover    | subtle color/surface change                                           |
+| Focus    | visible `ring-ring`                                                   |
+| Pressed  | optional 1 px translation                                             |
+| Selected | semantic surface plus accessible state                                |
+| Disabled | noninteractive but readable; opacity unified at 60% across primitives |
+| Loading  | preserve width; spinner and/or label                                  |
+| Error    | adjacent semantic message                                             |
+| Success  | confirmation without replacing selection                              |
 
 ### 8.2 Buttons
 
@@ -336,6 +336,7 @@ Rules:
 - Reuse existing Base UI/shadcn input, textarea, select, checkbox, radio, switch, label, helper, and error components.
 - Every field has a visible label; errors/helper text appear beside the field.
 - Checked controls use primary, not semantic success.
+- Switch states: off = muted track with foreground knob; on = primary track with primary-foreground knob. Knob/track and track/page boundaries hold ≥3:1 in both themes.
 - Dark fields use the semantic input surface and dedicated ring.
 - Continue using `customZodResolver`.
 - No placeholder-only labels.
@@ -373,6 +374,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 ### 8.7 Tabs, Badges, and Progress
 
 - Supported tabs: pill and line.
+- Honor the 44 px touch target on coarse pointers: horizontal lists grow to fit and triggers floor at `min-h-11`; desktop density is unchanged.
 - Primary marks active tabs and progress.
 - Cyan badges are categorical; semantic badges indicate status.
 - Progress includes a text/count/percentage.
@@ -383,13 +385,15 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Reuse `showToast` and root `ToastProvider`; do not add another toast system.
 - Approved kinds: success, warning, error/danger, information.
 - Use route skeletons, local spinners, actionable empty states, and adjacent `role="alert"` errors.
-- Preserve current URL-toast consumption and cleanup.
+- Loading stays perceivable under reduced motion: spinner pairs a pulse fallback with text or skeleton context.
+- Preserve current URL-toast consumption and cleanup; toasts are dismissible with a keyboard- and touch-operable control.
 - Use Dialog on desktop and Drawer on mobile where established.
 - Use `AlertDialog` for destructive confirmation.
 - Overlays use semantic surface, border, and scrim tokens; strong shadows are overlay-only.
 
 ### 8.9 Data Visualization
 
+- Render tooltips through the shared themed `ChartTooltip`; do not restyle per chart.
 - Use Recharts; do not add another chart library.
 - New/reworked charts should use shared shadcn-style wrappers when available.
 - Prepare and authorize data on the server; keep chart client boundaries narrow.
