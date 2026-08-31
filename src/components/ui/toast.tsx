@@ -15,6 +15,10 @@ type ToastMessage = {
 
 const TOAST_EVENT = "cloie-toast";
 
+// Monotonic id: toasts pushed in the same millisecond must still be
+// independently dismissible, so wall-clock time cannot identify them.
+let nextToastId = 1;
+
 export function showToast(message: string, kind: ToastKind = "success") {
   if (typeof window === "undefined") {
     return;
@@ -38,7 +42,7 @@ export function ToastProvider() {
 
   useEffect(() => {
     function pushToast(message: string, kind: ToastKind) {
-      const id = Date.now();
+      const id = nextToastId++;
       setToasts((current) => [...current, { id, kind, message }]);
       window.setTimeout(() => {
         setToasts((current) => current.filter((toast) => toast.id !== id));

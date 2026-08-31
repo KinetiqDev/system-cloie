@@ -57,6 +57,21 @@ describe("ToastProvider", () => {
     expect(screen.queryByText("Saved successfully")).not.toBeInTheDocument();
   });
 
+  it("dismisses only its own toast when several are pushed in the same millisecond", () => {
+    render(<ToastProvider />);
+
+    act(() => {
+      showToast("First notice");
+      showToast("Second notice");
+    });
+    expect(screen.getByText("First notice")).toBeInTheDocument();
+    expect(screen.getByText("Second notice")).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Dismiss notification" })[0]);
+    expect(screen.queryByText("First notice")).not.toBeInTheDocument();
+    expect(screen.getByText("Second notice")).toBeInTheDocument();
+  });
+
   it("renders error and warning toasts with semantic status tokens", () => {
     render(<ToastProvider />);
 
