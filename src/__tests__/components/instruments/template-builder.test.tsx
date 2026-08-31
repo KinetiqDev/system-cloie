@@ -237,7 +237,6 @@ describe("TemplateBuilder", () => {
           }),
         }}
         saveSuccessConfig={{
-          redirectTo: "/faculty/tools",
           toastMessage: "Template saved successfully.",
         }}
       />
@@ -255,7 +254,7 @@ describe("TemplateBuilder", () => {
     expect(screen.queryByText("course-1")).not.toBeInTheDocument();
     expect(screen.queryByText("cilo-1")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
 
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledTimes(1);
@@ -273,7 +272,7 @@ describe("TemplateBuilder", () => {
         },
       ])
     );
-    expect(pushMock).toHaveBeenCalledWith("/faculty/tools");
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   test("loads cilos for a general education course with no owning program", async () => {
@@ -348,7 +347,6 @@ describe("TemplateBuilder", () => {
           }),
         }}
         saveSuccessConfig={{
-          redirectTo: "/faculty/tools",
           toastMessage: "Template saved successfully.",
         }}
       />
@@ -364,17 +362,14 @@ describe("TemplateBuilder", () => {
     expect(screen.getByText(/saved CILO\(s\) available for binding/i)).toBeInTheDocument();
   });
 
-  test("redirects program head saves back to tools with a success toast", async () => {
+  test("saves program head drafts in place and shows saved state", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
       <TemplateBuilder
         programLabel="BSBA"
         onSave={onSave}
-        saveSuccessConfig={{
-          redirectTo: "/program-head/tools",
-          toastMessage: "Template saved successfully.",
-        }}
+        saveSuccessConfig={{ toastMessage: "Instrument template saved." }}
         initialData={{
           id: "template-1",
           name: "BSBA Tool",
@@ -410,12 +405,133 @@ describe("TemplateBuilder", () => {
       />
     );
 
+    fireEvent.change(screen.getByLabelText("Template Name"), { target: { value: "Updated Tool" } });
+    expect(screen.getByRole("status")).toHaveTextContent("Unsaved changes");
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
 
-    await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith("/program-head/tools");
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(pushMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Saved"));
+  });
+
+  test("tracks the Active toggle as unsaved work and persists it", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+
+    render(
+      <TemplateBuilder
+        programLabel="Institutional Baseline"
+        onSave={onSave}
+        initialData={{
+          id: "template-1",
+          name: "Baseline Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate outcome",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("switch", { name: "Active" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Unsaved changes");
+
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect((onSave.mock.calls[0][0] as FormData).get("is_active")).toBe("false");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Saved"));
+  });
+
+  test("saves the current draft before continuing to program publication", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+    const onPublish = vi.fn();
+    render(
+      <TemplateBuilder
+        programLabel="BSBA"
+        onSave={onSave}
+        onPublish={onPublish}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate outcome",
+                  type: "guided_open_ended",
+                  order: 0,
+                  required: true,
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Template Name"), {
+      target: { value: "Updated Program Tool" },
     });
-    expect(screen.queryByText("Template saved successfully.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /continue.*publish/i }));
+
+    await waitFor(() => expect(onPublish).toHaveBeenCalledWith("template-1"));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.invocationCallOrder[0]).toBeLessThan(onPublish.mock.invocationCallOrder[0]);
+  });
+
+  test("asks before leaving an instrument template with unsaved changes", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        toolsHref="/program-head/tools"
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Template Name"), { target: { value: "Unsaved Tool" } });
+    fireEvent.click(screen.getByRole("button", { name: "Back to Tools" }));
+
+    expect(
+      await screen.findByRole("alertdialog", { name: "Discard unsaved changes?" })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(pushMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Tools" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Discard changes" }));
+    expect(pushMock).toHaveBeenCalledWith("/program-head/tools");
   });
 
   test.each([
@@ -684,8 +800,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSBA"
         onSave={onSave}
         saveSuccessConfig={{
-          redirectTo: "/program-head/tools",
-          toastMessage: "Template saved successfully.",
+          toastMessage: "Instrument template saved.",
         }}
         initialData={{
           id: "template-1",
@@ -793,7 +908,7 @@ describe("TemplateBuilder", () => {
     expect(screen.getByDisplayValue("COURSE_BOUND")).toBeDisabled();
     expect(screen.queryByText("Program-wide Evaluation Tool")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
 
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledTimes(1);
@@ -1532,7 +1647,7 @@ describe("TemplateBuilder", () => {
     );
     fireEvent.click(trigger); // close the picker
 
-    fireEvent.click(screen.getByRole("button", { name: /save as program copy/i }));
+    fireEvent.click(screen.getByRole("button", { name: /create program copy/i }));
     fireEvent.click(screen.getByRole("button", { name: /create copy/i }));
     await waitFor(() => expect(onSaveAsCopy).toHaveBeenCalledTimes(1));
     expect(onSaveAsCopy).toHaveBeenCalledWith(

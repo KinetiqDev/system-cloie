@@ -97,6 +97,7 @@ describe("manage-instruments structure persistence", () => {
       name: "Reordered Evaluation",
       description: "Updated baseline",
       template_type: EvaluationTemplateType.COURSE_BOUND,
+      is_active: true,
       is_faculty_accessible: true,
       structure: reorderedStructure,
     });
@@ -132,6 +133,7 @@ describe("manage-instruments structure persistence", () => {
       code: "COURSE_BOUND_EVAL",
       name: "Rejected",
       template_type: EvaluationTemplateType.COURSE_BOUND,
+      is_active: true,
       is_faculty_accessible: true,
       structure: [],
     });

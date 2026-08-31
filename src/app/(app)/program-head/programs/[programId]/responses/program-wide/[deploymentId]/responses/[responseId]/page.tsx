@@ -49,8 +49,6 @@ export default async function CentralResponseDetailPage({
   const upwardState = {
     tab: "program-wide" as const,
     page: 1,
-    schoolYearId: state.schoolYearId,
-    semester: state.semester,
     termInstanceId: state.termInstanceId,
     stakeholder,
   };

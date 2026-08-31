@@ -8,7 +8,10 @@ import {
   updateProgramHeadTemplateAction,
 } from "@/lib/actions/program-head-template-actions";
 import type { TemplateBuilderProps } from "./template-builder";
-import { buildProgramHeadPublishToolPath, buildProgramHeadToolsPath } from "@/lib/constants/program-head-routes";
+import {
+  buildProgramHeadPublishToolPath,
+  buildProgramHeadToolsPath,
+} from "@/lib/constants/program-head-routes";
 
 interface ProgramHeadTemplateBuilderProps extends Omit<
   TemplateBuilderProps,
@@ -33,7 +36,8 @@ export function ProgramHeadTemplateBuilder({
   };
 
   const handlePublish = templateId
-     ? () => router.push(buildProgramHeadPublishToolPath(programId, templateId))
+    ? (savedTemplateId: string) =>
+        router.push(buildProgramHeadPublishToolPath(programId, savedTemplateId))
     : undefined;
 
   return (

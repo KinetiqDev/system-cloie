@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ManagementTemplateBuilder } from "@/features/instruments/components/management-template-builder";
 
 const { pushMock } = vi.hoisted(() => ({
@@ -51,47 +51,34 @@ describe("ManagementTemplateBuilder", () => {
     expect(screen.queryByText("CILO Binding")).not.toBeInTheDocument();
   });
 
-  test("shows success modal and redirects to toolsHref on save", async () => {
-    const { fireEvent } = await import("@testing-library/react");
-    
+  test("saves Secretary instrument templates in place", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
     render(
       <ManagementTemplateBuilder
         programLabel="Institutional Baseline"
-        onSave={vi.fn().mockResolvedValue({ success: true })}
+        onSave={onSave}
         toolsHref="/secretary/instruments"
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    fireEvent.click(screen.getByRole("button", { name: /create template/i }));
 
-    await vi.waitFor(() => {
-      expect(screen.getByText("Template Saved Successfully")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Go to Tools" }));
-
-    expect(pushMock).toHaveBeenCalledWith("/secretary/instruments");
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("dialog", { name: /saved successfully/i })).not.toBeInTheDocument();
+    expect(pushMock).toHaveBeenCalledWith("/secretary/instruments/template-1/edit");
   });
 
-  test("redirects Dean save to /dean/instruments via toolsHref prop", async () => {
-    const { fireEvent } = await import("@testing-library/react");
-    
+  test("uses the shared template action toolbar for Dean", () => {
     render(
       <ManagementTemplateBuilder
         programLabel="Institutional Baseline"
-        onSave={vi.fn().mockResolvedValue({ success: true })}
+        onSave={vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } })}
         toolsHref="/dean/instruments"
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
-
-    await vi.waitFor(() => {
-      expect(screen.getByText("Template Saved Successfully")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Go to Tools" }));
-
-    expect(pushMock).toHaveBeenCalledWith("/dean/instruments");
+    expect(screen.getByRole("toolbar", { name: "Template actions" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /create template/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /publish/i })).not.toBeInTheDocument();
   });
 });

@@ -31,6 +31,8 @@ const templateFields = {
   description: optionalTextField,
   template_type: z.nativeEnum(EvaluationTemplateType),
   is_faculty_accessible: checkboxBoolean,
+  // The template builder persists the Active toggle with every save.
+  is_active: checkboxBoolean.default(true),
 };
 
 // Schema without structure (for legacy/simple metadata updates)

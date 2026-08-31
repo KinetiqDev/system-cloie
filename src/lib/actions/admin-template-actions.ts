@@ -16,7 +16,7 @@ import {
   deleteBaselineTemplate,
 } from "@/features/instruments/services/manage-instruments";
 
-type ActionResult = { success: true } | { success: false; error: string };
+type ActionResult = { success: true; data?: { id: string } } | { success: false; error: string };
 
 function revalidateAdminTools() {
   revalidatePath("/secretary/instruments");
@@ -37,6 +37,7 @@ export async function createAdminTemplateAction(formData: FormData): Promise<Act
     description: formData.get("description"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
+    is_active: formData.get("is_active"),
     structure: JSON.parse((formData.get("structure") as string) || "[]"),
   };
 
@@ -68,7 +69,7 @@ export async function createAdminTemplateAction(formData: FormData): Promise<Act
   }
 
   revalidateAdminTools();
-  return { success: true };
+  return { success: true, data: result.data };
 }
 
 export async function updateAdminTemplateAction(formData: FormData): Promise<ActionResult> {
@@ -87,6 +88,7 @@ export async function updateAdminTemplateAction(formData: FormData): Promise<Act
     description: formData.get("description"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
+    is_active: formData.get("is_active"),
     structure: JSON.parse((formData.get("structure") as string) || "[]"),
   };
 
@@ -118,7 +120,7 @@ export async function updateAdminTemplateAction(formData: FormData): Promise<Act
   }
 
   revalidateAdminTools();
-  return { success: true };
+  return { success: true, data: { id: parsed.data.id } };
 }
 
 export async function toggleAdminTemplateActiveAction(

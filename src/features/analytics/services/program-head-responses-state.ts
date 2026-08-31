@@ -1,4 +1,4 @@
-import { AcademicSemester, DeploymentStatus, StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
+import { DeploymentStatus, StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
 import { z } from "zod";
 import { buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes";
 
@@ -11,8 +11,6 @@ export type ProgramHeadResponsesFilterState = {
   tab: ResponsesTab;
   page: number;
   q?: string;
-  schoolYearId?: string;
-  semester?: AcademicSemester;
   termInstanceId?: string;
   courseId?: string;
   facultyId?: string;
@@ -34,9 +32,12 @@ const uuid = z.string().uuid();
 const schema = z.object({
   tab: z.enum(RESPONSE_TABS).catch("course"),
   page: z.coerce.number().int().min(1).max(MAX_PAGE).catch(1),
-  q: z.string().trim().transform((value) => value.slice(0, MAX_QUERY_LENGTH)).optional().catch(undefined),
-  schoolYearId: uuid.optional().catch(undefined),
-  semester: z.nativeEnum(AcademicSemester).optional().catch(undefined),
+  q: z
+    .string()
+    .trim()
+    .transform((value) => value.slice(0, MAX_QUERY_LENGTH))
+    .optional()
+    .catch(undefined),
   termInstanceId: uuid.optional().catch(undefined),
   courseId: uuid.optional().catch(undefined),
   facultyId: uuid.optional().catch(undefined),
@@ -49,23 +50,48 @@ const schema = z.object({
   instrumentTemplateId: uuid.optional().catch(undefined),
 });
 
-export function parseProgramHeadResponsesSearchParams(raw: RawSearchParams = {}): ProgramHeadResponsesFilterState {
+export function parseProgramHeadResponsesSearchParams(
+  raw: RawSearchParams = {}
+): ProgramHeadResponsesFilterState {
   const parsed = schema.parse({
-    tab: first(raw.tab), page: first(raw.page), q: first(raw.q), schoolYearId: first(raw.schoolYearId),
-    semester: first(raw.semester), termInstanceId: first(raw.termInstanceId), courseId: first(raw.courseId),
-    facultyId: first(raw.facultyId), majorId: first(raw.majorId), yearLevel: first(raw.yearLevel),
-    section: first(raw.section), stakeholder: first(raw.stakeholder), status: first(raw.status),
-    completion: first(raw.completion), instrumentTemplateId: first(raw.instrumentTemplateId),
+    tab: first(raw.tab),
+    page: first(raw.page),
+    q: first(raw.q),
+    termInstanceId: first(raw.termInstanceId),
+    courseId: first(raw.courseId),
+    facultyId: first(raw.facultyId),
+    majorId: first(raw.majorId),
+    yearLevel: first(raw.yearLevel),
+    section: first(raw.section),
+    stakeholder: first(raw.stakeholder),
+    status: first(raw.status),
+    completion: first(raw.completion),
+    instrumentTemplateId: first(raw.instrumentTemplateId),
   });
   return { ...parsed, q: parsed.q || undefined };
 }
 
-const PARAM_KEYS = ["tab", "page", "q", "schoolYearId", "semester", "termInstanceId", "courseId", "facultyId", "majorId", "yearLevel", "section", "stakeholder", "status", "completion", "instrumentTemplateId"] as const;
+const PARAM_KEYS = [
+  "tab",
+  "page",
+  "q",
+  "termInstanceId",
+  "courseId",
+  "facultyId",
+  "majorId",
+  "yearLevel",
+  "section",
+  "stakeholder",
+  "status",
+  "completion",
+  "instrumentTemplateId",
+] as const;
 export function rawProgramHeadResponsesQuery(raw: RawSearchParams): string {
   const params = new URLSearchParams();
   for (const key of PARAM_KEYS) {
     const value = raw[key];
-    for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) params.append(key, entry);
+    for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value])
+      params.append(key, entry);
   }
   return params.toString();
 }
@@ -74,12 +100,27 @@ export function programHeadResponsesQuery(state: ProgramHeadResponsesFilterState
   const params = new URLSearchParams();
   if (state.tab !== "course") params.set("tab", state.tab);
   if (state.page > 1) params.set("page", String(state.page));
-  const entries = ["q", "schoolYearId", "semester", "termInstanceId", "courseId", "facultyId", "majorId", "yearLevel", "section", "stakeholder", "status", "completion", "instrumentTemplateId"] as const;
+  const entries = [
+    "q",
+    "termInstanceId",
+    "courseId",
+    "facultyId",
+    "majorId",
+    "yearLevel",
+    "section",
+    "stakeholder",
+    "status",
+    "completion",
+    "instrumentTemplateId",
+  ] as const;
   for (const key of entries) if (state[key]) params.set(key, String(state[key]));
   return params.toString();
 }
 
-export function buildProgramHeadResponsesUrl(programId: string, state: ProgramHeadResponsesFilterState): string {
+export function buildProgramHeadResponsesUrl(
+  programId: string,
+  state: ProgramHeadResponsesFilterState
+): string {
   const path = buildProgramHeadProgramPath(programId, "responses");
   const query = programHeadResponsesQuery(state);
   return query ? `${path}?${query}` : path;
@@ -97,8 +138,6 @@ export function buildProgramHeadResponsesTabUrl(
     tab,
     page: 1,
     q: current.q,
-    schoolYearId: current.schoolYearId,
-    semester: current.semester,
     termInstanceId: current.termInstanceId,
     majorId: current.majorId,
     yearLevel: current.yearLevel,
@@ -107,6 +146,10 @@ export function buildProgramHeadResponsesTabUrl(
   });
 }
 
-export function buildProgramHeadResponsesPageUrl(programId: string, state: ProgramHeadResponsesFilterState, page: number): string {
+export function buildProgramHeadResponsesPageUrl(
+  programId: string,
+  state: ProgramHeadResponsesFilterState,
+  page: number
+): string {
   return buildProgramHeadResponsesUrl(programId, { ...state, page });
 }
