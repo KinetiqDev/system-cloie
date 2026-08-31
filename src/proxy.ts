@@ -5,7 +5,8 @@ export async function proxy(request: NextRequest) {
   const origin = request.headers.get("origin");
   const isServerAction =
     request.method === "POST" &&
-    (request.headers.has("next-action") || request.headers.get("content-type")?.includes("multipart/form-data"));
+    (request.headers.has("next-action") ||
+      request.headers.get("content-type")?.includes("multipart/form-data"));
 
   if (isServerAction && origin) {
     const originHost = new URL(origin).host;
@@ -20,6 +21,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/health(?:/|$)|_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
