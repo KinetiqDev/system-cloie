@@ -31,15 +31,14 @@ interface SidebarProps {
     image?: string | null;
   };
   roles?: Role[];
+  activeProgramId?: string | null;
 }
-
-export function Sidebar({ user, roles = [] }: SidebarProps) {
+export function Sidebar({ user, roles = [], activeProgramId = null }: SidebarProps) {
   const pathname = usePathname();
 
-  const mainNav = getMainNavByRoles(roles, pathname);
+  const mainNav = getMainNavByRoles(roles, pathname, activeProgramId);
   const secondaryNav = getSecondaryNavByRoles(roles);
   const activeItem = getDeepestMatchingNavItem(pathname, mainNav);
-
   if (getHighestNavRole(roles) === ROLES.DEAN) {
     return <DeanSidebar user={user} />;
   }
@@ -48,7 +47,7 @@ export function Sidebar({ user, roles = [] }: SidebarProps) {
     <aside className="border-sidebar-border bg-sidebar fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r lg:flex">
       <div className="border-sidebar-border flex h-16 shrink-0 items-center border-b px-6">
         <Link
-          href={getDashboardHref(roles, pathname)}
+          href={getDashboardHref(roles, pathname, activeProgramId)}
           aria-label="System CLOIE — Dashboard"
           className="focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center gap-3 rounded-md transition-opacity hover:opacity-80"
         >

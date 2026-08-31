@@ -109,6 +109,20 @@ describe("navigation helpers", () => {
     ]);
   });
 
+  it("uses fallback Program ID when provided and no context in pathname", () => {
+    expect(getProgramHeadNav("/program-head/profile", "program-2").map((item) => item.href)).toEqual([
+      "/program-head/programs/program-2/dashboard",
+      "/program-head/programs/program-2/courses",
+      "/program-head/programs/program-2/course-assignments",
+      "/program-head/programs/program-2/outcomes",
+      "/program-head/programs/program-2/tools",
+      "/program-head/programs/program-2/responses",
+      "/program-head/programs/program-2/analytics",
+      "/program-head/programs/program-2/reports",
+      "/program-head/profile",
+    ]);
+  });
+
   it("extracts only the canonical dynamic Program segment", () => {
     expect(getProgramHeadProgramIdFromPathname("/program-head/programs/program-2/tools/new")).toBe(
       "program-2"

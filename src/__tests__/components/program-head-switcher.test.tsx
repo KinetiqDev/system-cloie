@@ -34,13 +34,27 @@ describe("ProgramHeadSwitcher", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
-  it("renders nothing when no Program context is present in the pathname", () => {
+  it("renders nothing when no Program context is present in the pathname and no fallback is passed", () => {
     pathnameMock.mockReturnValue("/program-head");
     render(<ProgramHeadSwitcher programs={programs} />);
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
+  it("renders with fallback activeProgramId when on profile page outside of program path", async () => {
+    pathnameMock.mockReturnValue("/program-head/profile");
+    render(<ProgramHeadSwitcher programs={programs} activeProgramId="program-2" />);
+
+    const trigger = screen.getByRole("button", { name: /Switch Program/ });
+    expect(trigger).toHaveTextContent("BSED");
+
+    fireEvent.click(trigger);
+    await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
+
+    const links = screen.getAllByRole("menuitem");
+    expect(links).toHaveLength(3);
+    expect(links[0]).toHaveAttribute("href", "/program-head/programs/program-1/dashboard");
+  });
   it("shows the active Program and marks it in the dropdown", async () => {
     pathnameMock.mockReturnValue("/program-head/programs/program-2/analytics");
     render(<ProgramHeadSwitcher programs={programs} />);

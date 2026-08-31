@@ -7,6 +7,7 @@ import { getDemoAuthConfig } from "@/features/auth/services/demo-auth";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadEntry } from "@/features/auth/services/resolve-program-head-context";
 import type { ProgramHeadProgram } from "@/features/auth/services/resolve-program-head-context";
+import { readSelectedProgramCookie } from "@/features/auth/services/selected-program-cookie";
 import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
 
 export async function AuthenticatedAppShell({ children }: { children: ReactNode }) {
@@ -22,10 +23,15 @@ export async function AuthenticatedAppShell({ children }: { children: ReactNode 
   // Only resolve assignments for the active Program Head role; other roles are
   // unaffected. The resolver itself enforces role and session boundaries.
   let programHeadPrograms: ProgramHeadProgram[] | undefined;
+  let initialSelectedProgramId: string | null = null;
   if (session?.activeRole === ROLES.PROGRAM_HEAD) {
     const entry = await resolveProgramHeadEntry();
     if (entry.success) {
       programHeadPrograms = entry.data.authorizedPrograms;
+      const cookieProgramId = await readSelectedProgramCookie();
+      if (cookieProgramId && programHeadPrograms.some((p) => p.id === cookieProgramId)) {
+        initialSelectedProgramId = cookieProgramId;
+      }
     }
   }
 
@@ -49,6 +55,7 @@ export async function AuthenticatedAppShell({ children }: { children: ReactNode 
         demoUsers={demoUsers}
         appearanceEnabled={appearanceEnabled}
         programHeadPrograms={programHeadPrograms}
+        initialSelectedProgramId={initialSelectedProgramId}
       >
         {children}
       </AppShell>
