@@ -6,7 +6,14 @@ import { FacultyAnalyticsDashboard } from "@/features/analytics/components/facul
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 
-export default async function FacultyAnalyticsPage() {
+// The route shells auth guards, deep-link hydration, and filter-option reads in one server component;
+// each guard is the page's Faculty authorization contract.
+// fallow-ignore-next-line complexity
+export default async function FacultyAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ courseId?: string | string[] }>;
+}) {
   const session = await resolveAuthSession();
 
   if (!session) {
@@ -22,8 +29,13 @@ export default async function FacultyAnalyticsPage() {
     redirect(redirectPath);
   }
 
-  // Get initial evaluations list (no filters)
-  const evaluationsResult = await listFacultyAnalyticsEvaluations({});
+  // Honor a course-scoped deep link from the Faculty dashboard evidence rows.
+  const raw = await searchParams;
+  const requestedCourseId = Array.isArray(raw.courseId) ? raw.courseId[0] : raw.courseId;
+  const initialCourseIds = requestedCourseId ? [requestedCourseId] : undefined;
+  const evaluationsResult = await listFacultyAnalyticsEvaluations(
+    initialCourseIds ? { courseIds: initialCourseIds } : {}
+  );
 
   if (!evaluationsResult.success) {
     return (
@@ -84,6 +96,7 @@ export default async function FacultyAnalyticsPage() {
       initialEvaluations={evaluationsResult.evaluations}
       availableAcademicYears={availableAcademicYears}
       availableCourses={availableCourses}
+      initialCourseIds={initialCourseIds}
     />
   );
 }
