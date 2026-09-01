@@ -62,6 +62,32 @@ tunnel origin. A fixed localhost value overrides the tunnel origin and sends the
 back to localhost. Restart System CLOIE after changing this public environment value. Restart the
 local Supabase stack after changing `supabase/config.toml`.
 
+#### Remote-device Quick Tunnel (different network)
+
+The flow above assumes the browser can reach the local Supabase stack directly at
+`127.0.0.1:54321` — true only when testing from the same machine. When the browser is on a
+different device or network (the reason to expose the dev server through a tunnel), it cannot reach
+the loopback Supabase Auth endpoint. System CLOIE handles this by proxying Supabase Auth through
+the app origin:
+
+- `src/lib/supabase/client.ts` resolves the browser's Supabase origin from `window.location.origin`
+  when `NEXT_PUBLIC_SUPABASE_URL` is a loopback address, so OAuth requests go to the tunnel origin.
+- `next.config.ts` adds an `async rewrites()` rule forwarding `/auth/v1/:path*` to
+  `NEXT_PUBLIC_SUPABASE_URL` when that URL is loopback, so the tunneled requests reach the local
+  stack.
+
+With the proxy in place, two callbacks must point at the current tunnel origin:
+
+1. **System CLOIE callback** — append `"https://<tunnel-subdomain>.trycloudflare.com/api/auth/callback?intent=*"`
+   to `additional_redirect_urls` in `supabase/config.toml` (same as the same-machine flow).
+2. **Google Cloud Console callback** — Supabase Auth passes its own callback to Google when
+   initiating OAuth. Set `[auth.external.google] redirect_uri = "https://<tunnel-subdomain>.trycloudflare.com/auth/v1/callback"`
+   in `supabase/config.toml`, and add that exact URL as an authorized redirect URI for the Google
+   OAuth client in the Cloud Console. Both are per-session entries for an ephemeral tunnel.
+
+Then restart System CLOIE and the local Supabase stack. For a stable (one-time) registration, use a
+named Cloudflare Tunnel with a fixed hostname instead of an ephemeral Quick Tunnel.
+
 After changing backend targets, clear stale Auth cookies (`cloie_dev_auth`, `sb-*` session cookies) and re-authenticate; sessions are not portable between instances because issuers and signing keys differ.
 
 ## Prisma-Owned Schema Changes
