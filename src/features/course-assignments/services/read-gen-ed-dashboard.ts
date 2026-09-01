@@ -56,6 +56,13 @@ export async function getGenEdDashboard(): Promise<GenEdDashboardData> {
     ...periodWhere,
     course: { course_scope: "GENERAL_EDUCATION" as const, is_active: true },
   };
+  // Program reachability counts only assignments owned by active programs;
+  // assignmentWhere itself stays broader so the assignment count reflects all
+  // current-period General Education assignments.
+  const reachedProgramWhere = {
+    ...assignmentWhere,
+    program: { is_active: true },
+  };
 
   const [
     activeCourseCount,
@@ -83,7 +90,11 @@ export async function getGenEdDashboard(): Promise<GenEdDashboardData> {
         course_assignments: { none: { is_active: true, ...periodWhere } },
       },
     }),
-    prisma.courseAssignment.groupBy({ by: ["program_id"], where: assignmentWhere, _count: true }),
+    prisma.courseAssignment.groupBy({
+      by: ["program_id"],
+      where: reachedProgramWhere,
+      _count: true,
+    }),
     prisma.program.count({ where: { is_active: true } }),
     prisma.cILO.count({
       where: {

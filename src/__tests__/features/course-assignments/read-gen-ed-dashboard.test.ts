@@ -188,4 +188,27 @@ describe("getGenEdDashboard", () => {
       .mockResolvedValueOnce(2);
     await expect(getGenEdDashboard()).resolves.toMatchObject({ emptyReason: null });
   });
+
+  it("excludes inactive programs from reached-program coverage", async () => {
+    const result = await getGenEdDashboard();
+
+    // The groupBy query that drives reachedProgramCount must filter to active
+    // programs only; otherwise an inactive program's current-period assignment
+    // inflates reachedProgramCount and hides an active unreached program.
+    expect(prismaMock.courseAssignment.groupBy).toHaveBeenCalledWith({
+      by: ["program_id"],
+      where: {
+        is_active: true,
+        term_instance_id: "term-1",
+        course: { course_scope: "GENERAL_EDUCATION", is_active: true },
+        program: { is_active: true },
+      },
+      _count: true,
+    });
+    // An inactive program's assignment excluded from the groupBy population
+    // means the active-unreached count is no longer understated.
+    expect(result.coverage.reachedProgramCount).toBe(1);
+    expect(result.coverage.activeProgramCount).toBe(3);
+    expect(result.attention.unreachedProgramCount).toBe(2);
+  });
 });
