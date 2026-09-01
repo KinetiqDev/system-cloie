@@ -192,6 +192,7 @@ async function readFacultyDashboardMetrics(
               course_bound: {
                 course_assignment: { faculty_id: scope.userId },
                 term_instance_id: activePeriod.id,
+                status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
                 OR: [{ activation_at: null }, { activation_at: { lte: now } }],
                 AND: [{ OR: [{ deadline_at: null }, { deadline_at: { gte: now } }] }],
               },
