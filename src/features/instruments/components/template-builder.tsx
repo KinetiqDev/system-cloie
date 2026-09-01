@@ -359,6 +359,92 @@ function formatQuestionTypeLabel(type: QuestionType): string {
   return type === "likert" ? "Likert" : "Guided Open-Ended";
 }
 
+const TEMPLATE_HISTORY_GUARD_KEY = "cloie-template-builder-dirty-entry";
+
+function currentHistoryEntryIndex(): number | undefined {
+  return window.navigation?.currentEntry?.index;
+}
+
+function isTemplateHistoryGuardEntry(marker: string): boolean {
+  const state: unknown = window.history.state;
+  return (
+    typeof state === "object" &&
+    state !== null &&
+    Reflect.get(state, TEMPLATE_HISTORY_GUARD_KEY) === marker
+  );
+}
+
+function useDirtyTemplateNavigationGuard(isDirty: boolean) {
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const confirmDiscard = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!link || event.defaultPrevented || event.button !== 0) return;
+
+      const hasModifier = [event.metaKey, event.ctrlKey, event.shiftKey, event.altKey].some(
+        Boolean
+      );
+      if (hasModifier || link.target || link.origin !== window.location.origin) return;
+      if (window.confirm("Discard unsaved template changes?")) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    const editorHistoryIndex = currentHistoryEntryIndex();
+    const editorHistoryState = window.history.state;
+    const historyMarker = `${Date.now()}-${Math.random()}`;
+    window.history.replaceState(
+      { ...editorHistoryState, [TEMPLATE_HISTORY_GUARD_KEY]: historyMarker },
+      "",
+      window.location.href
+    );
+
+    let revertingHistoryNavigation = false;
+    const confirmHistoryNavigation = () => {
+      if (revertingHistoryNavigation) {
+        if (!isTemplateHistoryGuardEntry(historyMarker)) {
+          window.history.go(1);
+          return;
+        }
+        revertingHistoryNavigation = false;
+        return;
+      }
+      if (window.confirm("Discard unsaved template changes?")) return;
+
+      const currentHistoryIndex = currentHistoryEntryIndex();
+      const stepsBackToEditor =
+        editorHistoryIndex === undefined || currentHistoryIndex === undefined
+          ? 1
+          : editorHistoryIndex - currentHistoryIndex;
+      if (stepsBackToEditor === 0) return;
+
+      revertingHistoryNavigation = true;
+      window.history.go(stepsBackToEditor);
+    };
+
+    window.addEventListener("popstate", confirmHistoryNavigation);
+    document.addEventListener("click", confirmDiscard, true);
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => {
+      document.removeEventListener("click", confirmDiscard, true);
+      window.removeEventListener("popstate", confirmHistoryNavigation);
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+      if (isTemplateHistoryGuardEntry(historyMarker)) {
+        window.history.replaceState(editorHistoryState, "", window.location.href);
+      }
+    };
+  }, [isDirty]);
+}
+
+function draftSignature(value: unknown): string {
+  return JSON.stringify(value);
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 // fallow-ignore-next-line complexity
@@ -417,6 +503,35 @@ export function TemplateBuilder({
     }
     return map;
   });
+  const [initialDraftSignature] = useState(() =>
+    draftSignature({
+      boundCourseId,
+      boundMajorId,
+      boundProgramId,
+      ciloQuestionBindings,
+      description,
+      isActive,
+      isFacultyAccessible,
+      name,
+      ploQuestionBindings,
+      sections,
+      templateType,
+    })
+  );
+  const currentDraftSignature = draftSignature({
+    boundCourseId,
+    boundMajorId,
+    boundProgramId,
+    ciloQuestionBindings,
+    description,
+    isActive,
+    isFacultyAccessible,
+    name,
+    ploQuestionBindings,
+    sections,
+    templateType,
+  });
+  useDirtyTemplateNavigationGuard(currentDraftSignature !== initialDraftSignature);
 
   /** Archived PLOs bound to questions: rendered as removable archived chips. */
   const archivedPloLookup = useMemo(() => {

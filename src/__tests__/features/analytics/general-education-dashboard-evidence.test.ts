@@ -87,13 +87,43 @@ describe("getGeneralEducationDashboardEvidence", () => {
         assignment: {
           course_bound: {
             course_assignment: {
+              is_active: true,
               term_instance_id: "term-1",
-              course: { course_scope: "GENERAL_EDUCATION" },
+              course: { course_scope: "GENERAL_EDUCATION", is_active: true },
             },
           },
         },
       },
     });
+
+    expect(prismaMock.evaluationAssignment.count).toHaveBeenCalledWith({
+      where: {
+        course_bound: {
+          course_assignment: {
+            is_active: true,
+            term_instance_id: "term-1",
+            course: { course_scope: "GENERAL_EDUCATION", is_active: true },
+          },
+        },
+      },
+    });
+    expect(prismaMock.quantitativeResponseItem.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          response: expect.objectContaining({
+            assignment: {
+              course_bound: {
+                course_assignment: {
+                  is_active: true,
+                  term_instance_id: "term-1",
+                  course: { course_scope: "GENERAL_EDUCATION", is_active: true },
+                },
+              },
+            },
+          }),
+        },
+      })
+    );
   });
 
   it("withholds a pooled mean across incompatible scales", async () => {

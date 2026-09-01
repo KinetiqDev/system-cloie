@@ -27,8 +27,9 @@ export async function getGeneralEducationDashboardEvidence(
   if (!session || session.activeRole !== ROLES.GEN_ED_COORDINATOR) return null;
 
   const courseAssignmentScope = {
+    is_active: true,
     term_instance_id: termInstanceId,
-    course: { course_scope: "GENERAL_EDUCATION" as const },
+    course: { course_scope: "GENERAL_EDUCATION" as const, is_active: true },
   };
   const responseScope = {
     status: ResponseStatus.SUBMITTED,
