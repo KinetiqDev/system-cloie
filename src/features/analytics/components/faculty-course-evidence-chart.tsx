@@ -54,8 +54,34 @@ export function FacultyCourseEvidenceChart({ data }: { data: FacultyCourseEviden
   const config = Object.fromEntries(
     data.map((item) => [item.courseCode, { label: `${item.courseCode} — ${item.courseTitle}` }])
   );
-  const highest = data.reduce((left, right) => (right.mean > left.mean ? right : left));
-  const lowest = data.reduce((left, right) => (right.mean < left.mean ? right : left));
+  // Normalize each mean to its own scale range so incompatible scales compare fairly:
+  // a 4/5 mean (80% of its scale) outranks a 5/7 mean (71% of its scale) without
+  // claiming the raw values are comparable. The evidence list keeps the raw mean and scale.
+  const chartData = data
+    .map((item) => {
+      const scaleMin = item.scaleMin;
+      const scaleMax = item.scaleMax;
+      const percentage =
+        scaleMin !== null && scaleMax !== null && scaleMax > scaleMin
+          ? ((item.mean - scaleMin) / (scaleMax - scaleMin)) * 100
+          : null;
+      return {
+        ...item,
+        percentage,
+        label: `${item.mean.toFixed(2)} · ${item.scaleLabel}`,
+      };
+    })
+    .sort(
+      (left, right) =>
+        (left.percentage ?? -1) - (right.percentage ?? -1) ||
+        left.courseCode.localeCompare(right.courseCode)
+    );
+  const highest = chartData.reduce((left, right) =>
+    (right.percentage ?? -1) > (left.percentage ?? -1) ? right : left
+  );
+  const lowest = chartData.reduce((left, right) =>
+    (right.percentage ?? -1) < (left.percentage ?? -1) ? right : left
+  );
 
   return (
     <Card className="min-w-0">
@@ -70,37 +96,29 @@ export function FacultyCourseEvidenceChart({ data }: { data: FacultyCourseEviden
         <div className="grid gap-3 sm:hidden" role="img" aria-label="Mean rating by course">
           {/* Mobile bars mirror the desktop chart with an indeterminate bar when the scale is unresolved. */}
           {/* fallow-ignore-next-line complexity */}
-          {data.map((item, index) => {
-            const minimum = item.scaleMin;
-            const maximum = item.scaleMax;
-            const width =
-              minimum === null || maximum === null || maximum === minimum
-                ? null
-                : ((item.mean - minimum) / (maximum - minimum)) * 100;
-            return (
-              <div key={`${item.courseCode}-${item.scaleLabel}`} className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-semibold tabular-nums">{item.courseCode}</span>
-                  <span className="text-label-sm font-semibold tabular-nums">
-                    {item.mean.toFixed(2)} / {item.scaleMax ?? "—"}
-                  </span>
-                </div>
-                <div className="bg-muted h-2 overflow-hidden rounded-full">
-                  {width === null ? (
-                    <div className="bg-muted-foreground/30 h-full w-full rounded-full" />
-                  ) : (
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${width}%`, background: chartFill(chartId, index) }}
-                    />
-                  )}
-                </div>
-                <p className="text-muted-foreground text-caption">
-                  {item.responseCount} responses · {item.ratingCount} ratings · {item.scaleLabel}
-                </p>
+          {chartData.map((item, index) => (
+            <div key={`${item.courseCode}-${item.scaleLabel}`} className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-semibold tabular-nums">{item.courseCode}</span>
+                <span className="text-label-sm font-semibold tabular-nums">
+                  {item.mean.toFixed(2)} / {item.scaleMax ?? "—"}
+                </span>
               </div>
-            );
-          })}
+              <div className="bg-muted h-2 overflow-hidden rounded-full">
+                {item.percentage === null ? (
+                  <div className="bg-muted-foreground/30 h-full w-full rounded-full" />
+                ) : (
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${item.percentage}%`, background: chartFill(chartId, index) }}
+                  />
+                )}
+              </div>
+              <p className="text-muted-foreground text-caption">
+                {item.responseCount} responses · {item.ratingCount} ratings · {item.scaleLabel}
+              </p>
+            </div>
+          ))}
         </div>
         <ChartContainer
           id={chartId}
@@ -112,18 +130,16 @@ export function FacultyCourseEvidenceChart({ data }: { data: FacultyCourseEviden
           style={{ height }}
         >
           <BarChart
-            data={data}
+            data={chartData}
             layout="vertical"
-            margin={{ top: 8, right: 46, bottom: 8, left: 8 }}
+            margin={{ top: 8, right: 64, bottom: 8, left: 8 }}
           >
-            <ChartPatternDefs chartId={chartId} categoryCount={data.length} />
+            <ChartPatternDefs chartId={chartId} categoryCount={chartData.length} />
             <CartesianGrid horizontal={false} />
             <XAxis
               type="number"
-              domain={[
-                Math.min(...data.map((item) => item.scaleMin ?? 0)),
-                Math.max(...data.map((item) => item.scaleMax ?? item.mean)),
-              ]}
+              domain={[0, 100]}
+              tickFormatter={(value) => `${value}%`}
               tickLine={false}
               axisLine={false}
             />
@@ -136,34 +152,38 @@ export function FacultyCourseEvidenceChart({ data }: { data: FacultyCourseEviden
             />
             <ChartTooltip
               formatter={(value, _name, item) => {
-                const payload = item.payload as FacultyCourseEvidence;
+                const payload = item.payload as FacultyCourseEvidence & {
+                  percentage: number | null;
+                };
+                const position =
+                  payload.percentage === null
+                    ? "Scale unavailable"
+                    : `${payload.percentage.toFixed(0)}% of scale`;
                 return [
-                  `${Number(value).toFixed(2)} · ${payload.responseCount} responses · ${payload.ratingCount} ratings`,
+                  `${payload.mean.toFixed(2)} · ${payload.responseCount} responses · ${payload.ratingCount} ratings · ${position}`,
                   payload.scaleLabel,
                 ];
               }}
             />
-            <Bar dataKey="mean" radius={[0, 4, 4, 0]} maxBarSize={28}>
-              {data.map((item, index) => (
+            <Bar dataKey="percentage" radius={[0, 4, 4, 0]} maxBarSize={28}>
+              {chartData.map((item, index) => (
                 <Cell
                   key={`${item.courseCode}-${item.scaleLabel}`}
                   fill={chartFill(chartId, index)}
                 />
               ))}
               <LabelList
-                dataKey="mean"
+                dataKey="label"
                 position="right"
-                formatter={(value) =>
-                  typeof value === "number" ? value.toFixed(2) : String(value ?? "")
-                }
+                formatter={(value) => (typeof value === "string" ? value : String(value ?? ""))}
               />
             </Bar>
           </BarChart>
         </ChartContainer>
         <p id={insightId} className="text-body-sm text-text-secondary">
-          {data.length === 1
-            ? `${data[0].courseCode} has a mean rating of ${data[0].mean.toFixed(2)} on its ${data[0].scaleLabel} scale.`
-            : `Mean ratings range from ${lowest.courseCode} at ${lowest.mean.toFixed(2)} to ${highest.courseCode} at ${highest.mean.toFixed(2)}. Sample sizes and scales remain visible in the evidence list.`}
+          {chartData.length === 1
+            ? `${chartData[0].courseCode} has a mean rating of ${chartData[0].mean.toFixed(2)} on its ${chartData[0].scaleLabel} scale.`
+            : `Bars are normalized to each course's own scale, so ${lowest.courseCode} ranks lowest and ${highest.courseCode} highest. Raw means and scales stay visible in the evidence list.`}
         </p>
         <div
           role="list"
