@@ -557,6 +557,56 @@ describe("TemplateBuilder", () => {
     }
   });
 
+  test("finds the dirty editor after rejecting Forward with multiple later entries and no Navigation API", () => {
+    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
+    const originalState = window.history.state;
+    const originalUrl = window.location.href;
+    Reflect.deleteProperty(window, "navigation");
+    vi.useFakeTimers();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          initialData={{
+            id: "template-1",
+            name: "Saved Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [],
+          }}
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+      const dirtyEditorState = window.history.state;
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      window.history.replaceState({ page: "later" }, "", "/later");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      act(() => vi.advanceTimersToNextTimer());
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      window.history.replaceState(dirtyEditorState, "", "/editor");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(historyGo.mock.calls.map(([delta]) => delta)).toEqual([1, 1, -1, -1]);
+    } finally {
+      confirm.mockRestore();
+      historyGo.mockRestore();
+      vi.useRealTimers();
+      window.history.replaceState(originalState, "", originalUrl);
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+    }
+  });
+
   test("allows confirmed browser-history navigation away from a dirty template", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);

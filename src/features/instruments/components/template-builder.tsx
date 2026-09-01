@@ -405,14 +405,34 @@ function useDirtyTemplateNavigationGuard(isDirty: boolean) {
     );
 
     let revertingHistoryNavigation = false;
-    let fallbackProbeTimer: ReturnType<typeof setTimeout> | null = null;
-    const confirmHistoryNavigation = () => {
-      if (revertingHistoryNavigation) {
-        if (!isTemplateHistoryGuardEntry(historyMarker)) {
-          window.history.go(1);
+    let fallbackSearchDirection: 1 | -1 = 1;
+    let fallbackSearchTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearFallbackSearchTimer = () => {
+      if (fallbackSearchTimer === null) return;
+      clearTimeout(fallbackSearchTimer);
+      fallbackSearchTimer = null;
+    };
+    const searchForMarkedEditor = () => {
+      clearFallbackSearchTimer();
+      window.history.go(fallbackSearchDirection);
+      fallbackSearchTimer = setTimeout(() => {
+        fallbackSearchTimer = null;
+        if (fallbackSearchDirection === 1) {
+          fallbackSearchDirection = -1;
+          searchForMarkedEditor();
           return;
         }
         revertingHistoryNavigation = false;
+      }, 0);
+    };
+    const confirmHistoryNavigation = () => {
+      if (revertingHistoryNavigation) {
+        clearFallbackSearchTimer();
+        if (isTemplateHistoryGuardEntry(historyMarker)) {
+          revertingHistoryNavigation = false;
+          return;
+        }
+        searchForMarkedEditor();
         return;
       }
       if (window.confirm("Discard unsaved template changes?")) return;
@@ -426,18 +446,13 @@ function useDirtyTemplateNavigationGuard(isDirty: boolean) {
         return;
       }
 
-      // Without Navigation API indices, probe the adjacent forward entry. A
-      // canceled Forward traversal has no entry ahead, so the probe is a no-op
-      // and one step back restores the editor. A canceled Back traversal moves
-      // the probe to another non-marker entry and the popstate branch below
-      // returns to the marked editor entry.
+      // Without Navigation API indices, search forward first. A canceled Back
+      // traversal reaches the marked editor directly. A canceled Forward
+      // traversal reaches the forward boundary, then searches backward until
+      // the marked editor entry is restored.
       revertingHistoryNavigation = true;
-      window.history.go(1);
-      fallbackProbeTimer = setTimeout(() => {
-        if (!isTemplateHistoryGuardEntry(historyMarker)) {
-          window.history.go(-1);
-        }
-      }, 0);
+      fallbackSearchDirection = 1;
+      searchForMarkedEditor();
     };
 
     window.addEventListener("popstate", confirmHistoryNavigation);
@@ -447,7 +462,7 @@ function useDirtyTemplateNavigationGuard(isDirty: boolean) {
       document.removeEventListener("click", confirmDiscard, true);
       window.removeEventListener("popstate", confirmHistoryNavigation);
       window.removeEventListener("beforeunload", warnBeforeUnload);
-      if (fallbackProbeTimer !== null) clearTimeout(fallbackProbeTimer);
+      clearFallbackSearchTimer();
       if (isTemplateHistoryGuardEntry(historyMarker)) {
         window.history.replaceState(editorHistoryState, "", window.location.href);
       }
