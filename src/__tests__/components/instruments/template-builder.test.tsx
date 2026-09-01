@@ -470,6 +470,93 @@ describe("TemplateBuilder", () => {
     }
   );
 
+  test("restores a rejected Forward traversal when Navigation API indices are unavailable", () => {
+    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
+    const originalState = window.history.state;
+    const originalUrl = window.location.href;
+    Reflect.deleteProperty(window, "navigation");
+    vi.useFakeTimers();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          initialData={{
+            id: "template-1",
+            name: "Saved Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [],
+          }}
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      expect(historyGo).toHaveBeenNthCalledWith(1, 1);
+      act(() => vi.runAllTimers());
+
+      expect(historyGo).toHaveBeenNthCalledWith(2, -1);
+    } finally {
+      confirm.mockRestore();
+      historyGo.mockRestore();
+      vi.useRealTimers();
+      window.history.replaceState(originalState, "", originalUrl);
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+    }
+  });
+
+  test("restores a rejected Back traversal when Navigation API indices are unavailable", () => {
+    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
+    const originalState = window.history.state;
+    const originalUrl = window.location.href;
+    Reflect.deleteProperty(window, "navigation");
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          initialData={{
+            id: "template-1",
+            name: "Saved Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [],
+          }}
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+      window.history.replaceState({ page: "origin" }, "", "/origin");
+
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      expect(historyGo).toHaveBeenNthCalledWith(1, 1);
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(historyGo).toHaveBeenNthCalledWith(2, 1);
+    } finally {
+      confirm.mockRestore();
+      historyGo.mockRestore();
+      window.history.replaceState(originalState, "", originalUrl);
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+    }
+  });
+
   test("allows confirmed browser-history navigation away from a dirty template", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);

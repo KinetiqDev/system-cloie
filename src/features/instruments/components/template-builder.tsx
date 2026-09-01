@@ -405,6 +405,7 @@ function useDirtyTemplateNavigationGuard(isDirty: boolean) {
     );
 
     let revertingHistoryNavigation = false;
+    let fallbackProbeTimer: ReturnType<typeof setTimeout> | null = null;
     const confirmHistoryNavigation = () => {
       if (revertingHistoryNavigation) {
         if (!isTemplateHistoryGuardEntry(historyMarker)) {
@@ -417,14 +418,26 @@ function useDirtyTemplateNavigationGuard(isDirty: boolean) {
       if (window.confirm("Discard unsaved template changes?")) return;
 
       const currentHistoryIndex = currentHistoryEntryIndex();
-      const stepsBackToEditor =
-        editorHistoryIndex === undefined || currentHistoryIndex === undefined
-          ? 1
-          : editorHistoryIndex - currentHistoryIndex;
-      if (stepsBackToEditor === 0) return;
+      if (editorHistoryIndex !== undefined && currentHistoryIndex !== undefined) {
+        const stepsBackToEditor = editorHistoryIndex - currentHistoryIndex;
+        if (stepsBackToEditor === 0) return;
+        revertingHistoryNavigation = true;
+        window.history.go(stepsBackToEditor);
+        return;
+      }
 
+      // Without Navigation API indices, probe the adjacent forward entry. A
+      // canceled Forward traversal has no entry ahead, so the probe is a no-op
+      // and one step back restores the editor. A canceled Back traversal moves
+      // the probe to another non-marker entry and the popstate branch below
+      // returns to the marked editor entry.
       revertingHistoryNavigation = true;
-      window.history.go(stepsBackToEditor);
+      window.history.go(1);
+      fallbackProbeTimer = setTimeout(() => {
+        if (!isTemplateHistoryGuardEntry(historyMarker)) {
+          window.history.go(-1);
+        }
+      }, 0);
     };
 
     window.addEventListener("popstate", confirmHistoryNavigation);
@@ -434,6 +447,7 @@ function useDirtyTemplateNavigationGuard(isDirty: boolean) {
       document.removeEventListener("click", confirmDiscard, true);
       window.removeEventListener("popstate", confirmHistoryNavigation);
       window.removeEventListener("beforeunload", warnBeforeUnload);
+      if (fallbackProbeTimer !== null) clearTimeout(fallbackProbeTimer);
       if (isTemplateHistoryGuardEntry(historyMarker)) {
         window.history.replaceState(editorHistoryState, "", window.location.href);
       }
