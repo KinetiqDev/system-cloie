@@ -42,6 +42,18 @@ function buildDimensions(containerWidth: number): Pick<WordCloudConfig, "height"
   return { height, width };
 }
 
+function buildFontSize(tokens: WordCloudToken[]) {
+  const values = tokens.map((token) => token.value);
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  return (word: WordCloudToken) => {
+    if (minimum === maximum) return 28;
+    const normalized =
+      (Math.sqrt(word.value) - Math.sqrt(minimum)) / (Math.sqrt(maximum) - Math.sqrt(minimum));
+    return 16 + normalized * 32;
+  };
+}
+
 /** Client-side `prefers-reduced-motion` resolution, defaults to motion allowed. */
 function usePrefersReducedMotion(): boolean {
   return useSyncExternalStore(
@@ -80,6 +92,7 @@ export function QualitativeWordCloud({
   const minimumWordCount = Math.min(MIN_VISIBLE_WORDS, tokens.length);
   const maximumWordCount = tokens.length;
   const renderedTokens = adjustable ? tokens.slice(0, visibleWordCount) : tokens;
+  const fontSize = buildFontSize(renderedTokens);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -140,8 +153,8 @@ export function QualitativeWordCloud({
             <CardDescription>{summary}</CardDescription>
           </div>
           {adjustable ? (
-            <label className="text-label-sm text-muted-foreground flex min-h-11 items-center gap-3 font-semibold">
-              <span>Top words</span>
+            <label className="text-label-sm text-muted-foreground flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 font-semibold">
+              <span>Words shown</span>
               <input
                 type="range"
                 min={minimumWordCount}
@@ -151,7 +164,7 @@ export function QualitativeWordCloud({
                 onChange={(event) => setVisibleWordCount(Number(event.target.value))}
                 disabled={minimumWordCount === maximumWordCount}
                 aria-label={`Number of top words shown: ${renderedTokens.length}`}
-                className="accent-primary min-h-11 w-32 cursor-pointer disabled:cursor-not-allowed sm:w-40"
+                className="accent-primary min-h-11 min-w-32 flex-1 cursor-pointer disabled:cursor-not-allowed sm:w-40 sm:flex-none"
               />
               <output className="text-foreground min-w-16 tabular-nums">
                 {renderedTokens.length} words
@@ -177,7 +190,7 @@ export function QualitativeWordCloud({
               height={dimensions.height}
               font="ui-sans-serif, system-ui, sans-serif"
               fill={(_word, index) => chartFill(chartId, index)}
-              fontSize={(word) => 16 + word.value * 4}
+              fontSize={fontSize}
               rotate={() => 0}
               enableTooltip
               transition={prefersReducedMotion ? "none" : "opacity 200ms ease"}
