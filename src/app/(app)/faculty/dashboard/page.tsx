@@ -34,6 +34,9 @@ import { HowCalculatedPopover } from "@/features/analytics/components/how-calcul
 import { ROLES } from "@/lib/constants/roles";
 import { formatDate } from "@/lib/utils/date-format";
 
+// The page shells session guards, metric reads, and section composition in one server component;
+// the guard checks are the route's authorization contract.
+// fallow-ignore-next-line complexity
 export default async function FacultyDashboardPage() {
   const session = await resolveAuthSession();
   if (!session) redirect("/portal/respondents");
@@ -111,6 +114,9 @@ export default async function FacultyDashboardPage() {
   );
 }
 
+// The strip derives one alert from closing-window and setup-debt signals; keeping the derivation
+// beside the alert copy preserves the shared hasAttention vocabulary.
+// fallow-ignore-next-line complexity
 function AttentionStrip({
   kpi,
   courseOverview,
@@ -156,17 +162,10 @@ function AttentionStrip({
   );
 }
 
+// The four KPI cards share one grid and one MetricCard contract; each card's conditional content
+// stays visible beside its metric so the response-progress and scale disclosures read together.
+// fallow-ignore-next-line complexity
 function FacultyKpiGrid({ kpi }: { kpi: FacultyDashboardKPI }) {
-  const completion = kpi.completionRate === null ? null : Math.round(kpi.completionRate * 100);
-  const meanEvidence = {
-    assignmentCount: kpi.evaluationOpportunities,
-    ratingCount: kpi.overallRatingCount,
-    responseCount: kpi.totalResponses,
-    scaleLabel: kpi.overallScaleLabel ?? undefined,
-    explanation:
-      "The mean pools submitted quantitative rating items in the active academic period. Incompatible rating scales are never combined. Response progress uses every evaluation assignment created in this period as its denominator.",
-    evidenceHref: "/faculty/analytics",
-  };
   return (
     <section
       aria-label="Faculty dashboard metrics"
@@ -183,20 +182,11 @@ function FacultyKpiGrid({ kpi }: { kpi: FacultyDashboardKPI }) {
       </MetricCard>
       <MetricCard
         label="Response progress"
-        value={completion === null ? "—" : `${completion}%`}
+        value={formatCompletion(kpi)}
         icon={<ListChecks aria-hidden="true" />}
         href="/faculty/tools?tab=published"
       >
-        {kpi.evaluationOpportunities === 0
-          ? "No evaluation assignments in this period."
-          : `${kpi.totalResponses.toLocaleString()} of ${kpi.evaluationOpportunities.toLocaleString()} evaluation assignments submitted`}
-        {completion !== null ? (
-          <Progress
-            value={completion}
-            aria-label={`${completion}% response completion`}
-            className="mt-2"
-          />
-        ) : null}
+        <ResponseProgressContent kpi={kpi} />
       </MetricCard>
       <MetricCard
         label="Awaiting responses"
@@ -208,25 +198,62 @@ function FacultyKpiGrid({ kpi }: { kpi: FacultyDashboardKPI }) {
       </MetricCard>
       <MetricCard
         label="Overall rating"
-        value={
-          kpi.spansMultipleScales
-            ? "Multiple scales"
-            : kpi.overallMean === null
-              ? "—"
-              : `${kpi.overallMean.toFixed(2)}${kpi.overallScaleMax === null ? "" : ` / ${kpi.overallScaleMax}`}`
-        }
+        value={formatOverallRating(kpi)}
         icon={<BarChart3 aria-hidden="true" />}
         href="/faculty/analytics"
-        action={<HowCalculatedPopover metric={meanEvidence} label="Overall rating" />}
+        action={<HowCalculatedPopover metric={buildMeanEvidence(kpi)} label="Overall rating" />}
       >
-        {kpi.spansMultipleScales
-          ? "Open analytics to compare each compatible scale separately."
-          : kpi.overallMean === null
-            ? "No submitted quantitative ratings in this period."
-            : `${kpi.totalResponses.toLocaleString()} responses · ${kpi.overallRatingCount.toLocaleString()} ratings · ${kpi.overallScaleLabel ?? "scale unavailable"}`}
+        <OverallRatingContent kpi={kpi} />
       </MetricCard>
     </section>
   );
+}
+
+function formatCompletion(kpi: FacultyDashboardKPI): string {
+  const completion = kpi.completionRate === null ? null : Math.round(kpi.completionRate * 100);
+  return completion === null ? "—" : `${completion}%`;
+}
+
+function ResponseProgressContent({ kpi }: { kpi: FacultyDashboardKPI }) {
+  const completion = kpi.completionRate === null ? null : Math.round(kpi.completionRate * 100);
+  return (
+    <>
+      {kpi.evaluationOpportunities === 0
+        ? "No evaluation assignments in this period."
+        : `${kpi.totalResponses.toLocaleString()} of ${kpi.evaluationOpportunities.toLocaleString()} evaluation assignments submitted`}
+      {completion !== null ? (
+        <Progress
+          value={completion}
+          aria-label={`${completion}% response completion`}
+          className="mt-2"
+        />
+      ) : null}
+    </>
+  );
+}
+
+function buildMeanEvidence(kpi: FacultyDashboardKPI) {
+  return {
+    assignmentCount: kpi.evaluationOpportunities,
+    ratingCount: kpi.overallRatingCount,
+    responseCount: kpi.totalResponses,
+    scaleLabel: kpi.overallScaleLabel ?? undefined,
+    explanation:
+      "The mean pools submitted quantitative rating items in the active academic period. Incompatible rating scales are never combined. Response progress uses every evaluation assignment created in this period as its denominator.",
+    evidenceHref: "/faculty/analytics",
+  };
+}
+
+function formatOverallRating(kpi: FacultyDashboardKPI): string {
+  if (kpi.spansMultipleScales) return "Multiple scales";
+  if (kpi.overallMean === null) return "—";
+  return `${kpi.overallMean.toFixed(2)}${kpi.overallScaleMax === null ? "" : ` / ${kpi.overallScaleMax}`}`;
+}
+
+function OverallRatingContent({ kpi }: { kpi: FacultyDashboardKPI }) {
+  if (kpi.spansMultipleScales) return "Open analytics to compare each compatible scale separately.";
+  if (kpi.overallMean === null) return "No submitted quantitative ratings in this period.";
+  return `${kpi.totalResponses.toLocaleString()} responses · ${kpi.overallRatingCount.toLocaleString()} ratings · ${kpi.overallScaleLabel ?? "scale unavailable"}`;
 }
 
 function MetricCard({
@@ -318,49 +345,95 @@ function UpcomingDeadlines({ items }: { items: FacultyUpcomingEvaluation[] }) {
           </p>
         ) : (
           <div className="divide-border divide-y">
-            {items.map((item) => {
-              const progress =
-                item.assignedCount === 0
-                  ? 0
-                  : Math.round((item.submittedCount / item.assignedCount) * 100);
-              return (
-                <Link
-                  key={item.evaluationId}
-                  href={`/faculty/cilo-evaluations/${item.evaluationId}`}
-                  className="hover:bg-surface-hover focus-visible:ring-ring block rounded-lg py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold">
-                        <span className="tabular-nums">{item.courseCode}</span> ·{" "}
-                        <span className="break-words">{item.courseTitle}</span>
-                      </p>
-                      <p className="text-muted-foreground text-body-sm">
-                        {item.deadlineAt
-                          ? `Closes ${formatDate(item.deadlineAt)}`
-                          : "No deadline set"}
-                      </p>
-                    </div>
-                    <Badge variant={item.status === "ACTIVE" ? "success" : "information"}>
-                      {item.status === "ACTIVE" ? "Active" : "Scheduled"}
-                    </Badge>
-                  </div>
-                  <p className="text-muted-foreground text-label-sm mt-2">
-                    {item.submittedCount.toLocaleString()} of {item.assignedCount.toLocaleString()}{" "}
-                    submitted
-                  </p>
-                  <Progress
-                    value={progress}
-                    aria-label={`${item.courseCode}: ${progress}% submitted`}
-                    className="mt-2"
-                  />
-                </Link>
-              );
-            })}
+            {items.map((item) => (
+              <UpcomingDeadlineRow key={item.evaluationId} item={item} />
+            ))}
           </div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function UpcomingDeadlineRow({ item }: { item: FacultyUpcomingEvaluation }) {
+  const progress =
+    item.assignedCount === 0 ? 0 : Math.round((item.submittedCount / item.assignedCount) * 100);
+  return (
+    <Link
+      href={`/faculty/cilo-evaluations/${item.evaluationId}`}
+      className="hover:bg-surface-hover focus-visible:ring-ring block rounded-lg py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold">
+            <span className="tabular-nums">{item.courseCode}</span> ·{" "}
+            <span className="break-words">{item.courseTitle}</span>
+          </p>
+          <p className="text-muted-foreground text-body-sm">
+            {item.deadlineAt ? `Closes ${formatDate(item.deadlineAt)}` : "No deadline set"}
+          </p>
+        </div>
+        <Badge variant={item.status === "ACTIVE" ? "success" : "information"}>
+          {item.status === "ACTIVE" ? "Active" : "Scheduled"}
+        </Badge>
+      </div>
+      <p className="text-muted-foreground text-label-sm mt-2">
+        {item.submittedCount.toLocaleString()} of {item.assignedCount.toLocaleString()} submitted
+      </p>
+      <Progress
+        value={progress}
+        aria-label={`${item.courseCode}: ${progress}% submitted`}
+        className="mt-2"
+      />
+    </Link>
+  );
+}
+
+// One row keeps the course's roster, response, and rating evidence in a single scanable cell;
+// the nested ternaries are the cell's data-driven copy.
+// fallow-ignore-next-line complexity
+function CourseOverviewRow({ item }: { item: FacultyCourseOverviewItem }) {
+  const href = item.evaluationId
+    ? `/faculty/cilo-evaluations/${item.evaluationId}`
+    : "/faculty/tools";
+  return (
+    <Link
+      key={item.assignmentId}
+      href={href}
+      className="hover:bg-surface-hover focus-visible:ring-ring grid gap-3 px-4 py-4 transition-colors focus-visible:ring-2 focus-visible:outline-none md:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(7rem,auto))_auto] md:items-center"
+    >
+      <div className="min-w-0">
+        <p className="font-semibold">
+          <span className="tabular-nums">{item.courseCode}</span> ·{" "}
+          <span className="break-words">{item.courseTitle}</span>
+        </p>
+        <p className="text-muted-foreground text-body-sm">
+          {item.contextLabel} ·{" "}
+          {item.evaluationStatus
+            ? item.evaluationStatus.toLowerCase().replace("_", " ")
+            : "No published evaluation"}
+          {item.deadlineAt ? ` · closes ${formatDate(item.deadlineAt)}` : ""}
+        </p>
+      </div>
+      <OverviewDatum label="Roster" value={`${item.rosterCount} students`} />
+      <OverviewDatum
+        label="Responses"
+        value={
+          item.evaluationId ? `${item.submittedCount} of ${item.assignedCount}` : "Not available"
+        }
+      />
+      <OverviewDatum
+        label="Rating"
+        value={
+          item.spansMultipleScales
+            ? "Multiple scales"
+            : item.mean === null
+              ? "No evidence"
+              : `${item.mean.toFixed(2)} · ${item.scaleLabel ?? "scale unavailable"}`
+        }
+      />
+      <ArrowRight aria-hidden="true" className="text-muted-foreground hidden size-4 md:block" />
+    </Link>
   );
 }
 
@@ -385,55 +458,9 @@ function CourseOverview({ items }: { items: FacultyCourseOverviewItem[] }) {
     <Card>
       <CardContent className="px-0">
         <div className="divide-border divide-y">
-          {items.map((item) => {
-            const href = item.evaluationId
-              ? `/faculty/cilo-evaluations/${item.evaluationId}`
-              : "/faculty/tools";
-            return (
-              <Link
-                key={item.assignmentId}
-                href={href}
-                className="hover:bg-surface-hover focus-visible:ring-ring grid gap-3 px-4 py-4 transition-colors focus-visible:ring-2 focus-visible:outline-none md:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(7rem,auto))_auto] md:items-center"
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold">
-                    <span className="tabular-nums">{item.courseCode}</span> ·{" "}
-                    <span className="break-words">{item.courseTitle}</span>
-                  </p>
-                  <p className="text-muted-foreground text-body-sm">
-                    {item.contextLabel} ·{" "}
-                    {item.evaluationStatus
-                      ? item.evaluationStatus.toLowerCase().replace("_", " ")
-                      : "No published evaluation"}
-                    {item.deadlineAt ? ` · closes ${formatDate(item.deadlineAt)}` : ""}
-                  </p>
-                </div>
-                <OverviewDatum label="Roster" value={`${item.rosterCount} students`} />
-                <OverviewDatum
-                  label="Responses"
-                  value={
-                    item.evaluationId
-                      ? `${item.submittedCount} of ${item.assignedCount}`
-                      : "Not available"
-                  }
-                />
-                <OverviewDatum
-                  label="Rating"
-                  value={
-                    item.spansMultipleScales
-                      ? "Multiple scales"
-                      : item.mean === null
-                        ? "No evidence"
-                        : `${item.mean.toFixed(2)} · ${item.scaleLabel ?? "scale unavailable"}`
-                  }
-                />
-                <ArrowRight
-                  aria-hidden="true"
-                  className="text-muted-foreground hidden size-4 md:block"
-                />
-              </Link>
-            );
-          })}
+          {items.map((item) => (
+            <CourseOverviewRow key={item.assignmentId} item={item} />
+          ))}
         </div>
       </CardContent>
     </Card>

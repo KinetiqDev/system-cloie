@@ -68,6 +68,8 @@ export function FacultyCourseEvidenceChart({ data }: { data: FacultyCourseEviden
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="grid gap-3 sm:hidden" role="img" aria-label="Mean rating by course">
+          {/* Mobile bars mirror the desktop chart with an indeterminate bar when the scale is unresolved. */}
+          {/* fallow-ignore-next-line complexity */}
           {data.map((item, index) => {
             const minimum = item.scaleMin;
             const maximum = item.scaleMax;

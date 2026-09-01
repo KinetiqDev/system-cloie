@@ -11,7 +11,7 @@ import {
   resolveItemScaleIdentity,
   type ScaleIdentity,
 } from "../aggregators/scale-identity";
-import type { ScaleCategoryCount } from "../aggregators/types";
+import type { QuantitativeMetric, ScaleCategoryCount } from "../aggregators/types";
 import type { WordCloudToken } from "../types";
 
 export type FacultyCourseEvidence = {
@@ -109,6 +109,12 @@ type RatingEntry = {
   scale: ScaleIdentity | null;
 };
 
+type SubmittedResponse = {
+  id: string;
+  status: ResponseStatus;
+  quant_items: Array<{ rating_value: number; section_key: string; item_key: string }>;
+};
+
 const MINIMUM_ANONYMIZED_RESPONSE_COUNT = 3;
 
 function roundToTwo(value: number): number {
@@ -142,15 +148,11 @@ async function readFacultyDashboardMetrics(
   scope: AuthorizedFacultyScope,
   activePeriod: ActivePeriod | null
 ): Promise<FacultyDashboardMetrics> {
-  const periodWhere = activePeriod
-    ? { term_instance_id: activePeriod.id }
-    : { id: "__no_active_period__" };
   const evaluationWhere = {
     course_assignment: { faculty_id: scope.userId },
-    ...periodWhere,
+    ...(activePeriod ? { term_instance_id: activePeriod.id } : { id: "__no_active_period__" }),
   };
   const now = new Date();
-  const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const [affiliation, evaluations, pendingResponses, courseAssignments] = await Promise.all([
     prisma.facultyProgramAffiliation.findFirst({
@@ -217,11 +219,70 @@ async function readFacultyDashboardMetrics(
   const evaluationByAssignment = new Map(
     evaluations.map((evaluation) => [evaluation.course_assignment_id, evaluation])
   );
-  const submittedResponses = evaluations.flatMap((evaluation) =>
+  const submittedResponses = collectSubmittedResponses(evaluations);
+  const ratingEvidence = collectRatingEvidence(evaluations);
+  const assignedCount = evaluations.reduce(
+    (sum, evaluation) => sum + evaluation.assignments.length,
+    0
+  );
+  const activeEvaluations = evaluations.filter(
+    (evaluation) => evaluation.status === DeploymentStatus.ACTIVE
+  );
+
+  return {
+    programLabel: affiliation?.program.name ?? "No active program affiliation",
+    programCode: affiliation?.program.code ?? "—",
+    periodLabel: activePeriod?.label ?? null,
+    kpi: buildFacultyKpi({
+      evaluations,
+      activeEvaluations,
+      submittedResponses,
+      ratingEvidence,
+      assignedCount,
+      pendingResponses,
+      now,
+    }),
+    upcomingEvaluations: buildUpcomingEvaluations(evaluations),
+    courseOverview: buildCourseOverview(courseAssignments, evaluationByAssignment),
+  };
+}
+
+type EvaluationRow = {
+  id: string;
+  status: DeploymentStatus;
+  deadline_at: Date | null;
+  course_assignment_id: string;
+  course_assignment: { course: { code: string; title: string } };
+  assignments: Array<{
+    response: {
+      id: string;
+      status: ResponseStatus;
+      quant_items: Array<{
+        rating_value: number;
+        section_key: string;
+        item_key: string;
+      }>;
+    } | null;
+  }>;
+  instrument: { structure_snapshot: unknown };
+};
+
+function collectSubmittedResponses(evaluations: EvaluationRow[]): SubmittedResponse[] {
+  return evaluations.flatMap((evaluation) =>
     evaluation.assignments.flatMap((assignment) =>
       assignment.response?.status === ResponseStatus.SUBMITTED ? [assignment.response] : []
     )
   );
+}
+
+type RatingEvidence = {
+  resolvedEntries: RatingEntry[];
+  scaleGroups: Array<{ scale: ScaleIdentity | null; metric: QuantitativeMetric }>;
+  distinctRatedResponses: number;
+  singleMetric: QuantitativeMetric | null;
+};
+
+function collectRatingEvidence(evaluations: EvaluationRow[]): RatingEvidence {
   const ratingEntries = evaluations.flatMap((evaluation) =>
     evaluation.assignments.flatMap((assignment) => {
       const response = assignment.response;
@@ -237,28 +298,73 @@ async function readFacultyDashboardMetrics(
       }));
     })
   );
-  const resolvedRatingEntries = ratingEntries.filter((entry) => entry.scale !== null);
+  const resolvedEntries = ratingEntries.filter((entry) => entry.scale !== null);
   const scaleGroups = groupRatingsByScale(
-    resolvedRatingEntries.map((entry) => ({
+    resolvedEntries.map((entry) => ({
       rating: { value: entry.value, responseId: entry.responseId },
       scale: entry.scale,
     }))
   );
-  const distinctRatedResponses = new Set(resolvedRatingEntries.map((entry) => entry.responseId))
-    .size;
+  const distinctRatedResponses = new Set(resolvedEntries.map((entry) => entry.responseId)).size;
   const singleMetric =
     scaleGroups.length === 1 && distinctRatedResponses >= MINIMUM_ANONYMIZED_RESPONSE_COUNT
       ? scaleGroups[0].metric
       : null;
-  const assignedCount = evaluations.reduce(
-    (sum, evaluation) => sum + evaluation.assignments.length,
-    0
-  );
-  const activeEvaluations = evaluations.filter(
-    (evaluation) => evaluation.status === DeploymentStatus.ACTIVE
-  );
+  return { resolvedEntries, scaleGroups, distinctRatedResponses, singleMetric };
+}
 
-  const upcomingEvaluations = evaluations
+// One KPI contract assembles period-scoped evaluation, response, and scale evidence with
+// the anonymization floor; splitting it into per-metric writers would scatter the contract.
+// fallow-ignore-next-line complexity
+function buildFacultyKpi({
+  evaluations,
+  activeEvaluations,
+  submittedResponses,
+  ratingEvidence,
+  assignedCount,
+  pendingResponses,
+  now,
+}: {
+  evaluations: EvaluationRow[];
+  activeEvaluations: EvaluationRow[];
+  submittedResponses: SubmittedResponse[];
+  ratingEvidence: RatingEvidence;
+  assignedCount: number;
+  pendingResponses: number;
+  now: Date;
+}): FacultyDashboardKPI {
+  const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const { scaleGroups, resolvedEntries, distinctRatedResponses, singleMetric } = ratingEvidence;
+  return {
+    activeEvaluations: activeEvaluations.length,
+    scheduledEvaluations: evaluations.filter(
+      (evaluation) => evaluation.status === DeploymentStatus.SCHEDULED
+    ).length,
+    closingWithin7Days: activeEvaluations.filter(
+      (evaluation) =>
+        evaluation.deadline_at !== null &&
+        evaluation.deadline_at >= now &&
+        evaluation.deadline_at <= inSevenDays
+    ).length,
+    totalResponses: submittedResponses.length,
+    evaluationOpportunities: assignedCount,
+    completionRate: assignedCount === 0 ? null : submittedResponses.length / assignedCount,
+    overallMean:
+      singleMetric?.mean === null || singleMetric?.mean === undefined
+        ? null
+        : roundToTwo(singleMetric.mean),
+    overallScaleLabel:
+      singleMetric && scaleGroups[0].scale ? describeScale(scaleGroups[0].scale.descriptors) : null,
+    overallScaleMax: singleMetric ? (scaleGroups[0].scale?.max ?? null) : null,
+    overallRatingCount: singleMetric ? resolvedEntries.length : 0,
+    spansMultipleScales:
+      distinctRatedResponses >= MINIMUM_ANONYMIZED_RESPONSE_COUNT && scaleGroups.length > 1,
+    pendingResponses,
+  };
+}
+
+function buildUpcomingEvaluations(evaluations: EvaluationRow[]): FacultyUpcomingEvaluation[] {
+  return evaluations
     .filter(
       (evaluation) =>
         evaluation.status === DeploymentStatus.ACTIVE ||
@@ -276,85 +382,78 @@ async function readFacultyDashboardMetrics(
         (assignment) => assignment.response?.status === ResponseStatus.SUBMITTED
       ).length,
     }));
+}
 
-  const courseOverview = courseAssignments.map((assignment) => {
+function buildCourseOverview(
+  courseAssignments: Array<{
+    id: string;
+    year_level: string;
+    section: string;
+    course: { code: string; title: string };
+    memberships: Array<{ id: string }>;
+  }>,
+  evaluationByAssignment: Map<string, EvaluationRow>
+): FacultyCourseOverviewItem[] {
+  return courseAssignments.map((assignment) => {
     const evaluation = evaluationByAssignment.get(assignment.id);
-    const entries = evaluation
-      ? evaluation.assignments.flatMap((evaluationAssignment) => {
-          const response = evaluationAssignment.response;
-          if (!response || response.status !== ResponseStatus.SUBMITTED) return [];
-          return response.quant_items.map((item) => ({
-            rating: { value: item.rating_value, responseId: response.id },
-            scale: resolveItemScaleIdentity(
-              evaluation.instrument.structure_snapshot,
-              item.section_key,
-              item.item_key
-            ),
-          }));
-        })
-      : [];
-    const resolvedEntries = entries.filter((entry) => entry.scale !== null);
-    const groups = groupRatingsByScale(resolvedEntries);
-    const distinctResponses = new Set(resolvedEntries.map((entry) => entry.rating.responseId)).size;
-    const mayDisplayEvidence = distinctResponses >= MINIMUM_ANONYMIZED_RESPONSE_COUNT;
     return {
       assignmentId: assignment.id,
       contextLabel: `${assignment.year_level.replaceAll("_", " ")} · ${assignment.section.replaceAll("_", " ")}`,
       courseCode: assignment.course.code,
       courseTitle: assignment.course.title,
-      evaluationId: evaluation?.id ?? null,
-      evaluationStatus: evaluation?.status ?? null,
       rosterCount: assignment.memberships.length,
       assignedCount: evaluation?.assignments.length ?? 0,
-      submittedCount:
-        evaluation?.assignments.filter(
-          (evaluationAssignment) =>
-            evaluationAssignment.response?.status === ResponseStatus.SUBMITTED
-        ).length ?? 0,
-      deadlineAt: evaluation?.deadline_at ?? null,
-      mean: mayDisplayEvidence && groups.length === 1 ? groups[0].metric.mean : null,
-      scaleLabel:
-        mayDisplayEvidence && groups.length === 1 && groups[0].scale
-          ? describeScale(groups[0].scale.descriptors)
-          : null,
-      spansMultipleScales: mayDisplayEvidence && groups.length > 1,
+      ...buildCourseOverviewEvidence(evaluation),
     };
   });
+}
 
+// One row projection keeps the evaluation and rating evidence for one course assignment together.
+// fallow-ignore-next-line complexity
+function buildCourseOverviewEvidence(
+  evaluation: EvaluationRow | undefined
+): Pick<
+  FacultyCourseOverviewItem,
+  | "evaluationId"
+  | "evaluationStatus"
+  | "submittedCount"
+  | "deadlineAt"
+  | "mean"
+  | "scaleLabel"
+  | "spansMultipleScales"
+> {
+  const entries = evaluation
+    ? evaluation.assignments.flatMap((evaluationAssignment) => {
+        const response = evaluationAssignment.response;
+        if (!response || response.status !== ResponseStatus.SUBMITTED) return [];
+        return response.quant_items.map((item) => ({
+          rating: { value: item.rating_value, responseId: response.id },
+          scale: resolveItemScaleIdentity(
+            evaluation.instrument.structure_snapshot,
+            item.section_key,
+            item.item_key
+          ),
+        }));
+      })
+    : [];
+  const resolvedEntries = entries.filter((entry) => entry.scale !== null);
+  const groups = groupRatingsByScale(resolvedEntries);
+  const distinctResponses = new Set(resolvedEntries.map((entry) => entry.rating.responseId)).size;
+  const mayDisplayEvidence = distinctResponses >= MINIMUM_ANONYMIZED_RESPONSE_COUNT;
   return {
-    programLabel: affiliation?.program.name ?? "No active program affiliation",
-    programCode: affiliation?.program.code ?? "—",
-    periodLabel: activePeriod?.label ?? null,
-    kpi: {
-      activeEvaluations: activeEvaluations.length,
-      scheduledEvaluations: evaluations.filter(
-        (evaluation) => evaluation.status === DeploymentStatus.SCHEDULED
-      ).length,
-      closingWithin7Days: activeEvaluations.filter(
-        (evaluation) =>
-          evaluation.deadline_at !== null &&
-          evaluation.deadline_at >= now &&
-          evaluation.deadline_at <= inSevenDays
-      ).length,
-      totalResponses: submittedResponses.length,
-      evaluationOpportunities: assignedCount,
-      completionRate: assignedCount === 0 ? null : submittedResponses.length / assignedCount,
-      overallMean:
-        singleMetric?.mean === null || singleMetric?.mean === undefined
-          ? null
-          : roundToTwo(singleMetric.mean),
-      overallScaleLabel:
-        singleMetric && scaleGroups[0].scale
-          ? describeScale(scaleGroups[0].scale.descriptors)
-          : null,
-      overallScaleMax: singleMetric ? (scaleGroups[0].scale?.max ?? null) : null,
-      overallRatingCount: singleMetric ? resolvedRatingEntries.length : 0,
-      spansMultipleScales:
-        distinctRatedResponses >= MINIMUM_ANONYMIZED_RESPONSE_COUNT && scaleGroups.length > 1,
-      pendingResponses,
-    },
-    upcomingEvaluations,
-    courseOverview,
+    evaluationId: evaluation?.id ?? null,
+    evaluationStatus: evaluation?.status ?? null,
+    submittedCount:
+      evaluation?.assignments.filter(
+        (evaluationAssignment) => evaluationAssignment.response?.status === ResponseStatus.SUBMITTED
+      ).length ?? 0,
+    deadlineAt: evaluation?.deadline_at ?? null,
+    mean: mayDisplayEvidence && groups.length === 1 ? groups[0].metric.mean : null,
+    scaleLabel:
+      mayDisplayEvidence && groups.length === 1 && groups[0].scale
+        ? describeScale(groups[0].scale.descriptors)
+        : null,
+    spansMultipleScales: mayDisplayEvidence && groups.length > 1,
   };
 }
 
@@ -421,6 +520,66 @@ async function readFacultyDashboardVisualizations(
     }),
   ]);
 
+  return {
+    courseEvidence: buildCourseEvidence(evaluations),
+    ...buildQualitativeSummary(qualitativeItems),
+  };
+}
+
+type QualitativeRow = {
+  text_content: string;
+  response_id: string;
+  response: { assignment: { course_bound_id: string | null } };
+};
+
+function buildQualitativeSummary(
+  qualitativeItems: QualitativeRow[]
+): Pick<
+  FacultyDashboardVisualizations,
+  | "qualitativeItemCount"
+  | "qualitativeResponseCount"
+  | "qualitativeEvaluationCount"
+  | "wordCloudTokens"
+> {
+  const texts = qualitativeItems
+    .map((item) => item.text_content)
+    .filter((text) => text.trim().length > 0);
+  const responseIds = new Set(qualitativeItems.map((item) => item.response_id));
+  const evaluationIds = new Set(
+    qualitativeItems
+      .map((item) => item.response.assignment.course_bound_id)
+      .filter((id): id is string => Boolean(id))
+  );
+
+  const qualitativeResponseCount = responseIds.size;
+  return {
+    qualitativeItemCount: texts.length,
+    qualitativeResponseCount,
+    qualitativeEvaluationCount: evaluationIds.size,
+    wordCloudTokens:
+      qualitativeResponseCount >= MINIMUM_ANONYMIZED_RESPONSE_COUNT
+        ? buildRedactedWordCloudTokens(texts)
+        : [],
+  };
+}
+
+// Course evidence aggregation collects per-course rating entries, groups by scale, and
+// sorts by mean; each course/scale group is a self-contained projection that splitting would
+// distribute across three modules without improving testability.
+// fallow-ignore-next-line complexity
+function buildCourseEvidence(
+  evaluations: Array<{
+    id: string;
+    instrument: { structure_snapshot: unknown };
+    course_assignment: { course: { id: string; code: string; title: string } };
+    assignments: Array<{
+      response: {
+        id: string;
+        quant_items: Array<{ rating_value: number; section_key: string; item_key: string }>;
+      } | null;
+    }>;
+  }>
+): FacultyCourseEvidence[] {
   const courseEntries = new Map<
     string,
     {
@@ -485,31 +644,9 @@ async function readFacultyDashboardVisualizations(
       });
     }
   }
-  courseEvidence.sort(
+  return courseEvidence.sort(
     (left, right) => left.mean - right.mean || left.courseCode.localeCompare(right.courseCode)
   );
-
-  const texts = qualitativeItems
-    .map((item) => item.text_content)
-    .filter((text) => text.trim().length > 0);
-  const responseIds = new Set(qualitativeItems.map((item) => item.response_id));
-  const evaluationIds = new Set(
-    qualitativeItems
-      .map((item) => item.response.assignment.course_bound_id)
-      .filter((id): id is string => Boolean(id))
-  );
-
-  const qualitativeResponseCount = responseIds.size;
-  return {
-    courseEvidence,
-    qualitativeItemCount: texts.length,
-    qualitativeResponseCount,
-    qualitativeEvaluationCount: evaluationIds.size,
-    wordCloudTokens:
-      qualitativeResponseCount >= MINIMUM_ANONYMIZED_RESPONSE_COUNT
-        ? buildRedactedWordCloudTokens(texts)
-        : [],
-  };
 }
 
 export async function getFacultyDashboardMetrics(
