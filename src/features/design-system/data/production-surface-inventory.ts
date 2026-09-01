@@ -2567,6 +2567,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/course-assignments/components/gen-ed-dashboard-assignment-launcher.tsx",
+    disposition: "task",
+    taskId: 12,
+    category: "feature_component",
+  },
+  {
     path: "src/features/course-assignments/components/course-roster-management.tsx",
     disposition: "task",
     taskId: 15,
