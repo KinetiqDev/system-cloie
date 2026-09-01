@@ -21,6 +21,9 @@ function resolveTailwindcssPackagePath(): string {
   }
 }
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const isLoopbackSupabase = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(supabaseUrl);
+
 const nextConfig: NextConfig = {
   output: "standalone",
   devIndicators: {
@@ -46,6 +49,16 @@ const nextConfig: NextConfig = {
       tailwindcss: resolveTailwindcssPackagePath(),
     },
   },
+  ...(isLoopbackSupabase && {
+    async rewrites() {
+      return [
+        {
+          source: "/auth/v1/:path*",
+          destination: `${supabaseUrl}/auth/v1/:path*`,
+        },
+      ];
+    },
+  }),
 };
 
 export default nextConfig;
