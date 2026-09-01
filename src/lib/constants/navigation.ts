@@ -129,8 +129,11 @@ export function getProgramHeadProgramIdFromPathname(pathname: string): string | 
   }
 }
 
-export function getProgramHeadNav(pathname = PROGRAM_HEAD_ENTRY_PATH): NavItem[] {
-  const programId = getProgramHeadProgramIdFromPathname(pathname);
+export function getProgramHeadNav(
+  pathname = PROGRAM_HEAD_ENTRY_PATH,
+  fallbackProgramId: string | null = null
+): NavItem[] {
+  const programId = getProgramHeadProgramIdFromPathname(pathname) ?? fallbackProgramId;
 
   return PROGRAM_HEAD_NAV.map((item) => {
     const childPath = item.programHeadChildPath;
@@ -239,7 +242,11 @@ export function getHighestNavRole(roles: Role[]) {
   return ROLE_NAV_PRECEDENCE.find((role) => roles.includes(role)) ?? null;
 }
 
-export function getMainNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_PATH): NavItem[] {
+export function getMainNavByRoles(
+  roles: Role[],
+  pathname = PROGRAM_HEAD_ENTRY_PATH,
+  fallbackProgramId: string | null = null
+): NavItem[] {
   const highestRole = getHighestNavRole(roles);
 
   switch (highestRole) {
@@ -248,7 +255,7 @@ export function getMainNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_P
     case ROLES.DEAN:
       return DEAN_PRIMARY_NAV;
     case ROLES.PROGRAM_HEAD:
-      return getProgramHeadNav(pathname);
+      return getProgramHeadNav(pathname, fallbackProgramId);
     case ROLES.GEN_ED_COORDINATOR:
       return GEN_ED_COORDINATOR_NAV;
     case ROLES.FACULTY:
@@ -264,7 +271,11 @@ export function getMainNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_P
   }
 }
 
-export function getMobileNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_PATH): NavItem[] {
+export function getMobileNavByRoles(
+  roles: Role[],
+  pathname = PROGRAM_HEAD_ENTRY_PATH,
+  fallbackProgramId: string | null = null
+): NavItem[] {
   const highestRole = getHighestNavRole(roles);
 
   switch (highestRole) {
@@ -273,7 +284,7 @@ export function getMobileNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY
     case ROLES.DEAN:
       return DEAN_PRIMARY_NAV;
     case ROLES.PROGRAM_HEAD:
-      return getProgramHeadNav(pathname);
+      return getProgramHeadNav(pathname, fallbackProgramId);
     case ROLES.GEN_ED_COORDINATOR:
       return GEN_ED_COORDINATOR_NAV;
     case ROLES.FACULTY:
@@ -293,8 +304,12 @@ export function getMobileNavByRoles(roles: Role[], pathname = PROGRAM_HEAD_ENTRY
  * Respective dashboard entry point for the highest-precedence role.
  * Program Heads get their current program's dashboard when one is active.
  */
-export function getDashboardHref(roles: Role[], pathname = PROGRAM_HEAD_ENTRY_PATH): string {
-  const nav = getMainNavByRoles(roles, pathname);
+export function getDashboardHref(
+  roles: Role[],
+  pathname = PROGRAM_HEAD_ENTRY_PATH,
+  fallbackProgramId: string | null = null
+): string {
+  const nav = getMainNavByRoles(roles, pathname, fallbackProgramId);
   return (nav.find((item) => item.name === "Dashboard") ?? nav[0]).href;
 }
 

@@ -2,10 +2,7 @@ import * as React from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
-import {
-  DevRoleSwitcher,
-  DevRoleSwitcherDesktop,
-} from "@/features/auth/components/dev-role-switcher";
+import { DevRoleSwitcherDesktop } from "@/features/auth/components/dev-role-switcher";
 import {
   DemoRoleSwitcher,
   DemoRoleSwitcherDesktop,
@@ -29,8 +26,8 @@ interface AppShellProps {
   demoUsers?: readonly RoleSwitcherUser[];
   appearanceEnabled?: boolean;
   programHeadPrograms?: ProgramHeadProgram[];
+  initialSelectedProgramId?: string | null;
 }
-
 export function AppShell({
   children,
   user,
@@ -40,6 +37,7 @@ export function AppShell({
   demoUsers = [],
   appearanceEnabled = false,
   programHeadPrograms,
+  initialSelectedProgramId,
 }: AppShellProps) {
   const activeRoles = activeRole ? [activeRole] : (roles ?? []);
   const mobileNavMode = getMobileNavMode(activeRoles);
@@ -48,8 +46,7 @@ export function AppShell({
   return (
     <div className="bg-background flex min-h-screen w-full">
       {/* Desktop Sidebar (hidden on mobile/tablet) */}
-      <Sidebar user={user} roles={activeRoles} />
-
+      <Sidebar user={user} roles={activeRoles} activeProgramId={initialSelectedProgramId} />
       {/* Main Content Area */}
       <div
         className={
@@ -64,6 +61,7 @@ export function AppShell({
           mobileNavMode={mobileNavMode}
           roles={activeRoles}
           appearanceEnabled={appearanceEnabled}
+          activeProgramId={initialSelectedProgramId}
         >
           {demoEnabled && (
             <div
@@ -74,8 +72,12 @@ export function AppShell({
               Dedicated demo environment
             </div>
           )}
-          {programHeadPrograms && <ProgramHeadSwitcher programs={programHeadPrograms} />}
-          <DevRoleSwitcher activeEmail={user?.email} />
+          {programHeadPrograms && (
+            <ProgramHeadSwitcher
+              programs={programHeadPrograms}
+              activeProgramId={initialSelectedProgramId}
+            />
+          )}
           <DemoRoleSwitcher enabled={demoEnabled} activeEmail={user?.email} users={demoUsers} />
           <DevRoleSwitcherDesktop activeEmail={user?.email} />
           <DemoRoleSwitcherDesktop

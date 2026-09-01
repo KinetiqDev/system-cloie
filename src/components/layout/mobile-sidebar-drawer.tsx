@@ -25,21 +25,25 @@ import { NavigationRow } from "./navigation-row";
 interface MobileSidebarDrawerProps {
   roles?: Role[];
   user?: { name?: string | null; email?: string | null };
+  activeProgramId?: string | null;
 }
 
-export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerProps) {
+export function MobileSidebarDrawer({
+  roles = [],
+  user,
+  activeProgramId = null,
+}: MobileSidebarDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const dean = getHighestNavRole(roles) === ROLES.DEAN;
   const activeGroup = dean ? getDeanActiveGroup(pathname) : null;
-  const mainNav = getMainNavByRoles(roles, pathname);
+  const mainNav = getMainNavByRoles(roles, pathname, activeProgramId);
   const activeItem = dean
     ? getDeanActiveItem(pathname)
     : getDeepestMatchingNavItem(pathname, mainNav);
   const restoreFocusRef = useRef(true);
-
   useEffect(() => {
     if (!isOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -147,10 +151,10 @@ export function MobileSidebarDrawer({ roles = [], user }: MobileSidebarDrawerPro
         >
           <div className="border-sidebar-border flex min-h-16 shrink-0 items-center justify-between border-b px-5">
             <Link
-              href={getDashboardHref(roles, pathname)}
+              href={getDashboardHref(roles, pathname, activeProgramId)}
               onClick={() => close(false)}
               aria-label="System CLOIE — Dashboard"
-              className="focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center gap-3 rounded-md transition-opacity hover:opacity-80"
+              className="focus-visible:outline-ring flex items-center gap-3 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               <Image
                 src="/logos/cloie-logo.png"

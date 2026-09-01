@@ -109,6 +109,22 @@ describe("navigation helpers", () => {
     ]);
   });
 
+  it("uses fallback Program ID when provided and no context in pathname", () => {
+    expect(
+      getProgramHeadNav("/program-head/profile", "program-2").map((item) => item.href)
+    ).toEqual([
+      "/program-head/programs/program-2/dashboard",
+      "/program-head/programs/program-2/courses",
+      "/program-head/programs/program-2/course-assignments",
+      "/program-head/programs/program-2/outcomes",
+      "/program-head/programs/program-2/tools",
+      "/program-head/programs/program-2/responses",
+      "/program-head/programs/program-2/analytics",
+      "/program-head/programs/program-2/reports",
+      "/program-head/profile",
+    ]);
+  });
+
   it("extracts only the canonical dynamic Program segment", () => {
     expect(getProgramHeadProgramIdFromPathname("/program-head/programs/program-2/tools/new")).toBe(
       "program-2"
@@ -158,16 +174,13 @@ describe("navigation helpers", () => {
     [ROLES.STUDENT, "/student/history"],
     [ROLES.ALUMNI, "/alumni/history"],
     [ROLES.INDUSTRY_PARTNER, "/industry-partner/history"],
-  ])(
-    "labels %s history as Submission History on desktop and History on mobile",
-    (role, href) => {
-      const desktop = getMainNavByRoles([role]);
-      const mobile = getMobileNavByRoles([role]);
+  ])("labels %s history as Submission History on desktop and History on mobile", (role, href) => {
+    const desktop = getMainNavByRoles([role]);
+    const mobile = getMobileNavByRoles([role]);
 
-      expect(desktop.find((item) => item.href === href)?.name).toBe("Submission History");
-      expect(mobile.find((item) => item.href === href)?.name).toBe("History");
-    }
-  );
+    expect(desktop.find((item) => item.href === href)?.name).toBe("Submission History");
+    expect(mobile.find((item) => item.href === href)?.name).toBe("History");
+  });
 
   it("marks deepest Dean route active and keeps its parent group discoverable", () => {
     expect(getDeanActiveItem("/dean/academic-structure/courses/abc/edit")?.name).toBe("Courses");

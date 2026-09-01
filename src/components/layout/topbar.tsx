@@ -26,6 +26,7 @@ interface TopbarProps {
   roles?: Role[];
   children?: React.ReactNode;
   appearanceEnabled?: boolean;
+  activeProgramId?: string | null;
 }
 
 export function Topbar({
@@ -34,6 +35,7 @@ export function Topbar({
   roles,
   children,
   appearanceEnabled = false,
+  activeProgramId = null,
 }: TopbarProps) {
   const router = useRouter();
 
@@ -50,7 +52,7 @@ export function Topbar({
       {/* Left side: branding (mobile) or hamburger trigger */}
       <div className="flex items-center gap-3 lg:hidden">
         {showHamburger ? (
-          <MobileSidebarDrawer roles={roles} user={user} />
+          <MobileSidebarDrawer roles={roles} user={user} activeProgramId={activeProgramId} />
         ) : (
           <>
             <Image

@@ -359,6 +359,121 @@ function formatQuestionTypeLabel(type: QuestionType): string {
   return type === "likert" ? "Likert" : "Guided Open-Ended";
 }
 
+const TEMPLATE_HISTORY_GUARD_KEY = "cloie-template-builder-dirty-entry";
+
+function currentHistoryEntryIndex(): number | undefined {
+  return window.navigation?.currentEntry?.index;
+}
+
+function isTemplateHistoryGuardEntry(marker: string): boolean {
+  const state: unknown = window.history.state;
+  return (
+    typeof state === "object" &&
+    state !== null &&
+    Reflect.get(state, TEMPLATE_HISTORY_GUARD_KEY) === marker
+  );
+}
+
+function useDirtyTemplateNavigationGuard(isDirty: boolean) {
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const confirmDiscard = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!link || event.defaultPrevented || event.button !== 0) return;
+
+      const hasModifier = [event.metaKey, event.ctrlKey, event.shiftKey, event.altKey].some(
+        Boolean
+      );
+      if (hasModifier || link.target || link.origin !== window.location.origin) return;
+      if (window.confirm("Discard unsaved template changes?")) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+    const editorHistoryIndex = currentHistoryEntryIndex();
+    const editorHistoryState = window.history.state;
+    const historyMarker = `${Date.now()}-${Math.random()}`;
+    window.history.replaceState(
+      { ...editorHistoryState, [TEMPLATE_HISTORY_GUARD_KEY]: historyMarker },
+      "",
+      window.location.href
+    );
+
+    let revertingHistoryNavigation = false;
+    let fallbackSearchDirection: 1 | -1 = 1;
+    let fallbackSearchTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearFallbackSearchTimer = () => {
+      if (fallbackSearchTimer === null) return;
+      clearTimeout(fallbackSearchTimer);
+      fallbackSearchTimer = null;
+    };
+    const searchForMarkedEditor = () => {
+      clearFallbackSearchTimer();
+      window.history.go(fallbackSearchDirection);
+      fallbackSearchTimer = setTimeout(() => {
+        fallbackSearchTimer = null;
+        if (fallbackSearchDirection === 1) {
+          fallbackSearchDirection = -1;
+          searchForMarkedEditor();
+          return;
+        }
+        revertingHistoryNavigation = false;
+      }, 0);
+    };
+    const confirmHistoryNavigation = () => {
+      if (revertingHistoryNavigation) {
+        clearFallbackSearchTimer();
+        if (isTemplateHistoryGuardEntry(historyMarker)) {
+          revertingHistoryNavigation = false;
+          return;
+        }
+        searchForMarkedEditor();
+        return;
+      }
+      if (window.confirm("Discard unsaved template changes?")) return;
+
+      const currentHistoryIndex = currentHistoryEntryIndex();
+      if (editorHistoryIndex !== undefined && currentHistoryIndex !== undefined) {
+        const stepsBackToEditor = editorHistoryIndex - currentHistoryIndex;
+        if (stepsBackToEditor === 0) return;
+        revertingHistoryNavigation = true;
+        window.history.go(stepsBackToEditor);
+        return;
+      }
+
+      // Without Navigation API indices, search forward first. A canceled Back
+      // traversal reaches the marked editor directly. A canceled Forward
+      // traversal reaches the forward boundary, then searches backward until
+      // the marked editor entry is restored.
+      revertingHistoryNavigation = true;
+      fallbackSearchDirection = 1;
+      searchForMarkedEditor();
+    };
+
+    window.addEventListener("popstate", confirmHistoryNavigation);
+    document.addEventListener("click", confirmDiscard, true);
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => {
+      document.removeEventListener("click", confirmDiscard, true);
+      window.removeEventListener("popstate", confirmHistoryNavigation);
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+      clearFallbackSearchTimer();
+      if (isTemplateHistoryGuardEntry(historyMarker)) {
+        window.history.replaceState(editorHistoryState, "", window.location.href);
+      }
+    };
+  }, [isDirty]);
+}
+
+function draftSignature(value: unknown): string {
+  return JSON.stringify(value);
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 // fallow-ignore-next-line complexity
@@ -417,6 +532,35 @@ export function TemplateBuilder({
     }
     return map;
   });
+  const [initialDraftSignature] = useState(() =>
+    draftSignature({
+      boundCourseId,
+      boundMajorId,
+      boundProgramId,
+      ciloQuestionBindings,
+      description,
+      isActive,
+      isFacultyAccessible,
+      name,
+      ploQuestionBindings,
+      sections,
+      templateType,
+    })
+  );
+  const currentDraftSignature = draftSignature({
+    boundCourseId,
+    boundMajorId,
+    boundProgramId,
+    ciloQuestionBindings,
+    description,
+    isActive,
+    isFacultyAccessible,
+    name,
+    ploQuestionBindings,
+    sections,
+    templateType,
+  });
+  useDirtyTemplateNavigationGuard(currentDraftSignature !== initialDraftSignature);
 
   /** Archived PLOs bound to questions: rendered as removable archived chips. */
   const archivedPloLookup = useMemo(() => {

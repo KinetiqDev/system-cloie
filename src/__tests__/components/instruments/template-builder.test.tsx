@@ -247,7 +247,9 @@ describe("TemplateBuilder", () => {
       expect(screen.getByText(/saved cilo\(s\) available for binding/i)).toBeInTheDocument();
     });
     expect(screen.getByText("CILO Binding")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("IT401 - Capstone 1 (BSIT - Shared Program Course)")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue("IT401 - Capstone 1 (BSIT - Shared Program Course)")
+    ).toBeInTheDocument();
     expect(screen.getByText("CILO 1: Apply project planning principles")).toBeInTheDocument();
     expect(screen.queryByText("program-1")).not.toBeInTheDocument();
     expect(screen.queryByText("course-1")).not.toBeInTheDocument();
@@ -414,6 +416,261 @@ describe("TemplateBuilder", () => {
       expect(pushMock).toHaveBeenCalledWith("/program-head/tools");
     });
     expect(screen.queryByText("Template saved successfully.")).not.toBeInTheDocument();
+  });
+
+  test.each([
+    { label: "Back", destinationIndex: 2, expectedReturnDelta: 1 },
+    { label: "Forward", destinationIndex: 4, expectedReturnDelta: -1 },
+  ])(
+    "requires confirmation and restores a dirty template after browser $label navigation is canceled",
+    ({ destinationIndex, expectedReturnDelta }) => {
+      const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
+      const originalState = window.history.state;
+      const originalUrl = window.location.href;
+      let historyIndex = 3;
+      Object.defineProperty(window, "navigation", {
+        configurable: true,
+        get: () => ({ currentEntry: { index: historyIndex } }),
+      });
+      const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+      try {
+        render(
+          <TemplateBuilder
+            programLabel="BSIT"
+            onSave={vi.fn().mockResolvedValue({ success: true })}
+            initialData={{
+              id: "template-1",
+              name: "Saved Tool",
+              description: "",
+              template_type: "PROGRAM_WIDE",
+              is_active: true,
+              is_faculty_accessible: false,
+              structure: [],
+            }}
+          />
+        );
+        fireEvent.change(screen.getByLabelText("Template Name"), {
+          target: { value: "Unsaved Tool" },
+        });
+        historyIndex = destinationIndex;
+
+        window.dispatchEvent(new PopStateEvent("popstate"));
+
+        expect(confirm).toHaveBeenCalledWith("Discard unsaved template changes?");
+        expect(historyGo).toHaveBeenCalledWith(expectedReturnDelta);
+      } finally {
+        confirm.mockRestore();
+        historyGo.mockRestore();
+        window.history.replaceState(originalState, "", originalUrl);
+        if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+        else Reflect.deleteProperty(window, "navigation");
+      }
+    }
+  );
+
+  test("restores a rejected Forward traversal when Navigation API indices are unavailable", () => {
+    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
+    const originalState = window.history.state;
+    const originalUrl = window.location.href;
+    Reflect.deleteProperty(window, "navigation");
+    vi.useFakeTimers();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          initialData={{
+            id: "template-1",
+            name: "Saved Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [],
+          }}
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      expect(historyGo).toHaveBeenNthCalledWith(1, 1);
+      act(() => vi.runAllTimers());
+
+      expect(historyGo).toHaveBeenNthCalledWith(2, -1);
+    } finally {
+      confirm.mockRestore();
+      historyGo.mockRestore();
+      vi.useRealTimers();
+      window.history.replaceState(originalState, "", originalUrl);
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+    }
+  });
+
+  test("restores a rejected Back traversal when Navigation API indices are unavailable", () => {
+    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
+    const originalState = window.history.state;
+    const originalUrl = window.location.href;
+    Reflect.deleteProperty(window, "navigation");
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          initialData={{
+            id: "template-1",
+            name: "Saved Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [],
+          }}
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+      window.history.replaceState({ page: "origin" }, "", "/origin");
+
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      expect(historyGo).toHaveBeenNthCalledWith(1, 1);
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(historyGo).toHaveBeenNthCalledWith(2, 1);
+    } finally {
+      confirm.mockRestore();
+      historyGo.mockRestore();
+      window.history.replaceState(originalState, "", originalUrl);
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+    }
+  });
+
+  test("finds the dirty editor after rejecting Forward with multiple later entries and no Navigation API", () => {
+    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
+    const originalState = window.history.state;
+    const originalUrl = window.location.href;
+    Reflect.deleteProperty(window, "navigation");
+    vi.useFakeTimers();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          initialData={{
+            id: "template-1",
+            name: "Saved Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [],
+          }}
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+      const dirtyEditorState = window.history.state;
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      window.history.replaceState({ page: "later" }, "", "/later");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      act(() => vi.advanceTimersToNextTimer());
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      window.history.replaceState(dirtyEditorState, "", "/editor");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(historyGo.mock.calls.map(([delta]) => delta)).toEqual([1, 1, -1, -1]);
+    } finally {
+      confirm.mockRestore();
+      historyGo.mockRestore();
+      vi.useRealTimers();
+      window.history.replaceState(originalState, "", originalUrl);
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+    }
+  });
+
+  test("allows confirmed browser-history navigation away from a dirty template", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          initialData={{
+            id: "template-1",
+            name: "Saved Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [],
+          }}
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(confirm).toHaveBeenCalledWith("Discard unsaved template changes?");
+      expect(historyGo).not.toHaveBeenCalled();
+    } finally {
+      confirm.mockRestore();
+      historyGo.mockRestore();
+    }
+  });
+
+  test("blocks application links until dirty template changes are confirmed", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          toolsHref="/program-head/tools"
+          initialData={{
+            id: "template-1",
+            name: "Saved Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [],
+          }}
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+
+      fireEvent.click(screen.getByRole("link", { name: "Back to Tools" }));
+
+      expect(confirm).toHaveBeenCalledWith("Discard unsaved template changes?");
+    } finally {
+      confirm.mockRestore();
+    }
   });
 
   test("does not redirect program head saves on failure and shows the error", async () => {
@@ -602,11 +859,11 @@ describe("TemplateBuilder", () => {
       "section-a:opaque",
     ]);
     expect(saved.map((section: { order: number }) => section.order)).toEqual([0, 1]);
-    expect(saved.flatMap((section: { questions: { order: number }[] }) => section.questions.map((q) => q.order))).toEqual([
-      0,
-      0,
-      1,
-    ]);
+    expect(
+      saved.flatMap((section: { questions: { order: number }[] }) =>
+        section.questions.map((q) => q.order)
+      )
+    ).toEqual([0, 0, 1]);
   });
 
   test("reorders questions only within their section and keeps handles accessible", async () => {
@@ -638,7 +895,9 @@ describe("TemplateBuilder", () => {
               title: "Section B",
               description: undefined,
               order: 1,
-              questions: [{ key: "question-b-1", prompt: "B1", type: "likert", order: 0, required: true }],
+              questions: [
+                { key: "question-b-1", prompt: "B1", type: "likert", order: 0, required: true },
+              ],
             },
           ],
         }}
@@ -674,8 +933,14 @@ describe("TemplateBuilder", () => {
       "title",
       "Drag section: Section A"
     );
-    expect(screen.getByRole("button", { name: "Drag question 1 in section 1" })).toBeInTheDocument();
-    expect(screen.getAllByPlaceholderText("Enter question").every((input) => !(input as HTMLInputElement).disabled)).toBe(true);
+    expect(
+      screen.getByRole("button", { name: "Drag question 1 in section 1" })
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByPlaceholderText("Enter question")
+        .every((input) => !(input as HTMLInputElement).disabled)
+    ).toBe(true);
   });
 
   test("keeps a failed-save error visible after a rejected reorder", async () => {
@@ -697,7 +962,9 @@ describe("TemplateBuilder", () => {
               title: "Section A",
               description: undefined,
               order: 0,
-              questions: [{ key: "question-a", prompt: "A", type: "likert", order: 0, required: true }],
+              questions: [
+                { key: "question-a", prompt: "A", type: "likert", order: 0, required: true },
+              ],
             },
           ],
         }}
@@ -812,19 +1079,25 @@ describe("TemplateBuilder", () => {
 
     expect(screen.getByText("PLO Binding")).toBeInTheDocument();
     expect(screen.getByText("Select PLOs…")).toBeInTheDocument();
-    expect(screen.getByText(/must be bound to at least one PLO before publishing/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/must be bound to at least one PLO before publishing/i)
+    ).toBeInTheDocument();
 
     // The trigger button is labelled by the "PLO Binding" label
     const trigger = screen.getByRole("button", { name: "PLO Binding" });
     fireEvent.click(trigger);
-    const checkbox = await screen.findByRole("checkbox", { name: /PLO-1: Apply discipline knowledge/ });
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /PLO-1: Apply discipline knowledge/,
+    });
     fireEvent.click(checkbox);
     fireEvent.click(trigger); // close the picker
 
     // Chip appears; warning clears
     expect(screen.getByText("PLO-1")).toBeInTheDocument();
     expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
-    expect(screen.queryByText(/must be bound to at least one PLO before publishing/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/must be bound to at least one PLO before publishing/i)
+    ).not.toBeInTheDocument();
 
     // Save payload carries the binding keyed to the likert question
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
@@ -850,9 +1123,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSIT"
         onSave={onSave}
         ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
-        initialPloBindings={[
-          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
-        ]}
+        initialPloBindings={[{ ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -915,9 +1186,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSIT"
         onSave={onSave}
         ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
-        initialPloBindings={[
-          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
-        ]}
+        initialPloBindings={[{ ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -978,9 +1247,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSIT"
         onSave={onSave}
         ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
-        initialPloBindings={[
-          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
-        ]}
+        initialPloBindings={[{ ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1203,9 +1470,7 @@ describe("TemplateBuilder", () => {
 
   test("shows the PLO picker when program heads copy an institutional baseline", async () => {
     const onSaveAsCopy = vi.fn().mockResolvedValue({ success: true, data: { id: "copy-1" } });
-    const ploOptions = [
-      { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
-    ];
+    const ploOptions = [{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }];
 
     const { unmount } = render(
       <TemplateBuilder
@@ -1392,11 +1657,17 @@ describe("TemplateBuilder", () => {
     fireEvent.change(screen.getByPlaceholderText(/search plos/i), {
       target: { value: "skills" },
     });
-    expect(screen.getByRole("checkbox", { name: /PLO-2: Demonstrate professional skills/ })).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox", { name: /PLO-1: Apply discipline knowledge/ })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /PLO-2: Demonstrate professional skills/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: /PLO-1: Apply discipline knowledge/ })
+    ).not.toBeInTheDocument();
 
     // Selecting inside the drawer shows a chip after closing
-    fireEvent.click(screen.getByRole("checkbox", { name: /PLO-2: Demonstrate professional skills/ }));
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /PLO-2: Demonstrate professional skills/ })
+    );
     fireEvent.click(screen.getByRole("button", { name: "Close PLO binding" }));
     expect(screen.getByText("PLO-2")).toBeInTheDocument();
     expect(screen.getByText("1 PLO selected")).toBeInTheDocument();

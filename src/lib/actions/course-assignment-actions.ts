@@ -58,6 +58,7 @@ function revalidateCourseAssignmentRoutes(programIds?: string | string[]) {
   revalidatePath("/secretary/course-assignments");
   revalidatePath("/dean/academic-structure/course-assignments");
   revalidatePath("/gen-ed-coordinator/course-assignments");
+  revalidatePath("/gen-ed-coordinator/dashboard");
   revalidatePath("/faculty/course-rosters");
 }
 

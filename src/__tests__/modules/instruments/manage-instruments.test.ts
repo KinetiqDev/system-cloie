@@ -88,9 +88,8 @@ describe("manage-instruments structure persistence", () => {
         ],
       },
     ];
-    const { updateBaselineTemplateWithStructure } = await import(
-      "@/features/instruments/services/manage-instruments"
-    );
+    const { updateBaselineTemplateWithStructure } =
+      await import("@/features/instruments/services/manage-instruments");
 
     const result = await updateBaselineTemplateWithStructure({
       id: "baseline-1",
@@ -125,9 +124,8 @@ describe("manage-instruments structure persistence", () => {
       studentProfileId: null,
       profileGate: null,
     });
-    const { updateBaselineTemplateWithStructure } = await import(
-      "@/features/instruments/services/manage-instruments"
-    );
+    const { updateBaselineTemplateWithStructure } =
+      await import("@/features/instruments/services/manage-instruments");
 
     const result = await updateBaselineTemplateWithStructure({
       id: "baseline-1",

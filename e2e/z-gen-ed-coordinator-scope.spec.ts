@@ -24,7 +24,7 @@ test.describe("General Education Coordinator Scope Verification", () => {
     // Coordinator enters role-owned dashboard (no program assignment required).
     await page.goto("/gen-ed-coordinator/dashboard");
     await expect(
-      page.getByRole("heading", { name: "Gen Ed Coordinator Dashboard" }).first()
+      page.getByRole("heading", { name: "General Education overview" }).first()
     ).toBeVisible({
       timeout: 15_000,
     });

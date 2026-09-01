@@ -23,14 +23,20 @@ import type { ProgramHeadProgram } from "@/features/auth/services/resolve-progra
  * the same page. Renders nothing when the Program Head manages at most one
  * Program or when no Program context is selected in the pathname.
  */
-export function ProgramHeadSwitcher({ programs }: { programs: ProgramHeadProgram[] }) {
+export function ProgramHeadSwitcher({
+  programs,
+  activeProgramId: explicitActiveProgramId,
+}: {
+  programs: ProgramHeadProgram[];
+  activeProgramId?: string | null;
+}) {
   const pathname = usePathname();
-  const activeProgramId = getProgramHeadProgramIdFromPathname(pathname);
+  const activeProgramId =
+    getProgramHeadProgramIdFromPathname(pathname) ?? explicitActiveProgramId ?? null;
 
   if (!activeProgramId || programs.length <= 1) {
     return null;
   }
-
   const activeProgram = programs.find((program) => program.id === activeProgramId);
   if (!activeProgram) {
     return null;

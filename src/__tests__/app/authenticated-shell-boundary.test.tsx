@@ -30,12 +30,17 @@ vi.mock("@/features/design-system/services/resolve-appearance-availability", () 
   resolveAppearanceAvailability: resolveAppearanceAvailabilityMock,
 }));
 
-const { resolveProgramHeadEntryMock } = vi.hoisted(() => ({
+const { resolveProgramHeadEntryMock, readSelectedProgramCookieMock } = vi.hoisted(() => ({
   resolveProgramHeadEntryMock: vi.fn(),
+  readSelectedProgramCookieMock: vi.fn(),
 }));
 
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadEntry: resolveProgramHeadEntryMock,
+}));
+
+vi.mock("@/features/auth/services/selected-program-cookie", () => ({
+  readSelectedProgramCookie: readSelectedProgramCookieMock,
 }));
 
 vi.mock("@/components/layout/app-shell", () => ({
@@ -46,6 +51,7 @@ vi.mock("@/components/layout/app-shell", () => ({
     demoUsers,
     appearanceEnabled,
     programHeadPrograms,
+    initialSelectedProgramId,
   }: {
     children: React.ReactNode;
     user?: { name?: string | null; email?: string | null } | undefined;
@@ -53,6 +59,7 @@ vi.mock("@/components/layout/app-shell", () => ({
     demoUsers?: readonly { email: string }[];
     appearanceEnabled?: boolean;
     programHeadPrograms?: readonly { code: string }[];
+    initialSelectedProgramId?: string | null;
   }) => (
     <div
       data-demo-enabled={String(demoEnabled)}
@@ -61,6 +68,7 @@ vi.mock("@/components/layout/app-shell", () => ({
       data-user-name={user?.name ?? ""}
       data-user-present={user ? "true" : "false"}
       data-program-head-programs={programHeadPrograms?.length ?? 0}
+      data-initial-selected-program-id={initialSelectedProgramId ?? ""}
     >
       {children}
     </div>
