@@ -29,9 +29,13 @@ Operator: tugeru
 - Internal port: 3000
 - Domain: https://system-cloie.app
 - Coolify origin route: http://system-cloie.app, because Cloudflare Tunnel terminates HTTPS
-- Auto deploy: enabled
-- Push webhook: configured on Coolify (secret present, Auto Deploy ON); GitHub hook pending
-  `~/.config/system-cloie/cloie-webhook-wizard.sh` run (runbook §38 "GitHub push webhook")
+- Auto deploy: enabled (Coolify resource setting)
+- Push webhook: NOT operational end-to-end. Coolify half is configured
+  (secret present, Auto Deploy ON), but the Cloudflare tunnel route and the
+  GitHub repository hook are not yet provisioned, so pushes to main do NOT
+  trigger deployments yet. Run `~/.config/system-cloie/cloie-webhook-wizard.sh`
+  (runbook §38 "GitHub push webhook"), verify one successful webhook delivery,
+  then update this entry to active with the verified deployment reference.
 - Health path: /api/health
 
 ## Supabase
