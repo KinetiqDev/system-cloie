@@ -1328,6 +1328,46 @@ Branch: main
 
 Coolify GitHub App supports deployment on new commits.
 
+#### GitHub push webhook
+
+Auto Deploy needs GitHub to notify Coolify. The repository webhook is the wiring
+that makes the flow above real. Current topology (beta):
+
+```text
+GitHub push to main
+  |
+  v
+webhook.system-cloie.app  (Cloudflare Tunnel, HTTP -> localhost:8000)
+  |
+  v
+Coolify POST /webhooks/source/github/events/manual
+  validates X-Hub-Signature-256 against the app's
+  manual_webhook_secret_github, matches repo + branch main, deploys
+```
+
+Configuration facts:
+
+```text
+Repository webhook: https://github.com/KinetiqDev/system-cloie/settings/hooks
+Payload URL:        https://webhook.system-cloie.app/webhooks/source/github/events/manual
+Content type:       application/json
+Events:             Just the push event
+Secret location:    Coolify (App > Advanced, manual_webhook_secret_github) and
+                    /home/tugeru/.config/system-cloie/deploy.env as GITHUB_WEBHOOK_SECRET
+```
+
+Rules:
+
+- The webhook hostname routes only to Coolify's webhook endpoint. Coolify
+  administration (:8000) must stay off the public Internet otherwise.
+- Setup and verification are scripted:
+  `/home/tugeru/.config/system-cloie/cloie-webhook-wizard.sh` (idempotent).
+- The GitHub "ping" delivery only proves reachability; the signature is proven
+  by a real push. GitHub's webhook "Test delivery" (redelivers the latest push)
+  is a safe end-to-end test: it redeploys the currently deployed commit.
+- A push whose commit messages all contain `[skip ci]` or `[skip cd]` is
+  acknowledged but not deployed.
+
 No Supabase redeployment should occur for normal application commits.
 
 ### Manual application redeploy
@@ -1723,6 +1763,19 @@ branch main
 Coolify webhook/Git integration status
 ```
 
+Webhook-specific checks for "New code push does not redeploy":
+
+```text
+GitHub hook exists and is active (repo Settings > Webhooks)
+Recent Deliveries show push events with a green check
+Cloudflare tunnel public hostname for the webhook subdomain exists
+Cloudflare response for the webhook host is Coolify, not 404
+manual_webhook_secret_github matches the GitHub hook secret exactly
+```
+
+If the secret is lost or exposed, rotate it in Coolify (App > Advanced) and set
+the same value on the GitHub hook; re-run the wizard to sync both sides.
+
 ## 49. Deployment inventory
 
 Agent must write or update a non-secret inventory after first successful deployment.
@@ -1744,11 +1797,13 @@ Last verified:
 Operator:
 
 ## Host
+
 - Hostname:
 - Ubuntu version:
 - Tailscale IP:
 
 ## Coolify
+
 - Context: home-lab
 - Project UUID:
 - Environment:
@@ -1756,6 +1811,7 @@ Operator:
 - Destination/network:
 
 ## System CLOIE App
+
 - Resource name:
 - Resource UUID:
 - Repository:
@@ -1767,6 +1823,7 @@ Operator:
 - Health path: /api/health
 
 ## Supabase
+
 - Resource name:
 - Resource UUID:
 - Repository: system-cloie-infra
@@ -1781,11 +1838,13 @@ Operator:
 - Maintenance Postgres host port:
 
 ## Cloudflare
+
 - Tunnel name: system-cloie-homelab
 - App route: system-cloie.app -> http://localhost:80
 - API route: api.system-cloie.app -> http://localhost:80
 
 ## Secrets
+
 - Supabase secrets: configured in Coolify
 - Google OAuth: configured in Supabase resource
 - CONFIRMATION_SECRET: configured
@@ -1793,12 +1852,14 @@ Operator:
 - BOOTSTRAP_SECRETARY_EMAIL: configured
 
 ## Backups
+
 - PostgreSQL backup path: /var/backups/system-cloie/postgres
 - Storage backup path: /var/backups/system-cloie/storage
 - Last database backup:
 - Last restore drill:
 
 ## Verification
+
 - App health:
 - Supabase Auth:
 - Google OAuth:
