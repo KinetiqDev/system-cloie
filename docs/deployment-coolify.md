@@ -1337,7 +1337,8 @@ that makes the flow above real. Current topology (beta):
 GitHub push to main
   |
   v
-webhook.system-cloie.app  (Cloudflare Tunnel, HTTP -> localhost:8000)
+webhook.system-cloie.app/webhooks/source/github/events/manual
+  (Cloudflare Tunnel rule: hostname + EXACT path, HTTP -> localhost:8000)
   |
   v
 Coolify POST /webhooks/source/github/events/manual
@@ -1358,10 +1359,22 @@ Secret location:    Coolify (App > Advanced, manual_webhook_secret_github) and
 
 Rules:
 
-- The webhook hostname routes only to Coolify's webhook endpoint. Coolify
-  administration (:8000) must stay off the public Internet otherwise.
+- The tunnel rule MUST carry the exact path. A Cloudflare public-hostname rule
+  without a path forwards EVERY path of that hostname to the origin, which
+  would expose Coolify administration (:8000). Configuration:
+
+```text
+1. hostname webhook.system-cloie.app
+   path /webhooks/source/github/events/manual -> http://localhost:8000
+2. catch-all rule for the same hostname -> service http_status:404
+```
+
+Verify after setup: the webhook URL returns a Coolify response, while `/`,
+`/api/docs`, and `/dashboard` on the same hostname return 404.
+
 - Setup and verification are scripted:
-  `/home/tugeru/.config/system-cloie/cloie-webhook-wizard.sh` (idempotent).
+  `/home/tugeru/.config/system-cloie/cloie-webhook-wizard.sh` (idempotent; the
+  verification stage probes both the webhook path and the deny fallback).
 - The GitHub "ping" delivery only proves reachability; the signature is proven
   by a real push. GitHub's webhook "Test delivery" (redelivers the latest push)
   is a safe end-to-end test: it redeploys the currently deployed commit.
@@ -1756,20 +1769,11 @@ migration command uses repository remote workflow
 Check:
 
 ```text
-GitHub App installation
-repository permissions
-Auto Deploy enabled
-branch main
-Coolify webhook/Git integration status
-```
-
-Webhook-specific checks for "New code push does not redeploy":
-
-```text
 GitHub hook exists and is active (repo Settings > Webhooks)
 Recent Deliveries show push events with a green check
-Cloudflare tunnel public hostname for the webhook subdomain exists
-Cloudflare response for the webhook host is Coolify, not 404
+Cloudflare tunnel rule exists with hostname AND path /webhooks/source/github/events/manual
+Cloudflare tunnel catch-all for that hostname returns 404
+webhook URL reaches Coolify; /api/docs and /dashboard on the hostname return 404
 manual_webhook_secret_github matches the GitHub hook secret exactly
 ```
 
