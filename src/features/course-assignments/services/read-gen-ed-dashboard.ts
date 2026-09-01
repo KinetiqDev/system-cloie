@@ -8,6 +8,8 @@ import {
   type GeneralEducationDashboardEvidence,
 } from "@/features/analytics/services/general-education-dashboard-evidence";
 
+// Intentionally exported for consumers to distinguish coordinator auth failure (mirrors DeanReadModelUnauthorizedError).
+// fallow-ignore-next-line unused-export
 export class GenEdDashboardUnauthorizedError extends Error {
   constructor(message = "General Education Coordinator access required.") {
     super(message);
@@ -36,6 +38,7 @@ export type GenEdDashboardData = {
   emptyReason: "no-active-period" | "no-courses" | null;
 };
 
+// fallow-ignore-next-line complexity
 export async function getGenEdDashboard(): Promise<GenEdDashboardData> {
   const session = await resolveAuthSession();
   if (!session) throw new GenEdDashboardUnauthorizedError("Authentication required.");

@@ -154,7 +154,7 @@ export function MobileSidebarDrawer({
               href={getDashboardHref(roles, pathname, activeProgramId)}
               onClick={() => close(false)}
               aria-label="System CLOIE — Dashboard"
-              className="focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center gap-3 rounded-md transition-opacity hover:opacity-80"
+              className="focus-visible:outline-ring flex items-center gap-3 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               <Image
                 src="/logos/cloie-logo.png"

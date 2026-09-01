@@ -78,15 +78,9 @@ describe("ProgramHeadSwitcher", () => {
     await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
 
     const beedItem = screen.getByRole("menuitem", { name: /BEED/ });
-    expect(beedItem).toHaveAttribute(
-      "href",
-      "/program-head/programs/program-1/analytics"
-    );
+    expect(beedItem).toHaveAttribute("href", "/program-head/programs/program-1/analytics");
     const bshmItem = screen.getByRole("menuitem", { name: /BSHM/ });
-    expect(bshmItem).toHaveAttribute(
-      "href",
-      "/program-head/programs/program-3/analytics"
-    );
+    expect(bshmItem).toHaveAttribute("href", "/program-head/programs/program-3/analytics");
   });
 
   it("links to the other Program's dashboard from the Program root path", async () => {

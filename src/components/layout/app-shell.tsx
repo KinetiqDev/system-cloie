@@ -2,10 +2,7 @@ import * as React from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
-import {
-  DevRoleSwitcher,
-  DevRoleSwitcherDesktop,
-} from "@/features/auth/components/dev-role-switcher";
+import { DevRoleSwitcherDesktop } from "@/features/auth/components/dev-role-switcher";
 import {
   DemoRoleSwitcher,
   DemoRoleSwitcherDesktop,

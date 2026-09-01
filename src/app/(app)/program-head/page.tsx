@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { ProgramHeadNoAssignmentState, ProgramHeadSelector } from "@/features/auth/components/program-head-selector";
+import {
+  ProgramHeadNoAssignmentState,
+  ProgramHeadSelector,
+} from "@/features/auth/components/program-head-selector";
 import { resolveProgramHeadEntry } from "@/features/auth/services/resolve-program-head-context";
 import { readSelectedProgramCookie } from "@/features/auth/services/selected-program-cookie";
 import { buildProgramHeadDashboardPath } from "@/lib/constants/program-head-routes";

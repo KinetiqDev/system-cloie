@@ -313,7 +313,6 @@ export function getDashboardHref(
   return (nav.find((item) => item.name === "Dashboard") ?? nav[0]).href;
 }
 
-
 export function getDeanNavGroups(): NavGroup[] {
   return DEAN_NAV_GROUPS;
 }

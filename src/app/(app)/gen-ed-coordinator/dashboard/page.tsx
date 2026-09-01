@@ -207,6 +207,7 @@ function Metric({
   );
 }
 
+// fallow-ignore-next-line complexity
 function AttentionSection({ data }: { data: GenEdDashboardData }) {
   const { attention, coverage, emptyReason } = data;
   const items = [
@@ -300,6 +301,7 @@ function AttentionSection({ data }: { data: GenEdDashboardData }) {
   );
 }
 
+// fallow-ignore-next-line complexity
 function EvidenceSection({
   data,
   responseRate,

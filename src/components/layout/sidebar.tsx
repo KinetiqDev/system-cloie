@@ -49,7 +49,7 @@ export function Sidebar({ user, roles = [], activeProgramId = null }: SidebarPro
         <Link
           href={getDashboardHref(roles, pathname, activeProgramId)}
           aria-label="System CLOIE — Dashboard"
-          className="focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center gap-3 rounded-md transition-opacity hover:opacity-80"
+          className="focus-visible:outline-ring flex items-center gap-3 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <Image
             src="/logos/cloie-logo.png"
@@ -170,36 +170,83 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
         <Link
           href={dashboard.href}
           aria-label="System CLOIE — Dashboard"
-          className="focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-2 flex items-center gap-3 rounded-md transition-opacity hover:opacity-80"
+          className="focus-visible:outline-ring flex items-center gap-3 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <Image src="/logos/cloie-logo.png" alt="System CLOIE Logo" width={486} height={513} className={LOGO_CLASS_NAME} />
-          <span className="text-title-lg text-link ml-3 hidden font-bold tracking-tight lg:inline">System CLOIE</span>
+          <Image
+            src="/logos/cloie-logo.png"
+            alt="System CLOIE Logo"
+            width={486}
+            height={513}
+            className={LOGO_CLASS_NAME}
+          />
+          <span className="text-title-lg text-link ml-3 hidden font-bold tracking-tight lg:inline">
+            System CLOIE
+          </span>
         </Link>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6 lg:px-4" aria-label="Dean navigation">
+      <nav
+        className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6 lg:px-4"
+        aria-label="Dean navigation"
+      >
         {renderLink(dashboard, true)}
-          {groups.map((group) => {
-            const active = activeItem?.href === group.href && activeItem.name === group.name;
-            const expanded =
-              activeGroup?.href === group.href ||
-              (openGroup?.href === group.href && openGroup.pathname === pathname);
-            return (
-              <div key={group.href}>
-                <div className="flex items-center gap-1">
-                  <NavigationRow href={group.href} active={active} rail aria-current={active ? "page" : undefined} title={group.name} className="flex-1">
-                    <group.icon className="size-5 shrink-0" aria-hidden="true" /><span className="md:hidden lg:inline">{group.name}</span>
-                  </NavigationRow>
-                  <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${group.name}`} aria-expanded={expanded} disabled={activeGroup !== null} onClick={() => setOpenGroup(expanded ? null : { href: group.href, pathname })} className="hidden min-h-11 min-w-11 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-ring md:flex lg:min-w-11">
-                    <ChevronDown className={cn("size-4 transition-transform", expanded && "rotate-180")} aria-hidden="true" />
-                  </button>
+        {groups.map((group) => {
+          const active = activeItem?.href === group.href && activeItem.name === group.name;
+          const expanded =
+            activeGroup?.href === group.href ||
+            (openGroup?.href === group.href && openGroup.pathname === pathname);
+          return (
+            <div key={group.href}>
+              <div className="flex items-center gap-1">
+                <NavigationRow
+                  href={group.href}
+                  active={active}
+                  rail
+                  aria-current={active ? "page" : undefined}
+                  title={group.name}
+                  className="flex-1"
+                >
+                  <group.icon className="size-5 shrink-0" aria-hidden="true" />
+                  <span className="md:hidden lg:inline">{group.name}</span>
+                </NavigationRow>
+                <button
+                  type="button"
+                  aria-label={`${expanded ? "Collapse" : "Expand"} ${group.name}`}
+                  aria-expanded={expanded}
+                  disabled={activeGroup !== null}
+                  onClick={() => setOpenGroup(expanded ? null : { href: group.href, pathname })}
+                  className="text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground focus-visible:outline-ring hidden min-h-11 min-w-11 items-center justify-center rounded-md focus-visible:outline-2 md:flex lg:min-w-11"
+                >
+                  <ChevronDown
+                    className={cn("size-4 transition-transform", expanded && "rotate-180")}
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
+              {expanded && (
+                <div className="border-sidebar-border mt-1 ml-4 hidden gap-1 border-l pl-2 md:flex md:flex-col">
+                  {group.items.map((item) => renderLink(item, true))}
                 </div>
-                {expanded && <div className="border-sidebar-border mt-1 ml-4 hidden gap-1 border-l pl-2 md:flex md:flex-col">{group.items.map((item) => renderLink(item, true))}</div>}
+              )}
             </div>
-            );
-          })}
+          );
+        })}
         {renderLink(profile, true)}
       </nav>
-      <div className="border-sidebar-border border-t p-4"><div className="flex items-center gap-3"><div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full"><span className="text-body-sm font-semibold">{user?.name?.[0] || "U"}</span></div><div className="hidden min-w-0 flex-col overflow-hidden lg:flex"><span className="text-label-md text-sidebar-foreground truncate font-semibold">{user?.name || "User"}</span><span className="text-caption text-sidebar-foreground/60 truncate">{user?.email || "No email provided"}</span></div></div></div>
+      <div className="border-sidebar-border border-t p-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
+            <span className="text-body-sm font-semibold">{user?.name?.[0] || "U"}</span>
+          </div>
+          <div className="hidden min-w-0 flex-col overflow-hidden lg:flex">
+            <span className="text-label-md text-sidebar-foreground truncate font-semibold">
+              {user?.name || "User"}
+            </span>
+            <span className="text-caption text-sidebar-foreground/60 truncate">
+              {user?.email || "No email provided"}
+            </span>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }
