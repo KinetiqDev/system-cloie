@@ -2229,6 +2229,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/analytics/components/faculty-course-evidence-chart.tsx",
+    disposition: "task",
+    taskId: 10,
+    category: "feature_component",
+  },
+  {
     path: "src/features/analytics/components/faculty-dashboard-visualization-fallbacks.tsx",
     disposition: "task",
     taskId: 10,

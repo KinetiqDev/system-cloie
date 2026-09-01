@@ -22,16 +22,20 @@ type FacultyAnalyticsDashboardProps = {
   initialEvaluations: FacultyAnalyticsEvaluationItem[];
   availableAcademicYears: string[];
   availableCourses: { id: string; label: string }[];
+  initialCourseIds?: string[];
 };
 
 export function FacultyAnalyticsDashboard({
   initialEvaluations,
   availableAcademicYears,
   availableCourses,
+  initialCourseIds,
 }: FacultyAnalyticsDashboardProps) {
   const [evaluations, setEvaluations] =
     useState<FacultyAnalyticsEvaluationItem[]>(initialEvaluations);
-  const [filters, setFilters] = useState<FacultyAnalyticsFilters>({});
+  const [filters, setFilters] = useState<FacultyAnalyticsFilters>(
+    initialCourseIds && initialCourseIds.length > 0 ? { courseIds: initialCourseIds } : {}
+  );
   const [selectedEvaluationIds, setSelectedEvaluationIds] = useState<string[]>([]);
   const [analyticsData, setAnalyticsData] = useState<FacultyAnalyticsData[]>([]);
   const [isPending, startTransition] = useTransition();
