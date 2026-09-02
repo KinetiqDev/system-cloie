@@ -38,7 +38,7 @@ async function main() {
   await persistPeriodReadinessSnapshot(termInstances.ti2026First.id);
 
   console.log("[D] Instrument templates...");
-  await seedInstruments(outcomeContext, { pMap });
+  await seedInstruments();
   await seedFacultyPublicationTemplate({ cMap });
 
   console.log("[E] Evaluations & deployments...");

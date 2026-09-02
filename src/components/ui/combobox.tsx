@@ -69,6 +69,7 @@ function ComboboxInput({
             render={<ComboboxTrigger />}
             // ComboboxTrigger renders a <button>; declare it native so Base UI skips role injection.
             nativeButton
+            aria-label="Open options"
             data-slot="input-group-button"
             className="group-has-data-[slot=combobox-clear]/input-group:hidden data-pressed:bg-transparent"
             disabled={disabled}

@@ -97,9 +97,7 @@ export function normalizePloQuestionBindings(input: {
     });
   }
 
-  const missingQuestionKeys = [...questionMap.keys()].filter(
-    (key) => !boundQuestionKeys.has(key)
-  );
+  const missingQuestionKeys = [...questionMap.keys()].filter((key) => !boundQuestionKeys.has(key));
 
   return { success: true, bindings: normalized, missingQuestionKeys };
 }
@@ -181,8 +179,6 @@ export type ListProgramHeadTemplatesResult = {
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-
 
 function slugify(text: string): string {
   return text
@@ -448,10 +444,8 @@ export async function updateProgramHeadTemplate(
           where: { id: input.id },
           select: { program_id: true, faculty_owner_id: true },
         });
-        if (
-          currentTemplate?.program_id !== selectedProgram.id ||
-          currentTemplate.faculty_owner_id
-        ) return null;
+        if (currentTemplate?.program_id !== selectedProgram.id || currentTemplate.faculty_owner_id)
+          return null;
 
         await tx.instrumentTemplate.update({
           where: { id: input.id },
@@ -490,10 +484,8 @@ export async function updateProgramHeadTemplate(
           where: { id: input.id },
           select: { program_id: true, faculty_owner_id: true },
         });
-        if (
-          currentTemplate?.program_id !== selectedProgram.id ||
-          currentTemplate.faculty_owner_id
-        ) return null;
+        if (currentTemplate?.program_id !== selectedProgram.id || currentTemplate.faculty_owner_id)
+          return null;
 
         await tx.instrumentTemplate.update({
           where: { id: input.id },
@@ -608,7 +600,8 @@ export async function duplicateTemplate(
       if (
         source.faculty_owner_id ||
         (source.program_id !== null && source.program_id !== currentProgram.id)
-      ) return null;
+      )
+        return null;
 
       const createdTemplate = await tx.instrumentTemplate.create({
         data: {
@@ -725,7 +718,10 @@ export async function toggleTemplateActive(
 
 // ─── Toggle Faculty Accessible ───────────────────────────────────────────────
 
-export async function deleteProgramHeadTemplate(programId: string, id: string): Promise<ServiceResult> {
+export async function deleteProgramHeadTemplate(
+  programId: string,
+  id: string
+): Promise<ServiceResult> {
   const authResult = await requirePHSession(programId);
 
   if (!authResult.success) {
@@ -792,10 +788,8 @@ export async function deleteProgramHeadTemplate(programId: string, id: string): 
       where: { id },
       select: { program_id: true, faculty_owner_id: true },
     });
-    if (
-      currentTemplate?.program_id !== selectedProgram.id ||
-      currentTemplate.faculty_owner_id
-    ) return null;
+    if (currentTemplate?.program_id !== selectedProgram.id || currentTemplate.faculty_owner_id)
+      return null;
     await tx.instrumentTemplate.delete({ where: { id } });
     return true;
   });
@@ -857,10 +851,8 @@ export async function toggleFacultyAccessible(
       where: { id },
       select: { program_id: true, faculty_owner_id: true },
     });
-    if (
-      currentTemplate?.program_id !== selectedProgram.id ||
-      currentTemplate.faculty_owner_id
-    ) return null;
+    if (currentTemplate?.program_id !== selectedProgram.id || currentTemplate.faculty_owner_id)
+      return null;
     await tx.instrumentTemplate.update({ where: { id }, data: { is_faculty_accessible } });
     return true;
   });
@@ -871,7 +863,10 @@ export async function toggleFacultyAccessible(
 
 // ─── Get Template by ID (for edit page) ──────────────────────────────────────
 
-export async function getProgramHeadTemplate(programId: string, id: string): Promise<
+export async function getProgramHeadTemplate(
+  programId: string,
+  id: string
+): Promise<
   ServiceResult<{
     template: {
       id: string;
@@ -950,15 +945,18 @@ export async function getProgramHeadTemplate(programId: string, id: string): Pro
       template: {
         ...template,
         structure: (template.structure as unknown as TemplateStructure) ?? [],
-        ploBindings: template.template_plo_question_bindings
-          .filter((binding) => binding.plo_id)
-          .map((binding) => ({
-            ploId: binding.plo_id!,
-            itemKey: binding.item_key,
-            sectionKey: binding.section_key,
-            ploCodeSnapshot: binding.plo_code_snapshot,
-            ploDescriptionSnapshot: binding.plo_description_snapshot,
-          })),
+        ploBindings:
+          template.program_id === null
+            ? []
+            : template.template_plo_question_bindings
+                .filter((binding) => binding.plo_id)
+                .map((binding) => ({
+                  ploId: binding.plo_id!,
+                  itemKey: binding.item_key,
+                  sectionKey: binding.section_key,
+                  ploCodeSnapshot: binding.plo_code_snapshot,
+                  ploDescriptionSnapshot: binding.plo_description_snapshot,
+                })),
       },
       ploOptions: plos,
       program,

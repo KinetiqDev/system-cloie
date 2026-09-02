@@ -78,6 +78,15 @@ export function FacultyToolsPage({
   const [deleteTarget, setDeleteTarget] = useState<TemplateCollectionItem | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
 
+  const ownedTemplates: TemplateCollectionItem[] = [];
+  const availableTemplates: TemplateCollectionItem[] = [];
+
+  for (const template of templates) {
+    const item = toTemplateItem(template);
+    if (item.origin === "faculty-copy") ownedTemplates.push(item);
+    else availableTemplates.push(item);
+  }
+
   function selectView(nextView: ToolsViewMode) {
     setView(nextView);
     updateToolsUrl({ view: nextView });
@@ -127,22 +136,27 @@ export function FacultyToolsPage({
             view={view}
             sections={[
               {
-                items: templates.map(toTemplateItem),
+                heading: "My Templates",
+                items: ownedTemplates,
                 renderFooterActions: (item) => <FacultyTemplateActions item={item} />,
-                renderOverflowMenu: (item) =>
-                  item.origin === "faculty-copy" ? (
-                    <DropdownMenuItem
-                      variant="destructive"
-                      disabled={isPending}
-                      onClick={() => {
-                        setDialogError(null);
-                        setDeleteTarget(item);
-                      }}
-                    >
-                      <Trash2 className="size-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  ) : null,
+                renderOverflowMenu: (item) => (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={isPending}
+                    onClick={() => {
+                      setDialogError(null);
+                      setDeleteTarget(item);
+                    }}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </DropdownMenuItem>
+                ),
+              },
+              {
+                heading: "Available Templates",
+                items: availableTemplates,
+                renderFooterActions: (item) => <FacultyTemplateActions item={item} />,
               },
             ]}
             empty={

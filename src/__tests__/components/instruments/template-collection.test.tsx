@@ -64,8 +64,32 @@ describe("TemplateCollection", () => {
     expect(table.getByRole("columnheader", { name: "Source" })).toBeInTheDocument();
     expect(table.getByText("Course Tool")).toBeInTheDocument();
     expect(table.getByText("My copy")).toBeInTheDocument();
-    // List view keeps the same role actions as card view.
-    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+    expect(table.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+  });
+
+  test("uses a compact card list instead of a wide table on mobile", () => {
+    render(
+      <TemplateCollection
+        view="list"
+        sections={[
+          {
+            heading: "My Templates",
+            items: [makeItem({ origin: "faculty-copy", originLabel: "My copy" })],
+            renderFooterActions: () => <button>Edit</button>,
+          },
+        ]}
+        empty={<p>Empty</p>}
+      />
+    );
+
+    const mobileList = screen.getByRole("list", { name: "My Templates" });
+    const desktopTable = screen.getByRole("table", { name: "My Templates" });
+
+    expect(mobileList).toHaveClass("sm:hidden");
+    expect(desktopTable.closest(".hidden.sm\\:block")).not.toBeNull();
+    expect(within(mobileList).getByText("Program Evaluation")).toBeInTheDocument();
+    expect(within(mobileList).getByText("My copy")).toBeInTheDocument();
+    expect(within(mobileList).getByRole("button", { name: "Edit" })).toBeInTheDocument();
   });
 
   test("renders section headings and omits empty sections", () => {
@@ -165,7 +189,7 @@ describe("TemplateCollection", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(2);
   });
 });

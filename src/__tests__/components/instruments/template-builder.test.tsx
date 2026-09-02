@@ -114,6 +114,106 @@ describe("TemplateBuilder", () => {
     expect(screen.queryByText("CILO Binding")).not.toBeInTheDocument();
   });
 
+  test("keeps template actions in a persistent bottom dock", () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        onPublish={vi.fn()}
+      />
+    );
+
+    const actionDock = screen.getByRole("toolbar", { name: "Template actions" });
+
+    expect(actionDock).toHaveClass("fixed", "inset-x-0", "bottom-0", "lg:left-64");
+    expect(actionDock).toContainElement(screen.getByRole("button", { name: "Create template" }));
+    expect(actionDock).toContainElement(
+      screen.getByRole("button", { name: "Continue to publish" })
+    );
+  });
+
+  test("constrains long CILO labels inside the binding control", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        initialData={{
+          id: "template-1",
+          name: "CILO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate outcome",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "IT401",
+              courseId: "course-1",
+              courseTitle: "Capstone 1",
+              courseType: "PROGRAM_SPECIFIC",
+              majorId: null,
+              majorName: null,
+              programCode: "BSIT",
+              programId: "program-1",
+              programName: "Information Technology",
+              scopeLabel: "BSIT - Shared Program Course",
+            },
+          ],
+          initialBindings: [
+            { ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" },
+          ],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: {
+              hasSavedCilos: true,
+              items: [
+                {
+                  description:
+                    "Evaluate the ethical and social implications of technological developments",
+                  id: "cilo-1",
+                },
+              ],
+            },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true }),
+        }}
+      />
+    );
+
+    const binding = await screen.findByLabelText("CILO Binding");
+    const value = binding.querySelector('[data-slot="select-value"]');
+
+    expect(binding).toHaveClass("w-full", "min-w-0");
+    expect(value).toHaveClass("min-w-0", "truncate");
+  });
+
   test("blocks adding duplicate predefined responses within the same question", () => {
     render(
       <TemplateBuilder

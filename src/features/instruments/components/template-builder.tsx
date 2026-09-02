@@ -1205,61 +1205,60 @@ export function TemplateBuilder({
         : "Create template";
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 pb-28 sm:pb-8">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6 pb-32 sm:pb-28">
       <div className="border-border bg-background/95 sticky top-0 z-30 -mx-4 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <button
-              type="button"
-              onClick={requestBackNavigation}
-              className="text-link focus-visible:ring-ring inline-flex min-h-8 items-center gap-2 rounded-md text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none pointer-coarse:min-h-11"
-            >
-              <ArrowLeft className="size-4" aria-hidden="true" />
-              Back to Tools
-            </button>
-            <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-wide uppercase">
-              {programLabel}
-            </p>
-            <h1 className="text-heading-lg">
-              {initialData?.id ? "Edit Template" : "New Template"}
-            </h1>
-          </div>
-
-          <div
-            role="toolbar"
-            aria-label="Template actions"
-            className="border-border bg-background fixed inset-x-0 bottom-0 z-40 flex shrink-0 flex-col gap-2 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:static sm:items-end sm:border-0 sm:bg-transparent sm:p-0 [&_[data-slot=button]]:min-h-11 sm:[&_[data-slot=button]]:min-h-0"
+        <div className="min-w-0">
+          <button
+            type="button"
+            onClick={requestBackNavigation}
+            className="text-link focus-visible:ring-ring inline-flex min-h-8 items-center gap-2 rounded-md text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none pointer-coarse:min-h-11"
           >
-            <p
-              className="text-muted-foreground flex items-center gap-1.5 text-xs"
-              role="status"
-              aria-live="polite"
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to Tools
+          </button>
+          <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-wide uppercase">
+            {programLabel}
+          </p>
+          <h1 className="text-heading-lg">
+            {initialData?.id ? "Edit Template" : "New Template"}
+          </h1>
+        </div>
+      </div>
+
+      <div
+        role="toolbar"
+        aria-label="Template actions"
+        className="border-border bg-background fixed inset-x-0 bottom-0 z-40 border-t px-4 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-md sm:px-6 lg:left-64"
+      >
+        <div className="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p
+            className="text-muted-foreground flex min-h-5 items-center gap-1.5 text-xs"
+            role="status"
+            aria-live="polite"
+          >
+            <SaveStateIcon className="size-3.5" aria-hidden="true" />
+            {saveStateContent.label}
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center [&_[data-slot=button]]:min-h-11 sm:[&_[data-slot=button]]:min-w-28">
+            <Button
+              className={canContinueToPublish ? "w-full" : "col-span-2 w-full"}
+              variant="outline"
+              onClick={handleSave}
+              loading={isPending || isCopyPending}
             >
-              <SaveStateIcon className="size-3.5" aria-hidden="true" />
-              {saveStateContent.label}
-            </p>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+              {saveActionLabel}
+            </Button>
+            {canContinueToPublish && (
               <Button
-                className={
-                  canContinueToPublish ? "w-full sm:w-auto" : "col-span-2 w-full sm:w-auto"
-                }
-                variant="outline"
-                onClick={handleSave}
-                loading={isPending || isCopyPending}
+                className="w-full"
+                onClick={handleContinueToPublish}
+                loading={isPending}
+                aria-label="Continue to publish"
               >
-                {saveActionLabel}
+                <span className="sm:hidden">Continue</span>
+                <span className="sr-only sm:not-sr-only">Continue to publish</span>
               </Button>
-              {canContinueToPublish && (
-                <Button
-                  className="w-full sm:w-auto"
-                  onClick={handleContinueToPublish}
-                  loading={isPending}
-                >
-                  <span className="sm:hidden">Continue</span>
-                  <span className="sr-only sm:not-sr-only"> to publish</span>
-                </Button>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -2016,11 +2015,11 @@ function QuestionCard({
                   }
                 }}
               >
-                <SelectTrigger
-                  id={`cilo-binding-${question.key}`}
-                  className="h-auto min-h-8 w-full whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-none *:data-[slot=select-value]:items-start *:data-[slot=select-value]:whitespace-normal"
-                >
-                  <SelectValue placeholder="Select a CILO…">
+                <SelectTrigger id={`cilo-binding-${question.key}`} className="w-full min-w-0">
+                  <SelectValue
+                    placeholder="Select a CILO…"
+                    className="block min-w-0 truncate text-left"
+                  >
                     {selectedCiloId ? selectedCiloLabel : undefined}
                   </SelectValue>
                 </SelectTrigger>
@@ -2031,7 +2030,12 @@ function QuestionCard({
                       selectedCiloIds.has(cilo.id) && selectedCiloId !== cilo.id;
 
                     return (
-                      <SelectItem key={cilo.id} value={cilo.id} disabled={usedByAnotherQuestion}>
+                      <SelectItem
+                        key={cilo.id}
+                        value={cilo.id}
+                        disabled={usedByAnotherQuestion}
+                        className="[&>span]:whitespace-normal"
+                      >
                         {formatCiloOptionLabel(cilo, index)}
                       </SelectItem>
                     );
@@ -2208,6 +2212,7 @@ function LikertDescriptorsEditor({
             {/* Editable label */}
             <input
               type="text"
+              aria-label={`Scale ${descriptor.value} descriptor`}
               className="text-muted-foreground hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent text-center text-xs transition-colors focus:outline-none"
               value={descriptor.label}
               onChange={(e) => onUpdate(sectionKey, questionKey, idx, e.target.value)}

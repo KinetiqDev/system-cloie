@@ -102,6 +102,27 @@ describe("PublishedDeploymentsCollection", () => {
     expect(screen.getByText("8 / 10")).toBeInTheDocument();
   });
 
+  test("anchors card actions to the bottom of stretched grid cards", () => {
+    render(
+      <PublishedDeploymentsCollection
+        view="card"
+        items={[
+          makeItem({ id: "short", name: "Short title" }),
+          makeItem({
+            id: "long",
+            name: "A longer deployment title that occupies another line in the card header",
+          }),
+        ]}
+        empty={<p>Empty</p>}
+        renderMenuItems={NOOP_MENU}
+      />
+    );
+
+    for (const footer of document.querySelectorAll('[data-slot="card-footer"]')) {
+      expect(footer).toHaveClass("mt-auto");
+    }
+  });
+
   test("filters by status and paginates", () => {
     const items = Array.from({ length: 12 }, (_, i) =>
       makeItem({
