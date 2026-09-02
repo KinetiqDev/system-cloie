@@ -26,7 +26,11 @@ import {
 import type { FacultyPublishedEvaluationItem } from "@/features/evaluations/types";
 import { FacultyPublishedEvaluations } from "@/features/evaluations/components/faculty-published-evaluations";
 import type { FacultyTemplateItem } from "../services/list-faculty-templates";
-import { EvaluationToolsTabs, updateToolsUrl, type EvaluationToolsTab } from "./evaluation-tools-tabs";
+import {
+  EvaluationToolsTabs,
+  updateToolsUrl,
+  type EvaluationToolsTab,
+} from "./evaluation-tools-tabs";
 import { TemplateCollection, type TemplateCollectionItem } from "./template-collection";
 import { ToolsViewSelector, type ToolsViewMode } from "./tools-view-selector";
 
@@ -125,11 +129,7 @@ export function FacultyToolsPage({
       <EvaluationToolsTabs
         initialTab={initialTab}
         viewControl={
-          <ToolsViewSelector
-            label="Evaluation tools"
-            value={view}
-            onValueChange={selectView}
-          />
+          <ToolsViewSelector label="Evaluation tools" value={view} onValueChange={selectView} />
         }
         templates={
           <TemplateCollection
@@ -164,8 +164,8 @@ export function FacultyToolsPage({
                 <CardContent className="py-12 text-center">
                   <FileText className="text-muted-foreground mx-auto mb-4 size-10" />
                   <p className="text-muted-foreground text-sm">
-                    No templates with faculty access are available yet. Contact your Program Head
-                    to enable faculty access on evaluation templates.
+                    No templates with faculty access are available yet. Contact your Program Head to
+                    enable faculty access on evaluation templates.
                   </p>
                 </CardContent>
               </Card>
@@ -234,11 +234,7 @@ function FacultyTemplateActions({ item }: { item: TemplateCollectionItem }) {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        render={<Link href={`/faculty/tools/${item.id}/edit`} />}
-      >
+      <Button variant="outline" size="sm" render={<Link href={`/faculty/tools/${item.id}/edit`} />}>
         <Edit className="size-3.5" data-icon="inline-start" />
         Edit
       </Button>

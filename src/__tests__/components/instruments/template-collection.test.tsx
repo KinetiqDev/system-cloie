@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { TemplateCollection, type TemplateCollectionItem } from "@/features/instruments/components/template-collection";
+import {
+  TemplateCollection,
+  type TemplateCollectionItem,
+} from "@/features/instruments/components/template-collection";
 
 function makeItem(overrides: Partial<TemplateCollectionItem> = {}): TemplateCollectionItem {
   return {
@@ -40,7 +43,12 @@ describe("TemplateCollection", () => {
     const { container } = render(
       <TemplateCollection
         view="card"
-        sections={[{ items: [makeItem({ origin: "institutional", originLabel: "Institutional baseline" })], renderFooterActions: () => null }]}
+        sections={[
+          {
+            items: [makeItem({ origin: "institutional", originLabel: "Institutional baseline" })],
+            renderFooterActions: () => null,
+          },
+        ]}
         empty={<p>Empty</p>}
       />
     );
@@ -54,7 +62,22 @@ describe("TemplateCollection", () => {
     render(
       <TemplateCollection
         view="list"
-        sections={[{ items: [makeItem(), makeItem({ id: "t2", name: "Course Tool", templateType: "COURSE_BOUND", origin: "faculty-copy", originLabel: "My copy", versionCount: 1 })] , renderFooterActions: () => <button>Edit</button> }]}
+        sections={[
+          {
+            items: [
+              makeItem(),
+              makeItem({
+                id: "t2",
+                name: "Course Tool",
+                templateType: "COURSE_BOUND",
+                origin: "faculty-copy",
+                originLabel: "My copy",
+                versionCount: 1,
+              }),
+            ],
+            renderFooterActions: () => <button>Edit</button>,
+          },
+        ]}
         empty={<p>Empty</p>}
       />
     );
