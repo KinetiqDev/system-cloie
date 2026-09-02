@@ -322,15 +322,15 @@ max_frequency = "5s"
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
 [auth.external.google]
 # Local Google OAuth through the Supabase CLI Docker stack. Client id and secret are read from the
-# environment via substitution (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET); never commit them. The
-# SSH-forwarded local callback uses the stable loopback address below, which must be registered in
-# the Google Cloud OAuth client: http://127.0.0.1:54321/auth/v1/callback
+# environment via substitution (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET); never commit them. Create
+# a Google Cloud OAuth client with authorized redirect URI http://127.0.0.1:54321/auth/v1/callback
+# (the local Supabase Auth callback), then set the two values in an ignored env file.
 enabled = true
 client_id = "env(GOOGLE_CLIENT_ID)"
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
 secret = "env(GOOGLE_CLIENT_SECRET)"
-# Keep the provider callback stable for local SSH port forwarding.
-redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
+# Overrides the default auth redirectUrl.
+redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
 # or any other third-party OIDC providers.
 url = ""

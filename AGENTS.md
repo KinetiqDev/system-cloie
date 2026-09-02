@@ -57,17 +57,18 @@ Before implementation, design, planning, or investigation, orient through:
 
 ## Communication and Explanations
 
-The user context-switches between agent sessions. Every response must be immediately understandable to someone who just arrived from another task.
+Apply the `unslop` skill to every reply before sending it.
 
-Apply the `unslop` skill to every reply.
+When planning, reviewing architecture, proposing changes, or walking through workflows:
 
-After planning, implementing, or making a change, respond in plain terms. Lead with what was done and why. The response should be self-contained: the user should grasp what changed and the key decisions without needing the prior session's context.
-
-- Use precise terminology when it improves accuracy, but always pair it with a plain explanation.
-- Do not oversimplify away security constraints, invariants, or important details.
+- Use precise technical terminology when it improves accuracy.
+- When heavy jargon or complex concepts are involved, also provide a brief **plain-language explanation**.
+- For substantial changes, include a concise end-to-end runthrough of the relevant user flow, data flow, or system workflow.
+- Explain important architectural decisions and tradeoffs in both technical and practical terms when useful.
+- Do not oversimplify away security constraints, invariants, or important implementation details.
 - Keep explanation depth proportional to the task.
 
-Test: the user can read the response cold, understand what changed and why, and move on.
+After implementing, close with a short digest of what was just built: a plain-terms run-through (explain it to a five-year-old) followed by the technical version. Keep it brief — someone who never saw the code should follow what changed and why.
 
 ---
 
