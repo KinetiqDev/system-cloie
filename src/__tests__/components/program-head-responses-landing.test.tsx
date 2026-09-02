@@ -61,6 +61,39 @@ describe("ProgramHeadResponsesLanding", () => {
     expect(screen.queryByText("INDUSTRY PARTNER")).not.toBeInTheDocument();
   });
 
+  it("renders archived deployment status as a friendly label", () => {
+    render(
+      <ProgramHeadResponsesLanding
+        programId="program-1"
+        program={{ code: "BSHM", name: "Hospitality Management" }}
+        state={{ tab: "program-wide", page: 1 }}
+        data={{
+          total: 1,
+          page: 1,
+          pageSize: 20,
+          options,
+          items: [
+            {
+              id: "deployment-archived",
+              title: "Archived evaluation",
+              period: "2025-2026 · 1st Semester",
+              status: "ARCHIVED",
+              assigned: 1,
+              submitted: 1,
+              mean: null,
+              scaleLabel: null,
+              stakeholder: "ALUMNI",
+              target: "All alumni",
+            },
+          ],
+        }}
+      />
+    );
+
+    expect(screen.getAllByText("Archived").length).toBeGreaterThan(0);
+    expect(screen.queryByText("ARCHIVED")).not.toBeInTheDocument();
+  });
+
   it("offers a direct recovery action when filters return no evaluations", () => {
     render(
       <ProgramHeadResponsesLanding

@@ -87,7 +87,13 @@ export function ProgramHeadResponsesFilters({ programId, state, options }: Props
       </div>
 
       <div className="border-border hidden border-t p-4 lg:block">
-        <FilterForm programId={programId} state={state} options={options} idPrefix="desktop" />
+        <FilterForm
+          key={`desktop:${buildProgramHeadResponsesUrl(programId, state)}`}
+          programId={programId}
+          state={state}
+          options={options}
+          idPrefix="desktop"
+        />
       </div>
 
       <div className="border-border border-t p-3 lg:hidden">
@@ -107,6 +113,7 @@ export function ProgramHeadResponsesFilters({ programId, state, options }: Props
             </DrawerHeader>
             <div className="overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
               <FilterForm
+                key={`mobile:${buildProgramHeadResponsesUrl(programId, state)}`}
                 programId={programId}
                 state={state}
                 options={options}

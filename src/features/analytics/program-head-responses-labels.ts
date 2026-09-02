@@ -30,6 +30,7 @@ export const RESPONSE_STATUS_OPTIONS: ResponseFilterOption[] = [
   { id: "SCHEDULED", label: "Scheduled" },
   { id: "ACTIVE", label: "Active" },
   { id: "CLOSED", label: "Closed" },
+  { id: "ARCHIVED", label: "Archived" },
 ];
 
 export const RESPONSE_COMPLETION_OPTIONS: ResponseFilterOption[] = [
