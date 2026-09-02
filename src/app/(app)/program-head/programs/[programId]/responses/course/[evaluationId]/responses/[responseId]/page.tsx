@@ -41,6 +41,8 @@ export default async function CourseResponseDetailPage({
     tab: "course" as const,
     page: 1,
     termInstanceId: state.termInstanceId,
+    schoolYearId: state.schoolYearId,
+    semester: state.semester,
     stakeholder: state.stakeholder,
   };
   const responsesHref = buildProgramHeadResponsesUrl(programId, upwardState);

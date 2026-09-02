@@ -39,6 +39,8 @@ export default async function CentralEvaluationDetailPage({
     tab: "program-wide" as const,
     page: 1,
     termInstanceId: state.termInstanceId,
+    schoolYearId: state.schoolYearId,
+    semester: state.semester,
     stakeholder: state.stakeholder,
   };
   const responsesHref = buildProgramHeadResponsesUrl(programId, upwardState);

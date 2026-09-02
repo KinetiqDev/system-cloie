@@ -224,12 +224,17 @@ describe("analytics dashboard access", () => {
     });
 
     for (const href of [
+      result?.links.responses,
       result?.links.responsesActiveCourse,
       result?.links.responsesActiveProgramWide,
     ]) {
       expect(href).toContain("schoolYearId=00000000-0000-4000-8000-000000000001");
       expect(href).toContain("semester=SECOND");
-      expect(href).toContain("status=ACTIVE");
+      if (href === result?.links.responses) {
+        expect(href).not.toContain("status=ACTIVE");
+      } else {
+        expect(href).toContain("status=ACTIVE");
+      }
     }
   });
 

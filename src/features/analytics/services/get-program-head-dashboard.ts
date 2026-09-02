@@ -5,7 +5,6 @@ import { resolveProgramHeadContext } from "@/features/auth/services/resolve-prog
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import {
   buildProgramHeadResponsesCourseEvaluationPath,
-  buildProgramHeadResponsesPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
@@ -985,7 +984,13 @@ async function loadCentralPloBindings(
 
 function buildDashboardLinks(programId: string, filters: DashboardPeriodFilters): DashboardLinks {
   return {
-    responses: buildProgramHeadResponsesPath(programId),
+    responses: buildProgramHeadResponsesUrl(programId, {
+      termInstanceId: filters.termInstanceId,
+      schoolYearId: filters.schoolYearId,
+      semester: filters.semester as AcademicSemester | undefined,
+      tab: "course",
+      page: 1,
+    }),
     responsesActiveCourse: buildProgramHeadResponsesUrl(programId, {
       termInstanceId: filters.termInstanceId,
       schoolYearId: filters.schoolYearId,
