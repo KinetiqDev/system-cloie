@@ -1,4 +1,5 @@
 import { DeploymentStatus, ResponseStatus, TargetStakeholder } from "@prisma/client";
+import type { AcademicSemester } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
@@ -987,12 +988,16 @@ function buildDashboardLinks(programId: string, filters: DashboardPeriodFilters)
     responses: buildProgramHeadResponsesPath(programId),
     responsesActiveCourse: buildProgramHeadResponsesUrl(programId, {
       termInstanceId: filters.termInstanceId,
+      schoolYearId: filters.schoolYearId,
+      semester: filters.semester as AcademicSemester | undefined,
       tab: "course",
       page: 1,
       status: DeploymentStatus.ACTIVE,
     }),
     responsesActiveProgramWide: buildProgramHeadResponsesUrl(programId, {
       termInstanceId: filters.termInstanceId,
+      schoolYearId: filters.schoolYearId,
+      semester: filters.semester as AcademicSemester | undefined,
       tab: "program-wide",
       page: 1,
       status: DeploymentStatus.ACTIVE,

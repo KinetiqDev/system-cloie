@@ -73,7 +73,11 @@ function cleanSearch(value: string | undefined): string | undefined {
 function termInstanceWhere(
   filters: ProgramHeadResponsesFilterState
 ): Prisma.AcademicTermInstanceWhereInput {
-  return filters.termInstanceId ? { id: filters.termInstanceId } : {};
+  if (filters.termInstanceId) return { id: filters.termInstanceId };
+  return {
+    ...(filters.schoolYearId ? { school_year_id: filters.schoolYearId } : {}),
+    ...(filters.semester ? { semester: filters.semester } : {}),
+  };
 }
 
 function completionWhere(

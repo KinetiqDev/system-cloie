@@ -1,4 +1,10 @@
-import { DeploymentStatus, StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
+import {
+  AcademicSemester,
+  DeploymentStatus,
+  StudentSection,
+  TargetStakeholder,
+  YearLevel,
+} from "@prisma/client";
 import { z } from "zod";
 import { buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes";
 
@@ -12,6 +18,8 @@ export type ProgramHeadResponsesFilterState = {
   page: number;
   q?: string;
   termInstanceId?: string;
+  schoolYearId?: string;
+  semester?: AcademicSemester;
   courseId?: string;
   facultyId?: string;
   majorId?: string;
@@ -39,6 +47,8 @@ const schema = z.object({
     .optional()
     .catch(undefined),
   termInstanceId: uuid.optional().catch(undefined),
+  schoolYearId: uuid.optional().catch(undefined),
+  semester: z.nativeEnum(AcademicSemester).optional().catch(undefined),
   courseId: uuid.optional().catch(undefined),
   facultyId: uuid.optional().catch(undefined),
   majorId: uuid.optional().catch(undefined),
@@ -58,6 +68,8 @@ export function parseProgramHeadResponsesSearchParams(
     page: first(raw.page),
     q: first(raw.q),
     termInstanceId: first(raw.termInstanceId),
+    schoolYearId: first(raw.schoolYearId),
+    semester: first(raw.semester),
     courseId: first(raw.courseId),
     facultyId: first(raw.facultyId),
     majorId: first(raw.majorId),
@@ -76,6 +88,8 @@ const PARAM_KEYS = [
   "page",
   "q",
   "termInstanceId",
+  "schoolYearId",
+  "semester",
   "courseId",
   "facultyId",
   "majorId",
@@ -103,6 +117,8 @@ export function programHeadResponsesQuery(state: ProgramHeadResponsesFilterState
   const entries = [
     "q",
     "termInstanceId",
+    "schoolYearId",
+    "semester",
     "courseId",
     "facultyId",
     "majorId",
@@ -139,6 +155,8 @@ export function buildProgramHeadResponsesTabUrl(
     page: 1,
     q: current.q,
     termInstanceId: current.termInstanceId,
+    schoolYearId: current.schoolYearId,
+    semester: current.semester,
     majorId: current.majorId,
     yearLevel: current.yearLevel,
     status: current.status,

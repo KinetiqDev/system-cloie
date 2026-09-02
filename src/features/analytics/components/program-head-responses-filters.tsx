@@ -141,6 +141,10 @@ function FilterForm({
 
   return (
     <form method="get" action={buildProgramHeadProgramPath(programId, "responses")}>
+      {state.schoolYearId ? (
+        <input type="hidden" name="schoolYearId" value={state.schoolYearId} />
+      ) : null}
+      {state.semester ? <input type="hidden" name="semester" value={state.semester} /> : null}
       {state.tab !== "course" ? <input type="hidden" name="tab" value={state.tab} /> : null}
       <FieldGroup className="gap-4">
         <div className={cn("grid gap-4", mobile ? "grid-cols-1" : "grid-cols-2 xl:grid-cols-4")}>

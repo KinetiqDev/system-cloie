@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DeploymentStatus, StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
+import {
+  AcademicSemester,
+  DeploymentStatus,
+  StudentSection,
+  TargetStakeholder,
+  YearLevel,
+} from "@prisma/client";
 import {
   buildProgramHeadResponsesPageUrl,
   buildProgramHeadResponsesTabUrl,
@@ -29,8 +35,8 @@ describe("Program Head Responses URL state", () => {
     expect(state.status).toBe(DeploymentStatus.ACTIVE);
     expect("programId" in state).toBe(false);
 
-    expect("schoolYearId" in state).toBe(false);
-    expect("semester" in state).toBe(false);
+    expect(state.schoolYearId).toBeUndefined();
+    expect(state.semester).toBeUndefined();
   });
 
   it("serializes only canonical non-default values", () => {
@@ -42,6 +48,21 @@ describe("Program Head Responses URL state", () => {
     expect(programHeadResponsesQuery(state)).toBe("tab=program-wide&page=2&q=alumni");
     expect(buildProgramHeadResponsesPageUrl("program-1", state, 3)).toBe(
       "/program-head/programs/program-1/responses?tab=program-wide&page=3&q=alumni"
+    );
+  });
+
+  it("preserves school-year and semester scope without a term instance", () => {
+    const state = parseProgramHeadResponsesSearchParams({
+      schoolYearId: "00000000-0000-4000-8000-000000000001",
+      semester: AcademicSemester.SECOND,
+      status: DeploymentStatus.ACTIVE,
+    });
+
+    expect(programHeadResponsesQuery(state)).toBe(
+      "schoolYearId=00000000-0000-4000-8000-000000000001&semester=SECOND&status=ACTIVE"
+    );
+    expect(buildProgramHeadResponsesTabUrl("program-1", "program-wide", state)).toContain(
+      "schoolYearId=00000000-0000-4000-8000-000000000001&semester=SECOND"
     );
   });
 

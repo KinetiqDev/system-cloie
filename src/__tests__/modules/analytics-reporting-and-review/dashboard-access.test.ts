@@ -24,6 +24,7 @@ const {
   getActiveTermIdMock: vi.fn<() => Promise<string | null>>(async () => "term-active-1"),
   prismaMock: {
     program: { findUniqueOrThrow: vi.fn() },
+    schoolYear: { findUnique: vi.fn() },
     centralDeployment: { count: vi.fn(), findMany: vi.fn() },
     courseBoundEvaluation: { count: vi.fn(), findMany: vi.fn() },
     courseAssignment: { findMany: vi.fn() },
@@ -100,6 +101,7 @@ describe("analytics dashboard access", () => {
       term: "FIRST_TERM",
       school_year: { code: "2026-2027" },
     });
+    prismaMock.schoolYear.findUnique.mockResolvedValue({ code: "2026-2027" });
     prismaMock.courseAssignment.findMany.mockResolvedValue([]);
     resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "unauthorized" });
   });
@@ -208,6 +210,26 @@ describe("analytics dashboard access", () => {
       prismaMock.courseBoundEvaluation.findMany,
     ]) {
       expect(mock.mock.calls[0][0].where.status).toBe("ACTIVE");
+    }
+  });
+
+  it("preserves school-year and semester scope in active-response links", async () => {
+    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    getActiveTermIdMock.mockResolvedValue(null);
+
+    const result = await getProgramHeadDashboard("program-1", {
+      schoolYearId: "00000000-0000-4000-8000-000000000001",
+      semester: "SECOND",
+    });
+
+    for (const href of [
+      result?.links.responsesActiveCourse,
+      result?.links.responsesActiveProgramWide,
+    ]) {
+      expect(href).toContain("schoolYearId=00000000-0000-4000-8000-000000000001");
+      expect(href).toContain("semester=SECOND");
+      expect(href).toContain("status=ACTIVE");
     }
   });
 
