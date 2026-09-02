@@ -411,11 +411,10 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 | Course assignments                   | dense roster/membership tables | domain `CONTEXT.md`, existing page shell and constraints          |
 | Outcomes / instruments / evaluations | authoring/deployment           | progressive disclosure, explicit status, destructive confirmation |
 | Responses                            | guided low-density flow        | `wizard-shell.tsx`, visible progress, mobile-first                |
-
-| Analytics | KPIs, filters, charts | theme chart tokens, legends, summaries, export |
-| Reports | formal evidence/export | limited institutional navy |
-| Dean PWA | stable installable shell | offline data remains deferred by ADR 0006 |
-| Navigation | role-filtered structure | edit central constants only |
+| Analytics                            | KPIs, filters, charts          | theme chart tokens, legends, summaries, export                    |
+| Reports                              | formal evidence/export         | limited institutional navy                                        |
+| Dean PWA                             | stable installable shell       | offline data remains deferred by ADR 0006                         |
+| Navigation                           | role-filtered structure        | edit central constants only                                       |
 
 ### 9.1 Instrument template builder actions
 

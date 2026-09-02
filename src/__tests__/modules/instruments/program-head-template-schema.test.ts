@@ -54,4 +54,33 @@ describe("program-head-template schema", () => {
 
     expect(result.success).toBe(true);
   });
+
+  test("parses an explicit inactive template state", () => {
+    const result = createProgramHeadTemplateSchema.safeParse({
+      programId: "00000000-0000-4000-8000-000000000001",
+      name: "Inactive Tool",
+      is_active: "false",
+      template_type: "PROGRAM_WIDE",
+      is_faculty_accessible: false,
+      structure: [
+        {
+          key: "section-1",
+          title: "Feedback",
+          order: 0,
+          questions: [
+            {
+              key: "question-1",
+              prompt: "Suggestions",
+              type: "guided_open_ended",
+              order: 0,
+              required: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.is_active).toBe(false);
+  });
 });

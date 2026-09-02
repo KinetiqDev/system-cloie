@@ -573,27 +573,58 @@ export function TemplateBuilder({
       window.location.href
     );
 
-    let revertingHistoryNavigation = false;
-    const confirmHistoryNavigation = () => {
-      if (revertingHistoryNavigation) {
-        if (!isHistoryGuardEntry(marker)) {
-          window.history.go(1);
+    let restoringEditorEntry = false;
+    let pendingHistoryHref: string | null = null;
+    let fallbackSearchDirection: 1 | -1 = 1;
+    let fallbackSearchTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearFallbackSearchTimer = () => {
+      if (fallbackSearchTimer === null) return;
+      clearTimeout(fallbackSearchTimer);
+      fallbackSearchTimer = null;
+    };
+    const showHistoryConfirmation = () => {
+      restoringEditorEntry = false;
+      setPendingNavigationHref(pendingHistoryHref);
+      setDiscardDialogOpen(true);
+      pendingHistoryHref = null;
+    };
+    const searchForEditorEntry = () => {
+      clearFallbackSearchTimer();
+      window.history.go(fallbackSearchDirection);
+      fallbackSearchTimer = setTimeout(() => {
+        fallbackSearchTimer = null;
+        if (fallbackSearchDirection === 1) {
+          fallbackSearchDirection = -1;
+          searchForEditorEntry();
           return;
         }
-        revertingHistoryNavigation = false;
+        restoringEditorEntry = false;
+      }, 0);
+    };
+    const confirmHistoryNavigation = () => {
+      if (restoringEditorEntry) {
+        clearFallbackSearchTimer();
+        if (isHistoryGuardEntry(marker)) {
+          showHistoryConfirmation();
+          return;
+        }
+        searchForEditorEntry();
         return;
       }
-      window.history.go(1);
 
+      pendingHistoryHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       const currentHistoryIndex = currentHistoryEntryIndex();
-      const stepsBackToEditor =
-        editorHistoryIndex === undefined || currentHistoryIndex === undefined
-          ? 1
-          : editorHistoryIndex - currentHistoryIndex;
-      if (stepsBackToEditor === 0) return;
+      if (editorHistoryIndex !== undefined && currentHistoryIndex !== undefined) {
+        const stepsToEditor = editorHistoryIndex - currentHistoryIndex;
+        if (stepsToEditor === 0) return;
+        restoringEditorEntry = true;
+        window.history.go(stepsToEditor);
+        return;
+      }
 
-      revertingHistoryNavigation = true;
-      window.history.go(stepsBackToEditor);
+      restoringEditorEntry = true;
+      fallbackSearchDirection = 1;
+      searchForEditorEntry();
     };
 
     window.addEventListener("popstate", confirmHistoryNavigation);
@@ -603,6 +634,7 @@ export function TemplateBuilder({
       window.removeEventListener("popstate", confirmHistoryNavigation);
       document.removeEventListener("click", confirmInternalNavigation, true);
       window.removeEventListener("beforeunload", warnBeforeUnload);
+      clearFallbackSearchTimer();
       if (isHistoryGuardEntry(marker)) {
         window.history.replaceState(editorHistoryState, "", window.location.href);
       }
@@ -1219,9 +1251,7 @@ export function TemplateBuilder({
           <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-wide uppercase">
             {programLabel}
           </p>
-          <h1 className="text-heading-lg">
-            {initialData?.id ? "Edit Template" : "New Template"}
-          </h1>
+          <h1 className="text-heading-lg">{initialData?.id ? "Edit Template" : "New Template"}</h1>
         </div>
       </div>
 

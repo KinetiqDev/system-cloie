@@ -310,7 +310,7 @@ export async function createProgramHeadTemplate(
           code,
           name: input.name,
           description: input.description ?? null,
-          is_active: true,
+          is_active: input.is_active ?? true,
           is_faculty_accessible:
             input.template_type === EvaluationTemplateType.COURSE_BOUND &&
             input.is_faculty_accessible,
@@ -452,6 +452,7 @@ export async function updateProgramHeadTemplate(
           data: {
             name: input.name,
             description: input.description ?? null,
+            is_active: input.is_active ?? true,
             is_faculty_accessible:
               input.template_type === EvaluationTemplateType.COURSE_BOUND &&
               input.is_faculty_accessible,
@@ -492,6 +493,7 @@ export async function updateProgramHeadTemplate(
           data: {
             name: input.name,
             description: input.description ?? null,
+            is_active: input.is_active ?? true,
             is_faculty_accessible:
               input.template_type === EvaluationTemplateType.COURSE_BOUND &&
               input.is_faculty_accessible,

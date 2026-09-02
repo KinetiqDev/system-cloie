@@ -218,9 +218,7 @@ describe("TemplateBuilder", () => {
               scopeLabel: "BSIT - Shared Program Course",
             },
           ],
-          initialBindings: [
-            { ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" },
-          ],
+          initialBindings: [{ ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" }],
           loadManagedCilosAction: vi.fn().mockResolvedValue({
             success: true,
             data: {
@@ -664,6 +662,58 @@ describe("TemplateBuilder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back to Tools" }));
     fireEvent.click(await screen.findByRole("button", { name: "Discard changes" }));
     expect(pushMock).toHaveBeenCalledWith("/program-head/tools");
+  });
+
+  test("restores the dirty editor before confirming browser history navigation", async () => {
+    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
+    const originalState = window.history.state;
+    const originalUrl = window.location.href;
+    let historyIndex = 1;
+    Object.defineProperty(window, "navigation", {
+      configurable: true,
+      value: {
+        currentEntry: {
+          get index() {
+            return historyIndex;
+          },
+        },
+      },
+    });
+    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+
+    try {
+      render(
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={vi.fn().mockResolvedValue({ success: true })}
+          toolsHref="/program-head/tools"
+        />
+      );
+      fireEvent.change(screen.getByLabelText("Template Name"), {
+        target: { value: "Unsaved Tool" },
+      });
+      const guardedState = window.history.state;
+
+      historyIndex = 0;
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      expect(historyGo).toHaveBeenCalledWith(1);
+
+      historyIndex = 1;
+      window.history.replaceState(guardedState, "", originalUrl);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(
+        await screen.findByRole("alertdialog", { name: "Discard unsaved changes?" })
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+      expect(pushMock).not.toHaveBeenCalled();
+    } finally {
+      historyGo.mockRestore();
+      window.history.replaceState(originalState, "", originalUrl);
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+      else Reflect.deleteProperty(window, "navigation");
+    }
   });
 
   test("does not redirect program head saves on failure and shows the error", async () => {

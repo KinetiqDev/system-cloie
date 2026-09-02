@@ -275,6 +275,7 @@ describe("manage-program-head-templates", () => {
       programId: PROGRAM_ID,
       name: "Industry Partners Evaluation Tool",
       description: "For evaluating industry partners.",
+      is_active: false,
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       is_faculty_accessible: false,
       structure: VALID_STRUCTURE,
@@ -291,7 +292,7 @@ describe("manage-program-head-templates", () => {
         name: "Industry Partners Evaluation Tool",
         description: "For evaluating industry partners.",
         program_id: PROGRAM_ID,
-        is_active: true,
+        is_active: false,
         is_faculty_accessible: false,
       }),
     });
@@ -573,6 +574,7 @@ describe("manage-program-head-templates", () => {
       id: TEMPLATE_ID,
       name: "Updated Name",
       description: "Updated description",
+      is_active: false,
       template_type: EvaluationTemplateType.COURSE_BOUND,
       is_faculty_accessible: true,
       structure: VALID_STRUCTURE,
@@ -581,6 +583,10 @@ describe("manage-program-head-templates", () => {
     expect(result).toEqual({
       success: true,
       data: { id: TEMPLATE_ID },
+    });
+    expect(instrumentTemplateUpdateMock).toHaveBeenCalledWith({
+      where: { id: TEMPLATE_ID },
+      data: expect.objectContaining({ is_active: false }),
     });
   });
 
