@@ -82,6 +82,15 @@ export function AssignmentFilters({
   const [searchDraft, setSearchDraft] = useState(filters.searchQuery);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerFilters, setDrawerFilters] = useState(filters);
+  const [previousFilters, setPreviousFilters] = useState(filters);
+
+  if (previousFilters !== filters) {
+    setPreviousFilters(filters);
+    setSearchDraft(filters.searchQuery);
+    if (drawerOpen) {
+      setDrawerFilters((current) => reconcileDrawerFilters(current, previousFilters, filters));
+    }
+  }
 
   useEffect(() => {
     if (searchDraft === filters.searchQuery) return;
@@ -276,6 +285,20 @@ export function AssignmentFilters({
       </div>
     </section>
   );
+}
+
+function reconcileDrawerFilters(
+  current: AssignmentFiltersState,
+  previous: AssignmentFiltersState,
+  next: AssignmentFiltersState
+): AssignmentFiltersState {
+  const reconciled = { ...current };
+  for (const key of Object.keys(next) as Array<keyof AssignmentFiltersState>) {
+    if (Object.is(current[key], previous[key])) {
+      Object.assign(reconciled, { [key]: next[key] });
+    }
+  }
+  return reconciled;
 }
 
 type AssignmentFilterUpdate = <K extends keyof AssignmentFiltersState>(

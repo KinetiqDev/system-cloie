@@ -21,7 +21,7 @@ test("empty states differentiate the reason", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
   await page.getByPlaceholder(/Evaluation, course, or faculty/).fill("zzzz-no-match");
   await page.getByRole("button", { name: "Apply filters" }).click();
-  await expect(page.getByText("No Course evaluations match the selected filters.")).toBeVisible();
+  await expect(page.getByText("No matching evaluations", { exact: true })).toBeVisible();
 
   // Zero-response evaluation (§61): GESTECH has an eligible roster but no
   // submissions — the landing row says "No responses yet" and the detail
@@ -31,10 +31,10 @@ test("empty states differentiate the reason", async ({ page }) => {
   await page.getByRole("option", { name: "No responses" }).click();
   await page.getByRole("button", { name: "Apply filters" }).click();
   const emptyEvaluationRow = page.getByRole("row", {
-    name: /GESTECH Post-Term CILO Evaluation.*FIRST YEAR.*MORNING/,
+    name: /GESTECH Post-Term CILO Evaluation.*First year.*Morning/i,
   });
   await expect(emptyEvaluationRow).toBeVisible();
-  await expect(emptyEvaluationRow.getByText("No responses yet")).toBeVisible();
+  await expect(emptyEvaluationRow.getByText("None", { exact: true })).toBeVisible();
   await emptyEvaluationRow.getByRole("link", { name: "GESTECH Post-Term CILO Evaluation" }).click();
   await expect(
     page.getByText("Evaluations exist, but no responses have been submitted.")

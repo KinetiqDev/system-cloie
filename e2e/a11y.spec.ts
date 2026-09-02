@@ -229,7 +229,7 @@ test.describe("accessibility sweep", () => {
     await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
     await page.getByPlaceholder(/Evaluation, course, or faculty/).fill("zzzz-no-match");
     await page.getByRole("button", { name: "Apply filters" }).click();
-    await expect(page.getByText("No Course evaluations match the selected filters.")).toBeVisible();
+    await expect(page.getByText("No matching evaluations", { exact: true })).toBeVisible();
     await expectNoAxeViolations(page);
 
     // Cross-Program not-found state (no data leak).

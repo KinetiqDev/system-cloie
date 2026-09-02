@@ -94,6 +94,59 @@ describe("ProgramHeadResponsesLanding", () => {
     expect(screen.queryByText("ARCHIVED")).not.toBeInTheDocument();
   });
 
+  it("preserves period scope in course and program-wide evaluation links", () => {
+    const sharedData = {
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      options,
+      items: [
+        {
+          id: "evidence-1",
+          title: "Scoped evaluation",
+          period: "2026-2027 · 2nd Semester",
+          status: "ACTIVE" as const,
+          assigned: 1,
+          submitted: 0,
+          mean: null,
+          scaleLabel: null,
+          stakeholder: "STUDENT" as const,
+          target: "All students",
+        },
+      ],
+    };
+    const { rerender } = render(
+      <ProgramHeadResponsesLanding
+        programId="program-1"
+        program={{ code: "BSHM", name: "Hospitality Management" }}
+        state={{ tab: "course", page: 3, termInstanceId: "term-1", q: "local search" }}
+        data={sharedData}
+      />
+    );
+
+    for (const link of screen.getAllByRole("link", { name: "Scoped evaluation" })) {
+      expect(link).toHaveAttribute(
+        "href",
+        "/program-head/programs/program-1/responses/course/evidence-1?termInstanceId=term-1"
+      );
+    }
+
+    rerender(
+      <ProgramHeadResponsesLanding
+        programId="program-1"
+        program={{ code: "BSHM", name: "Hospitality Management" }}
+        state={{ tab: "program-wide", page: 2, termInstanceId: "term-1", q: "local search" }}
+        data={sharedData}
+      />
+    );
+    for (const link of screen.getAllByRole("link", { name: "Scoped evaluation" })) {
+      expect(link).toHaveAttribute(
+        "href",
+        "/program-head/programs/program-1/responses/program-wide/evidence-1?tab=program-wide&termInstanceId=term-1"
+      );
+    }
+  });
+
   it("offers a direct recovery action when filters return no evaluations", () => {
     render(
       <ProgramHeadResponsesLanding

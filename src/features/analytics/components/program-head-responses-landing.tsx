@@ -31,6 +31,7 @@ import type { ProgramHeadResponsesFilterState } from "@/features/analytics/servi
 import {
   buildProgramHeadResponsesTabUrl,
   buildProgramHeadResponsesUrl,
+  programHeadResponsesQuery,
 } from "@/features/analytics/services/program-head-responses-state";
 import {
   buildProgramHeadResponsesCourseEvaluationPath,
@@ -132,11 +133,17 @@ export function ProgramHeadResponsesLanding({
                     item={item}
                     programId={programId}
                     isCourse={isCourse}
+                    state={state}
                   />
                 ))}
               </div>
               <div className="hidden lg:block">
-                <ResponseTable items={data.items} programId={programId} isCourse={isCourse} />
+                <ResponseTable
+                  items={data.items}
+                  programId={programId}
+                  isCourse={isCourse}
+                  state={state}
+                />
               </div>
             </>
           )}
@@ -155,10 +162,24 @@ export function ProgramHeadResponsesLanding({
   );
 }
 
-function itemHref(programId: string, item: Deployment, isCourse: boolean): string {
-  return isCourse
+function itemHref(
+  programId: string,
+  item: Deployment,
+  isCourse: boolean,
+  state: ProgramHeadResponsesFilterState
+): string {
+  const path = isCourse
     ? buildProgramHeadResponsesCourseEvaluationPath(programId, item.id)
     : buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id);
+  const query = programHeadResponsesQuery({
+    tab: isCourse ? "course" : "program-wide",
+    page: 1,
+    termInstanceId: state.termInstanceId,
+    schoolYearId: state.schoolYearId,
+    semester: state.semester,
+    stakeholder: state.stakeholder,
+  });
+  return query ? `${path}?${query}` : path;
 }
 
 // Card branches keep course and program-wide evidence readable in the mobile layout.
@@ -167,17 +188,19 @@ function ResponseCard({
   item,
   programId,
   isCourse,
+  state,
 }: {
   item: Deployment;
   programId: string;
   isCourse: boolean;
+  state: ProgramHeadResponsesFilterState;
 }) {
   return (
     <article className="border-border bg-background rounded-xl border p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Link
-            href={itemHref(programId, item, isCourse)}
+            href={itemHref(programId, item, isCourse, state)}
             className="text-title-sm text-link focus-visible:ring-ring -m-2 inline-flex min-h-11 items-center rounded-lg p-2 font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none"
           >
             {item.title}
@@ -239,10 +262,12 @@ function ResponseTable({
   items,
   programId,
   isCourse,
+  state,
 }: {
   items: Deployment[];
   programId: string;
   isCourse: boolean;
+  state: ProgramHeadResponsesFilterState;
 }) {
   return (
     <Table className="table-fixed">
@@ -263,7 +288,7 @@ function ResponseTable({
             <TableCell className="whitespace-normal">
               <Link
                 className="text-link focus-visible:ring-ring -m-2 inline-flex min-h-11 items-center rounded-lg p-2 font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                href={itemHref(programId, item, isCourse)}
+                href={itemHref(programId, item, isCourse, state)}
               >
                 {item.title}
               </Link>

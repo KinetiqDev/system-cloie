@@ -160,6 +160,78 @@ describe("AssignmentFilters", () => {
     expect(onFiltersChange).toHaveBeenCalledWith({ ...filters, searchQuery: "faculty" }, "replace");
   });
 
+  it("cancels a pending search draft when parent filters change", () => {
+    vi.useFakeTimers();
+    const onFiltersChange = vi.fn();
+    const { rerender } = render(
+      <AssignmentFilters
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        availableCourses={[]}
+        availablePrograms={[]}
+        availableFaculty={[]}
+        termInstances={[]}
+      />
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Search assignments" }), {
+      target: { value: "local draft" },
+    });
+    const parentFilters = { ...filters, courseId: "course-2", searchQuery: "parent search" };
+    rerender(
+      <AssignmentFilters
+        filters={parentFilters}
+        onFiltersChange={onFiltersChange}
+        availableCourses={[]}
+        availablePrograms={[]}
+        availableFaculty={[]}
+        termInstances={[]}
+      />
+    );
+    act(() => vi.advanceTimersByTime(300));
+
+    expect(screen.getByRole("textbox", { name: "Search assignments" })).toHaveValue(
+      "parent search"
+    );
+    expect(onFiltersChange).not.toHaveBeenCalled();
+  });
+
+  it("reconciles an open mobile drawer with parent filter changes", () => {
+    const onFiltersChange = vi.fn();
+    const { rerender } = render(
+      <AssignmentFilters
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        availableCourses={[
+          { id: "course-1", code: "CS101", title: "Intro to Computing" },
+          { id: "course-2", code: "CS202", title: "Data Structures" },
+        ]}
+        availablePrograms={[]}
+        availableFaculty={[]}
+        termInstances={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /More filters/ }));
+    const parentFilters = { ...filters, courseId: "course-2", searchQuery: "current" };
+    rerender(
+      <AssignmentFilters
+        filters={parentFilters}
+        onFiltersChange={onFiltersChange}
+        availableCourses={[
+          { id: "course-1", code: "CS101", title: "Intro to Computing" },
+          { id: "course-2", code: "CS202", title: "Data Structures" },
+        ]}
+        availablePrograms={[]}
+        availableFaculty={[]}
+        termInstances={[]}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Show results/ }));
+
+    expect(onFiltersChange).toHaveBeenCalledWith(parentFilters);
+  });
+
   it("can reset the Secretary empty-roster attention filter", () => {
     const onFiltersChange = vi.fn();
     render(
