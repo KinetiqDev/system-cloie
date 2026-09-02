@@ -9,7 +9,10 @@ import {
 } from "@/lib/constants/program-head-routes";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
 import { buildAnalyticsUrl } from "./program-head-analytics-state";
-import { buildProgramHeadResponsesUrl } from "./program-head-responses-state";
+import {
+  buildProgramHeadResponsesUrl,
+  programHeadResponsesQuery,
+} from "./program-head-responses-state";
 import {
   IMPOSSIBLE_TERM_INSTANCE_ID,
   buildPeriodLabel,
@@ -456,6 +459,7 @@ export function buildNeedsAttentionItems(input: {
   programPlos: Array<{ id: string; code: string }>;
   ploRowsBySource: Partial<Record<DashboardSourceKey, DashboardPloSummaryRow[]>>;
   analyticsOutcomesHref: string;
+  periodFilters?: DashboardPeriodFilters;
 }): NeedsAttentionItem[] {
   const items: NeedsAttentionItem[] = [];
   const activeDeployments = input.deployments.filter(
@@ -469,10 +473,7 @@ export function buildNeedsAttentionItems(input: {
       rule: "closing-soon",
       title: `${deployment.name} closes soon`,
       note: "Deadline within 7 days",
-      href:
-        deployment.kind === "course"
-          ? buildProgramHeadResponsesCourseEvaluationPath(input.programId, deployment.id)
-          : buildProgramHeadResponsesProgramWideDeploymentPath(input.programId, deployment.id),
+      href: buildAttentionDeploymentHref(input.programId, deployment, input.periodFilters),
     });
   }
 
@@ -483,10 +484,7 @@ export function buildNeedsAttentionItems(input: {
       rule: "zero-submissions",
       title: `${deployment.name} has no submissions yet`,
       note: "No submitted responses so far",
-      href:
-        deployment.kind === "course"
-          ? buildProgramHeadResponsesCourseEvaluationPath(input.programId, deployment.id)
-          : buildProgramHeadResponsesProgramWideDeploymentPath(input.programId, deployment.id),
+      href: buildAttentionDeploymentHref(input.programId, deployment, input.periodFilters),
     });
   }
 
@@ -509,6 +507,25 @@ export function buildNeedsAttentionItems(input: {
   }
 
   return items;
+}
+
+function buildAttentionDeploymentHref(
+  programId: string,
+  deployment: AttentionDeployment,
+  filters: DashboardPeriodFilters = {}
+): string {
+  const path =
+    deployment.kind === "course"
+      ? buildProgramHeadResponsesCourseEvaluationPath(programId, deployment.id)
+      : buildProgramHeadResponsesProgramWideDeploymentPath(programId, deployment.id);
+  const query = programHeadResponsesQuery({
+    tab: deployment.kind === "course" ? "course" : "program-wide",
+    page: 1,
+    termInstanceId: filters.termInstanceId,
+    schoolYearId: filters.schoolYearId,
+    semester: filters.semester as AcademicSemester | undefined,
+  });
+  return query ? `${path}?${query}` : path;
 }
 
 // ---------------------------------------------------------------------------
@@ -784,6 +801,7 @@ export async function getProgramHeadDashboard(
     programPlos,
     ploRowsBySource,
     analyticsOutcomesHref,
+    periodFilters: effectiveFilters,
   });
 
   return {
