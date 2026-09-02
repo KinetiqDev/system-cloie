@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CourseScope, YearLevel, StudentSection } from "@prisma/client";
+import type { ReactNode } from "react";
+import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { ListFilter, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import {
   Drawer,
   DrawerContent,
@@ -18,7 +27,6 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -26,6 +34,14 @@ import {
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
 import { YEAR_LEVEL_OPTIONS, STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
+
+const ALL_OPTION_ID = "__all__";
+
+type SearchableFilterOption = {
+  id: string;
+  label: string;
+  detail?: string;
+};
 
 export interface AssignmentFiltersState {
   termInstanceId: string | null;
@@ -97,6 +113,7 @@ export function AssignmentFilters({
     hideCourseScopeFilter ? null : drawerFilters.courseScope,
     drawerFilters.hasActiveRosterMembers === false ? "empty-roster" : null,
   ].filter((value) => value !== null).length;
+
   const resetFilters = () => {
     const reset = {
       termInstanceId: defaultTermInstanceId,
@@ -125,43 +142,56 @@ export function AssignmentFilters({
     update: <K extends keyof AssignmentFiltersState>(
       key: K,
       value: AssignmentFiltersState[K]
-    ) => void
+    ) => void,
+    idSuffix = ""
   ) => (
     <>
-      <FilterSelect
+      <SearchableFilterSelect
         label="Course"
-        id="assignment-course"
-        value={state.courseId ?? "all"}
-        onChange={(value) => update("courseId", value === "all" ? null : value)}
-      >
-        <SelectItem value="all">All Courses</SelectItem>
-        {availableCourses.map((course) => (
-          <SelectItem key={course.id} value={course.id}>
-            {course.code} — {course.title}
-          </SelectItem>
-        ))}
-      </FilterSelect>
-      <FilterSelect
+        id={`assignment-course${idSuffix}`}
+        value={state.courseId}
+        options={[
+          { id: ALL_OPTION_ID, label: "All Courses" },
+          ...availableCourses.map((course) => ({
+            id: course.id,
+            label: course.code,
+            detail: course.title,
+          })),
+        ]}
+        placeholder="Search courses…"
+        emptyMessage="No courses match your search."
+        onChange={(value) => update("courseId", value)}
+      />
+      <SearchableFilterSelect
         label="Faculty"
-        id="assignment-faculty"
-        value={state.facultyId ?? "all"}
-        onChange={(value) => update("facultyId", value === "all" ? null : value)}
-      >
-        <SelectItem value="all">All Faculty</SelectItem>
-        {availableFaculty.map((faculty) => (
-          <SelectItem key={faculty.id} value={faculty.id}>
-            {faculty.name}
-          </SelectItem>
-        ))}
-      </FilterSelect>
+        id={`assignment-faculty${idSuffix}`}
+        value={state.facultyId}
+        options={[
+          { id: ALL_OPTION_ID, label: "All Faculty" },
+          ...availableFaculty.map((faculty) => ({
+            id: faculty.id,
+            label: faculty.name,
+            detail: faculty.email,
+          })),
+        ]}
+        placeholder="Search faculty…"
+        emptyMessage="No faculty match your search."
+        onChange={(value) => update("facultyId", value)}
+      />
       {showProgramFilter && (
         <FilterSelect
           label="Program"
-          id="assignment-program"
-          value={state.programId ?? "all"}
-          onChange={(value) => update("programId", value === "all" ? null : value)}
+          id={`assignment-program${idSuffix}`}
+          value={state.programId ?? ALL_OPTION_ID}
+          displayValue={
+            state.programId
+              ? (availablePrograms.find((program) => program.id === state.programId)?.code ??
+                "Selected program")
+              : "All Programs"
+          }
+          onChange={(value) => update("programId", value === ALL_OPTION_ID ? null : value)}
         >
-          <SelectItem value="all">All Programs</SelectItem>
+          <SelectItem value={ALL_OPTION_ID}>All Programs</SelectItem>
           {availablePrograms.map((program) => (
             <SelectItem key={program.id} value={program.id}>
               {program.code} — {program.name}
@@ -171,11 +201,19 @@ export function AssignmentFilters({
       )}
       <FilterSelect
         label="Year level"
-        id="assignment-year-level"
-        value={state.yearLevel ?? "all"}
-        onChange={(value) => update("yearLevel", value === "all" ? null : (value as YearLevel))}
+        id={`assignment-year-level${idSuffix}`}
+        value={state.yearLevel ?? ALL_OPTION_ID}
+        displayValue={
+          state.yearLevel
+            ? (YEAR_LEVEL_OPTIONS.find((option) => option.value === state.yearLevel)?.label ??
+              "Selected year level")
+            : "All Years"
+        }
+        onChange={(value) =>
+          update("yearLevel", value === ALL_OPTION_ID ? null : (value as YearLevel))
+        }
       >
-        <SelectItem value="all">All Years</SelectItem>
+        <SelectItem value={ALL_OPTION_ID}>All Years</SelectItem>
         {YEAR_LEVEL_OPTIONS.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
@@ -184,11 +222,19 @@ export function AssignmentFilters({
       </FilterSelect>
       <FilterSelect
         label="Section"
-        id="assignment-section"
-        value={state.section ?? "all"}
-        onChange={(value) => update("section", value === "all" ? null : (value as StudentSection))}
+        id={`assignment-section${idSuffix}`}
+        value={state.section ?? ALL_OPTION_ID}
+        displayValue={
+          state.section
+            ? (STUDENT_SECTION_OPTIONS.find((option) => option.value === state.section)?.label ??
+              "Selected section")
+            : "All Sections"
+        }
+        onChange={(value) =>
+          update("section", value === ALL_OPTION_ID ? null : (value as StudentSection))
+        }
       >
-        <SelectItem value="all">All Sections</SelectItem>
+        <SelectItem value={ALL_OPTION_ID}>All Sections</SelectItem>
         {STUDENT_SECTION_OPTIONS.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
@@ -197,24 +243,34 @@ export function AssignmentFilters({
       </FilterSelect>
       <FilterSelect
         label="Status"
-        id="assignment-status"
-        value={state.isActive === null ? "all" : String(state.isActive)}
-        onChange={(value) => update("isActive", value === "all" ? null : value === "true")}
+        id={`assignment-status${idSuffix}`}
+        value={state.isActive === null ? ALL_OPTION_ID : String(state.isActive)}
+        displayValue={
+          state.isActive === null ? "All Statuses" : state.isActive ? "Active" : "Inactive"
+        }
+        onChange={(value) => update("isActive", value === ALL_OPTION_ID ? null : value === "true")}
       >
-        <SelectItem value="all">All Statuses</SelectItem>
+        <SelectItem value={ALL_OPTION_ID}>All Statuses</SelectItem>
         <SelectItem value="true">Active</SelectItem>
         <SelectItem value="false">Inactive</SelectItem>
       </FilterSelect>
       {!hideCourseScopeFilter && (
         <FilterSelect
           label="Course scope"
-          id="assignment-scope"
-          value={state.courseScope ?? "all"}
+          id={`assignment-scope${idSuffix}`}
+          value={state.courseScope ?? ALL_OPTION_ID}
+          displayValue={
+            state.courseScope === CourseScope.GENERAL_EDUCATION
+              ? "General Education"
+              : state.courseScope === CourseScope.PROGRAM_SPECIFIC
+                ? "Program-specific"
+                : "All Scopes"
+          }
           onChange={(value) =>
-            update("courseScope", value === "all" ? null : (value as CourseScope))
+            update("courseScope", value === ALL_OPTION_ID ? null : (value as CourseScope))
           }
         >
-          <SelectItem value="all">All Scopes</SelectItem>
+          <SelectItem value={ALL_OPTION_ID}>All Scopes</SelectItem>
           <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
           <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-specific</SelectItem>
         </FilterSelect>
@@ -233,7 +289,7 @@ export function AssignmentFilters({
   return (
     <section
       aria-labelledby="assignment-filter-title"
-      className="bg-card flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border p-4 shadow-xs"
+      className="bg-card flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border p-4 shadow-xs sm:p-5"
     >
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -243,12 +299,12 @@ export function AssignmentFilters({
           >
             <ListFilter className="size-4" />
           </span>
-          <div className="flex min-w-0 flex-col">
-            <h2 id="assignment-filter-title" className="text-title-sm leading-none">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 id="assignment-filter-title" className="text-title-sm leading-tight">
               Filter assignments
             </h2>
-            <p className="text-muted-foreground mt-1 text-xs leading-none break-words">
-              Term, course, class, and faculty — combine filters to narrow the list.
+            <p className="text-muted-foreground text-xs leading-normal break-words">
+              Search or combine filters to narrow the assignment list.
             </p>
           </div>
         </div>
@@ -272,7 +328,7 @@ export function AssignmentFilters({
           allowAll
         />
         <div className="flex min-w-0 flex-col gap-2">
-          <Label htmlFor="assignment-search">Search</Label>
+          <Label htmlFor="assignment-search">Search assignments</Label>
           <div className="relative">
             <Search
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
@@ -289,11 +345,9 @@ export function AssignmentFilters({
           </div>
         </div>
       </div>
-      {/* Desktop: secondary filters as responsive grid */}
       <div className="hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {secondaryControls(filters, updateFilter)}
       </div>
-      {/* Mobile: collapsed into drawer */}
       <div className="md:hidden">
         <Drawer
           open={drawerOpen}
@@ -304,22 +358,29 @@ export function AssignmentFilters({
           showSwipeHandle
         >
           <DrawerTrigger
-            render={<Button variant="outline" className="w-full justify-center gap-2" />}
+            render={<Button variant="outline" className="w-full justify-between gap-2" />}
           >
-            <SlidersHorizontal className="size-4" aria-hidden="true" />
-            Filters{secondaryCount ? ` (${secondaryCount})` : ""}
-            <span className="sr-only">Open additional filters</span>
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal className="size-4" aria-hidden="true" />
+              More filters
+            </span>
+            <span className="text-muted-foreground">
+              {secondaryCount ? `${secondaryCount} active` : "Optional"}
+            </span>
           </DrawerTrigger>
           <DrawerContent className="max-h-[88dvh]">
             <DrawerHeader className="text-left">
-              <DrawerTitle>Filter assignments</DrawerTitle>
+              <DrawerTitle>More assignment filters</DrawerTitle>
               <DrawerDescription>
-                Choose course, faculty, and class to narrow the visible assignments.
+                Search courses and faculty by name, code, or email. Changes apply when you show
+                results.
               </DrawerDescription>
             </DrawerHeader>
             <div className="grid min-h-0 gap-3 overflow-y-auto px-4 py-2">
-              {secondaryControls(drawerFilters, (key, value) =>
-                setDrawerFilters((current) => ({ ...current, [key]: value }))
+              {secondaryControls(
+                drawerFilters,
+                (key, value) => setDrawerFilters((current) => ({ ...current, [key]: value })),
+                "-mobile"
               )}
             </div>
             <DrawerFooter className="pb-[calc(env(safe-area-inset-bottom)+1rem)]">
@@ -345,29 +406,96 @@ export function AssignmentFilters({
   );
 }
 
+function SearchableFilterSelect({
+  label,
+  id,
+  value,
+  options,
+  placeholder,
+  emptyMessage,
+  onChange,
+}: {
+  label: string;
+  id: string;
+  value: string | null;
+  options: SearchableFilterOption[];
+  placeholder: string;
+  emptyMessage: string;
+  onChange: (value: string | null) => void;
+}) {
+  const selectedOption = value ? (options.find((option) => option.id === value) ?? null) : null;
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Combobox
+        value={selectedOption}
+        onValueChange={(option) => {
+          const nextOption = option as SearchableFilterOption | null;
+          onChange(!nextOption || nextOption.id === ALL_OPTION_ID ? null : nextOption.id);
+        }}
+        items={options}
+        filter={(option, query) => {
+          if (!query) return true;
+          const normalizedQuery = query.toLowerCase();
+          return [option.label, option.detail]
+            .filter((text): text is string => Boolean(text))
+            .some((text) => text.toLowerCase().includes(normalizedQuery));
+        }}
+        itemToStringLabel={(option) => option?.label ?? ""}
+        itemToStringValue={(option) => option.id}
+        autoHighlight
+      >
+        <ComboboxInput
+          id={id}
+          className="w-full"
+          placeholder={placeholder}
+          showClear={Boolean(value)}
+        />
+        <ComboboxContent className="max-w-[calc(100vw-2rem)]">
+          <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
+          <ComboboxList>
+            {(option) => (
+              <ComboboxItem key={option.id} value={option} className="items-start py-2">
+                <span className="flex min-w-0 flex-col gap-0.5 py-0.5 text-left">
+                  <span className="truncate text-sm leading-snug font-medium">{option.label}</span>
+                  {option.detail && (
+                    <span className="text-muted-foreground truncate text-xs leading-normal">
+                      {option.detail}
+                    </span>
+                  )}
+                </span>
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    </div>
+  );
+}
+
 function FilterSelect({
   label,
   id,
   value,
+  displayValue,
   onChange,
   children,
 }: {
   label: string;
   id: string;
   value: string;
+  displayValue?: string;
   onChange: (value: string) => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <Select value={value} onValueChange={(value) => value && onChange(value)}>
+      <Select value={value} onValueChange={(nextValue) => nextValue && onChange(nextValue)}>
         <SelectTrigger id={id} className="bg-background w-full">
-          <SelectValue />
+          <SelectValue>{displayValue}</SelectValue>
         </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>{children}</SelectGroup>
-        </SelectContent>
+        <SelectContent>{children}</SelectContent>
       </Select>
     </div>
   );
