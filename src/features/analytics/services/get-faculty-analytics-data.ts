@@ -4,6 +4,7 @@ import { eng } from "stopword";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type {
   FacultyAnalyticsData,
   FacultyCiloMetric,
@@ -200,10 +201,7 @@ export async function getFacultyAnalyticsData(
       }
 
       const ti = evaluation.term_instance;
-      const termLabel = ti.term ? `${ti.term}` : "";
-      const termInstanceLabel = termLabel
-        ? `${ti.school_year.code} — ${ti.semester} — ${termLabel}`
-        : `${ti.school_year.code} — ${ti.semester}`;
+      const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
 
       const ca = evaluation.course_assignment;
 

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveReviewerProgramScope } from "@/features/academic-structure/services/resolve-reviewer-program-scope";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type { CourseBoundReviewListItem } from "../types";
 import { buildReviewerEvaluationScope, mean, pickReviewerRole } from "./shared";
 
@@ -105,10 +106,7 @@ export async function listCourseBoundReviewItems(
     );
 
     const ti = evaluation.term_instance;
-    const termLabel = ti.term ? `${ti.term}` : "";
-    const termInstanceLabel = termLabel
-      ? `${ti.school_year.code} — ${ti.semester} — ${termLabel}`
-      : `${ti.school_year.code} — ${ti.semester}`;
+    const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
 
     const ca = evaluation.course_assignment;
 

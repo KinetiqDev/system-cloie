@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveReviewerProgramScope } from "@/features/academic-structure/services/resolve-reviewer-program-scope";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type { CourseBoundResponseReview } from "../types";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import {
@@ -156,10 +157,7 @@ export async function getCourseBoundResponseReview(
     });
 
   const ti = ca.term_instance;
-  const termLabel = ti.term ? `${ti.term}` : "";
-  const termInstanceLabel = termLabel
-    ? `${ti.school_year.code} — ${ti.semester} — ${termLabel}`
-    : `${ti.school_year.code} — ${ti.semester}`;
+  const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
 
   return {
     termInstanceLabel,

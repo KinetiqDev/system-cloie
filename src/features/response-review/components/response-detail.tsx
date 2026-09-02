@@ -8,6 +8,7 @@ import {
   buildAnalyticsUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
 import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
+import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
@@ -265,7 +266,9 @@ function respondentContextLabel(
 ): string | null {
   if (respondent.studentContext) {
     const { programLabel, majorLabel, yearLevel, section } = respondent.studentContext;
-    return [programLabel, majorLabel, yearLevel, section].filter(Boolean).join(" · ");
+    return [programLabel, majorLabel, getYearLevelDisplay(yearLevel), getSectionLabel(section)]
+      .filter((part) => part && part !== "—")
+      .join(" · ");
   }
   if (respondent.alumniContext) {
     const { programLabel, majorLabel, graduationYear } = respondent.alumniContext;

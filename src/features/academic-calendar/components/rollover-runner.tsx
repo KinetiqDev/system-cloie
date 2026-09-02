@@ -5,11 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { showToast } from "@/components/ui/toast";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type { TermInstanceItem } from "../types";
-import type {
-  RolloverException,
-  RunTermRolloverInput,
-} from "../services/run-term-rollover";
+import type { RolloverException, RunTermRolloverInput } from "../services/run-term-rollover";
 import { RolloverExceptionsTable } from "./rollover-exceptions-table";
 
 type Step = "confirm" | "running" | "results";
@@ -114,39 +112,36 @@ export function RolloverRunner({
     }
   };
 
-  const formatTermLabel = (term: TermInstanceItem) => {
-    return term.term
-      ? `${term.schoolYearCode} — ${term.semester} — ${term.term}`
-      : `${term.schoolYearCode} — ${term.semester}`;
-  };
+  const formatTermLabel = (term: TermInstanceItem) =>
+    formatTermInstanceLabel(term.schoolYearCode, term.semester, term.term);
 
   // ─── Confirm Step ─────────────────────────────────────────────────────────
 
   if (step === "confirm") {
     return (
-      <div className="rounded-xl border bg-card space-y-6 p-6">
+      <div className="bg-card space-y-6 rounded-xl border p-6">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Confirm Term Rollover</h3>
           <p className="text-muted-foreground text-sm">
-            This will roll over active student enrollments from the source term to the target
-            term, promoting students to their next year level.
+            This will roll over active student enrollments from the source term to the target term,
+            promoting students to their next year level.
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1 rounded-lg bg-muted p-4">
+          <div className="bg-muted space-y-1 rounded-lg p-4">
             <p className="text-muted-foreground text-xs font-semibold uppercase">Source Term</p>
             <p className="font-medium">{formatTermLabel(sourceTerm)}</p>
           </div>
-          <div className="space-y-1 rounded-lg bg-muted p-4">
+          <div className="bg-muted space-y-1 rounded-lg p-4">
             <p className="text-muted-foreground text-xs font-semibold uppercase">Target Term</p>
             <p className="font-medium">{formatTermLabel(targetTerm)}</p>
           </div>
         </div>
 
-        <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
+        <div className="border-primary/20 bg-primary/5 space-y-2 rounded-lg border p-4">
           <p className="text-sm font-medium">Cohort Promotion Rules:</p>
-          <ul className="text-muted-foreground text-sm space-y-1">
+          <ul className="text-muted-foreground space-y-1 text-sm">
             <li>• 1st Year → 2nd Year</li>
             <li>• 2nd Year → 3rd Year</li>
             <li>• 3rd Year → 4th Year</li>
@@ -162,7 +157,9 @@ export function RolloverRunner({
                 <p className="text-muted-foreground text-xs">Students to Process</p>
               </div>
               <div className="text-center">
-                <p className="text-text-primary text-2xl font-bold">{previewData.wouldCreateCount}</p>
+                <p className="text-text-primary text-2xl font-bold">
+                  {previewData.wouldCreateCount}
+                </p>
                 <p className="text-muted-foreground text-xs">Enrollments to Create</p>
               </div>
               <div className="text-center">
@@ -175,9 +172,7 @@ export function RolloverRunner({
 
             {previewData.exceptions.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">
-                  Exceptions ({previewData.exceptions.length})
-                </p>
+                <p className="text-sm font-medium">Exceptions ({previewData.exceptions.length})</p>
                 <RolloverExceptionsTable exceptions={previewData.exceptions} />
               </div>
             )}
@@ -186,23 +181,13 @@ export function RolloverRunner({
               <Button type="button" variant="outline" onClick={() => setPreviewData(null)}>
                 Refresh Preview
               </Button>
-              <Button
-                type="button"
-                onClick={handleRun}
-                loading={isLoading}
-                className="flex-1"
-              >
+              <Button type="button" onClick={handleRun} loading={isLoading} className="flex-1">
                 {isLoading ? "Processing..." : "Run Rollover"}
               </Button>
             </div>
           </div>
         ) : (
-          <Button
-            type="button"
-            onClick={handlePreview}
-            loading={isLoading}
-            className="w-full"
-          >
+          <Button type="button" onClick={handlePreview} loading={isLoading} className="w-full">
             {isLoading ? "Loading Preview..." : "Preview Rollover"}
           </Button>
         )}
@@ -214,7 +199,7 @@ export function RolloverRunner({
 
   if (step === "running") {
     return (
-      <div className="rounded-xl border bg-card space-y-6 p-6">
+      <div className="bg-card space-y-6 rounded-xl border p-6">
         <div className="space-y-2 text-center">
           <h3 className="text-lg font-semibold">Running Rollover...</h3>
           <p className="text-muted-foreground text-sm">
@@ -239,7 +224,7 @@ export function RolloverRunner({
 
   if (step === "results" && resultData) {
     return (
-      <div className="rounded-xl border bg-card space-y-6 p-6">
+      <div className="bg-card space-y-6 rounded-xl border p-6">
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Rollover Complete</h3>
           <p className="text-muted-foreground text-sm">
@@ -248,18 +233,16 @@ export function RolloverRunner({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg bg-muted p-4 text-center">
+          <div className="bg-muted rounded-lg p-4 text-center">
             <p className="text-2xl font-bold">{resultData.processedCount}</p>
             <p className="text-muted-foreground text-xs">Students Processed</p>
           </div>
-          <div className="rounded-lg bg-primary/10 p-4 text-center">
+          <div className="bg-primary/10 rounded-lg p-4 text-center">
             <p className="text-text-primary text-2xl font-bold">{resultData.createdCount}</p>
             <p className="text-muted-foreground text-xs">Enrollments Created</p>
           </div>
-          <div className="rounded-lg bg-muted p-4 text-center">
-            <p className="text-muted-foreground text-2xl font-bold">
-              {resultData.skippedCount}
-            </p>
+          <div className="bg-muted rounded-lg p-4 text-center">
+            <p className="text-muted-foreground text-2xl font-bold">{resultData.skippedCount}</p>
             <p className="text-muted-foreground text-xs">Already Enrolled</p>
           </div>
         </div>
@@ -275,11 +258,7 @@ export function RolloverRunner({
           <Button type="button" variant="outline" onClick={() => setStep("confirm")}>
             Run Another Rollover
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => window.location.reload()}
-          >
+          <Button type="button" variant="outline" onClick={() => window.location.reload()}>
             Refresh Page
           </Button>
         </div>
