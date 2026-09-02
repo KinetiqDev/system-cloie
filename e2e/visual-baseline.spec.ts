@@ -120,7 +120,7 @@ test.describe("@visual curated baseline (desktop)", () => {
     await page.getByRole("link", { name: "Responses", exact: true }).click();
     await waitForStableState(page);
     await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
-    await page.getByPlaceholder(/Course, title, evaluation or faculty/).fill("zzzz-no-match");
+    await page.getByPlaceholder(/Evaluation, course, or faculty/).fill("zzzz-no-match");
     await page.getByRole("button", { name: "Apply filters" }).click();
     await expect(page.getByText("No Course evaluations match the selected filters.")).toBeVisible();
     await screenshotStable(page, "empty-filtered-responses.png");

@@ -63,7 +63,7 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
 
   await page.getByLabel("Deployed Evaluation Name").fill(deploymentName);
   await page.getByRole("combobox", { name: "Evaluation Template" }).click();
-  await page.getByRole("option", { name: "Alumni Evaluation Tool" }).click();
+  await page.getByRole("option", { name: "BSIT Alumni Evaluation Tool", exact: true }).click();
 
   // Select the PLANNED academic term
   await page.getByRole("combobox", { name: "Academic Term" }).click();
@@ -209,7 +209,9 @@ test("industry partner: profile-based targeting and distinct instrument rules", 
   await page.goto(`/program-head/programs/${fx.bsit.id}/tools/publish`);
   await page.getByLabel("Deployed Evaluation Name").fill(deploymentName);
   await page.getByRole("combobox", { name: "Evaluation Template" }).click();
-  await page.getByRole("option", { name: "Industry Partner Internship Evaluation Tool" }).click();
+  await page
+    .getByRole("option", { name: "BSIT Industry Partner Internship Evaluation Tool", exact: true })
+    .click();
   await page.getByRole("combobox", { name: "Academic Term" }).click();
   await page
     .getByRole("option", { name: /2027-2028/ })
