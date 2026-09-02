@@ -184,114 +184,147 @@ function FilterForm({
           <div
             className={cn("grid gap-4 pt-3", mobile ? "grid-cols-1" : "grid-cols-2 xl:grid-cols-4")}
           >
-            {state.tab === "course" ? (
-              <>
-                <SearchableField
-                  id={`${idPrefix}-course`}
-                  label="Course"
-                  name="courseId"
-                  value={state.courseId}
-                  options={options.courses}
-                  placeholder="All courses"
-                  emptyMessage="No courses match your search."
-                />
-                <SearchableField
-                  id={`${idPrefix}-faculty`}
-                  label="Faculty"
-                  name="facultyId"
-                  value={state.facultyId}
-                  options={options.faculty}
-                  placeholder="All faculty"
-                  emptyMessage="No faculty match your search."
-                />
-                <SearchableField
-                  id={`${idPrefix}-major`}
-                  label="Major"
-                  name="majorId"
-                  value={state.majorId}
-                  options={options.majors}
-                  placeholder="All majors"
-                  emptyMessage="No majors match your search."
-                />
-                <SimpleSelect
-                  id={`${idPrefix}-year-level`}
-                  label="Year level"
-                  name="yearLevel"
-                  value={state.yearLevel}
-                  options={RESPONSE_YEAR_LEVEL_OPTIONS}
-                  blank="All year levels"
-                />
-                <SimpleSelect
-                  id={`${idPrefix}-section`}
-                  label="Section"
-                  name="section"
-                  value={state.section}
-                  options={RESPONSE_SECTION_OPTIONS}
-                  blank="All sections"
-                />
-              </>
-            ) : (
-              <>
-                <SimpleSelect
-                  id={`${idPrefix}-stakeholder`}
-                  label="Stakeholder"
-                  name="stakeholder"
-                  value={state.stakeholder}
-                  options={RESPONSE_STAKEHOLDER_OPTIONS}
-                  blank="All stakeholders"
-                />
-                <SearchableField
-                  id={`${idPrefix}-major`}
-                  label="Major"
-                  name="majorId"
-                  value={state.majorId}
-                  options={options.majors}
-                  placeholder="All majors"
-                  emptyMessage="No majors match your search."
-                />
-                <SimpleSelect
-                  id={`${idPrefix}-year-level`}
-                  label="Year level"
-                  name="yearLevel"
-                  value={state.yearLevel}
-                  options={RESPONSE_YEAR_LEVEL_OPTIONS}
-                  blank="All year levels"
-                />
-                <SearchableField
-                  id={`${idPrefix}-instrument`}
-                  label="Evaluation instrument"
-                  name="instrumentTemplateId"
-                  value={state.instrumentTemplateId}
-                  options={options.instruments}
-                  placeholder="All instruments"
-                  emptyMessage="No instruments match your search."
-                />
-              </>
-            )}
+            <AdvancedFilterFields
+              tab={state.tab}
+              state={state}
+              options={options}
+              idPrefix={idPrefix}
+            />
           </div>
         </details>
 
-        <div
-          className={cn(
-            "flex items-center gap-2",
-            mobile && "bg-popover sticky bottom-0 -mx-1 py-2"
-          )}
-        >
-          <Button type="submit" className={cn(mobile && "flex-1")}>
-            Apply filters
-          </Button>
-          {activeCount > 0 ? (
-            <Link
-              href={clearHref}
-              className={buttonVariants({ variant: mobile ? "outline" : "ghost" })}
-            >
-              <X data-icon="inline-start" aria-hidden="true" />
-              Clear
-            </Link>
-          ) : null}
-        </div>
+        <FilterActions activeCount={activeCount} clearHref={clearHref} mobile={mobile} />
       </FieldGroup>
     </form>
+  );
+}
+
+function FilterActions({
+  activeCount,
+  clearHref,
+  mobile,
+}: {
+  activeCount: number;
+  clearHref: string;
+  mobile: boolean;
+}) {
+  return (
+    <div
+      className={cn("flex items-center gap-2", mobile && "bg-popover sticky bottom-0 -mx-1 py-2")}
+    >
+      <Button type="submit" className={cn(mobile && "flex-1")}>
+        Apply filters
+      </Button>
+      {activeCount > 0 ? (
+        <Link
+          href={clearHref}
+          className={buttonVariants({ variant: mobile ? "outline" : "ghost" })}
+        >
+          <X data-icon="inline-start" aria-hidden="true" />
+          Clear
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function AdvancedFilterFields({
+  tab,
+  state,
+  options,
+  idPrefix,
+}: Pick<ProgramHeadResponsesFilterState, "tab"> & {
+  state: ProgramHeadResponsesFilterState;
+  options: ResponseFilterOptions;
+  idPrefix: string;
+}) {
+  if (tab === "course") {
+    return (
+      <>
+        <SearchableField
+          id={`${idPrefix}-course`}
+          label="Course"
+          name="courseId"
+          value={state.courseId}
+          options={options.courses}
+          placeholder="All courses"
+          emptyMessage="No courses match your search."
+        />
+        <SearchableField
+          id={`${idPrefix}-faculty`}
+          label="Faculty"
+          name="facultyId"
+          value={state.facultyId}
+          options={options.faculty}
+          placeholder="All faculty"
+          emptyMessage="No faculty match your search."
+        />
+        <SearchableField
+          id={`${idPrefix}-major`}
+          label="Major"
+          name="majorId"
+          value={state.majorId}
+          options={options.majors}
+          placeholder="All majors"
+          emptyMessage="No majors match your search."
+        />
+        <SimpleSelect
+          id={`${idPrefix}-year-level`}
+          label="Year level"
+          name="yearLevel"
+          value={state.yearLevel}
+          options={RESPONSE_YEAR_LEVEL_OPTIONS}
+          blank="All year levels"
+        />
+        <SimpleSelect
+          id={`${idPrefix}-section`}
+          label="Section"
+          name="section"
+          value={state.section}
+          options={RESPONSE_SECTION_OPTIONS}
+          blank="All sections"
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <SimpleSelect
+        id={`${idPrefix}-stakeholder`}
+        label="Stakeholder"
+        name="stakeholder"
+        value={state.stakeholder}
+        options={RESPONSE_STAKEHOLDER_OPTIONS}
+        blank="All stakeholders"
+      />
+      <SearchableField
+        id={`${idPrefix}-major`}
+        label="Major"
+        name="majorId"
+        value={state.majorId}
+        options={options.majors}
+        placeholder="All majors"
+        emptyMessage="No majors match your search."
+      />
+      <SimpleSelect
+        id={`${idPrefix}-year-level`}
+        label="Year level"
+        name="yearLevel"
+        value={state.yearLevel}
+        options={RESPONSE_YEAR_LEVEL_OPTIONS}
+        blank="All year levels"
+      />
+      <SearchableField
+        id={`${idPrefix}-instrument`}
+        label="Evaluation instrument"
+        name="instrumentTemplateId"
+        value={state.instrumentTemplateId}
+        options={options.instruments}
+        placeholder="All instruments"
+        emptyMessage="No instruments match your search."
+      />
+    </>
   );
 }
 

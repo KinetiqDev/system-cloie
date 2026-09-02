@@ -132,151 +132,8 @@ export function AssignmentFilters({
     onFiltersChange(reset);
   };
 
-  const updateFilter = <K extends keyof AssignmentFiltersState>(
-    key: K,
-    value: AssignmentFiltersState[K]
-  ) => onFiltersChange({ ...filters, [key]: value });
-
-  const secondaryControls = (
-    state: AssignmentFiltersState,
-    update: <K extends keyof AssignmentFiltersState>(
-      key: K,
-      value: AssignmentFiltersState[K]
-    ) => void,
-    idSuffix = ""
-  ) => (
-    <>
-      <SearchableFilterSelect
-        label="Course"
-        id={`assignment-course${idSuffix}`}
-        value={state.courseId}
-        options={[
-          { id: ALL_OPTION_ID, label: "All Courses" },
-          ...availableCourses.map((course) => ({
-            id: course.id,
-            label: course.code,
-            detail: course.title,
-          })),
-        ]}
-        placeholder="Search courses…"
-        emptyMessage="No courses match your search."
-        onChange={(value) => update("courseId", value)}
-      />
-      <SearchableFilterSelect
-        label="Faculty"
-        id={`assignment-faculty${idSuffix}`}
-        value={state.facultyId}
-        options={[
-          { id: ALL_OPTION_ID, label: "All Faculty" },
-          ...availableFaculty.map((faculty) => ({
-            id: faculty.id,
-            label: faculty.name,
-            detail: faculty.email,
-          })),
-        ]}
-        placeholder="Search faculty…"
-        emptyMessage="No faculty match your search."
-        onChange={(value) => update("facultyId", value)}
-      />
-      {showProgramFilter && (
-        <FilterSelect
-          label="Program"
-          id={`assignment-program${idSuffix}`}
-          value={state.programId ?? ALL_OPTION_ID}
-          displayValue={
-            state.programId
-              ? (availablePrograms.find((program) => program.id === state.programId)?.code ??
-                "Selected program")
-              : "All Programs"
-          }
-          onChange={(value) => update("programId", value === ALL_OPTION_ID ? null : value)}
-        >
-          <SelectItem value={ALL_OPTION_ID}>All Programs</SelectItem>
-          {availablePrograms.map((program) => (
-            <SelectItem key={program.id} value={program.id}>
-              {program.code} — {program.name}
-            </SelectItem>
-          ))}
-        </FilterSelect>
-      )}
-      <FilterSelect
-        label="Year level"
-        id={`assignment-year-level${idSuffix}`}
-        value={state.yearLevel ?? ALL_OPTION_ID}
-        displayValue={
-          state.yearLevel
-            ? (YEAR_LEVEL_OPTIONS.find((option) => option.value === state.yearLevel)?.label ??
-              "Selected year level")
-            : "All Years"
-        }
-        onChange={(value) =>
-          update("yearLevel", value === ALL_OPTION_ID ? null : (value as YearLevel))
-        }
-      >
-        <SelectItem value={ALL_OPTION_ID}>All Years</SelectItem>
-        {YEAR_LEVEL_OPTIONS.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </FilterSelect>
-      <FilterSelect
-        label="Section"
-        id={`assignment-section${idSuffix}`}
-        value={state.section ?? ALL_OPTION_ID}
-        displayValue={
-          state.section
-            ? (STUDENT_SECTION_OPTIONS.find((option) => option.value === state.section)?.label ??
-              "Selected section")
-            : "All Sections"
-        }
-        onChange={(value) =>
-          update("section", value === ALL_OPTION_ID ? null : (value as StudentSection))
-        }
-      >
-        <SelectItem value={ALL_OPTION_ID}>All Sections</SelectItem>
-        {STUDENT_SECTION_OPTIONS.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </FilterSelect>
-      <FilterSelect
-        label="Status"
-        id={`assignment-status${idSuffix}`}
-        value={state.isActive === null ? ALL_OPTION_ID : String(state.isActive)}
-        displayValue={
-          state.isActive === null ? "All Statuses" : state.isActive ? "Active" : "Inactive"
-        }
-        onChange={(value) => update("isActive", value === ALL_OPTION_ID ? null : value === "true")}
-      >
-        <SelectItem value={ALL_OPTION_ID}>All Statuses</SelectItem>
-        <SelectItem value="true">Active</SelectItem>
-        <SelectItem value="false">Inactive</SelectItem>
-      </FilterSelect>
-      {!hideCourseScopeFilter && (
-        <FilterSelect
-          label="Course scope"
-          id={`assignment-scope${idSuffix}`}
-          value={state.courseScope ?? ALL_OPTION_ID}
-          displayValue={
-            state.courseScope === CourseScope.GENERAL_EDUCATION
-              ? "General Education"
-              : state.courseScope === CourseScope.PROGRAM_SPECIFIC
-                ? "Program-specific"
-                : "All Scopes"
-          }
-          onChange={(value) =>
-            update("courseScope", value === ALL_OPTION_ID ? null : (value as CourseScope))
-          }
-        >
-          <SelectItem value={ALL_OPTION_ID}>All Scopes</SelectItem>
-          <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
-          <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-specific</SelectItem>
-        </FilterSelect>
-      )}
-    </>
-  );
+  const updateFilter: AssignmentFilterUpdate = (key, value) =>
+    onFiltersChange({ ...filters, [key]: value });
 
   const searchPlaceholder = showProgramFilter
     ? "Search course, faculty, or program"
@@ -346,7 +203,15 @@ export function AssignmentFilters({
         </div>
       </div>
       <div className="hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {secondaryControls(filters, updateFilter)}
+        <SecondaryAssignmentControls
+          state={filters}
+          update={updateFilter}
+          availableCourses={availableCourses}
+          availablePrograms={availablePrograms}
+          availableFaculty={availableFaculty}
+          showProgramFilter={showProgramFilter}
+          hideCourseScopeFilter={hideCourseScopeFilter}
+        />
       </div>
       <div className="md:hidden">
         <Drawer
@@ -377,11 +242,18 @@ export function AssignmentFilters({
               </DrawerDescription>
             </DrawerHeader>
             <div className="grid min-h-0 gap-3 overflow-y-auto px-4 py-2">
-              {secondaryControls(
-                drawerFilters,
-                (key, value) => setDrawerFilters((current) => ({ ...current, [key]: value })),
-                "-mobile"
-              )}
+              <SecondaryAssignmentControls
+                state={drawerFilters}
+                update={(key, value) =>
+                  setDrawerFilters((current) => ({ ...current, [key]: value }))
+                }
+                availableCourses={availableCourses}
+                availablePrograms={availablePrograms}
+                availableFaculty={availableFaculty}
+                showProgramFilter={showProgramFilter}
+                hideCourseScopeFilter={hideCourseScopeFilter}
+                idSuffix="-mobile"
+              />
             </div>
             <DrawerFooter className="pb-[calc(env(safe-area-inset-bottom)+1rem)]">
               <Button
@@ -403,6 +275,212 @@ export function AssignmentFilters({
         </Drawer>
       </div>
     </section>
+  );
+}
+
+type AssignmentFilterUpdate = <K extends keyof AssignmentFiltersState>(
+  key: K,
+  value: AssignmentFiltersState[K]
+) => void;
+
+interface SecondaryAssignmentControlsProps {
+  state: AssignmentFiltersState;
+  update: AssignmentFilterUpdate;
+  availableCourses: AssignmentFiltersProps["availableCourses"];
+  availablePrograms: AssignmentFiltersProps["availablePrograms"];
+  availableFaculty: AssignmentFiltersProps["availableFaculty"];
+  showProgramFilter: boolean;
+  hideCourseScopeFilter: boolean;
+  idSuffix?: string;
+}
+
+function SecondaryAssignmentControls({
+  state,
+  update,
+  availableCourses,
+  availablePrograms,
+  availableFaculty,
+  showProgramFilter,
+  hideCourseScopeFilter,
+  idSuffix = "",
+}: SecondaryAssignmentControlsProps) {
+  return (
+    <>
+      <SearchableFilterSelect
+        label="Course"
+        id={`assignment-course${idSuffix}`}
+        value={state.courseId}
+        options={[
+          { id: ALL_OPTION_ID, label: "All Courses" },
+          ...availableCourses.map((course) => ({
+            id: course.id,
+            label: course.code,
+            detail: course.title,
+          })),
+        ]}
+        placeholder="Search courses…"
+        emptyMessage="No courses match your search."
+        onChange={(value) => update("courseId", value)}
+      />
+      <SearchableFilterSelect
+        label="Faculty"
+        id={`assignment-faculty${idSuffix}`}
+        value={state.facultyId}
+        options={[
+          { id: ALL_OPTION_ID, label: "All Faculty" },
+          ...availableFaculty.map((faculty) => ({
+            id: faculty.id,
+            label: faculty.name,
+            detail: faculty.email,
+          })),
+        ]}
+        placeholder="Search faculty…"
+        emptyMessage="No faculty match your search."
+        onChange={(value) => update("facultyId", value)}
+      />
+      {showProgramFilter && (
+        <ProgramFilter
+          state={state}
+          update={update}
+          availablePrograms={availablePrograms}
+          idSuffix={idSuffix}
+        />
+      )}
+      <YearLevelFilter state={state} update={update} idSuffix={idSuffix} />
+      <SectionFilter state={state} update={update} idSuffix={idSuffix} />
+      <StatusFilter state={state} update={update} idSuffix={idSuffix} />
+      {!hideCourseScopeFilter && (
+        <CourseScopeFilter state={state} update={update} idSuffix={idSuffix} />
+      )}
+    </>
+  );
+}
+
+type BasicFilterProps = Pick<SecondaryAssignmentControlsProps, "state" | "update"> & {
+  idSuffix: string;
+};
+
+function ProgramFilter({
+  state,
+  update,
+  availablePrograms,
+  idSuffix,
+}: BasicFilterProps & Pick<SecondaryAssignmentControlsProps, "availablePrograms">) {
+  const displayValue = state.programId
+    ? (availablePrograms.find((program) => program.id === state.programId)?.code ??
+      "Selected program")
+    : "All Programs";
+
+  return (
+    <FilterSelect
+      label="Program"
+      id={`assignment-program${idSuffix}`}
+      value={state.programId ?? ALL_OPTION_ID}
+      displayValue={displayValue}
+      onChange={(value) => update("programId", value === ALL_OPTION_ID ? null : value)}
+    >
+      <SelectItem value={ALL_OPTION_ID}>All Programs</SelectItem>
+      {availablePrograms.map((program) => (
+        <SelectItem key={program.id} value={program.id}>
+          {program.code} — {program.name}
+        </SelectItem>
+      ))}
+    </FilterSelect>
+  );
+}
+
+function YearLevelFilter({ state, update, idSuffix }: BasicFilterProps) {
+  const displayValue = state.yearLevel
+    ? (YEAR_LEVEL_OPTIONS.find((option) => option.value === state.yearLevel)?.label ??
+      "Selected year level")
+    : "All Years";
+
+  return (
+    <FilterSelect
+      label="Year level"
+      id={`assignment-year-level${idSuffix}`}
+      value={state.yearLevel ?? ALL_OPTION_ID}
+      displayValue={displayValue}
+      onChange={(value) =>
+        update("yearLevel", value === ALL_OPTION_ID ? null : (value as YearLevel))
+      }
+    >
+      <SelectItem value={ALL_OPTION_ID}>All Years</SelectItem>
+      {YEAR_LEVEL_OPTIONS.map((option) => (
+        <SelectItem key={option.value} value={option.value}>
+          {option.label}
+        </SelectItem>
+      ))}
+    </FilterSelect>
+  );
+}
+
+function SectionFilter({ state, update, idSuffix }: BasicFilterProps) {
+  const displayValue = state.section
+    ? (STUDENT_SECTION_OPTIONS.find((option) => option.value === state.section)?.label ??
+      "Selected section")
+    : "All Sections";
+
+  return (
+    <FilterSelect
+      label="Section"
+      id={`assignment-section${idSuffix}`}
+      value={state.section ?? ALL_OPTION_ID}
+      displayValue={displayValue}
+      onChange={(value) =>
+        update("section", value === ALL_OPTION_ID ? null : (value as StudentSection))
+      }
+    >
+      <SelectItem value={ALL_OPTION_ID}>All Sections</SelectItem>
+      {STUDENT_SECTION_OPTIONS.map((option) => (
+        <SelectItem key={option.value} value={option.value}>
+          {option.label}
+        </SelectItem>
+      ))}
+    </FilterSelect>
+  );
+}
+
+function StatusFilter({ state, update, idSuffix }: BasicFilterProps) {
+  const displayValue =
+    state.isActive === null ? "All Statuses" : state.isActive ? "Active" : "Inactive";
+
+  return (
+    <FilterSelect
+      label="Status"
+      id={`assignment-status${idSuffix}`}
+      value={state.isActive === null ? ALL_OPTION_ID : String(state.isActive)}
+      displayValue={displayValue}
+      onChange={(value) => update("isActive", value === ALL_OPTION_ID ? null : value === "true")}
+    >
+      <SelectItem value={ALL_OPTION_ID}>All Statuses</SelectItem>
+      <SelectItem value="true">Active</SelectItem>
+      <SelectItem value="false">Inactive</SelectItem>
+    </FilterSelect>
+  );
+}
+
+function CourseScopeFilter({ state, update, idSuffix }: BasicFilterProps) {
+  const labels: Record<CourseScope, string> = {
+    [CourseScope.GENERAL_EDUCATION]: "General Education",
+    [CourseScope.PROGRAM_SPECIFIC]: "Program-specific",
+  };
+  const displayValue = state.courseScope ? labels[state.courseScope] : "All Scopes";
+
+  return (
+    <FilterSelect
+      label="Course scope"
+      id={`assignment-scope${idSuffix}`}
+      value={state.courseScope ?? ALL_OPTION_ID}
+      displayValue={displayValue}
+      onChange={(value) =>
+        update("courseScope", value === ALL_OPTION_ID ? null : (value as CourseScope))
+      }
+    >
+      <SelectItem value={ALL_OPTION_ID}>All Scopes</SelectItem>
+      <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
+      <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-specific</SelectItem>
+    </FilterSelect>
   );
 }
 

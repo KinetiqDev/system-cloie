@@ -21,6 +21,16 @@ const SEMESTER_LABELS: Record<string, string> = {
 const TERM_LABELS: Record<string, string> = { FIRST_TERM: "1st Term", SECOND_TERM: "2nd Term" };
 
 type ResponseStats = { assigned: number; submitted: number; mean: number | null };
+const EMPTY_RESPONSE_STATS: ResponseStats = { assigned: 0, submitted: 0, mean: null };
+
+function deploymentTitle(deploymentName: string | null, templateName: string): string {
+  return deploymentName ?? templateName;
+}
+
+function centralTargetLabel(majorName: string | null, yearLevel: YearLevel | null): string {
+  const parts = [majorName, yearLevel ? formatResponseYearLevel(yearLevel) : null].filter(Boolean);
+  return parts.join(" · ") || "All eligible respondents";
+}
 type ResponseDeploymentRow = {
   id: string;
   title: string;
@@ -302,22 +312,21 @@ export async function listProgramHeadResponseDeployments(
       "course_bound_id"
     );
     // fallow-ignore-next-line complexity -- row projection preserves class and response metrics.
-    // fallow-ignore-next-line complexity
     return {
       total,
       page: filters.page,
       pageSize: DEFAULT_TABLE_PAGE_SIZE,
       options,
       items: rows.map((row) => {
-        const value = stats.get(row.id);
+        const value = stats.get(row.id) ?? EMPTY_RESPONSE_STATS;
         return {
           id: row.id,
-          title: row.deployment_name ?? row.instrument.template.name,
+          title: deploymentTitle(row.deployment_name, row.instrument.template.name),
           period: periodLabel(row.term_instance),
           status: row.status,
-          assigned: value?.assigned ?? 0,
-          submitted: value?.submitted ?? 0,
-          mean: value?.mean ?? null,
+          assigned: value.assigned,
+          submitted: value.submitted,
+          mean: value.mean,
           scaleLabel: describeScales(extractDistinctScales(row.instrument.structure_snapshot)),
           course: {
             id: row.course_assignment.course.id,
@@ -358,28 +367,24 @@ export async function listProgramHeadResponseDeployments(
     rows.map((row) => row.id),
     "central_deployment_id"
   );
-  // fallow-ignore-next-line complexity
   return {
     total,
     page: filters.page,
     pageSize: DEFAULT_TABLE_PAGE_SIZE,
     options,
     items: rows.map((row) => {
-      const value = stats.get(row.id);
+      const value = stats.get(row.id) ?? EMPTY_RESPONSE_STATS;
       return {
         id: row.id,
-        title: row.deployment_name ?? row.instrument.template.name,
+        title: deploymentTitle(row.deployment_name, row.instrument.template.name),
         period: periodLabel(row.term_instance),
         status: row.status,
-        assigned: value?.assigned ?? 0,
-        submitted: value?.submitted ?? 0,
-        mean: value?.mean ?? null,
+        assigned: value.assigned,
+        submitted: value.submitted,
+        mean: value.mean,
         scaleLabel: describeScales(extractDistinctScales(row.instrument.structure_snapshot)),
         stakeholder: row.target_stakeholder,
-        target:
-          [row.major?.name, row.year_level ? formatResponseYearLevel(row.year_level) : null]
-            .filter(Boolean)
-            .join(" · ") || "All eligible respondents",
+        target: centralTargetLabel(row.major?.name ?? null, row.year_level),
       };
     }),
   };
