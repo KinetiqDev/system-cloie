@@ -132,6 +132,38 @@ describe("TemplateBuilder", () => {
     );
   });
 
+  test("uses the primary treatment when save is the only commit action", () => {
+    render(
+      <TemplateBuilder
+        programLabel="Institutional Baseline"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+      />
+    );
+
+    const saveButton = screen.getByRole("button", { name: "Create template" });
+
+    expect(saveButton).toHaveClass("bg-primary", "text-primary-foreground");
+  });
+
+  test("keeps save secondary when continue to publish is the primary action", () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        onPublish={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Create template" })).toHaveClass(
+      "border-border",
+      "bg-background"
+    );
+    expect(screen.getByRole("button", { name: "Continue to publish" })).toHaveClass(
+      "bg-primary",
+      "text-primary-foreground"
+    );
+  });
+
   test("constrains long CILO labels inside the binding control", async () => {
     render(
       <TemplateBuilder

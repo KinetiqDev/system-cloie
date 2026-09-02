@@ -1242,7 +1242,7 @@ export function TemplateBuilder({
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center [&_[data-slot=button]]:min-h-11 sm:[&_[data-slot=button]]:min-w-28">
             <Button
               className={canContinueToPublish ? "w-full" : "col-span-2 w-full"}
-              variant="outline"
+              variant={canContinueToPublish ? "outline" : "default"}
               onClick={handleSave}
               loading={isPending || isCopyPending}
             >

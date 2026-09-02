@@ -115,6 +115,20 @@ describe("CourseAssignmentsTable", () => {
     expect(screen.getByLabelText(/open actions for CS101/i)).toBeInTheDocument();
   });
 
+  it("gives the roster action course context and a visible primary-soft treatment", () => {
+    renderTable({ mode: "all-program" });
+
+    const rosterLink = screen.getByRole("link", { name: "Open roster for CS101" });
+
+    expect(rosterLink).toHaveClass(
+      "border-primary-border",
+      "bg-primary-soft",
+      "text-selected-fg",
+      "font-semibold"
+    );
+    expect(rosterLink).toHaveTextContent("Open roster");
+  });
+
   it("labels pagination previous/next buttons", () => {
     renderTable({ total: 25, pageSize: 10, page: 1 });
     expect(screen.getByLabelText(/previous page/i)).toBeInTheDocument();

@@ -148,16 +148,17 @@ function RosterCell({
     return (
       <Link
         href={href}
+        aria-label={`Open roster for ${assignment.courseCode}`}
         className={buttonVariants({
           variant: "outline",
           size: "sm",
           className:
-            "bg-background hover:bg-accent h-8 gap-1.5 rounded-full px-3 text-xs font-medium shadow-xs",
+            "border-primary-border bg-primary-soft text-selected-fg hover:bg-selected-bg hover:text-selected-fg h-8 gap-1.5 rounded-full px-3 text-xs font-semibold shadow-xs",
         })}
       >
         <Users aria-hidden="true" />
         Open roster
-        <ExternalLink className="opacity-60" aria-hidden="true" />
+        <ExternalLink className="opacity-70" aria-hidden="true" />
       </Link>
     );
   }
