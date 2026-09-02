@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import { zodResponseFormat } from "openai/helpers/zod";
 import {
   AI_EVIDENCE_END,
   AI_EVIDENCE_START,
@@ -462,7 +461,7 @@ function createOpenAiCompatTransport(config: AiConfiguration): AiModelTransport 
         ...(usesCompletionTokens
           ? { max_completion_tokens: maxOutputTokens }
           : { max_tokens: maxOutputTokens, temperature: 0.2 }),
-        response_format: zodResponseFormat(aiInsightOutputSchema, "system_cloie_ai_insight"),
+        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemInstruction },
           { role: "user", content: userMessage },

@@ -543,7 +543,7 @@ describe("generateProgramHeadAnalyticsInsight", () => {
     expect(openAiCreateMock.mock.calls[0][0].max_completion_tokens).toBeUndefined();
     expect(result.ok).toBe(true);
   });
-  it("requests the bounded Zod JSON schema from compatible providers", async () => {
+  it("uses JSON-object mode for OpenAI-compatible providers", async () => {
     stubEnabledConfig();
     openAiCreateMock.mockResolvedValue({
       choices: [{ message: { content: JSON.stringify(VALID_OUTPUT) } }],
@@ -557,21 +557,7 @@ describe("generateProgramHeadAnalyticsInsight", () => {
     );
     expect(systemMessage?.content).toContain("summary <=400 characters");
     expect(systemMessage?.content).toContain("limitations have at most 5 items");
-    expect(request.response_format).toMatchObject({
-      type: "json_schema",
-      json_schema: {
-        name: "system_cloie_ai_insight",
-        strict: true,
-        schema: expect.objectContaining({
-          type: "object",
-          additionalProperties: false,
-          properties: expect.objectContaining({
-            summary: expect.objectContaining({ maxLength: 400 }),
-            limitations: expect.objectContaining({ maxItems: 5 }),
-          }),
-        }),
-      },
-    });
+    expect(request.response_format).toEqual({ type: "json_object" });
   });
 
   it("selects max_completion_tokens for reasoning models", async () => {
