@@ -29,8 +29,8 @@ _Avoid_: Current PLO binding, live PLO reference
 ## Summarization and context
 
 **Period label**:
-The canonical school year — semester — term label used across review contexts, e.g. '2025-2026 — SECOND — FIRST_TERM' (two-part when the term is null).
-_Avoid_: Raw term instance id
+The canonical school year — semester — term label used across review contexts, e.g. '2025-2026 — 2nd Semester — 2nd Term' (two-part when the term is null). Semester and term use the friendly display labels, never raw enum values.
+_Avoid_: Raw term instance id, raw enum label
 
 **Qualitative summary**:
 Aggregate evidence over submitted qualitative answers: non-empty answer count, distinct respondent count, per-prompt counts ordered descending, and identifier-redacted top terms feeding word clouds. Raw response rows and comments never appear in the summary.

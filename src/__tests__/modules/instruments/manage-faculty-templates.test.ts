@@ -90,13 +90,12 @@ function draftInput(id = TEMPLATE_ID) {
     id,
     name: "Reordered Faculty Evaluation",
     description: "Reordered draft",
+    is_active: false,
     bound_course_id: COURSE_ID,
     bound_major_id: null,
     bound_program_id: "program-1",
     structure: REORDERED_STRUCTURE,
-    cilo_question_bindings: [
-      { ciloId: "cilo-1", itemKey: "question-b", sectionKey: "section-b" },
-    ],
+    cilo_question_bindings: [{ ciloId: "cilo-1", itemKey: "question-b", sectionKey: "section-b" }],
   };
 }
 
@@ -167,15 +166,14 @@ describe("manage-faculty-templates structure persistence", () => {
       })
     );
 
-    const { saveFacultyTemplateDraft } = await import(
-      "@/features/instruments/services/manage-faculty-templates"
-    );
+    const { saveFacultyTemplateDraft } =
+      await import("@/features/instruments/services/manage-faculty-templates");
     const result = await saveFacultyTemplateDraft(draftInput());
 
     expect(result).toEqual({ success: true, data: { id: TEMPLATE_ID } });
     expect(templateUpdateMock).toHaveBeenCalledWith({
       where: { id: TEMPLATE_ID },
-      data: expect.objectContaining({ structure: REORDERED_STRUCTURE }),
+      data: expect.objectContaining({ is_active: false, structure: REORDERED_STRUCTURE }),
     });
     expect(versionUpdateMock).toHaveBeenCalledWith({
       where: { id: "version-1" },
@@ -221,15 +219,15 @@ describe("manage-faculty-templates structure persistence", () => {
       })
     );
 
-    const { saveFacultyTemplateDraft } = await import(
-      "@/features/instruments/services/manage-faculty-templates"
-    );
+    const { saveFacultyTemplateDraft } =
+      await import("@/features/instruments/services/manage-faculty-templates");
     const result = await saveFacultyTemplateDraft(draftInput("baseline-1"));
 
     expect(result).toEqual({ success: true, data: { id: "faculty-copy-1" } });
     expect(templateCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         faculty_owner_id: FACULTY_ID,
+        is_active: false,
         source_template_id: "baseline-1",
         structure: REORDERED_STRUCTURE,
       }),

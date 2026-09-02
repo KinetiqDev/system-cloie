@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { TemplateCollection, type TemplateCollectionItem } from "@/features/instruments/components/template-collection";
+import {
+  TemplateCollection,
+  type TemplateCollectionItem,
+} from "@/features/instruments/components/template-collection";
 
 function makeItem(overrides: Partial<TemplateCollectionItem> = {}): TemplateCollectionItem {
   return {
@@ -40,7 +43,12 @@ describe("TemplateCollection", () => {
     const { container } = render(
       <TemplateCollection
         view="card"
-        sections={[{ items: [makeItem({ origin: "institutional", originLabel: "Institutional baseline" })], renderFooterActions: () => null }]}
+        sections={[
+          {
+            items: [makeItem({ origin: "institutional", originLabel: "Institutional baseline" })],
+            renderFooterActions: () => null,
+          },
+        ]}
         empty={<p>Empty</p>}
       />
     );
@@ -54,7 +62,22 @@ describe("TemplateCollection", () => {
     render(
       <TemplateCollection
         view="list"
-        sections={[{ items: [makeItem(), makeItem({ id: "t2", name: "Course Tool", templateType: "COURSE_BOUND", origin: "faculty-copy", originLabel: "My copy", versionCount: 1 })] , renderFooterActions: () => <button>Edit</button> }]}
+        sections={[
+          {
+            items: [
+              makeItem(),
+              makeItem({
+                id: "t2",
+                name: "Course Tool",
+                templateType: "COURSE_BOUND",
+                origin: "faculty-copy",
+                originLabel: "My copy",
+                versionCount: 1,
+              }),
+            ],
+            renderFooterActions: () => <button>Edit</button>,
+          },
+        ]}
         empty={<p>Empty</p>}
       />
     );
@@ -64,8 +87,32 @@ describe("TemplateCollection", () => {
     expect(table.getByRole("columnheader", { name: "Source" })).toBeInTheDocument();
     expect(table.getByText("Course Tool")).toBeInTheDocument();
     expect(table.getByText("My copy")).toBeInTheDocument();
-    // List view keeps the same role actions as card view.
-    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+    expect(table.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+  });
+
+  test("uses a compact card list instead of a wide table on mobile", () => {
+    render(
+      <TemplateCollection
+        view="list"
+        sections={[
+          {
+            heading: "My Templates",
+            items: [makeItem({ origin: "faculty-copy", originLabel: "My copy" })],
+            renderFooterActions: () => <button>Edit</button>,
+          },
+        ]}
+        empty={<p>Empty</p>}
+      />
+    );
+
+    const mobileList = screen.getByRole("list", { name: "My Templates" });
+    const desktopTable = screen.getByRole("table", { name: "My Templates" });
+
+    expect(mobileList).toHaveClass("sm:hidden");
+    expect(desktopTable.closest(".hidden.sm\\:block")).not.toBeNull();
+    expect(within(mobileList).getByText("Program Evaluation")).toBeInTheDocument();
+    expect(within(mobileList).getByText("My copy")).toBeInTheDocument();
+    expect(within(mobileList).getByRole("button", { name: "Edit" })).toBeInTheDocument();
   });
 
   test("renders section headings and omits empty sections", () => {
@@ -165,7 +212,7 @@ describe("TemplateCollection", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(2);
   });
 });

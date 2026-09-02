@@ -7,10 +7,14 @@ vi.mock("@/features/auth/services/resolve-auth-session");
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 vi.mock("@/features/instruments/services/manage-instruments", () => ({
-  createBaselineTemplateWithStructure: vi.fn(() => Promise.resolve({ success: true, data: { id: "template-1" } })),
+  createBaselineTemplateWithStructure: vi.fn(() =>
+    Promise.resolve({ success: true, data: { id: "template-1" } })
+  ),
   updateBaselineTemplateWithStructure: vi.fn(() => Promise.resolve({ success: true })),
   deleteBaselineTemplate: vi.fn(() => Promise.resolve({ success: true })),
-  duplicateBaselineTemplate: vi.fn(() => Promise.resolve({ success: true, data: { id: "template-dup" } })),
+  duplicateBaselineTemplate: vi.fn(() =>
+    Promise.resolve({ success: true, data: { id: "template-dup" } })
+  ),
 }));
 
 import {
@@ -50,19 +54,23 @@ describe("template-actions security", () => {
   });
 
   function makeTemplateFormData(name = "Test Template", withId = false) {
-    const structure = JSON.stringify([{
-      key: "sec-1",
-      title: "Section 1",
-      description: null,
-      order: 0,
-      questions: [{
-        key: "q-1",
-        prompt: "Question 1",
-        type: "likert" as const,
+    const structure = JSON.stringify([
+      {
+        key: "sec-1",
+        title: "Section 1",
+        description: null,
         order: 0,
-        required: true,
-      }],
-    }]);
+        questions: [
+          {
+            key: "q-1",
+            prompt: "Question 1",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+        ],
+      },
+    ]);
     const fd = new FormData();
     fd.set("name", name);
     fd.set("description", "A test description");
@@ -92,7 +100,7 @@ describe("template-actions security", () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
       const result = await createDeanTemplateAction(makeTemplateFormData());
       expect(createBaselineTemplateWithStructure).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, data: { id: "template-1" } });
     });
   });
 
@@ -117,14 +125,18 @@ describe("template-actions security", () => {
           title: "Section B",
           description: undefined,
           order: 0,
-          questions: [{ key: "question-b", prompt: "Question B", type: "likert", order: 0, required: true }],
+          questions: [
+            { key: "question-b", prompt: "Question B", type: "likert", order: 0, required: true },
+          ],
         },
         {
           key: "section-a",
           title: "Section A",
           description: undefined,
           order: 1,
-          questions: [{ key: "question-a", prompt: "Question A", type: "likert", order: 0, required: true }],
+          questions: [
+            { key: "question-a", prompt: "Question A", type: "likert", order: 0, required: true },
+          ],
         },
       ];
       const formData = makeTemplateFormData("Updated", true);
@@ -132,7 +144,10 @@ describe("template-actions security", () => {
 
       const result = await updateDeanTemplateAction(formData);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({
+        success: true,
+        data: { id: "aaaaaaaa-aaaa-4aaa-baaa-aaaaaaaaaaaa" },
+      });
       expect(updateBaselineTemplateWithStructure).toHaveBeenCalledWith(
         expect.objectContaining({ structure: reorderedStructure })
       );
@@ -200,7 +215,7 @@ describe("template-actions security", () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
       const result = await createAdminTemplateAction(makeTemplateFormData());
       expect(createBaselineTemplateWithStructure).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, data: { id: "template-1" } });
     });
   });
 
@@ -225,14 +240,18 @@ describe("template-actions security", () => {
           title: "Section B",
           description: undefined,
           order: 0,
-          questions: [{ key: "question-b", prompt: "Question B", type: "likert", order: 0, required: true }],
+          questions: [
+            { key: "question-b", prompt: "Question B", type: "likert", order: 0, required: true },
+          ],
         },
         {
           key: "section-a",
           title: "Section A",
           description: undefined,
           order: 1,
-          questions: [{ key: "question-a", prompt: "Question A", type: "likert", order: 0, required: true }],
+          questions: [
+            { key: "question-a", prompt: "Question A", type: "likert", order: 0, required: true },
+          ],
         },
       ];
       const formData = makeTemplateFormData("Updated", true);
@@ -240,7 +259,10 @@ describe("template-actions security", () => {
 
       const result = await updateAdminTemplateAction(formData);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({
+        success: true,
+        data: { id: "aaaaaaaa-aaaa-4aaa-baaa-aaaaaaaaaaaa" },
+      });
       expect(updateBaselineTemplateWithStructure).toHaveBeenCalledWith(
         expect.objectContaining({ structure: reorderedStructure })
       );

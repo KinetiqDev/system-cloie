@@ -65,13 +65,29 @@ const institutional: FacultyTemplateItem = {
   boundProgramId: null,
 };
 
-function renderPage() {
+const programOwned: FacultyTemplateItem = {
+  ...institutional,
+  id: "program-template-1",
+  code: "PROGRAM_CILO_EVAL",
+  name: "Program CILO Evaluation",
+  programCode: "BSIT",
+  programName: "Information Technology",
+};
+
+function renderPage({
+  templates = [facultyCopy, programOwned, institutional],
+  initialView = "card",
+}: {
+  templates?: FacultyTemplateItem[];
+  initialView?: "card" | "list";
+} = {}) {
   return render(
     <FacultyToolsPage
       evaluations={[]}
       program={{ id: "program-1", code: "BSIT", name: "Information Technology" }}
-      templates={[facultyCopy, institutional]}
+      templates={templates}
       initialTab="templates"
+      initialView={initialView}
     />
   );
 }
@@ -87,6 +103,31 @@ describe("FacultyToolsPage", () => {
 
     expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
     expect(screen.getByText("My CILO Evaluation")).toBeInTheDocument();
+  });
+
+  test("groups owned copies separately from available source templates", () => {
+    renderPage();
+
+    const ownedSection = screen.getByRole("heading", { name: "My Templates" }).closest("section");
+    const availableSection = screen
+      .getByRole("heading", { name: "Available Templates" })
+      .closest("section");
+
+    expect(ownedSection).not.toBeNull();
+    expect(availableSection).not.toBeNull();
+    expect(within(ownedSection!).getByText("My CILO Evaluation")).toBeInTheDocument();
+    expect(within(ownedSection!).queryByText("Program CILO Evaluation")).not.toBeInTheDocument();
+    expect(within(availableSection!).getByText("Program CILO Evaluation")).toBeInTheDocument();
+    expect(within(availableSection!).getByText("Course Evaluation")).toBeInTheDocument();
+    expect(within(availableSection!).getByText("Program-owned")).toBeInTheDocument();
+    expect(within(availableSection!).getByText("Institutional baseline")).toBeInTheDocument();
+  });
+
+  test("keeps the same two-section hierarchy in list view", () => {
+    renderPage({ initialView: "list" });
+
+    expect(screen.getByRole("table", { name: "My Templates" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Available Templates" })).toBeInTheDocument();
   });
 
   test("right-aligns the shared view selector on templates and published tabs", () => {

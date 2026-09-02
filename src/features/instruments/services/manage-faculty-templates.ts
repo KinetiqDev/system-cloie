@@ -284,6 +284,7 @@ export async function saveFacultyTemplateDraft(
             bound_program_id: input.bound_program_id ?? null,
             description: input.description ?? null,
             name: input.name,
+            is_active: input.is_active,
             structure: structure as unknown as Prisma.InputJsonValue,
           },
         });
@@ -309,7 +310,7 @@ export async function saveFacultyTemplateDraft(
             code: generateFacultyTemplateCode(template.code, auth.data.userId),
             description: input.description ?? null,
             faculty_owner_id: auth.data.userId,
-            is_active: true,
+            is_active: input.is_active,
             is_faculty_accessible: false,
             name: input.name,
             program_id: template.program_id,
@@ -488,12 +489,6 @@ type CourseContextOverride = {
   programCode: string;
   programName: string;
   scopeLabel: string;
-};
-
-type FacultyCourseContextLike = CourseContextOverride & {
-  courseId: string;
-  majorId: string | null;
-  programId: string;
 };
 
 async function resolvePublicationCourseContext(

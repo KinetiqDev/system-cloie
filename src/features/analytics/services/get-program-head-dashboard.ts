@@ -1,15 +1,18 @@
-import { AcademicSemester, DeploymentStatus, Prisma, ResponseStatus, TargetStakeholder } from "@prisma/client";
+import { DeploymentStatus, ResponseStatus, TargetStakeholder } from "@prisma/client";
+import type { AcademicSemester } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import {
   buildProgramHeadResponsesCourseEvaluationPath,
-  buildProgramHeadResponsesPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
 import { buildAnalyticsUrl } from "./program-head-analytics-state";
-import { buildProgramHeadResponsesUrl } from "./program-head-responses-state";
+import {
+  buildProgramHeadResponsesUrl,
+  programHeadResponsesQuery,
+} from "./program-head-responses-state";
 import {
   IMPOSSIBLE_TERM_INSTANCE_ID,
   buildPeriodLabel,
@@ -20,7 +23,12 @@ import {
 import { FEEDBACK_SOURCE_LABELS, buildRedactedWordCloudTokens } from "./qualitative-analytics";
 import { buildParticipationSummary, type ParticipationRow } from "../aggregators/participation";
 import { groupRatingsByScale } from "../aggregators/quantitative";
-import { describeSingleScaleGroup, describeScale, resolveItemScaleIdentity, type ScaleIdentity } from "../aggregators/scale-identity";
+import {
+  describeSingleScaleGroup,
+  describeScale,
+  resolveItemScaleIdentity,
+  type ScaleIdentity,
+} from "../aggregators/scale-identity";
 import {
   buildCourseDerivedPloMetrics,
   buildProgramWidePloMetrics,
@@ -174,7 +182,11 @@ function ratingRowScale(
     row.response.assignment.central_deployment?.instrument_version_id ??
     null;
   if (!versionId) return null;
-  return resolveItemScaleIdentity(snapshotById.get(versionId) ?? null, row.section_key, row.item_key);
+  return resolveItemScaleIdentity(
+    snapshotById.get(versionId) ?? null,
+    row.section_key,
+    row.item_key
+  );
 }
 
 /**
@@ -191,7 +203,11 @@ export function buildDashboardSourceMeans(
 ): DashboardSourceMean[] {
   return DASHBOARD_SOURCE_ORDER.map((sourceKey) => {
     const sourceScope = DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey];
-    const evidenceHref = buildAnalyticsUrl(programId, { ...periodFilters, tab: "outcomes", ...sourceScope });
+    const evidenceHref = buildAnalyticsUrl(programId, {
+      ...periodFilters,
+      tab: "outcomes",
+      ...sourceScope,
+    });
     const sourceRows = rows.filter((row) => ratingRowSourceKey(row) === sourceKey);
     const groups = groupRatingsByScale(
       sourceRows.map((row) => ({
@@ -443,6 +459,7 @@ export function buildNeedsAttentionItems(input: {
   programPlos: Array<{ id: string; code: string }>;
   ploRowsBySource: Partial<Record<DashboardSourceKey, DashboardPloSummaryRow[]>>;
   analyticsOutcomesHref: string;
+  periodFilters?: DashboardPeriodFilters;
 }): NeedsAttentionItem[] {
   const items: NeedsAttentionItem[] = [];
   const activeDeployments = input.deployments.filter(
@@ -456,10 +473,7 @@ export function buildNeedsAttentionItems(input: {
       rule: "closing-soon",
       title: `${deployment.name} closes soon`,
       note: "Deadline within 7 days",
-      href:
-        deployment.kind === "course"
-          ? buildProgramHeadResponsesCourseEvaluationPath(input.programId, deployment.id)
-          : buildProgramHeadResponsesProgramWideDeploymentPath(input.programId, deployment.id),
+      href: buildAttentionDeploymentHref(input.programId, deployment, input.periodFilters),
     });
   }
 
@@ -470,10 +484,7 @@ export function buildNeedsAttentionItems(input: {
       rule: "zero-submissions",
       title: `${deployment.name} has no submissions yet`,
       note: "No submitted responses so far",
-      href:
-        deployment.kind === "course"
-          ? buildProgramHeadResponsesCourseEvaluationPath(input.programId, deployment.id)
-          : buildProgramHeadResponsesProgramWideDeploymentPath(input.programId, deployment.id),
+      href: buildAttentionDeploymentHref(input.programId, deployment, input.periodFilters),
     });
   }
 
@@ -496,6 +507,25 @@ export function buildNeedsAttentionItems(input: {
   }
 
   return items;
+}
+
+function buildAttentionDeploymentHref(
+  programId: string,
+  deployment: AttentionDeployment,
+  filters: DashboardPeriodFilters = {}
+): string {
+  const path =
+    deployment.kind === "course"
+      ? buildProgramHeadResponsesCourseEvaluationPath(programId, deployment.id)
+      : buildProgramHeadResponsesProgramWideDeploymentPath(programId, deployment.id);
+  const query = programHeadResponsesQuery({
+    tab: deployment.kind === "course" ? "course" : "program-wide",
+    page: 1,
+    termInstanceId: filters.termInstanceId,
+    schoolYearId: filters.schoolYearId,
+    semester: filters.semester as AcademicSemester | undefined,
+  });
+  return query ? `${path}?${query}` : path;
 }
 
 // ---------------------------------------------------------------------------
@@ -561,9 +591,10 @@ export function summarizeQualitativePulse(rows: QualitativeRow[]): QualitativePu
           ]
         : []
     ),
-    tokens: buildRedactedWordCloudTokens(
-      contributing.map((row) => row.text_content)
-    ).slice(0, QUALITATIVE_TOKEN_CAP),
+    tokens: buildRedactedWordCloudTokens(contributing.map((row) => row.text_content)).slice(
+      0,
+      QUALITATIVE_TOKEN_CAP
+    ),
   };
 }
 
@@ -590,11 +621,7 @@ export async function getProgramHeadDashboard(
   // Default every metric to the active academic period (§13.1); explicit
   // Analytics-compatible period filters win over the default.
   let effectiveFilters: DashboardPeriodFilters = periodFilters;
-  if (
-    !periodFilters.schoolYearId &&
-    !periodFilters.semester &&
-    !periodFilters.termInstanceId
-  ) {
+  if (!periodFilters.schoolYearId && !periodFilters.semester && !periodFilters.termInstanceId) {
     const activeTermId = await getActiveTermId();
     if (activeTermId) {
       effectiveFilters = { termInstanceId: activeTermId };
@@ -688,7 +715,12 @@ export async function getProgramHeadDashboard(
 
   // ── Source-separated quantitative results (§13.5) ────────────────────────
 
-  const sourceMeans = buildDashboardSourceMeans(ratingRows, snapshotById, scope.programId, effectiveFilters);
+  const sourceMeans = buildDashboardSourceMeans(
+    ratingRows,
+    snapshotById,
+    scope.programId,
+    effectiveFilters
+  );
 
   // ── PLO evidence per source (§13.8) ──────────────────────────────────────
 
@@ -730,7 +762,11 @@ export async function getProgramHeadDashboard(
   for (const sourceKey of ["CENTRAL_STUDENT", "ALUMNI", "INDUSTRY_PARTNER"] as const) {
     ploRowsBySource[sourceKey] = toCentralDashboardPloRows(
       buildProgramWidePloMetrics(
-        buildCentralPloRatingRows(centralBySource.get(sourceKey) ?? [], centralBindings, snapshotById)
+        buildCentralPloRatingRows(
+          centralBySource.get(sourceKey) ?? [],
+          centralBindings,
+          snapshotById
+        )
       ),
       (ploId) => ploEvidenceHref(sourceKey, ploId)
     );
@@ -765,6 +801,7 @@ export async function getProgramHeadDashboard(
     programPlos,
     ploRowsBySource,
     analyticsOutcomesHref,
+    periodFilters: effectiveFilters,
   });
 
   return {
@@ -963,24 +1000,27 @@ async function loadCentralPloBindings(
   return byDeployment;
 }
 
-function buildDashboardLinks(
-  programId: string,
-  filters: DashboardPeriodFilters
-): DashboardLinks {
+function buildDashboardLinks(programId: string, filters: DashboardPeriodFilters): DashboardLinks {
   return {
-    responses: buildProgramHeadResponsesPath(programId),
-    responsesActiveCourse: buildProgramHeadResponsesUrl(programId, {
+    responses: buildProgramHeadResponsesUrl(programId, {
+      termInstanceId: filters.termInstanceId,
       schoolYearId: filters.schoolYearId,
       semester: filters.semester as AcademicSemester | undefined,
+      tab: "course",
+      page: 1,
+    }),
+    responsesActiveCourse: buildProgramHeadResponsesUrl(programId, {
       termInstanceId: filters.termInstanceId,
+      schoolYearId: filters.schoolYearId,
+      semester: filters.semester as AcademicSemester | undefined,
       tab: "course",
       page: 1,
       status: DeploymentStatus.ACTIVE,
     }),
     responsesActiveProgramWide: buildProgramHeadResponsesUrl(programId, {
+      termInstanceId: filters.termInstanceId,
       schoolYearId: filters.schoolYearId,
       semester: filters.semester as AcademicSemester | undefined,
-      termInstanceId: filters.termInstanceId,
       tab: "program-wide",
       page: 1,
       status: DeploymentStatus.ACTIVE,

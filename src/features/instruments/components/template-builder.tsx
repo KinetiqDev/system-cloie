@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -22,8 +22,16 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowLeft, GripVertical, Plus, SearchIcon, XIcon } from "lucide-react";
-import Link from "next/link";
+import {
+  ArrowLeft,
+  Check,
+  CloudAlert,
+  GripVertical,
+  Plus,
+  Save,
+  SearchIcon,
+  XIcon,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +43,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Drawer,
   DrawerClose,
@@ -116,7 +134,6 @@ export interface TemplateBuilderProps {
   onSave: (data: FormData) => Promise<ActionResult<{ id: string }>>;
   programLabel: string;
   saveSuccessConfig?: {
-    redirectTo: string;
     toastMessage: string;
   };
   toolsHref?: string;
@@ -130,7 +147,7 @@ export interface TemplateBuilderProps {
     structure: TemplateStructure,
     ploBindings: TemplatePloQuestionBinding[]
   ) => Promise<ActionResult<{ id: string }>>;
-  onPublish?: () => void;
+  onPublish?: (templateId: string) => void;
   /**
    * Server-prepared active PLOs (canonical order) offered to Program-wide
    * templates. Absent in faculty/COURSE_BOUND mode.
@@ -142,19 +159,23 @@ export interface TemplateBuilderProps {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function createSection(order: number): TemplateSection {
+function createSection(
+  order: number,
+  key = crypto.randomUUID(),
+  questionKey?: string
+): TemplateSection {
   return {
-    key: crypto.randomUUID(),
+    key,
     title: "",
     description: undefined,
     order,
-    questions: [createQuestion(0)],
+    questions: [createQuestion(0, questionKey)],
   };
 }
 
-function createQuestion(order: number): TemplateQuestion {
+function createQuestion(order: number, key = crypto.randomUUID()): TemplateQuestion {
   return {
-    key: crypto.randomUUID(),
+    key,
     prompt: "",
     type: "likert",
     order,
@@ -355,123 +376,42 @@ function formatTemplateTypeLabel(type: EvaluationTemplateType): string {
   return type === "COURSE_BOUND" ? "Course-bound" : "Program-wide";
 }
 
-function formatQuestionTypeLabel(type: QuestionType): string {
-  return type === "likert" ? "Likert" : "Guided Open-Ended";
-}
-
-const TEMPLATE_HISTORY_GUARD_KEY = "cloie-template-builder-dirty-entry";
+const HISTORY_GUARD_KEY = "cloie-instrument-template-dirty-entry";
 
 function currentHistoryEntryIndex(): number | undefined {
   return window.navigation?.currentEntry?.index;
 }
 
-function isTemplateHistoryGuardEntry(marker: string): boolean {
+function isHistoryGuardEntry(marker: string): boolean {
   const state: unknown = window.history.state;
   return (
-    typeof state === "object" &&
-    state !== null &&
-    Reflect.get(state, TEMPLATE_HISTORY_GUARD_KEY) === marker
+    typeof state === "object" && state !== null && Reflect.get(state, HISTORY_GUARD_KEY) === marker
   );
 }
 
-function useDirtyTemplateNavigationGuard(isDirty: boolean) {
-  useEffect(() => {
-    if (!isDirty) return;
+type SaveState = "unchanged" | "unsaved" | "saving" | "saved" | "error";
 
-    const confirmDiscard = (event: MouseEvent) => {
-      const link = (event.target as Element | null)?.closest("a[href]") as HTMLAnchorElement | null;
-      if (!link || event.defaultPrevented || event.button !== 0) return;
-
-      const hasModifier = [event.metaKey, event.ctrlKey, event.shiftKey, event.altKey].some(
-        Boolean
-      );
-      if (hasModifier || link.target || link.origin !== window.location.origin) return;
-      if (window.confirm("Discard unsaved template changes?")) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = true;
-    };
-    const editorHistoryIndex = currentHistoryEntryIndex();
-    const editorHistoryState = window.history.state;
-    const historyMarker = `${Date.now()}-${Math.random()}`;
-    window.history.replaceState(
-      { ...editorHistoryState, [TEMPLATE_HISTORY_GUARD_KEY]: historyMarker },
-      "",
-      window.location.href
-    );
-
-    let revertingHistoryNavigation = false;
-    let fallbackSearchDirection: 1 | -1 = 1;
-    let fallbackSearchTimer: ReturnType<typeof setTimeout> | null = null;
-    const clearFallbackSearchTimer = () => {
-      if (fallbackSearchTimer === null) return;
-      clearTimeout(fallbackSearchTimer);
-      fallbackSearchTimer = null;
-    };
-    const searchForMarkedEditor = () => {
-      clearFallbackSearchTimer();
-      window.history.go(fallbackSearchDirection);
-      fallbackSearchTimer = setTimeout(() => {
-        fallbackSearchTimer = null;
-        if (fallbackSearchDirection === 1) {
-          fallbackSearchDirection = -1;
-          searchForMarkedEditor();
-          return;
-        }
-        revertingHistoryNavigation = false;
-      }, 0);
-    };
-    const confirmHistoryNavigation = () => {
-      if (revertingHistoryNavigation) {
-        clearFallbackSearchTimer();
-        if (isTemplateHistoryGuardEntry(historyMarker)) {
-          revertingHistoryNavigation = false;
-          return;
-        }
-        searchForMarkedEditor();
-        return;
-      }
-      if (window.confirm("Discard unsaved template changes?")) return;
-
-      const currentHistoryIndex = currentHistoryEntryIndex();
-      if (editorHistoryIndex !== undefined && currentHistoryIndex !== undefined) {
-        const stepsBackToEditor = editorHistoryIndex - currentHistoryIndex;
-        if (stepsBackToEditor === 0) return;
-        revertingHistoryNavigation = true;
-        window.history.go(stepsBackToEditor);
-        return;
-      }
-
-      // Without Navigation API indices, search forward first. A canceled Back
-      // traversal reaches the marked editor directly. A canceled Forward
-      // traversal reaches the forward boundary, then searches backward until
-      // the marked editor entry is restored.
-      revertingHistoryNavigation = true;
-      fallbackSearchDirection = 1;
-      searchForMarkedEditor();
-    };
-
-    window.addEventListener("popstate", confirmHistoryNavigation);
-    document.addEventListener("click", confirmDiscard, true);
-    window.addEventListener("beforeunload", warnBeforeUnload);
-    return () => {
-      document.removeEventListener("click", confirmDiscard, true);
-      window.removeEventListener("popstate", confirmHistoryNavigation);
-      window.removeEventListener("beforeunload", warnBeforeUnload);
-      clearFallbackSearchTimer();
-      if (isTemplateHistoryGuardEntry(historyMarker)) {
-        window.history.replaceState(editorHistoryState, "", window.location.href);
-      }
-    };
-  }, [isDirty]);
+function serializeBuilderDraft(draft: {
+  boundCourseId: string;
+  boundMajorId: string;
+  boundProgramId: string;
+  ciloQuestionBindings: Record<string, string>;
+  description: string;
+  isActive: boolean;
+  isFacultyAccessible: boolean;
+  name: string;
+  ploQuestionBindings: Record<string, string[]>;
+  sections: TemplateStructure;
+  templateType: EvaluationTemplateType;
+}) {
+  return JSON.stringify({
+    ...draft,
+    sections: normalizeTemplateStructure(draft.sections),
+  });
 }
 
-function draftSignature(value: unknown): string {
-  return JSON.stringify(value);
+function formatQuestionTypeLabel(type: QuestionType): string {
+  return type === "likert" ? "Likert" : "Guided Open-Ended";
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -495,6 +435,8 @@ export function TemplateBuilder({
   const [isPending, startTransition] = useTransition();
   const templateId = initialData?.id;
 
+  const initialSectionKey = useId();
+  const initialQuestionKey = useId();
   // Template metadata state
   const [name, setName] = useState(initialData?.name ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
@@ -509,7 +451,9 @@ export function TemplateBuilder({
   // Structure state
   const [sections, setSections] = useState<TemplateStructure>(() =>
     normalizeTemplateStructure(
-      initialData?.structure?.length ? initialData.structure : [createSection(0)]
+      initialData?.structure?.length
+        ? initialData.structure
+        : [createSection(0, initialSectionKey, initialQuestionKey)]
     )
   );
   const [boundProgramId, setBoundProgramId] = useState(initialData?.bound_program_id ?? "");
@@ -532,36 +476,6 @@ export function TemplateBuilder({
     }
     return map;
   });
-  const [initialDraftSignature] = useState(() =>
-    draftSignature({
-      boundCourseId,
-      boundMajorId,
-      boundProgramId,
-      ciloQuestionBindings,
-      description,
-      isActive,
-      isFacultyAccessible,
-      name,
-      ploQuestionBindings,
-      sections,
-      templateType,
-    })
-  );
-  const currentDraftSignature = draftSignature({
-    boundCourseId,
-    boundMajorId,
-    boundProgramId,
-    ciloQuestionBindings,
-    description,
-    isActive,
-    isFacultyAccessible,
-    name,
-    ploQuestionBindings,
-    sections,
-    templateType,
-  });
-  useDirtyTemplateNavigationGuard(currentDraftSignature !== initialDraftSignature);
-
   /** Archived PLOs bound to questions: rendered as removable archived chips. */
   const archivedPloLookup = useMemo(() => {
     const lookup = new Map<string, ProgramPloOption>();
@@ -595,6 +509,153 @@ export function TemplateBuilder({
     !facultyMode &&
     effectiveTemplateType === "PROGRAM_WIDE" &&
     (!isInstitutionalBaseline || Boolean(onSaveAsCopy));
+  const currentDraftSnapshot = useMemo(
+    () =>
+      serializeBuilderDraft({
+        boundCourseId,
+        boundMajorId,
+        boundProgramId,
+        ciloQuestionBindings,
+        description,
+        isActive,
+        isFacultyAccessible,
+        name,
+        ploQuestionBindings,
+        sections,
+        templateType: effectiveTemplateType,
+      }),
+    [
+      boundCourseId,
+      boundMajorId,
+      boundProgramId,
+      ciloQuestionBindings,
+      description,
+      effectiveTemplateType,
+      isActive,
+      isFacultyAccessible,
+      name,
+      ploQuestionBindings,
+      sections,
+    ]
+  );
+  const [savedDraftSnapshot, setSavedDraftSnapshot] = useState(currentDraftSnapshot);
+  const [saveState, setSaveState] = useState<SaveState>("unchanged");
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  const [pendingNavigationHref, setPendingNavigationHref] = useState<string | null>(null);
+  const isDirty = currentDraftSnapshot !== savedDraftSnapshot;
+
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const confirmInternalNavigation = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest("a[href]") as HTMLAnchorElement | null;
+      if (!link || event.defaultPrevented || event.button !== 0) return;
+      const hasModifier = [event.metaKey, event.ctrlKey, event.shiftKey, event.altKey].some(
+        Boolean
+      );
+      if (hasModifier || link.target || link.origin !== window.location.origin) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setPendingNavigationHref(`${link.pathname}${link.search}${link.hash}`);
+      setDiscardDialogOpen(true);
+    };
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = true;
+    };
+
+    const editorHistoryIndex = currentHistoryEntryIndex();
+    const editorHistoryState = window.history.state;
+    const marker = `${Date.now()}-${Math.random()}`;
+    window.history.replaceState(
+      { ...editorHistoryState, [HISTORY_GUARD_KEY]: marker },
+      "",
+      window.location.href
+    );
+
+    let restoringEditorEntry = false;
+    let pendingHistoryHref: string | null = null;
+    let fallbackSearchDirection: 1 | -1 = 1;
+    let fallbackSearchTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearFallbackSearchTimer = () => {
+      if (fallbackSearchTimer === null) return;
+      clearTimeout(fallbackSearchTimer);
+      fallbackSearchTimer = null;
+    };
+    const showHistoryConfirmation = () => {
+      restoringEditorEntry = false;
+      setPendingNavigationHref(pendingHistoryHref);
+      setDiscardDialogOpen(true);
+      pendingHistoryHref = null;
+    };
+    const searchForEditorEntry = () => {
+      clearFallbackSearchTimer();
+      window.history.go(fallbackSearchDirection);
+      fallbackSearchTimer = setTimeout(() => {
+        fallbackSearchTimer = null;
+        if (fallbackSearchDirection === 1) {
+          fallbackSearchDirection = -1;
+          searchForEditorEntry();
+          return;
+        }
+        restoringEditorEntry = false;
+      }, 0);
+    };
+    const confirmHistoryNavigation = () => {
+      if (restoringEditorEntry) {
+        clearFallbackSearchTimer();
+        if (isHistoryGuardEntry(marker)) {
+          showHistoryConfirmation();
+          return;
+        }
+        searchForEditorEntry();
+        return;
+      }
+
+      pendingHistoryHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      const currentHistoryIndex = currentHistoryEntryIndex();
+      if (editorHistoryIndex !== undefined && currentHistoryIndex !== undefined) {
+        const stepsToEditor = editorHistoryIndex - currentHistoryIndex;
+        if (stepsToEditor === 0) return;
+        restoringEditorEntry = true;
+        window.history.go(stepsToEditor);
+        return;
+      }
+
+      restoringEditorEntry = true;
+      fallbackSearchDirection = 1;
+      searchForEditorEntry();
+    };
+
+    window.addEventListener("popstate", confirmHistoryNavigation);
+    document.addEventListener("click", confirmInternalNavigation, true);
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => {
+      window.removeEventListener("popstate", confirmHistoryNavigation);
+      document.removeEventListener("click", confirmInternalNavigation, true);
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+      clearFallbackSearchTimer();
+      if (isHistoryGuardEntry(marker)) {
+        window.history.replaceState(editorHistoryState, "", window.location.href);
+      }
+    };
+  }, [isDirty]);
+
+  const requestBackNavigation = useCallback(() => {
+    if (isDirty) {
+      setPendingNavigationHref(toolsHref);
+      setDiscardDialogOpen(true);
+      return;
+    }
+    router.push(toolsHref);
+  }, [isDirty, router, toolsHref]);
+
+  const discardAndLeave = useCallback(() => {
+    const destination = pendingNavigationHref ?? toolsHref;
+    setDiscardDialogOpen(false);
+    setPendingNavigationHref(null);
+    router.push(destination);
+  }, [pendingNavigationHref, router, toolsHref]);
   const programPloOptions = ploOptions ?? [];
   const facultyCourseContexts = facultyConfig?.courseContexts ?? EMPTY_FACULTY_COURSE_CONTEXTS;
   const loadManagedCilosAction = facultyConfig?.loadManagedCilosAction;
@@ -1000,6 +1061,7 @@ export function TemplateBuilder({
     formData.set("name", name);
     formData.set("description", description);
     formData.set("template_type", effectiveTemplateType);
+    formData.set("is_active", isActive ? "true" : "false");
     formData.set(
       "is_faculty_accessible",
       effectiveTemplateType === "COURSE_BOUND" && isFacultyAccessible ? "true" : "false"
@@ -1041,6 +1103,7 @@ export function TemplateBuilder({
     description,
     effectiveTemplateType,
     facultyMode,
+    isActive,
     isFacultyAccessible,
     name,
     ploQuestionBindings,
@@ -1051,18 +1114,22 @@ export function TemplateBuilder({
 
   const saveDraft = useCallback(async () => {
     setError(null);
+    setSaveState("saving");
 
     const result = await onSave(buildFormData());
 
     if (!result.success) {
       setError(result.error);
+      setSaveState("error");
       showToast(result.error, "error");
       return { success: false as const, error: result.error };
     }
 
+    setSavedDraftSnapshot(currentDraftSnapshot);
+    setSaveState("saved");
     const id = result.data?.id ?? templateId ?? null;
     return { success: true as const, id };
-  }, [buildFormData, onSave, templateId]);
+  }, [buildFormData, currentDraftSnapshot, onSave, templateId]);
 
   const handleSaveAsCopy = useCallback(async () => {
     if (!templateId || !onSaveAsCopy) return;
@@ -1096,7 +1163,6 @@ export function TemplateBuilder({
   ]);
 
   const handleSave = useCallback(() => {
-    // If editing an institutional baseline, show copy name dialog
     if (isInstitutionalBaseline && templateId && onSaveAsCopy) {
       setCopyName(name);
       setCopyNameDialogOpen(true);
@@ -1105,79 +1171,126 @@ export function TemplateBuilder({
 
     startTransition(async () => {
       const result = await saveDraft();
-
       if (!result.success) {
         onSaveResult?.({ success: false, error: result.error });
         return;
       }
 
       onSaveResult?.({ success: true, id: result.id! });
-
-      if (saveSuccessConfig) {
-        showToast(saveSuccessConfig.toastMessage, "success");
-        router.push(saveSuccessConfig.redirectTo);
-        return;
+      showToast(saveSuccessConfig?.toastMessage ?? "Instrument template saved.", "success");
+      if (!templateId && result.id) {
+        router.push(`${toolsHref}/${encodeURIComponent(result.id)}/edit`);
       }
-
-      showToast("Template saved successfully.", "success");
-      router.push(toolsHref);
     });
   }, [
     isInstitutionalBaseline,
     templateId,
     onSaveAsCopy,
-    name,
     router,
+    toolsHref,
+    name,
     saveDraft,
     saveSuccessConfig,
-    toolsHref,
     onSaveResult,
   ]);
 
-  const handlePublish = useCallback(() => {
-    if (!facultyConfig) {
-      return;
-    }
-
+  const handleContinueToPublish = useCallback(() => {
     startTransition(async () => {
       const saveResult = await saveDraft();
 
-      if (!saveResult.success) {
+      if (!saveResult.success || !saveResult.id) return;
+
+      if (facultyConfig) {
+        const result = await facultyConfig.validatePublishReadinessAction(saveResult.id);
+
+        if (!result.success) {
+          showToast(result.error, "error");
+          setError(result.error);
+          return;
+        }
+
+        router.push(`/faculty/cilo-evaluations/new?templateId=${saveResult.id}`);
         return;
       }
 
-      const result = await facultyConfig.validatePublishReadinessAction(saveResult.id!);
-
-      if (!result.success) {
-        showToast(result.error, "error");
-        setError(result.error);
-        return;
-      }
-
-      router.push(`/faculty/cilo-evaluations/new?templateId=${saveResult.id}`);
+      onPublish?.(saveResult.id);
     });
-  }, [facultyConfig, router, saveDraft]);
+  }, [facultyConfig, onPublish, router, saveDraft]);
 
-  // ─── Render ──────────────────────────────────────────────────────────
+  const visibleSaveState: SaveState = isPending ? "saving" : isDirty ? "unsaved" : saveState;
+  const saveStateContent = {
+    unchanged: { icon: Check, label: "No pending changes" },
+    unsaved: { icon: CloudAlert, label: "Unsaved changes" },
+    saving: { icon: Save, label: "Saving..." },
+    saved: { icon: Check, label: "Saved" },
+    error: { icon: CloudAlert, label: "Save failed" },
+  }[visibleSaveState];
+  const SaveStateIcon = saveStateContent.icon;
+  const canContinueToPublish = (facultyMode || Boolean(onPublish)) && !isInstitutionalBaseline;
+  const saveActionLabel =
+    isInstitutionalBaseline && onSaveAsCopy
+      ? "Create program copy"
+      : templateId
+        ? facultyMode || onPublish
+          ? "Save draft"
+          : "Save template"
+        : "Create template";
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <Link
-        href={toolsHref}
-        className="text-link focus-visible:ring-ring inline-flex items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none"
-      >
-        <ArrowLeft className="size-4" />
-        Back to Tools
-      </Link>
+    <div className="mx-auto flex max-w-4xl flex-col gap-6 pb-32 sm:pb-28">
+      <div className="border-border bg-background/95 sticky top-0 z-30 -mx-4 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border">
+        <div className="min-w-0">
+          <button
+            type="button"
+            onClick={requestBackNavigation}
+            className="text-link focus-visible:ring-ring inline-flex min-h-8 items-center gap-2 rounded-md text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none pointer-coarse:min-h-11"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to Tools
+          </button>
+          <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-wide uppercase">
+            {programLabel}
+          </p>
+          <h1 className="text-heading-lg">{initialData?.id ? "Edit Template" : "New Template"}</h1>
+        </div>
+      </div>
 
-      {/* Header */}
-      <div className="space-y-1">
-        <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
-          {programLabel}
-        </p>
-        <h1 className="font-heading text-text-primary text-2xl font-black">
-          {initialData?.id ? "Edit Template" : "New Template"}
-        </h1>
+      <div
+        role="toolbar"
+        aria-label="Template actions"
+        className="border-border bg-background fixed inset-x-0 bottom-0 z-40 border-t px-4 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-md sm:px-6 lg:left-64"
+      >
+        <div className="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p
+            className="text-muted-foreground flex min-h-5 items-center gap-1.5 text-xs"
+            role="status"
+            aria-live="polite"
+          >
+            <SaveStateIcon className="size-3.5" aria-hidden="true" />
+            {saveStateContent.label}
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center [&_[data-slot=button]]:min-h-11 sm:[&_[data-slot=button]]:min-w-28">
+            <Button
+              className={canContinueToPublish ? "w-full" : "col-span-2 w-full"}
+              variant={canContinueToPublish ? "outline" : "default"}
+              onClick={handleSave}
+              loading={isPending || isCopyPending}
+            >
+              {saveActionLabel}
+            </Button>
+            {canContinueToPublish && (
+              <Button
+                className="w-full"
+                onClick={handleContinueToPublish}
+                loading={isPending}
+                aria-label="Continue to publish"
+              >
+                <span className="sm:hidden">Continue</span>
+                <span className="sr-only sm:not-sr-only">Continue to publish</span>
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Error / Success Messages */}
@@ -1512,25 +1625,6 @@ export function TemplateBuilder({
         </button>
       </div>
 
-      {/* Save Actions */}
-      <div className="flex justify-end gap-3 pb-8">
-        <Button variant="outline" onClick={() => router.push(toolsHref)} disabled={isPending}>
-          Cancel
-        </Button>
-        {(facultyMode || onPublish) && (
-          <Button
-            variant="brand-accent"
-            onClick={facultyMode ? handlePublish : onPublish}
-            loading={isPending}
-          >
-            Publish
-          </Button>
-        )}
-        <Button onClick={handleSave} loading={isPending}>
-          {isInstitutionalBaseline && onSaveAsCopy ? "Save as Program Copy" : "Save Template"}
-        </Button>
-      </div>
-
       {/* Copy Name Dialog for Institutional Baselines */}
       <Dialog open={copyNameDialogOpen} onOpenChange={setCopyNameDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1561,6 +1655,23 @@ export function TemplateBuilder({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Changes made after the last save will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={discardAndLeave}>
+              Discard changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -1934,11 +2045,11 @@ function QuestionCard({
                   }
                 }}
               >
-                <SelectTrigger
-                  id={`cilo-binding-${question.key}`}
-                  className="h-auto min-h-8 w-full whitespace-normal data-[size=default]:h-auto *:data-[slot=select-value]:line-clamp-none *:data-[slot=select-value]:items-start *:data-[slot=select-value]:whitespace-normal"
-                >
-                  <SelectValue placeholder="Select a CILO…">
+                <SelectTrigger id={`cilo-binding-${question.key}`} className="w-full min-w-0">
+                  <SelectValue
+                    placeholder="Select a CILO…"
+                    className="block min-w-0 truncate text-left"
+                  >
                     {selectedCiloId ? selectedCiloLabel : undefined}
                   </SelectValue>
                 </SelectTrigger>
@@ -1949,7 +2060,12 @@ function QuestionCard({
                       selectedCiloIds.has(cilo.id) && selectedCiloId !== cilo.id;
 
                     return (
-                      <SelectItem key={cilo.id} value={cilo.id} disabled={usedByAnotherQuestion}>
+                      <SelectItem
+                        key={cilo.id}
+                        value={cilo.id}
+                        disabled={usedByAnotherQuestion}
+                        className="[&>span]:whitespace-normal"
+                      >
                         {formatCiloOptionLabel(cilo, index)}
                       </SelectItem>
                     );
@@ -2126,6 +2242,7 @@ function LikertDescriptorsEditor({
             {/* Editable label */}
             <input
               type="text"
+              aria-label={`Scale ${descriptor.value} descriptor`}
               className="text-muted-foreground hover:border-border focus:border-primary w-full border-0 border-b border-transparent bg-transparent text-center text-xs transition-colors focus:outline-none"
               value={descriptor.label}
               onChange={(e) => onUpdate(sectionKey, questionKey, idx, e.target.value)}

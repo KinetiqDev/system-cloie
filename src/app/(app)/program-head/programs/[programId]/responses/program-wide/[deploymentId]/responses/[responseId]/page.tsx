@@ -49,9 +49,9 @@ export default async function CentralResponseDetailPage({
   const upwardState = {
     tab: "program-wide" as const,
     page: 1,
+    termInstanceId: state.termInstanceId,
     schoolYearId: state.schoolYearId,
     semester: state.semester,
-    termInstanceId: state.termInstanceId,
     stakeholder,
   };
   const responsesHref = buildProgramHeadResponsesUrl(programId, upwardState);

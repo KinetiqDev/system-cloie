@@ -210,9 +210,10 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getByRole("button", { name: "Card view" }));
     expect(replaceMock).not.toHaveBeenCalled();
     expect(window.location.search).toBe("?search=CS&history=1&view=card");
-    expect(
-      screen.getByRole("button", { name: "Card view" })
-    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Card view" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
     expect(screen.queryByRole("table", { name: "Course assignments" })).not.toBeInTheDocument();
 
     replaceMock.mockClear();
@@ -698,7 +699,9 @@ describe("course roster pages", () => {
   it("describes the currently available name parsing step", () => {
     render(<CourseRosterDetailPage data={detail} />);
 
-    expect(screen.getByText(/Review parsed rows before continuing roster reconciliation/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Review parsed rows before continuing roster reconciliation/i)
+    ).toBeInTheDocument();
   });
 
   it.each([
@@ -753,7 +756,13 @@ describe("course roster pages", () => {
             candidates: [],
           },
         ],
-        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
+        summary: {
+          readyToCreate: 1,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 1,
+          ineligible: 0,
+        },
       },
     });
     const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
@@ -777,9 +786,9 @@ describe("course roster pages", () => {
     fireEvent.change(input, { target: { files: [file] } });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
 
-    expect(
-      await screen.findByRole("group", { name: "Wizard progress" })
-    ).toHaveTextContent("Review and resolve");
+    expect(await screen.findByRole("group", { name: "Wizard progress" })).toHaveTextContent(
+      "Review and resolve"
+    );
     expect(screen.getAllByText(/maria santos/i).length).toBeGreaterThan(0);
     expect(screen.getByText("Exact match")).toBeInTheDocument();
     expect(screen.getByText("No match")).toBeInTheDocument();
@@ -837,7 +846,9 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
 
     await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(/The roster preview could not be completed/i)
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /The roster preview could not be completed/i
+      )
     );
     expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent("Add members");
   });
@@ -927,9 +938,7 @@ describe("course roster pages", () => {
     expect(screen.getByRole("button", { name: "Skip" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument());
     expect(screen.getByText("Added to roster")).toBeInTheDocument();
     expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
   });
@@ -969,7 +978,13 @@ describe("course roster pages", () => {
             candidates: [],
           },
         ],
-        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
+        summary: {
+          readyToCreate: 1,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 1,
+          ineligible: 0,
+        },
       },
     });
     vi.spyOn(rosterActions, "confirmRosterResolutionAction").mockResolvedValue({
@@ -1001,16 +1016,12 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[1]);
     expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument());
     expect(screen.getByText("Added to roster")).toBeInTheDocument();
     expect(screen.getAllByText("Not processed").length).toBeGreaterThan(0);
 
     // Confirmed results are final: Done closes without a discard prompt.
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Done" })).toBeEnabled()
-    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Done" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -1120,11 +1131,9 @@ describe("course roster pages", () => {
     fireEvent.change(input, {
       target: {
         files: [
-          new File(
-            ["name\nMaria Santos\nUnknown Student\nActive Student\n"],
-            "roster.csv",
-            { type: "text/csv" }
-          ),
+          new File(["name\nMaria Santos\nUnknown Student\nActive Student\n"], "roster.csv", {
+            type: "text/csv",
+          }),
         ],
       },
     });
@@ -1199,7 +1208,13 @@ describe("course roster pages", () => {
         data: {
           assignmentId: "assignment-1",
           rows: [],
-          summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+          summary: {
+            readyToCreate: 0,
+            willRestore: 0,
+            alreadyActive: 0,
+            needsReview: 0,
+            ineligible: 0,
+          },
         },
       };
     });
@@ -1278,7 +1293,13 @@ describe("course roster pages", () => {
             ],
           },
         ],
-        summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
+        summary: {
+          readyToCreate: 0,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 1,
+          ineligible: 0,
+        },
       },
     });
     vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
@@ -1316,13 +1337,17 @@ describe("course roster pages", () => {
     const reviewComplete = screen.getByRole("button", { name: /review complete/i });
     const ack = screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ });
     expect(reviewComplete).toBeDisabled();
-    expect(screen.getByRole("alert")).toHaveTextContent(/Acknowledge 1 suggested match before continuing/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /Acknowledge 1 suggested match before continuing/i
+    );
 
     // A count-aware checkbox acknowledges the current suggestion set.
     fireEvent.click(ack);
     expect(ack).toBeChecked();
     expect(reviewComplete).toBeEnabled();
-    expect(screen.getByText("This confirmation will add or restore 1 Student.")).toBeInTheDocument();
+    expect(
+      screen.getByText("This confirmation will add or restore 1 Student.")
+    ).toBeInTheDocument();
 
     // Changing the suggested account clears the acknowledgement.
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
@@ -1334,7 +1359,9 @@ describe("course roster pages", () => {
     // Returning the row to its suggestion shows the acknowledgement reset.
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
     expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ })).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ })
+    ).not.toBeChecked();
     expect(reviewComplete).toBeDisabled();
   });
 
@@ -1373,7 +1400,13 @@ describe("course roster pages", () => {
             candidates: [],
           },
         ],
-        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 1, ineligible: 0 },
+        summary: {
+          readyToCreate: 1,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 1,
+          ineligible: 0,
+        },
       },
     });
     render(<RosterManagementDialog assignmentId="assignment-1" />);
@@ -1422,7 +1455,13 @@ describe("course roster pages", () => {
             candidates: [],
           },
         ],
-        summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 2, ineligible: 0 },
+        summary: {
+          readyToCreate: 0,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 2,
+          ineligible: 0,
+        },
       },
     });
     vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
@@ -1464,7 +1503,11 @@ describe("course roster pages", () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, {
       target: {
-        files: [new File(["name\nJohn Paul Santos\nJohn Paul Santos\n"], "roster.csv", { type: "text/csv" })],
+        files: [
+          new File(["name\nJohn Paul Santos\nJohn Paul Santos\n"], "roster.csv", {
+            type: "text/csv",
+          }),
+        ],
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
@@ -1546,7 +1589,13 @@ describe("course roster pages", () => {
             ],
           },
         ],
-        summary: { readyToCreate: 2, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+        summary: {
+          readyToCreate: 2,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 0,
+          ineligible: 0,
+        },
       },
     });
     render(<RosterManagementDialog assignmentId="assignment-1" />);
@@ -1554,18 +1603,15 @@ describe("course roster pages", () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, {
       target: {
-        files: [new File(["name\nMaria Santos\nMaria Santos\n"], "roster.csv", { type: "text/csv" })],
+        files: [
+          new File(["name\nMaria Santos\nMaria Santos\n"], "roster.csv", { type: "text/csv" }),
+        ],
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
-    await waitFor(() =>
-      expect(screen.getByRole("group", { name: "Wizard progress" })).toHaveTextContent(
-        "Review and resolve"
-      )
-    );
+    const reviewComplete = await screen.findByRole("button", { name: /review complete/i });
 
     // Two identical exact names prepare the same account; the duplicate blocks review.
-    const reviewComplete = screen.getByRole("button", { name: /review complete/i });
     expect(reviewComplete).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(
       /The same Student is selected for rows 2 and 3/
@@ -1606,7 +1652,13 @@ describe("course roster pages", () => {
             ],
           },
         ],
-        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+        summary: {
+          readyToCreate: 1,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 0,
+          ineligible: 0,
+        },
       },
     });
     render(<RosterManagementDialog assignmentId="assignment-1" />);
@@ -1670,7 +1722,13 @@ describe("course roster pages", () => {
             ],
           },
         ],
-        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+        summary: {
+          readyToCreate: 1,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 0,
+          ineligible: 0,
+        },
       },
     });
     render(<RosterManagementDialog assignmentId="assignment-1" />);
@@ -1748,7 +1806,13 @@ describe("buildReviewGuards", () => {
     const preview: CourseRosterPreview = {
       assignmentId: "assignment-1",
       rows: [exactRow(2, "student-1"), exactRow(3, "student-1")],
-      summary: { readyToCreate: 2, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+      summary: {
+        readyToCreate: 2,
+        willRestore: 0,
+        alreadyActive: 0,
+        needsReview: 0,
+        ineligible: 0,
+      },
     };
     const guards = buildReviewGuards({
       preview,
@@ -1773,7 +1837,13 @@ describe("buildReviewGuards", () => {
     const preview: CourseRosterPreview = {
       assignmentId: "assignment-1",
       rows: [noMatchRow(2), noMatchRow(3)],
-      summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 2, ineligible: 0 },
+      summary: {
+        readyToCreate: 0,
+        willRestore: 0,
+        alreadyActive: 0,
+        needsReview: 2,
+        ineligible: 0,
+      },
     };
     const guards = buildReviewGuards({
       preview,
@@ -1798,7 +1868,13 @@ describe("buildReviewGuards", () => {
     const preview: CourseRosterPreview = {
       assignmentId: "assignment-1",
       rows: [suggestedRow(2, "student-1"), noMatchRow(3)],
-      summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 2, ineligible: 0 },
+      summary: {
+        readyToCreate: 0,
+        willRestore: 0,
+        alreadyActive: 0,
+        needsReview: 2,
+        ineligible: 0,
+      },
     };
     const beforeAck = buildReviewGuards({
       preview,
@@ -1825,7 +1901,13 @@ describe("buildReviewGuards", () => {
     const preview: CourseRosterPreview = {
       assignmentId: "assignment-1",
       rows: [suggestedRow(2, "student-1"), noMatchRow(3)],
-      summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 2, ineligible: 0 },
+      summary: {
+        readyToCreate: 0,
+        willRestore: 0,
+        alreadyActive: 0,
+        needsReview: 2,
+        ineligible: 0,
+      },
     };
     const guards = buildReviewGuards({
       preview,
@@ -1844,7 +1926,13 @@ describe("buildReviewGuards", () => {
     const preview: CourseRosterPreview = {
       assignmentId: "assignment-1",
       rows: [suggestedRow(2, "student-1", "INELIGIBLE"), noMatchRow(3)],
-      summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 1 },
+      summary: {
+        readyToCreate: 0,
+        willRestore: 0,
+        alreadyActive: 0,
+        needsReview: 0,
+        ineligible: 1,
+      },
     };
     const guards = buildReviewGuards({
       preview,
@@ -1852,9 +1940,7 @@ describe("buildReviewGuards", () => {
       selectedCandidateByIndex: {},
       suggestionsAcknowledged: false,
     });
-    expect(guards.reviewBlockers).toEqual([
-      "Resolve or skip 2 rows before continuing.",
-    ]);
+    expect(guards.reviewBlockers).toEqual(["Resolve or skip 2 rows before continuing."]);
 
     const skipped = buildReviewGuards({
       preview,
@@ -1875,7 +1961,13 @@ describe("buildReviewGuards", () => {
         noMatchRow(5),
         exactRow(6, "student-3"),
       ],
-      summary: { readyToCreate: 2, willRestore: 0, alreadyActive: 0, needsReview: 3, ineligible: 0 },
+      summary: {
+        readyToCreate: 2,
+        willRestore: 0,
+        alreadyActive: 0,
+        needsReview: 3,
+        ineligible: 0,
+      },
     };
 
     // Manual selection wins over prepared exact; skipped rows are excluded;
@@ -1982,7 +2074,13 @@ describe("course roster confirmation results", () => {
             ],
           },
         ],
-        summary: { readyToCreate: 2, willRestore: 0, alreadyActive: 1, needsReview: 0, ineligible: 0 },
+        summary: {
+          readyToCreate: 2,
+          willRestore: 0,
+          alreadyActive: 1,
+          needsReview: 0,
+          ineligible: 0,
+        },
       },
     });
     vi.spyOn(rosterActions, "confirmRosterResolutionAction").mockResolvedValue({
@@ -1990,7 +2088,12 @@ describe("course roster confirmation results", () => {
       data: {
         rows: [
           { sourceIndex: 2, outcome: "CREATED", error: null },
-          { sourceIndex: 3, outcome: "OTHER_SECTION_CONFLICT", error: "Student is already active in another section for this Course and Academic Period." },
+          {
+            sourceIndex: 3,
+            outcome: "OTHER_SECTION_CONFLICT",
+            error:
+              "Student is already active in another section for this Course and Academic Period.",
+          },
         ],
         referenceId: "ref-abc-123",
       },
@@ -2000,7 +2103,9 @@ describe("course roster confirmation results", () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, {
       target: {
-        files: [new File(["name\nMaria Santos\nJuan Dela Cruz\n"], "roster.csv", { type: "text/csv" })],
+        files: [
+          new File(["name\nMaria Santos\nJuan Dela Cruz\n"], "roster.csv", { type: "text/csv" }),
+        ],
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
@@ -2009,7 +2114,9 @@ describe("course roster confirmation results", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
     await waitFor(() =>
-      expect(screen.getAllByText(/Confirmation complete|Confirmation stopped/).length).toBeGreaterThan(0)
+      expect(
+        screen.getAllByText(/Confirmation complete|Confirmation stopped/).length
+      ).toBeGreaterThan(0)
     );
     expect(screen.getByText("Added to roster")).toBeInTheDocument();
     expect(screen.getByText("Other section conflict")).toBeInTheDocument();
@@ -2020,9 +2127,9 @@ describe("course roster confirmation results", () => {
     expect(screen.getAllByText("Already active").length).toBeGreaterThan(0);
     expect(screen.getByText("Active Student")).toBeInTheDocument();
     expect(screen.getByText("Already active", { selector: "dt" })).toBeInTheDocument();
-    expect(
-      screen.getByText("Already active", { selector: "dt" }).parentElement
-    ).toHaveTextContent("1");
+    expect(screen.getByText("Already active", { selector: "dt" }).parentElement).toHaveTextContent(
+      "1"
+    );
     // Confirmed results are final: Back is not offered after confirmation.
     expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
   });
@@ -2055,14 +2162,24 @@ describe("course roster confirmation results", () => {
             ],
           },
         ],
-        summary: { readyToCreate: 1, willRestore: 0, alreadyActive: 0, needsReview: 0, ineligible: 0 },
+        summary: {
+          readyToCreate: 1,
+          willRestore: 0,
+          alreadyActive: 0,
+          needsReview: 0,
+          ineligible: 0,
+        },
       },
     });
     vi.spyOn(rosterActions, "confirmRosterResolutionAction").mockResolvedValue({
       success: true,
       data: {
         rows: [
-          { sourceIndex: 2, outcome: "UNEXPECTED_FAILURE", error: "The roster request could not be completed." },
+          {
+            sourceIndex: 2,
+            outcome: "UNEXPECTED_FAILURE",
+            error: "The roster request could not be completed.",
+          },
         ],
         referenceId: "ref-uuid-1",
       },
@@ -2165,7 +2282,13 @@ describe("course roster confirmation results", () => {
             ],
           },
         ],
-        summary: { readyToCreate: 0, willRestore: 0, alreadyActive: 1, needsReview: 0, ineligible: 0 },
+        summary: {
+          readyToCreate: 0,
+          willRestore: 0,
+          alreadyActive: 1,
+          needsReview: 0,
+          ineligible: 0,
+        },
       },
     });
     const confirmSpy = vi.spyOn(rosterActions, "confirmRosterResolutionAction");
@@ -2182,9 +2305,7 @@ describe("course roster confirmation results", () => {
       expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
     );
     fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
-    await waitFor(() =>
-      expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument());
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(screen.getAllByText("Already active").length).toBeGreaterThan(0);
     expect(screen.getByText("Active Student")).toBeInTheDocument();

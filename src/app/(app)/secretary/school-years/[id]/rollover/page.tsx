@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
 import {
   Empty,
   EmptyDescription,
@@ -51,26 +52,23 @@ export default async function TermRolloverPage({ params }: PageProps) {
   }
 
   // 3. Map to TermInstanceItem format
-  const termInstances: TermInstanceItem[] = schoolYear.term_instances.map(
-    (ti) => ({
-      id: ti.id,
-      schoolYearId: ti.school_year_id,
-      schoolYearCode: schoolYear.code,
-      semester: ti.semester,
-      term: ti.term ?? null,
-      startDate: ti.start_date ?? null,
-      endDate: ti.end_date ?? null,
-      status: ti.status,
-      createdAt: ti.created_at,
-      updatedAt: ti.updated_at,
-    })
-  );
+  const termInstances: TermInstanceItem[] = schoolYear.term_instances.map((ti) => ({
+    id: ti.id,
+    schoolYearId: ti.school_year_id,
+    schoolYearCode: schoolYear.code,
+    semester: ti.semester,
+    term: ti.term ?? null,
+    startDate: ti.start_date ?? null,
+    endDate: ti.end_date ?? null,
+    status: ti.status,
+    createdAt: ti.created_at,
+    updatedAt: ti.updated_at,
+  }));
 
   // 4. Find active term (source) and next term (target)
   const activeTermIndex = termInstances.findIndex((ti) => ti.status === "ACTIVE");
   const sourceTerm = activeTermIndex >= 0 ? termInstances[activeTermIndex] : null;
-  const targetTerm =
-    activeTermIndex >= 0 ? termInstances[activeTermIndex + 1] : null;
+  const targetTerm = activeTermIndex >= 0 ? termInstances[activeTermIndex + 1] : null;
 
   // 5. Check if rollover is possible
   const canRollover = sourceTerm && targetTerm;
@@ -83,10 +81,7 @@ export default async function TermRolloverPage({ params }: PageProps) {
           School Years
         </Link>
         <span>›</span>
-        <Link
-          href={`/secretary/school-years/${schoolYearId}`}
-          className="hover:text-foreground"
-        >
+        <Link href={`/secretary/school-years/${schoolYearId}`} className="hover:text-foreground">
           {schoolYear.code}
         </Link>
         <span>›</span>
@@ -103,7 +98,7 @@ export default async function TermRolloverPage({ params }: PageProps) {
       </div>
 
       {/* Term Instances Summary */}
-      <div className="rounded-xl border bg-card p-4">
+      <div className="bg-card rounded-xl border p-4">
         <h2 className="text-sm font-semibold">Available Terms</h2>
         <div className="mt-2 space-y-1">
           {termInstances.map((ti) => (
@@ -114,8 +109,8 @@ export default async function TermRolloverPage({ params }: PageProps) {
               }`}
             >
               <span>
-                {ti.semester}
-                {ti.term ? ` — ${ti.term}` : ""}
+                {getSemesterLabel(ti.semester)}
+                {ti.term ? ` — ${getTermLabel(ti.term)}` : ""}
               </span>
               {ti.status === "ACTIVE" && (
                 <span className="text-success text-xs font-medium">Active</span>

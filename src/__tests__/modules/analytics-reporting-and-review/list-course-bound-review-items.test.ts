@@ -96,7 +96,7 @@ describe("listCourseBoundReviewItems", () => {
 
     await expect(listCourseBoundReviewItems()).resolves.toEqual([
       {
-        termInstanceLabel: "2025-2026 — SECOND — FIRST_TERM",
+        termInstanceLabel: "2025-2026 — 2nd Semester — 1st Term",
         courseTitle: "Software Engineering",
         deadlineAt: new Date("2026-01-10T10:00:00.000Z"),
         evaluationId: "eval-1",

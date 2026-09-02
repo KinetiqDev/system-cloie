@@ -77,7 +77,7 @@ const outcomesDTO = () => ({
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
   programWideOutcomes: [],
-      currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
+  currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
   manyToManyDisclosure: false,
   outcomes: [
     {
@@ -188,10 +188,20 @@ function feedbackDTO(
     qualitativeItemCount: 12,
     qualitativeResponseCount: 8,
     sourceCounts: [
-      { sourceKey: "COURSE_STUDENT", sourceLabel: "Course-bound student evidence", itemCount: 12, responseCount: 8 },
+      {
+        sourceKey: "COURSE_STUDENT",
+        sourceLabel: "Course-bound student evidence",
+        itemCount: 12,
+        responseCount: 8,
+      },
     ],
     promptCounts: [
-      { sourceLabel: "Course-bound student evidence", promptLabel: "What worked well?", itemCount: 12, responseCount: 8 },
+      {
+        sourceLabel: "Course-bound student evidence",
+        promptLabel: "What worked well?",
+        itemCount: 12,
+        responseCount: 8,
+      },
     ],
     evidenceEvaluations: [],
   };
@@ -203,8 +213,16 @@ const VALID_OUTPUT = {
   areasForReview: ["Qualitative prompts draw few responses"],
   themes: [{ name: "Teaching clarity", summary: "Ratings cluster at the top of the scale." }],
   sentimentClassifications: [
-    { evidenceCategory: "Course-bound student evidence", sentiment: "positive", rationale: "High means." },
-    { evidenceCategory: "Course-bound student evidence", sentiment: "positive", rationale: "Consistent distributions." },
+    {
+      evidenceCategory: "Course-bound student evidence",
+      sentiment: "positive",
+      rationale: "High means.",
+    },
+    {
+      evidenceCategory: "Course-bound student evidence",
+      sentiment: "positive",
+      rationale: "Consistent distributions.",
+    },
     { evidenceCategory: "Alumni evidence", sentiment: "negative", rationale: "Lower coverage." },
   ],
   questionsForHumanReview: ["Why do alumni respond less?"],
@@ -252,14 +270,22 @@ describe("generateProgramHeadAnalyticsInsight", () => {
 
   it("stays disabled when required credentials are missing", async () => {
     stubEnabledConfig({ CLOIE_AI_API_KEY: "" });
-    const result = await generateProgramHeadAnalyticsInsight("program-bsed", FILTERS, enabledTransport({ ok: true, content: "" }));
+    const result = await generateProgramHeadAnalyticsInsight(
+      "program-bsed",
+      FILTERS,
+      enabledTransport({ ok: true, content: "" })
+    );
 
     expect(result).toEqual({ ok: false, state: "disabled" });
   });
 
   it("stays disabled when a required minimum count is malformed", async () => {
     stubEnabledConfig({ CLOIE_AI_MIN_SUBMITTED_RESPONSES: "abc" });
-    const result = await generateProgramHeadAnalyticsInsight("program-bsed", FILTERS, enabledTransport({ ok: true, content: "" }));
+    const result = await generateProgramHeadAnalyticsInsight(
+      "program-bsed",
+      FILTERS,
+      enabledTransport({ ok: true, content: "" })
+    );
 
     expect(result).toEqual({ ok: false, state: "disabled" });
   });
@@ -270,15 +296,22 @@ describe("generateProgramHeadAnalyticsInsight", () => {
     ["0", "10"],
     ["-3", "10"],
     ["", "10"],
-  ])("stays disabled when a required numeric threshold is not a whole positive integer (%s)", async (submitted, qualitative) => {
-    stubEnabledConfig({
-      CLOIE_AI_MIN_SUBMITTED_RESPONSES: submitted,
-      CLOIE_AI_MIN_QUALITATIVE_ITEMS: qualitative,
-    });
-    const result = await generateProgramHeadAnalyticsInsight("program-bsed", FILTERS, enabledTransport({ ok: true, content: "" }));
+  ])(
+    "stays disabled when a required numeric threshold is not a whole positive integer (%s)",
+    async (submitted, qualitative) => {
+      stubEnabledConfig({
+        CLOIE_AI_MIN_SUBMITTED_RESPONSES: submitted,
+        CLOIE_AI_MIN_QUALITATIVE_ITEMS: qualitative,
+      });
+      const result = await generateProgramHeadAnalyticsInsight(
+        "program-bsed",
+        FILTERS,
+        enabledTransport({ ok: true, content: "" })
+      );
 
-    expect(result).toEqual({ ok: false, state: "disabled" });
-  });
+      expect(result).toEqual({ ok: false, state: "disabled" });
+    }
+  );
 
   it("fails safely as unauthorized when any evidence rebuild is denied", async () => {
     stubEnabledConfig();
@@ -402,10 +435,7 @@ describe("generateProgramHeadAnalyticsInsight", () => {
     expect(evidenceEnd).toBeGreaterThan(evidenceStart);
     // Whatever sits between the markers must parse as the bounded packet: hostile
     // token text can exist only as packet data between the fixed markers.
-    const evidenceBlock = userMessage.slice(
-      evidenceStart + AI_EVIDENCE_START.length,
-      evidenceEnd
-    );
+    const evidenceBlock = userMessage.slice(evidenceStart + AI_EVIDENCE_START.length, evidenceEnd);
     const packet = JSON.parse(evidenceBlock);
     const packetTokenTexts = packet.wordFrequencyTokens.map(
       (token: { text: string }) => token.text
@@ -512,6 +542,22 @@ describe("generateProgramHeadAnalyticsInsight", () => {
     expect(openAiCreateMock.mock.calls[0][0].max_tokens).toBe(AI_MAX_OUTPUT_TOKENS);
     expect(openAiCreateMock.mock.calls[0][0].max_completion_tokens).toBeUndefined();
     expect(result.ok).toBe(true);
+  });
+  it("uses JSON-object mode for OpenAI-compatible providers", async () => {
+    stubEnabledConfig();
+    openAiCreateMock.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(VALID_OUTPUT) } }],
+    });
+
+    await generateProgramHeadAnalyticsInsight("program-bsed", FILTERS);
+
+    const request = openAiCreateMock.mock.calls[0][0];
+    const systemMessage = request.messages.find(
+      (message: { role: string }) => message.role === "system"
+    );
+    expect(systemMessage?.content).toContain("summary <=400 characters");
+    expect(systemMessage?.content).toContain("limitations have at most 5 items");
+    expect(request.response_format).toEqual({ type: "json_object" });
   });
 
   it("selects max_completion_tokens for reasoning models", async () => {

@@ -2,7 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EvaluationTemplateType } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
-import { normalizePloQuestionBindings } from "@/features/instruments/services/manage-program-head-templates";
+import {
+  normalizePloQuestionBindings,
+  type createProgramHeadTemplate as CreateProgramHeadTemplate,
+  type deleteProgramHeadTemplate as DeleteProgramHeadTemplate,
+  type duplicateTemplate as DuplicateTemplate,
+  type getProgramHeadTemplate as GetProgramHeadTemplate,
+  type listProgramHeadTemplates as ListProgramHeadTemplates,
+  type toggleFacultyAccessible as ToggleFacultyAccessible,
+  type toggleTemplateActive as ToggleTemplateActive,
+  type updateProgramHeadTemplate as UpdateProgramHeadTemplate,
+} from "@/features/instruments/services/manage-program-head-templates";
 
 const {
   instrumentTemplateFindManyMock,
@@ -119,14 +129,14 @@ const VALID_STRUCTURE = [
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe("manage-program-head-templates", () => {
-  let listProgramHeadTemplates: typeof import("@/features/instruments/services/manage-program-head-templates").listProgramHeadTemplates;
-  let createProgramHeadTemplate: typeof import("@/features/instruments/services/manage-program-head-templates").createProgramHeadTemplate;
-  let updateProgramHeadTemplate: typeof import("@/features/instruments/services/manage-program-head-templates").updateProgramHeadTemplate;
-  let duplicateTemplate: typeof import("@/features/instruments/services/manage-program-head-templates").duplicateTemplate;
-  let deleteProgramHeadTemplate: typeof import("@/features/instruments/services/manage-program-head-templates").deleteProgramHeadTemplate;
-  let toggleTemplateActive: typeof import("@/features/instruments/services/manage-program-head-templates").toggleTemplateActive;
-  let toggleFacultyAccessible: typeof import("@/features/instruments/services/manage-program-head-templates").toggleFacultyAccessible;
-
+  let listProgramHeadTemplates: typeof ListProgramHeadTemplates;
+  let createProgramHeadTemplate: typeof CreateProgramHeadTemplate;
+  let updateProgramHeadTemplate: typeof UpdateProgramHeadTemplate;
+  let duplicateTemplate: typeof DuplicateTemplate;
+  let deleteProgramHeadTemplate: typeof DeleteProgramHeadTemplate;
+  let toggleTemplateActive: typeof ToggleTemplateActive;
+  let toggleFacultyAccessible: typeof ToggleFacultyAccessible;
+  let getProgramHeadTemplate: typeof GetProgramHeadTemplate;
   beforeEach(async () => {
     vi.clearAllMocks();
 
@@ -155,6 +165,7 @@ describe("manage-program-head-templates", () => {
     deleteProgramHeadTemplate = mod.deleteProgramHeadTemplate;
     toggleTemplateActive = mod.toggleTemplateActive;
     toggleFacultyAccessible = mod.toggleFacultyAccessible;
+    getProgramHeadTemplate = mod.getProgramHeadTemplate;
   });
 
   // ─── listProgramHeadTemplates ──────────────────────────────────────
@@ -264,6 +275,7 @@ describe("manage-program-head-templates", () => {
       programId: PROGRAM_ID,
       name: "Industry Partners Evaluation Tool",
       description: "For evaluating industry partners.",
+      is_active: false,
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       is_faculty_accessible: false,
       structure: VALID_STRUCTURE,
@@ -280,7 +292,7 @@ describe("manage-program-head-templates", () => {
         name: "Industry Partners Evaluation Tool",
         description: "For evaluating industry partners.",
         program_id: PROGRAM_ID,
-        is_active: true,
+        is_active: false,
         is_faculty_accessible: false,
       }),
     });
@@ -337,7 +349,9 @@ describe("manage-program-head-templates", () => {
     transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
       fn({
         instrumentTemplate: {
-          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({
+            program_id: PROGRAM_ID,
+          }),
           update: instrumentTemplateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID }),
         },
         instrumentVersion: {
@@ -416,7 +430,9 @@ describe("manage-program-head-templates", () => {
     transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
       fn({
         instrumentTemplate: {
-          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({
+            program_id: PROGRAM_ID,
+          }),
           update: instrumentTemplateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID }),
         },
         instrumentVersion: {
@@ -530,7 +546,9 @@ describe("manage-program-head-templates", () => {
     transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
         instrumentTemplate: {
-          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({
+            program_id: PROGRAM_ID,
+          }),
           update: instrumentTemplateUpdateMock.mockResolvedValue({
             id: TEMPLATE_ID,
           }),
@@ -556,6 +574,7 @@ describe("manage-program-head-templates", () => {
       id: TEMPLATE_ID,
       name: "Updated Name",
       description: "Updated description",
+      is_active: false,
       template_type: EvaluationTemplateType.COURSE_BOUND,
       is_faculty_accessible: true,
       structure: VALID_STRUCTURE,
@@ -564,6 +583,10 @@ describe("manage-program-head-templates", () => {
     expect(result).toEqual({
       success: true,
       data: { id: TEMPLATE_ID },
+    });
+    expect(instrumentTemplateUpdateMock).toHaveBeenCalledWith({
+      where: { id: TEMPLATE_ID },
+      data: expect.objectContaining({ is_active: false }),
     });
   });
 
@@ -628,6 +651,55 @@ describe("manage-program-head-templates", () => {
       error: "Institutional baseline templates cannot be modified by Program Heads.",
     });
     expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("does not expose a baseline's foreign PLO bindings in a selected Program copy session", async () => {
+    programFindUniqueMock.mockResolvedValue({
+      id: PROGRAM_ID,
+      code: "BSHM",
+      name: "BS Hospitality Management",
+    });
+    instrumentTemplateFindUniqueMock.mockResolvedValue({
+      id: "baseline-1",
+      code: "EXIT_SURVEY",
+      name: "Institutional Exit Survey",
+      description: null,
+      structure: VALID_STRUCTURE,
+      template_type: EvaluationTemplateType.PROGRAM_WIDE,
+      is_active: true,
+      is_faculty_accessible: false,
+      program_id: null,
+      faculty_owner_id: null,
+      template_plo_question_bindings: [
+        {
+          plo_id: "bsit-plo-1",
+          plo_code_snapshot: "BSIT-GO1",
+          plo_description_snapshot: "Apply computing knowledge",
+          section_key: "sec-1",
+          item_key: "q-1",
+        },
+      ],
+    });
+    ploFindManyMock.mockResolvedValue([
+      {
+        id: "bshm-plo-1",
+        code: "BSHM-PLO1",
+        description: "Apply hospitality knowledge",
+      },
+    ]);
+
+    const result = await getProgramHeadTemplate(PROGRAM_ID, "baseline-1");
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.ploOptions).toEqual([
+      {
+        id: "bshm-plo-1",
+        code: "BSHM-PLO1",
+        description: "Apply hospitality knowledge",
+      },
+    ]);
+    expect(result.data.template.ploBindings).toEqual([]);
   });
 
   // ─── duplicateTemplate ─────────────────────────────────────────────
@@ -752,7 +824,9 @@ describe("manage-program-head-templates", () => {
     transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
       fn({
         instrumentTemplate: {
-          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({
+            program_id: PROGRAM_ID,
+          }),
           delete: instrumentTemplateDeleteMock,
         },
       })
@@ -799,7 +873,9 @@ describe("manage-program-head-templates", () => {
     transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
       fn({
         instrumentTemplate: {
-          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({
+            program_id: PROGRAM_ID,
+          }),
           update: instrumentTemplateUpdateMock,
         },
       })
@@ -841,7 +917,9 @@ describe("manage-program-head-templates", () => {
     transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
       fn({
         instrumentTemplate: {
-          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({ program_id: PROGRAM_ID }),
+          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({
+            program_id: PROGRAM_ID,
+          }),
           update: instrumentTemplateUpdateMock,
         },
       })
@@ -938,8 +1016,20 @@ describe("normalizePloQuestionBindings", () => {
       title: "Outcomes",
       order: 0,
       questions: [
-        { key: "q-1", prompt: "Prepared me for employment", type: "likert" as const, order: 0, required: true },
-        { key: "q-2", prompt: "Recommend the program", type: "likert" as const, order: 1, required: true },
+        {
+          key: "q-1",
+          prompt: "Prepared me for employment",
+          type: "likert" as const,
+          order: 0,
+          required: true,
+        },
+        {
+          key: "q-2",
+          prompt: "Recommend the program",
+          type: "likert" as const,
+          order: 1,
+          required: true,
+        },
       ],
     },
     {
@@ -947,7 +1037,13 @@ describe("normalizePloQuestionBindings", () => {
       title: "Open",
       order: 1,
       questions: [
-        { key: "q-3", prompt: "Any comments?", type: "guided_open_ended" as const, order: 0, required: false },
+        {
+          key: "q-3",
+          prompt: "Any comments?",
+          type: "guided_open_ended" as const,
+          order: 0,
+          required: false,
+        },
       ],
     },
   ];
@@ -1006,8 +1102,20 @@ describe("normalizePloQuestionBindings", () => {
         title: "Tricky",
         order: 0,
         questions: [
-          { key: "b:c", prompt: "Joined key question", type: "likert" as const, order: 0, required: true },
-          { key: "q-1", prompt: "Plain key question", type: "likert" as const, order: 1, required: true },
+          {
+            key: "b:c",
+            prompt: "Joined key question",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+          {
+            key: "q-1",
+            prompt: "Plain key question",
+            type: "likert" as const,
+            order: 1,
+            required: true,
+          },
         ],
       },
       {
@@ -1015,7 +1123,13 @@ describe("normalizePloQuestionBindings", () => {
         title: "Joined section",
         order: 1,
         questions: [
-          { key: "c", prompt: "Other join direction", type: "likert" as const, order: 0, required: true },
+          {
+            key: "c",
+            prompt: "Other join direction",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
         ],
       },
     ];

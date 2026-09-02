@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type {
   FacultyAnalyticsEvaluationItem,
   ListFacultyAnalyticsEvaluationsResult,
@@ -111,10 +112,7 @@ export async function listFacultyAnalyticsEvaluations(
       ).length;
 
       const ti = evalItem.term_instance;
-      const termLabel = ti.term ? `${ti.term}` : "";
-      const termInstanceLabel = termLabel
-        ? `${ti.school_year.code} — ${ti.semester} — ${termLabel}`
-        : `${ti.school_year.code} — ${ti.semester}`;
+      const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
 
       const ca = evalItem.course_assignment;
 

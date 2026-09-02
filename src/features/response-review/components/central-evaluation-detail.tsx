@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getYearLevelDisplay } from "@/lib/constants/academic";
 import {
   Table,
   TableBody,
@@ -26,6 +27,10 @@ type CentralEvaluationDetailProps = {
   analyticsHref: string;
 };
 
+function statusLabel(status: string): string {
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
 // Evaluation evidence stays in one read-only report so shared counts and links cannot diverge.
 // fallow-ignore-next-line complexity
 export function CentralEvaluationDetail({
@@ -48,7 +53,7 @@ export function CentralEvaluationDetail({
       <header className="border-border flex flex-col gap-2 border-b pb-5">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">Program-wide evaluation</Badge>
-          <Badge variant="secondary">{evaluation.status}</Badge>
+          <Badge variant="secondary">{statusLabel(evaluation.status)}</Badge>
         </div>
         <h1 className="text-heading-lg text-balance">{evaluation.title}</h1>
         <p className="text-body-md text-text-secondary text-pretty">
@@ -61,8 +66,10 @@ export function CentralEvaluationDetail({
         <p className="text-body-sm text-muted-foreground">
           {evaluation.targetProgramLabel ?? "College-wide"}
           {evaluation.targetMajorLabel ? ` · ${evaluation.targetMajorLabel}` : ""}
-          {evaluation.targetYearLevel ? ` · Year ${evaluation.targetYearLevel}` : ""} · Version{" "}
-          {evaluation.instrumentVersion}
+          {evaluation.targetYearLevel
+            ? ` · ${getYearLevelDisplay(evaluation.targetYearLevel)}`
+            : ""}{" "}
+          · Version {evaluation.instrumentVersion}
         </p>
         {evaluation.activationAt || evaluation.deadlineAt ? (
           <p className="text-body-sm text-muted-foreground">

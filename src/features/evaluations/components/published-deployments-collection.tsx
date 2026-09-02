@@ -311,7 +311,7 @@ function PublishedCard({
           <span className="text-sm tabular-nums">{formatDate(item.publishedDate)}</span>
         </div>
       </CardContent>
-      <CardFooter className="justify-end">
+      <CardFooter className="mt-auto justify-end">
         {renderCardActions ? (
           <div className="flex flex-wrap justify-end gap-2">
             {renderCardActions(item, { view: "card", expanded: false, toggle: () => {} })}

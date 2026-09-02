@@ -13,11 +13,9 @@ import {
   deleteProgramHeadTemplate,
   toggleFacultyAccessible,
 } from "@/features/instruments/services/manage-program-head-templates";
-import {
-  buildProgramHeadToolsPath,
-} from "@/lib/constants/program-head-routes";
+import { buildProgramHeadToolsPath } from "@/lib/constants/program-head-routes";
 
-type ActionResult = { success: true } | { success: false; error: string };
+type ActionResult = { success: true; data?: { id: string } } | { success: false; error: string };
 
 function revalidateTools(programId: string) {
   revalidatePath(buildProgramHeadToolsPath(programId));
@@ -47,6 +45,7 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
     name: formData.get("name"),
     programId: formData.get("programId"),
     description: formData.get("description"),
+    is_active: formData.get("is_active"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
     structure,
@@ -67,7 +66,7 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
   }
 
   revalidateTools(parsed.data.programId);
-  return { success: true };
+  return { success: true, data: result.data };
 }
 
 export async function updateProgramHeadTemplateAction(formData: FormData): Promise<ActionResult> {
@@ -95,6 +94,7 @@ export async function updateProgramHeadTemplateAction(formData: FormData): Promi
     programId: formData.get("programId"),
     name: formData.get("name"),
     description: formData.get("description"),
+    is_active: formData.get("is_active"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
     structure,
@@ -115,10 +115,13 @@ export async function updateProgramHeadTemplateAction(formData: FormData): Promi
   }
 
   revalidateTools(parsed.data.programId);
-  return { success: true };
+  return { success: true, data: result.data };
 }
 
-export async function duplicateTemplateAction(programId: string, templateId: string): Promise<ActionResult> {
+export async function duplicateTemplateAction(
+  programId: string,
+  templateId: string
+): Promise<ActionResult> {
   const result = await duplicateTemplate(programId, templateId);
 
   if (!result.success) {

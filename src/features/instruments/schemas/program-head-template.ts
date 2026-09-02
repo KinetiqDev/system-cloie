@@ -107,6 +107,7 @@ export const createProgramHeadTemplateSchema = z
       .min(3, "Template name must be at least 3 characters.")
       .max(200, "Template name must be 200 characters or fewer."),
     description: optionalTextField,
+    is_active: checkboxBoolean.default(true),
     template_type: z.nativeEnum(EvaluationTemplateType),
     is_faculty_accessible: checkboxBoolean,
     structure: templateStructureSchema,
@@ -145,6 +146,7 @@ export const updateProgramHeadTemplateSchema = z
       .min(3, "Template name must be at least 3 characters.")
       .max(200, "Template name must be 200 characters or fewer."),
     description: optionalTextField,
+    is_active: checkboxBoolean.default(true),
     template_type: z.nativeEnum(EvaluationTemplateType),
     is_faculty_accessible: checkboxBoolean,
     structure: templateStructureSchema,
@@ -187,6 +189,7 @@ export const saveFacultyTemplateDraftSchema = z.object({
     .min(3, "Template name must be at least 3 characters.")
     .max(200, "Template name must be 200 characters or fewer."),
   description: optionalTextField,
+  is_active: checkboxBoolean.default(true),
   structure: templateStructureSchema,
   bound_course_id: z.string().uuid().optional().nullable(),
   bound_program_id: z.string().uuid().optional().nullable(),
@@ -201,6 +204,7 @@ export type CreateProgramHeadTemplateInput = {
   programId: string;
   name: string;
   description?: string | null;
+  is_active?: boolean;
   template_type: EvaluationTemplateType;
   is_faculty_accessible: boolean;
   structure: z.infer<typeof templateStructureSchema>;
@@ -208,4 +212,3 @@ export type CreateProgramHeadTemplateInput = {
 };
 export type UpdateProgramHeadTemplateInput = CreateProgramHeadTemplateInput & { id: string };
 export type SaveFacultyTemplateDraftInput = z.infer<typeof saveFacultyTemplateDraftSchema>;
-

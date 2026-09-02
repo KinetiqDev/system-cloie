@@ -143,6 +143,7 @@ export async function createBaselineTemplateWithStructure(
           code: input.code,
           name: input.name,
           description: input.description ?? null,
+          is_active: input.is_active,
           is_faculty_accessible:
             input.template_type === "COURSE_BOUND" && input.is_faculty_accessible,
           program_id: null,
@@ -275,6 +276,7 @@ export async function updateBaselineTemplateWithStructure(
           code: input.code,
           name: input.name,
           description: input.description ?? null,
+          is_active: input.is_active,
           is_faculty_accessible:
             input.template_type === "COURSE_BOUND" && input.is_faculty_accessible,
           structure: structureJson,

@@ -416,6 +416,18 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 | Dean PWA                             | stable installable shell       | offline data remains deferred by ADR 0006                         |
 | Navigation                           | role-filtered structure        | edit central constants only                                       |
 
+### 9.1 Instrument template builder actions
+
+- Long instrument template builders keep document actions visible while users edit sections and questions.
+- Desktop and tablet use a sticky page header below the application top bar.
+- Mobile uses the same action toolbar as a fixed bottom bar with safe-area padding and at least 44 px touch targets.
+- The builder reserves enough bottom space that the mobile toolbar never covers fields or section controls.
+- The toolbar states `No pending changes`, `Unsaved changes`, `Saving...`, `Saved`, or `Save failed`; status never depends on color alone.
+- Draft persistence uses `Save draft`. A separate `Continue to publish` action saves successfully before it enters the publication workflow.
+- Management builders that do not publish use `Save template`. Institutional baseline copies use `Create program copy`.
+- Back and internal navigation warn before they discard unsaved instrument template changes. Refresh and browser close use the native unsaved-change warning.
+- Save remains in the builder and preserves the user's editing position. Success uses the shared toast and the toolbar status, not a modal.
+
 ---
 
 ## 10. Responsive Behavior

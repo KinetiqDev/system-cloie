@@ -3,7 +3,13 @@ import { ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   Table,
   TableBody,
@@ -12,19 +18,28 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
-import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
+import {
+  formatResponseProgress,
+  formatResponseSection,
+  formatResponseStakeholder,
+  formatResponseStatus,
+  formatResponseYearLevel,
+  responseStatusVariant,
+} from "@/features/analytics/program-head-responses-labels";
 import type { ResponseDeploymentList } from "@/features/analytics/services/list-program-head-response-deployments";
+import type { ProgramHeadResponsesFilterState } from "@/features/analytics/services/program-head-responses-state";
+import {
+  buildProgramHeadResponsesTabUrl,
+  buildProgramHeadResponsesUrl,
+  programHeadResponsesQuery,
+} from "@/features/analytics/services/program-head-responses-state";
 import {
   buildProgramHeadResponsesCourseEvaluationPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
-import {
-  buildProgramHeadResponsesTabUrl,
-  buildProgramHeadResponsesUrl,
-} from "@/features/analytics/services/program-head-responses-state";
-import type { ProgramHeadResponsesFilterState } from "@/features/analytics/services/program-head-responses-state";
 import { cn } from "@/lib/utils";
+import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
+import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
 
 type Deployment = ResponseDeploymentList["items"][number];
 
@@ -44,8 +59,6 @@ export function ProgramHeadResponsesLanding({
   const rootHref = buildProgramHeadResponsesUrl(programId, {
     tab: state.tab,
     page: 1,
-    schoolYearId: state.schoolYearId,
-    semester: state.semester,
     termInstanceId: state.termInstanceId,
     stakeholder: state.stakeholder,
   });
@@ -58,23 +71,18 @@ export function ProgramHeadResponsesLanding({
           { label: isCourse ? "Course evaluations" : "Program-wide evaluations" },
         ]}
       />
+
       <header className="border-border flex flex-col gap-2 border-b pb-5">
-        <p className="text-label-sm text-primary font-semibold tracking-wider uppercase">
-          Submitted evidence
-        </p>
         <h1 className="text-heading-lg text-balance">Responses</h1>
         <p className="text-body-md text-text-secondary max-w-3xl text-pretty">
           <span className="text-foreground font-semibold">
             {program.code} — {program.name}
           </span>
-          {" · "}Review evaluation participation and open identified submitted responses.
+          {" · "}Review participation and open identified submitted responses.
         </p>
       </header>
 
-      <nav
-        aria-label="Response views"
-        className="border-border -mx-1 flex gap-1 overflow-x-auto border-b px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
+      <nav aria-label="Response views" className="border-border grid grid-cols-2 border-b sm:flex">
         <Tab href={buildProgramHeadResponsesTabUrl(programId, "course", state)} active={isCourse}>
           Course evaluations
         </Tab>
@@ -82,7 +90,7 @@ export function ProgramHeadResponsesLanding({
           href={buildProgramHeadResponsesTabUrl(programId, "program-wide", state)}
           active={!isCourse}
         >
-          Program-wide evaluations
+          Program-wide
         </Tab>
       </nav>
 
@@ -90,8 +98,8 @@ export function ProgramHeadResponsesLanding({
 
       <Card>
         <CardHeader>
-          <CardTitle>{isCourse ? "Course evaluations" : "Program-wide evaluations"}</CardTitle>
-          <CardDescription>
+          <CardTitle>Evaluation evidence</CardTitle>
+          <CardDescription aria-live="polite">
             {data.total.toLocaleString()} {data.total === 1 ? "evaluation" : "evaluations"} in this
             view
           </CardDescription>
@@ -104,8 +112,17 @@ export function ProgramHeadResponsesLanding({
               </EmptyMedia>
               <EmptyTitle>No matching evaluations</EmptyTitle>
               <EmptyDescription>
-                No {isCourse ? "Course" : "Program-wide"} evaluations match the selected filters.
+                No evaluations match the filters in this view. Clear the filters to see every
+                available evaluation.
               </EmptyDescription>
+              <EmptyContent>
+                <Link
+                  href={buildProgramHeadResponsesUrl(programId, { tab: state.tab, page: 1 })}
+                  className="text-link focus-visible:ring-ring rounded-lg px-3 py-2.5 font-semibold underline underline-offset-4 focus-visible:ring-3 focus-visible:outline-none"
+                >
+                  Clear filters
+                </Link>
+              </EmptyContent>
             </Empty>
           ) : (
             <>
@@ -116,11 +133,17 @@ export function ProgramHeadResponsesLanding({
                     item={item}
                     programId={programId}
                     isCourse={isCourse}
+                    state={state}
                   />
                 ))}
               </div>
               <div className="hidden lg:block">
-                <ResponseTable items={data.items} programId={programId} isCourse={isCourse} />
+                <ResponseTable
+                  items={data.items}
+                  programId={programId}
+                  isCourse={isCourse}
+                  state={state}
+                />
               </div>
             </>
           )}
@@ -139,10 +162,24 @@ export function ProgramHeadResponsesLanding({
   );
 }
 
-function itemHref(programId: string, item: Deployment, isCourse: boolean): string {
-  return isCourse
+function itemHref(
+  programId: string,
+  item: Deployment,
+  isCourse: boolean,
+  state: ProgramHeadResponsesFilterState
+): string {
+  const path = isCourse
     ? buildProgramHeadResponsesCourseEvaluationPath(programId, item.id)
     : buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id);
+  const query = programHeadResponsesQuery({
+    tab: isCourse ? "course" : "program-wide",
+    page: 1,
+    termInstanceId: state.termInstanceId,
+    schoolYearId: state.schoolYearId,
+    semester: state.semester,
+    stakeholder: state.stakeholder,
+  });
+  return query ? `${path}?${query}` : path;
 }
 
 // Card branches keep course and program-wide evidence readable in the mobile layout.
@@ -151,44 +188,48 @@ function ResponseCard({
   item,
   programId,
   isCourse,
+  state,
 }: {
   item: Deployment;
   programId: string;
   isCourse: boolean;
+  state: ProgramHeadResponsesFilterState;
 }) {
   return (
     <article className="border-border bg-background rounded-xl border p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Link
-            href={itemHref(programId, item, isCourse)}
-            className="text-title-sm text-link focus-visible:ring-ring font-semibold hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:outline-none"
+            href={itemHref(programId, item, isCourse, state)}
+            className="text-title-sm text-link focus-visible:ring-ring -m-2 inline-flex min-h-11 items-center rounded-lg p-2 font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none"
           >
             {item.title}
           </Link>
           <p className="text-body-sm text-muted-foreground mt-1">
             {isCourse && item.course
               ? `${item.course.code} — ${item.course.title}`
-              : item.stakeholder?.replace("_", " ")}
+              : formatResponseStakeholder(item.stakeholder)}
           </p>
         </div>
-        <Badge variant="outline">{item.status}</Badge>
+        <Badge variant={responseStatusVariant(item.status)}>
+          {formatResponseStatus(item.status)}
+        </Badge>
       </div>
-      <dl className="text-body-sm mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+      <dl className="text-body-sm mt-4 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
         <Data label={isCourse ? "Class" : "Target"}>
-          {isCourse ? `${item.yearLevel?.replace("_", " ")} · ${item.section}` : item.target}
+          {isCourse
+            ? `${formatResponseYearLevel(item.yearLevel)} · ${formatResponseSection(item.section)}`
+            : item.target}
         </Data>
         <Data label={isCourse ? "Faculty" : "Period"}>{isCourse ? item.faculty : item.period}</Data>
         {isCourse ? <Data label="Period">{item.period}</Data> : null}
-        <Data label="Submitted">
-          <span className="font-semibold tabular-nums">
-            {item.submitted === 0 ? "No responses yet" : `${item.submitted} / ${item.assigned}`}
-          </span>
+        <Data label="Response progress">
+          <strong className="tabular-nums">
+            {formatResponseProgress(item.submitted, item.assigned)}
+          </strong>
         </Data>
         <Data label="Quantitative mean">
-          <span className="font-semibold tabular-nums">
-            {item.mean === null ? "—" : item.mean.toFixed(2)}
-          </span>
+          <MeanValue item={item} />
         </Data>
       </dl>
     </article>
@@ -204,26 +245,41 @@ function Data({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+function MeanValue({ item }: { item: Deployment }) {
+  if (item.mean === null) return <>—</>;
+  return (
+    <span className="font-semibold tabular-nums">
+      {item.mean.toFixed(2)}
+      <span className="text-muted-foreground font-normal">
+        {" · "}
+        {item.scaleLabel ?? "Scale unavailable"}
+      </span>
+    </span>
+  );
+}
+
 function ResponseTable({
   items,
   programId,
   isCourse,
+  state,
 }: {
   items: Deployment[];
   programId: string;
   isCourse: boolean;
+  state: ProgramHeadResponsesFilterState;
 }) {
   return (
     <Table className="table-fixed">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[25%]">Evaluation</TableHead>
-          <TableHead className="w-[16%]">{isCourse ? "Class" : "Stakeholder"}</TableHead>
-          <TableHead className="w-[17%]">{isCourse ? "Faculty" : "Target"}</TableHead>
+          <TableHead className="w-[24%]">Evaluation</TableHead>
+          <TableHead className="w-[15%]">{isCourse ? "Class" : "Stakeholder"}</TableHead>
+          <TableHead className="w-[16%]">{isCourse ? "Faculty" : "Target"}</TableHead>
           <TableHead className="w-[17%]">Period</TableHead>
-          <TableHead className="w-[10%]">Status</TableHead>
-          <TableHead className="w-[8%] text-right">Responses</TableHead>
-          <TableHead className="w-[7%] text-right">Mean</TableHead>
+          <TableHead className="w-[9%]">Status</TableHead>
+          <TableHead className="w-[9%] text-right">Submitted</TableHead>
+          <TableHead className="w-[10%] text-right">Mean / scale</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -231,8 +287,8 @@ function ResponseTable({
           <TableRow key={item.id}>
             <TableCell className="whitespace-normal">
               <Link
-                className="text-link font-semibold hover:underline"
-                href={itemHref(programId, item, isCourse)}
+                className="text-link focus-visible:ring-ring -m-2 inline-flex min-h-11 items-center rounded-lg p-2 font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                href={itemHref(programId, item, isCourse, state)}
               >
                 {item.title}
               </Link>
@@ -244,21 +300,23 @@ function ResponseTable({
             </TableCell>
             <TableCell className="whitespace-normal">
               {isCourse
-                ? `${item.yearLevel?.replace("_", " ")} · ${item.section}`
-                : item.stakeholder?.replace("_", " ")}
+                ? `${formatResponseYearLevel(item.yearLevel)} · ${formatResponseSection(item.section)}`
+                : formatResponseStakeholder(item.stakeholder)}
             </TableCell>
             <TableCell className="whitespace-normal">
               {isCourse ? item.faculty : item.target}
             </TableCell>
             <TableCell className="whitespace-normal">{item.period}</TableCell>
             <TableCell>
-              <Badge variant="outline">{item.status}</Badge>
+              <Badge variant={responseStatusVariant(item.status)}>
+                {formatResponseStatus(item.status)}
+              </Badge>
             </TableCell>
             <TableCell className="text-right tabular-nums">
-              {item.submitted === 0 ? "No responses yet" : `${item.submitted} / ${item.assigned}`}
+              {item.submitted === 0 ? "None" : `${item.submitted} of ${item.assigned}`}
             </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {item.mean === null ? "—" : item.mean.toFixed(2)}
+            <TableCell className="text-right">
+              <MeanValue item={item} />
             </TableCell>
           </TableRow>
         ))}
@@ -281,7 +339,7 @@ function Tab({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "text-label-md relative inline-flex min-h-11 shrink-0 items-center px-3 font-semibold whitespace-nowrap transition-colors motion-reduce:transition-none",
+        "text-label-md relative inline-flex min-h-11 min-w-0 items-center justify-center px-2 text-center font-semibold transition-colors motion-reduce:transition-none sm:justify-start sm:px-3",
         "focus-visible:ring-ring focus-visible:rounded-t-lg focus-visible:ring-2 focus-visible:outline-none",
         "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full",
         active

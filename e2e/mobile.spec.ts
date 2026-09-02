@@ -33,17 +33,31 @@ test("mobile drawer navigation and filter persistence", async ({ page }) => {
   await expectNoAxeViolations(page);
   await drawer.getByRole("link", { name: "Responses", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/program-head/programs/${fx.bsit.id}/responses`));
+  await expect(page.getByRole("heading", { name: "Find evaluations" })).toBeVisible({
+    timeout: 30_000,
+  });
   await expectNoAxeViolations(page);
 
   // Apply a filter; it must land in the URL and survive a reload.
-  await page.getByLabel("Completion").selectOption("zero");
-  await page.getByRole("button", { name: "Apply filters" }).click();
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  const responseFilters = page.getByRole("dialog", { name: "Filter evaluations" });
+  await responseFilters.getByRole("combobox", { name: "Response progress" }).click();
+  await page.getByRole("option", { name: "No responses" }).click();
+  await responseFilters.getByRole("button", { name: "Apply filters" }).click();
   await expect(page).toHaveURL(/completion=zero/);
   await page.waitForLoadState("networkidle");
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
-  await expect(page.getByLabel("Completion")).toHaveValue("zero");
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Filter evaluations" }).getByRole("combobox", {
+      name: "Response progress",
+    })
+  ).toContainText("No responses");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Filter evaluations" })).toBeHidden();
 
   // Drawer navigation to Analytics; tab choice persists in the URL.
   await page.getByRole("button", { name: "Open navigation menu" }).click();

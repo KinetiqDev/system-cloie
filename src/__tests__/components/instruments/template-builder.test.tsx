@@ -114,6 +114,136 @@ describe("TemplateBuilder", () => {
     expect(screen.queryByText("CILO Binding")).not.toBeInTheDocument();
   });
 
+  test("keeps template actions in a persistent bottom dock", () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        onPublish={vi.fn()}
+      />
+    );
+
+    const actionDock = screen.getByRole("toolbar", { name: "Template actions" });
+
+    expect(actionDock).toHaveClass("fixed", "inset-x-0", "bottom-0", "lg:left-64");
+    expect(actionDock).toContainElement(screen.getByRole("button", { name: "Create template" }));
+    expect(actionDock).toContainElement(
+      screen.getByRole("button", { name: "Continue to publish" })
+    );
+  });
+
+  test("uses the primary treatment when save is the only commit action", () => {
+    render(
+      <TemplateBuilder
+        programLabel="Institutional Baseline"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+      />
+    );
+
+    const saveButton = screen.getByRole("button", { name: "Create template" });
+
+    expect(saveButton).toHaveClass("bg-primary", "text-primary-foreground");
+  });
+
+  test("keeps save secondary when continue to publish is the primary action", () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        onPublish={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Create template" })).toHaveClass(
+      "border-border",
+      "bg-background"
+    );
+    expect(screen.getByRole("button", { name: "Continue to publish" })).toHaveClass(
+      "bg-primary",
+      "text-primary-foreground"
+    );
+  });
+
+  test("constrains long CILO labels inside the binding control", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        initialData={{
+          id: "template-1",
+          name: "CILO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate outcome",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "IT401",
+              courseId: "course-1",
+              courseTitle: "Capstone 1",
+              courseType: "PROGRAM_SPECIFIC",
+              majorId: null,
+              majorName: null,
+              programCode: "BSIT",
+              programId: "program-1",
+              programName: "Information Technology",
+              scopeLabel: "BSIT - Shared Program Course",
+            },
+          ],
+          initialBindings: [{ ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" }],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: {
+              hasSavedCilos: true,
+              items: [
+                {
+                  description:
+                    "Evaluate the ethical and social implications of technological developments",
+                  id: "cilo-1",
+                },
+              ],
+            },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true }),
+        }}
+      />
+    );
+
+    const binding = await screen.findByLabelText("CILO Binding");
+    const value = binding.querySelector('[data-slot="select-value"]');
+
+    expect(binding).toHaveClass("w-full", "min-w-0");
+    expect(value).toHaveClass("min-w-0", "truncate");
+  });
+
   test("blocks adding duplicate predefined responses within the same question", () => {
     render(
       <TemplateBuilder
@@ -237,7 +367,6 @@ describe("TemplateBuilder", () => {
           }),
         }}
         saveSuccessConfig={{
-          redirectTo: "/faculty/tools",
           toastMessage: "Template saved successfully.",
         }}
       />
@@ -255,7 +384,7 @@ describe("TemplateBuilder", () => {
     expect(screen.queryByText("course-1")).not.toBeInTheDocument();
     expect(screen.queryByText("cilo-1")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
 
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledTimes(1);
@@ -273,7 +402,7 @@ describe("TemplateBuilder", () => {
         },
       ])
     );
-    expect(pushMock).toHaveBeenCalledWith("/faculty/tools");
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   test("loads cilos for a general education course with no owning program", async () => {
@@ -348,7 +477,6 @@ describe("TemplateBuilder", () => {
           }),
         }}
         saveSuccessConfig={{
-          redirectTo: "/faculty/tools",
           toastMessage: "Template saved successfully.",
         }}
       />
@@ -364,17 +492,14 @@ describe("TemplateBuilder", () => {
     expect(screen.getByText(/saved CILO\(s\) available for binding/i)).toBeInTheDocument();
   });
 
-  test("redirects program head saves back to tools with a success toast", async () => {
+  test("saves program head drafts in place and shows saved state", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
       <TemplateBuilder
         programLabel="BSBA"
         onSave={onSave}
-        saveSuccessConfig={{
-          redirectTo: "/program-head/tools",
-          toastMessage: "Template saved successfully.",
-        }}
+        saveSuccessConfig={{ toastMessage: "Instrument template saved." }}
         initialData={{
           id: "template-1",
           name: "BSBA Tool",
@@ -410,239 +535,151 @@ describe("TemplateBuilder", () => {
       />
     );
 
+    fireEvent.change(screen.getByLabelText("Template Name"), { target: { value: "Updated Tool" } });
+    expect(screen.getByRole("status")).toHaveTextContent("Unsaved changes");
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
 
-    await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith("/program-head/tools");
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(pushMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Saved"));
+  });
+
+  test("tracks the Active toggle as unsaved work and persists it", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+
+    render(
+      <TemplateBuilder
+        programLabel="Institutional Baseline"
+        onSave={onSave}
+        initialData={{
+          id: "template-1",
+          name: "Baseline Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate outcome",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("switch", { name: "Active" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Unsaved changes");
+
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect((onSave.mock.calls[0][0] as FormData).get("is_active")).toBe("false");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Saved"));
+  });
+
+  test("saves the current draft before continuing to program publication", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+    const onPublish = vi.fn();
+    render(
+      <TemplateBuilder
+        programLabel="BSBA"
+        onSave={onSave}
+        onPublish={onPublish}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate outcome",
+                  type: "guided_open_ended",
+                  order: 0,
+                  required: true,
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Template Name"), {
+      target: { value: "Updated Program Tool" },
     });
-    expect(screen.queryByText("Template saved successfully.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /continue.*publish/i }));
+
+    await waitFor(() => expect(onPublish).toHaveBeenCalledWith("template-1"));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.invocationCallOrder[0]).toBeLessThan(onPublish.mock.invocationCallOrder[0]);
   });
 
-  test.each([
-    { label: "Back", destinationIndex: 2, expectedReturnDelta: 1 },
-    { label: "Forward", destinationIndex: 4, expectedReturnDelta: -1 },
-  ])(
-    "requires confirmation and restores a dirty template after browser $label navigation is canceled",
-    ({ destinationIndex, expectedReturnDelta }) => {
-      const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
-      const originalState = window.history.state;
-      const originalUrl = window.location.href;
-      let historyIndex = 3;
-      Object.defineProperty(window, "navigation", {
-        configurable: true,
-        get: () => ({ currentEntry: { index: historyIndex } }),
-      });
-      const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-      const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+  test("asks before leaving an instrument template with unsaved changes", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        toolsHref="/program-head/tools"
+      />
+    );
 
-      try {
-        render(
-          <TemplateBuilder
-            programLabel="BSIT"
-            onSave={vi.fn().mockResolvedValue({ success: true })}
-            initialData={{
-              id: "template-1",
-              name: "Saved Tool",
-              description: "",
-              template_type: "PROGRAM_WIDE",
-              is_active: true,
-              is_faculty_accessible: false,
-              structure: [],
-            }}
-          />
-        );
-        fireEvent.change(screen.getByLabelText("Template Name"), {
-          target: { value: "Unsaved Tool" },
-        });
-        historyIndex = destinationIndex;
+    fireEvent.change(screen.getByLabelText("Template Name"), { target: { value: "Unsaved Tool" } });
+    fireEvent.click(screen.getByRole("button", { name: "Back to Tools" }));
 
-        window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(
+      await screen.findByRole("alertdialog", { name: "Discard unsaved changes?" })
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(pushMock).not.toHaveBeenCalled();
 
-        expect(confirm).toHaveBeenCalledWith("Discard unsaved template changes?");
-        expect(historyGo).toHaveBeenCalledWith(expectedReturnDelta);
-      } finally {
-        confirm.mockRestore();
-        historyGo.mockRestore();
-        window.history.replaceState(originalState, "", originalUrl);
-        if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
-        else Reflect.deleteProperty(window, "navigation");
-      }
-    }
-  );
+    fireEvent.click(screen.getByRole("button", { name: "Back to Tools" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Discard changes" }));
+    expect(pushMock).toHaveBeenCalledWith("/program-head/tools");
+  });
 
-  test("restores a rejected Forward traversal when Navigation API indices are unavailable", () => {
+  test("restores the dirty editor before confirming browser history navigation", async () => {
     const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
     const originalState = window.history.state;
     const originalUrl = window.location.href;
-    Reflect.deleteProperty(window, "navigation");
-    vi.useFakeTimers();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    let historyIndex = 1;
+    Object.defineProperty(window, "navigation", {
+      configurable: true,
+      value: {
+        currentEntry: {
+          get index() {
+            return historyIndex;
+          },
+        },
+      },
+    });
     const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
-
-    try {
-      render(
-        <TemplateBuilder
-          programLabel="BSIT"
-          onSave={vi.fn().mockResolvedValue({ success: true })}
-          initialData={{
-            id: "template-1",
-            name: "Saved Tool",
-            description: "",
-            template_type: "PROGRAM_WIDE",
-            is_active: true,
-            is_faculty_accessible: false,
-            structure: [],
-          }}
-        />
-      );
-      fireEvent.change(screen.getByLabelText("Template Name"), {
-        target: { value: "Unsaved Tool" },
-      });
-      window.history.replaceState({ page: "destination" }, "", "/destination");
-
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      expect(historyGo).toHaveBeenNthCalledWith(1, 1);
-      act(() => vi.runAllTimers());
-
-      expect(historyGo).toHaveBeenNthCalledWith(2, -1);
-    } finally {
-      confirm.mockRestore();
-      historyGo.mockRestore();
-      vi.useRealTimers();
-      window.history.replaceState(originalState, "", originalUrl);
-      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
-    }
-  });
-
-  test("restores a rejected Back traversal when Navigation API indices are unavailable", () => {
-    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
-    const originalState = window.history.state;
-    const originalUrl = window.location.href;
-    Reflect.deleteProperty(window, "navigation");
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
-
-    try {
-      render(
-        <TemplateBuilder
-          programLabel="BSIT"
-          onSave={vi.fn().mockResolvedValue({ success: true })}
-          initialData={{
-            id: "template-1",
-            name: "Saved Tool",
-            description: "",
-            template_type: "PROGRAM_WIDE",
-            is_active: true,
-            is_faculty_accessible: false,
-            structure: [],
-          }}
-        />
-      );
-      fireEvent.change(screen.getByLabelText("Template Name"), {
-        target: { value: "Unsaved Tool" },
-      });
-      window.history.replaceState({ page: "origin" }, "", "/origin");
-
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      expect(historyGo).toHaveBeenNthCalledWith(1, 1);
-      window.history.replaceState({ page: "destination" }, "", "/destination");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-
-      expect(historyGo).toHaveBeenNthCalledWith(2, 1);
-    } finally {
-      confirm.mockRestore();
-      historyGo.mockRestore();
-      window.history.replaceState(originalState, "", originalUrl);
-      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
-    }
-  });
-
-  test("finds the dirty editor after rejecting Forward with multiple later entries and no Navigation API", () => {
-    const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
-    const originalState = window.history.state;
-    const originalUrl = window.location.href;
-    Reflect.deleteProperty(window, "navigation");
-    vi.useFakeTimers();
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
-
-    try {
-      render(
-        <TemplateBuilder
-          programLabel="BSIT"
-          onSave={vi.fn().mockResolvedValue({ success: true })}
-          initialData={{
-            id: "template-1",
-            name: "Saved Tool",
-            description: "",
-            template_type: "PROGRAM_WIDE",
-            is_active: true,
-            is_faculty_accessible: false,
-            structure: [],
-          }}
-        />
-      );
-      fireEvent.change(screen.getByLabelText("Template Name"), {
-        target: { value: "Unsaved Tool" },
-      });
-      const dirtyEditorState = window.history.state;
-      window.history.replaceState({ page: "destination" }, "", "/destination");
-
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      window.history.replaceState({ page: "later" }, "", "/later");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      act(() => vi.advanceTimersToNextTimer());
-      window.history.replaceState({ page: "destination" }, "", "/destination");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      window.history.replaceState(dirtyEditorState, "", "/editor");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-
-      expect(historyGo.mock.calls.map(([delta]) => delta)).toEqual([1, 1, -1, -1]);
-    } finally {
-      confirm.mockRestore();
-      historyGo.mockRestore();
-      vi.useRealTimers();
-      window.history.replaceState(originalState, "", originalUrl);
-      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
-    }
-  });
-
-  test("allows confirmed browser-history navigation away from a dirty template", () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
-
-    try {
-      render(
-        <TemplateBuilder
-          programLabel="BSIT"
-          onSave={vi.fn().mockResolvedValue({ success: true })}
-          initialData={{
-            id: "template-1",
-            name: "Saved Tool",
-            description: "",
-            template_type: "PROGRAM_WIDE",
-            is_active: true,
-            is_faculty_accessible: false,
-            structure: [],
-          }}
-        />
-      );
-      fireEvent.change(screen.getByLabelText("Template Name"), {
-        target: { value: "Unsaved Tool" },
-      });
-
-      window.dispatchEvent(new PopStateEvent("popstate"));
-
-      expect(confirm).toHaveBeenCalledWith("Discard unsaved template changes?");
-      expect(historyGo).not.toHaveBeenCalled();
-    } finally {
-      confirm.mockRestore();
-      historyGo.mockRestore();
-    }
-  });
-
-  test("blocks application links until dirty template changes are confirmed", () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     try {
       render(
@@ -650,26 +687,32 @@ describe("TemplateBuilder", () => {
           programLabel="BSIT"
           onSave={vi.fn().mockResolvedValue({ success: true })}
           toolsHref="/program-head/tools"
-          initialData={{
-            id: "template-1",
-            name: "Saved Tool",
-            description: "",
-            template_type: "PROGRAM_WIDE",
-            is_active: true,
-            is_faculty_accessible: false,
-            structure: [],
-          }}
         />
       );
       fireEvent.change(screen.getByLabelText("Template Name"), {
         target: { value: "Unsaved Tool" },
       });
+      const guardedState = window.history.state;
 
-      fireEvent.click(screen.getByRole("link", { name: "Back to Tools" }));
+      historyIndex = 0;
+      window.history.replaceState({ page: "destination" }, "", "/destination");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      expect(historyGo).toHaveBeenCalledWith(1);
 
-      expect(confirm).toHaveBeenCalledWith("Discard unsaved template changes?");
+      historyIndex = 1;
+      window.history.replaceState(guardedState, "", originalUrl);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+
+      expect(
+        await screen.findByRole("alertdialog", { name: "Discard unsaved changes?" })
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+      expect(pushMock).not.toHaveBeenCalled();
     } finally {
-      confirm.mockRestore();
+      historyGo.mockRestore();
+      window.history.replaceState(originalState, "", originalUrl);
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+      else Reflect.deleteProperty(window, "navigation");
     }
   });
 
@@ -684,8 +727,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSBA"
         onSave={onSave}
         saveSuccessConfig={{
-          redirectTo: "/program-head/tools",
-          toastMessage: "Template saved successfully.",
+          toastMessage: "Instrument template saved.",
         }}
         initialData={{
           id: "template-1",
@@ -793,7 +835,7 @@ describe("TemplateBuilder", () => {
     expect(screen.getByDisplayValue("COURSE_BOUND")).toBeDisabled();
     expect(screen.queryByText("Program-wide Evaluation Tool")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
 
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledTimes(1);
@@ -1532,7 +1574,7 @@ describe("TemplateBuilder", () => {
     );
     fireEvent.click(trigger); // close the picker
 
-    fireEvent.click(screen.getByRole("button", { name: /save as program copy/i }));
+    fireEvent.click(screen.getByRole("button", { name: /create program copy/i }));
     fireEvent.click(screen.getByRole("button", { name: /create copy/i }));
     await waitFor(() => expect(onSaveAsCopy).toHaveBeenCalledTimes(1));
     expect(onSaveAsCopy).toHaveBeenCalledWith(

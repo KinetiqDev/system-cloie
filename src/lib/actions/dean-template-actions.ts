@@ -16,7 +16,7 @@ import {
   deleteBaselineTemplate,
 } from "@/features/instruments/services/manage-instruments";
 
-type ActionResult = { success: true } | { success: false; error: string };
+type ActionResult = { success: true; data?: { id: string } } | { success: false; error: string };
 
 function revalidateDeanTools() {
   revalidatePath("/dean/academic-structure/instruments");
@@ -35,6 +35,7 @@ export async function createDeanTemplateAction(formData: FormData): Promise<Acti
   const raw = {
     name: formData.get("name"),
     description: formData.get("description"),
+    is_active: formData.get("is_active"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
     structure: JSON.parse((formData.get("structure") as string) || "[]"),
@@ -67,7 +68,7 @@ export async function createDeanTemplateAction(formData: FormData): Promise<Acti
   }
 
   revalidateDeanTools();
-  return { success: true };
+  return { success: true, data: result.data };
 }
 
 export async function updateDeanTemplateAction(formData: FormData): Promise<ActionResult> {
@@ -84,6 +85,7 @@ export async function updateDeanTemplateAction(formData: FormData): Promise<Acti
     id: formData.get("id"),
     name: formData.get("name"),
     description: formData.get("description"),
+    is_active: formData.get("is_active"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
     structure: JSON.parse((formData.get("structure") as string) || "[]"),
@@ -116,7 +118,7 @@ export async function updateDeanTemplateAction(formData: FormData): Promise<Acti
   }
 
   revalidateDeanTools();
-  return { success: true };
+  return { success: true, data: { id: parsed.data.id } };
 }
 
 export async function toggleDeanTemplateActiveAction(

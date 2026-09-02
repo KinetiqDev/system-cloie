@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { HowCalculatedPopover } from "@/features/analytics/components/how-calculated-popover";
 import { describeScale } from "@/features/analytics/aggregators/scale-identity";
 import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics/aggregators/types";
@@ -24,6 +25,10 @@ type CourseEvaluationDetailProps = {
   /** Link to the qualitative Analytics tab (§25.3). */
   analyticsHref: string;
 };
+
+function statusLabel(status: string): string {
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
 
 // Evaluation evidence stays in one read-only report so shared counts and links cannot diverge.
 // fallow-ignore-next-line complexity
@@ -47,7 +52,7 @@ export function CourseEvaluationDetail({
       <header className="border-border flex flex-col gap-2 border-b pb-5">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">Course evaluation</Badge>
-          <Badge variant="secondary">{evaluation.status}</Badge>
+          <Badge variant="secondary">{statusLabel(evaluation.status)}</Badge>
         </div>
         <h1 className="text-heading-lg text-balance">{evaluation.title}</h1>
         <p className="text-body-md text-text-secondary text-pretty">
@@ -58,8 +63,9 @@ export function CourseEvaluationDetail({
           {evaluation.periodLabel}
         </p>
         <p className="text-body-sm text-muted-foreground">
-          {evaluation.facultyName ?? "No faculty assigned"} · Year {evaluation.yearLevel} · Section{" "}
-          {evaluation.section}
+          {evaluation.facultyName ?? "No faculty assigned"} ·{" "}
+          {getYearLevelDisplay(evaluation.yearLevel)} · Section{" "}
+          {getSectionLabel(evaluation.section)}
           {evaluation.majorLabel ? ` · ${evaluation.majorLabel}` : ""}
         </p>
         {evaluation.activationAt || evaluation.deadlineAt ? (

@@ -100,7 +100,7 @@ describe("getCourseBoundResponseReview", () => {
     });
 
     await expect(getCourseBoundResponseReview("response-1")).resolves.toEqual({
-      termInstanceLabel: "2025-2026 — SECOND — FIRST_TERM",
+      termInstanceLabel: "2025-2026 — 2nd Semester — 1st Term",
       courseTitle: "Capstone 2",
       evaluationId: "eval-1",
       evaluationTitle: "Post-Term CILO Evaluation Tool",

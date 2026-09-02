@@ -59,7 +59,13 @@ describe("ProgramHeadTemplateBuilder", () => {
   });
 
   it("updates an existing Program-owned template in the route-selected Program", async () => {
-    render(<ProgramHeadTemplateBuilder programId={PROGRAM_ID} programLabel="BSIT" initialData={initialData()} />);
+    render(
+      <ProgramHeadTemplateBuilder
+        programId={PROGRAM_ID}
+        programLabel="BSIT"
+        initialData={initialData()}
+      />
+    );
 
     const formData = new FormData();
     await templateBuilderProps!.onSave(formData);
@@ -91,6 +97,20 @@ describe("ProgramHeadTemplateBuilder", () => {
     );
     expect(createProgramHeadTemplateActionMock).not.toHaveBeenCalled();
     expect(updateProgramHeadTemplateActionMock).not.toHaveBeenCalled();
+  });
+
+  it("routes the saved instrument template to publication", () => {
+    render(
+      <ProgramHeadTemplateBuilder
+        programId={PROGRAM_ID}
+        programLabel="BSIT"
+        initialData={initialData()}
+      />
+    );
+
+    templateBuilderProps!.onPublish!(TEMPLATE_ID);
+
+    expect(pushMock).toHaveBeenCalledWith(expect.stringContaining(TEMPLATE_ID));
   });
 });
 

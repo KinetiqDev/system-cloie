@@ -109,9 +109,7 @@ function courseRow(overrides: Partial<DashboardRatingRow> = {}): DashboardRating
   };
 }
 
-function centralRow(
-  stakeholder: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER"
-): DashboardRatingRow {
+function centralRow(stakeholder: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER"): DashboardRatingRow {
   return {
     rating_value: 1,
     response_id: `resp-${stakeholder}`,
@@ -258,7 +256,10 @@ describe("PLO row normalization", () => {
       [
         "cd-STUDENT",
         new Map([
-          ["plo-items:q-plo", [{ ploId: "plo-1", ploCode: "PLO 1", ploDescription: "Communicate." }]],
+          [
+            "plo-items:q-plo",
+            [{ ploId: "plo-1", ploCode: "PLO 1", ploDescription: "Communicate." }],
+          ],
         ]),
       ],
     ]);
@@ -298,7 +299,10 @@ describe("PLO summary projections", () => {
   ];
 
   it("exposes CILO contributors for course evidence", () => {
-    const row = toDashboardPloRows(metrics, () => "/program-head/programs/p1/analytics?tab=outcomes")[0];
+    const row = toDashboardPloRows(
+      metrics,
+      () => "/program-head/programs/p1/analytics?tab=outcomes"
+    )[0];
     expect(row.contributorKind).toBe("cilos");
     expect(row.contributorCount).toBe(2);
     expect(row.hasEvidence).toBe(true);
@@ -307,7 +311,10 @@ describe("PLO summary projections", () => {
   });
 
   it("exposes bound-question counts for program-wide evidence", () => {
-    const row = toCentralDashboardPloRows(metrics, () => "/program-head/programs/p1/analytics?tab=outcomes")[0];
+    const row = toCentralDashboardPloRows(
+      metrics,
+      () => "/program-head/programs/p1/analytics?tab=outcomes"
+    )[0];
     expect(row.contributorKind).toBe("questions");
     expect(row.contributorCount).toBe(3);
   });
@@ -380,9 +387,9 @@ describe("buildNeedsAttentionItems", () => {
       ploRowsBySource: {},
       analyticsOutcomesHref: "/analytics?tab=outcomes",
     });
-    expect(items.filter((item) => item.rule === "zero-submissions").map((item) => item.id)).toEqual([
-      "zero-submissions:central:d-zero",
-    ]);
+    expect(items.filter((item) => item.rule === "zero-submissions").map((item) => item.id)).toEqual(
+      ["zero-submissions:central:d-zero"]
+    );
   });
 
   it("reports every live PLO without ratings for each evidence source", () => {
@@ -438,13 +445,19 @@ describe("buildNeedsAttentionItems", () => {
       programPlos: [],
       ploRowsBySource: {},
       analyticsOutcomesHref: "/outcomes",
+      periodFilters: {
+        schoolYearId: "00000000-0000-4000-8000-000000000009",
+        semester: "SECOND",
+      },
     });
-    expect(items.find((item) => item.rule === "closing-soon")!.href).toContain(
-      "/responses/course/d-closing"
-    );
-    expect(items.find((item) => item.rule === "zero-submissions")!.href).toContain(
-      "/responses/program-wide/d-zero"
-    );
+    const closingHref = items.find((item) => item.rule === "closing-soon")!.href;
+    const zeroHref = items.find((item) => item.rule === "zero-submissions")!.href;
+    expect(closingHref).toContain("/responses/course/d-closing");
+    expect(zeroHref).toContain("/responses/program-wide/d-zero");
+    for (const href of [closingHref, zeroHref]) {
+      expect(href).toContain("schoolYearId=00000000-0000-4000-8000-000000000009");
+      expect(href).toContain("semester=SECOND");
+    }
   });
 
   it("treats an already-passed deadline as inside the seven-day window", () => {

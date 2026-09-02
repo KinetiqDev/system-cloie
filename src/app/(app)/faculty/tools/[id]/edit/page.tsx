@@ -65,8 +65,7 @@ export default async function FacultyEditTemplatePage({ params }: FacultyEditTem
         onSave={saveFacultyTemplateDraftAction}
         programLabel={programLabel}
         saveSuccessConfig={{
-          redirectTo: "/faculty/tools",
-          toastMessage: "Template saved successfully.",
+          toastMessage: "Instrument template saved.",
         }}
         toolsHref="/faculty/tools"
       />

@@ -102,10 +102,18 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     });
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
-      data: { userId: "head-1", selectedProgram: { id: "prog-beed", code: "BEED", name: "BEED" }, authorizedPrograms: [] },
+      data: {
+        userId: "head-1",
+        selectedProgram: { id: "prog-beed", code: "BEED", name: "BEED" },
+        authorizedPrograms: [],
+      },
     });
     ciloMappingFindManyMock.mockResolvedValue([
-      { cilo_id: "cilo-1", plo: { id: "plo-1", code: "PLO-1", description: "Communicate" }, manifestation: "LEARNING" },
+      {
+        cilo_id: "cilo-1",
+        plo: { id: "plo-1", code: "PLO-1", description: "Communicate" },
+        manifestation: "LEARNING",
+      },
     ]);
   });
 
@@ -140,7 +148,9 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
   it("returns null when the evaluation does not belong to the Program", async () => {
     courseBoundEvaluationFindFirstMock.mockResolvedValue(null);
 
-    await expect(getProgramHeadCourseEvaluationDetail("prog-beed", "eval-other")).resolves.toBeNull();
+    await expect(
+      getProgramHeadCourseEvaluationDetail("prog-beed", "eval-other")
+    ).resolves.toBeNull();
   });
 
   it("keeps the participation invariant over raw assignment rows", async () => {
@@ -195,7 +205,12 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
         respondent_id: "user-s1",
         respondent: { name: "Juan dela Cruz" },
         quant_items: [
-          { cilo_question_binding_id: "binding-clarity", section_key: "teaching", item_key: "clarity", rating_value: 4 },
+          {
+            cilo_question_binding_id: "binding-clarity",
+            section_key: "teaching",
+            item_key: "clarity",
+            rating_value: 4,
+          },
         ],
         qual_items: [
           { section_key: "teaching", prompt_key: "remarks", text_content: "Very clear." },
@@ -217,8 +232,9 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     const result = await getProgramHeadCourseEvaluationDetail("prog-beed", "eval-1");
 
     expect(result).not.toBeNull();
-    // CILO metric pools the raw rating
-    expect(result!.ciloResults).toHaveLength(1);
+    expect(result!.evaluation.periodLabel).toBe("2025-2026 — 2nd Semester — 1st Term");
+    expect(result!.evaluation.yearLevel).toBe("THIRD_YEAR");
+    expect(result!.evaluation.section).toBe("MORNING");
     expect(result!.ciloResults[0].quantitative?.mean).toBe(4);
     expect(result!.ciloResults[0].mappings[0].ploCode).toBe("PLO-1");
     // Question metric

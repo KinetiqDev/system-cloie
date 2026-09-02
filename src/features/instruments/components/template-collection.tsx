@@ -123,12 +123,22 @@ export function TemplateCollection({ view, sections, empty }: TemplateCollection
               ))}
             </div>
           ) : (
-            <TemplateTable
-              items={section.items}
-              renderFooterActions={section.renderFooterActions}
-              renderOverflowMenu={section.renderOverflowMenu}
-              sectionHeading={section.heading}
-            />
+            <>
+              <TemplateMobileList
+                items={section.items}
+                renderFooterActions={section.renderFooterActions}
+                renderOverflowMenu={section.renderOverflowMenu}
+                sectionHeading={section.heading}
+              />
+              <div className="hidden sm:block">
+                <TemplateTable
+                  items={section.items}
+                  renderFooterActions={section.renderFooterActions}
+                  renderOverflowMenu={section.renderOverflowMenu}
+                  sectionHeading={section.heading}
+                />
+              </div>
+            </>
           )}
         </section>
       ))}
@@ -192,6 +202,66 @@ function TemplateCard({
 // ---------------------------------------------------------------------------
 // List view
 // ---------------------------------------------------------------------------
+
+function TemplateMobileList({
+  items,
+  renderFooterActions,
+  renderOverflowMenu,
+  sectionHeading,
+}: {
+  items: TemplateCollectionItem[];
+  renderFooterActions: (item: TemplateCollectionItem) => ReactNode;
+  renderOverflowMenu?: (item: TemplateCollectionItem) => ReactNode;
+  sectionHeading?: string;
+}) {
+  return (
+    <div
+      role="list"
+      aria-label={sectionHeading ?? "Evaluation templates"}
+      className="border-border bg-card divide-border divide-y overflow-hidden rounded-xl border sm:hidden"
+    >
+      {items.map((item) => {
+        const overflowMenu = renderOverflowMenu?.(item);
+
+        return (
+          <article key={item.id} role="listitem" className="space-y-3 p-4">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="font-semibold break-words">{item.name}</h4>
+                {item.description && (
+                  <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                    {item.description}
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <Badge variant={item.statusActive ? "success" : "outline"}>
+                  {item.statusLabel}
+                </Badge>
+                {overflowMenu && <OverflowMenu>{overflowMenu}</OverflowMenu>}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <OriginMarker item={item} />
+              <Badge variant="outline" className="text-xs">
+                {templateTypeLabel(item)}
+              </Badge>
+            </div>
+
+            <div className="border-border flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+              <span className="text-muted-foreground text-xs tabular-nums">
+                {item.versionCount !== undefined &&
+                  `${item.versionCount} version${item.versionCount !== 1 ? "s" : ""}`}
+              </span>
+              <div className="flex flex-wrap justify-end gap-2">{renderFooterActions(item)}</div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
 
 function TemplateTable({
   items,

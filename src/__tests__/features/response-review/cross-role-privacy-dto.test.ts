@@ -69,7 +69,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
       evaluationTitle: "IT201 Post-Term CILO Evaluation",
       courseTitle: "IT201 Systems",
       programLabel: "BSIT",
-      termInstanceLabel: "2025-2026 — SECOND — FIRST_TERM",
+      termInstanceLabel: "2025-2026 — 2nd Semester — 1st Term",
       overallMean: 4.5,
       reviewerRole: "FACULTY",
       sections: [
@@ -157,7 +157,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
       deploymentName: "IT201 Post-Term",
       courseTitle: "IT201",
       programName: "BSIT",
-      termInstanceLabel: "2025-2026 — SECOND — FIRST_TERM",
+      termInstanceLabel: "2025-2026 — 2nd Semester — 1st Term",
       status: "ACTIVE",
       overallMean: 4.5,
       responseCount: 1,

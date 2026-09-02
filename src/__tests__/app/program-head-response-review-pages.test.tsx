@@ -79,7 +79,8 @@ vi.mock("@/features/response-review/components/response-detail", () => ({
     evaluationHref: string;
   }) => (
     <div>
-      Response detail: {response.respondent.name} ({response.evaluation.title}) | back: {evaluationHref}
+      Response detail: {response.respondent.name} ({response.evaluation.title}) | back:{" "}
+      {evaluationHref}
     </div>
   ),
 }));
@@ -105,11 +106,17 @@ describe("program head identified response-review pages", () => {
       await import("../../app/(app)/program-head/programs/[programId]/responses/course/[evaluationId]/page")
     ).default;
 
-    const page = await Page({ params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1" }) });
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1" }),
+    });
     render(page);
 
     expect(getProgramHeadCourseEvaluationDetailMock).toHaveBeenCalledWith("program-1", "eval-1");
-    expect(screen.getByText("Course detail: Post-Term CILO Evaluation | response href: /program-head/programs/program-1/responses/course/eval-1/responses/response-1")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Course detail: Post-Term CILO Evaluation | response href: /program-head/programs/program-1/responses/course/eval-1/responses/response-1"
+      )
+    ).toBeInTheDocument();
   });
 
   it("preserves period and stakeholder scope in course evaluation respondent links", async () => {
@@ -124,13 +131,22 @@ describe("program head identified response-review pages", () => {
       params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1" }),
       searchParams: Promise.resolve({
         termInstanceId: "11111111-1111-4111-8111-111111111111",
+        schoolYearId: "22222222-2222-4222-8222-222222222222",
+        semester: "SECOND",
         stakeholder: "ALUMNI",
       }),
     });
     render(page);
 
-    const responseHref = "Course detail: Post-Term CILO Evaluation | response href: /program-head/programs/program-1/responses/course/eval-1/responses/response-1?termInstanceId=11111111-1111-4111-8111-111111111111&stakeholder=ALUMNI";
-    expect(screen.getByText(responseHref)).toBeInTheDocument();
+    const responseHref = screen.getByText(/Course detail:.*response href:/).textContent;
+    expect(responseHref).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
+    expect(responseHref).toContain("schoolYearId=22222222-2222-4222-8222-222222222222");
+    expect(responseHref).toContain("semester=SECOND");
+    expect(responseHref).toContain("stakeholder=ALUMNI");
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
+    const responsesHref = within(breadcrumb).getByRole("link", { name: "Responses" });
+    expect(responsesHref).toHaveAttribute("href", expect.stringContaining("schoolYearId="));
+    expect(responsesHref).toHaveAttribute("href", expect.stringContaining("semester=SECOND"));
   });
 
   it("returns 404 when the course evaluation is not found", async () => {
@@ -152,11 +168,20 @@ describe("program head identified response-review pages", () => {
       await import("../../app/(app)/program-head/programs/[programId]/responses/program-wide/[deploymentId]/page")
     ).default;
 
-    const page = await Page({ params: Promise.resolve({ programId: "program-1", deploymentId: "central-1" }) });
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-1", deploymentId: "central-1" }),
+    });
     render(page);
 
-    expect(getProgramHeadCentralEvaluationDetailMock).toHaveBeenCalledWith("program-1", "central-1");
-    expect(screen.getByText("Central detail: Exit Survey | response href: /program-head/programs/program-1/responses/program-wide/central-1/responses/response-1?tab=program-wide")).toBeInTheDocument();
+    expect(getProgramHeadCentralEvaluationDetailMock).toHaveBeenCalledWith(
+      "program-1",
+      "central-1"
+    );
+    expect(
+      screen.getByText(
+        "Central detail: Exit Survey | response href: /program-head/programs/program-1/responses/program-wide/central-1/responses/response-1?tab=program-wide"
+      )
+    ).toBeInTheDocument();
   });
 
   it("returns 404 when the program-wide evaluation is not found", async () => {
@@ -185,12 +210,20 @@ describe("program head identified response-review pages", () => {
     ).default;
 
     const page = await Page({
-      params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1", responseId: "response-1" }),
+      params: Promise.resolve({
+        programId: "program-1",
+        evaluationId: "eval-1",
+        responseId: "response-1",
+      }),
     });
     render(page);
 
     expect(getProgramHeadResponseDetailMock).toHaveBeenCalledWith("program-1", "response-1");
-    expect(screen.getByText("Response detail: Juan dela Cruz (Post-Term CILO Evaluation) | back: /program-head/programs/program-1/responses/course/eval-1")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Response detail: Juan dela Cruz (Post-Term CILO Evaluation) | back: /program-head/programs/program-1/responses/course/eval-1"
+      )
+    ).toBeInTheDocument();
   });
 
   it("preserves period and stakeholder scope in the course response breadcrumb", async () => {
@@ -208,7 +241,11 @@ describe("program head identified response-review pages", () => {
     ).default;
 
     const page = await Page({
-      params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1", responseId: "response-1" }),
+      params: Promise.resolve({
+        programId: "program-1",
+        evaluationId: "eval-1",
+        responseId: "response-1",
+      }),
       searchParams: Promise.resolve({
         termInstanceId: "11111111-1111-4111-8111-111111111111",
         courseId: "22222222-2222-4222-8222-222222222222",
@@ -219,13 +256,19 @@ describe("program head identified response-review pages", () => {
 
     const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
     const responsesLink = within(breadcrumb).getByRole("link", { name: "Responses" });
-    expect(responsesLink.getAttribute("href")).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
+    expect(responsesLink.getAttribute("href")).toContain(
+      "termInstanceId=11111111-1111-4111-8111-111111111111"
+    );
     // Class-level filters reset on upward navigation (§12).
     expect(responsesLink.getAttribute("href")).not.toContain("courseId");
     expect(responsesLink.getAttribute("href")).not.toContain("facultyId");
     // The evaluation step keeps the same scope.
-    const evaluationStep = within(breadcrumb).getByRole("link", { name: "Post-Term CILO Evaluation" });
-    expect(evaluationStep.getAttribute("href")).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
+    const evaluationStep = within(breadcrumb).getByRole("link", {
+      name: "Post-Term CILO Evaluation",
+    });
+    expect(evaluationStep.getAttribute("href")).toContain(
+      "termInstanceId=11111111-1111-4111-8111-111111111111"
+    );
     // Alternate back links keep the scope too.
     expect(screen.getByRole("link", { name: /Back to evaluation/ })).toHaveAttribute(
       "href",
@@ -245,6 +288,8 @@ describe("program head identified response-review pages", () => {
       params: Promise.resolve({ programId: "program-1", deploymentId: "central-1" }),
       searchParams: Promise.resolve({
         termInstanceId: "11111111-1111-4111-8111-111111111111",
+        schoolYearId: "22222222-2222-4222-8222-222222222222",
+        semester: "SECOND",
         stakeholder: "ALUMNI",
         section: "MORNING",
       }),
@@ -253,9 +298,15 @@ describe("program head identified response-review pages", () => {
 
     const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
     const responsesLink = within(breadcrumb).getByRole("link", { name: "Responses" });
-    expect(responsesLink.getAttribute("href")).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
+    expect(responsesLink.getAttribute("href")).toContain(
+      "termInstanceId=11111111-1111-4111-8111-111111111111"
+    );
     expect(responsesLink.getAttribute("href")).toContain("stakeholder=ALUMNI");
     expect(responsesLink.getAttribute("href")).toContain("tab=program-wide");
+    expect(responsesLink.getAttribute("href")).toContain(
+      "schoolYearId=22222222-2222-4222-8222-222222222222"
+    );
+    expect(responsesLink.getAttribute("href")).toContain("semester=SECOND");
     expect(responsesLink.getAttribute("href")).not.toContain("section");
   });
 
@@ -270,7 +321,11 @@ describe("program head identified response-review pages", () => {
 
     await expect(
       Page({
-        params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1", responseId: "response-1" }),
+        params: Promise.resolve({
+          programId: "program-1",
+          evaluationId: "eval-1",
+          responseId: "response-1",
+        }),
       })
     ).rejects.toThrow("NEXT_NOT_FOUND");
   });
@@ -290,12 +345,20 @@ describe("program head identified response-review pages", () => {
     ).default;
 
     const page = await Page({
-      params: Promise.resolve({ programId: "program-1", deploymentId: "central-1", responseId: "response-1" }),
+      params: Promise.resolve({
+        programId: "program-1",
+        deploymentId: "central-1",
+        responseId: "response-1",
+      }),
     });
     render(page);
 
     expect(getProgramHeadResponseDetailMock).toHaveBeenCalledWith("program-1", "response-1");
-    expect(screen.getByText("Response detail: Maria Gomez (Exit Survey) | back: /program-head/programs/program-1/responses/program-wide/central-1?tab=program-wide&stakeholder=ALUMNI")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Response detail: Maria Gomez (Exit Survey) | back: /program-head/programs/program-1/responses/program-wide/central-1?tab=program-wide&stakeholder=ALUMNI"
+      )
+    ).toBeInTheDocument();
   });
 
   it("returns 404 when the response does not belong to the program-wide deployment", async () => {
@@ -309,7 +372,11 @@ describe("program head identified response-review pages", () => {
 
     await expect(
       Page({
-        params: Promise.resolve({ programId: "program-1", deploymentId: "central-1", responseId: "response-1" }),
+        params: Promise.resolve({
+          programId: "program-1",
+          deploymentId: "central-1",
+          responseId: "response-1",
+        }),
       })
     ).rejects.toThrow("NEXT_NOT_FOUND");
   });
@@ -322,7 +389,11 @@ describe("program head identified response-review pages", () => {
 
     await expect(
       Page({
-        params: Promise.resolve({ programId: "program-1", evaluationId: "eval-1", responseId: "response-1" }),
+        params: Promise.resolve({
+          programId: "program-1",
+          evaluationId: "eval-1",
+          responseId: "response-1",
+        }),
       })
     ).rejects.toThrow("NEXT_NOT_FOUND");
   });

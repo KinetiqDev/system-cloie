@@ -39,6 +39,7 @@ export async function saveFacultyTemplateDraftAction(
     cilo_question_bindings: ciloQuestionBindings,
     description: formData.get("description"),
     id: formData.get("id"),
+    is_active: formData.get("is_active"),
     name: formData.get("name"),
     structure,
   });
@@ -74,9 +75,7 @@ export async function duplicateFacultyTemplateAction(
   return { success: true, data: result.data };
 }
 
-export async function deleteFacultyTemplateAction(
-  templateId: string
-): Promise<ActionResult> {
+export async function deleteFacultyTemplateAction(templateId: string): Promise<ActionResult> {
   const result = await deleteFacultyTemplate(templateId);
 
   if (!result.success) {
