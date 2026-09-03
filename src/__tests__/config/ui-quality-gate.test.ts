@@ -42,7 +42,7 @@ interface Workflow {
 }
 
 function readWorkflow(fileName: string): Workflow {
-  const source = readFileSync(join(process.cwd(), ".depot", "workflows", fileName), "utf8");
+  const source = readFileSync(join(process.cwd(), ".github", "workflows", fileName), "utf8");
   return yaml.load(source) as Workflow;
 }
 
@@ -172,7 +172,7 @@ describe("scheduled deep verification matrix (551)", () => {
 
   it("proves the demo reset isolation gate without running the destructive reset", () => {
     const workflowSource = readFileSync(
-      join(process.cwd(), ".depot", "workflows", SCHEDULED),
+      join(process.cwd(), ".github", "workflows", SCHEDULED),
       "utf8"
     );
     expect(workflowSource).not.toContain("demo:reset");
@@ -252,8 +252,8 @@ describe("Playwright quality gate contract (551)", () => {
     expect(readPlaywrightConfig()).toMatch(/workers:\s*1/);
     for (const [fileName, source] of [
       ["playwright.config.ts", readPlaywrightConfig()],
-      [CI, readFileSync(join(process.cwd(), ".depot", "workflows", CI), "utf8")],
-      [SCHEDULED, readFileSync(join(process.cwd(), ".depot", "workflows", SCHEDULED), "utf8")],
+      [CI, readFileSync(join(process.cwd(), ".github", "workflows", CI), "utf8")],
+      [SCHEDULED, readFileSync(join(process.cwd(), ".github", "workflows", SCHEDULED), "utf8")],
     ] as const) {
       expect(source, `${fileName} must not shard`).not.toMatch(/--shard|shard:\s/);
     }

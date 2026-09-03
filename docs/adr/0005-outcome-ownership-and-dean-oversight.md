@@ -41,7 +41,7 @@ Operational responsibility shifted in the same revision: Faculty is the primary 
 - The Dean does not acquire edit capability for outcomes or mappings. If a future effort changes this, it must amend this ADR explicitly.
 - Mapping integrity is enforced at both service and database layers: unique CILO-target pairs, scope backstops, Program-scope validation, and active-target requirements for both typed relations. Live readiness reports incomplete mappings without blocking step-by-step CILO or GO authoring; the alignment gate applies to new Course-bound evaluation publication only.
 - Legacy General Education CILO-to-GO rows were deleted by the approved irreversible migration. New and changed mapping writes carry actor and timestamp provenance; legacy rows that predate provenance remain unattributed and the system does not fabricate actors.
-- The outdated `docs/cloie-prd.md` and `docs/cloie-srs.md` are not authoritative for the rules in this ADR; the Wayfinder map (Issue #103), this ADR, and the OpenSpec change `introduce-institutional-learning-outcomes` are.
+- The outdated `docs/cloie-prd.md` and `docs/cloie-srs.md` are not authoritative for the rules in this ADR; the Wayfinder map (Issue #103) and this ADR are. (The originally co-authoritative change artifacts are retired with the OpenSpec deprecation; for ILO catalog ownership see ADR 0018, which supersedes this ADR's Secretary-ownership decision.)
 
 ## Related
 
@@ -53,5 +53,5 @@ Operational responsibility shifted in the same revision: Faculty is the primary 
 - Background, non-authoritative: `docs/cloie-prd.md`, `docs/cloie-srs.md`
 - Adjacent ADR: [Course Catalog and Assignment Refactor](0003-course-catalog-and-assignment-refactor.md)
 - Parent specification: [spec(outcomes): introduce institutional learning outcomes and typed CILO mappings](https://github.com/KinetiqDev/system-cloie/issues/370)
-- OpenSpec change: `openspec/changes/introduce-institutional-learning-outcomes/`
+- Superseding ADR: [Transfer ILO Ownership to Gen Ed Coordinator](0018-transfer-ilo-ownership-to-gen-ed-coordinator.md) (retired OpenSpec change artifacts preserved in git history)
 - Implementation tickets: #371 (Faculty Program-specific alignment), #372 (Secretary catalog), #373 (shared General Education alignment and cutover), #374 (Secretary mapping administration and Program Head read-only review), #375 (typed readiness and publication gate), #376 (Dean typed oversight), #377 (reconciliation and release verification)

@@ -27,3 +27,13 @@ _Avoid_: Persistent login cookie, session cookie
 **Non-anonymous disclosure**:
 The privacy notice statement that evaluation submissions are not completely anonymous: System CLOIE retains an internal link between the respondent and the assigned evaluation for verification, security, and data-integrity purposes, while evaluation results are intended to appear in aggregated or de-identified reports.
 _Avoid_: Fully anonymous feedback, untraceable submission
+
+## Design boundaries
+
+**Typed legal content**:
+Privacy and terms content is authored as typed structured content rendered by Server Components — not Markdown imports and not a CMS — with stable section anchors, a table of contents, and draft pages excluded from indexing.
+_Avoid_: Markdown pipeline, headless CMS, ad-hoc JSX copy
+
+**No durable acceptance record**:
+The acknowledgement gate intentionally persists no per-account acceptance evidence; the signed ticket proves acknowledgement per sign-in flow only. A durable per-account LegalAcceptance record requires a separately approved change if the institution requires audit evidence.
+_Avoid_: Acceptance history table, implied stored consent

@@ -10,8 +10,8 @@ This file defines System CLOIE's visual language, theme behavior, page patterns,
 
 | Subject                                        | Source of truth                              |
 | ---------------------------------------------- | -------------------------------------------- |
-| Architecture, stack, binding engineering rules | `openspec/config.yaml`                       |
-| Product workflows and requirements             | `openspec/specs/`                            |
+| Architecture, stack, binding engineering rules | `AGENTS.md`                                  |
+| Product workflows and requirements             | GitHub issues, feature `CONTEXT.md`          |
 | Domain terms and invariants                    | `CONTEXT-MAP.md`, feature `CONTEXT.md`, ADRs |
 | Visual and interaction behavior                | `docs/design.md`                             |
 | Numerical design values                        | `src/styles/tokens.css`                      |
@@ -126,7 +126,7 @@ Theme-adaptive:
 - Persist the choice and resolve it before first paint.
 - Theme changes must not reset route, form, filter, scroll, or async state.
 - Use text labels; do not rely on a sun/moon icon alone.
-- Preferred placement: avatar menu and `Settings → Appearance`.
+- Preferred placement: the standalone appearance trigger in the app topbar, mirrored on public routes (a dedicated `Settings → Appearance` route was removed during design-system implementation).
 
 ### 4.5 Logo Treatment
 

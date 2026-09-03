@@ -6,7 +6,7 @@ System CLOIE renames the "Graduate Outcome" (GO) concept to "Program Learning Ou
 
 ## Context
 
-The outcomes domain models three learning-outcome layers: Institutional Outcomes, program-level outcomes, and Course Intended Learning Outcomes. The program-level layer was named "Graduate Outcome," which conflated the outcome's role (a Program outcome, not a graduation credential) and diverged from the terminology used by the institution's curriculum and accreditation workflows. OpenSpec change `cilo-to-plo-manifestation` established PLO as the canonical term and requires every user-visible surface to use it.
+The outcomes domain models three learning-outcome layers: Institutional Outcomes, program-level outcomes, and Course Intended Learning Outcomes. The program-level layer was named "Graduate Outcome," which conflated the outcome's role (a Program outcome, not a graduation credential) and diverged from the terminology used by the institution's curriculum and accreditation workflows. The PLO terminology change (retired OpenSpec change `cilo-to-plo-manifestation`; see `docs/openspec-deprecation-migration-report.md`) established PLO as the canonical term and requires every user-visible surface to use it.
 
 ## Decision
 

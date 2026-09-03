@@ -9,11 +9,11 @@ A pre-provisioned, single-role System CLOIE account for college-wide General Edu
 _Avoid_: Self-service Coordinator claim, Coordinator with program_id, multi-role Coordinator
 
 **Coordinator scope model — shared college-wide**:
-Every active `GEN_ED_COORDINATOR` account shares the same managed scope: `Course.course_scope == GENERAL_EDUCATION`. Authorization is derived from Course scope, not a nullable `Course.program_id` or an assignment row. A portfolio-partitioned model requires a separate approved OpenSpec change and a new assignment model and is not enabled by this change.
+Every active `GEN_ED_COORDINATOR` account shares the same managed scope: `Course.course_scope == GENERAL_EDUCATION`. Authorization is derived from Course scope, not a nullable `Course.program_id` or an assignment row. A portfolio-partitioned model requires a separately approved capability change and a new assignment model and is not enabled.
 _Avoid_: Coordinator portfolio assignment, fake General Education Program, ProgramHead-like scope table
 
 **Coordinator assignment authority** (after the approved transfer; server-enforced):
-Secretary: read-only General Education assignments; retains Program-specific assignment mutation. Dean: preserves current all-program mutation behavior until a separate decision changes it. Coordinator: college-wide read and mutation for General Education assignments only. Program Head: read-only General Education within the Authorized Program set. Faculty: no assignment mutation. Server services enforce the General Education predicate inside reads and every mutation path (create, update, activation, deactivation, deletion, deletion preflight, bulk creation).
+Secretary: no Course assignment mutation; read-only visibility only. Coordinator: college-wide read and mutation for General Education assignments only. Program Head: mutation for Program-specific assignments within the Authorized Program set; read-only for General Education. Dean: all-program mutation across General Education and Program-specific assignments. Faculty: read-only for own assignments; no assignment mutation. Server services enforce the General Education predicate inside reads and every mutation path (create, update, activation, deactivation, deletion, deletion preflight, bulk creation).
 _Avoid_: Program Head Coordinator mutation, Secretary General Education mutation after the transfer, client-provided course_scope filter
 
 

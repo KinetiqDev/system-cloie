@@ -2,7 +2,7 @@
  * Risk-domain classification for CI check selection (issue #551).
  *
  * Pure classifier: changed files → which check families a PR must run.
- * `.depot/workflows/ci.yml` consumes the outputs through the `select` job;
+ * `.github/workflows/ci.yml` consumes the outputs through the `select` job;
  * `scripts/ci/select-checks.mjs` is the CLI wrapper. Keeping the mapping here
  * (instead of inline workflow expressions) makes the risk contract unit-testable.
  *
@@ -45,7 +45,7 @@ const BROWSER_PREFIXES = ["src/", "e2e/", "playwright.config.ts"];
 // the check-selection implementation — decides which gates run. A PR that
 // touches it selects every production gate instead of trusting the mechanism
 // being modified.
-const CI_INFRASTRUCTURE_PREFIXES = [".depot/workflows/", ".github/workflows/", "scripts/ci/"];
+const CI_INFRASTRUCTURE_PREFIXES = [".github/workflows/", "scripts/ci/"];
 
 // Paths that select the production build.
 const BUILD_PREFIXES = [

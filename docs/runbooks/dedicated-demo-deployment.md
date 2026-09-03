@@ -1,6 +1,6 @@
 # Dedicated Demo Deployment Runbook
 
-This is the operator-facing contract for the isolated production-mode demo deployment. It complements [ADR 0008](../adr/0008-dedicated-demo-deployment-authentication.md); the full design and normative scenarios live in [`openspec/changes/add-dedicated-demo-auth/`](../../openspec/changes/add-dedicated-demo-auth/).
+This is the operator-facing contract for the isolated production-mode demo deployment. It complements [ADR 0008](../adr/0008-dedicated-demo-deployment-authentication.md), which holds the full design decision and normative scenarios.
 
 ## Scope And Safety
 

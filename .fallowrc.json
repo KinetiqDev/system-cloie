@@ -1,5 +1,5 @@
 {
-  // Fallow policy for System CLOIE (see openspec/changes/integrate-fallow-code-intelligence).
+  // Fallow policy for System CLOIE (policy: docs/adr/0011-fallow-code-intelligence-policy.md; runbook: docs/agents/fallow.md).
   // Exact pin: fallow@2.54.3 in package.json; every command runs through `pnpm exec fallow`.
 
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",

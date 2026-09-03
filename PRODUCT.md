@@ -50,7 +50,7 @@ A purpose-built, college-wide OBE attainment-evidence engine for ACD. The mechan
 - Canonical terminology: Institutional Learning Outcome (ILO), Program Learning Outcome (PLO), Course Intended Learning Outcome (CILO). "Graduate Outcome" is retired.
 - **PWA surface expectation (confirmed):** web platform, but on mobile the app must feel almost mobile-native — touch-friendly controls, natural scrolling, native-like navigation and ergonomics. Mobile is a first-class product surface, never a scaled-down desktop.
 - No offline data caching, mutation queues, Serwist/Workbox/next-pwa unless ADR 0006 is reopened.
-- Detailed stack and engineering rules live in `openspec/config.yaml`; do not duplicate here.
+- Detailed stack and engineering rules live in `AGENTS.md` (with `CONTEXT-MAP.md`, feature `CONTEXT.md` files, and `docs/adr/`); do not duplicate here.
 
 ## Brand Commitments
 

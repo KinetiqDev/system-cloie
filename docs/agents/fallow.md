@@ -26,16 +26,16 @@ Before deleting **anything** Fallow reports unused — an export, a file, a depe
 
 All verified against the installed binary (see `pnpm exec fallow --help`):
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm exec fallow dead-code --format json --quiet` | Unused files/exports/deps/types, circular deps, boundary violations |
-| `pnpm exec fallow dupes --format json --quiet` | Duplication / clone groups |
-| `pnpm exec fallow health --format json --quiet` | Complexity hotspots and refactoring targets |
-| `pnpm exec fallow flags --format json --quiet` | Feature-flag patterns |
-| `pnpm exec fallow audit --base <ref> --format json --quiet` | Changed-files audit with verdict (used by the CI gate) |
-| `pnpm exec fallow fix --dry-run --format json --quiet` | Dry-run preview of auto-fix candidates |
-| `pnpm exec fallow list --entry-points --format json --quiet` | Discovered entry points |
-| `pnpm exec fallow config --path` | Which config file was loaded |
+| Command                                                      | Purpose                                                             |
+| ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `pnpm exec fallow dead-code --format json --quiet`           | Unused files/exports/deps/types, circular deps, boundary violations |
+| `pnpm exec fallow dupes --format json --quiet`               | Duplication / clone groups                                          |
+| `pnpm exec fallow health --format json --quiet`              | Complexity hotspots and refactoring targets                         |
+| `pnpm exec fallow flags --format json --quiet`               | Feature-flag patterns                                               |
+| `pnpm exec fallow audit --base <ref> --format json --quiet`  | Changed-files audit with verdict (used by the CI gate)              |
+| `pnpm exec fallow fix --dry-run --format json --quiet`       | Dry-run preview of auto-fix candidates                              |
+| `pnpm exec fallow list --entry-points --format json --quiet` | Discovered entry points                                             |
+| `pnpm exec fallow config --path`                             | Which config file was loaded                                        |
 
 Package scripts (see `package.json`): `pnpm fallow:audit`, `pnpm fallow:dead-code`, `pnpm fallow:dupes`, `pnpm fallow:health`, `pnpm fallow:flags`, `pnpm fallow:reports`, `pnpm fallow:baseline`.
 
@@ -69,7 +69,7 @@ Package scripts (see `package.json`): `pnpm fallow:audit`, `pnpm fallow:dead-cod
 Initial reports point at these evidence-backed candidates; each needs a focused domain/seam design before any code change (see issue #174 for the refactor scope and issue #167 for the stabilization backlog — referencing them here does not implement them). The first report intake (2026-08-07) filed these focused issues:
 
 - **Traced dead code** — unused exports/files after trace verification (e.g. framework-discovered Server Actions with non-obvious consumers must be traced before removal). Intake issue: open a new ticket per traced finding or link to #167.
-- **Duplicate modules/workflows** — the duplicated evaluation/instrument workflows and mirrored respondent route families are the high-value clone clusters. Intake issues: #287 (mirrored respondent route pages), #288 (responses list-student-* service pair), #290 (fallow verification fixtures and report scripts).
+- **Duplicate modules/workflows** — the duplicated evaluation/instrument workflows and mirrored respondent route families are the high-value clone clusters. Intake issues: #287 (mirrored respondent route pages), #288 (responses list-student-\* service pair), #290 (fallow verification fixtures and report scripts).
 - **Complexity hotspots** — health report targets; the `edit-user-by-secretary` service module is the leading hotspot candidate. Intake issues: #286 (edit-user-by-secretary, parent #174), #289 (get-student-assigned-evaluation-session, parent #174).
 - **Dedicated seam designs** — future cross-domain seam work (e.g. `auth <-> users`, `instruments <-> evaluations`, layout/auth coupling); requires a focused proposal naming the module, interface, seam, preserved invariants, and migration tests.
 
@@ -78,5 +78,5 @@ Initial reports point at these evidence-backed candidates; each needs a focused 
 - Skill: `.agents/skills/fallow/SKILL.md`
 - CLI reference: `.agents/skills/fallow/references/cli-reference.md` (note: its command TOC is ahead of the installed 2.54.3 — the binary's `--help` is authoritative)
 - Policy: `docs/adr/0011-fallow-code-intelligence-policy.md`
-- Change: `openspec/changes/integrate-fallow-code-intelligence/`
+- Deprecation note: this runbook supersedes the retired change artifacts previously tracked under the code-intelligence OpenSpec change (see ADR 0011 and the migration report `docs/openspec-deprecation-migration-report.md`).
 - Tests: `src/__tests__/config/fallow-agent-guidance.test.ts`, `src/__tests__/config/fallow-config.test.ts`

@@ -38,7 +38,7 @@ permission:
 ---
 
 You are the implementation subagent for System CLOIE.
-Implement only the delegated task using its issue, OpenSpec artifacts, acceptance
+Implement only the delegated task using its issue, acceptance
 criteria, and existing repository architecture as the source of truth.
 
 Before editing:

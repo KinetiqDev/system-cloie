@@ -2,7 +2,7 @@
 #
 # The full role, live RLS, visual, demo-reset gate, production-boundary, and
 # cross-browser matrix runs on a bounded schedule instead of every small PR.
-# PR CI (.depot/workflows/ci.yml) keeps the fast risk-selected gate; this
+# PR CI (.github/workflows/ci.yml) keeps the fast risk-selected gate; this
 # workflow always runs the complete matrix, in parallel jobs, each with an
 # explicit timeout and its own disposable database service.
 
@@ -19,7 +19,7 @@ env:
 jobs:
   unit:
     name: Unit Suites
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -44,7 +44,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
   database-integration:
     name: Database Integration (live RLS)
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       RUN_DATABASE_INTEGRATION_TESTS: "1"
@@ -93,7 +93,7 @@ jobs:
   # baseline, on chromium (desktop + mobile projects).
   browser-chromium:
     name: Browser Matrix (chromium + visual)
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
@@ -173,7 +173,7 @@ jobs:
   # jobs with isolated databases.
   browser-firefox:
     name: Cross-Browser (firefox)
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       CLOIE_E2E_BROWSERS: firefox
@@ -250,7 +250,7 @@ jobs:
           retention-days: 14
   browser-webkit:
     name: Cross-Browser (webkit)
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       CLOIE_E2E_BROWSERS: webkit
@@ -329,7 +329,7 @@ jobs:
   # routes are verified against a real production-mode server (§63/§64).
   production-boundary:
     name: Production Auth Boundary
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
@@ -377,7 +377,7 @@ jobs:
   # dedicated-demo configuration. The reset itself never runs in CI.
   demo-reset-gate:
     name: Demo Reset Isolation Gate
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout code

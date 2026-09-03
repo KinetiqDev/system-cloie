@@ -1,9 +1,3 @@
-# Depot CI Migration
-# Source: .github/workflows/ci.yml
-#
-# Changes made:
-# - Changed GitHub runs-on labels to their Depot equivalents
-#
 # Risk-based check selection (issue #551): the `select` job classifies the
 # changed files into risk domains (scripts/ci/lib/risk-domains.mjs) and the
 # database, build, and browser jobs run only when a matching domain changed.
@@ -21,7 +15,7 @@ concurrency:
 jobs:
   select:
     name: Risk Selection
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       run_build: ${{ steps.select.outputs.run_build }}
@@ -44,7 +38,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
   quality-checks:
     name: Quality Checks
-    runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -90,7 +84,7 @@ jobs:
     # (application code, schema, or production configuration).
     needs: select
     if: needs.select.outputs.run_build == 'true'
-    runs-on: depot-ubuntu-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -135,7 +129,7 @@ jobs:
     name: Database Integration
     needs: select
     if: needs.select.outputs.run_database == 'true'
-    runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -195,7 +189,7 @@ jobs:
     name: Browser E2E
     needs: select
     if: needs.select.outputs.run_browser == 'true'
-    runs-on: depot-ubuntu-latest # was: ubuntu-latest. Mapped standard GitHub runner to Depot equivalent.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

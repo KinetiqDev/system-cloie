@@ -56,3 +56,9 @@ Replaced. The seed now creates School Years through `createSchoolYearWithCanonic
 - Operators cannot create or delete terms — canonical structure is enforced by construction.
 - Backfill is lossy only if multiple ACTIVE periods span different School Years; the partial unique index makes that state impossible, so the single ACTIVE period is authoritative.
 - The seed's `active_semester = FIRST` on SY_2026_2027 coexists with an ACTIVE SECOND-semester fixture period (spec "period is the authority" scenario); the UI can resolve this through the normal lifecycle flow.
+
+## Appendix: historical-deletion guard and migration/rollback (from the refactor design, retained at deprecation of its source)
+
+**Course → CourseAssignment FK: CASCADE → RESTRICT** (migration `20260808173502`, with an orphan pre-flight check). The application layer (`manage-courses.ts#deleteCourse`) already blocks deletion when dependents exist (CILOs or CBEs); RESTRICT adds database-level enforcement across all entry points (raw SQL, migrations, bugs) — defense-in-depth for historical data integrity. `CourseAssignment` → `CourseAssignmentMembership` remains CASCADE because assignment deletion is already guarded at both app and DB layers (a published evaluation blocks both assignment and membership deletion).
+
+**Rollback plan.** Revert the code deploy. Schema changes are additive (new columns) or backward-compatible (RESTRICT is stricter than CASCADE; no application code depends on the cascade behavior directly). The FK change cannot revert to CASCADE without another migration, but RESTRICT only blocks deletes that would have been destructive — safe to leave as RESTRICT even on rollback.

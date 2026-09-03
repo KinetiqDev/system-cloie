@@ -69,15 +69,13 @@ See `supabase/README.md` for the full local and remote self-hosted Supabase work
 
 ## How We Build
 
-The project combines two workflows depending on the change's size and stage:
+Change management is conversation-driven with GitHub issues as the execution units:
 
-- **OpenSpec workflow** (`openspec/`) — artifact-driven change management. Use `openspec-explore` + `openspec-propose` to draft proposals, designs, specs, and tasks. For fast-tracking, `openspec-ff-change` creates all artifacts in one pass. Implementation follows with `openspec-apply-change`, verification with `openspec-verify-change`, and archiving with `openspec-archive-change`.
+- **Planning and execution skills** — use `wayfinder` to chart large explorations as investigation tickets, `grilling` / `grill-with-docs` to stress-test designs and record ADRs, `prototype` to build throwaway artifacts, `to-spec` to synthesize specifications, and `to-tickets` to break work into vertical-slice GitHub issues with blocking edges.
 
-- **Matt Pocock skills** — conversation-driven planning and execution. Use `wayfinder` to chart large explorations as investigation tickets, `grilling` / `grill-with-docs` to stress-test designs and record ADRs, `prototype` to build throwaway artifacts, `to-spec` to synthesize specifications, and `to-tickets` to break work into vertical-slice GitHub issues with blocking edges.
+**In practice** for a big feature or refactor: chart the space with `wayfinder` → grill the design to sharpen it and record an ADR for cross-cutting decisions → `to-tickets` to split into dependency-ordered issues → implement each slice → verify with tests, `pnpm lint`, and `pnpm build`.
 
-**In practice** for a big feature or refactor: explore and propose with OpenSpec → grill the design to sharpen it → `to-tickets` to split into dependency-ordered issues → implement each slice → verify and archive. For scouting without a clear destination, `wayfinder` charts the map first and its resolved tickets feed into the OpenSpec proposal.
-
-See `AGENTS.md` for the full skill inventory and `openspec/config.yaml` for the canonical architecture rules.
+See `AGENTS.md` for the full skill inventory, `CONTEXT-MAP.md` and `src/features/<domain>/CONTEXT.md` for domain rules, and `docs/adr/` for architectural decisions.
 
 ## Authentication
 
@@ -89,7 +87,7 @@ CLOIE operates with three intentionally separated authentication modes, never co
 | **Local Development**  | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails                     | `NODE_ENV=development` only |
 | **Dedicated Demo**     | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration | Separate demo deployment    |
 
-The demo deployment is used for production-build route/rendering evidence, cross-role demonstrations, and performance traces. It never replaces OAuth evidence. See `docs/runbooks/dedicated-demo-deployment.md`, `docs/adr/0008-dedicated-demo-deployment-authentication.md`, and the archived `openspec/changes/archive/2026-07-29-add-dedicated-demo-auth/` artifacts for the full contract.
+The demo deployment is used for production-build route/rendering evidence, cross-role demonstrations, and performance traces. It never replaces OAuth evidence. See `docs/runbooks/dedicated-demo-deployment.md` and `docs/adr/0008-dedicated-demo-deployment-authentication.md` for the full contract.
 
 Key demo scripts:
 
@@ -492,7 +490,7 @@ See `src/__tests__/` for example test implementations.
 
 ## Continuous Integration
 
-CI runs on Depot. Workflows live in `.depot/workflows/`. The `.github/` directory is gitignored, so do not add GitHub Actions workflows there.
+CI runs on GitHub Actions. Workflows live in `.github/workflows/`. The retired Depot CI workflows remain locally under `.depot/workflows/` and are gitignored.
 
 `ci.yml` runs three jobs on every push to `main` and pull request:
 

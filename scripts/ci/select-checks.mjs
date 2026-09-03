@@ -4,7 +4,7 @@
  * CLI wrapper around the risk-domain classifier (issue #551).
  *
  * Prints the selection and, when running inside GitHub Actions, writes the
- * outputs expected by `.depot/workflows/ci.yml` (`needs.select.outputs.*`).
+ * outputs expected by `.github/workflows/ci.yml` (`needs.select.outputs.*`).
  * Scheduled or manual full-matrix runs pass `--all`.
  */
 

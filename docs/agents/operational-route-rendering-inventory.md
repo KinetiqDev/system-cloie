@@ -3,8 +3,8 @@
 This inventory selects route-level loading boundaries and role-level recovery for
 GitHub #184. Existing authorization, account-state gates, role-owned URLs, and
 server-side reads remain unchanged. Course Assignments entries receive only
-loading geometry; their server-first migration remains owned by OpenSpec tasks
-3.1-3.3.
+loading geometry; their server-first migration was completed in GitHub #184 and
+its follow-up slices.
 
 | Role         | Selected route                                                     | Fallback owner                                                                | Geometry source                                              | Boundary type |
 | ------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------- |
