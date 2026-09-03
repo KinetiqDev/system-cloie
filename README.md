@@ -490,7 +490,7 @@ See `src/__tests__/` for example test implementations.
 
 ## Continuous Integration
 
-CI runs on Depot. Workflows live in `.depot/workflows/`. The `.github/` directory is gitignored, so do not add GitHub Actions workflows there.
+CI runs on GitHub Actions. Workflows live in `.github/workflows/`. The retired Depot CI workflows remain locally under `.depot/workflows/` and are gitignored.
 
 `ci.yml` runs three jobs on every push to `main` and pull request:
 

@@ -73,8 +73,8 @@ skills-lock.json
 .idea
 .vscode
 
-# redundant ci
-.github/
+# depot ci (retired; workflows remain locally, untracked)
+.depot/
 
 #playwright
 .playwright-cli

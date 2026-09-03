@@ -216,7 +216,7 @@ Fallow/static-analysis findings are investigation leads, not automatic refactori
 
 ## Continuous Integration
 
-CI runs on Depot. Workflows live in `.depot/workflows/`. The `.github/` directory is gitignored; do not add GitHub Actions workflows there.
+CI runs on GitHub Actions. Workflows live in `.github/workflows/`. The retired Depot CI workflows remain locally under `.depot/workflows/` and are gitignored; do not re-add them.
 
 `ci.yml` gates every push to `main` and pull request with Prettier, ESLint, Vitest, and the production build. `database-integration` replays the migrations and seed against a disposable Postgres and runs the gated DB suites. `browser-e2e` runs the Playwright journeys against a production build and the disposable Postgres, signed in with the isolated CI test session (`CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test`).
 
