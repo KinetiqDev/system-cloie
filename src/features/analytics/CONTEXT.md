@@ -2,6 +2,16 @@
 
 Analytics defines how System CLOIE presents stakeholder-evaluation evidence for monitoring and continuous quality improvement without treating ratings as individual mastery or grades.
 
+## Program Head analytics surface (shipped contract)
+
+**Program Head analytics tabs**:
+Six canonical tabs — `outcomes`, `courses`, `stakeholders`, `trends`, `qualitative`, `ai` — encoded in URL state by `program-head-analytics-state.ts`. Unknown or legacy tab keys redirect to their canonical successors; the overview tab redirects to the dashboard; each tab resolves through view-gated reads that re-authorize via `resolveProgramHeadContext` per request. A filter fingerprint (comparable-series + filter set) marks previously returned AI insights stale when filters change.
+_Avoid_: Legacy seven-tab vocabulary, overview as a landing tab, client-side tab authorization
+
+**AI insight freshness**:
+The AI insight is a non-persisted, fingerprint-tagged result of the single re-authorizing Server Action; it is recomputed when the filter fingerprint changes and never cached across requests.
+_Avoid_: Persisted AI result, stale insight after filter change
+
 ## General Education Coordinator evidence (approved scope, issue #477)
 
 **General Education evidence (first release, approved)**:

@@ -43,3 +43,7 @@ _Avoid_: program membership, teaching load
 **Student academic context**:
 The student academic profile linking an account to a program and optional major. It must be removed before the Student role can be revoked; deleting it leaves the enrollment ledger rows and response history on the account.
 _Avoid_: enrollment record, academic year assignment
+
+**Canonical-name ordering**:
+The Secretary Users list sorts by the complete canonical account name (with legacy canonicalization for pre-canonical rows) and uses the canonical name for display labels, never split first/last name components.
+_Avoid_: First/last name columns, legacy split-name sorting

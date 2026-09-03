@@ -118,5 +118,5 @@ _Avoid_: ILO-to-PLO mapping, automatic crosswalk, attainment rollup
 
 ## Institutional Learning Outcome catalog ownership (resolved, ADR 0018, issue #490)
 
-The Institutional Learning Outcome catalog ownership and write-authority conflict (ADR 0005 / `introduce-institutional-learning-outcomes` documenting Secretary ownership vs `secretary-outcome-access-removal` and live server denial) is **resolved** by `transfer-ilo-catalog-to-gen-ed-coordinator` and ADR 0018: `GEN_ED_COORDINATOR college-wide owns ILO` (CRUD, reorder, archive, restore; college-wide `order`, `code @unique`). The Secretary has no ILO access and `SECRETARY_NAV` retains no Learning Outcomes entry. Earlier deferred notes (`openspec/config.yaml:132`, deferred section here) are superseded.
+The Institutional Learning Outcome catalog ownership and write-authority conflict (ADR 0005 documenting Secretary ownership vs the live server denial) is **resolved** by ADR 0018: `GEN_ED_COORDINATOR college-wide owns ILO` (CRUD, reorder, archive, restore; college-wide `order`, `code @unique`). The Secretary has no ILO access and `SECRETARY_NAV` retains no Learning Outcomes entry. Earlier deferred notes are superseded.
 _Avoid_: Secretary ILO ownership, Coordinator ILO catalog editor deferred assumption

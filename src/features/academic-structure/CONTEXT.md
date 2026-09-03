@@ -23,3 +23,15 @@ _Avoid_: Delete, archive, retire
 **Program lifecycle steward**:
 A Secretary or Dean authorized to create, edit, activate, deactivate, and permanently delete programs. Program Heads do not hold program lifecycle authority.
 _Avoid_: Program owner, Program Head administrator
+
+## Program Head catalog surface
+
+**Unified Program Head course catalog**:
+The Program Head catalog table resolves all its courses through one program-scoped read (`resolve-program-head-courses.ts` — a single `findMany`, no separate General Education query, no read-only flag) and presents status filtering, Year Level/Semester/Term columns, and summary cards. Course-type (Program-specific/General Education) and Gen-Ed badges are deliberately absent from this surface.
+_Avoid_: Dual catalog queries, course-type badge on the Program Head surface
+
+## Demo catalog seed provenance
+
+**ACD demo catalog seed**:
+The demo-seeded catalog derives from `docs/acd_programs_demo_seed_recommended_expanded.csv` (102 ACD courses, title-normalized) and is upserted by `ACD_DEMO_CATALOG_SEED_SOURCE` provenance; courses removed from the seed set are converged to inactive rather than deleted.
+_Avoid_: Hand-edited demo catalog, hard-deleting seed-managed courses

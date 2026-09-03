@@ -68,7 +68,7 @@ Use `signed demo session` only for route rendering, UI, navigation, server-read,
 
 ## References
 
-- OpenSpec change: `openspec/changes/add-dedicated-demo-auth/`
+- Retired change artifacts: the original OpenSpec change was retired with the OpenSpec deprecation (preserved in git history; see `docs/openspec-deprecation-migration-report.md`)
 - Parent feature: [GitHub issue #196](https://github.com/Tugeru/project-cloie/issues/196)
 - Contract issue: [GitHub issue #197](https://github.com/Tugeru/project-cloie/issues/197)
 - Operator runbook: `docs/runbooks/dedicated-demo-deployment.md`

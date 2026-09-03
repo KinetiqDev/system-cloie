@@ -41,17 +41,17 @@ Rejected. Inline bootstrap requires `'unsafe-inline'`. Experimental build-time S
 - Preference is stored in browser storage under a stable key, parsed through a pure resolution module shared by the bootstrap script and hydrated provider.
 - A missing, malformed, or unavailable value defaults to System.
 - Explicit Light or Dark takes precedence over OS preference.
-- Primary Production appearance is enabled only when the server-only `CLOIE_APPEARANCE_ENABLED` release setting is exactly `"true"`; unset, empty, `"false"`, malformed, and all other values remain disabled. When disabled, the bootstrap forces Light before paint, ignores storage, and writes no preference. The avatar menu omits the control and `Settings → Appearance` returns not-found UI.
-- Repository readiness is recorded in the OpenSpec task; a separate operator follows `docs/runbooks/appearance-production-activation.md` to make, verify, record, or roll back the deployment configuration change. No source-code or example-environment default enables the rollout.
+- Primary Production appearance is enabled only when the server-only `CLOIE_APPEARANCE_ENABLED` release setting is exactly `"true"`; unset, empty, `"false"`, malformed, and all other values remain disabled. When disabled, the bootstrap forces Light before paint, ignores storage, and writes no preference. The standalone appearance trigger (`AppearanceMenuTrigger` in the topbar, mirrored on public routes) omits the control.
+- Repository readiness is recorded on issue [#225](https://github.com/Tugeru/project-cloie/issues/225); a separate operator follows `docs/runbooks/appearance-production-activation.md` to make, verify, record, or roll back the deployment configuration change. No source-code or example-environment default enables the rollout.
 - The setting is listed in `.env.example` as a release control, never exposed through `NEXT_PUBLIC_*`.
 
 ### 2. Protected showcase access
 
-| Environment | Behavior |
-| --- | --- |
-| `NODE_ENV === "development"` | Available to authenticated accounts that pass the parent account-state guard |
-| Isolated dedicated demo deployment with valid `getDemoAuthConfig()` | Available to demo-authenticated accounts |
-| Primary Production or malformed demo configuration | Route returns not-found UI before showcase content renders |
+| Environment                                                         | Behavior                                                                     |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `NODE_ENV === "development"`                                        | Available to authenticated accounts that pass the parent account-state guard |
+| Isolated dedicated demo deployment with valid `getDemoAuthConfig()` | Available to demo-authenticated accounts                                     |
+| Primary Production or malformed demo configuration                  | Route returns not-found UI before showcase content renders                   |
 
 - The policy relies on ADR 0008's fail-closed dedicated-demo identity checks.
 - Under streamed layouts, the access check runs in the route's server component before content is yielded. This may produce a not-found UI within the authenticated shell rather than an HTTP 404 status. An actual 404 is only promised if the check can execute before the streaming response commits and tests prove the status code.
@@ -81,7 +81,7 @@ Rejected. Inline bootstrap requires `'unsafe-inline'`. Experimental build-time S
 
 ### Negative
 
-- Two separate controls (avatar menu and Settings Appearance) must remain synchronized; the appearance provider is the single source of truth.
+- The appearance trigger appears on both the app topbar and the public layout using the same provider state; the appearance provider is the single source of truth. (A planned `Settings → Appearance` route was removed during implementation review; no settings route exists.)
 - Effective deployed-header confirmation is a blocking implementation precondition and a repeated readiness check.
 - Showcase denial under streamed layouts may produce not-found UI rather than an HTTP 404 until implementation proves the earlier check.
 - The server-owned rollout setting adds an operator step that could be missed if not documented in the release runbook.
@@ -92,4 +92,4 @@ Rejected. Inline bootstrap requires `'unsafe-inline'`. Experimental build-time S
 - ADR 0006 — deferred PWA/offline
 - ADR 0008 — dedicated demo deployment fail-closed
 - ADR 0009 — Program Head selected-Program routes
-- OpenSpec change: `openspec/changes/migrate-unified-design-system/`
+- Retired change artifacts: the original OpenSpec change was retired with the OpenSpec deprecation (preserved in git history; see `docs/openspec-deprecation-migration-report.md`)

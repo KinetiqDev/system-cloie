@@ -29,14 +29,12 @@ For every user-facing change:
 
 Before implementation, design, planning, or investigation, orient through:
 
-1. `openspec/config.yaml` — canonical architecture, stack, and engineering rules.
-2. `CONTEXT-MAP.md` — domain-context index.
-3. `src/features/<domain>/CONTEXT.md` — domain terminology, rules, and invariants.
-4. `**docs/adr/**` — architectural decisions.
+1. `CONTEXT-MAP.md` — domain-context index.
+2. `src/features/<domain>/CONTEXT.md` — domain terminology, rules, and invariants.
+3. `**docs/adr/**` — architectural decisions.
 
 - Relevant GitHub issues, implementation, and tests.
 - **When sources conflict, surface the conflict. Do not silently choose or invent behavior.**
-- `openspec/config.yaml` rules are binding.
 - `cloie-prd.md` and `cloie-srs.md` are deprecated and outdated.
 
 ## Core Engineering Principles
@@ -54,6 +52,31 @@ Before implementation, design, planning, or investigation, orient through:
 - **YAGNI:** Do not build abstractions, features, flexibility, or infrastructure until the current requirement actually needs them.
 
 ---
+
+## Architecture
+
+- Modular monolith organized under `src/features/<domain>/`; split code by domain responsibility and cohesion, not arbitrary line count.
+- Server Components are the default. Keep `"use client"` boundaries narrow and limited to state, hooks, browser APIs, event handlers, charts, drag-and-drop, and react-hook-form; justify every new boundary.
+- Fetch and authorize data in Server Components or server-only feature services. Pass serializable prepared data into Client Components.
+- Server Actions live under `src/lib/actions/` and must follow existing patterns in the affected domain.
+- Role-owned routes and program/course scope checks must remain explicit and server-enforced.
+- For caching designs, include a cache matrix covering key, scope, lifetime, tags, invalidation triggers, authorization boundary, and stale behavior.
+- For charts, prepare and authorize data on the server and render through shadcn/ui chart primitives plus Recharts.
+- Record durable architectural decisions in an ADR when a design introduces or reverses a cross-cutting constraint.
+
+## Rendering and Caching
+
+- Prefer route `loading.tsx` files, Suspense boundaries, and meaningful skeletons; parallelize independent server reads.
+- Avoid internal HTTP calls from Server Components when a server service can be called directly. Do not move server-owned data fetching to the client merely to show loading UI.
+- Never shared-cache sessions, authorization decisions, user profiles, student identifiers, rosters, raw responses, or qualitative comments. Cache only explicitly scoped catalog or aggregate data.
+- Every persistent cache must define its key dimensions, lifetime, tags, invalidation triggers, authorization boundary, and stale-data behavior.
+- Enabling Next.js Cache Components requires a separate reviewed change.
+
+## Implementation Slices
+
+- Organize implementation into dependency-ordered vertical slices — not separate schema, backend, frontend, and test phases — each delivering testable behavior or preserving a named invariant end to end.
+- Place required database migrations before code that depends on the migrated shape.
+- For performance work, identify the measured or observable problem instead of assuming caching is the solution. Mark breaking behavior or data changes with **BREAKING**.
 
 ## Communication and Explanations
 
@@ -105,6 +128,10 @@ During implementation:
 - **Authentication:** Supabase Auth / SSR
 - **Testing:** Vitest
   Use `pnpm dev` for the Turbopack development server.
+- **Charts:** Recharts composed through shadcn/ui chart primitives; do not install another charting library.
+- **Qualitative processing:** winkNLP, stopword, the existing word-cloud component, and the OpenAI-compatible server-side interpretation boundary.
+- **E2E:** Playwright (`@playwright/test`) with the `browser-e2e` CI gate.
+- **TanStack Query** is not a default dependency; add it only when a design establishes a concrete need for client-owned asynchronous server state.
 
 ### UI
 
@@ -159,6 +186,9 @@ Typical commands:
 
 Do not hand-edit `src/types/supabase-database.ts`.
 Some Postgres constraints cannot be represented exactly by Prisma. Preserve existing SQL-backed constraints rather than replacing them with incorrect Prisma uniqueness declarations.
+Never use Docker-backed `supabase db pull` or `supabase db diff --linked`.
+Database migrations must remain compatible with existing production data.
+Multi-file Prisma schemas stay organized by existing domain boundaries under `prisma/models/`.
 For Supabase, Postgres, RLS, migrations, indexes, or database-security work, load the applicable Supabase project skills first.
 
 ---

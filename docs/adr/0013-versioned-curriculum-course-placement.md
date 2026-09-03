@@ -8,7 +8,7 @@
 
 System CLOIE introduces a Curriculum bounded context that versioned how Courses are placed (year level, semester, term) within an academic Program. A Program owns one or more `CurriculumVersion` records with a DRAFT → PUBLISHED → RETIRED lifecycle; each version holds `CurriculumCourse` rows that pin a stable Course to a placement and freeze `course_code_snapshot`/`course_title_snapshot` at creation. PUBLISHED and RETIRED versions are immutable — revisions are made by cloning into a new DRAFT. RETIRED means historical, not hidden. Course temporal defaults (`default_year_level`/`default_semester`/`default_term`) become migration hints only, superseding ADR 0003 Clarification 6 once baseline DRAFT curricula are validated and published.
 
-CourseAssignment does not yet reference CurriculumCourse: assignment creation still takes a direct Course and year level, and placement authority transfers to CurriculumCourse only as a future integration (see the `integrate-curriculum-course-assignments` OpenSpec change).
+**Update (2026-09-03):** CourseAssignment now optionally references CurriculumCourse (`curriculum_course_id`, migration `20260810082518`): assignment creation validates the link (PUBLISHED-only, same program, course match) and pre-fills the year level from the placement, and published Course-bound evaluations snapshot `curriculumCourseId`/`curriculumVersionId`. Placement authority has transferred; the curriculum link is validated at creation but remains optional for legacy assignments (see `src/features/curriculum/CONTEXT.md` "Assignment linkage").
 
 ## Context
 

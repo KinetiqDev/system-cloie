@@ -17,7 +17,7 @@ _Avoid_: Client-provided course_scope, Secretary assignment mutation, Coordinato
 _Avoid_: Roster management by Coordinator, generic permission-configured component framework
 
 **Coordinator scope model**:
-All Coordinators share the single college-wide General Education scope (`course.course_scope == GENERAL_EDUCATION`). No portfolio assignment table exists in this change; a partitioned scope requires a separate approved OpenSpec capability.
+All Coordinators share the single college-wide General Education scope (`course.course_scope == GENERAL_EDUCATION`). No portfolio assignment table exists in this change; a partitioned scope requires a separately approved capability change and a new assignment model.
 _Avoid_: Coordinator portfolio assignment, fake General Education Program
 
 **Curriculum provenance (advisory, unchanged in this slice)**:
@@ -69,6 +69,10 @@ _Avoid_: Roster eligibility reason, generic success/failure
 **Roster name resolution**:
 The authorized discovery and human-reconciliation step that compares one uploaded name with a bounded Course-assignment candidate population. Exact, suggested, ambiguous, and no-match states describe discovery evidence only; confirmed `User.id` identifies the Student.
 _Avoid_: Name identity, automatic fuzzy match, normalized Student name
+
+**Roster import durable constraints**:
+The roster pipeline deliberately excludes fuzzy scoring (suggestions come only from deterministic normalization tiers — middle-token, initial, separator, suffix, diacritic — over NFKC case-folded whitespace-collapsed names), persists no import history, and suppresses stale responses after a newer request supersedes them. CSV input is UTF-8 with quoting, keyed on a name column, bounded at 1–100 rows with `INVALID_NAME` on unusable rows. Name search requires at least 2 characters, returns at most 10 results, and never paginates. A candidate row matching an already-active membership resolves as `DUPLICATE_MATCH`.
+_Avoid_: Fuzzy similarity score, import history table, unbounded search
 
 **Roster failure**:
 An expected roster validation, eligibility, permission, or lifecycle outcome is reported with a specific safe message. An unexpected failure is reported with a generic safe message and support reference ID; its diagnostic detail stays in server-side structured logs. During an import it stops remaining processing while preserving completed memberships.
