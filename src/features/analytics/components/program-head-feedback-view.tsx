@@ -112,8 +112,7 @@ export function ProgramHeadFeedbackView({
             <QualitativeWordCloud
               title="Qualitative Feedback"
               tokens={tokens}
-              responseCount={qualitativeResponseCount}
-              adjustable
+              answerCount={qualitativeItemCount}
             />
           ) : (
             <Alert variant="information">

@@ -124,7 +124,7 @@ export function CourseBoundReviewTabs({ detail, responseBasePath }: CourseBoundR
         <QualitativeWordCloud
           title="Qualitative Feedback"
           tokens={detail.wordCloudTokens}
-          responseCount={detail.qualitativeItemCount}
+          answerCount={detail.qualitativeItemCount}
         />
       </TabsContent>
     </Tabs>

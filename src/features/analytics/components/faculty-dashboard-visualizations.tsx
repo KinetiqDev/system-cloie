@@ -37,8 +37,7 @@ export function FacultyDashboardVisualizations({
         <QualitativeWordCloud
           title="Qualitative feedback themes"
           tokens={wordCloudTokens}
-          responseCount={qualitativeResponseCount}
-          adjustable
+          answerCount={qualitativeItemCount}
         />
         <Card>
           <CardHeader>
@@ -73,8 +72,8 @@ export function FacultyDashboardVisualizations({
               </div>
             </div>
             <p className="text-muted-foreground text-body-sm">
-              Word size reflects frequency. Adjusting the slider changes how many top terms are
-              shown, not the underlying evidence.
+              Word size reflects frequency. The Ranked view lists exact counts, and the Cloud view
+              shows the shape of the most mentioned terms — neither changes the underlying evidence.
             </p>
           </CardContent>
         </Card>

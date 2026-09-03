@@ -172,14 +172,20 @@ describe("OverlayAndFeedbackShowcase", () => {
     render(<DesignSystemShowcasePage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Actions" }));
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: "View details" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "View details" })).toBeInTheDocument()
+    );
     expect(screen.getByRole("menuitem", { name: "Delete sample" })).toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("menuitem", { name: "View details" })).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByRole("menuitem", { name: "View details" })).not.toBeInTheDocument()
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Duplicate sample" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "Duplicate sample" })).toBeInTheDocument()
+    );
   });
 
   it("fires the shared toast contract with each supported kind", () => {
@@ -228,21 +234,24 @@ describe("ChartShowcase", () => {
     ).not.toBeNull();
   });
 
-  it("renders the qualitative word cloud with frequency summary, insight, and exact values", () => {
+  it("renders the qualitative word cloud with summary, insight, and ranked values", () => {
     render(<DesignSystemShowcasePage />);
 
     expect(
-      screen.getByRole("heading", { name: "Word cloud with repeated-token hatch distinction" })
+      screen.getByRole("heading", { name: "Word cloud with a bounded ranked view" })
     ).toBeInTheDocument();
     expect(screen.getByText("Sample Word Cloud")).toBeInTheDocument();
-    expect(screen.getByText("Top 13 words from 24 qualitative responses")).toBeInTheDocument();
-    expect(screen.getByText("Most frequent word: clarity (12).")).toBeInTheDocument();
+    expect(screen.getByText("13 terms from 24 qualitative answers")).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Sample Word Cloud" })
+      screen.getByText(
+        /Most frequent term: clarity \(12\)\. 13 of 13 terms appear more than once\./
+      )
     ).toBeInTheDocument();
-    expect(
-      document.querySelector('[id*="word-cloud-"][id$="-hatch-0-c1"]')
-    ).not.toBeNull();
+    expect(screen.getByRole("region", { name: "Sample Word Cloud" })).toBeInTheDocument();
+
+    // Ranked exact values are one toggle away from the default cloud.
+    fireEvent.click(screen.getByRole("button", { name: "Ranked" }));
+    expect(screen.getByRole("table", { name: "Exact word frequency values" })).toBeInTheDocument();
   });
 });
 
@@ -259,45 +268,47 @@ describe("FormControlsShowcase", () => {
     });
   });
 
-  it(
-    "submits valid values and renders the reference submission summary",
-    async () => {
-      render(<DesignSystemShowcasePage />);
+  it("submits valid values and renders the reference submission summary", async () => {
+    render(<DesignSystemShowcasePage />);
 
-      fireEvent.change(screen.getByLabelText("Display name"), {
-        target: { value: "Sample Reviewer" },
-      });
-      fireEvent.click(screen.getByRole("radio", { name: /Evaluator/ }));
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: { value: "Sample Reviewer" },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: /Evaluator/ }));
 
-      fireEvent.click(screen.getByRole("combobox", { name: "Department" }));
-      await waitFor(() => {
-        expect(screen.getByRole("option", { name: "Arts and Sciences" })).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByRole("option", { name: "Arts and Sciences" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Department" }));
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Arts and Sciences" })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("option", { name: "Arts and Sciences" }));
 
-      fireEvent.click(screen.getByRole("combobox", { name: "Plan" }));
-      await waitFor(() => {
-        expect(screen.getByRole("option", { name: "Standard plan" })).toBeInTheDocument();
-      });
-      fireEvent.click(screen.getByRole("option", { name: "Standard plan" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Plan" }));
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: "Standard plan" })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("option", { name: "Standard plan" }));
 
-      fireEvent.submit(screen.getByRole("form", { name: "Showcase reference form" }));
+    fireEvent.submit(screen.getByRole("form", { name: "Showcase reference form" }));
 
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Submitted: Evaluator in Arts and Sciences/)
-        ).toBeInTheDocument();
-      });
-    },
-    10000
-  );
+    await waitFor(() => {
+      expect(screen.getByText(/Submitted: Evaluator in Arts and Sciences/)).toBeInTheDocument();
+    });
+  }, 10000);
 });
 
 describe("NavigationShowcase", () => {
   it("renders every role card from the real central declarations", () => {
     render(<NavigationShowcase />);
 
-    for (const role of ["Secretary", "Dean", "Program Head", "Faculty", "Student", "Alumni", "Industry Partner"]) {
+    for (const role of [
+      "Secretary",
+      "Dean",
+      "Program Head",
+      "Faculty",
+      "Student",
+      "Alumni",
+      "Industry Partner",
+    ]) {
       expect(screen.getByText(role)).toBeInTheDocument();
     }
     expect(screen.getAllByText("Course Assignments").length).toBeGreaterThan(0);
@@ -336,10 +347,7 @@ describe("NavigationShowcase", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Open navigation menu" })[0]);
 
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
-    expect(screen.getByRole("link", { name: "Users" })).toHaveAttribute(
-      "href",
-      "/secretary/users"
-    );
+    expect(screen.getByRole("link", { name: "Users" })).toHaveAttribute("href", "/secretary/users");
   });
 });
 
@@ -351,7 +359,9 @@ describe("ResponsiveShowcase", () => {
     expect(screen.getByText(/Dean icon rail/)).toBeInTheDocument();
     expect(screen.getByText(/Mobile · <md/)).toBeInTheDocument();
 
-    expect(screen.getByRole("navigation", { name: "Desktop sidebar reference" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "Desktop sidebar reference" })
+    ).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Dean rail reference" })).toBeInTheDocument();
     expect(
       screen.getByRole("navigation", { name: "Respondent bottom navigation reference" })

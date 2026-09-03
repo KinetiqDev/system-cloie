@@ -4,7 +4,14 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  containerClassName,
+  ...props
+}: React.ComponentProps<"table"> & {
+  /** Classes for the scrollable container that owns overflow (e.g. bounded height + vertical scrolling). */
+  containerClassName?: string;
+}) {
   return (
     // The overflow container is keyboard-focusable so horizontally scrollable
     // tables stay reachable without a mouse (axe scrollable-region-focusable).
@@ -13,7 +20,10 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
       role="region"
       aria-label="Table content (scrollable)"
       tabIndex={0}
-      className="focus-visible:outline-ring relative w-full overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2"
+      className={cn(
+        "focus-visible:outline-ring relative w-full overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2",
+        containerClassName
+      )}
     >
       <table
         data-slot="table"

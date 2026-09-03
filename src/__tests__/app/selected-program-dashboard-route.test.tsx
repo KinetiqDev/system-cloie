@@ -328,11 +328,11 @@ describe("selected Program dashboard route", () => {
     expect(within(card).getAllByText("No ratings")).toHaveLength(1);
   });
 
-  it("renders the qualitative word cloud and adjusts its visible token count", async () => {
+  it("renders the qualitative word cloud panel with its tokens", async () => {
     await loadPage();
 
     expect(wordCloudPropsMock.mock.calls.at(-1)?.[0]).toEqual(
-      expect.objectContaining({ adjustable: true, tokens: expect.any(Array) })
+      expect.objectContaining({ answerCount: expect.any(Number), tokens: expect.any(Array) })
     );
     expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].tokens).toHaveLength(40);
   });

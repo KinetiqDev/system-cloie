@@ -592,7 +592,7 @@ function FeedbackSection({ feedback }: { feedback: GeneralEducationAnalyticsDTO[
         <QualitativeWordCloud
           title="Frequent terms"
           tokens={tokens}
-          responseCount={qualitativeResponseCount}
+          answerCount={qualitativeItemCount}
         />
       ) : (
         <Alert variant="information">

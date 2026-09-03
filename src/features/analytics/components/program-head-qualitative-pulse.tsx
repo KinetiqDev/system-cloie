@@ -10,8 +10,8 @@ import type { QualitativePulse } from "@/features/analytics/services/get-program
 
 /**
  * Qualitative pulse (spec §13.10): the server already returned identifier-
- * redacted tokens capped at QUALITATIVE_TOKEN_CAP; the slider only re-slices
- * that bounded list client-side. Raw comments stay in Responses.
+ * redacted tokens capped at QUALITATIVE_TOKEN_CAP; the panel's views only
+ * re-render that bounded list client-side. Raw comments stay in Responses.
  */
 export function ProgramHeadQualitativePulse({
   pulse,
@@ -81,8 +81,7 @@ export function ProgramHeadQualitativePulse({
           <QualitativeWordCloud
             title="Frequent terms"
             tokens={pulse.tokens}
-            responseCount={pulse.respondentCount}
-            adjustable
+            answerCount={pulse.answerCount}
           />
         )}
 
