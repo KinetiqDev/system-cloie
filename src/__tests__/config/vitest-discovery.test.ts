@@ -17,7 +17,7 @@ function readPackageScripts(): Record<string, string> {
 }
 
 function readCiWorkflow(): string {
-  return readFileSync(join(process.cwd(), ".depot/workflows/ci.yml"), "utf8");
+  return readFileSync(join(process.cwd(), ".github/workflows/ci.yml"), "utf8");
 }
 
 describe("vitest discovery determinism (537)", () => {

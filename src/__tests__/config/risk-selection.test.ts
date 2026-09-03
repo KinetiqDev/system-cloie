@@ -131,8 +131,8 @@ describe("risk-domain check selection (551)", () => {
 
   it("fails closed to the full matrix when CI verification machinery changes", () => {
     const ciFiles = [
-      ".depot/workflows/ci.yml",
       ".github/workflows/ci.yml",
+      ".github/workflows/scheduled.yml",
       "scripts/ci/select-checks.mjs",
       "scripts/ci/lib/risk-domains.mjs",
       "scripts/ci/lib/changed-files.mjs",

@@ -12,7 +12,7 @@ const eslintRequire = createRequire(rootRequire.resolve("eslint/package.json"));
 const eslintrcRequire = createRequire(eslintRequire.resolve("@eslint/eslintrc/package.json"));
 const yaml = eslintrcRequire("js-yaml") as { load: (source: string) => unknown };
 
-const WORKFLOW_PATH = join(process.cwd(), ".depot", "workflows", "code-intelligence.yml");
+const WORKFLOW_PATH = join(process.cwd(), ".github", "workflows", "code-intelligence.yml");
 const WORKFLOW_SOURCE = readFileSync(WORKFLOW_PATH, "utf8");
 
 interface Workflow {
