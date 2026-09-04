@@ -9,7 +9,7 @@ last_verified: 2026-09-04
 
 This document interprets the Assumption College of Davao policy [ISDRT Policy on Institutional Information Systems](../institutional/isdrt-policy.md) for System CLOIE, the college-wide outcome-based education evaluation platform developed in this repository.
 
-It is an interpretation and working record only. The authoritative policy is the transcription at [../institutional/isdrt-policy.md](../institutional/isdrt-policy.md), converted faithfully from `ISDRT Policy_Long.docx` (permanent copy in [../assets/source-docs/institutional/](../assets/source-docs/institutional/), working copy in [../_sources/institutional/](../_sources/institutional/)). Where this document and the policy disagree, the policy governs; conflicts are surfaced here, never silently reconciled.
+It is an interpretation and working record only. The authoritative policy is the transcription at [../institutional/isdrt-policy.md](../institutional/isdrt-policy.md), converted faithfully from `ISDRT Policy_Long.docx` (permanent copy in [../assets/source-docs/institutional/](../assets/source-docs/institutional/), working copy in [../\_sources/institutional/](../_sources/institutional/)). Where this document and the policy disagree, the policy governs; conflicts are surfaced here, never silently reconciled.
 
 Per the policy's section XI (Effectivity), the policy takes effect upon approval; the transcription includes the signature block (prepared by the ICTC Supervisor, approved by the ACD President) but the source states no effective date.
 
@@ -27,15 +27,15 @@ Statuses: **Supported** (repository evidence exists today), **Partial** (some ev
 
 Before deployment, the developer must formally turn over the completed system to the ICTC with the listed artifacts.
 
-| Required artifact | System CLOIE practice | Evidence | Status |
-| --- | --- | --- | --- |
-| Complete and updated code | The repository itself is the turnover artifact, maintained in git on `main` | Repository `KinetiqDev/system-cloie` | Supported |
-| System architecture diagram | No consolidated diagram; architectural decisions are recorded as ADRs | `../adr/` (21 ADRs) | Pending (consolidated diagram) |
-| User manual | No end-user documentation exists in the repository | — | Pending |
-| Administrator Guide or System Playbook | Deployment, secrets, migrations, backups, and rollback are documented operator-side, though not packaged as a formal administrator guide | `../deployment-coolify.md`, [deployment-inventory.md](deployment-inventory.md), `../runbooks/` | Partial |
-| Administrative and database access credentials | Secrets are configured in Coolify/Supabase and intentionally absent from git; encrypted recovery custody is not yet established | [deployment-inventory.md](deployment-inventory.md), "Secrets" section | Partial |
-| Backup and restore procedures | Initial backups exist and passed readability checks, but automation, off-server copies, and a restore drill are outstanding | [deployment-inventory.md](deployment-inventory.md), "Backups" section | Partial |
-| List of software dependencies and licenses | Dependencies are pinned via the pnpm lockfile; a license inventory has not been compiled | `package.json`, `pnpm-lock.yaml` | Partial |
+| Required artifact                              | System CLOIE practice                                                                                                                    | Evidence                                                                                       | Status                         |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------ |
+| Complete and updated code                      | The repository itself is the turnover artifact, maintained in git on `main`                                                              | Repository `KinetiqDev/system-cloie`                                                           | Supported                      |
+| System architecture diagram                    | No consolidated diagram; architectural decisions are recorded as ADRs                                                                    | `../adr/` (21 ADRs)                                                                            | Pending (consolidated diagram) |
+| User manual                                    | No end-user documentation exists in the repository                                                                                       | —                                                                                              | Pending                        |
+| Administrator Guide or System Playbook         | Deployment, secrets, migrations, backups, and rollback are documented operator-side, though not packaged as a formal administrator guide | `../deployment-coolify.md`, [deployment-inventory.md](deployment-inventory.md), `../runbooks/` | Partial                        |
+| Administrative and database access credentials | Secrets are configured in Coolify/Supabase and intentionally absent from git; encrypted recovery custody is not yet established          | [deployment-inventory.md](deployment-inventory.md), "Secrets" section                          | Partial                        |
+| Backup and restore procedures                  | Initial backups exist and passed readability checks, but automation, off-server copies, and a restore drill are outstanding              | [deployment-inventory.md](deployment-inventory.md), "Backups" section                          | Partial                        |
+| List of software dependencies and licenses     | Dependencies are pinned via the pnpm lockfile; a license inventory has not been compiled                                                 | `package.json`, `pnpm-lock.yaml`                                                               | Partial                        |
 
 Final validation testing before turnover maps to the repository's verification practice: narrowest-relevant verification first, CI on GitHub Actions, and the production build verified at initial deployment (see `AGENTS.md`, "Verification" and "Continuous Integration"; [deployment-inventory.md](deployment-inventory.md), "Verification").
 

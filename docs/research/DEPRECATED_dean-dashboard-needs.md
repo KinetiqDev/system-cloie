@@ -9,16 +9,16 @@
 
 Based on institutional effectiveness platform case studies, dean testimonials, and dashboard design literature, here are the top items a dean checks first when logging in:
 
-| # | Item | Reason | Priority |
-|---|------|--------|----------|
-| 1 | **Alerts & Notifications** (deadlines, compliance flags, bottlenecks) | Deans live in reactive mode; missed deadlines = accreditation risk, faculty grievances, administrative fire drills | Primary (must see) |
-| 2 | **Assessment/Accreditation Progress** (% programs with current assessment plans, missing reports, action items overdue) | Continuous accreditation readiness is existential; "don't get ready for reaccreditation, stay ready" (TCU/HelioCampus case study) | Primary |
-| 3 | **Faculty Compliance Status** (RPT deadlines, annual reviews, credentialing gaps, course evaluation completion) | Faculty affairs = half the dean's job; P&T bottlenecks create political and legal exposure | Primary |
-| 4 | **Enrollment & Student Success KPIs** (DFW rates, retention, course fill rates, at-risk student alerts) | Student success is the dean's #1 external accountability metric; funders and trustees ask about this first | Primary |
-| 5 | **Curriculum/Program Health** (programs with gaps, curriculum map coverage, catalog accuracy, new course proposals pending) | Curriculum = academic identity; gaps here show up in accreditation and employer complaints | Secondary (one click) |
-| 6 | **Budget/Resource Signals** (workload distribution, class size outliers, adjunct ratio trends, program cost margins) | Deans are department heads' bosses; workload inequity is the #1 grievance driver | Secondary |
-| 7 | **Course Evaluation Response Rates** | Low response = invalid data = can't use for P&T; this is a dean-level crisis every semester | Secondary |
-| 8 | **Strategic Plan Progress** (unit-level goal progress, evidence bank health) | Trustees and provosts ask; deans need to tell the story | Tertiary (deep report) |
+| #   | Item                                                                                                                        | Reason                                                                                                                            | Priority               |
+| --- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1   | **Alerts & Notifications** (deadlines, compliance flags, bottlenecks)                                                       | Deans live in reactive mode; missed deadlines = accreditation risk, faculty grievances, administrative fire drills                | Primary (must see)     |
+| 2   | **Assessment/Accreditation Progress** (% programs with current assessment plans, missing reports, action items overdue)     | Continuous accreditation readiness is existential; "don't get ready for reaccreditation, stay ready" (TCU/HelioCampus case study) | Primary                |
+| 3   | **Faculty Compliance Status** (RPT deadlines, annual reviews, credentialing gaps, course evaluation completion)             | Faculty affairs = half the dean's job; P&T bottlenecks create political and legal exposure                                        | Primary                |
+| 4   | **Enrollment & Student Success KPIs** (DFW rates, retention, course fill rates, at-risk student alerts)                     | Student success is the dean's #1 external accountability metric; funders and trustees ask about this first                        | Primary                |
+| 5   | **Curriculum/Program Health** (programs with gaps, curriculum map coverage, catalog accuracy, new course proposals pending) | Curriculum = academic identity; gaps here show up in accreditation and employer complaints                                        | Secondary (one click)  |
+| 6   | **Budget/Resource Signals** (workload distribution, class size outliers, adjunct ratio trends, program cost margins)        | Deans are department heads' bosses; workload inequity is the #1 grievance driver                                                  | Secondary              |
+| 7   | **Course Evaluation Response Rates**                                                                                        | Low response = invalid data = can't use for P&T; this is a dean-level crisis every semester                                       | Secondary              |
+| 8   | **Strategic Plan Progress** (unit-level goal progress, evidence bank health)                                                | Trustees and provosts ask; deans need to tell the story                                                                           | Tertiary (deep report) |
 
 **Key insight from Watermark case studies:** Deans at institutions like University of Arizona and Northeastern Illinois University report that having a "single source of truth" (unified dashboard) reduced their morning triage from 30+ minutes across spreadsheets/emails to under 5 minutes.
 
@@ -28,7 +28,7 @@ Based on institutional effectiveness platform case studies, dean testimonials, a
 
 ### A. Time-Sensitive (Action Required Today)
 
-These are *interrupt-driven* and failure has immediate consequences:
+These are _interrupt-driven_ and failure has immediate consequences:
 
 - Accreditation deadlines (SACSCOC, MSCHE, HLC, NWCCU, etc.)
 - Faculty review/P&T dossier deadlines
@@ -43,7 +43,7 @@ These are *interrupt-driven* and failure has immediate consequences:
 
 ### B. Analytic (Understand & Decide)
 
-These support *strategic decisions* and pattern recognition:
+These support _strategic decisions_ and pattern recognition:
 
 - Longitudinal outcome trends (assessment results over 3–5 years)
 - Program health scores (enrollment + retention + DFW + assessment quality)
@@ -57,7 +57,7 @@ These support *strategic decisions* and pattern recognition:
 
 ### C. Navigational (Get Somewhere Else)
 
-These are *wayfinding* affordances, not data:
+These are _wayfinding_ affordances, not data:
 
 - Links to faculty success system, course evaluations, curriculum proposals
 - Quick access to specific program review documents
@@ -73,20 +73,20 @@ These are *wayfinding* affordances, not data:
 
 Synthesized from platform marketing (Watermark, HelioCampus, AEFIS, Coursetune), higher-ed blog literature, and case study testimonials:
 
-| Pain Point | Why It Hurts | Dashboard Solution |
-|------------|--------------|-------------------|
-| **Accreditation deadline scrambling** | "We used to run to somebody's office and grab different pieces of evidence" (Garrett College); 95% reduction in prep time with unified system (HelioCampus) | Real-time readiness meter; evidence bank with missing-item flags; auto-generated compliance reports |
-| **Low course evaluation response rates** | Can't use data for P&T; invalidates assessment culture; Amarillo College and CSU LA both identified this as primary pain point | Live response-rate tracker by department/professor; automated reminder workflows; benchmark vs. peer departments |
-| **Faculty compliance tracking** | Spreadsheets across offices; credentialing gaps discovered during accreditor visit; "hunt and peck frustration" (Watermark Faculty Success testimonials) | Unified faculty activity timeline; credential expiring alerts; annual review status board |
-| **Curriculum gaps & catalog drift** | "We used to have lots of binders, files, and folders" (West Liberty University); curriculum changes don't make it to syllabi/catalog | Curriculum map coverage visualization; pending proposal pipeline; catalog sync status |
-| **Workload inequity** | Full-time vs. adjunct ratios; course prep load; service burden; #1 source of faculty grievance | Workload heat map by department/faculty; trend lines over semesters; flag outliers |
-| **Data silos** | "Prior to P&SS, we used a homegrown system for program review, a competitor for accreditation, and yet a different one for strategic planning" (Assistant Provost, anonymized institution) | Single hub integrating LMS, SIS, course evals, faculty activity, assessment results |
-| **Proving continuous improvement** | Accreditors want "closing the loop" — evidence that assessment data led to action | Action-item tracker linked to assessment findings; longitudinal trend visualization; before/after metrics |
-| **Equity gaps** | Online vs. in-person parity; demographic achievement gaps; Pell/non-Pell retention | Disaggregated outcome views; equity gap alerts; modality comparison dashboards |
-| **Political visibility** | Deans report to provosts who report to presidents who report to boards; need to tell a credible story | Executive summary view; auto-generated narrative reports; public-facing faculty profiles |
-| **Faculty development blind spots** | Don't know who's struggling until course evals come back; growth opportunities missed | Teaching effectiveness trends; professional development participation; mentorship pairing suggestions |
+| Pain Point                               | Why It Hurts                                                                                                                                                                               | Dashboard Solution                                                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **Accreditation deadline scrambling**    | "We used to run to somebody's office and grab different pieces of evidence" (Garrett College); 95% reduction in prep time with unified system (HelioCampus)                                | Real-time readiness meter; evidence bank with missing-item flags; auto-generated compliance reports              |
+| **Low course evaluation response rates** | Can't use data for P&T; invalidates assessment culture; Amarillo College and CSU LA both identified this as primary pain point                                                             | Live response-rate tracker by department/professor; automated reminder workflows; benchmark vs. peer departments |
+| **Faculty compliance tracking**          | Spreadsheets across offices; credentialing gaps discovered during accreditor visit; "hunt and peck frustration" (Watermark Faculty Success testimonials)                                   | Unified faculty activity timeline; credential expiring alerts; annual review status board                        |
+| **Curriculum gaps & catalog drift**      | "We used to have lots of binders, files, and folders" (West Liberty University); curriculum changes don't make it to syllabi/catalog                                                       | Curriculum map coverage visualization; pending proposal pipeline; catalog sync status                            |
+| **Workload inequity**                    | Full-time vs. adjunct ratios; course prep load; service burden; #1 source of faculty grievance                                                                                             | Workload heat map by department/faculty; trend lines over semesters; flag outliers                               |
+| **Data silos**                           | "Prior to P&SS, we used a homegrown system for program review, a competitor for accreditation, and yet a different one for strategic planning" (Assistant Provost, anonymized institution) | Single hub integrating LMS, SIS, course evals, faculty activity, assessment results                              |
+| **Proving continuous improvement**       | Accreditors want "closing the loop" — evidence that assessment data led to action                                                                                                          | Action-item tracker linked to assessment findings; longitudinal trend visualization; before/after metrics        |
+| **Equity gaps**                          | Online vs. in-person parity; demographic achievement gaps; Pell/non-Pell retention                                                                                                         | Disaggregated outcome views; equity gap alerts; modality comparison dashboards                                   |
+| **Political visibility**                 | Deans report to provosts who report to presidents who report to boards; need to tell a credible story                                                                                      | Executive summary view; auto-generated narrative reports; public-facing faculty profiles                         |
+| **Faculty development blind spots**      | Don't know who's struggling until course evals come back; growth opportunities missed                                                                                                      | Teaching effectiveness trends; professional development participation; mentorship pairing suggestions            |
 
-**Key insight from HelioCampus:** "Data doesn't make decisions. Confident leaders do." The dean's job is not to analyze data but to *act on it with confidence*. Dashboards must reduce decision friction, not add cognitive load.
+**Key insight from HelioCampus:** "Data doesn't make decisions. Confident leaders do." The dean's job is not to analyze data but to _act on it with confidence_. Dashboards must reduce decision friction, not add cognitive load.
 
 ---
 
@@ -106,25 +106,25 @@ Watermark's solutions reveal what deans actually do:
 
 ### HelioCampus Assessment Management & Analytics
 
-HelioCampus emphasizes *decision-ready* data for deans:
+HelioCampus emphasizes _decision-ready_ data for deans:
 
 - **Outcomes Assessment:** Direct and indirect measures in one place. "Stop scrambling before reaccreditation."
 - **Accreditation & Program Review:** Evidence bank, workflow automation, continuous readiness.
 - **Academic Cost Analytics:** Program viability analysis connecting costs to enrollment demand and faculty workloads. "Know the difference [between margin and mission alignment] — and make the case for both."
 - **Student Retention Insights:** Early alerts, predictive analytics, proactive outreach prioritization.
 
-**Dashboard pattern:** HelioCampus emphasizes *contextual intelligence* — data connected across enrollment, finance, and assessment. Deans can answer "Why are these numbers what they are?" not just "What are the numbers?"
+**Dashboard pattern:** HelioCampus emphasizes _contextual intelligence_ — data connected across enrollment, finance, and assessment. Deans can answer "Why are these numbers what they are?" not just "What are the numbers?"
 
 ### EAB Edify / Navigate360
 
-EAB focuses on *student success* and *enrollment* dashboards:
+EAB focuses on _student success_ and _enrollment_ dashboards:
 
 - Predictive analytics for at-risk students
 - Recruitment funnel visualization
 - Retention intervention tracking
 - CRM-integrated decision support
 
-**Dashboard pattern:** EAB dashboards are heavily oriented toward *action lists* — who to call, what to do, by when. Less about exploration, more about guided workflow.
+**Dashboard pattern:** EAB dashboards are heavily oriented toward _action lists_ — who to call, what to do, by when. Less about exploration, more about guided workflow.
 
 ### Coursetune (Curriculum Mapping)
 
@@ -172,13 +172,13 @@ Deans are not data analysts. Raw numbers are meaningless without:
 
 Every data point should have an associated action:
 
-| Data Point | Action |
-|------------|--------|
-| Assessment plan overdue | "Send reminder to Dr. Smith" |
-| Course eval response rate 42% | "Extend window / send nudge" |
-| DFW rate spike in Math 101 | "Schedule chair meeting" |
-| Faculty credential gap | "Alert HR / initiate compliance plan" |
-| Curriculum proposal pending 30 days | "Escalate to curriculum committee" |
+| Data Point                          | Action                                |
+| ----------------------------------- | ------------------------------------- |
+| Assessment plan overdue             | "Send reminder to Dr. Smith"          |
+| Course eval response rate 42%       | "Extend window / send nudge"          |
+| DFW rate spike in Math 101          | "Schedule chair meeting"              |
+| Faculty credential gap              | "Alert HR / initiate compliance plan" |
+| Curriculum proposal pending 30 days | "Escalate to curriculum committee"    |
 
 ### Principle 4: Role-Based Views
 
@@ -219,56 +219,56 @@ Accreditation reviewers, trustees, and donors respond to stories. Dashboards sho
 
 ### Primary Zone (Must See Immediately — Above Fold)
 
-| Content | Data Source | Visual Treatment | Rationale |
-|---------|-------------|-----------------|-----------|
-| **Notification Center** | All modules | Badge count + dropdown feed | Interrupt-driven items only |
-| **Accreditation Readiness Meter** | Assessment module | % complete + countdown | Existential risk |
-| **Faculty Compliance Status** | Faculty Success | Red/yellow/green dots by department | P&T/political risk |
-| **Enrollment/DFW Alert** | SIS/LMS | Sparkline + alert flag | External accountability |
-| **Course Eval Response Rate** | Evaluations | Progress bar vs. target threshold | Data validity |
-| **Action Buttons** | N/A | "Run report" / "Send reminder" / "Schedule meeting" | Reduce friction |
+| Content                           | Data Source       | Visual Treatment                                    | Rationale                   |
+| --------------------------------- | ----------------- | --------------------------------------------------- | --------------------------- |
+| **Notification Center**           | All modules       | Badge count + dropdown feed                         | Interrupt-driven items only |
+| **Accreditation Readiness Meter** | Assessment module | % complete + countdown                              | Existential risk            |
+| **Faculty Compliance Status**     | Faculty Success   | Red/yellow/green dots by department                 | P&T/political risk          |
+| **Enrollment/DFW Alert**          | SIS/LMS           | Sparkline + alert flag                              | External accountability     |
+| **Course Eval Response Rate**     | Evaluations       | Progress bar vs. target threshold                   | Data validity               |
+| **Action Buttons**                | N/A               | "Run report" / "Send reminder" / "Schedule meeting" | Reduce friction             |
 
 ### Secondary Zone (One Click Away — Dashboard Body)
 
-| Content | Data Source | Visual Treatment | Rationale |
-|---------|-------------|-----------------|-----------|
-| **Assessment Plan Progress by Program** | Assessment module | Bar chart + table | Accountability |
-| **Faculty Workload Distribution** | Faculty Success | Heat map or treemap | Equity |
-| **Curriculum Map Coverage** | Curriculum module | Network graph or coverage matrix | Alignment |
-| **Student Success Trends** | SIS/LMS | Multi-line chart (3–5 years) | Storytelling |
-| **Program Health Scorecards** | Multi-source | Color-coded scorecard | Priority setting |
-| **Budget/Enrollment Signals** | SIS/Finance | Table with trend arrows | Resource decisions |
-| **Task/Assignment Tracker** | All modules | Kanban-style board | Workflow mgmt |
+| Content                                 | Data Source       | Visual Treatment                 | Rationale          |
+| --------------------------------------- | ----------------- | -------------------------------- | ------------------ |
+| **Assessment Plan Progress by Program** | Assessment module | Bar chart + table                | Accountability     |
+| **Faculty Workload Distribution**       | Faculty Success   | Heat map or treemap              | Equity             |
+| **Curriculum Map Coverage**             | Curriculum module | Network graph or coverage matrix | Alignment          |
+| **Student Success Trends**              | SIS/LMS           | Multi-line chart (3–5 years)     | Storytelling       |
+| **Program Health Scorecards**           | Multi-source      | Color-coded scorecard            | Priority setting   |
+| **Budget/Enrollment Signals**           | SIS/Finance       | Table with trend arrows          | Resource decisions |
+| **Task/Assignment Tracker**             | All modules       | Kanban-style board               | Workflow mgmt      |
 
 ### Tertiary Zone (Deep Reports — Sub-pages)
 
-| Content | Data Source | Visual Treatment | Rationale |
-|---------|-------------|-----------------|-----------|
-| **Historical Accreditation Reports** | Assessment archive | PDF/Word export | Compliance evidence |
-| **Longitudinal Outcome Analysis** | Assessment + LMS | Statistical charts | Research/QA |
-| **Equity Gap Analysis** | SIS + assessment | Disaggregated tables | DEI initiatives |
-| **Cost-per-Student by Program** | Finance + SIS | Breakdown tables | Program viability |
-| **Raw Data Exports** | All modules | CSV/Excel download | Custom analysis |
-| **System Configuration** | Admin panel | Forms and toggles | Maintenance |
+| Content                              | Data Source        | Visual Treatment     | Rationale           |
+| ------------------------------------ | ------------------ | -------------------- | ------------------- |
+| **Historical Accreditation Reports** | Assessment archive | PDF/Word export      | Compliance evidence |
+| **Longitudinal Outcome Analysis**    | Assessment + LMS   | Statistical charts   | Research/QA         |
+| **Equity Gap Analysis**              | SIS + assessment   | Disaggregated tables | DEI initiatives     |
+| **Cost-per-Student by Program**      | Finance + SIS      | Breakdown tables     | Program viability   |
+| **Raw Data Exports**                 | All modules        | CSV/Excel download   | Custom analysis     |
+| **System Configuration**             | Admin panel        | Forms and toggles    | Maintenance         |
 
 ---
 
 ## 7. Key Quotes from the Field
 
 > "Don't get ready for reaccreditation, stay ready."  
-> — *Dr. David Allen, Director of Institutional Effectiveness, Texas Christian University (HelioCampus)*
+> — _Dr. David Allen, Director of Institutional Effectiveness, Texas Christian University (HelioCampus)_
 
 > "Rather than searching through emails or spreadsheets, I can find everything I need in one place. This streamlines processes like annual reviews, accreditation, and promotion or tenure reporting, making them much easier and faster."  
-> — *Michelle Y., Office Administrator, midsize institution (Watermark Faculty Success)*
+> — _Michelle Y., Office Administrator, midsize institution (Watermark Faculty Success)_
 
 > "During enrollment periods, we can see daily when students aren't enrolling, which lets us have the right conversations that we simply couldn't have before."  
-> — *Doug Masterson, Senior Associate Provost, University of Southern Mississippi (HelioCampus)*
+> — _Doug Masterson, Senior Associate Provost, University of Southern Mississippi (HelioCampus)_
 
 > "If anything, Watermark kind of inspired us. Once we started really familiarizing ourselves with Planning and Self-Study, we recognized, 'You know what, we need to raise the bar ourselves'."  
-> — *Jonathan Renz, Research Associate, Office of Institutional Effectiveness (Watermark)*
+> — _Jonathan Renz, Research Associate, Office of Institutional Effectiveness (Watermark)_
 
 > "Data doesn't make decisions. Confident leaders do."  
-> — *HelioCampus marketing, reflecting industry consensus*
+> — _HelioCampus marketing, reflecting industry consensus_
 
 ---
 
@@ -281,6 +281,7 @@ The ideal dean dashboard is not a data visualization tool — it is a **decision
 3. **Deep Work Layer** (30+ minutes): Build reports, run analyses, prepare for meetings.
 
 It must be:
+
 - **Integrated:** Pulling from assessment, faculty, curriculum, and student success systems
 - **Trusted:** Transparent about data sources and calculations
 - **Actionable:** Every metric has a corresponding action

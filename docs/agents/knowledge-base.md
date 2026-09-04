@@ -11,15 +11,15 @@ How to orient in this repository: which sources answer which kind of question, w
 
 ## Source Roles and Authority
 
-| Source                                                                 | Answers                                                            | Authority                                       |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------- |
-| Code and tests (`src/**`, `e2e/**`)                                     | What the system actually does today                                 | Current behavior — highest                      |
-| `src/features/<domain>/CONTEXT.md`                                      | Domain terminology, rules, invariants                               | Current domain intent (must match code)         |
-| [docs/adr/](../adr/)                                                    | Durable architectural decisions and their context                   | Durable decisions                               |
-| `docs/product/`, `docs/architecture/`, `docs/operations/`                | Maintained explanation of behavior, structure, and operations        | Maintained explanation (must match code)        |
+| Source                                                                               | Answers                                                                                | Authority                                                      |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Code and tests (`src/**`, `e2e/**`)                                                  | What the system actually does today                                                    | Current behavior — highest                                     |
+| `src/features/<domain>/CONTEXT.md`                                                   | Domain terminology, rules, invariants                                                  | Current domain intent (must match code)                        |
+| [docs/adr/](../adr/)                                                                 | Durable architectural decisions and their context                                      | Durable decisions                                              |
+| `docs/product/`, `docs/architecture/`, `docs/operations/`                            | Maintained explanation of behavior, structure, and operations                          | Maintained explanation (must match code)                       |
 | [docs/capstone/guide/](../capstone/guide/), [docs/institutional/](../institutional/) | External requirements the system must satisfy (capstone guide, institutional policies) | External authoritative requirements — not implementation specs |
-| [docs/history/](../history/), `docs/openspec-deprecation-migration-report.md` | How the project got here; retired plans and change artifacts        | Historical — never describes current behavior   |
-| `graphify-out/` ([docs/tooling/graphify.md](../tooling/graphify.md))     | Cross-domain navigation over the current tree                       | Generated navigation aid — verify before use    |
+| [docs/history/](../history/), `docs/openspec-deprecation-migration-report.md`        | How the project got here; retired plans and change artifacts                           | Historical — never describes current behavior                  |
+| `graphify-out/` ([docs/tooling/graphify.md](../tooling/graphify.md))                 | Cross-domain navigation over the current tree                                          | Generated navigation aid — verify before use                   |
 
 Precedence: implementation and tests settle what **is**; CONTEXT.md and maintained docs explain what **is meant**; ADRs settle what **was decided and why**; external guides settle what **must be true**; history explains what **used to be**.
 

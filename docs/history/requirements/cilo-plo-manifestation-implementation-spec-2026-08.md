@@ -335,10 +335,7 @@ Replace that concept with explicit mapping assignments.
 Example:
 
 ```ts
-type CILOPLOManifestation =
-  | "LEARNING"
-  | "PRACTICE"
-  | "OPPORTUNITY";
+type CILOPLOManifestation = "LEARNING" | "PRACTICE" | "OPPORTUNITY";
 
 type CourseAlignmentMapping = {
   ploId: string;

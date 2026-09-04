@@ -11,21 +11,21 @@ Skeleton aligned to [Appendix G — Simplified Testing and User Validation Forms
 
 ## Header block (pending)
 
-| Capstone Project Title: | pending |
-| :---- | :---- |
-| **Team / Proponents:** | pending |
-| **Client / Partner:** | pending |
-| **Capstone Adviser:** | pending |
-| **System / Build Version:** | pending |
-| **Testing Period:** | pending |
-| **Project Stage:** | ☐ Pre-Final   ☐ Pre-Defense Validation   ☐ Final |
-| **Document Version:** | pending |
+| Capstone Project Title:     | pending                                      |
+| :-------------------------- | :------------------------------------------- |
+| **Team / Proponents:**      | pending                                      |
+| **Client / Partner:**       | pending                                      |
+| **Capstone Adviser:**       | pending                                      |
+| **System / Build Version:** | pending                                      |
+| **Testing Period:**         | pending                                      |
+| **Project Stage:**          | ☐ Pre-Final ☐ Pre-Defense Validation ☐ Final |
+| **Document Version:**       | pending                                      |
 
 ## Automated test layers (existing infrastructure)
 
 ### Unit and integration suites — Vitest
 
-- Runner: `pnpm test` ([package.json](../../../package.json)); unit/integration suites under [src/__tests__/](../../../src/__tests__/).
+- Runner: `pnpm test` ([package.json](../../../package.json)); unit/integration suites under [src/**tests**/](../../../src/__tests__/).
 - Database-invariant suites are **gated**: they run only via `RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db` against a disposable test database, so `pnpm test` never writes to a shared backend. Gate rationale and the full sixteen-suite list: [README.md](../../../README.md) ("Running Tests"). Target verification: `pnpm verify:database-target`; suite-discovery completeness: `pnpm verify:database-suites` ([scripts/verify-database-suite-completeness.ts](../../../scripts/verify-database-suite-completeness.ts)).
 - CI enforcement: the `database-integration` job applies migrations, seeds the fixture, and runs the gated suites against an ephemeral Postgres service container — never a hosted backend ([.github/workflows/ci.yml](../../../.github/workflows/ci.yml)).
 - Test evidence to record: suite counts, latest run reference, failing/flaky findings. **All pending.**
@@ -46,11 +46,11 @@ Evidence records: **pending** — none recorded yet.
 
 Per [Appendix G-1](../guide/appendix-g-simplified-testing-user-validation.md). One row per feature/workflow/critical requirement; populated from actual executed runs only.
 
-| No. | Feature / Requirement Tested | What Was Tested / Test Scenario | Expected Result | Result | Issue / Finding | Evidence / Reference |
-| :---: | ----- | ----- | ----- | ----- | ----- | ----- |
-| 1 | pending | pending | pending | ☐ Pass ☐ Fail | pending | pending |
+| No. | Feature / Requirement Tested | What Was Tested / Test Scenario | Expected Result | Result        | Issue / Finding | Evidence / Reference |
+| :-: | ---------------------------- | ------------------------------- | --------------- | ------------- | --------------- | -------------------- |
+|  1  | pending                      | pending                         | pending         | ☐ Pass ☐ Fail | pending         | pending              |
 
-**Testing Summary:** Total Tested: pending   Passed: pending   Failed: pending   Pass Rate: pending%
+**Testing Summary:** Total Tested: pending Passed: pending Failed: pending Pass Rate: pending%
 
 **Major unresolved system issue(s), if any:** pending
 
@@ -58,14 +58,14 @@ Per [Appendix G-1](../guide/appendix-g-simplified-testing-user-validation.md). O
 
 Per [Appendix G-2](../guide/appendix-g-simplified-testing-user-validation.md). No alpha/beta/pilot/UAT/usability session has been conducted or scheduled yet; this section is a placeholder and MUST NOT be filled with projected participants or results.
 
-| Field | Value |
-| :---- | :---- |
-| **Validation Type** | ☐ Alpha ☐ Beta ☐ Pilot/Field ☐ Usability ☐ UAT ☐ Other: pending |
-| **Date / Location or Mode** | pending |
-| **User / Stakeholder Group** | pending |
-| **Number of Participants** | pending |
-| **Main Tasks / Features Evaluated** | pending |
-| **Method Used** | ☐ Task Performance ☐ Observation ☐ Questionnaire ☐ Interview ☐ UAT Checklist ☐ Other: pending |
+| Field                               | Value                                                                                         |
+| :---------------------------------- | :-------------------------------------------------------------------------------------------- |
+| **Validation Type**                 | ☐ Alpha ☐ Beta ☐ Pilot/Field ☐ Usability ☐ UAT ☐ Other: pending                               |
+| **Date / Location or Mode**         | pending                                                                                       |
+| **User / Stakeholder Group**        | pending                                                                                       |
+| **Number of Participants**          | pending                                                                                       |
+| **Main Tasks / Features Evaluated** | pending                                                                                       |
+| **Method Used**                     | ☐ Task Performance ☐ Observation ☐ Questionnaire ☐ Interview ☐ UAT Checklist ☐ Other: pending |
 
 Task-level result rows: pending — added only after sessions occur.
 
@@ -73,23 +73,23 @@ Task-level result rows: pending — added only after sessions occur.
 
 Per [Appendix G-3](../guide/appendix-g-simplified-testing-user-validation.md). Records significant defects/feedback requiring action, with retest results. Empty until real findings exist; IDs are issued sequentially (ISS-01, ISS-02, …) and never reused.
 
-| Issue ID | Defect / Feedback / Finding | Priority | Revision / Action Taken | Where Changed | Retest Result | Status |
-| :---: | ----- | ----- | ----- | ----- | ----- | ----- |
-| ISS-__ | pending | ☐ High ☐ Medium ☐ Low | pending | pending | ☐ Pass ☐ Fail | ☐ Closed ☐ Open |
+| Issue ID | Defect / Feedback / Finding | Priority              | Revision / Action Taken | Where Changed | Retest Result | Status          |
+| :------: | --------------------------- | --------------------- | ----------------------- | ------------- | ------------- | --------------- |
+| ISS-\_\_ | pending                     | ☐ High ☐ Medium ☐ Low | pending                 | pending       | ☐ Pass ☐ Fail | ☐ Closed ☐ Open |
 
 ## G-4. User / Client Validation Summary and Acceptance
 
 Per [Appendix G-4](../guide/appendix-g-simplified-testing-user-validation.md). Entirely **pending** — blocked on G-2 sessions and G-3 revisions/retests.
 
-| System / Build Validated | pending |
-| :---- | :---- |
-| **Users / Stakeholders Represented** | pending |
-| **Number of Participants** | pending |
-| **Main Strengths Observed** | pending |
-| **Most Important Issues / Feedback** | pending |
-| **Major Revisions Made After Validation** | pending |
-| **Remaining Known Limitations** | pending |
-| **Overall User / Stakeholder Result** | ☐ Accepted   ☐ Accepted with Minor Conditions   ☐ Requires Further Revision |
-| **Ready for Final Defense from User-Validation Perspective** | ☐ Yes   ☐ Yes, with Minor Conditions   ☐ Not Yet |
+| System / Build Validated                                     | pending                                                                 |
+| :----------------------------------------------------------- | :---------------------------------------------------------------------- |
+| **Users / Stakeholders Represented**                         | pending                                                                 |
+| **Number of Participants**                                   | pending                                                                 |
+| **Main Strengths Observed**                                  | pending                                                                 |
+| **Most Important Issues / Feedback**                         | pending                                                                 |
+| **Major Revisions Made After Validation**                    | pending                                                                 |
+| **Remaining Known Limitations**                              | pending                                                                 |
+| **Overall User / Stakeholder Result**                        | ☐ Accepted ☐ Accepted with Minor Conditions ☐ Requires Further Revision |
+| **Ready for Final Defense from User-Validation Perspective** | ☐ Yes ☐ Yes, with Minor Conditions ☐ Not Yet                            |
 
 Signatures (user/stakeholder confirmation, proponent and adviser review per Appendix G): **pending** — no names, signatures, or dates may be entered until the corresponding activities have occurred.

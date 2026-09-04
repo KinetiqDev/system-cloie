@@ -22,12 +22,12 @@ The repository root **is** the Obsidian vault. There is no nested vault and no s
 
 Configure Obsidian once per machine (Settings → Files and links):
 
-| Setting                            | Value                                | Why                                                          |
-| ---------------------------------- | ------------------------------------ | ------------------------------------------------------------ |
-| Vault location                     | Repository root                      | Repo root is the vault; no nested vaults                      |
-| New link format                    | Relative path to file                | Relative Markdown links are the project convention            |
-| Use `[[Wikilinks]]`                | Off                                  | Wikilinks are prohibited in committed docs                    |
-| Automatically update internal links | On                                  | File moves keep links valid during refactors of the docs tree |
+| Setting                             | Value                 | Why                                                           |
+| ----------------------------------- | --------------------- | ------------------------------------------------------------- |
+| Vault location                      | Repository root       | Repo root is the vault; no nested vaults                      |
+| New link format                     | Relative path to file | Relative Markdown links are the project convention            |
+| Use `[[Wikilinks]]`                 | Off                   | Wikilinks are prohibited in committed docs                    |
+| Automatically update internal links | On                    | File moves keep links valid during refactors of the docs tree |
 
 Core plugins to enable: **Search**, **Backlinks**, **Outgoing Links**, **Graph**, **Properties**. All of these operate on plain Markdown and add no syntax obligations to committed files. No community plugins are required for any documentation workflow in this repository.
 

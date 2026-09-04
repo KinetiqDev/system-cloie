@@ -46,10 +46,10 @@ CI previously ran on Depot; those workflows were ported to GitHub Actions and re
 
 ## Related runbooks
 
-| Document | Owns |
-|---|---|
-| [`docs/deployment-coolify.md`](../deployment-coolify.md) | Full production deployment runbook (host, Coolify, Supabase, secrets, migrations, backups, rollback). |
-| [`docs/operations/deployment-inventory.md`](../operations/deployment-inventory.md) | Observed deployment state, verification evidence, open operational items. |
-| [`docs/runbooks/dedicated-demo-deployment.md`](../runbooks/dedicated-demo-deployment.md) | Demo deployment environment contract, provisioning/reset, rollback and incident disable. |
+| Document                                                                                               | Owns                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`docs/deployment-coolify.md`](../deployment-coolify.md)                                               | Full production deployment runbook (host, Coolify, Supabase, secrets, migrations, backups, rollback).                                                |
+| [`docs/operations/deployment-inventory.md`](../operations/deployment-inventory.md)                     | Observed deployment state, verification evidence, open operational items.                                                                            |
+| [`docs/runbooks/dedicated-demo-deployment.md`](../runbooks/dedicated-demo-deployment.md)               | Demo deployment environment contract, provisioning/reset, rollback and incident disable.                                                             |
 | [`docs/runbooks/appearance-production-activation.md`](../runbooks/appearance-production-activation.md) | Fail-closed activation of Light/Dark/System appearance in primary production ([ADR 0010](../adr/0010-unified-appearance-and-protected-showcase.md)). |
-| [`docs/testing/production-browser-evidence.md`](../testing/production-browser-evidence.md) | Accepted production browser evidence process. |
+| [`docs/testing/production-browser-evidence.md`](../testing/production-browser-evidence.md)             | Accepted production browser evidence process.                                                                                                        |

@@ -5,6 +5,7 @@ status: authoritative-reference
 source_file: Capstone_Technical_Document_Guide_2026.docx
 conversion: faithful-markdown-transcription
 ---
+
 **Bachelor of Science in Information Technology**
 
 # CAPSTONE PROJECT TECHNICAL DOCUMENT GUIDE
@@ -15,17 +16,17 @@ The document should function as technical evidence of the project rather than as
 
 ## I. DOCUMENT AND WRITING STANDARDS
 
-| Item | Recommended Standard |
-| :---- | :---- |
-| Paper / Margins | Letter (8.5 × 11 in); 1 in margins on all sides. A larger left margin may be retained only if required for hard binding. |
-| Font | Arial 11 or Times New Roman 12\. Use one font consistently throughout the manuscript. |
-| Spacing | 1.5 spacing for body text; single spacing for tables, captions, references, and long technical entries. Use paragraph spacing rather than blank lines. |
-| Alignment | Body text justified or left-aligned consistently. Avoid excessive first-line indentation; use a standard 0.5 in first-line indent if required. |
-| Headings | Use numbered hierarchical headings (e.g., 3.2, 3.2.1) consistently. Avoid unnecessary levels. |
+| Item             | Recommended Standard                                                                                                                                                                                  |
+| :--------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Paper / Margins  | Letter (8.5 × 11 in); 1 in margins on all sides. A larger left margin may be retained only if required for hard binding.                                                                              |
+| Font             | Arial 11 or Times New Roman 12\. Use one font consistently throughout the manuscript.                                                                                                                 |
+| Spacing          | 1.5 spacing for body text; single spacing for tables, captions, references, and long technical entries. Use paragraph spacing rather than blank lines.                                                |
+| Alignment        | Body text justified or left-aligned consistently. Avoid excessive first-line indentation; use a standard 0.5 in first-line indent if required.                                                        |
+| Headings         | Use numbered hierarchical headings (e.g., 3.2, 3.2.1) consistently. Avoid unnecessary levels.                                                                                                         |
 | Tables / Figures | Number consecutively by chapter or throughout the document. Table titles appear above; figure captions appear below. Every table/figure must be discussed in the text and cite its source if adapted. |
-| Page numbering | Roman numerals for preliminary pages; Arabic numerals beginning with Chapter 1\. Title page carries no displayed page number. |
-| Citation style | APA 7th edition unless the College adopts another official style. Use a reference manager when possible. |
-| Writing | Use concise technical prose. Avoid unsupported claims, generic filler, and lengthy textbook definitions. Explain project-specific decisions and evidence. |
+| Page numbering   | Roman numerals for preliminary pages; Arabic numerals beginning with Chapter 1\. Title page carries no displayed page number.                                                                         |
+| Citation style   | APA 7th edition unless the College adopts another official style. Use a reference manager when possible.                                                                                              |
+| Writing          | Use concise technical prose. Avoid unsupported claims, generic filler, and lengthy textbook definitions. Explain project-specific decisions and evidence.                                             |
 
 ## II. MANUSCRIPT STRUCTURE
 
@@ -197,26 +198,26 @@ State evidence-based conclusions about whether project objectives and success cr
 
 ## CHAPTER 6. APPENDICES
 
-*Please see VI. APPENDICES/ SUPPORTING EVIDENCES*
+_Please see VI. APPENDICES/ SUPPORTING EVIDENCES_
 
 ## III. REQUIRED CORE TECHNICAL ARTIFACTS
 
 The following artifacts provide a common BSIT competency baseline. The exact form may vary according to the capstone type.
 
-| Artifact | Expectation |
-| :---- | :---- |
-| Problem / stakeholder evidence | Interview/observation/documentary evidence or equivalent basis for requirements. |
-| Requirements specification | Prioritized functional requirements plus measurable quality/non-functional requirements and acceptance criteria. |
-| Requirements Traceability Matrix | Trace objectives and requirements to design/implementation and test evidence. |
-| Interaction model | Use cases, user stories/story map, workflows, or equivalent appropriate to the project. |
-| Solution architecture | High-level components, interfaces, data stores, external services/devices, and deployment context. |
-| Data model | ERD/schema or appropriate data model for projects that persist/manage data. |
-| UX prototype | Key flows and representative interfaces with evidence of user/stakeholder feedback. |
-| Security/privacy design | Risk-appropriate controls and treatment of sensitive data, identities, permissions, dependencies, and threats. |
-| Repository / project evidence | Version history, issue/task records, releases/milestones, and evidence of individual/team contribution. |
-| Test evidence | Test plan/strategy, test cases or automated tests, defect/issue log, results, revisions, and retest evidence. |
-| User validation | Alpha, beta, pilot, usability, UAT, or equivalent testing appropriate to the project. |
-| Deployment / handover evidence | Deployment topology, configuration/installation guidance, operational documentation, acceptance/handover as applicable. |
+| Artifact                         | Expectation                                                                                                             |
+| :------------------------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| Problem / stakeholder evidence   | Interview/observation/documentary evidence or equivalent basis for requirements.                                        |
+| Requirements specification       | Prioritized functional requirements plus measurable quality/non-functional requirements and acceptance criteria.        |
+| Requirements Traceability Matrix | Trace objectives and requirements to design/implementation and test evidence.                                           |
+| Interaction model                | Use cases, user stories/story map, workflows, or equivalent appropriate to the project.                                 |
+| Solution architecture            | High-level components, interfaces, data stores, external services/devices, and deployment context.                      |
+| Data model                       | ERD/schema or appropriate data model for projects that persist/manage data.                                             |
+| UX prototype                     | Key flows and representative interfaces with evidence of user/stakeholder feedback.                                     |
+| Security/privacy design          | Risk-appropriate controls and treatment of sensitive data, identities, permissions, dependencies, and threats.          |
+| Repository / project evidence    | Version history, issue/task records, releases/milestones, and evidence of individual/team contribution.                 |
+| Test evidence                    | Test plan/strategy, test cases or automated tests, defect/issue log, results, revisions, and retest evidence.           |
+| User validation                  | Alpha, beta, pilot, usability, UAT, or equivalent testing appropriate to the project.                                   |
+| Deployment / handover evidence   | Deployment topology, configuration/installation guidance, operational documentation, acceptance/handover as applicable. |
 
 ## IV. ARTIFACTS THAT ARE CONDITIONAL, NOT AUTOMATICALLY REQUIRED
 
@@ -232,37 +233,35 @@ Testing should progress from developer/internal verification to integrated syste
 
 ## VI. APPENDICES / SUPPORTING EVIDENCE
 
-- Approved project proposal / letters / stakeholder agreements, as applicable  
-- Data-gathering instruments, interview guides, consent forms, and anonymized evidence  
-- Requirements Traceability Matrix  
-- Detailed user stories/use-case descriptions and acceptance criteria  
-- Backlog, sprint/release records, Gantt/WBS, risk register, and meeting/review evidence as applicable  
-- Detailed test cases, automated-test reports, defect/issue logs, alpha/beta/pilot/UAT evidence, and retest results  
-- Detailed data dictionary/schema and API documentation when too extensive for Chapter 4  
-- Selected relevant source-code excerpts only when needed as evidence; prefer repository/version-control evidence over printing large volumes of code  
-- User Manual and Administrator/Technical Guide as separate operational documents where appropriate  
-- Installation/Deployment Guide and configuration requirements  
-- Client/stakeholder acceptance, turnover, or deployment documentation  
+- Approved project proposal / letters / stakeholder agreements, as applicable
+- Data-gathering instruments, interview guides, consent forms, and anonymized evidence
+- Requirements Traceability Matrix
+- Detailed user stories/use-case descriptions and acceptance criteria
+- Backlog, sprint/release records, Gantt/WBS, risk register, and meeting/review evidence as applicable
+- Detailed test cases, automated-test reports, defect/issue logs, alpha/beta/pilot/UAT evidence, and retest results
+- Detailed data dictionary/schema and API documentation when too extensive for Chapter 4
+- Selected relevant source-code excerpts only when needed as evidence; prefer repository/version-control evidence over printing large volumes of code
+- User Manual and Administrator/Technical Guide as separate operational documents where appropriate
+- Installation/Deployment Guide and configuration requirements
+- Client/stakeholder acceptance, turnover, or deployment documentation
 - Research-paper format output (ACM/IEEE-style paper) if required by the program
 
 - **ACM-STYLE CAPSTONE RESEARCH PAPER TEMPLATE**
 
-1. Title  
-2. Authors and Affiliations  
-3. Abstract  
-4. CCS Concepts (when required for the target ACM venue)  
-5. Keywords  
-6. Introduction  
-7. Related Work  
-8. Methodology / System Development Approach  
-9. System Design and Implementation  
-10. Evaluation and Results  
-11. Discussion  
-12. Conclusion and Future Work  
-13. Acknowledgments (if applicable)  
+1. Title
+2. Authors and Affiliations
+3. Abstract
+4. CCS Concepts (when required for the target ACM venue)
+5. Keywords
+6. Introduction
+7. Related Work
+8. Methodology / System Development Approach
+9. System Design and Implementation
+10. Evaluation and Results
+11. Discussion
+12. Conclusion and Future Work
+13. Acknowledgments (if applicable)
 14. References
-
-    
 
 ## VII. CAPSTONE-SPECIFIC ADAPTATION
 
@@ -271,4 +270,3 @@ The adviser/panel may approve equivalent artifacts for projects that do not fit 
 ## VIII. RECOMMENDED DOCUMENTATION PRINCIPLE
 
 Evidence over volume. The technical manuscript should make it possible for an informed reader to understand the problem, reproduce the reasoning behind the solution, trace requirements into implementation and tests, evaluate the quality and risks of the product, and determine whether the proponents exercised professional BSIT-level engineering judgment.
-

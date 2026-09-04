@@ -232,18 +232,18 @@ gives the Secretary and Dean college-wide General Education authority. Do not
 apply the matrix until an approved OpenSpec change and the domain context record
 the transfer.
 
-| Capability | Secretary | General Education Coordinator | Program Head | Faculty | Dean |
-|---|---|---|---|---|---|
-| View General Education assignments | Read-only if retained | Read and write | Read within selected Program | Own assignments | Current behavior |
-| Create, edit, activate, deactivate, or delete General Education assignments | No under the proposed transfer | Yes | No | No | Current behavior |
-| Manage Program-specific assignments | Yes | No | Assigned Programs | No | Current behavior |
-| Search Faculty for assignment | Yes | Yes | Yes | No | Yes |
-| Manage ILO catalog | Sources conflict; no live editor | No until ownership is approved | No | No | Read-only |
-| Manage PLO catalog | No | No | Assigned Programs | No | Read-only |
-| Create or manage CILOs | No by default | No | No | Assigned Courses | No |
-| Map a General Education CILO to an ILO | Separate correction decision | No by default | No | Assigned General Education Courses | No |
-| View General Education analytics | No new access | Yes | Existing Program view | Existing Course view | Existing oversight |
-| View PLO analytics | No | No | Assigned Programs | Existing Course views | Existing oversight |
+| Capability                                                                  | Secretary                        | General Education Coordinator  | Program Head                 | Faculty                            | Dean               |
+| --------------------------------------------------------------------------- | -------------------------------- | ------------------------------ | ---------------------------- | ---------------------------------- | ------------------ |
+| View General Education assignments                                          | Read-only if retained            | Read and write                 | Read within selected Program | Own assignments                    | Current behavior   |
+| Create, edit, activate, deactivate, or delete General Education assignments | No under the proposed transfer   | Yes                            | No                           | No                                 | Current behavior   |
+| Manage Program-specific assignments                                         | Yes                              | No                             | Assigned Programs            | No                                 | Current behavior   |
+| Search Faculty for assignment                                               | Yes                              | Yes                            | Yes                          | No                                 | Yes                |
+| Manage ILO catalog                                                          | Sources conflict; no live editor | No until ownership is approved | No                           | No                                 | Read-only          |
+| Manage PLO catalog                                                          | No                               | No                             | Assigned Programs            | No                                 | Read-only          |
+| Create or manage CILOs                                                      | No by default                    | No                             | No                           | Assigned Courses                   | No                 |
+| Map a General Education CILO to an ILO                                      | Separate correction decision     | No by default                  | No                           | Assigned General Education Courses | No                 |
+| View General Education analytics                                            | No new access                    | Yes                            | Existing Program view        | Existing Course view               | Existing oversight |
+| View PLO analytics                                                          | No                               | No                             | Assigned Programs            | Existing Course views              | Existing oversight |
 
 Two rows need an explicit product decision before the assignment transfer ships:
 
@@ -692,17 +692,17 @@ database. Use the repository's disposable test database and the explicit
    college-wide General Education scope. If the institution needs separate
    portfolios, add an explicit assignment model before provisioning them.
 3. **Does the Secretary retain read-only General Education assignment access?**
-    Removing ownership removes mutation authority, but it does not necessarily
-    require hiding existing assignment records.
+   Removing ownership removes mutation authority, but it does not necessarily
+   require hiding existing assignment records.
 4. **Does the Dean retain General Education assignment mutation authority?**
-    The default is to preserve current Dean behavior.
+   The default is to preserve current Dean behavior.
 5. **Does the Coordinator manage student rosters?** The assignment requirement
-    does not grant that access. The default is no roster action.
+   does not grant that access. The default is no roster action.
 6. **Does the Coordinator publish evaluations on behalf of Faculty?** The default
-    is no.
+   is no.
 7. **Does the Coordinator manage the Course catalog or curriculum placement?**
-    The default is no. The assignment wizard may consume valid published
-    curriculum placements without granting curriculum authoring rights.
+   The default is no. The assignment wizard may consume valid published
+   curriculum placements without granting curriculum authoring rights.
 8. **What belongs in General Education analytics?** The first release should use
    Course-bound General Education evidence. Confirm whether the client also wants
    central stakeholder evidence or future ILO attainment work. Cross-Program
