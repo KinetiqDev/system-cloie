@@ -40,7 +40,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OutcomeKpiGrid } from "./outcome-kpi-grid";
 import {
   deletePLOAction,
   reorderPLOsAction,
@@ -136,7 +136,7 @@ function SortablePLORow({
                 size="icon"
                 className="text-muted-foreground hover:text-destructive"
                 aria-label={`Archive ${plo.code}`}
-                title="Delete"
+                title="Archive"
                 onClick={() => onDelete(plo)}
               >
                 <Trash2 className="size-4" aria-hidden="true" />
@@ -197,10 +197,10 @@ export function ProgramHeadOutcomesPage({
   const withMappings = orderedPLOs.filter((plo) => plo._count.cilo_mappings > 0).length;
   const unmappedCount = totalPLOs - withMappings;
   const mappingStats = [
-    { label: "Total PLOs", value: totalPLOs, valueClassName: "text-foreground" },
-    { label: "Mapped to CILOs", value: withMappings, valueClassName: "text-success" },
+    { label: "Total PLOs", value: totalPLOs, tone: "default" as const },
+    { label: "Mapped to CILOs", value: withMappings, tone: "success" as const },
     ...(unmappedCount > 0
-      ? [{ label: "Unmapped", value: unmappedCount, valueClassName: "text-muted-foreground" }]
+      ? [{ label: "Unmapped", value: unmappedCount, tone: "muted" as const }]
       : []),
   ];
   const sensors = useSensors(
@@ -315,27 +315,7 @@ export function ProgramHeadOutcomesPage({
 
       {totalPLOs > 0 && (
         <div className="flex flex-col gap-2">
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-4",
-              mappingStats.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"
-            )}
-          >
-            {mappingStats.map((stat) => (
-              <Card key={stat.label} size="sm">
-                <CardHeader>
-                  <CardTitle className="text-title-sm">{stat.label}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p
-                    className={cn("font-heading text-heading-xl tabular-nums", stat.valueClassName)}
-                  >
-                    {stat.value}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <OutcomeKpiGrid items={mappingStats} />
           <p className="text-caption text-muted-foreground">Drag rows to reorder</p>
         </div>
       )}

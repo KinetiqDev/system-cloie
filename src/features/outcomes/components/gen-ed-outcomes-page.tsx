@@ -48,6 +48,7 @@ import {
 } from "@/lib/actions/gen-ed-outcome-actions";
 import { buildGenEdOutcomeMappingPath } from "@/lib/constants/gen-ed-routes";
 import { ILOFormDialog } from "./ilo-form-dialog";
+import { OutcomeKpiGrid } from "./outcome-kpi-grid";
 import type { InstitutionalOutcomeItem } from "../services/manage-gen-ed-outcomes";
 
 // fallow-ignore-next-line code-duplication
@@ -84,12 +85,13 @@ function SortableILORow({
       }`}
     >
       <button
+        type="button"
         className="text-muted-foreground hover:text-foreground mt-0.5 inline-flex min-h-11 min-w-11 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-4 w-4" aria-hidden="true" />
       </button>
 
       <div className="min-w-0 flex-1 space-y-1.5">
@@ -113,7 +115,9 @@ function SortableILORow({
             </Badge>
           )}
         </div>
-        <p className="text-body-md text-muted-foreground leading-relaxed">{ilo.description}</p>
+        <p className="text-body-md text-muted-foreground leading-relaxed text-pretty break-words">
+          {ilo.description}
+        </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
@@ -125,7 +129,7 @@ function SortableILORow({
           title="Edit"
           onClick={() => onEdit(ilo)}
         >
-          <Edit className="h-4 w-4" />
+          <Edit className="h-4 w-4" aria-hidden="true" />
         </Button>
         {ilo.is_active ? (
           <Button
@@ -136,7 +140,7 @@ function SortableILORow({
             title="Archive"
             onClick={() => onArchive(ilo)}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
           </Button>
         ) : (
           <Button
@@ -147,7 +151,7 @@ function SortableILORow({
             title="Restore"
             onClick={() => onRestore(ilo)}
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
           </Button>
         )}
       </div>
@@ -193,6 +197,14 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
     // fallow-ignore-next-line code-duplication
     (ilo) => ilo._count.cilo_institutional_outcome_mappings > 0
   ).length;
+  const unmappedCount = totalILOs - withMappings;
+  const mappingStats = [
+    { label: "Total ILOs", value: totalILOs, tone: "default" as const },
+    { label: "Mapped to CILOs", value: withMappings, tone: "success" as const },
+    ...(unmappedCount > 0
+      ? [{ label: "Unmapped", value: unmappedCount, tone: "muted" as const }]
+      : []),
+  ];
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -298,56 +310,39 @@ export function GenEdOutcomesPage({ ilos: initialILOs }: { ilos: InstitutionalOu
   }
 
   return (
-    <div>
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-heading text-text-primary text-3xl font-bold tracking-tight lg:text-4xl">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-heading-xl text-foreground text-pretty">
             Institutional Learning Outcomes
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-body-sm text-muted-foreground mt-1">
             College-wide · General Education CILOs (e.g., GEMATH, GEGS) map here
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button
             render={<Link href={buildGenEdOutcomeMappingPath()} />}
             variant="outline"
-            size="sm"
-            className="gap-2"
+            className="w-full justify-center sm:w-auto"
           >
-            <ListChecks className="h-4 w-4" />
+            <ListChecks className="size-4" aria-hidden="true" />
             CILO Mappings
           </Button>
-          <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="w-full justify-center sm:w-auto"
+          >
+            <Plus className="size-4" aria-hidden="true" />
             Add ILO
           </Button>
         </div>
       </div>
 
       {totalILOs > 0 && (
-        <div className="border-border bg-muted mb-6 flex items-center gap-6 rounded-lg border px-5 py-3">
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-heading text-text-primary text-2xl font-bold">{totalILOs}</span>
-            <span className="text-foreground text-sm">Total ILOs</span>
-          </div>
-          <div className="bg-border h-5 w-px" />
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-heading text-success text-2xl font-bold">{withMappings}</span>
-            <span className="text-foreground text-sm">Mapped to CILOs</span>
-          </div>
-          {totalILOs - withMappings > 0 && (
-            <>
-              <div className="bg-border h-5 w-px" />
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-heading text-foreground text-2xl font-bold">
-                  {totalILOs - withMappings}
-                </span>
-                <span className="text-foreground text-sm">Unmapped</span>
-              </div>
-            </>
-          )}
-          <p className="text-foreground ml-auto hidden text-xs sm:block">Drag rows to reorder</p>
+        <div className="flex flex-col gap-2">
+          <OutcomeKpiGrid items={mappingStats} />
+          <p className="text-caption text-muted-foreground">Drag rows to reorder</p>
         </div>
       )}
 

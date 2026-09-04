@@ -6,7 +6,7 @@ import type { CILOMappingManifestation } from "@prisma/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import {
   Empty,
   EmptyDescription,
@@ -18,7 +18,11 @@ import { buildGenEdOutcomesPath } from "@/lib/constants/gen-ed-routes";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { listCILOILOMappingsForGE } from "@/features/outcomes/services/manage-gen-ed-outcomes";
-import { ArrowLeft, ListChecks } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ListChecks } from "lucide-react";
+
+export const metadata = {
+  title: "CILO Mapping Review | Gen Ed Coordinator | System CLOIE",
+};
 
 // Mirrors program-head mapping labels; duplication is intentional scope separation (college-wide GE vs program-bound).
 // fallow-ignore-next-line code-duplication
@@ -49,20 +53,21 @@ export default async function GenEdOutcomesMappingPage() {
   const data = result.data;
 
   return (
-    <div>
-      <div className="mb-10">
+    <div className="flex flex-col gap-6">
+      <div className="max-w-3xl">
         <Button
           render={<Link href={buildGenEdOutcomesPath()} />}
           variant="ghost"
           className="mb-4 inline-flex items-center gap-2 px-0"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Institutional Learning Outcomes
         </Button>
-        <h1 className="text-heading-xl text-text-primary mb-2 text-pretty">CILO Mapping Review</h1>
-        <p className="text-body-md text-text-muted">
-          College-wide read-only review of General Education CILO-to-ILO mappings. Faculty classify
-          every CILO-to-ILO pair through Course alignment. This review is read-only.
+        <h1 className="text-heading-xl text-foreground text-pretty">CILO Mapping Review</h1>
+        <p className="text-body-md text-muted-foreground mt-2 text-pretty">
+          Review the college-wide alignment between General Education CILOs and Institutional
+          Learning Outcomes. Faculty manage these classifications in Course alignment. This review
+          is read-only.
         </p>
       </div>
 
@@ -83,42 +88,52 @@ export default async function GenEdOutcomesMappingPage() {
           </Button>
         </Empty>
       ) : (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-4">
           {data.map((course) => (
             <Card key={course.courseId}>
-              <CardHeader>
-                <CardTitle className="flex flex-wrap items-center gap-3">
+              <CardHeader className="gap-2 border-b">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="default" className="text-label-sm">
                     {course.courseCode}
                   </Badge>
-                  <span>{course.courseTitle}</span>
-                  <Badge variant="secondary" className="text-label-sm">
+                  <Badge variant="information" className="text-label-sm">
                     Shared General Education
                   </Badge>
-                </CardTitle>
+                </div>
+                <h2 className="font-heading text-title-lg font-semibold text-pretty">
+                  {course.courseTitle}
+                </h2>
                 <CardDescription>
                   {course.cilos.length} {course.cilos.length === 1 ? "CILO" : "CILOs"} defined
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="flex flex-col gap-3">
                   {course.cilos.map((cilo, index) => (
                     <div
                       key={cilo.id}
-                      className="border-border rounded-lg border p-4"
+                      className="border-border bg-surface-secondary rounded-lg border p-4"
+                      role="group"
                       aria-label={`CILO ${index + 1}`}
                     >
-                      <div className="mb-2 flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <span className="text-text-muted text-caption font-semibold tracking-wider uppercase">
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-muted-foreground text-caption font-semibold tracking-wider uppercase">
                             CILO {index + 1}
                           </span>
-                          <p className="text-body-md text-text-primary mt-1">{cilo.description}</p>
+                          <p className="text-body-md text-foreground mt-1 text-pretty">
+                            {cilo.description}
+                          </p>
                         </div>
                         <Badge
-                          variant={cilo.readiness === "ready" ? "default" : "outline"}
-                          className="text-label-sm shrink-0"
+                          variant={cilo.readiness === "ready" ? "success" : "warning"}
+                          className="text-label-sm shrink-0 gap-1"
                         >
+                          {cilo.readiness === "ready" ? (
+                            <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                          ) : (
+                            <AlertTriangle className="size-3.5" aria-hidden="true" />
+                          )}
                           {cilo.readiness === "ready" ? "Aligned" : "Needs mapping"}
                         </Badge>
                       </div>
@@ -127,15 +142,16 @@ export default async function GenEdOutcomesMappingPage() {
                           {cilo.mappedTargets.map((target) => (
                             <Badge
                               key={target.mappingId}
-                              variant="secondary"
-                              className="text-label-sm max-w-40 truncate"
-                              title={target.description}
+                              variant={target.is_active ? "information" : "outline"}
+                              className="text-label-sm h-auto max-w-full justify-start py-1.5 whitespace-normal"
                             >
-                              {target.code}
-                              {target.manifestation
-                                ? ` · ${manifestationLabel(target.manifestation)}`
-                                : ""}
-                              {!target.is_active && " (archived)"}
+                              <span>
+                                <span className="font-semibold">{target.code}</span>
+                                {target.manifestation
+                                  ? ` · ${manifestationLabel(target.manifestation)}`
+                                  : " · Unanswered"}
+                                {!target.is_active && " · Archived"}
+                              </span>
                             </Badge>
                           ))}
                         </div>
