@@ -32,4 +32,4 @@ To eliminate the manual "Course Offerings" encoding step and improve data integr
 
 ## Implementation
 
-See [`docs/plans/prd2-implementation-plan.md`](../plans/prd2-implementation-plan.md) for the phased implementation roadmap.
+See the retired `docs/plans/prd2-implementation-plan.md` (deleted; preserved in git history) for the phased implementation roadmap of PRD 2.
