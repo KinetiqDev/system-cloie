@@ -42,12 +42,12 @@ const MIN_HEIGHT = 220;
 const MAX_HEIGHT = 420;
 /** Frame padding mirrors the `p-3` on the shared frame so both views match. */
 const FRAME_PADDING = 12;
-/** Fallback cloud density before the first resize measurement lands. */
-const DEFAULT_CLOUD_TERMS = 28;
+/** Initial density uses a reachable native range value. */
+const DEFAULT_CLOUD_TERMS = 30;
 /** Slider bounds: the cloud never renders fewer than 10 or more than 70 words. */
 const MIN_CLOUD_TERMS = 10;
 const MAX_CLOUD_TERMS = 70;
-const CLOUD_TERM_STEP = 5;
+const CLOUD_TERM_STEP = 1;
 /** Terms that repeat (count >= 2) rank; singletons collapse into one row. */
 const SINGLETON_GROUP_MIN = 5;
 
@@ -226,9 +226,9 @@ export function QualitativeWordCloud({ title, tokens, answerCount }: Qualitative
     [tokens]
   );
   const hasTokens = tokens.length > 0;
-  // The slider caps at the term list itself, so it can never suggest words
-  // that do not exist.
+  // Keep native range constraints valid even when fewer than ten tokens exist.
   const cloudCap = Math.min(MAX_CLOUD_TERMS, sortedTokens.length);
+  const cloudFloor = Math.min(MIN_CLOUD_TERMS, cloudCap);
   const cloudTermCount = Math.min(wordCount, cloudCap);
   const cloudTokens = useMemo(
     () => sortedTokens.slice(0, cloudTermCount),
@@ -306,14 +306,15 @@ export function QualitativeWordCloud({ title, tokens, answerCount }: Qualitative
                 <span className="hidden sm:inline">Words shown</span>
                 <input
                   type="range"
-                  min={MIN_CLOUD_TERMS}
+                  min={cloudFloor}
                   max={cloudCap}
                   step={CLOUD_TERM_STEP}
-                  value={Math.min(wordCount, cloudCap)}
-                  onChange={(event) => setWordCount(Number(event.target.value))}
-                  disabled={cloudCap <= MIN_CLOUD_TERMS}
+                  value={cloudTermCount}
+                  onChange={(event) => setWordCount(event.currentTarget.valueAsNumber)}
+                  disabled={cloudCap === cloudFloor}
                   aria-label={`Words shown in the cloud: ${cloudTermCount}`}
-                  className="accent-primary h-1.5 w-24 cursor-pointer disabled:cursor-not-allowed sm:w-32"
+                  aria-valuetext={`${cloudTermCount} words`}
+                  className="accent-primary min-h-11 w-24 cursor-pointer disabled:cursor-not-allowed sm:w-32"
                 />
                 <output className="text-foreground w-12 tabular-nums">{cloudTermCount}</output>
               </label>
@@ -372,6 +373,11 @@ export function QualitativeWordCloud({ title, tokens, answerCount }: Qualitative
                 fontSize={fontSize}
                 rotate={NO_ROTATION}
                 enableTooltip
+                svgProps={{
+                  width: "100%",
+                  height: "100%",
+                  preserveAspectRatio: "xMidYMid meet",
+                }}
                 transition={prefersReducedMotion ? "none" : "opacity 200ms ease"}
               />
             </div>

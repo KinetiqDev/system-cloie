@@ -13,6 +13,7 @@ vi.mock("@isoterik/react-word-cloud", () => ({
     height: number;
     words: Array<{ text: string; value: number }>;
     fill: (word: { text: string; value: number }, index: number) => string;
+    svgProps?: React.SVGProps<SVGSVGElement>;
   }) => {
     wordCloudPropsMock(props);
     return <div data-testid="word-cloud-mock" />;
@@ -153,8 +154,23 @@ describe("QualitativeWordCloud", () => {
     expect(cloudProps.fontSize({ text: "peak", value: 12 })).toBe(48);
     expect(cloudProps.fontSize({ text: "floor", value: 1 })).toBe(16);
   });
+  it("constrains the package SVG to the visible cloud frame", async () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
 
-  it("adjusts cloud density with an accessible word-count slider", async () => {
+    await waitFor(() => {
+      expect(wordCloudPropsMock).toHaveBeenCalled();
+    });
+
+    expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].svgProps).toEqual(
+      expect.objectContaining({
+        width: "100%",
+        height: "100%",
+        preserveAspectRatio: "xMidYMid meet",
+      })
+    );
+  });
+
+  it("keeps the native slider value aligned with the visible cloud count", async () => {
     const manyTokens = Array.from({ length: 40 }, (_, index) => ({
       text: `word${index}`,
       value: 40 - index,
@@ -164,12 +180,12 @@ describe("QualitativeWordCloud", () => {
       <QualitativeWordCloud title="Qualitative Feedback" tokens={manyTokens} answerCount={3} />
     );
 
-    // Cloud is the default; the slider is immediately present.
     const slider = screen.getByRole("slider", { name: /Words shown in the cloud/ });
     expect(slider).toHaveAttribute("min", "10");
     expect(slider).toHaveAttribute("max", "40");
-    expect(slider).toHaveAttribute("step", "5");
-    expect(slider).toHaveValue("28");
+    expect(slider).toHaveAttribute("step", "1");
+    expect(slider).toHaveValue("30");
+    expect(slider).toBeValid();
 
     fireEvent.change(slider, { target: { value: "10" } });
     await waitFor(() => {
@@ -182,14 +198,15 @@ describe("QualitativeWordCloud", () => {
     });
   });
 
-  it("caps the slider at the available term count", () => {
+  it("uses valid bounds when fewer than ten terms are available", () => {
     render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Cloud" }));
-
     const slider = screen.getByRole("slider", { name: /Words shown in the cloud/ });
-    // Seven tokens: the slider max is the list itself, not 70.
+    expect(slider).toHaveAttribute("min", "7");
     expect(slider).toHaveAttribute("max", "7");
+    expect(slider).toHaveValue("7");
+    expect(slider).toBeDisabled();
+    expect(slider).toBeValid();
   });
 
   it("marks the term frame unselectable so slider drags cannot extend a text selection", () => {
