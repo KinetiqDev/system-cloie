@@ -1,3 +1,15 @@
+---
+title: "CILO to PLO manifestation implementation specification"
+kind: historical-project-source
+status: historical
+as_of: 2026-08
+source_file: "CILO to PLO manifestation implementation specification.md"
+---
+
+> Historical System CLOIE material. Do not use this document to infer current
+> system behavior. Verify current behavior against CONTEXT.md, ADRs,
+> implementation, schema, and tests.
+
 # CILO to PLO manifestation implementation specification
 
 ## 1. Scope

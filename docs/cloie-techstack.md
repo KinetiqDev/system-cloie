@@ -1,117 +1,84 @@
+---
+title: CLOIE Tech Stack
+kind: living-project-document
+status: living
+last_verified: 2026-09-04
+---
+
 # CLOIE Tech Stack
 
-## Quick Reference
+A lean, verifiable snapshot of the stack. **Most stack rules live in [AGENTS.md](../AGENTS.md)** (Tech and Repository Conventions, Architecture, Supabase and Prisma, CI) and in `docs/adr/` — this page records versions and pointers, not a duplicate specification. Versions below are read from `package.json` (specifiers) and `pnpm-lock.yaml` (resolved), verified 2026-09-04.
 
-| Category | Technology | Version | Status |
-|----------|-----------|---------|--------|
-| Framework | Next.js (App Router) | 16.2.4 | ✅ installed |
-| Language | TypeScript | 5.x | ✅ installed |
-| Styling | Tailwind CSS | v4 | ✅ installed |
-| UI Components | shadcn/ui (base-nova style) | latest | ✅ installed |
-| Headless UI Primitives | @base-ui/react | ^1.4.0 | ✅ installed |
-| Forms | react-hook-form | ^7.72.1 | ✅ installed |
-| Validation | Zod | 4.3.6 | ✅ installed |
-| Database | PostgreSQL (Supabase) | 15+ | ✅ configured |
-| ORM | Prisma | 6.19.2 | ✅ installed |
-| Auth | Supabase Auth (Google OAuth) | — | ✅ configured |
-| Charts | Recharts | ^3.8.1 | ✅ installed |
-| Text Processing | winkNLP + stopword | ^2.4.0 / ^3.1.5 | ✅ installed |
-| Icons | lucide-react | ^1.8.0 | ✅ installed |
-| Testing | Vitest | 4.1.4 | ✅ installed |
-| Package Manager | pnpm | 10.30.3 | ✅ configured |
-| Linting | ESLint | 9.x | ✅ configured |
-| Formatting | Prettier | ^3.8.3 | ✅ configured |
+## Stack versions
 
-### Planned, Not Yet Installed
+| Category | Technology | Specifier (`package.json`) | Resolved (`pnpm-lock.yaml`) |
+|----------|-----------|----------------------------|------------------------------|
+| Framework | Next.js (App Router, Turbopack dev) | `16.3.3` (pinned) | 16.3.3 |
+| Language | TypeScript | `^5` | 5.9.3 |
+| Runtime | Node.js | — | 22 (CI workflows, Dockerfile `node:22-bookworm-slim`) |
+| Package Manager | pnpm | `packageManager: pnpm@10.30.3` | 10.30.3 (CI-pinned, Dockerfile-pinned) |
+| Styling | Tailwind CSS | `^4` | 4.2.2 (via `@tailwindcss/postcss`) |
+| UI Components | shadcn/ui (`base-nova` style, see `components.json`) | CLI `shadcn` `^4.6.0` | 4.6.0 |
+| Headless UI Primitives | `@base-ui/react` (not Radix) | `^1.4.0` | 1.4.0 |
+| Forms | react-hook-form | `^7.72.1` | 7.72.1 |
+| Validation | Zod | `^4.3.6` | 4.3.6 |
+| Database | PostgreSQL on self-hosted Supabase | — | Postgres 17 (production, per deployment inventory); `postgres:16-alpine` in CI service containers |
+| ORM | Prisma (+ `@prisma/client`) | `6.19.2` (pinned) | 6.19.2 |
+| Auth | Supabase Auth (Google OAuth) via `@supabase/ssr` / `@supabase/supabase-js` | `^0.10.2` / `^2.103.3` | 0.10.2 / 2.103.3 |
+| Charts | Recharts | `^3.8.1` | 3.8.1 |
+| Text Processing | winkNLP + `wink-eng-lite-web-model` + stopword | `^2.4.0` / `^1.8.1` / `^3.1.5` | 2.4.0 / 1.8.1 / 3.1.5 |
+| AI (server-side, bounded) | `openai` SDK against an OpenAI-compatible base URL ([ADR 0016](adr/0016-server-side-bounded-ai-interpretation-boundary.md)) | `^7.4.0` | 7.4.0 |
+| Icons | lucide-react | `^1.8.0` | 1.8.0 |
+| Word cloud | `@isoterik/react-word-cloud` | `^1.3.0` | 1.3.0 |
+| Drag and drop | `@dnd-kit/core` / `sortable` / `utilities` | `^6.3.1` / `^10.0.0` / `^3.2.2` | 6.3.1 / 10.0.0 / 3.2.2 |
+| Unit/Integration Testing | Vitest (+ Testing Library, jsdom) | `^4.1.4` | 4.1.4 |
+| E2E Testing | Playwright (`@playwright/test`) + `@axe-core/playwright` sweep | `^1.62.1` / `^4.13.0` | 1.62.1 / 4.13.0 |
+| Supabase CLI | `supabase` | `^2.92.1` | 2.92.1 |
+| Code Intelligence | Fallow | `2.54.3` (pinned, [ADR 0011](adr/0011-fallow-code-intelligence-policy.md)) | 2.54.3 |
+| Linting | ESLint (+ `eslint-config-next` `16.3.3`) | `^9` | 9.39.4 |
+| Formatting | Prettier (+ `prettier-plugin-tailwindcss`) | `^3.8.3` / `^0.7.2` | 3.8.3 / 0.7.2 |
 
-| Technology | Notes |
-|-----------|-------|
-| TanStack Query | doc recommends, not implemented |
-| SheetJS (xlsx) | doc recommends, not implemented |
-| PDF export | doc recommends, not implemented |
-| Playwright | doc recommends, not implemented |
-| PWA manifest/SW | doc recommends, not implemented |
-| CI/CD (GitHub workflows) | `.github/` is empty |
+Not dependencies, deliberately: **TanStack Query** (add only when a design establishes a concrete need — see [AGENTS.md](../AGENTS.md)); no PDF-export or spreadsheet library is installed; there is no service worker (PWA installability comes from `src/app/manifest.ts`, offline caching remains deferred per [ADR 0006](adr/0006-dean-pwa-offline-cache-contract.md)).
 
----
-
-## Critical: shadcn + Base UI (Not Radix)
-
-This project uses **shadcn/ui** with the **"base-nova"** style. The underlying headless primitives are **`@base-ui/react`**, **NOT** Radix UI.
-
-- All components in `src/components/ui/` import from `@base-ui/react/*`
-- **Do not install Radix UI packages** — `@radix-ui/*` is not used here
-- Add new components: `npx shadcn@latest add <component>` (auto-picks Base UI)
-- Styling variants: `class-variance-authority` (cva)
-- Utility: `cn()` from `src/lib/utils.ts` (clsx + tailwind-merge)
-
----
-
-## Where Things Live
+## Where things live
 
 | Concern | Location |
 |---------|----------|
-| UI components | `src/components/ui/` |
-| Feature modules | `src/features/<name>/` |
-| Prisma schema | `prisma/schema.prisma` entrypoint + `prisma/models/` domain files |
-| Supabase migrations | `supabase/migrations/` |
+| Feature modules | `src/features/<name>/` (domain contexts: [CONTEXT-MAP.md](../CONTEXT-MAP.md)) |
 | App routes | `src/app/` (App Router) |
-| API routes | `src/app/api/` |
-| Auth session handling | `src/lib/supabase/` |
-| Zod schemas | `src/lib/forms/` (resolver: `customZodResolver`) |
-| Charts | `src/features/analytics/components/` |
-| Text processing | winkNLP + stopword in `src/` NLP modules |
+| Server Actions | `src/lib/actions/` |
+| Request boundary | `src/proxy.ts` (session refresh in `src/lib/supabase/middleware.ts`) |
+| UI components | `src/components/ui/` |
+| Prisma schema | `prisma/schema.prisma` entrypoint + `prisma/models/` domain files |
+| Supabase migrations | `supabase/migrations/` (workflow: [`supabase/README.md`](../supabase/README.md) and [architecture/data-and-storage.md](architecture/data-and-storage.md)) |
+| Forms | `src/lib/forms/zod-resolver.ts` (`customZodResolver`) |
+| Charts | `src/components/ui/chart.tsx` + `src/features/analytics/components/` |
+| E2E journeys | `e2e/` (Playwright; fixture contract pinned in `e2e/support/contract.ts`) |
+| CI workflows | `.github/workflows/` (inventory: [architecture/overview.md](architecture/overview.md)) |
+| Architecture docs | `docs/architecture/` |
 
----
+## Non-obvious gotchas
 
-## Non-Obvious Gotchas
+The durable engineering rules live in [AGENTS.md](../AGENTS.md); these are the environment-specific traps that are easy to rediscover the hard way:
 
-- **Request entry point** is `src/proxy.ts`, not `middleware.ts`. It rewrites Server Action POSTs for `x-forwarded-host` then calls `updateSession()`.
-- **Supabase SSR**: session refresh lives in `src/lib/supabase/middleware.ts` (imported by proxy.ts).
-- **Development auth bypass**: `POST /api/auth/dev-login` and `cloie_dev_auth` are development-only. `NEXT_PUBLIC_DEMO_MODE` does not enable them outside development.
-- **Dedicated demo deployment auth**: a separately reviewed signed demo session may expose the role switcher only in an isolated production-mode demo deployment. Primary Production remains OAuth-only. See ADR 0008.
-- **Forms**: use `customZodResolver` from `src/lib/forms/zod-resolver.ts`. Do **not** use `@hookform/resolvers/zod` — it breaks with Turbopack + Zod 4.
-- **Prisma + Supabase migrations**: edit `prisma/schema.prisma` or the relevant `prisma/models/` file, then `pnpm supabase:migration:diff -- <name>` to generate SQL. See `supabase/README.md`.
-- **Prisma constraint gotcha**: `NULLS NOT DISTINCT` unique indexes can't be expressed in Prisma schema. Real constraint lives in `supabase/migrations/`; Prisma gets a non-unique `@@index` mirror.
-- **Turbopack + Tailwind**: `.npmrc` hoists `*tailwindcss*` packages. `next.config.ts` aliases `tailwindcss` to absolute on-disk path. If `@import` breaks under pnpm + Turbopack, check these two files first.
-- **Tailwind v4**: uses `@import "tailwindcss"` syntax in `globals.css`, plus `@import "shadcn/tailwind.css"`. No `tailwind.config.ts` (v4 convention).
+- **shadcn + Base UI, not Radix**: components import from `@base-ui/react/*`; never install `@radix-ui/*`. Add components with `npx shadcn@latest add <component>` (rule owned by [AGENTS.md → UI](../AGENTS.md)).
+- **Request entry point** is `src/proxy.ts`, not `middleware.ts` (none exists); it rewrites `x-forwarded-host` on Server Action POSTs, then calls `updateSession()` from `src/lib/supabase/middleware.ts`.
+- **Forms**: use `customZodResolver` from `src/lib/forms/zod-resolver.ts`; do **not** use `@hookform/resolvers/zod` — it breaks with Turbopack + Zod 4 (rule owned by [AGENTS.md → Forms](../AGENTS.md)).
+- **Turbopack + Tailwind under pnpm**: `.npmrc` public-hoists `*tailwindcss*` packages, and `next.config.ts` aliases `tailwindcss` to its absolute on-disk path. If `@import` resolution breaks under pnpm + Turbopack, check those two files first. Tailwind v4 uses `@import "tailwindcss"` in `src/app/globals.css` (plus `shadcn/tailwind.css`); there is no `tailwind.config.ts`.
+- **Prisma constraint gotcha**: `NULLS NOT DISTINCT` unique indexes cannot be expressed in Prisma; the real constraint lives in `supabase/migrations/` with a non-unique `@@index` mirror in Prisma (rule and details: [architecture/data-and-storage.md](architecture/data-and-storage.md)).
+- **Supabase is self-hosted only** ([ADR 0020](adr/0020-self-hosted-supabase-target-neutral-backends.md)); there is no Supabase Cloud workflow — no `supabase login`/`link`/`--linked` commands.
+- **Development auth bypass** (`POST /api/auth/dev-login`, `cloie_dev_auth` cookie) exists only in `NODE_ENV=development`; production-mode builds refuse it. Dedicated-demo and CI test sessions have their own fail-closed gates (see [architecture/auth-and-authorization.md](architecture/auth-and-authorization.md)).
 
----
-
-## Security Practices (Enforced)
-
-- All auth via Supabase SSR (server-side session validation)
-- Route/API protection via server-side role + scope checks
-- No client-only trust for authorization
-- Zod validation on all form input
-- Confidential response protection (qualitative comments restricted)
-- One-response enforcement per evaluation
-- Immutable finalized submissions
-
----
-
-## Architecture Style
-
-**Modular monolith** — feature-based modules under `src/features/`, shared UI primitives, server logic via Next.js App Router (no separate backend service).
-
----
-
-## Verification Commands
+## Verification commands
 
 | Command | Purpose |
 |---------|---------|
-| `pnpm dev` | Start Turbopack dev server |
-| `pnpm lint` | ESLint |
-| `pnpm test` | Vitest (unit/integration) |
-| `pnpm build` | Full build + Next.js typecheck |
-| `pnpm vitest run <path>` | Single test file |
-| `pnpm db:seed` | Seed database (loads `.env`) |
-| `pnpm supabase:types` | Regenerate Supabase TS types |
+| `pnpm dev` | Turbopack dev server |
+| `pnpm lint` / `pnpm lint:changed` | ESLint (full / changed-file, no new warnings) |
+| `pnpm test` / `pnpm vitest run <path>` | Vitest suite / single file |
+| `pnpm test:db` | Gated DB integration suites (`RUN_DATABASE_INTEGRATION_TESTS=1`, disposable target only) |
+| `pnpm test:e2e` | Playwright journeys |
+| `pnpm build` | Production build |
+| `pnpm supabase:types` | Regenerate Supabase TS types (remote; `:local` for the local stack) |
 
----
-
-## Commit Convention
-
-Conventional Commits: `<type>(<scope>): <description>`
-Types: `feat`/`fix`/`refactor`/`perf`/`style`/`test`/`docs`/`build`/`ops`/`chore`
-Breaking: `!` before `:` with `BREAKING CHANGE:` in footer.
+Commit convention: Conventional Commits `<type>(<scope>): <description>` — owned by [AGENTS.md → Git and Issues](../AGENTS.md).
