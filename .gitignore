@@ -68,6 +68,8 @@ prisma/*.db-journal
 
 # agent / ai
 skills-lock.json
+.opencode
+.pi
 
 # IDE
 .idea
@@ -80,3 +82,12 @@ skills-lock.json
 .playwright-cli
 
 .obsidian
+
+# Obsidian vault local state (repo root is the vault; Markdown in git is canonical)
+.obsidian/
+
+# Graphify generated output (disposable, rebuildable)
+graphify-out/
+
+# Private working notes never committed
+docs/_private/
