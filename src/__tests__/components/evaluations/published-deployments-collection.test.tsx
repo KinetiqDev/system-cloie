@@ -192,6 +192,46 @@ describe("PublishedDeploymentsCollection", () => {
     );
   });
 
+  test("disclosure button wires aria-controls to the expanded details row", () => {
+    render(
+      <PublishedDeploymentsCollection
+        view="list"
+        items={[makeItem({ id: "d-1", name: "Survey" })]}
+        empty={<p>Empty</p>}
+        renderExpanded={() => <p>Deployment details here</p>}
+        renderMenuItems={NOOP_MENU}
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Expand Survey" });
+    expect(trigger).toHaveAttribute("aria-controls", "deployment-details-d-1");
+
+    fireEvent.click(trigger);
+    expect(screen.getByText("Deployment details here").closest("tr")).toHaveAttribute(
+      "id",
+      "deployment-details-d-1"
+    );
+  });
+
+  test("row toggle and disclosure button stay in sync when both are used", () => {
+    render(
+      <PublishedDeploymentsCollection
+        view="list"
+        items={[makeItem({ id: "d-1", name: "Survey", courseLabel: "CS 101" })]}
+        empty={<p>Empty</p>}
+        renderExpanded={() => <p>Deployment details here</p>}
+        renderMenuItems={NOOP_MENU}
+      />
+    );
+
+    const row = screen.getByText("Survey").closest("tr")!;
+    fireEvent.click(row); // row click expands
+    expect(screen.getByRole("button", { name: "Collapse Survey" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse Survey" })); // button click must not double-toggle
+    expect(screen.getByRole("button", { name: "Expand Survey" })).toBeInTheDocument();
+  });
+
   test("renders the empty state when there are no deployments", () => {
     render(
       <PublishedDeploymentsCollection

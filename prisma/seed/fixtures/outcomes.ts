@@ -167,6 +167,20 @@ export const ciloDefsGeneralEducation = [
     order: 3,
     createdBy: U.FAC_BSIT,
   },
+  // GEETHICS — Ethics (General Education): backs the GE analytics fixture
+  // deployment whose qualitative responses feed the coordinator word cloud.
+  {
+    courseCode: "GEETHICS",
+    desc: "Apply ethical frameworks to contemporary moral dilemmas.",
+    order: 1,
+    createdBy: U.FAC_BSIT,
+  },
+  {
+    courseCode: "GEETHICS",
+    desc: "Evaluate the consequences of personal and collective choices.",
+    order: 2,
+    createdBy: U.FAC_BSIT,
+  },
 ] as const;
 
 export const ciloDefsNewCourses = [

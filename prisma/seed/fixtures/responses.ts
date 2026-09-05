@@ -5,7 +5,9 @@ export interface ResponseSequence {
   log: string;
   // Deployment locator: "cbEval1" (ITRES1), "cbEval2" (MM201), or "newCb:<courseCode>" (IT201/FM200/ENG2/HTC401/EDUC11E),
   // or "central:<D constant>" for central deployments
-  deploymentKey: { kind: "cb1" | "cb2" | "newCb"; courseCode: string } | { kind: "central"; id: string };
+  deploymentKey:
+    | { kind: "cb1" | "cb2" | "newCb"; courseCode: string }
+    | { kind: "central"; id: string };
   respondentKey: keyof typeof U;
   status: ResponseStatus;
   submittedAt?: string; // ISO string, undefined for IN_PROGRESS drafts
@@ -528,6 +530,78 @@ export const responseSequences: ResponseSequence[] = [
         sk: "qualitative",
         pk: "qualitative-3",
         text: "Better projectors and printed instructional materials in cooperating schools are needed.",
+      },
+    ],
+  },
+  // ── 17–18. GEETHICS (GE): STU_BEED + STU_BSED → SUBMITTED ────────────
+  // The only Course-bound GENERAL_EDUCATION responses with qualitative
+  // items; they make the Gen Ed Coordinator analytics workspace render its
+  // qualitative evidence region. GEETHICS is referenced by no other journey.
+  {
+    log: "    • BEED GEETHICS student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "GEETHICS" },
+    respondentKey: "STU_BEED",
+    status: ResponseStatus.SUBMITTED,
+    submittedAt: "2026-04-27T10:00:00Z",
+    quantItems: [
+      { sk: "cilo-items", ik: "cilo-attainment-1", val: 5 },
+      { sk: "cilo-items", ik: "cilo-attainment-2", val: 4 },
+      { sk: "overall-attainment", ik: "overall-attainment-1", val: 5 },
+      { sk: "facilities", ik: "facilities-1", val: 4 },
+      { sk: "facilities", ik: "facilities-2", val: 4 },
+      { sk: "facilities", ik: "facilities-3", val: 4 },
+      { sk: "facilities", ik: "facilities-4", val: 4 },
+      { sk: "facilities", ik: "facilities-5", val: 5 },
+    ],
+    qualItems: [
+      {
+        sk: "qualitative",
+        pk: "qualitative-1",
+        text: "Case studies on moral dilemmas made utilitarian and deontological frameworks concrete and easy to apply.",
+      },
+      {
+        sk: "qualitative",
+        pk: "qualitative-2",
+        text: "Small-group debates were sometimes dominated by a few voices; rotating facilitation would balance participation.",
+      },
+      {
+        sk: "qualitative",
+        pk: "qualitative-3",
+        text: "Reading packets arrived late in the semester; earlier access to articles would help preparation.",
+      },
+    ],
+  },
+  {
+    log: "    • BSED GEETHICS student submitted CILO eval...",
+    deploymentKey: { kind: "newCb", courseCode: "GEETHICS" },
+    respondentKey: "STU_BSED",
+    status: ResponseStatus.SUBMITTED,
+    submittedAt: "2026-04-27T11:30:00Z",
+    quantItems: [
+      { sk: "cilo-items", ik: "cilo-attainment-1", val: 4 },
+      { sk: "cilo-items", ik: "cilo-attainment-2", val: 5 },
+      { sk: "overall-attainment", ik: "overall-attainment-1", val: 4 },
+      { sk: "facilities", ik: "facilities-1", val: 5 },
+      { sk: "facilities", ik: "facilities-2", val: 4 },
+      { sk: "facilities", ik: "facilities-3", val: 4 },
+      { sk: "facilities", ik: "facilities-4", val: 4 },
+      { sk: "facilities", ik: "facilities-5", val: 4 },
+    ],
+    qualItems: [
+      {
+        sk: "qualitative",
+        pk: "qualitative-1",
+        text: "Applying virtue ethics to real teaching scenarios clarified how character formation guides classroom decisions.",
+      },
+      {
+        sk: "qualitative",
+        pk: "qualitative-2",
+        text: "The assessment rubric for reflection essays was unclear; worked examples would set clearer expectations.",
+      },
+      {
+        sk: "qualitative",
+        pk: "qualitative-3",
+        text: "Guest lecture on professional ethics codes was engaging and connected theory to licensure practice.",
       },
     ],
   },

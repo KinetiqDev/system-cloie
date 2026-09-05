@@ -52,6 +52,19 @@ export const newCourseBoundDefs = [
     ylId: YearLevel.THIRD_YEAR,
     section: "MORNING",
   },
+  // GE analytics fixture: the only Course-bound GE deployment with seeded
+  // submitted qualitative responses. Isolated from the GESTECH cohorts,
+  // which stay zero-response for the Student lifecycle journeys.
+  {
+    id: D.CB_BSIT_GEETHICS,
+    courseCode: "GEETHICS",
+    deployName: "GEETHICS Post-Term CILO Evaluation",
+    progId: undefined as string | undefined,
+    progCode: "BSIT",
+    progName: "Bachelor of Science in Information Technology",
+    ylId: YearLevel.FIRST_YEAR,
+    section: "AFTERNOON",
+  },
   // Zero-response evaluation (§53/§61): eligible students exist on the
   // roster, but no response has been submitted — the fixture keeps it that
   // way (no response sequence references GESTECH).

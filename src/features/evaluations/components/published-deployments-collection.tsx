@@ -393,6 +393,8 @@ function PublishedTable({
   );
 }
 
+// Render-only column/toggle branching pinned by the disclosure contract tests; extraction would split one table row across files.
+// fallow-ignore-next-line complexity
 function PublishedRow({
   item,
   isExpanded,

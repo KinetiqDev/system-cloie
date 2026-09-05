@@ -103,6 +103,13 @@ export const courseAssignmentDefinitions = [
     section: "EVENING",
   },
   {
+    courseCode: "GEETHICS",
+    programCode: "BSIT",
+    facultyId: U.FAC_BSIT,
+    yearLevel: YearLevel.FIRST_YEAR,
+    section: "AFTERNOON",
+  },
+  {
     courseCode: "SW312",
     programCode: "BSSW",
     facultyId: U.FAC_BSED,
@@ -192,5 +199,16 @@ export const membershipDefinitions = [
     year: YearLevel.FIRST_YEAR,
     section: "EVENING",
     students: [U.STU_BSED, U.STU_BSHM],
+  },
+  // GE analytics fixture: GEETHICS (General Education) carries the only
+  // seeded Course-bound GE responses with qualitative items, so the Gen Ed
+  // Coordinator analytics workspace renders its evidence state. Rostered
+  // BEED first-year students are unused by every other journey.
+  {
+    course: "GEETHICS",
+    program: "BSIT",
+    year: YearLevel.FIRST_YEAR,
+    section: "AFTERNOON",
+    students: [U.STU_BEED, U.STU_BSED],
   },
 ] as const;

@@ -1,5 +1,3 @@
-// Mapping review intentionally mirrors program-head mapping card layout per #493 spec (college-wide GE vs program-bound) — shared card/Badge/Alert composition.
-// fallow-ignore-file code-duplication
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { CILOMappingManifestation } from "@prisma/client";
@@ -17,12 +15,72 @@ import {
 import { buildGenEdOutcomesPath } from "@/lib/constants/gen-ed-routes";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { listCILOILOMappingsForGE } from "@/features/outcomes/services/manage-gen-ed-outcomes";
+import {
+  listCILOILOMappingsForGE,
+  type GECourseCILOMappings,
+} from "@/features/outcomes/services/manage-gen-ed-outcomes";
 import { AlertTriangle, ArrowLeft, CheckCircle2, ListChecks } from "lucide-react";
 
-export const metadata = {
-  title: "CILO Mapping Review | Gen Ed Coordinator | System CLOIE",
-};
+type GECilo = GECourseCILOMappings["cilos"][number];
+
+// Read-only render branching (readiness badge, manifestation label, archived suffix) mirrors the program-head mapping card per #493.
+// fallow-ignore-next-line complexity
+function CiloMappingCard({ cilo, index }: { cilo: GECilo; index: number }) {
+  return (
+    <div
+      key={cilo.id}
+      className="border-border bg-surface-secondary rounded-lg border p-4"
+      role="group"
+      aria-label={`CILO ${index + 1}`}
+    >
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <span className="text-muted-foreground text-caption font-semibold tracking-wider uppercase">
+            CILO {index + 1}
+          </span>
+          <p className="text-body-md text-foreground mt-1 text-pretty">{cilo.description}</p>
+        </div>
+        <Badge
+          variant={cilo.readiness === "ready" ? "success" : "warning"}
+          className="text-label-sm shrink-0 gap-1"
+        >
+          {cilo.readiness === "ready" ? (
+            <CheckCircle2 className="size-3.5" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="size-3.5" aria-hidden="true" />
+          )}
+          {cilo.readiness === "ready" ? "Aligned" : "Needs mapping"}
+        </Badge>
+      </div>
+      {cilo.mappedTargets.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {cilo.mappedTargets.map((target) => (
+            <Badge
+              key={target.mappingId}
+              variant={target.is_active ? "information" : "outline"}
+              className="text-label-sm h-auto max-w-full justify-start py-1.5 whitespace-normal"
+            >
+              <span>
+                <span className="font-semibold">{target.code}</span>
+                {target.manifestation
+                  ? ` · ${manifestationLabel(target.manifestation)}`
+                  : " · Unanswered"}
+                {!target.is_active && " · Archived"}
+              </span>
+            </Badge>
+          ))}
+        </div>
+      ) : (
+        <Alert>
+          <AlertDescription>
+            No mapped outcome. Faculty can align this CILO to Institutional Outcomes through Course
+            alignment.
+          </AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
 
 // Mirrors program-head mapping labels; duplication is intentional scope separation (college-wide GE vs program-bound).
 // fallow-ignore-next-line code-duplication
@@ -110,60 +168,7 @@ export default async function GenEdOutcomesMappingPage() {
               <CardContent>
                 <div className="flex flex-col gap-3">
                   {course.cilos.map((cilo, index) => (
-                    <div
-                      key={cilo.id}
-                      className="border-border bg-surface-secondary rounded-lg border p-4"
-                      role="group"
-                      aria-label={`CILO ${index + 1}`}
-                    >
-                      <div className="mb-2 flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <span className="text-muted-foreground text-caption font-semibold tracking-wider uppercase">
-                            CILO {index + 1}
-                          </span>
-                          <p className="text-body-md text-foreground mt-1 text-pretty">
-                            {cilo.description}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={cilo.readiness === "ready" ? "success" : "warning"}
-                          className="text-label-sm shrink-0 gap-1"
-                        >
-                          {cilo.readiness === "ready" ? (
-                            <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                          ) : (
-                            <AlertTriangle className="size-3.5" aria-hidden="true" />
-                          )}
-                          {cilo.readiness === "ready" ? "Aligned" : "Needs mapping"}
-                        </Badge>
-                      </div>
-                      {cilo.mappedTargets.length > 0 ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          {cilo.mappedTargets.map((target) => (
-                            <Badge
-                              key={target.mappingId}
-                              variant={target.is_active ? "information" : "outline"}
-                              className="text-label-sm h-auto max-w-full justify-start py-1.5 whitespace-normal"
-                            >
-                              <span>
-                                <span className="font-semibold">{target.code}</span>
-                                {target.manifestation
-                                  ? ` · ${manifestationLabel(target.manifestation)}`
-                                  : " · Unanswered"}
-                                {!target.is_active && " · Archived"}
-                              </span>
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <Alert>
-                          <AlertDescription>
-                            No mapped outcome. Faculty can align this CILO to Institutional Outcomes
-                            through Course alignment.
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
+                    <CiloMappingCard key={cilo.id} cilo={cilo} index={index} />
                   ))}
                 </div>
               </CardContent>
