@@ -93,8 +93,8 @@ export default async function GenEdOutcomesMappingPage() {
             <Card key={course.courseId}>
               <CardHeader className="gap-2 border-b">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="default" className="text-label-sm">
-                    {course.courseCode}
+                  <Badge className="bg-brand-accent text-brand-accent-on">
+                    <span className="text-label-sm">{course.courseCode}</span>
                   </Badge>
                   <Badge variant="information" className="text-label-sm">
                     Shared General Education
