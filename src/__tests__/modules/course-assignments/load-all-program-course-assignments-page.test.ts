@@ -100,6 +100,7 @@ describe("loadAllProgramCourseAssignmentsPageData", () => {
     ] as never);
     vi.mocked(prisma.facultyProgramAffiliation.findMany).mockResolvedValue([
       {
+        program: { code: "BSCS" },
         faculty: {
           id: "faculty-1",
           name: "Ada Lovelace",
@@ -128,6 +129,7 @@ describe("loadAllProgramCourseAssignmentsPageData", () => {
         id: "faculty-1",
         name: "Ada Lovelace",
         email: "ada@example.com",
+        programCodes: ["BSCS"],
       },
     ]);
   });

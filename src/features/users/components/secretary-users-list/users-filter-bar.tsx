@@ -22,6 +22,7 @@ const ALL_ROLES: SystemRole[] = [
   SystemRole.SECRETARY,
   SystemRole.DEAN,
   SystemRole.PROGRAM_HEAD,
+  SystemRole.GEN_ED_COORDINATOR,
   SystemRole.FACULTY,
   SystemRole.STUDENT,
   SystemRole.ALUMNI,
@@ -87,7 +88,7 @@ export function UsersFilterBar({
     <div className="flex flex-col gap-3 md:flex-row md:items-center">
       {/* Role filter */}
       <Select value={roleFilter} onValueChange={(v) => onRoleChange(v)}>
-        <SelectTrigger className="w-full md:w-[180px]">
+        <SelectTrigger aria-label="Filter by role" className="w-full md:w-[180px]">
           <SelectValue>
             {roleFilter === "__all__" ? "All Roles" : formatRole(roleFilter as SystemRole)}
           </SelectValue>
@@ -104,7 +105,7 @@ export function UsersFilterBar({
 
       {/* Program filter */}
       <Select value={programFilter} onValueChange={(v) => onProgramChange(v)}>
-        <SelectTrigger className="w-full md:w-[220px]">
+        <SelectTrigger aria-label="Filter by program" className="w-full md:w-[220px]">
           <SelectValue>
             {programFilter === "__all__"
               ? "All Programs"
@@ -124,7 +125,7 @@ export function UsersFilterBar({
       {/* Major filter — only shown when selected program has majors */}
       {selectedProgramMajors.length > 0 && (
         <Select value={majorFilter} onValueChange={(v) => onMajorChange(v)}>
-          <SelectTrigger className="w-full md:w-[180px]">
+          <SelectTrigger aria-label="Filter by major" className="w-full md:w-[180px]">
             <SelectValue>
               {majorFilter === "__all__"
                 ? "All Majors"
@@ -162,8 +163,7 @@ export function UsersFilterBar({
       <Select value={sort} onValueChange={onSortChange}>
         <SelectTrigger aria-label="Sort users" className="w-full md:w-[160px]">
           <SelectValue>
-            Sort:{" "}
-            {sort === "name" ? "Name" : sort === "email" ? "Email" : "Status"}
+            Sort: {sort === "name" ? "Name" : sort === "email" ? "Email" : "Status"}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
@@ -187,6 +187,7 @@ export function UsersFilterBar({
       <div className="relative w-full md:ml-auto md:max-w-xs">
         <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
         <Input
+          aria-label="Search users"
           placeholder="Search by name or email..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}

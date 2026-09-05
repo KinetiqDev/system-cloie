@@ -50,7 +50,9 @@ describe("AssignmentFilters", () => {
         onFiltersChange={vi.fn()}
         availableCourses={[{ id: "course-1", code: "CS101", title: "Intro to Computing" }]}
         availablePrograms={[]}
-        availableFaculty={[{ id: "faculty-1", name: "Ada Lovelace", email: "ada@example.com" }]}
+        availableFaculty={[
+          { id: "faculty-1", name: "Ada Lovelace", email: "ada@example.com", programCodes: [] },
+        ]}
         termInstances={[]}
       />
     );
@@ -113,8 +115,18 @@ describe("AssignmentFilters", () => {
         availableCourses={[{ id: "course-1", code: "CS101", title: "Intro to Computing" }]}
         availablePrograms={[]}
         availableFaculty={[
-          { id: "faculty-1", name: "Ada Lovelace", email: "ada@example.com" },
-          { id: "faculty-2", name: "Grace Hopper", email: "grace@example.com" },
+          {
+            id: "faculty-1",
+            name: "Ada Lovelace",
+            email: "ada@example.com",
+            programCodes: ["BSCS"],
+          },
+          {
+            id: "faculty-2",
+            name: "Grace Hopper",
+            email: "grace@example.com",
+            programCodes: ["BSIT", "BSCS"],
+          },
         ]}
         termInstances={[]}
       />
@@ -129,6 +141,8 @@ describe("AssignmentFilters", () => {
 
     const option = await screen.findByRole("option", { name: /grace hopper/i });
     expect(option).toHaveTextContent("grace@example.com");
+    expect(option).toHaveTextContent("BSCS");
+    expect(option).toHaveTextContent("BSIT");
     fireEvent.click(option);
 
     expect(onFiltersChange).toHaveBeenCalledWith({

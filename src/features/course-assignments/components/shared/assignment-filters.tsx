@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { ListFilter, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Combobox,
   ComboboxContent,
@@ -41,6 +42,7 @@ type SearchableFilterOption = {
   id: string;
   label: string;
   detail?: string;
+  badges?: string[];
 };
 
 export interface AssignmentFiltersState {
@@ -61,7 +63,7 @@ interface AssignmentFiltersProps {
   onFiltersChange: (filters: AssignmentFiltersState, navigation?: "push" | "replace") => void;
   availableCourses: Array<{ id: string; code: string; title: string }>;
   availablePrograms: Array<{ id: string; code: string; name: string }>;
-  availableFaculty: Array<{ id: string; name: string; email: string }>;
+  availableFaculty: Array<{ id: string; name: string; email: string; programCodes: string[] }>;
   termInstances: TermInstanceItem[];
   showProgramFilter?: boolean;
   hideCourseScopeFilter?: boolean;
@@ -355,6 +357,7 @@ function SecondaryAssignmentControls({
             id: faculty.id,
             label: faculty.name,
             detail: faculty.email,
+            badges: faculty.programCodes,
           })),
         ]}
         placeholder="Search faculty…"
@@ -538,7 +541,7 @@ function SearchableFilterSelect({
         filter={(option, query) => {
           if (!query) return true;
           const normalizedQuery = query.toLowerCase();
-          return [option.label, option.detail]
+          return [option.label, option.detail, ...(option.badges ?? [])]
             .filter((text): text is string => Boolean(text))
             .some((text) => text.toLowerCase().includes(normalizedQuery));
         }}
@@ -557,13 +560,20 @@ function SearchableFilterSelect({
           <ComboboxList>
             {(option) => (
               <ComboboxItem key={option.id} value={option} className="items-start py-2">
-                <span className="flex min-w-0 flex-col gap-0.5 py-0.5 text-left">
+                <span className="flex min-w-0 flex-1 flex-col gap-1 py-0.5 text-left">
                   <span className="truncate text-sm leading-snug font-medium">{option.label}</span>
-                  {option.detail && (
-                    <span className="text-muted-foreground truncate text-xs leading-normal">
-                      {option.detail}
-                    </span>
-                  )}
+                  <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    {option.badges?.map((badge: string) => (
+                      <Badge key={badge} variant="outline" className="bg-background">
+                        {badge}
+                      </Badge>
+                    ))}
+                    {option.detail && (
+                      <span className="text-muted-foreground min-w-0 truncate text-xs leading-normal">
+                        {option.detail}
+                      </span>
+                    )}
+                  </span>
                 </span>
               </ComboboxItem>
             )}

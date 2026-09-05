@@ -31,6 +31,7 @@ interface FacultyOption {
   id: string;
   name: string;
   email: string;
+  programCodes: string[];
 }
 
 export type CourseAssignmentsPageMode = "all-program" | "program-head" | "general-education";
