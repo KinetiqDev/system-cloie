@@ -4,7 +4,11 @@ import {
   resolveCourseBoundEvaluationEligibility,
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
-import { parseCourseInfoSnapshot } from "@/features/evaluations/services/course-info-snapshot";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotProgramLabel,
+  resolveSnapshotText,
+} from "@/features/evaluations/services/course-info-snapshot";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type {
   StudentEvaluationSection,
@@ -150,12 +154,15 @@ export async function getStudentCourseBoundEvaluationSession(
   const courseInfo = parseCourseInfoSnapshot(assignment.course_bound.course_info_snapshot);
   return {
     assignmentId: assignment.id,
-    courseTitle: courseInfo?.courseTitle ?? ca.course.title,
+    courseTitle: resolveSnapshotText(courseInfo, "courseTitle", ca.course.title),
     deadlineAt: assignment.course_bound.deadline_at,
     evaluationTitle:
       assignment.course_bound.deployment_name ?? assignment.course_bound.instrument.template.name,
-    programLabel:
-      courseInfo?.majorName ?? courseInfo?.programName ?? ca.course.major?.name ?? ca.program.name,
+    programLabel: resolveSnapshotProgramLabel(
+      courseInfo,
+      ca.course.major?.name ?? null,
+      ca.program.name
+    ),
     savedAnswers,
     sections,
     session: {

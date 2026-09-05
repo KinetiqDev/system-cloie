@@ -10,7 +10,10 @@ import {
   resolveCourseBoundEvaluationEligibilities,
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
-import { parseCourseInfoSnapshot } from "@/features/evaluations/services/course-info-snapshot";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotProgramLabel,
+} from "@/features/evaluations/services/course-info-snapshot";
 import { isCourseBoundEvaluationAvailable } from "./course-bound-availability";
 import { mapStructureSnapshotToSections } from "./get-student-course-bound-evaluation-session";
 
@@ -243,11 +246,11 @@ export async function listStudentCourseBoundEvaluations(): Promise<{
             facultyName: courseInfo?.facultyName ?? (ca.faculty ? ca.faculty.name : null),
             href,
             now,
-            programLabel:
-              courseInfo?.majorName ??
-              courseInfo?.programName ??
-              ca.course.major?.name ??
-              ca.program.name,
+            programLabel: resolveSnapshotProgramLabel(
+              courseInfo,
+              ca.course.major?.name ?? null,
+              ca.program.name
+            ),
             section,
             session,
           });

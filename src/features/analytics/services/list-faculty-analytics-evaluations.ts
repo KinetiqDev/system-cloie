@@ -3,7 +3,11 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
-import { parseCourseInfoSnapshot } from "@/features/evaluations/services/course-info-snapshot";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotNullableText,
+  resolveSnapshotText,
+} from "@/features/evaluations/services/course-info-snapshot";
 import type {
   FacultyAnalyticsEvaluationItem,
   ListFacultyAnalyticsEvaluationsResult,
@@ -114,21 +118,21 @@ export async function listFacultyAnalyticsEvaluations(
         (a) => a.response?.status === "SUBMITTED"
       ).length;
       const ti = evalItem.term_instance;
-      const schoolYearCode = courseInfo?.schoolYearCode ?? ti.school_year.code;
+      const schoolYearCode = resolveSnapshotText(courseInfo, "schoolYearCode", ti.school_year.code);
       const termInstanceLabel = formatTermInstanceLabel(
         schoolYearCode,
-        (courseInfo?.semester as AcademicSemester | null) ?? ti.semester,
-        (courseInfo?.term as AcademicTerm | null) ?? ti.term
+        resolveSnapshotText(courseInfo, "semester", ti.semester) as AcademicSemester,
+        resolveSnapshotNullableText(courseInfo, "term", ti.term) as AcademicTerm | null
       );
       const ca = evalItem.course_assignment;
       return {
         id: evalItem.id,
         deploymentName: evalItem.deployment_name,
         courseId: ca.course.id,
-        courseCode: courseInfo?.courseCode ?? ca.course.code,
-        courseTitle: courseInfo?.courseTitle ?? ca.course.title,
+        courseCode: resolveSnapshotText(courseInfo, "courseCode", ca.course.code),
+        courseTitle: resolveSnapshotText(courseInfo, "courseTitle", ca.course.title),
         programId: ca.program.id,
-        programName: courseInfo?.programName ?? ca.program.name,
+        programName: resolveSnapshotText(courseInfo, "programName", ca.program.name),
         termInstanceLabel,
         schoolYearCode,
         status: evalItem.status,

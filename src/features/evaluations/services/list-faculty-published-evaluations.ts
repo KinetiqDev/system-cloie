@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
-import { parseCourseInfoSnapshot } from "./course-info-snapshot";
+import { parseCourseInfoSnapshot, resolveSnapshotNullableText } from "./course-info-snapshot";
 import type {
   FacultyPublishedEvaluationItem,
   ListFacultyPublishedEvaluationsResult,
@@ -117,7 +117,7 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
     const termInstanceLabel = formatTermInstanceLabel(
       courseInfo?.schoolYearCode ?? ti.school_year.code,
       (courseInfo?.semester as AcademicSemester | null) ?? ti.semester,
-      (courseInfo?.term as AcademicTerm | null) ?? ti.term
+      resolveSnapshotNullableText(courseInfo, "term", ti.term) as AcademicTerm | null
     );
     const ca = evalItem.course_assignment;
     return {
@@ -131,7 +131,11 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
       deploymentName: evalItem.deployment_name,
       evaluationId: evalItem.id,
       majorId: ca.course.major_id,
-      majorName: courseInfo?.majorName ?? ca.course.major?.name ?? null,
+      majorName: resolveSnapshotNullableText(
+        courseInfo,
+        "majorName",
+        ca.course.major?.name ?? null
+      ),
       programCode: courseInfo?.programCode ?? ca.program.code,
       programId: ca.program.id,
       programName: courseInfo?.programName ?? ca.program.name,

@@ -44,7 +44,6 @@ export interface RlsProbeEvidence {
   expect: RlsProbeExpectation;
 }
 
-// fallow-ignore-next-line unused-type
 export type TableAccessDisposition =
   | {
       kind: "role-aware-rls";

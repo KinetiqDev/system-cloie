@@ -109,6 +109,35 @@ describe("listFacultyPublishedEvaluations – course info snapshots", () => {
     });
   });
 
+  it("preserves explicitly null snapshot fields", async () => {
+    prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
+    prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
+      {
+        ...v2Evaluation,
+        course_info_snapshot: {
+          ...v2Evaluation.course_info_snapshot,
+          semester: "SUMMER",
+          term: null,
+        },
+        course_assignment: {
+          ...v2Evaluation.course_assignment,
+          course: {
+            ...v2Evaluation.course_assignment.course,
+            major_id: "major-added-later",
+            major: { name: "New Live Major" },
+          },
+        },
+      },
+    ] as never);
+
+    const result = await listFacultyPublishedEvaluations();
+
+    expect(result.success && result.data.evaluations[0]).toMatchObject({
+      majorName: null,
+      termInstanceLabel: "2024-2025 — Summer",
+    });
+  });
+
   it("normalizes legacy code/title snapshot shapes", async () => {
     prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
     prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
@@ -188,38 +217,6 @@ describe("listFacultyPublishedEvaluations – historical visibility", () => {
     expect(result).toEqual({
       success: true,
       data: { evaluations: [], program: affiliation.program },
-    });
-  });
-
-  it("prefers published snapshot labels over live relations for historical records", async () => {
-    prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
-    prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([v2Evaluation] as never);
-
-    const result = await listFacultyPublishedEvaluations();
-
-    expect(result.success).toBe(true);
-    expect(result.success && result.data.evaluations[0]).toMatchObject({
-      courseCode: "IT-401-PREV",
-      courseTitle: "Capstone 1 (previous edition)",
-      termInstanceLabel: "2024-2025 — 2nd Semester — 2nd Term",
-    });
-  });
-
-  it("normalizes legacy code/title snapshot shapes", async () => {
-    prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
-    prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
-      {
-        ...publishedEvaluation,
-        course_info_snapshot: { code: "IT-401-LEGACY", title: "Legacy Capstone" },
-      },
-    ] as never);
-
-    const result = await listFacultyPublishedEvaluations();
-
-    expect(result.success).toBe(true);
-    expect(result.success && result.data.evaluations[0]).toMatchObject({
-      courseCode: "IT-401-LEGACY",
-      courseTitle: "Legacy Capstone",
     });
   });
 });

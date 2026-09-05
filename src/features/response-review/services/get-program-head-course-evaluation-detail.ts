@@ -24,7 +24,11 @@ import { buildQualitativeSummary } from "./qualitative-summary";
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
 import type { ProgramHeadCourseEvaluationDetail, ProgramHeadRespondentRow } from "../types";
-import { parseCourseInfoSnapshot } from "@/features/evaluations/services/course-info-snapshot";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotNullableText,
+  resolveSnapshotText,
+} from "@/features/evaluations/services/course-info-snapshot";
 
 // ---------------------------------------------------------------------------
 // Program Head course-bound evaluation detail (spec §25)
@@ -175,16 +179,26 @@ export async function getProgramHeadCourseEvaluationDetail(
     evaluation: {
       id: evaluation.id,
       title: evaluation.deployment_name,
-      courseCode: courseInfo?.courseCode ?? ca.course.code,
-      courseTitle: courseInfo?.courseTitle ?? ca.course.title,
-      facultyName: courseInfo?.facultyName ?? ca.faculty?.name ?? null,
-      yearLevel: (courseInfo?.yearLevel as YearLevel | null) ?? ca.year_level,
-      section: (courseInfo?.section as StudentSection | null) ?? ca.section,
-      majorLabel: courseInfo?.majorName ?? ca.course.major?.name ?? null,
+      courseCode: resolveSnapshotText(courseInfo, "courseCode", ca.course.code),
+      courseTitle: resolveSnapshotText(courseInfo, "courseTitle", ca.course.title),
+      facultyName: resolveSnapshotNullableText(courseInfo, "facultyName", ca.faculty?.name ?? null),
+      yearLevel: resolveSnapshotText(courseInfo, "yearLevel", ca.year_level) as YearLevel,
+      section: resolveSnapshotText(courseInfo, "section", ca.section) as StudentSection,
+      majorLabel: resolveSnapshotNullableText(
+        courseInfo,
+        "majorName",
+        ca.course.major?.name ?? null
+      ),
       periodLabel: buildPeriodLabel({
-        school_year: { code: courseInfo?.schoolYearCode ?? ca.term_instance.school_year.code },
-        semester: courseInfo?.semester ?? ca.term_instance.semester,
-        term: courseInfo?.term ?? ca.term_instance.term,
+        school_year: {
+          code: resolveSnapshotText(
+            courseInfo,
+            "schoolYearCode",
+            ca.term_instance.school_year.code
+          ),
+        },
+        semester: resolveSnapshotText(courseInfo, "semester", ca.term_instance.semester),
+        term: resolveSnapshotNullableText(courseInfo, "term", ca.term_instance.term),
       }),
       activationAt: evaluation.activation_at,
       deadlineAt: evaluation.deadline_at,

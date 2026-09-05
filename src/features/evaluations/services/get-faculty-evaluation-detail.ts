@@ -6,7 +6,7 @@ import { AcademicSemester, AcademicTerm, CourseScope } from "@prisma/client";
 import type { FacultyEvaluationDetail, GetFacultyEvaluationDetailResult } from "../types";
 import { parsePublishedInstrument } from "@/features/instruments/services/parse-published-instrument";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
-import { parseCourseInfoSnapshot } from "./course-info-snapshot";
+import { parseCourseInfoSnapshot, resolveSnapshotNullableText } from "./course-info-snapshot";
 
 export async function getFacultyEvaluationDetail(
   evaluationId: string
@@ -156,7 +156,7 @@ export async function getFacultyEvaluationDetail(
   const termInstanceLabel = formatTermInstanceLabel(
     courseInfoSnapshot?.schoolYearCode ?? ti.school_year.code,
     (courseInfoSnapshot?.semester as AcademicSemester | null) ?? ti.semester,
-    (courseInfoSnapshot?.term as AcademicTerm | null) ?? ti.term
+    resolveSnapshotNullableText(courseInfoSnapshot, "term", ti.term) as AcademicTerm | null
   );
 
   const ca = evaluation.course_assignment;
@@ -192,7 +192,11 @@ export async function getFacultyEvaluationDetail(
         (courseInfoSnapshot?.courseScope as CourseScope | null) ??
         ca.course.course_scope.replace(/_/g, " ").toLowerCase(),
       courseTitle: courseInfoSnapshot?.courseTitle ?? ca.course.title,
-      majorName: courseInfoSnapshot?.majorName ?? ca.course.major?.name ?? null,
+      majorName: resolveSnapshotNullableText(
+        courseInfoSnapshot,
+        "majorName",
+        ca.course.major?.name ?? null
+      ),
       programCode: courseInfoSnapshot?.programCode ?? ca.program.code,
       programName: courseInfoSnapshot?.programName ?? ca.program.name,
     },

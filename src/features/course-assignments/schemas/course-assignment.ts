@@ -166,7 +166,6 @@ export type BulkCreateCourseAssignmentsInput = z.infer<typeof bulkCreateCourseAs
 export type AddRosterMembershipInput = z.infer<typeof addRosterMembershipSchema>;
 // Confirmation preflight contract; the bulk confirmation write flow (#400)
 // is the first consumer.
-// fallow-ignore-next-line unused-type
 export type ConfirmRosterResolutionInput = z.infer<typeof confirmRosterResolutionSchema>;
 export type RestoreRosterMembershipInput = z.infer<typeof restoreRosterMembershipSchema>;
 export type RemoveRosterMembershipInput = z.infer<typeof removeRosterMembershipSchema>;

@@ -1,8 +1,8 @@
-export const COURSE_INFO_SNAPSHOT_SCHEMA_VERSION = 2;
+const COURSE_INFO_SNAPSHOT_SCHEMA_VERSION = 2;
 
-export type CourseInfoSnapshotSource = "PUBLICATION" | "BACKFILLED_CURRENT_STATE";
+type CourseInfoSnapshotSource = "PUBLICATION" | "BACKFILLED_CURRENT_STATE";
 
-export type CourseInfoSnapshotV2 = {
+type CourseInfoSnapshotV2 = {
   snapshotSchemaVersion: typeof COURSE_INFO_SNAPSHOT_SCHEMA_VERSION;
   courseAssignmentId: string;
   courseId: string;
@@ -26,7 +26,7 @@ export type CourseInfoSnapshotV2 = {
   assignmentContextSource: CourseInfoSnapshotSource;
 };
 
-export interface BuildCourseInfoSnapshotInput {
+interface BuildCourseInfoSnapshotInput {
   courseAssignmentId: string;
   courseId: string;
   courseCode: string;
@@ -49,7 +49,7 @@ export interface BuildCourseInfoSnapshotInput {
   assignmentContextSource?: CourseInfoSnapshotSource;
 }
 
-export interface ParsedCourseInfoSnapshot {
+interface ParsedCourseInfoSnapshot {
   snapshotSchemaVersion: number | null;
   courseCode: string | null;
   courseTitle: string | null;
@@ -57,14 +57,60 @@ export interface ParsedCourseInfoSnapshot {
   programCode: string | null;
   programName: string | null;
   majorName: string | null;
+  hasMajorName: boolean;
   schoolYearCode: string | null;
   semester: string | null;
   term: string | null;
+  hasTerm: boolean;
   yearLevel: string | null;
   section: string | null;
   facultyName: string | null;
   capturedAt: string | null;
   assignmentContextSource: CourseInfoSnapshotSource | null;
+}
+
+type RequiredSnapshotTextField =
+  | "courseCode"
+  | "courseTitle"
+  | "courseScope"
+  | "programCode"
+  | "programName"
+  | "schoolYearCode"
+  | "semester"
+  | "yearLevel"
+  | "section"
+  | "facultyName";
+
+export function resolveSnapshotText(
+  snapshot: ParsedCourseInfoSnapshot | null,
+  field: RequiredSnapshotTextField,
+  fallback: string
+): string {
+  return snapshot?.[field] ?? fallback;
+}
+
+export function resolveSnapshotNullableText(
+  snapshot: ParsedCourseInfoSnapshot | null,
+  field: "majorName" | "term" | "facultyName",
+  fallback: string | null
+): string | null {
+  if (!snapshot) return fallback;
+  const isPresent =
+    field === "majorName"
+      ? snapshot.hasMajorName
+      : field === "term"
+        ? snapshot.hasTerm
+        : snapshot.facultyName === null || typeof snapshot.facultyName === "string";
+  return isPresent ? snapshot[field] : fallback;
+}
+
+export function resolveSnapshotProgramLabel(
+  snapshot: ParsedCourseInfoSnapshot | null,
+  liveMajorName: string | null,
+  liveProgramName: string
+): string {
+  const snapshotMajorName = resolveSnapshotNullableText(snapshot, "majorName", liveMajorName);
+  return snapshotMajorName ?? snapshot?.programName ?? liveProgramName;
 }
 
 function asText(value: unknown): string | null {
@@ -126,9 +172,11 @@ export function parseCourseInfoSnapshot(value: unknown): ParsedCourseInfoSnapsho
     programCode: asText(snapshot.programCode),
     programName: asText(snapshot.programName),
     majorName: asNullableText(snapshot.majorName),
+    hasMajorName: snapshot.majorName === null || typeof snapshot.majorName === "string",
     schoolYearCode: asText(snapshot.schoolYearCode),
     semester: asText(snapshot.semester),
     term: asNullableText(snapshot.term),
+    hasTerm: snapshot.term === null || typeof snapshot.term === "string",
     yearLevel: asNullableText(snapshot.yearLevel),
     section: asNullableText(snapshot.section),
     facultyName: asNullableText(snapshot.facultyName),
