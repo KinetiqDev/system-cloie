@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { Button } from "@/components/ui/button";
 import { CentralEvaluationDetail } from "@/features/response-review/components/central-evaluation-detail";
 import { getProgramHeadCentralEvaluationDetail } from "@/features/response-review/services/get-program-head-central-evaluation-detail";
 import {
@@ -63,6 +66,16 @@ export default async function CentralEvaluationDetailPage({
               ]
         }
       />
+      <div>
+        <Button
+          render={<Link href={openedFromTools ? toolsHref : responsesHref} />}
+          variant="outline"
+          size="sm"
+        >
+          <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+          {openedFromTools ? "Back to Evaluation Tools" : "Back to Program-wide evaluations"}
+        </Button>
+      </div>
       <CentralEvaluationDetail
         detail={detail}
         analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}

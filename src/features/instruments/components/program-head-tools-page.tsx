@@ -390,6 +390,39 @@ function ProgramHeadPublishedDeployments({
             <p className="text-muted-foreground">No published tools yet.</p>
           </div>
         }
+        renderExpanded={(item) => (
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <dl className="grid min-w-0 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
+              <div>
+                <dt className="text-muted-foreground text-caption">Target</dt>
+                <dd className="mt-1 font-medium">{item.targetLabel ?? "Not specified"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-caption">Academic period</dt>
+                <dd className="mt-1 font-medium">{item.periodLabel ?? "Not specified"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-caption">Responses</dt>
+                <dd className="mt-1 font-medium tabular-nums">
+                  {item.responseCount} of {item.totalCount} submitted
+                </dd>
+              </div>
+            </dl>
+            <Button
+              render={
+                <Link
+                  href={`${buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id)}?from=tools`}
+                />
+              }
+              variant="outline"
+              size="sm"
+              className="shrink-0 self-start sm:self-center"
+            >
+              <Eye data-icon="inline-start" aria-hidden="true" />
+              View evaluation details
+            </Button>
+          </div>
+        )}
         renderMenuItems={(item, ctx) => (
           <>
             {ctx.view === "list" && (
