@@ -507,7 +507,8 @@ export async function preflightCourseAssignmentDeletion(
       success: true,
       data: {
         id: existing.id,
-        label: assignmentLabel(existing),
+        label: existing.course.code,
+        fullLabel: assignmentLabel(existing),
         revision: existing.updated_at.toISOString(),
         membershipCount: existing._count.memberships,
         activeMembershipCount,
@@ -563,10 +564,14 @@ export async function deleteCourseAssignment(
         isProgramHead(authSession) && input.programId ? [input.programId] : []
       );
       if (!permission.allowed) return { success: false, error: permission.reason };
-
-      const currentLabel = assignmentLabel(existing);
-      if (input.confirmationLabel !== currentLabel) {
-        return { success: false, error: "Course assignment label confirmation does not match." };
+      const fullLabel = assignmentLabel(existing);
+      const courseCode = existing.course.code.trim().toUpperCase();
+      const trimmedConfirmation = input.confirmationLabel.trim();
+      const isConfirmed =
+        trimmedConfirmation.toUpperCase() === courseCode ||
+        trimmedConfirmation === fullLabel;
+      if (!isConfirmed) {
+        return { success: false, error: "Course assignment confirmation does not match." };
       }
       if (input.revision !== existing.updated_at.toISOString()) {
         return { success: false, error: "Course assignment changed after deletion preflight." };

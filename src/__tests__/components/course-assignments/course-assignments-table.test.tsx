@@ -215,6 +215,50 @@ describe("CourseAssignmentsTable", () => {
     expect(onUpdated).toHaveBeenCalled();
   });
 
+  it("allows confirming assignment deletion by typing the course code", async () => {
+    vi.mocked(deleteCourseAssignmentAction).mockResolvedValue({ success: true, data: undefined });
+    vi.mocked(preflightCourseAssignmentDeletionAction).mockResolvedValue({
+      success: true,
+      data: {
+        id: "assignment-1",
+        label: "CS101",
+        fullLabel:
+          "CS101 — Intro to Computing · BSCS · 2nd Year · Morning · 2025-2026 — 1st Semester — 1st Term",
+        revision: "2026-07-21T00:00:00.000Z",
+        membershipCount: 2,
+        activeMembershipCount: 1,
+        removedMembershipCount: 1,
+        courseBoundEvaluationCount: 0,
+      },
+    });
+    const onUpdated = vi.fn();
+    const assignment = createAssignment();
+
+    renderTable({ assignments: [assignment], onAssignmentUpdated: onUpdated });
+    openRowActions();
+
+    fireEvent.click(screen.getByRole("menuitem", { name: /delete/i }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(/Type CS101 to confirm/);
+
+    fireEvent.change(await within(dialog).findByRole("textbox"), {
+      target: { value: "cs101" },
+    });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /delete permanently/i }));
+
+    await waitFor(() => {
+      expect(deleteCourseAssignmentAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assignmentId: assignment.id,
+          confirmationLabel: "cs101",
+        })
+      );
+    });
+    expect(onUpdated).toHaveBeenCalled();
+  });
+
   it("activates an inactive assignment directly without opening a confirmation dialog", async () => {
     vi.mocked(activateCourseAssignmentAction).mockResolvedValue({ success: true, data: undefined });
     const onUpdated = vi.fn();

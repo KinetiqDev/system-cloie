@@ -12,6 +12,7 @@ import {
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
+import { prisma } from "@/lib/db/prisma";
 
 const resolveProgramHeadContextMock = vi.hoisted(() => vi.fn());
 const revalidateProgramHeadAssignmentMock = vi.hoisted(() => vi.fn());
@@ -881,6 +882,67 @@ describe("manage-course-assignments", () => {
 
       expect(result.success).toBe(true);
       expect(tx.courseAssignment.delete).toHaveBeenCalledWith({ where: { id: "assignment-1" } });
+    });
+
+    it("allows deletion when confirming with the course code", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
+
+      const tx = {
+        courseAssignment: {
+          findUnique: vi.fn().mockResolvedValue(lifecycleAssignment),
+          delete: vi.fn(),
+        },
+        courseAssignmentMembership: { count: vi.fn().mockResolvedValue(0) },
+        programHeadAssignment: { findMany: vi.fn() },
+        $queryRaw: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
+        callback(tx as never)
+      );
+
+      const result = await deleteCourseAssignment({
+        assignmentId: "assignment-1",
+        confirmationLabel: "CS101",
+        revision: lifecycleAssignment.updated_at.toISOString(),
+        membershipCount: 0,
+        activeMembershipCount: 0,
+        removedMembershipCount: 0,
+      });
+
+      expect(result.success).toBe(true);
+      expect(tx.courseAssignment.delete).toHaveBeenCalledWith({ where: { id: "assignment-1" } });
+    });
+
+    it("rejects deletion when confirmation code does not match", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
+
+      const tx = {
+        courseAssignment: {
+          findUnique: vi.fn().mockResolvedValue(lifecycleAssignment),
+          delete: vi.fn(),
+        },
+        courseAssignmentMembership: { count: vi.fn().mockResolvedValue(0) },
+        programHeadAssignment: { findMany: vi.fn() },
+        $queryRaw: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
+        callback(tx as never)
+      );
+
+      const result = await deleteCourseAssignment({
+        assignmentId: "assignment-1",
+        confirmationLabel: "WRONG_CODE",
+        revision: lifecycleAssignment.updated_at.toISOString(),
+        membershipCount: 0,
+        activeMembershipCount: 0,
+        removedMembershipCount: 0,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment confirmation does not match.",
+      });
+      expect(tx.courseAssignment.delete).not.toHaveBeenCalled();
     });
 
     it("rejects Secretary deletion before persistence", async () => {
