@@ -21,6 +21,10 @@ jobs:
     name: Unit Suites
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [node, dom]
     steps:
       - name: Checkout code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -35,13 +39,38 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Test
-        run: pnpm vitest run --pool=forks --maxWorkers=4
+      - name: Test ${{ matrix.project }} project
+        run: pnpm test --project=${{ matrix.project }}
         env:
           NODE_ENV: test
           NODE_OPTIONS: --max-old-space-size=4096
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+  tooling-integration:
+    name: Tooling Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test CI tooling against real subprocesses
+        run: pnpm test:tooling-integration
+        env:
+          NODE_ENV: test
+          NODE_OPTIONS: --max-old-space-size=4096
   database-integration:
     name: Database Integration (live RLS)
     runs-on: ubuntu-latest
@@ -73,8 +102,6 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
       - name: Verify disposable database target
         run: pnpm verify:database-target
       - name: Verify database suite completeness
@@ -131,8 +158,13 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Restore Next.js compiler cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
       - name: Apply migrations
         run: bash scripts/ci/apply-migrations.sh
       - name: Seed fixture
@@ -143,15 +175,6 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
       - name: Run Playwright journeys (production)
         run: pnpm exec playwright test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
-          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
-          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-          CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
-          CLOIE_CI_TEST_ENABLED: "true"
-          CLOIE_DEPLOYMENT_KIND: "ci-test"
-          CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
-          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -211,8 +234,13 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Restore Next.js compiler cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
       - name: Apply migrations
         run: bash scripts/ci/apply-migrations.sh
       - name: Seed fixture
@@ -223,15 +251,6 @@ jobs:
         run: pnpm exec playwright install --with-deps firefox
       - name: Run Playwright journeys (production)
         run: pnpm exec playwright test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
-          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
-          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-          CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
-          CLOIE_CI_TEST_ENABLED: "true"
-          CLOIE_DEPLOYMENT_KIND: "ci-test"
-          CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
-          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -288,8 +307,13 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Restore Next.js compiler cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
       - name: Apply migrations
         run: bash scripts/ci/apply-migrations.sh
       - name: Seed fixture
@@ -300,15 +324,6 @@ jobs:
         run: pnpm exec playwright install --with-deps webkit
       - name: Run Playwright journeys (production)
         run: pnpm exec playwright test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
-          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/cloie_test
-          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-          CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
-          CLOIE_CI_TEST_ENABLED: "true"
-          CLOIE_DEPLOYMENT_KIND: "ci-test"
-          CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
-          CLOIE_CI_TEST_ALLOWED_USERS: "demo-ph@cloie.test,ph-beed@cloie.test,demo-faculty@cloie.test,faculty-bsed@cloie.test,faculty-bsba@cloie.test,faculty-bshm@cloie.test,demo-student@cloie.test,student-bsba@cloie.test,demo-grad@cloie.test,student-bsed@cloie.test,student-bshm@cloie.test,demo-secretary@cloie.test,demo-dean@cloie.test,demo-gened@cloie.test,demo-alumni@cloie.test,alumni-bsba@cloie.test,alumni-rejected@cloie.test,alumni-inactive@cloie.test,demo-industry@cloie.test,industry-bshm@cloie.test"
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

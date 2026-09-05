@@ -34,7 +34,6 @@ describe("changed-files", () => {
     git("git config user.name CI");
     return repo;
   }
-
   function collectIn(repo: string) {
     // getChangedFiles and existingFiles resolve relative paths against the
     // process working directory, so both must run inside the fixture repo,
@@ -48,6 +47,20 @@ describe("changed-files", () => {
       process.chdir(previousCwd);
     }
   }
+
+  it("propagates git plumbing failures instead of silently selecting nothing", () => {
+    const repo = initRepo();
+    const previousCwd = process.cwd();
+    process.chdir(repo);
+    try {
+      // No commits exist, so both getBaseRef fallbacks fail and the selector
+      // treats the tree as an unrelated push. The working-tree diff against a
+      // broken ref must surface the git error instead of yielding [].
+      expect(() => getChangedFiles("definitely-not-a-ref")).toThrow();
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
 
   it("collects deleted risk-domain paths from the working tree", () => {
     const repo = initRepo();

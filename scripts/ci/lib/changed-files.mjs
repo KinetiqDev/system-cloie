@@ -5,7 +5,16 @@ function run(cmd) {
   return execSync(cmd, { encoding: "utf8", stdio: "pipe" }).trim();
 }
 
-// fallow-ignore-next-line complexity
+function collect(cmd, target) {
+  const out = run(cmd);
+  if (out)
+    out
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((f) => target.add(f));
+}
+
 export function getBaseRef() {
   if (process.env.BASE_SHA && process.env.BASE_SHA.trim()) return process.env.BASE_SHA.trim();
   try {
@@ -21,22 +30,9 @@ export function getBaseRef() {
   }
 }
 
-// fallow-ignore-next-line complexity
 export function getChangedFiles(baseRef) {
   const committed = new Set();
   const working = new Set();
-
-  function collect(cmd, target) {
-    try {
-      const out = run(cmd);
-      if (out)
-        out
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .forEach((f) => target.add(f));
-    } catch {}
-  }
 
   if (baseRef) {
     collect(`git diff --name-only --diff-filter=ACDMRT ${baseRef}...HEAD`, committed);
@@ -48,14 +44,7 @@ export function getChangedFiles(baseRef) {
   const combined = [...new Set([...committed, ...working])];
   if (combined.length === 0) {
     // Push to main: no PR base, no working tree changes – diff against previous commit.
-    try {
-      const out = run("git diff --name-only --diff-filter=ACDMRT HEAD~1...HEAD");
-      if (out)
-        return out
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean);
-    } catch {}
+    collect("git diff --name-only --diff-filter=ACDMRT HEAD~1...HEAD", combined);
   }
   return combined;
 }

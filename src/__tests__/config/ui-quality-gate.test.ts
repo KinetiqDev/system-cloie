@@ -16,15 +16,6 @@ const rootRequire = createRequire(import.meta.url);
 const eslintRequire = createRequire(rootRequire.resolve("eslint/package.json"));
 const eslintrcRequire = createRequire(eslintRequire.resolve("@eslint/eslintrc/package.json"));
 const yaml = eslintrcRequire("js-yaml") as { load: (source: string) => unknown };
-
-interface WorkflowStep {
-  name?: string;
-  run?: string;
-  uses?: string;
-  env?: Record<string, string>;
-  if?: string;
-  with?: Record<string, unknown>;
-}
 interface WorkflowJob {
   name?: string;
   "timeout-minutes"?: number;
@@ -32,8 +23,15 @@ interface WorkflowJob {
   if?: string;
   outputs?: Record<string, string>;
   env?: Record<string, string>;
-  steps?: WorkflowStep[];
+  strategy?: { matrix?: Record<string, unknown> };
   services?: Record<string, unknown>;
+  steps?: Array<{
+    name?: string;
+    if?: string;
+    run?: string;
+    uses?: string;
+    with?: Record<string, unknown>;
+  }>;
 }
 interface Workflow {
   name: string;
@@ -70,15 +68,15 @@ describe("risk-based PR CI selection (551)", () => {
     expect(selectStep?.run).toContain("node scripts/ci/select-checks.mjs");
   });
 
-  it("always runs the quality job (formatting, lint, repository-owned tests)", () => {
-    const quality = ci().jobs["quality-checks"];
-    expect(quality?.if).toBeUndefined();
-    expect(quality?.needs).toBeUndefined();
-    const stepNames = (quality?.steps ?? []).map((step) => step.name ?? "");
-    expect(stepNames.some((name) => name.startsWith("Check formatting"))).toBe(true);
-    expect(stepNames).toContain("Lint");
-    expect(stepNames.some((name) => name.startsWith("Lint changed production code"))).toBe(true);
-    expect(stepNames.some((name) => name.startsWith("Test"))).toBe(true);
+  it("always runs independent static and unit gates", () => {
+    const jobs = ci().jobs;
+    const staticSteps = (jobs["static-checks"]?.steps ?? []).map((step) => step.name ?? "");
+    const unitSteps = (jobs["unit-tests"]?.steps ?? []).map((step) => step.name ?? "");
+    expect(staticSteps).toEqual(expect.arrayContaining(["Check formatting", "Lint changed files"]));
+    expect(unitSteps.some((name) => name.startsWith("Test"))).toBe(true);
+    expect(jobs["unit-tests"]?.strategy?.matrix?.project).toEqual(["node", "dom"]);
+    expect(jobs["static-checks"]?.needs).toBeUndefined();
+    expect(jobs["unit-tests"]?.needs).toBeUndefined();
   });
 
   it("gates the build, database, and browser jobs on the risk outputs", () => {
@@ -133,6 +131,7 @@ describe("scheduled deep verification matrix (551)", () => {
         "database-integration",
         "demo-reset-gate",
         "production-boundary",
+        "tooling-integration",
         "unit",
       ].sort()
     );

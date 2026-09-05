@@ -107,7 +107,7 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
-    navigationTimeout: 120_000,
+    navigationTimeout: 60_000,
   },
   projects: selectedBrowsers.flatMap(projectFor),
   webServer: {

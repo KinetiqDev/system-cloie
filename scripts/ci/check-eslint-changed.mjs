@@ -1,20 +1,13 @@
 #!/usr/bin/env node
 /**
- * Check ESLint warnings in changed production code only.
- * Fails when any changed production file introduces a warning or error.
+ * Check ESLint warnings and errors in changed lintable files only.
  */
 
 import { existingFiles, getBaseRef, getChangedFiles, runCheck } from "./lib/changed-files.mjs";
 
-// fallow-ignore-next-line complexity
-function isProductionFile(f) {
-  if (!f.startsWith("src/")) return false;
-  if (!/\.(ts|tsx|js|jsx)$/.test(f)) return false;
-  if (f.includes("__tests__")) return false;
-  if (f.includes(".test.")) return false;
-  if (f.includes(".spec.")) return false;
-  if (f.includes(".stories.")) return false;
-  if (f === "src/types/supabase-database.ts") return false;
+function isLintableFile(file) {
+  if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file)) return false;
+  if (file === "src/types/supabase-database.ts") return false;
   return true;
 }
 
@@ -29,18 +22,18 @@ function main() {
     return;
   }
 
-  const production = existingFiles(changed.filter(isProductionFile));
+  const lintable = existingFiles(changed.filter(isLintableFile));
 
-  if (production.length === 0) {
-    console.log("[lint:changed] No changed production files — skipping.");
+  if (lintable.length === 0) {
+    console.log("[lint:changed] No changed lintable files — skipping.");
     console.log(`[lint:changed] Changed files (${changed.length}): ${changed.join(", ")}`);
     return;
   }
 
-  console.log(`[lint:changed] Changed production files (${production.length}):`);
-  for (const f of production) console.log(`  - ${f}`);
+  console.log(`[lint:changed] Changed lintable files (${lintable.length}):`);
+  for (const file of lintable) console.log(`  - ${file}`);
 
-  runCheck("lint:changed", "pnpm", ["exec", "eslint", "--max-warnings=0", ...production]);
+  runCheck("lint:changed", "pnpm", ["exec", "eslint", "--max-warnings=0", ...lintable]);
 }
 
 main();
