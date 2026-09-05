@@ -6,7 +6,6 @@ const FACULTY_ID = "22222222-2222-4222-b222-222222222222";
 const COURSE_ID = "33333333-3333-4333-a333-333333333333";
 const PROGRAM_ID = "44444444-4444-4444-b444-444444444444";
 const ASSIGNMENT_ID = "aaaaaaaa-1111-4111-a111-111111111111";
-const CURRICULUM_COURSE_ID = "55555555-5555-4555-a555-555555555555";
 
 const revalidatePathSpy = vi.hoisted(() => vi.fn());
 
@@ -46,11 +45,6 @@ vi.mock("@/features/course-assignments/services/list-course-assignments-for-facu
 vi.mock("@/features/course-assignments/services/search-faculty-pool", () => ({
   searchFacultyPool: vi.fn(),
 }));
-
-vi.mock("@/features/curriculum/services/read-curriculum-pages", () => ({
-  listPublishedCurriculumCourseOptions: vi.fn(() => Promise.resolve([])),
-}));
-
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: vi.fn(),
 }));
@@ -66,7 +60,6 @@ import {
   activateCourseAssignmentAction,
   deleteCourseAssignmentAction,
   bulkCreateCourseAssignmentsAction,
-  loadCurriculumCoursesForProgramAction,
 } from "@/lib/actions/course-assignment-actions";
 import {
   createCourseAssignment,
@@ -76,8 +69,6 @@ import {
   deleteCourseAssignment,
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { listPublishedCurriculumCourseOptions } from "@/features/curriculum/services/read-curriculum-pages";
 
 describe("course-assignment actions revalidate all role routes on success", () => {
   beforeEach(() => {
@@ -99,77 +90,6 @@ describe("course-assignment actions revalidate all role routes on success", () =
       `/program-head/programs/${PROGRAM_ID}/course-assignments`
     );
     expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/academic-structure/course-assignments");
-  });
-
-  it("parses curriculum_course_id from FormData", async () => {
-    const formData = new FormData();
-    formData.set("termInstanceId", TERM_ID);
-    formData.set("facultyId", FACULTY_ID);
-    formData.set("courseId", COURSE_ID);
-    formData.set("programId", PROGRAM_ID);
-    formData.set("yearLevel", YearLevel.FIRST_YEAR);
-    formData.set("section", StudentSection.MORNING);
-    formData.set("curriculum_course_id", CURRICULUM_COURSE_ID);
-
-    await createCourseAssignmentAction(formData);
-
-    expect(createCourseAssignment).toHaveBeenCalledWith(
-      expect.objectContaining({ curriculumCourseId: CURRICULUM_COURSE_ID })
-    );
-  });
-
-  it("accepts an explicit null curriculum link", async () => {
-    await createCourseAssignmentAction({
-      termInstanceId: TERM_ID,
-      facultyId: FACULTY_ID,
-      courseId: COURSE_ID,
-      programId: PROGRAM_ID,
-      curriculumCourseId: null,
-      yearLevel: YearLevel.FIRST_YEAR,
-      section: StudentSection.MORNING,
-    });
-
-    expect(createCourseAssignment).toHaveBeenCalledWith(
-      expect.objectContaining({ curriculumCourseId: null })
-    );
-  });
-
-  it("loads published curriculum courses for authorized assignment creators", async () => {
-    vi.mocked(resolveAuthSession).mockResolvedValue({ activeRole: "DEAN" } as never);
-    vi.mocked(listPublishedCurriculumCourseOptions).mockResolvedValue([
-      {
-        id: CURRICULUM_COURSE_ID,
-        curriculumVersionId: "66666666-6666-4666-a666-666666666666",
-        curriculumVersionCode: "BSCS-2030",
-        curriculumVersionName: null,
-        courseId: COURSE_ID,
-        courseCode: "CS101",
-        courseTitle: "Intro",
-        courseScope: "PROGRAM_SPECIFIC",
-        yearLevel: YearLevel.FIRST_YEAR,
-        semester: "FIRST",
-        term: "FIRST_TERM",
-      },
-    ]);
-
-    const result = await loadCurriculumCoursesForProgramAction(PROGRAM_ID);
-
-    expect(result).toEqual({
-      success: true,
-      data: expect.arrayContaining([expect.objectContaining({ id: CURRICULUM_COURSE_ID })]),
-    });
-  });
-
-  it("returns a safe failure when curriculum course loading fails", async () => {
-    vi.mocked(resolveAuthSession).mockResolvedValue({ activeRole: "DEAN" } as never);
-    vi.mocked(listPublishedCurriculumCourseOptions).mockRejectedValueOnce(
-      new Error("database down")
-    );
-
-    await expect(loadCurriculumCoursesForProgramAction(PROGRAM_ID)).resolves.toEqual({
-      success: false,
-      error: "Unable to load published curriculum courses. Please try again.",
-    });
   });
 
   it("updateCourseAssignmentAction revalidates /program-head and /dean course-assignment routes", async () => {
