@@ -114,7 +114,7 @@ Key demo scripts:
 | `pnpm verify:database-suites`              | Verify DB suite discovery completeness                                       |
 | `pnpm vitest run src/__tests__/...`        | Run a single test file                                                       |
 | `pnpm db:push`                             | Push Prisma schema to dev database                                           |
-| `pnpm db:seed`                             | Seed database with demo data                                                 |
+| `pnpm db:seed`                             | Seed database with demo data (run `pnpm install` or `prisma generate` first) |
 | `pnpm db:studio`                           | Open Prisma Studio GUI                                                       |
 | `pnpm supabase:start`                      | Start the local Supabase CLI Docker stack                                    |
 | `pnpm supabase:stop`                       | Stop the local Supabase CLI Docker stack                                     |
@@ -494,11 +494,13 @@ CI runs on GitHub Actions. Workflows live in `.github/workflows/`. The retired D
 
 `ci.yml` runs three jobs on every push to `main` and pull request:
 
-- **quality-checks** — Prettier (`pnpm format:check:changed`), ESLint (`pnpm lint` and `pnpm lint:changed`), Vitest (`pnpm test`), and the production build (`pnpm build`).
-- **database-integration** — applies the Supabase migrations and the fixture seed to a disposable Postgres 16 container, then runs the gated DB suites (`pnpm test:db`). The container is the only database involved; no shared backend is touched.
+- **static-checks** — changed-file Prettier and zero-warning ESLint checks. This runs in parallel with unit tests.
+- **unit-tests** — the fast Vitest suite, split into Node and jsdom projects. `pnpm test` runs them sequentially to preserve test isolation; CI shards them across separate runners. Database and subprocess-heavy tooling suites run in their dedicated jobs.
+- **production-build** — risk-selected production compilation and route generation.
+- **database-integration** — applies the Supabase migrations and fixture seed to a disposable Postgres 16 container, then runs the gated DB suites (`pnpm test:db`). The container is the only database involved; no shared backend is touched.
 - **browser-e2e** — production build plus `pnpm test:e2e` against the same disposable Postgres, signed in with the isolated CI test session (`CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test`). The Playwright report and traces upload as artifacts on failure.
 
-`code-intelligence.yml` runs the fallow audit gate on pull requests and scheduled fallow reports.
+`scheduled.yml` repeats the full unit gate and runs the real-subprocess CI tooling integration suite nightly. `code-intelligence.yml` runs the baseline-backed Fallow audit gate on pull requests and scheduled Fallow reports.
 
 ## Database & Migrations
 

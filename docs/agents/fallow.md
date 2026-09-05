@@ -79,4 +79,4 @@ Initial reports point at these evidence-backed candidates; each needs a focused 
 - CLI reference: `.agents/skills/fallow/references/cli-reference.md` (note: its command TOC is ahead of the installed 2.54.3 — the binary's `--help` is authoritative)
 - Policy: `docs/adr/0011-fallow-code-intelligence-policy.md`
 - Deprecation note: this runbook supersedes the retired change artifacts previously tracked under the code-intelligence OpenSpec change (see ADR 0011 and the migration report `docs/openspec-deprecation-migration-report.md`).
-- Tests: `src/__tests__/config/fallow-agent-guidance.test.ts`, `src/__tests__/config/fallow-config.test.ts`
+- Tests: `src/__tests__/config/fallow-config.test.ts`; the pull-request workflow executes `scripts/run-fallow-audit.ts` against the real changed revision.
