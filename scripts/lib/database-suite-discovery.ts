@@ -18,7 +18,6 @@ const EXCLUDE_DIRS: Record<string, true> = {
 const EXCLUDED_FILES: Record<string, true> = {
   "src/__tests__/config/vitest-discovery.test.ts": true,
   "src/__tests__/config/database-suite-completeness.test.ts": true,
-  "src/__tests__/features/course-assignments/db-invariants-gate.test.ts": true,
 };
 
 const TEST_EXT_RE = /\.(test|spec)\.(ts|tsx|js|jsx)$/;
@@ -49,7 +48,10 @@ function isDatabaseSuiteContent(content: string): boolean {
 }
 
 function isGatedFileContent(content: string): boolean {
-  return content.includes(DATABASE_GATE_MARKER) && (content.includes("skipIf") || content.includes("RUN_DATABASE"));
+  return (
+    content.includes(DATABASE_GATE_MARKER) &&
+    (content.includes("skipIf") || content.includes("RUN_DATABASE"))
+  );
 }
 
 export function discoverDatabaseSuites(repoRoot: string = REPO_ROOT): string[] {
@@ -89,16 +91,18 @@ function collectGatedFiles(repoRoot: string): string[] {
       continue;
     }
     if (!isGatedFileContent(content)) continue;
-    if (rel.includes("__tests__/config/vitest-discovery") || rel.includes("db-invariants-gate")) continue;
+    if (rel.includes("__tests__/config/vitest-discovery")) continue;
     gatedFiles.push(rel);
   }
   gatedFiles.sort();
   return gatedFiles;
 }
 
-export function getDatabaseSuiteCompleteness(
-  repoRoot: string = REPO_ROOT
-): { suites: string[]; gatedFiles: string[]; orphans: string[] } {
+export function getDatabaseSuiteCompleteness(repoRoot: string = REPO_ROOT): {
+  suites: string[];
+  gatedFiles: string[];
+  orphans: string[];
+} {
   const suites = discoverDatabaseSuites(repoRoot);
   const gatedFiles = collectGatedFiles(repoRoot);
   const suiteSet: Record<string, true> = {};

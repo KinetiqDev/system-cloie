@@ -5,7 +5,7 @@ import type { CILOMappingManifestation } from "@prisma/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import {
   Empty,
   EmptyDescription,
@@ -20,7 +20,7 @@ import {
 import { buildProgramHeadOutcomesPath } from "@/lib/constants/program-head-routes";
 
 export const metadata = {
-  title: "CILO Mapping Review | Program Head | CLOIE",
+  title: "CILO Mapping Review | Program Head | System CLOIE",
 };
 
 function manifestationLabel(value: CILOMappingManifestation | null): string {
@@ -47,21 +47,21 @@ export default async function SelectedProgramOutcomeMappingPage({
   if (!result.success) notFound();
 
   return (
-    <div>
-      <div className="mb-8">
+    <div className="flex flex-col gap-6">
+      <div className="max-w-3xl">
         <Button
           render={<Link href={buildProgramHeadOutcomesPath(programId)} />}
           variant="ghost"
           className="mb-4 inline-flex items-center gap-2 px-0"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Program Learning Outcomes
         </Button>
-        <h1 className="text-heading-xl text-text-primary mb-2 text-pretty">CILO Mapping Review</h1>
-        <p className="text-body-md text-text-muted">
+        <h1 className="text-heading-xl text-foreground text-pretty">CILO Mapping Review</h1>
+        <p className="text-body-md text-muted-foreground mt-2 text-pretty">
           Review how Course Intended Learning Outcomes manifest across this program&apos;s Program
-          Learning Outcomes. Faculty classify every CILO-to-PLO pair through Course alignment. This
-          review is read-only.
+          Learning Outcomes. Faculty manage these classifications in Course alignment. This review
+          is read-only.
         </p>
       </div>
 
@@ -85,22 +85,27 @@ export default async function SelectedProgramOutcomeMappingPage({
           </Button>
         </Empty>
       ) : (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-4">
           {result.data.map((course) => (
             <Card key={course.courseId}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Badge variant="secondary" className="text-label-sm">
-                    {course.courseCode}
+              <CardHeader className="gap-2 border-b">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="bg-brand-accent text-brand-accent-on">
+                    <span className="text-label-sm">{course.courseCode}</span>
                   </Badge>
-                  <span>{course.courseTitle}</span>
-                </CardTitle>
+                  <Badge variant="information" className="text-label-sm">
+                    Program-specific
+                  </Badge>
+                </div>
+                <h2 className="font-heading text-title-lg font-semibold text-pretty">
+                  {course.courseTitle}
+                </h2>
                 <CardDescription>
                   {course.cilos.length} {course.cilos.length === 1 ? "CILO" : "CILOs"} defined
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4">
                   {course.plos.length === 0 && (
                     <Alert>
                       <AlertDescription>
@@ -114,7 +119,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                       <div className="border-border overflow-x-auto rounded-lg border">
                         <table className="w-full min-w-[38rem] border-collapse">
                           <thead>
-                            <tr className="border-border bg-muted/50 border-b">
+                            <tr className="border-border bg-surface-secondary border-b">
                               <th
                                 scope="col"
                                 className="text-text-muted text-label-sm py-3 pr-4 pl-4 text-left font-semibold"
@@ -184,7 +189,8 @@ export default async function SelectedProgramOutcomeMappingPage({
                     {course.cilos.map((cilo, index) => (
                       <div
                         key={cilo.id}
-                        className="border-border rounded-lg border p-4"
+                        className="border-border bg-surface-secondary rounded-lg border p-4"
+                        role="group"
                         aria-label={`CILO ${index + 1}`}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -211,7 +217,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                               return (
                                 <li
                                   key={plo.id}
-                                  className="bg-muted/50 flex items-start justify-between gap-3 rounded-lg px-3 py-2.5"
+                                  className="border-border bg-card flex items-start justify-between gap-3 rounded-lg border px-3 py-2.5"
                                 >
                                   <span className="flex min-w-0 flex-col gap-0.5">
                                     <span className="text-label-sm font-semibold">{plo.code}</span>
@@ -233,6 +239,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                   {course.archivedPlos.length > 0 && (
                     <div
                       className="border-border bg-muted/30 rounded-lg border border-dashed p-4"
+                      role="region"
                       aria-label="Archived Program Learning Outcome manifestations, read-only"
                       data-testid="archived-mapping-rows"
                     >

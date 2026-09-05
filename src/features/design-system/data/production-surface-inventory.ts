@@ -2143,6 +2143,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/outcomes/components/outcome-kpi-grid.tsx",
+    disposition: "task",
+    taskId: 12,
+    category: "feature_component",
+  },
+  {
     path: "src/features/outcomes/components/ilo-form-dialog.tsx",
     disposition: "task",
     taskId: 12,

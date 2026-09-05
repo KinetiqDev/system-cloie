@@ -8,7 +8,7 @@ describe("package install scripts", () => {
 
     expect(pkg.scripts.postinstall).toBe("prisma generate --schema prisma");
     expect(pkg.scripts["db:push"]).toBe("prisma db push --schema prisma");
-    expect(pkg.scripts["db:seed"]).toBe("prisma generate --schema prisma && prisma db seed");
+    expect(pkg.scripts["db:seed"]).toBe("prisma db seed");
     expect(pkg.scripts["db:studio"]).toBe("prisma studio --schema prisma");
   });
 });

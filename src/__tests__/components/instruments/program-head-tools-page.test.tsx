@@ -138,6 +138,27 @@ describe("ProgramHeadToolsPage", () => {
     expect(screen.queryByRole("dialog", { name: "BSIT Tool" })).not.toBeInTheDocument();
   });
 
+  test("shows deployment details in the list-view accordion", () => {
+    render(
+      <ProgramHeadToolsPage
+        templates={[template]}
+        deployments={[deployment]}
+        baselines={[baseline]}
+        program={{ id: "program-1", code: "BSIT", name: "Information Technology" }}
+        initialTab="published"
+        initialView="list"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand BSIT Tool" }));
+
+    expect(screen.getByText("5 of 10 submitted")).toBeVisible();
+    expect(screen.getByRole("button", { name: "View evaluation details" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/responses/program-wide/deployment-1?from=tools"
+    );
+  });
+
   test("does not surface a stale operation error inside the delete confirmation", async () => {
     duplicateTemplateActionMock.mockResolvedValue({ success: false, error: "Duplicate failed." });
 

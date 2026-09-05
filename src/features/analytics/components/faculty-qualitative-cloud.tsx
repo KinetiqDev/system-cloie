@@ -28,7 +28,7 @@ export function FacultyQualitativeCloud({ data }: FacultyQualitativeCloudProps) 
     <QualitativeWordCloud
       title="Qualitative Feedback"
       tokens={aggregatedTokens}
-      responseCount={qualitativeItemCount}
+      answerCount={qualitativeItemCount}
     />
   );
 }

@@ -81,4 +81,3 @@ Next.js entry points and route handlers (`src/app/**`), Server Actions (`"use se
 - Retired change artifacts: the original OpenSpec change was retired with the OpenSpec deprecation (preserved in git history; see `docs/openspec-deprecation-migration-report.md`)
 - Runbook: `docs/agents/fallow.md`
 - Skill: `.agents/skills/fallow/SKILL.md`
-- Tests: `src/__tests__/config/fallow-agent-guidance.test.ts`

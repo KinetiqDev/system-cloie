@@ -399,6 +399,13 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Prepare and authorize data on the server; keep chart client boundaries narrow.
 - Use `--chart-*`, legends, tooltips, tabular values, low-contrast grids, and text summaries.
 - Export may be offered for data-heavy views.
+- Qualitative word clouds are single-series magnitude encodings: words may cycle
+  the approved `--chart-1…5` tokens as solid fills (every token clears 4.5:1 on
+  the card surface), but pattern hatching stays out of text glyphs. Pair the
+  cloud with a bounded, sticky-header "Ranked" exact-values table inside the
+  same fixed-height frame; opening exact values must never change page height.
+  An exact-values percentage whose denominator depends on a display control is
+  forbidden; exact counts only.
 
 ---
 

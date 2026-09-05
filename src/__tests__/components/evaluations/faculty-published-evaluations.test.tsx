@@ -87,7 +87,7 @@ describe("FacultyPublishedEvaluations", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /closed/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Closed" }));
     expect(screen.getByText("Closed Eval")).toBeInTheDocument();
     expect(screen.queryByText("Active Eval")).not.toBeInTheDocument();
   });

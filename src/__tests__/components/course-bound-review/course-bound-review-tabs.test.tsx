@@ -31,13 +31,13 @@ vi.mock("@/features/analytics/components/qualitative-word-cloud", () => ({
   QualitativeWordCloud: ({
     title,
     tokens,
-    responseCount,
+    answerCount,
   }: {
     title: string;
     tokens: Array<{ text: string; value: number }>;
-    responseCount?: number;
+    answerCount?: number;
   }) => {
-    qualitativeWordCloudMock({ title, tokens, responseCount });
+    qualitativeWordCloudMock({ title, tokens, answerCount });
     return <div>Word cloud: {title}</div>;
   },
 }));
@@ -121,7 +121,7 @@ describe("CourseBoundReviewTabs", () => {
         { text: "clear", value: 3 },
         { text: "helpful", value: 2 },
       ],
-      responseCount: 2,
+      answerCount: 2,
     });
   });
 

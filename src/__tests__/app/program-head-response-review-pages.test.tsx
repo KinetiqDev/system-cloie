@@ -184,6 +184,26 @@ describe("program head identified response-review pages", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a clear back button when evaluation detail opens from tools", async () => {
+    getProgramHeadCentralEvaluationDetailMock.mockResolvedValue({
+      evaluation: { title: "Exit Survey" },
+    });
+    const Page = (
+      await import("../../app/(app)/program-head/programs/[programId]/responses/program-wide/[deploymentId]/page")
+    ).default;
+
+    const page = await Page({
+      params: Promise.resolve({ programId: "program-1", deploymentId: "central-1" }),
+      searchParams: Promise.resolve({ from: "tools" }),
+    });
+    render(page);
+
+    expect(screen.getByRole("link", { name: "Back to Evaluation Tools" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/tools?tab=published"
+    );
+  });
+
   it("returns 404 when the program-wide evaluation is not found", async () => {
     getProgramHeadCentralEvaluationDetailMock.mockResolvedValue(null);
     const Page = (

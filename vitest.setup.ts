@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 
 const RealDate = global.Date;
 const mockTime = new RealDate("2026-05-10T00:00:00.000Z").getTime();
@@ -28,4 +28,3 @@ Object.getOwnPropertyNames(RealDate).forEach((prop) => {
 });
 
 global.Date = DateMock as unknown as typeof RealDate;
-

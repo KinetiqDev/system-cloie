@@ -2,14 +2,19 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createActionMock, updateActionMock, toggleActionMock, bulkToggleActionMock } = vi.hoisted(
-  () => ({
-    createActionMock: vi.fn(),
-    updateActionMock: vi.fn(),
-    toggleActionMock: vi.fn(),
-    bulkToggleActionMock: vi.fn(),
-  })
-);
+const {
+  createActionMock,
+  updateActionMock,
+  toggleActionMock,
+  bulkToggleActionMock,
+  showToastMock,
+} = vi.hoisted(() => ({
+  createActionMock: vi.fn(),
+  updateActionMock: vi.fn(),
+  toggleActionMock: vi.fn(),
+  bulkToggleActionMock: vi.fn(),
+  showToastMock: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/lib/actions/program-head-course-actions", () => ({
@@ -18,6 +23,7 @@ vi.mock("@/lib/actions/program-head-course-actions", () => ({
   toggleProgramHeadCourseActiveAction: toggleActionMock,
   bulkToggleProgramHeadCoursesActiveAction: bulkToggleActionMock,
 }));
+vi.mock("@/components/ui/toast", () => ({ showToast: showToastMock }));
 vi.mock("@/features/academic-calendar/components/term-instance-picker", () => ({
   TermInstancePicker: () => null,
 }));
@@ -173,5 +179,96 @@ describe("Program Head Courses catalog", () => {
     expect(screen.getByText("1 course selected")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Archive" }).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Restore" })).toBeInTheDocument();
+  });
+
+  it("confirms a single archive and reports the outcome", async () => {
+    const { ProgramHeadCoursesCatalog } =
+      await import("@/features/academic-structure/components/program-head-courses-catalog");
+    const programId = "11111111-1111-4111-8111-111111111111";
+    toggleActionMock.mockResolvedValue({ success: true });
+
+    render(
+      <ProgramHeadCoursesCatalog
+        program={{ id: programId, code: "BSIT", name: "Information Technology" }}
+        courses={[
+          {
+            id: "course-1",
+            code: "IT-101",
+            title: "Introduction to Computing",
+            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            program_id: programId,
+            major_id: null,
+            default_year_level: null,
+            default_semester: null,
+            default_term: null,
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            program: { id: programId, code: "BSIT", name: "Information Technology" },
+            major: null,
+            _count: { cilos: 0, course_bound_evaluations: 0 },
+          },
+        ]}
+        summary={{ total: 1, programWide: 1, majorSpecific: 0, archived: 0 }}
+        majors={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Archive IT-101" }));
+    expect(screen.getByRole("heading", { name: "Archive course?" })).toBeInTheDocument();
+    expect(toggleActionMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+    await waitFor(() =>
+      expect(toggleActionMock).toHaveBeenCalledWith(programId, "course-1", false)
+    );
+    expect(showToastMock).toHaveBeenCalledWith("Course IT-101 archived.", "success");
+  });
+
+  it("reports a friendly course edit failure without closing the dialog", async () => {
+    const { ProgramHeadCoursesCatalog } =
+      await import("@/features/academic-structure/components/program-head-courses-catalog");
+    const programId = "11111111-1111-4111-8111-111111111111";
+    updateActionMock.mockResolvedValue({
+      success: false,
+      error: "That course code is already used in this program.",
+    });
+
+    render(
+      <ProgramHeadCoursesCatalog
+        program={{ id: programId, code: "BSIT", name: "Information Technology" }}
+        courses={[
+          {
+            id: "course-1",
+            code: "IT-101",
+            title: "Introduction to Computing",
+            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            program_id: programId,
+            major_id: null,
+            default_year_level: null,
+            default_semester: null,
+            default_term: null,
+            is_active: true,
+            created_at: new Date(),
+            updated_at: new Date(),
+            program: { id: programId, code: "BSIT", name: "Information Technology" },
+            major: null,
+            _count: { cilos: 0, course_bound_evaluations: 0 },
+          },
+        ]}
+        summary={{ total: 1, programWide: 1, majorSpecific: 0, archived: 0 }}
+        majors={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit IT-101" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() => expect(updateActionMock).toHaveBeenCalled());
+    expect(showToastMock).toHaveBeenCalledWith(
+      "That course code is already used in this program.",
+      "error"
+    );
+    expect(screen.getByRole("heading", { name: "Edit Course" })).toBeInTheDocument();
   });
 });

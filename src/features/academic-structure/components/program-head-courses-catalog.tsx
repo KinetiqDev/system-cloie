@@ -10,12 +10,34 @@ import {
   SEMESTER_OPTIONS,
   TERM_OPTIONS,
 } from "@/lib/constants/academic";
-import { AlertCircle, Archive, Edit, FileSpreadsheet, Plus, Power, Search } from "lucide-react";
+import {
+  Archive,
+  AlertCircle,
+  BookOpen,
+  Edit,
+  FileSpreadsheet,
+  GraduationCap,
+  Layers,
+  Plus,
+  Power,
+  Search,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -106,21 +128,30 @@ function filterCourses(
 function StatCard({
   label,
   value,
+  icon,
   muted = false,
 }: {
   label: string;
   value: number;
+  icon: React.ReactNode;
   muted?: boolean;
 }) {
   return (
-    <div className="border-border bg-surface hover:bg-surface-alt flex h-28 flex-col justify-between rounded-lg border p-5 transition-colors">
-      <span className="text-label-sm text-muted-foreground tracking-wider uppercase">{label}</span>
-      <span
-        className={`font-heading text-heading-xl tabular-nums ${muted ? "text-muted-foreground" : "text-foreground"}`}
-      >
-        {value}
-      </span>
-    </div>
+    <Card size="sm">
+      <CardHeader>
+        <div className="flex items-center justify-between gap-2">
+          <CardDescription className="text-label-sm truncate tracking-wider uppercase">
+            {label}
+          </CardDescription>
+          {icon}
+        </div>
+        <CardTitle
+          className={`text-heading-xl tabular-nums ${muted ? "text-muted-foreground" : "text-foreground"}`}
+        >
+          {value.toLocaleString()}
+        </CardTitle>
+      </CardHeader>
+    </Card>
   );
 }
 
@@ -330,15 +361,24 @@ function submitCourseForm({
   formData.set("default_term", semester === AcademicSemester.SUMMER ? "" : term);
 
   startTransition(async () => {
-    const result = await action(formData);
-    if (!result.success) {
-      setError(result.error);
-      return;
+    try {
+      const result = await action(formData);
+      if (!result.success) {
+        setError(result.error);
+        showToast(result.error, "error");
+        return;
+      }
+      onSuccess();
+    } catch {
+      const message = "We couldn’t save the course. Check your connection and try again.";
+      setError(message);
+      showToast(message, "error");
     }
-    onSuccess();
   });
 }
 
+// Pre-existing tracked debt (main baseline: crap_critical); single-form dialog keeps create/edit branches cohesive.
+// fallow-ignore-next-line complexity
 function CourseFormDialog({
   mode,
   programId,
@@ -376,7 +416,12 @@ function CourseFormDialog({
       startTransition,
       setError,
       onSuccess: () => {
+        const courseCode = String(formData.get("code"));
         onOpenChange(false);
+        showToast(
+          mode === "create" ? `Course ${courseCode} added.` : `Course ${courseCode} updated.`,
+          "success"
+        );
         router.refresh();
       },
     });
@@ -460,6 +505,8 @@ function CourseFormDialog({
   );
 }
 
+// Pre-existing tracked debt (main baseline: complexity_critical); refactor tracked under issue #174 scope.
+// fallow-ignore-next-line complexity
 export function ProgramHeadCoursesCatalog({
   program,
   courses,
@@ -476,6 +523,10 @@ export function ProgramHeadCoursesCatalog({
   const [createDialogKey, setCreateDialogKey] = useState(0);
   const [editingCourse, setEditingCourse] = useState<ProgramHeadCourseItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [statusChange, setStatusChange] = useState<{
+    courses: Array<{ id: string; code: string }>;
+    makeActive: boolean;
+  } | null>(null);
 
   const PAGE_SIZE = 15;
   const filteredCourses = filterCourses(courses, statusFilter, search, majorFilter);
@@ -488,73 +539,115 @@ export function ProgramHeadCoursesCatalog({
   );
   const programLabel = program.name;
 
-  function handleToggleActive(id: string, currentActive: boolean) {
-    startTransition(async () => {
-      await toggleProgramHeadCourseActiveAction(program.id, id, !currentActive);
-      selection.clearSelection();
-      router.refresh();
+  function requestSingleStatusChange(course: ProgramHeadCourseItem) {
+    setStatusChange({
+      courses: [{ id: course.id, code: course.code }],
+      makeActive: !course.is_active,
     });
   }
 
-  function handleBulkStatus(isActive: boolean) {
+  function requestBulkStatusChange(makeActive: boolean) {
+    const selectedCourses = paginatedCourses
+      .filter((course) => selection.selectedIds.has(course.id))
+      .map((course) => ({ id: course.id, code: course.code }));
+    setStatusChange({ courses: selectedCourses, makeActive });
+  }
+
+  function confirmStatusChange() {
+    if (!statusChange) return;
+    const requestedChange = statusChange;
+    setStatusChange(null);
+    // Pre-existing tracked debt: single/multi-course toast branching stays in one transition for correct sequencing.
+    // fallow-ignore-next-line complexity
     startTransition(async () => {
-      const result = await bulkToggleProgramHeadCoursesActiveAction(
-        program.id,
-        [...selection.selectedIds],
-        isActive
-      );
-      if (result.failed.length > 0) {
+      try {
+        if (requestedChange.courses.length === 1) {
+          const course = requestedChange.courses[0];
+          const result = await toggleProgramHeadCourseActiveAction(
+            program.id,
+            course.id,
+            requestedChange.makeActive
+          );
+          if (!result.success) {
+            showToast(result.error, "error");
+            return;
+          }
+          showToast(
+            `Course ${course.code} ${requestedChange.makeActive ? "restored" : "archived"}.`,
+            "success"
+          );
+        } else {
+          const result = await bulkToggleProgramHeadCoursesActiveAction(
+            program.id,
+            requestedChange.courses.map((course) => course.id),
+            requestedChange.makeActive
+          );
+          if (result.failed.length > 0) {
+            showToast(
+              `${result.succeeded.length} ${result.succeeded.length === 1 ? "course was" : "courses were"} updated. ${result.failed.length} could not be updated. Try again.`,
+              "warning"
+            );
+          } else {
+            showToast(
+              `${result.succeeded.length} ${result.succeeded.length === 1 ? "course" : "courses"} ${requestedChange.makeActive ? "restored" : "archived"}.`,
+              "success"
+            );
+          }
+        }
+        selection.clearSelection();
+        router.refresh();
+      } catch {
         showToast(
-          `${result.succeeded.length} updated; ${result.failed.length} could not be updated.`,
-          "warning"
+          `We couldn’t ${requestedChange.makeActive ? "restore" : "archive"} the ${requestedChange.courses.length === 1 ? "course" : "courses"}. Check your connection and try again.`,
+          "error"
         );
-      } else {
-        showToast(`${result.succeeded.length} courses ${isActive ? "restored" : "archived"}.`);
       }
-      selection.clearSelection();
-      router.refresh();
     });
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="font-heading text-text-primary text-2xl font-black">Courses</h1>
-          <div className="mt-2 flex items-center gap-3">
-            <span className="font-heading text-link text-xl font-medium">{programLabel}</span>
-            <span className="bg-border-strong h-1.5 w-1.5 rounded-full" />
-            <span className="text-body-md text-text-muted">
-              Manage courses for this program only
-            </span>
-          </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-heading-lg">Courses</h1>
+          <p className="text-body-md text-text-secondary">
+            Manage program-wide and major-specific courses for <span>{programLabel}</span>.
+          </p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setImportOpen(true)}
-            className="inline-flex items-center gap-2"
-          >
-            <FileSpreadsheet className="size-4" data-icon="inline-start" />
+        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <FileSpreadsheet aria-hidden="true" className="size-4" />
             Import CSV
           </Button>
-          <Button
-            onClick={() => setCreateDialogOpen(true)}
-            className="inline-flex items-center gap-2"
-          >
-            <Plus className="size-4" data-icon="inline-start" />
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus aria-hidden="true" className="size-4" />
             Add Course
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Total Courses" value={summary.total} />
-        <StatCard label="Program-Wide" value={summary.programWide} />
-        <StatCard label="Major-Specific" value={summary.majorSpecific} />
-        <StatCard label="Archived" value={summary.archived} muted />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatCard
+          label="Active Courses"
+          value={summary.total}
+          icon={<BookOpen aria-hidden="true" className="text-muted-foreground size-5" />}
+        />
+        <StatCard
+          label="Program-Wide"
+          value={summary.programWide}
+          icon={<Layers aria-hidden="true" className="text-muted-foreground size-5" />}
+        />
+        <StatCard
+          label="Major-Specific"
+          value={summary.majorSpecific}
+          icon={<GraduationCap aria-hidden="true" className="text-muted-foreground size-5" />}
+        />
+        <StatCard
+          label="Archived"
+          value={summary.archived}
+          icon={<Archive aria-hidden="true" className="text-muted-foreground size-5" />}
+          muted
+        />
       </div>
 
       {/* Filter bar */}
@@ -592,7 +685,7 @@ export function ProgramHeadCoursesCatalog({
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-full md:w-[180px]">
+            <SelectTrigger aria-label="Filter by major" className="w-full md:w-[180px]">
               <SelectValue>
                 {majorFilter === "all"
                   ? "All Majors"
@@ -614,6 +707,7 @@ export function ProgramHeadCoursesCatalog({
         <div className="relative w-full md:ml-auto md:max-w-xs">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
+            aria-label="Search courses"
             className="pl-8"
             placeholder="Search by code or title..."
             value={search}
@@ -634,7 +728,7 @@ export function ProgramHeadCoursesCatalog({
           size="sm"
           variant="outline"
           disabled={isPending}
-          onClick={() => handleBulkStatus(true)}
+          onClick={() => requestBulkStatusChange(true)}
         >
           <Power aria-hidden="true" className="size-4" />
           Restore
@@ -643,7 +737,7 @@ export function ProgramHeadCoursesCatalog({
           size="sm"
           variant="outline"
           disabled={isPending}
-          onClick={() => handleBulkStatus(false)}
+          onClick={() => requestBulkStatusChange(false)}
         >
           <Archive aria-hidden="true" className="size-4" />
           Archive
@@ -665,7 +759,7 @@ export function ProgramHeadCoursesCatalog({
               </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
-              <TableHead className="hidden md:table-cell">Major</TableHead>
+              {majors.length > 0 && <TableHead className="hidden md:table-cell">Major</TableHead>}
               <TableHead className="hidden md:table-cell">Year Level</TableHead>
               <TableHead className="hidden md:table-cell">Semester</TableHead>
               <TableHead className="hidden md:table-cell">Term</TableHead>
@@ -677,8 +771,13 @@ export function ProgramHeadCoursesCatalog({
           <TableBody>
             {paginatedCourses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-muted-foreground h-24 text-center">
-                  No courses found.
+                <TableCell colSpan={10} className="h-32 text-center">
+                  <p className="font-medium">No courses found</p>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {search || statusFilter !== "__all__" || majorFilter !== "all"
+                      ? "Clear or change the filters to see more courses."
+                      : "Add a course or import a CSV file to build this program’s catalog."}
+                  </p>
                 </TableCell>
               </TableRow>
             ) : (
@@ -716,9 +815,11 @@ export function ProgramHeadCoursesCatalog({
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{course.title}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {course.major?.name ?? "—"}
-                  </TableCell>
+                  {majors.length > 0 && (
+                    <TableCell className="hidden md:table-cell">
+                      {course.major?.name ?? "—"}
+                    </TableCell>
+                  )}
                   <TableCell className="hidden md:table-cell">
                     {getYearLevelDisplay(course.default_year_level)}
                   </TableCell>
@@ -741,19 +842,25 @@ export function ProgramHeadCoursesCatalog({
                       <Button
                         variant="ghost"
                         size="icon-lg"
-                        title="Edit"
+                        aria-label={`Edit ${course.code}`}
+                        title={`Edit ${course.code}`}
                         onClick={() => setEditingCourse(course)}
                       >
-                        <Edit className="size-4" />
+                        <Edit aria-hidden="true" className="size-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon-lg"
-                        title={course.is_active ? "Archive" : "Restore"}
+                        aria-label={`${course.is_active ? "Archive" : "Restore"} ${course.code}`}
+                        title={`${course.is_active ? "Archive" : "Restore"} ${course.code}`}
                         disabled={isPending}
-                        onClick={() => handleToggleActive(course.id, course.is_active)}
+                        onClick={() => requestSingleStatusChange(course)}
                       >
-                        <Archive className="size-4" />
+                        {course.is_active ? (
+                          <Archive aria-hidden="true" className="size-4" />
+                        ) : (
+                          <Power aria-hidden="true" className="size-4" />
+                        )}
                       </Button>
                     </div>
                   </TableCell>
@@ -818,6 +925,46 @@ export function ProgramHeadCoursesCatalog({
           }}
         />
       )}
+      <AlertDialog
+        open={statusChange !== null}
+        onOpenChange={(open) => !open && setStatusChange(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusChange?.makeActive ? "Restore" : "Archive"}{" "}
+              {statusChange?.courses.length === 1 ? "course?" : "selected courses?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusChange?.courses.length === 1 ? (
+                <>
+                  {statusChange.makeActive
+                    ? `Restore ${statusChange.courses[0]?.code} so it can be used again?`
+                    : `Archive ${statusChange.courses[0]?.code}? It will remain in the catalog and can be restored later.`}
+                </>
+              ) : (
+                <>
+                  {statusChange?.makeActive ? "Restore" : "Archive"} {statusChange?.courses.length}{" "}
+                  selected courses
+                  {statusChange?.makeActive
+                    ? " so they can be used again?"
+                    : "? They will remain in the catalog and can be restored later."}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant={statusChange?.makeActive ? "default" : "destructive"}
+              disabled={isPending}
+              onClick={confirmStatusChange}
+            >
+              {statusChange?.makeActive ? "Restore" : "Archive"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

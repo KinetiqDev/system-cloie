@@ -64,18 +64,22 @@ describe("code-intelligence workflow", () => {
   it("checks out full history and reuses the pinned pnpm/Node setup", () => {
     const steps = jobSteps(GATE_JOB);
 
-    const checkout = steps.find((step) => step.uses === "actions/checkout@v4");
+    const checkout = steps.find((step) => String(step.uses ?? "").startsWith("actions/checkout@"));
     expect(checkout).toBeDefined();
     expect((checkout as { with: Record<string, unknown> }).with).toMatchObject({
       "fetch-depth": 0,
     });
 
-    const pnpmSetup = steps.find((step) => step.uses === "pnpm/action-setup@v3");
+    const pnpmSetup = steps.find((step) =>
+      String(step.uses ?? "").startsWith("pnpm/action-setup@")
+    );
     expect((pnpmSetup as { with: Record<string, unknown> }).with).toMatchObject({
       version: "10.30.3",
     });
 
-    const nodeSetup = steps.find((step) => step.uses === "actions/setup-node@v4");
+    const nodeSetup = steps.find((step) =>
+      String(step.uses ?? "").startsWith("actions/setup-node@")
+    );
     expect((nodeSetup as { with: Record<string, unknown> }).with).toMatchObject({
       "node-version": "22",
       cache: "pnpm",
@@ -142,7 +146,7 @@ describe("code-intelligence workflow", () => {
       String(step.uses ?? "").startsWith("actions/upload-artifact@")
     );
     expect(upload).toBeDefined();
-    expect(String(upload?.uses)).toBe("actions/upload-artifact@v4");
+    expect(String(upload?.uses)).toMatch(/^actions\/upload-artifact@[0-9a-f]{40}$/);
     expect(upload?.if).toBe("always()");
     expect(String((upload as { with: Record<string, string> }).with.path)).toContain(
       "artifacts/fallow"
@@ -171,7 +175,7 @@ describe("code-intelligence workflow", () => {
       String(step.uses ?? "").startsWith("actions/upload-artifact@")
     );
     expect(upload).toBeDefined();
-    expect(String(upload?.uses)).toBe("actions/upload-artifact@v4");
+    expect(String(upload?.uses)).toMatch(/^actions\/upload-artifact@[0-9a-f]{40}$/);
     expect(upload?.if).toBe("always()");
     expect(String((upload as { with: Record<string, string> }).with.path)).toContain(
       "artifacts/fallow"
@@ -200,17 +204,17 @@ describe("code-intelligence workflow", () => {
   it("does not add write permissions, comments, code scanning, or third-party actions", () => {
     const workflow = loadWorkflow();
 
-    const allowedUses = new Set([
-      "actions/checkout@v4",
-      "pnpm/action-setup@v3",
-      "actions/setup-node@v4",
-      "actions/upload-artifact@v4",
-    ]);
+    const allowedActions = [
+      "actions/checkout@",
+      "pnpm/action-setup@",
+      "actions/setup-node@",
+      "actions/upload-artifact@",
+    ];
     for (const job of Object.values(workflow.jobs)) {
       for (const step of job.steps) {
         const uses = String(step.uses ?? "");
         if (uses) {
-          expect(allowedUses.has(uses)).toBe(true);
+          expect(allowedActions.some((action) => uses.startsWith(action))).toBe(true);
         }
       }
     }

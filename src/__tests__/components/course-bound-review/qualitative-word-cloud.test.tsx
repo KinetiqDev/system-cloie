@@ -13,6 +13,7 @@ vi.mock("@isoterik/react-word-cloud", () => ({
     height: number;
     words: Array<{ text: string; value: number }>;
     fill: (word: { text: string; value: number }, index: number) => string;
+    svgProps?: React.SVGProps<SVGSVGElement>;
   }) => {
     wordCloudPropsMock(props);
     return <div data-testid="word-cloud-mock" />;
@@ -27,6 +28,15 @@ const tokens: WordCloudToken[] = [
   { text: "feedback", value: 6 },
   { text: "practical", value: 5 },
   { text: "patient", value: 4 },
+];
+
+const singletonTokens: WordCloudToken[] = [
+  { text: "alpha", value: 1 },
+  { text: "bravo", value: 1 },
+  { text: "charlie", value: 1 },
+  { text: "delta", value: 1 },
+  { text: "echo", value: 1 },
+  { text: "foxtrot", value: 1 },
 ];
 
 describe("QualitativeWordCloud", () => {
@@ -51,150 +61,253 @@ describe("QualitativeWordCloud", () => {
     vi.unstubAllGlobals();
   });
 
-  it("limits adjustable clouds with an accessible word-count slider", () => {
+  it("shows the cloud view by default with the ranked exact values one toggle away", () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
+
+    expect(screen.getByRole("region", { name: "Qualitative Feedback" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /Word cloud of the most frequent terms/ })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ranked" }));
+
+    expect(screen.getByRole("table", { name: "Exact word frequency values" })).toBeInTheDocument();
+    expect(screen.getByText("7 terms from 3 qualitative answers")).toBeInTheDocument();
+    expect(wordCloudPropsMock).not.toHaveBeenCalled();
+  });
+
+  it("bounds the ranked table and groups the singleton tail", () => {
+    const manyTokens = [
+      ...Array.from({ length: 12 }, (_, index) => ({
+        text: `word${index}`,
+        value: 40 - index,
+      })),
+      ...singletonTokens,
+    ];
+
+    const { container } = render(
+      <QualitativeWordCloud title="Qualitative Feedback" tokens={manyTokens} answerCount={3} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ranked" }));
+
+    const tableRegion = container.querySelector('[data-slot="table-container"]');
+    expect(tableRegion).not.toBeNull();
+    expect(tableRegion!.className).toContain("overflow-y-auto");
+
+    const rows = screen.getAllByRole("row");
+    // Header + twelve repeated terms + the singleton group row; no individual
+    // singleton rows.
+    expect(rows).toHaveLength(14);
+    expect(screen.getByText("alpha")).toBeInTheDocument();
+    expect(screen.getByText("foxtrot")).toBeInTheDocument();
+  });
+
+  it("keeps singleton rows when too few to group", () => {
+    render(
+      <QualitativeWordCloud
+        title="Qualitative Feedback"
+        tokens={[{ text: "clarity", value: 4 }, ...singletonTokens.slice(0, 2)]}
+        answerCount={2}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ranked" }));
+
+    const rows = screen.getAllByRole("row");
+    // Header + clarity + two ungrouped singletons.
+    expect(rows).toHaveLength(4);
+    expect(screen.getByText("alpha")).toBeInTheDocument();
+    expect(screen.getByText("bravo")).toBeInTheDocument();
+  });
+
+  it("renders the cloud through the view toggle", async () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cloud" }));
+
+    await waitFor(() => {
+      expect(wordCloudPropsMock).toHaveBeenCalled();
+    });
+
+    const cloudProps = wordCloudPropsMock.mock.calls.at(-1)![0] as {
+      words: WordCloudToken[];
+      fill: (word: WordCloudToken, index: number) => string;
+      fontSize: (word: WordCloudToken) => number;
+      width: number;
+      height: number;
+    };
+    // Cloud shows the slider-default slice; the ranked view holds every term.
+    expect(cloudProps.words.length).toBeLessThanOrEqual(28);
+    expect(cloudProps.words.length).toBeGreaterThan(0);
+    expect(cloudProps.words[0]).toEqual({ text: "clarity", value: 12 });
+
+    // Fill cycles the approved five chart tokens as solid colors, no hatch.
+    expect(cloudProps.fill(tokens[0], 0)).toBe("var(--chart-1)");
+    expect(cloudProps.fill(tokens[4], 4)).toBe("var(--chart-5)");
+    expect(cloudProps.fill(tokens[5], 5)).toBe("var(--chart-1)");
+
+    // Font scale resolves over the full token list, not the rendered slice.
+    const fullScale = cloudProps.fontSize(tokens[0]);
+    const smallScale = cloudProps.fontSize({ text: "rare", value: 1 });
+    expect(fullScale).toBeGreaterThan(smallScale);
+    expect(cloudProps.fontSize({ text: "peak", value: 12 })).toBe(48);
+    expect(cloudProps.fontSize({ text: "floor", value: 1 })).toBe(16);
+  });
+  it("constrains the package SVG to the visible cloud frame", async () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
+
+    await waitFor(() => {
+      expect(wordCloudPropsMock).toHaveBeenCalled();
+    });
+
+    expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].svgProps).toEqual(
+      expect.objectContaining({
+        width: "100%",
+        height: "100%",
+        preserveAspectRatio: "xMidYMid meet",
+      })
+    );
+  });
+
+  it("keeps the native slider value aligned with the visible cloud count", async () => {
     const manyTokens = Array.from({ length: 40 }, (_, index) => ({
       text: `word${index}`,
       value: 40 - index,
     }));
 
     render(
-      <QualitativeWordCloud
-        title="Qualitative Feedback"
-        tokens={manyTokens}
-        responseCount={3}
-        adjustable
-      />
+      <QualitativeWordCloud title="Qualitative Feedback" tokens={manyTokens} answerCount={3} />
     );
 
-    const slider = screen.getByRole("slider", { name: /Number of top words shown/ });
+    const slider = screen.getByRole("slider", { name: /Words shown in the cloud/ });
     expect(slider).toHaveAttribute("min", "10");
     expect(slider).toHaveAttribute("max", "40");
-    expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].words).toHaveLength(30);
+    expect(slider).toHaveAttribute("step", "1");
+    expect(slider).toHaveValue("30");
+    expect(slider).toBeValid();
 
     fireEvent.change(slider, { target: { value: "10" } });
-    expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].words).toHaveLength(10);
+    await waitFor(() => {
+      expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].words).toHaveLength(10);
+    });
+
+    fireEvent.change(slider, { target: { value: "40" } });
+    await waitFor(() => {
+      expect(wordCloudPropsMock.mock.calls.at(-1)?.[0].words).toHaveLength(40);
+    });
   });
 
-  it("clamps responsive width between mobile and desktop bounds", async () => {
-    wordCloudPropsMock.mockClear();
+  it("uses valid bounds when fewer than ten terms are available", () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
 
-    render(
-      <QualitativeWordCloud
-        title="Qualitative Feedback"
-        tokens={[{ text: "clarity", value: 3 }]}
-        responseCount={3}
-      />
-    );
+    const slider = screen.getByRole("slider", { name: /Words shown in the cloud/ });
+    expect(slider).toHaveAttribute("min", "7");
+    expect(slider).toHaveAttribute("max", "7");
+    expect(slider).toHaveValue("7");
+    expect(slider).toBeDisabled();
+    expect(slider).toBeValid();
+  });
+
+  it("marks the term frame unselectable so slider drags cannot extend a text selection", () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
+
+    const region = screen.getByRole("region", { name: "Qualitative Feedback" });
+    expect(region.className).toContain("select-none");
+  });
+
+  it("derives cloud density from the canvas width", async () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cloud" }));
+    await waitFor(() => {
+      expect(resizeCallback).not.toBeNull();
+    });
 
     act(() => {
       resizeCallback?.([{ contentRect: { width: 220 } }]);
     });
-
     await waitFor(() => {
       expect(wordCloudPropsMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          height: 220,
-          width: 280,
-        })
+        expect.objectContaining({ width: 220, height: 220 })
       );
     });
 
     act(() => {
       resizeCallback?.([{ contentRect: { width: 640 } }]);
     });
-
     await waitFor(() => {
       expect(wordCloudPropsMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          height: 352,
-          width: 640,
-        })
+        expect.objectContaining({ width: 640, height: 352 })
       );
     });
 
     act(() => {
       resizeCallback?.([{ contentRect: { width: 1440 } }]);
     });
-
     await waitFor(() => {
       expect(wordCloudPropsMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          height: 420,
-          width: 960,
-        })
+        expect.objectContaining({ width: 960, height: 420 })
       );
     });
+
+    // Same term keeps one size regardless of slice width.
+    const firstCall = wordCloudPropsMock.mock.calls.at(-2)![0] as {
+      fontSize: (word: WordCloudToken) => number;
+    };
+    const lastCall = wordCloudPropsMock.mock.calls.at(-1)![0] as {
+      fontSize: (word: WordCloudToken) => number;
+    };
+    expect(firstCall.fontSize(tokens[0])).toBe(lastCall.fontSize(tokens[0]));
   });
 
   it("renders empty-state text when no tokens exist", () => {
-    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={[]} responseCount={3} />);
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={[]} answerCount={3} />);
     expect(screen.getByText("No qualitative responses yet")).toBeInTheDocument();
     expect(screen.getByText("No qualitative response data available yet.")).toBeInTheDocument();
   });
 
-  it("resolves word fills from semantic tokens and hatches words beyond five", () => {
-    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />);
-
-    const { fill } = wordCloudPropsMock.mock.calls.at(-1)![0] as {
-      fill: (word: WordCloudToken, index: number) => string;
-    };
-    expect(fill(tokens[0], 0)).toBe("var(--chart-1)");
-    expect(fill(tokens[4], 4)).toBe("var(--chart-5)");
-    expect(fill(tokens[5], 5)).toMatch(/^url\(#word-cloud-[A-Za-z0-9_]+-hatch-0-c1\)$/);
-    expect(fill(tokens[6], 6)).toMatch(/^url\(#word-cloud-[A-Za-z0-9_]+-hatch-1-c1\)$/);
-    expect(fill(tokens[6], 6)).not.toBe(fill(tokens[5], 5));
-  });
-
-  it("namespaces hatch pattern ids per instance", () => {
-    const { container } = render(
-      <div>
-        <QualitativeWordCloud title="First" tokens={tokens} responseCount={3} />
-        <QualitativeWordCloud title="Second" tokens={tokens.slice(0, 6)} responseCount={3} />
-      </div>
-    );
-
-    const patternIds = Array.from(
-      container.querySelectorAll('[id*="word-cloud-"][id*="-hatch-"]')
-    ).map((pattern) => pattern.id);
-    expect(patternIds.length).toBeGreaterThan(0);
-    expect(new Set(patternIds).size).toBe(patternIds.length);
-  });
-
   it("names the cloud region from its title and insight", () => {
-    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />);
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
 
     const region = screen.getByRole("region", { name: "Qualitative Feedback" });
     expect(region).toBeInTheDocument();
     const insightId = region.getAttribute("aria-describedby");
     expect(insightId).not.toBeNull();
     expect(document.getElementById(insightId!)!.textContent).toMatch(
-      /Most frequent word: clarity \(12\)\./
+      /Most frequent term: clarity \(12\)\./
+    );
+    expect(document.getElementById(insightId!)!.textContent).toContain(
+      "7 of 7 terms appear more than once"
     );
   });
 
-  it("shows the frequency summary, insight, and exact-value table", () => {
-    const { container } = render(
-      <QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={9} />
-    );
-
-    expect(screen.getByText("Top 7 words from 9 qualitative responses")).toBeInTheDocument();
-    expect(screen.getByText("Most frequent word: clarity (12).")).toBeInTheDocument();
-
-    const exactTable = container.querySelector("table");
-    expect(exactTable).not.toBeNull();
-    expect(exactTable!.textContent).toContain("clarity");
-    expect(exactTable!.textContent).toContain("12");
-    expect(exactTable!.textContent).toContain("23.5%");
-    expect(exactTable!.textContent).toContain("patient");
-    expect(exactTable!.textContent).toContain("7.8%");
+  it("pluralizes the answer count", () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={1} />);
+    expect(screen.getByText("7 terms from 1 qualitative answer")).toBeInTheDocument();
   });
 
-  it("pluralizes the response count", () => {
-    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={1} />);
-    expect(screen.getByText("Top 7 words from 1 qualitative response")).toBeInTheDocument();
+  it("keeps exact counts stable outside the visible cloud slice", async () => {
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
+
+    const rankedCell = () => {
+      const rows = screen.getAllByRole("row");
+      const match = rows.find((row) => row.textContent?.startsWith("patient"));
+      return match?.textContent ?? "";
+    };
+
+    fireEvent.click(screen.getByRole("button", { name: "Cloud" }));
+    await waitFor(() => {
+      expect(wordCloudPropsMock).toHaveBeenCalled();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Ranked" }));
+
+    expect(rankedCell()).toContain("patient");
+    expect(rankedCell()).toContain("4");
+    expect(screen.queryByText("%")).not.toBeInTheDocument();
   });
 
-  it("disables word transitions under prefers-reduced-motion", () => {
+  it("disables word transitions under prefers-reduced-motion", async () => {
     vi.stubGlobal(
       "matchMedia",
       vi.fn((query: string) => ({
@@ -207,10 +320,14 @@ describe("QualitativeWordCloud", () => {
       }))
     );
 
-    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} responseCount={3} />);
+    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={tokens} answerCount={3} />);
 
-    expect(wordCloudPropsMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ transition: "none" })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Cloud" }));
+
+    await waitFor(() => {
+      expect(wordCloudPropsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ transition: "none" })
+      );
+    });
   });
 });

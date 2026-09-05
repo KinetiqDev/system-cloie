@@ -3,7 +3,7 @@ import { ProgramHeadCoursesCatalog } from "@/features/academic-structure/compone
 import { listProgramHeadCourses } from "@/features/academic-structure/services/resolve-program-head-courses";
 
 export const metadata = {
-  title: "Courses | Program Head | CLOIE",
+  title: "Courses | Program Head | System CLOIE",
 };
 
 export default async function SelectedProgramCoursesPage({

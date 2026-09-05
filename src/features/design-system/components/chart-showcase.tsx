@@ -37,18 +37,17 @@ export function ChartShowcase() {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-title-sm text-foreground">
-          Word cloud with repeated-token hatch distinction
+          Word cloud with a bounded ranked view
         </h3>
         <p className="text-body-sm text-muted-foreground">
-          Thirteen words over the approved five-token palette: words beyond the fifth repeat a
-          color and receive a deterministic hatch pattern, with a frequency summary, text insight,
-          and an exact-value table. Tokens are static fixture data — no submitted response text is
-          ever rendered here.
+          Two views over one fixed frame: a ranked exact-values table, and a word cloud whose words
+          use one accessible ink tier per frequency band. Tokens are static fixture data — no
+          submitted response text is ever rendered here.
         </p>
         <QualitativeWordCloud
           title="Sample Word Cloud"
           tokens={[...SHOWCASE_WORD_CLOUD]}
-          responseCount={24}
+          answerCount={24}
         />
       </section>
     </div>

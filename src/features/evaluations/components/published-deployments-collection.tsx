@@ -109,7 +109,7 @@ export function PublishedDeploymentsCollection({
 
   const hasCourseColumn = items.some((item) => Boolean(item.courseLabel));
   const hasTargetColumn = items.some((item) => Boolean(item.targetLabel));
-  const columnCount = 6 + (hasCourseColumn ? 1 : 0) + (hasTargetColumn ? 1 : 0);
+  const columnCount = 7 + (hasCourseColumn ? 1 : 0) + (hasTargetColumn ? 1 : 0);
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -393,6 +393,8 @@ function PublishedTable({
   );
 }
 
+// Render-only column/toggle branching pinned by the disclosure contract tests; extraction would split one table row across files.
+// fallow-ignore-next-line complexity
 function PublishedRow({
   item,
   isExpanded,
@@ -419,7 +421,18 @@ function PublishedRow({
     <>
       <TableRow className="cursor-pointer" onClick={onToggle}>
         <TableCell className="p-2">
-          <Button variant="ghost" size="sm" className="size-8 p-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-8 p-0"
+            aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.name}`}
+            aria-expanded={isExpanded}
+            aria-controls={`deployment-details-${item.id}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggle();
+            }}
+          >
             {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
           </Button>
         </TableCell>
@@ -455,7 +468,7 @@ function PublishedRow({
         </TableCell>
       </TableRow>
       {isExpanded && renderExpanded && (
-        <TableRow className="bg-muted/30 hover:bg-muted/30">
+        <TableRow id={`deployment-details-${item.id}`} className="bg-muted/30 hover:bg-muted/30">
           <TableCell colSpan={columnCount} className="p-4">
             {renderExpanded(item)}
           </TableCell>
