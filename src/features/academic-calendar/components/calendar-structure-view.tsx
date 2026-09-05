@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AcademicPeriodStatus, AcademicSemester } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ import {
   Archive,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Play,
   Power,
   PowerOff,
@@ -324,66 +326,83 @@ function SchoolYearCard({
   const busy = pendingAction !== null;
 
   return (
-    <div className="bg-card overflow-hidden rounded-lg border">
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-lg font-semibold">{year.code}</span>
+    <Collapsible
+      defaultOpen={year.isActive}
+      className="bg-card overflow-hidden rounded-xl border shadow-xs"
+    >
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="text-title-lg tabular-nums">{year.code}</span>
             {year.isActive && !archived && <Badge variant="success">Active</Badge>}
+            {!year.isActive && !archived && <Badge variant="outline">Inactive</Badge>}
             {archived && <Badge variant="secondary">Archived</Badge>}
-            <span className="text-muted-foreground text-sm">
-              {formatDateRange(year.startDate, year.endDate)}
-            </span>
           </div>
+          <span className="text-body-sm text-muted-foreground tabular-nums">
+            {formatDateRange(year.startDate, year.endDate)}
+          </span>
           {archived && (year.archivedAt || year.archivedBy) && (
-            <p className="text-muted-foreground text-xs">
+            <p className="text-caption text-muted-foreground">
               {year.archivedAt ? `Archived ${formatDate(year.archivedAt)}` : "Archived"}
               {year.archivedBy ? ` · by ${year.archivedBy.name}` : ""}
             </p>
           )}
         </div>
 
-        <SchoolYearHeaderActions
-          yearId={year.id}
-          isActive={year.isActive}
-          archived={archived}
-          busy={busy}
-          pendingAction={pendingAction}
-          onActivate={onActivate}
-          onDeactivate={onDeactivate}
-          onArchive={onArchive}
-        />
+        <div className="flex items-center gap-2 self-stretch sm:self-auto">
+          <SchoolYearHeaderActions
+            yearId={year.id}
+            isActive={year.isActive}
+            archived={archived}
+            busy={busy}
+            pendingAction={pendingAction}
+            onActivate={onActivate}
+            onDeactivate={onDeactivate}
+            onArchive={onArchive}
+          />
+          <CollapsibleTrigger
+            render={<Button variant="ghost" size="icon" className="group ml-auto border sm:ml-0" />}
+            aria-label={`Toggle details for school year ${year.code}`}
+          >
+            <ChevronDown
+              aria-hidden="true"
+              className="transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-data-panel-open:rotate-180 motion-reduce:transition-none"
+            />
+          </CollapsibleTrigger>
+        </div>
       </div>
 
       {actionError && (
-        <div className="border-t px-4 py-3">
+        <div className="border-t px-4 py-3 sm:px-5">
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <AlertCircle aria-hidden="true" />
             <AlertDescription>{actionError}</AlertDescription>
           </Alert>
         </div>
       )}
 
-      <div className="border-t">
-        {SEMESTER_ORDER.map((semester) => (
-          <SemesterSection
-            key={semester}
-            semester={semester}
-            terms={year.termInstances.filter((t) => t.semester === semester)}
-            isActiveSemester={year.isActive && year.activeSemester === semester}
-            yearActive={year.isActive}
-            activeSemester={year.activeSemester}
-            archived={archived}
-            busy={busy}
-            pendingSemesterKey={pendingAction === `semester:${year.id}`}
-            onSetSemester={onSetSemester}
-            onMakeActive={onMakeActive}
-            onComplete={onComplete}
-            onCancel={onCancel}
-          />
-        ))}
-      </div>
-    </div>
+      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden border-t transition-[height] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
+        <div>
+          {SEMESTER_ORDER.map((semester) => (
+            <SemesterSection
+              key={semester}
+              semester={semester}
+              terms={year.termInstances.filter((t) => t.semester === semester)}
+              isActiveSemester={year.isActive && year.activeSemester === semester}
+              yearActive={year.isActive}
+              activeSemester={year.activeSemester}
+              archived={archived}
+              busy={busy}
+              pendingSemesterKey={pendingAction === `semester:${year.id}`}
+              onSetSemester={onSetSemester}
+              onMakeActive={onMakeActive}
+              onComplete={onComplete}
+              onCancel={onCancel}
+            />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 interface SchoolYearHeaderActionsProps {
@@ -418,17 +437,24 @@ function SchoolYearHeaderActions({
         size="sm"
         onClick={onDeactivate}
         disabled={busy || pendingAction === `deactivate:${yearId}`}
+        className="flex-1 sm:flex-none"
       >
-        <PowerOff className="mr-1 h-3.5 w-3.5" />
+        <PowerOff data-icon="inline-start" aria-hidden="true" />
         Deactivate
       </Button>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button variant="outline" size="sm" onClick={onActivate} disabled={busy}>
-        <Power className="mr-1 h-3.5 w-3.5" />
+    <div className="flex flex-1 items-center gap-2 sm:flex-none">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onActivate}
+        disabled={busy}
+        className="flex-1 sm:flex-none"
+      >
+        <Power data-icon="inline-start" aria-hidden="true" />
         Activate
       </Button>
       <Button
@@ -436,8 +462,9 @@ function SchoolYearHeaderActions({
         size="sm"
         onClick={onArchive}
         disabled={busy || pendingAction === `archive:${yearId}`}
+        className="flex-1 sm:flex-none"
       >
-        <Archive className="mr-1 h-3.5 w-3.5" />
+        <Archive data-icon="inline-start" aria-hidden="true" />
         Archive
       </Button>
     </div>
@@ -474,10 +501,10 @@ function SemesterSection({
   onCancel,
 }: SemesterSectionProps) {
   return (
-    <div className="border-b last:border-b-0">
-      <div className="bg-muted/50 flex items-center justify-between px-4 py-2">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">{getSemesterLabel(semester)}</span>
+    <section className="border-b last:border-b-0">
+      <div className="bg-muted/50 flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <h3 className="text-title-sm">{getSemesterLabel(semester)}</h3>
           {isActiveSemester && <Badge variant="success">Active semester</Badge>}
         </div>
         {yearActive && !archived && (
@@ -486,35 +513,43 @@ function SemesterSection({
             size="sm"
             onClick={() => onSetSemester(semester)}
             disabled={busy || pendingSemesterKey}
+            className="w-full justify-start sm:w-auto"
           >
-            <CalendarClock className="mr-1 h-3.5 w-3.5" />
+            <CalendarClock data-icon="inline-start" aria-hidden="true" />
             Set Active Semester
           </Button>
         )}
       </div>
 
       {terms.length === 0 ? (
-        <div className="text-muted-foreground px-4 py-2 text-sm">No terms in this semester.</div>
+        <div className="text-body-sm text-muted-foreground px-4 py-3 sm:px-5">
+          No terms in this semester.
+        </div>
       ) : (
-        terms.map((term) => (
-          <div key={term.id} className="flex items-center justify-between gap-3 px-4 py-2 pl-10">
-            <div className="flex items-center gap-3">
-              <span className="text-sm">{termLabel(term.term)}</span>
-              <Badge variant={STATUS_BADGE_VARIANT[term.status]}>{term.status}</Badge>
+        <div className="divide-y">
+          {terms.map((term) => (
+            <div
+              key={term.id}
+              className="flex flex-col gap-3 px-4 py-3 pl-8 sm:flex-row sm:items-center sm:justify-between sm:pl-10"
+            >
+              <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+                <span className="text-body-sm font-medium">{termLabel(term.term)}</span>
+                <Badge variant={STATUS_BADGE_VARIANT[term.status]}>{term.status}</Badge>
+              </div>
+              <TermActions
+                term={term}
+                canActivate={yearActive && activeSemester === term.semester}
+                archived={archived}
+                busy={busy}
+                onMakeActive={onMakeActive}
+                onComplete={onComplete}
+                onCancel={onCancel}
+              />
             </div>
-            <TermActions
-              term={term}
-              canActivate={yearActive && activeSemester === term.semester}
-              archived={archived}
-              busy={busy}
-              onMakeActive={onMakeActive}
-              onComplete={onComplete}
-              onCancel={onCancel}
-            />
-          </div>
-        ))
+          ))}
+        </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -549,21 +584,27 @@ function TermActions({
       return null;
     }
     return (
-      <Button variant="outline" size="sm" onClick={() => onMakeActive(term)} disabled={busy}>
-        <Play className="mr-1 h-3.5 w-3.5" />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onMakeActive(term)}
+        disabled={busy}
+        className="w-full sm:w-auto"
+      >
+        <Play data-icon="inline-start" aria-hidden="true" />
         Make Active
       </Button>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
       <Button variant="outline" size="sm" onClick={() => onComplete(term.id)} disabled={busy}>
-        <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+        <CheckCircle2 data-icon="inline-start" aria-hidden="true" />
         Complete
       </Button>
       <Button variant="outline" size="sm" onClick={() => onCancel(term)} disabled={busy}>
-        <XCircle className="mr-1 h-3.5 w-3.5" />
+        <XCircle data-icon="inline-start" aria-hidden="true" />
         Cancel
       </Button>
     </div>
