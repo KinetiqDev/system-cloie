@@ -135,22 +135,28 @@ function QuantitativeAnswerCard({
   return (
     <div className="border-border/70 flex flex-col gap-2 border-b pb-4 last:border-b-0 last:pb-0">
       <p className="text-body-md font-semibold text-pretty">{item.prompt}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-lg font-bold tabular-nums">{item.rating}</span>
-        {item.scaleLabel && <span className="text-text-muted text-sm">({item.scaleLabel})</span>}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex items-baseline gap-2">
+          <span className="text-lg font-bold tabular-nums">{item.rating}</span>
+          {item.scaleLabel && <span className="text-text-muted text-sm">({item.scaleLabel})</span>}
+        </div>
         {binding.type === "CILO" && (
-          <Badge variant="outline" className="border-info/30 bg-info-soft text-info">
-            CILO: {binding.ciloLabel}
+          <Badge
+            variant="outline"
+            className="border-info/30 bg-info-soft text-info h-auto max-w-full justify-start py-1 whitespace-normal text-left break-words leading-relaxed text-xs"
+          >
+            <span className="font-semibold shrink-0">CILO:</span>
+            <span className="break-words">{binding.ciloLabel}</span>
             {binding.ploMappings.length > 0 && (
-              <span className="text-text-muted ml-1">
-                →{" "}
+              <span className="text-text-muted ml-1 inline-flex flex-wrap items-center gap-1">
+                <span>→</span>
                 {binding.ploMappings.map((m, index) => (
                   <Fragment key={m.ploId}>
                     {index > 0 ? ", " : null}
                     <span>
                       <Link
                         href={outcomeHref(m.ploId)}
-                        className="hover:text-foreground underline underline-offset-2"
+                        className="hover:text-foreground underline underline-offset-2 font-medium"
                       >
                         {m.ploCode}
                       </Link>
@@ -162,15 +168,18 @@ function QuantitativeAnswerCard({
           </Badge>
         )}
         {binding.type === "PLO" && (
-          <Badge variant="outline" className="border-success/30 bg-success-soft text-success">
-            PLO:{" "}
+          <Badge
+            variant="outline"
+            className="border-success/30 bg-success-soft text-success h-auto max-w-full justify-start py-1 whitespace-normal text-left break-words leading-relaxed text-xs"
+          >
+            <span className="font-semibold shrink-0">PLO:</span>
             {binding.ploBindings.map((p, index) => (
               <Fragment key={p.key}>
                 {index > 0 ? ", " : null}
                 <span>
                   <Link
                     href={outcomeHref(p.key)}
-                    className="hover:text-foreground underline underline-offset-2"
+                    className="hover:text-foreground underline underline-offset-2 font-medium"
                   >
                     {p.code}
                   </Link>

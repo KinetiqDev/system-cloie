@@ -55,11 +55,11 @@ function ComparisonExactValuesTable({ rows }: { rows: ProgramHeadComparisonDatum
   const showsLinks = rows.some((row) => (row.links?.length ?? 0) > 0);
 
   return (
-    <details>
-      <summary className="text-label-sm text-text-secondary cursor-pointer pointer-coarse:min-h-11">
-        View exact values
+    <details className="group">
+      <summary className="text-label-sm font-medium text-text-secondary cursor-pointer pointer-coarse:min-h-11 hover:text-foreground focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-2 rounded-sm py-1 select-none flex items-center gap-1.5 transition-colors">
+        <span>View exact values table</span>
       </summary>
-      <div className="border-border mt-3 overflow-x-auto rounded-lg border">
+      <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
         <Table aria-label="Exact values by comparison group">
           <TableHeader>
             <TableRow>
@@ -160,12 +160,15 @@ export function ProgramHeadComparisonChart({
       : `Highest Mean Rating: ${ranked[0].label} (${ranked[0].meanRating.toFixed(2)}). Lowest Mean Rating: ${ranked[ranked.length - 1].label} (${ranked[ranked.length - 1].meanRating.toFixed(2)}).`;
 
   return (
-    <div className="space-y-3">
-      <h3 id={titleId} className="text-title-sm text-foreground">
-        {title}
-      </h3>
+    <div className="space-y-4 rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+        <h3 id={titleId} className="text-title-md font-semibold text-foreground tracking-tight">
+          {title}
+        </h3>
+        <span className="text-xs text-muted-foreground font-medium">Ranked Comparison</span>
+      </div>
       {description ? <p className="text-body-sm text-text-secondary">{description}</p> : null}
-      <div className="border-border h-72 w-full rounded-xl border p-3">
+      <div className="border-border/60 h-72 w-full rounded-xl border bg-background/50 p-3">
         <ChartContainer
           id={chartId}
           role="region"
