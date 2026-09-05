@@ -1,6 +1,6 @@
 # Course Catalog and Assignment Refactor
 
-> **Clarification 6 (advisory catalog defaults) is partially superseded by [ADR 0013](./0013-versioned-curriculum-course-placement.md)** — `CurriculumCourse` becomes the canonical placement source once baseline DRAFT curricula are validated and published. `Course.default_year_level`/`default_semester`/`default_term` remain as migration hints until contract migration removes them.
+> **Clarification 6 (advisory catalog defaults) is canonical again after [ADR 0021](./0021-remove-curriculum-versioning.md), which supersedes [ADR 0013](./0013-versioned-curriculum-course-placement.md).** `Course.default_year_level`/`default_semester`/`default_term` are advisory pre-fill values only. Actual historical context lives on `CourseAssignment` and in immutable published evaluation snapshots.
 
 To eliminate the manual "Course Offerings" encoding step and improve data integrity, we are refactoring the `Course`, `CourseAssignment`, and `CourseBoundEvaluation` models.
 

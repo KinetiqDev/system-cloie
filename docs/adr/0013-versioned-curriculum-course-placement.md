@@ -1,6 +1,8 @@
 # ADR 0013: Versioned Curriculum Course Placement
 
-- **Status:** Accepted
+> **Superseded by [ADR 0021](./0021-remove-curriculum-versioning.md)** — curriculum versioning was removed from System CLOIE. This record preserves the historical decision; do not implement from it.
+
+- **Status:** Superseded
 - **Date:** 2026-08-10
 - **Contexts:** Curriculum, Course Catalog and Assignments, Academic Structure
 

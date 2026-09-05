@@ -116,52 +116,6 @@ function unexpectedLifecycleFailure(
   };
 }
 
-async function resolveCurriculumCourseForAssignment(
-  tx: Prisma.TransactionClient,
-  curriculumCourseId: string | null | undefined,
-  courseId: string,
-  programId: string
-) {
-  if (!curriculumCourseId) return null;
-
-  await tx.$queryRaw`
-    SELECT id
-    FROM "curriculum_versions"
-    WHERE id = (
-      SELECT curriculum_version_id
-      FROM "curriculum_courses"
-      WHERE id = ${curriculumCourseId}
-    )
-    FOR UPDATE
-  `;
-
-  const curriculumCourse = await tx.curriculumCourse.findUnique({
-    where: { id: curriculumCourseId },
-    select: {
-      course_id: true,
-      year_level: true,
-      course: { select: { is_active: true } },
-      curriculum_version: { select: { program_id: true, status: true } },
-    },
-  });
-
-  if (!curriculumCourse) throw new Error("CURRICULUM_COURSE_NOT_FOUND");
-  if (curriculumCourse.course_id !== courseId) {
-    throw new Error("CURRICULUM_COURSE_MISMATCH");
-  }
-  if (!curriculumCourse.course.is_active) {
-    throw new Error("COURSE_INACTIVE");
-  }
-  if (curriculumCourse.curriculum_version.status !== "PUBLISHED") {
-    throw new Error("CURRICULUM_COURSE_NOT_PUBLISHED");
-  }
-  if (curriculumCourse.curriculum_version.program_id !== programId) {
-    throw new Error("CURRICULUM_PROGRAM_MISMATCH");
-  }
-
-  return curriculumCourse;
-}
-
 async function resolveAssignmentCourse(
   tx: Prisma.TransactionClient,
   input: CreateCourseAssignmentInput
@@ -175,17 +129,7 @@ async function resolveAssignmentCourse(
   if (course.program_id !== null && course.program_id !== input.programId) {
     throw new Error("COURSE_PROGRAM_MISMATCH");
   }
-
-  const curriculumCourse = await resolveCurriculumCourseForAssignment(
-    tx,
-    input.curriculumCourseId,
-    input.courseId,
-    input.programId
-  );
-  const yearLevel = input.yearLevel ?? curriculumCourse?.year_level;
-  if (!yearLevel) throw new Error("YEAR_LEVEL_REQUIRED");
-
-  return { course, yearLevel };
+  return course;
 }
 
 function assignmentCreationError(error: unknown): string | null {
@@ -196,13 +140,7 @@ function assignmentCreationError(error: unknown): string | null {
     const errors: Record<string, string> = {
       COURSE_NOT_FOUND: "Course not found.",
       COURSE_PROGRAM_MISMATCH: "Assignment program must match the Course's owning program.",
-      CURRICULUM_COURSE_NOT_FOUND: "Selected curriculum course was not found.",
-      CURRICULUM_COURSE_MISMATCH: "Selected curriculum course does not match the assigned course",
-      CURRICULUM_COURSE_NOT_PUBLISHED:
-        "Only published curriculum courses can be linked to new assignments.",
       COURSE_INACTIVE: "Inactive courses cannot receive new assignments.",
-      CURRICULUM_PROGRAM_MISMATCH:
-        "Selected curriculum course does not belong to the assignment program.",
       YEAR_LEVEL_REQUIRED: "Year level is required.",
       SELECTED_PROGRAM_INACTIVE: "Selected Program is no longer assigned.",
     };
@@ -237,7 +175,7 @@ export async function createCourseAssignment(
         if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
       }
 
-      const { course, yearLevel } = await resolveAssignmentCourse(tx, input);
+      const course = await resolveAssignmentCourse(tx, input);
       const permission = canManageCourseAssignment(
         authSession,
         course.course_scope,
@@ -252,9 +190,8 @@ export async function createCourseAssignment(
           faculty_id: input.facultyId,
           course_id: input.courseId,
           program_id: input.programId,
-          year_level: yearLevel,
+          year_level: input.yearLevel,
           section: input.section,
-          ...(input.curriculumCourseId ? { curriculum_course_id: input.curriculumCourseId } : {}),
           is_active: true,
           ...(authSession?.userId ? { assigned_by: authSession.userId } : {}),
         },
@@ -351,6 +288,18 @@ export async function updateCourseAssignment(
       }
 
       if (input.facultyId !== undefined && input.facultyId !== existing.faculty_id) {
+        const publishedEvaluation = await tx.courseBoundEvaluation.findFirst({
+          where: { course_assignment_id: input.assignmentId, published_at: { not: null } },
+          select: { id: true },
+        });
+        if (publishedEvaluation) {
+          return {
+            success: false,
+            error:
+              "Faculty cannot be reassigned after an evaluation for this assignment has been published.",
+          };
+        }
+
         const faculty = await tx.user.findFirst({
           where: {
             id: input.facultyId,
@@ -691,11 +640,7 @@ export async function bulkCreateCourseAssignments(
 ): Promise<BulkCreateResult> {
   const authSession = await resolveAuthSession();
 
-  const allowedRoles: SystemRole[] = [
-    ROLES.DEAN,
-    ROLES.PROGRAM_HEAD,
-    ROLES.GEN_ED_COORDINATOR,
-  ];
+  const allowedRoles: SystemRole[] = [ROLES.DEAN, ROLES.PROGRAM_HEAD, ROLES.GEN_ED_COORDINATOR];
   if (!authSession?.activeRole || !allowedRoles.includes(authSession.activeRole)) {
     return {
       success: false,
@@ -737,7 +682,7 @@ export async function bulkCreateCourseAssignments(
           });
           if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
         }
-        const { course, yearLevel } = await resolveAssignmentCourse(tx, input);
+        const course = await resolveAssignmentCourse(tx, input);
         const permission = canManageCourseAssignment(
           authSession,
           course.course_scope,
@@ -751,9 +696,8 @@ export async function bulkCreateCourseAssignments(
             faculty_id: input.facultyId,
             course_id: input.courseId,
             program_id: input.programId,
-            year_level: yearLevel,
+            year_level: input.yearLevel,
             section: input.section,
-            ...(input.curriculumCourseId ? { curriculum_course_id: input.curriculumCourseId } : {}),
             is_active: true,
             assigned_by: authSession.userId,
           },

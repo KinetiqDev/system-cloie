@@ -29,7 +29,6 @@
     "verify:demo-target-isolation": "tsx scripts/validate-demo-target-isolation.ts",
     "demo:reset": "tsx scripts/reset-demo-database.ts",
     "seed:baseline": "tsx scripts/seed-baseline-database.ts",
-    "curriculum:generate-baseline": "tsx scripts/generate-baseline-curricula.ts",
     "academic:backfill-active-state": "tsx scripts/backfill-school-year-active-state.ts",
     "test:db": "tsx scripts/run-database-tests.ts",
     "verify:database-target": "tsx scripts/verify-database-target.ts",

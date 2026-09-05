@@ -1,7 +1,13 @@
+import { AcademicSemester, AcademicTerm } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotNullableText,
+  resolveSnapshotText,
+} from "@/features/evaluations/services/course-info-snapshot";
 import type {
   FacultyAnalyticsEvaluationItem,
   ListFacultyAnalyticsEvaluationsResult,
@@ -107,25 +113,28 @@ export async function listFacultyAnalyticsEvaluations(
     });
 
     const items: FacultyAnalyticsEvaluationItem[] = evaluations.map((evalItem) => {
+      const courseInfo = parseCourseInfoSnapshot(evalItem.course_info_snapshot);
       const responseCount = evalItem.assignments.filter(
         (a) => a.response?.status === "SUBMITTED"
       ).length;
-
       const ti = evalItem.term_instance;
-      const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
-
+      const schoolYearCode = resolveSnapshotText(courseInfo, "schoolYearCode", ti.school_year.code);
+      const termInstanceLabel = formatTermInstanceLabel(
+        schoolYearCode,
+        resolveSnapshotText(courseInfo, "semester", ti.semester) as AcademicSemester,
+        resolveSnapshotNullableText(courseInfo, "term", ti.term) as AcademicTerm | null
+      );
       const ca = evalItem.course_assignment;
-
       return {
         id: evalItem.id,
         deploymentName: evalItem.deployment_name,
         courseId: ca.course.id,
-        courseCode: ca.course.code,
-        courseTitle: ca.course.title,
+        courseCode: resolveSnapshotText(courseInfo, "courseCode", ca.course.code),
+        courseTitle: resolveSnapshotText(courseInfo, "courseTitle", ca.course.title),
         programId: ca.program.id,
-        programName: ca.program.name,
+        programName: resolveSnapshotText(courseInfo, "programName", ca.program.name),
         termInstanceLabel,
-        schoolYearCode: ti.school_year.code,
+        schoolYearCode,
         status: evalItem.status,
         publishedAt: evalItem.published_at,
         responseCount,

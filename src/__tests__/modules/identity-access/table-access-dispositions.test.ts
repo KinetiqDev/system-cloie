@@ -256,12 +256,6 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       return { select, write };
     }
 
-    const CURRICULUM_WRITERS: Record<RlsProbeIdentity, boolean> = {
-      SECRETARY: true,
-      PROGRAM_HEAD_BSIT: true,
-      FACULTY: false,
-    };
-
     /**
      * Authenticated-read tables: every authenticated identity may SELECT every
      * row (read policy USING true), while every write command is denied —
@@ -295,165 +289,6 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       return { select, write: !(updateDenied && insertDenied && deleteDenied) };
     }
 
-    async function probeCurriculumVersions(identity: RlsProbeIdentity): Promise<LiveProbeResult> {
-      const authUid = RLS_AUTH_UUIDS[identity];
-      const code = `RLS-PROBE-CV-${crypto.randomUUID()}`;
-
-      const program = await prisma.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "programs" WHERE "code" = 'BSIT' LIMIT 1`;
-      expect(program[0], "seeded BSIT program required for curriculum fixture").toBeTruthy();
-
-      const select = await probeSelect("curriculum_versions", authUid);
-
-      const createVersion = (asUid: string): Promise<string> =>
-        runRlsProbe(asUid, async (tx) => {
-          const rows = await tx.$queryRawUnsafe<{ id: string }[]>(
-            `INSERT INTO "curriculum_versions" ("program_id", "code", "name", "status", "updated_at") VALUES ($1::uuid, $2, 'RLS probe', 'DRAFT', now()) RETURNING "id"`,
-            program[0].id,
-            code
-          );
-          return rows[0].id;
-        });
-
-      let versionId: string;
-      try {
-        versionId = CURRICULUM_WRITERS[identity]
-          ? await createVersion(authUid)
-          : await createVersion(RLS_AUTH_UUIDS.SECRETARY);
-      } catch (error) {
-        if (!isPermissionDenied(error)) throw error;
-        return { select, write: false };
-      }
-
-      const updateSql = `UPDATE "curriculum_versions" SET "name" = 'renamed by probe' WHERE "id" = $1::uuid`;
-      let write = false;
-      try {
-        if (CURRICULUM_WRITERS[identity]) {
-          write = await probeUpdateOutcome(authUid, updateSql, versionId);
-        } else {
-          const updateDenied = !(await probeUpdateOutcome(authUid, updateSql, versionId));
-          const insertDenied = await probeInsertDenied(
-            authUid,
-            `INSERT INTO "curriculum_versions" ("program_id", "code", "name", "status", "updated_at") VALUES ($1::uuid, $2, 'RLS probe', 'DRAFT', now())`,
-            program[0].id,
-            `RLS-PROBE-${crypto.randomUUID()}`
-          );
-          const deleteDenied = await probeDeleteDenied(authUid, "curriculum_versions", versionId);
-          write = !(updateDenied && insertDenied && deleteDenied);
-        }
-      } finally {
-        await prisma.$executeRawUnsafe(
-          `DELETE FROM "curriculum_versions" WHERE "id" = $1::uuid`,
-          versionId
-        );
-      }
-      return { select, write };
-    }
-
-    async function probeCurriculumCourses(identity: RlsProbeIdentity): Promise<LiveProbeResult> {
-      const authUid = RLS_AUTH_UUIDS[identity];
-
-      const program = await prisma.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "programs" WHERE "code" = 'BSIT' LIMIT 1`;
-      expect(program[0], "seeded BSIT program required for curriculum fixture").toBeTruthy();
-
-      const course = await prisma.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "courses" ORDER BY "created_at" ASC LIMIT 1`;
-      expect(course[0], "seeded course required for curriculum fixture").toBeTruthy();
-
-      const select = await probeSelect("curriculum_courses", authUid);
-
-      // Parent DRAFT version + course row, both created by the identity when
-      // it is a writer; otherwise both are created by SECRETARY so the probed
-      // identity has a real row to target with UPDATE.
-      const createFixture = async (
-        asUid: string
-      ): Promise<{ courseId: string; versionId: string }> => {
-        const versionRows = await runRlsProbe(asUid, async (tx) =>
-          tx.$queryRawUnsafe<{ id: string }[]>(
-            `INSERT INTO "curriculum_versions" ("program_id", "code", "name", "status", "updated_at") VALUES ($1::uuid, $2, 'RLS probe', 'DRAFT', now()) RETURNING "id"`,
-            program[0].id,
-            `RLS-PROBE-PARENT-${crypto.randomUUID()}`
-          )
-        );
-        const versionId = versionRows[0].id;
-        const courseRows = await runRlsProbe(asUid, async (tx) =>
-          tx.$queryRawUnsafe<{ id: string }[]>(
-            `INSERT INTO "curriculum_courses" ("curriculum_version_id", "course_id", "year_level", "semester", "term", "course_code_snapshot", "course_title_snapshot", "updated_at") VALUES ($1::uuid, $2::uuid, 'FIRST_YEAR', '1ST', 'FIRST_TERM', 'PROBE', 'Probe course', now()) RETURNING "id"`,
-            versionId,
-            course[0].id
-          )
-        );
-        return { courseId: courseRows[0].id, versionId };
-      };
-
-      let fixture: { courseId: string; versionId: string };
-      try {
-        fixture = CURRICULUM_WRITERS[identity]
-          ? await createFixture(authUid)
-          : await createFixture(RLS_AUTH_UUIDS.SECRETARY);
-      } catch (error) {
-        if (!isPermissionDenied(error)) throw error;
-        await prisma.$executeRawUnsafe(
-          `DELETE FROM "curriculum_courses" WHERE "course_code_snapshot" = 'PROBE'`
-        );
-        await prisma.$executeRawUnsafe(
-          `DELETE FROM "curriculum_versions" WHERE "name" = 'RLS probe' AND "code" LIKE 'RLS-PROBE-PARENT-%'`
-        );
-        return { select, write: false };
-      }
-
-      const updateSql = `UPDATE "curriculum_courses" SET "course_code_snapshot" = 'RENAMED' WHERE "id" = $1::uuid`;
-      let write = false;
-      try {
-        if (CURRICULUM_WRITERS[identity]) {
-          write = await probeUpdateOutcome(authUid, updateSql, fixture.courseId);
-        } else {
-          const updateDenied = !(await probeUpdateOutcome(authUid, updateSql, fixture.courseId));
-          // Fresh parent DRAFT version so the denied INSERT targets a unique
-          // parent; the course INSERT as the denied identity must throw 42501.
-          const preparedVersionId = await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
-            const rows = await tx.$queryRawUnsafe<{ id: string }[]>(
-              `INSERT INTO "curriculum_versions" ("program_id", "code", "name", "status", "updated_at") VALUES ($1::uuid, $2, 'RLS probe', 'DRAFT', now()) RETURNING "id"`,
-              program[0].id,
-              `RLS-PROBE-PARENT-${crypto.randomUUID()}`
-            );
-            return rows[0].id;
-          });
-          let insertDenied: boolean;
-          try {
-            insertDenied = await probeInsertDenied(
-              authUid,
-              `INSERT INTO "curriculum_courses" ("curriculum_version_id", "course_id", "year_level", "semester", "term", "course_code_snapshot", "course_title_snapshot", "updated_at") VALUES ($1::uuid, $2::uuid, 'FIRST_YEAR', '1ST', 'FIRST_TERM', 'PROBE', 'Probe course', now())`,
-              preparedVersionId,
-              course[0].id
-            );
-          } finally {
-            await prisma.$executeRawUnsafe(
-              `DELETE FROM "curriculum_versions" WHERE "id" = $1::uuid`,
-              preparedVersionId
-            );
-          }
-          const deleteDenied = await probeDeleteDenied(
-            authUid,
-            "curriculum_courses",
-            fixture.courseId
-          );
-          write = !(updateDenied && insertDenied && deleteDenied);
-        }
-      } finally {
-        await prisma.$executeRawUnsafe(
-          `DELETE FROM "curriculum_courses" WHERE "id" = $1::uuid`,
-          fixture.courseId
-        );
-        await prisma.$executeRawUnsafe(
-          `DELETE FROM "curriculum_versions" WHERE "id" = $1::uuid`,
-          fixture.versionId
-        );
-      }
-      return { select, write };
-    }
-
     describe("role-aware and authenticated-read dispositions carry live policy evidence", () => {
       const LIVE_PROBE_RUNNERS: Record<
         string,
@@ -461,8 +296,6 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       > = {
         school_years: probeCalendarTable.bind(null, "school_years"),
         academic_term_instances: probeCalendarTable.bind(null, "academic_term_instances"),
-        curriculum_versions: probeCurriculumVersions,
-        curriculum_courses: probeCurriculumCourses,
         users: probeAuthenticatedReadTable.bind(null, "users", "name"),
         user_roles: probeAuthenticatedReadTable.bind(null, "user_roles", "role"),
         program_head_assignments: probeAuthenticatedReadTable.bind(

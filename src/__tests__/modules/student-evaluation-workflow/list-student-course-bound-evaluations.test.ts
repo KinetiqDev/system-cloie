@@ -406,6 +406,82 @@ describe("listStudentCourseBoundEvaluations", () => {
     });
   });
 
+  it("prefers the published snapshot faculty label over the live assignment", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    membershipFindManyMock.mockResolvedValue([
+      {
+        course_assignment_id: "ca-snapshot",
+        is_active: true,
+        student: {
+          enrollments: [{ program_id: "program-1", term_instance_id: "term-1" }],
+          is_active: true,
+          roles: [{ role: "STUDENT" }],
+          student_profile: {
+            program_id: "program-1",
+            major_id: null,
+            program: { is_active: true, majors: [] },
+            major: null,
+          },
+        },
+      },
+    ]);
+    findManyMock.mockResolvedValue([
+      {
+        course_bound_id: "eval-snapshot",
+        id: "assignment-snapshot",
+        course_bound: {
+          activation_at: new Date("2026-04-01T00:00:00.000Z"),
+          status: "ACTIVE",
+          course_assignment: {
+            course_scope: "PROGRAM_SPECIFIC",
+            id: "ca-snapshot",
+            program_id: "program-1",
+            term_instance_id: "term-1",
+            course: { title: "Capstone 1" },
+            faculty: { name: "Current Faculty" },
+            program: { name: "BSIT" },
+          },
+          course_info_snapshot: {
+            snapshotSchemaVersion: 2,
+            courseAssignmentId: "ca-snapshot",
+            courseId: "course-1",
+            courseCode: "IT-401",
+            courseTitle: "Capstone 1 (previous edition)",
+            courseScope: "PROGRAM_SPECIFIC",
+            programId: "program-1",
+            programCode: "BSIT",
+            programName: "BS Information Technology",
+            majorId: null,
+            majorName: null,
+            termInstanceId: "term-1",
+            schoolYearCode: "2025-2026",
+            semester: "SECOND",
+            term: null,
+            yearLevel: "FOURTH_YEAR",
+            section: "MORNING",
+            facultyId: "faculty-1",
+            facultyName: "Previous Faculty",
+            capturedAt: "2025-06-01T00:00:00.000Z",
+            assignmentContextSource: "PUBLICATION",
+          },
+          deadline_at: new Date("2026-05-20T00:00:00.000Z"),
+          deployment_name: "Post-Term CILO Evaluation Tool",
+          instrument: { structure_snapshot: [] },
+        },
+        response: null,
+      },
+    ]);
+
+    const result = await listStudentCourseBoundEvaluations();
+
+    expect(result.active).toHaveLength(1);
+    expect(result.active[0]).toMatchObject({
+      courseTitle: "Capstone 1 (previous edition)",
+      facultyName: "Previous Faculty",
+      programLabel: "BS Information Technology",
+    });
+  });
+
   it("hides pending assignments for an ineligible Student but preserves submitted history", async () => {
     resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
     membershipFindManyMock.mockResolvedValue([]);

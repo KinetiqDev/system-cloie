@@ -49,9 +49,8 @@ export type CreateCourseAssignmentInput = {
   facultyId: string;
   courseId: string;
   programId: string;
-  yearLevel?: YearLevel;
+  yearLevel: YearLevel;
   section: StudentSection;
-  curriculumCourseId?: string | null;
   selectedProgramId?: string;
 };
 
@@ -256,7 +255,6 @@ export type ScopedRosterCandidate = {
   reason: RosterEligibilityReason | null;
 } & RosterCandidateContext;
 
-
 export type CourseRosterPreviewRow = {
   sourceIndex: number;
   submittedName: string;
@@ -313,7 +311,6 @@ export type CourseRosterConfirmation = {
   rows: CourseRosterConfirmationRow[];
   referenceId?: string;
 };
-
 
 export type AuthorizedRosterAssignment = {
   assignmentId: string;

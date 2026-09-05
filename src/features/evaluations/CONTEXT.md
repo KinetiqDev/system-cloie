@@ -9,7 +9,7 @@ A scheduled instance of an instrument version offered to a population of respond
 _Avoid_: Survey, survey event
 
 **Course-bound evaluation**:
-A per-class deployment bound to exactly one Course Assignment and offered to that class's roster members. It evaluates CILO-bound Likert questions, snapshotting each bound CILO description and question prompt at publish time.
+A per-class deployment bound to exactly one Course Assignment and offered to that class's roster members. It evaluates CILO-bound Likert questions, snapshotting each bound CILO description and question prompt at publish time. It also freezes a flat assignment-context snapshot — Course, Program, major, academic period, year level, section, and Faculty — so historical labels do not drift when live catalog records change. Faculty may be reassigned only before publication.
 _Avoid_: Class evaluation when the Central Deployment distinction matters
 
 **Central deployment**:

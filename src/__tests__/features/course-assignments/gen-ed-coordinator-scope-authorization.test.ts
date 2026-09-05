@@ -37,11 +37,8 @@ vi.mock("@/lib/db/prisma", () => ({
       delete: vi.fn(),
       count: vi.fn(),
     },
-    curriculumVersion: {
-      findUnique: vi.fn(),
-    },
-    curriculumCourse: {
-      findUnique: vi.fn(),
+    courseBoundEvaluation: {
+      findFirst: vi.fn(),
     },
     courseAssignmentMembership: {
       count: vi.fn(),

@@ -26,6 +26,7 @@ import {
   classifyCourseAlignment,
   type CourseAlignmentState,
 } from "@/features/outcomes/services/classify-course-alignment";
+import { buildCourseInfoSnapshotV2 } from "./course-info-snapshot";
 import type {
   PublishCourseBoundEvaluationInput,
   PublishCourseBoundEvaluationResult,
@@ -315,9 +316,9 @@ export async function publishCourseBoundEvaluation({
               include: {
                 course: { include: { major: true } },
                 program: true,
-                term_instance: true,
+                faculty: { select: { name: true } },
+                term_instance: { include: { school_year: { select: { code: true } } } },
                 course_bound_evaluations: { select: { published_at: true } },
-                curriculumCourse: { select: { id: true, curriculum_version_id: true } },
               },
             });
 
@@ -541,6 +542,7 @@ export async function publishCourseBoundEvaluation({
               label: `CILO ${index + 1}`,
             }));
 
+            const publishedAt = new Date();
             const evaluation = await tx.courseBoundEvaluation.create({
               data: {
                 // Source of truth for class identity (Issue #39)
@@ -550,22 +552,32 @@ export async function publishCourseBoundEvaluation({
                 deployed_by: authSession.userId,
                 activation_at: activationAt,
                 cilos_snapshot: ciloSnapshots,
-                course_info_snapshot: {
+                course_info_snapshot: buildCourseInfoSnapshotV2({
+                  courseAssignmentId: lockedAssignment.id,
+                  courseId: lockedAssignment.course_id,
                   courseCode: lockedAssignment.course.code,
-                  courseScope: contextData.course.courseType,
                   courseTitle: lockedAssignment.course.title,
-                  majorName: lockedAssignment.course.major?.name ?? null,
+                  courseScope: lockedAssignment.course.course_scope,
+                  programId: lockedAssignment.program_id,
                   programCode: lockedAssignment.program.code,
                   programName: lockedAssignment.program.name,
-                  ...(lockedAssignment.curriculumCourse && {
-                    curriculumCourseId: lockedAssignment.curriculumCourse.id,
-                    curriculumVersionId: lockedAssignment.curriculumCourse.curriculum_version_id,
-                  }),
-                },
+                  majorId: lockedAssignment.course.major_id,
+                  majorName: lockedAssignment.course.major?.name ?? null,
+                  termInstanceId: lockedAssignment.term_instance_id,
+                  schoolYearCode: lockedAssignment.term_instance.school_year.code,
+                  semester: lockedAssignment.term_instance.semester,
+                  term: lockedAssignment.term_instance.term,
+                  yearLevel: lockedAssignment.year_level,
+                  section: lockedAssignment.section,
+                  facultyId: lockedAssignment.faculty_id,
+                  facultyName: lockedAssignment.faculty.name,
+                  capturedAt: publishedAt,
+                  assignmentContextSource: "PUBLICATION",
+                }),
                 deadline_at: deadlineAt,
                 deployment_name: deploymentName.trim(),
                 instrument_version_id: latestVersion.id,
-                published_at: new Date(),
+                published_at: publishedAt,
                 status,
               },
             });

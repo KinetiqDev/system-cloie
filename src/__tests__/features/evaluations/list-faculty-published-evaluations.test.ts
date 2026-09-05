@@ -56,6 +56,107 @@ const publishedEvaluation = {
   },
 };
 
+const v2Evaluation = {
+  ...publishedEvaluation,
+  course_info_snapshot: {
+    snapshotSchemaVersion: 2,
+    courseAssignmentId: "assignment-1",
+    courseId: "course-1",
+    courseCode: "IT-401-PREV",
+    courseTitle: "Capstone 1 (previous edition)",
+    courseScope: "PROGRAM_SPECIFIC",
+    programId: "program-1",
+    programCode: "BSIT",
+    programName: "BS Information Technology",
+    majorId: null,
+    majorName: null,
+    termInstanceId: "term-instance-previous",
+    schoolYearCode: "2024-2025",
+    semester: "SECOND",
+    term: "SECOND_TERM",
+    yearLevel: "FOURTH_YEAR",
+    section: "MORNING",
+    facultyId: "faculty-1",
+    facultyName: "Faculty One",
+    capturedAt: "2025-06-01T00:00:00.000Z",
+    assignmentContextSource: "PUBLICATION",
+  },
+};
+
+describe("listFacultyPublishedEvaluations – course info snapshots", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    prismaMocks.facultyProgramAffiliationFindMany.mockResolvedValue([affiliation]);
+  });
+
+  it("prefers published snapshot labels over live relations for historical records", async () => {
+    prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
+    prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([v2Evaluation] as never);
+
+    const result = await listFacultyPublishedEvaluations();
+
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.evaluations[0]).toMatchObject({
+      courseCode: "IT-401-PREV",
+      courseTitle: "Capstone 1 (previous edition)",
+      termInstanceLabel: "2024-2025 — 2nd Semester — 2nd Term",
+    });
+  });
+
+  it("preserves explicitly null snapshot fields", async () => {
+    prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
+    prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
+      {
+        ...v2Evaluation,
+        course_info_snapshot: {
+          ...v2Evaluation.course_info_snapshot,
+          semester: "SUMMER",
+          term: null,
+        },
+        course_assignment: {
+          ...v2Evaluation.course_assignment,
+          course: {
+            ...v2Evaluation.course_assignment.course,
+            major_id: "major-added-later",
+            major: { name: "New Live Major" },
+          },
+        },
+      },
+    ] as never);
+
+    const result = await listFacultyPublishedEvaluations();
+
+    expect(result.success && result.data.evaluations[0]).toMatchObject({
+      majorName: null,
+      termInstanceLabel: "2024-2025 — Summer",
+    });
+  });
+
+  it("normalizes legacy code/title snapshot shapes", async () => {
+    prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
+    prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
+      {
+        ...publishedEvaluation,
+        course_info_snapshot: { code: "IT-401-LEGACY", title: "Legacy Capstone" },
+      },
+    ] as never);
+
+    const result = await listFacultyPublishedEvaluations();
+
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.evaluations[0]).toMatchObject({
+      courseCode: "IT-401-LEGACY",
+      courseTitle: "Legacy Capstone",
+    });
+  });
+});
+
 describe("listFacultyPublishedEvaluations – historical visibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();

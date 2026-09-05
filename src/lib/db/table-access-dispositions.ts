@@ -44,7 +44,6 @@ export interface RlsProbeEvidence {
   expect: RlsProbeExpectation;
 }
 
-// fallow-ignore-next-line unused-type
 export type TableAccessDisposition =
   | {
       kind: "role-aware-rls";
@@ -82,16 +81,6 @@ const AUTHENTICATED_READ_EVIDENCE = [
   { identity: "PROGRAM_HEAD_BSIT", operation: "write", expect: "denied" },
 ] as const satisfies readonly RlsProbeEvidence[];
 
-/** Secretary/Program Head draft-write boundary for curriculum tables. */
-const CURRICULUM_BOUNDARY_EVIDENCE = [
-  { identity: "SECRETARY", operation: "select", expect: "allowed" },
-  { identity: "SECRETARY", operation: "write", expect: "allowed" },
-  { identity: "PROGRAM_HEAD_BSIT", operation: "select", expect: "allowed" },
-  { identity: "PROGRAM_HEAD_BSIT", operation: "write", expect: "allowed" },
-  { identity: "FACULTY", operation: "select", expect: "allowed" },
-  { identity: "FACULTY", operation: "write", expect: "denied" },
-] as const satisfies readonly RlsProbeEvidence[];
-
 export const TABLE_ACCESS_DISPOSITIONS = {
   // academic-calendar.prisma
   school_years: {
@@ -113,16 +102,6 @@ export const TABLE_ACCESS_DISPOSITIONS = {
   courses: { kind: "server-only" },
   course_assignments: { kind: "server-only" },
   course_assignment_memberships: { kind: "server-only" },
-
-  // curriculum.prisma
-  curriculum_versions: {
-    kind: "role-aware-rls",
-    evidence: CURRICULUM_BOUNDARY_EVIDENCE,
-  },
-  curriculum_courses: {
-    kind: "role-aware-rls",
-    evidence: CURRICULUM_BOUNDARY_EVIDENCE,
-  },
 
   // identity-access.prisma
   // users, user_roles and program_head_assignments are authenticated read-only:

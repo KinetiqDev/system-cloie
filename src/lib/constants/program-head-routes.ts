@@ -23,10 +23,6 @@ export function buildProgramHeadCoursesPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "courses");
 }
 
-export function buildProgramHeadCurriculaPath(programId: string): string {
-  return buildProgramHeadProgramPath(programId, "curricula");
-}
-
 export function buildProgramHeadCourseAssignmentsPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "course-assignments");
 }
@@ -100,7 +96,6 @@ export function buildProgramHeadResponsesProgramWideDeploymentPath(
     `responses/program-wide/${encodeURIComponent(deploymentId)}`
   );
 }
-
 
 export function buildProgramHeadCiloReviewsPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "cilo-reviews");

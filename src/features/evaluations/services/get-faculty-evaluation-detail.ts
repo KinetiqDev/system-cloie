@@ -2,10 +2,11 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { canViewCourseRoster } from "@/features/course-assignments/policies";
-import { CourseScope } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, CourseScope } from "@prisma/client";
 import type { FacultyEvaluationDetail, GetFacultyEvaluationDetailResult } from "../types";
 import { parsePublishedInstrument } from "@/features/instruments/services/parse-published-instrument";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
+import { parseCourseInfoSnapshot, resolveSnapshotNullableText } from "./course-info-snapshot";
 
 export async function getFacultyEvaluationDetail(
   evaluationId: string
@@ -145,23 +146,18 @@ export async function getFacultyEvaluationDetail(
     return { success: false, error: "Evaluation not found or you do not have access." };
   }
 
-  const courseInfoSnapshot = evaluation.course_info_snapshot as {
-    courseCode?: string;
-    courseTitle?: string;
-    courseScope?: string;
-    majorName?: string | null;
-    programCode?: string;
-    programName?: string;
-  } | null;
-
+  const courseInfoSnapshot = parseCourseInfoSnapshot(evaluation.course_info_snapshot);
   const cilosSnapshot = evaluation.cilos_snapshot as Array<{
     description: string;
     id: string;
     label: string;
   }> | null;
-
   const ti = evaluation.term_instance;
-  const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
+  const termInstanceLabel = formatTermInstanceLabel(
+    courseInfoSnapshot?.schoolYearCode ?? ti.school_year.code,
+    (courseInfoSnapshot?.semester as AcademicSemester | null) ?? ti.semester,
+    resolveSnapshotNullableText(courseInfoSnapshot, "term", ti.term) as AcademicTerm | null
+  );
 
   const ca = evaluation.course_assignment;
   const parsedSections = parsePublishedInstrument(evaluation.instrument.structure_snapshot);
@@ -193,9 +189,14 @@ export async function getFacultyEvaluationDetail(
     courseInfo: {
       courseCode: courseInfoSnapshot?.courseCode ?? ca.course.code,
       courseScope:
-        courseInfoSnapshot?.courseScope ?? ca.course.course_scope.replace(/_/g, " ").toLowerCase(),
+        (courseInfoSnapshot?.courseScope as CourseScope | null) ??
+        ca.course.course_scope.replace(/_/g, " ").toLowerCase(),
       courseTitle: courseInfoSnapshot?.courseTitle ?? ca.course.title,
-      majorName: courseInfoSnapshot?.majorName ?? ca.course.major?.name ?? null,
+      majorName: resolveSnapshotNullableText(
+        courseInfoSnapshot,
+        "majorName",
+        ca.course.major?.name ?? null
+      ),
       programCode: courseInfoSnapshot?.programCode ?? ca.program.code,
       programName: courseInfoSnapshot?.programName ?? ca.program.name,
     },

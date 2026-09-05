@@ -4,6 +4,11 @@ import {
   resolveCourseBoundEvaluationEligibility,
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotProgramLabel,
+  resolveSnapshotText,
+} from "@/features/evaluations/services/course-info-snapshot";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type {
   StudentEvaluationSection,
@@ -11,7 +16,6 @@ import type {
 } from "@/features/responses/types";
 import { isCourseBoundEvaluationAvailable } from "./course-bound-availability";
 import { mapTemplateStructureToSections } from "./map-template-structure";
-
 type QuantitativeSavedAnswerItem = {
   item_key: string;
   rating_value: number;
@@ -147,14 +151,18 @@ export async function getStudentCourseBoundEvaluationSession(
   const answeredItems = response ? response.qual_items.length + response.quant_items.length : 0;
 
   const ca = assignment.course_bound.course_assignment;
-
+  const courseInfo = parseCourseInfoSnapshot(assignment.course_bound.course_info_snapshot);
   return {
     assignmentId: assignment.id,
-    courseTitle: ca.course.title,
+    courseTitle: resolveSnapshotText(courseInfo, "courseTitle", ca.course.title),
     deadlineAt: assignment.course_bound.deadline_at,
     evaluationTitle:
       assignment.course_bound.deployment_name ?? assignment.course_bound.instrument.template.name,
-    programLabel: ca.course.major?.name ?? ca.program.name,
+    programLabel: resolveSnapshotProgramLabel(
+      courseInfo,
+      ca.course.major?.name ?? null,
+      ca.program.name
+    ),
     savedAnswers,
     sections,
     session: {

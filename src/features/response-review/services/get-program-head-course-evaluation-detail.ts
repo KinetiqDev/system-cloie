@@ -1,19 +1,34 @@
-import { ResponseStatus, TargetStakeholder } from "@prisma/client";
+import { ResponseStatus, StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
-import { buildCiloMetrics, buildQuestionMetrics, type OutcomeItemRatingRow } from "@/features/analytics/aggregators/cilo";
+import {
+  buildCiloMetrics,
+  buildQuestionMetrics,
+  type OutcomeItemRatingRow,
+} from "@/features/analytics/aggregators/cilo";
 import type { CiloPloMapping } from "@/features/analytics/aggregators/types";
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
-import { resolveItemScaleIdentity, type ScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
-import { getSnapshotSectionItems, isSnapshotSection } from "@/features/analytics/services/snapshot-structure";
+import {
+  resolveItemScaleIdentity,
+  type ScaleIdentity,
+} from "@/features/analytics/aggregators/scale-identity";
+import {
+  getSnapshotSectionItems,
+  isSnapshotSection,
+} from "@/features/analytics/services/snapshot-structure";
 import { loadCiloMappings } from "./cilo-mappings";
 import { buildQualitativeSummary } from "./qualitative-summary";
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
 import type { ProgramHeadCourseEvaluationDetail, ProgramHeadRespondentRow } from "../types";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotNullableText,
+  resolveSnapshotText,
+} from "@/features/evaluations/services/course-info-snapshot";
 
 // ---------------------------------------------------------------------------
 // Program Head course-bound evaluation detail (spec §25)
@@ -91,7 +106,10 @@ export async function getProgramHeadCourseEvaluationDetail(
     }
   }
 
-  const bindingByQuestionKey = new Map<string, { cilo_id: string | null; cilo_description_snapshot: string }>();
+  const bindingByQuestionKey = new Map<
+    string,
+    { cilo_id: string | null; cilo_description_snapshot: string }
+  >();
   for (const binding of evaluation.cilo_question_bindings) {
     bindingByQuestionKey.set(`${binding.section_key}|${binding.item_key}`, {
       cilo_id: binding.cilo_id,
@@ -156,18 +174,32 @@ export async function getProgramHeadCourseEvaluationDetail(
   );
 
   const ca = evaluation.course_assignment;
-
+  const courseInfo = parseCourseInfoSnapshot(evaluation.course_info_snapshot);
   return {
     evaluation: {
       id: evaluation.id,
       title: evaluation.deployment_name,
-      courseCode: ca.course.code,
-      courseTitle: ca.course.title,
-      facultyName: ca.faculty?.name ?? null,
-      yearLevel: ca.year_level,
-      section: ca.section,
-      majorLabel: ca.course.major?.name ?? null,
-      periodLabel: buildPeriodLabel(ca.term_instance),
+      courseCode: resolveSnapshotText(courseInfo, "courseCode", ca.course.code),
+      courseTitle: resolveSnapshotText(courseInfo, "courseTitle", ca.course.title),
+      facultyName: resolveSnapshotNullableText(courseInfo, "facultyName", ca.faculty?.name ?? null),
+      yearLevel: resolveSnapshotText(courseInfo, "yearLevel", ca.year_level) as YearLevel,
+      section: resolveSnapshotText(courseInfo, "section", ca.section) as StudentSection,
+      majorLabel: resolveSnapshotNullableText(
+        courseInfo,
+        "majorName",
+        ca.course.major?.name ?? null
+      ),
+      periodLabel: buildPeriodLabel({
+        school_year: {
+          code: resolveSnapshotText(
+            courseInfo,
+            "schoolYearCode",
+            ca.term_instance.school_year.code
+          ),
+        },
+        semester: resolveSnapshotText(courseInfo, "semester", ca.term_instance.semester),
+        term: resolveSnapshotNullableText(courseInfo, "term", ca.term_instance.term),
+      }),
       activationAt: evaluation.activation_at,
       deadlineAt: evaluation.deadline_at,
       status: evaluation.status,
@@ -204,7 +236,11 @@ function buildCourseRatingRows(
   snapshotItems: Map<string, { prompt: string }>,
   bindingByQuestionKey: Map<string, { cilo_id: string | null; cilo_description_snapshot: string }>,
   ciloMappings: Map<string, CiloPloMapping[]>
-): { ratingRows: OutcomeItemRatingRow[]; meanByResponse: Map<string, number | null>; submittedRespondentIds: string[] } {
+): {
+  ratingRows: OutcomeItemRatingRow[];
+  meanByResponse: Map<string, number | null>;
+  submittedRespondentIds: string[];
+} {
   const ratingRows: OutcomeItemRatingRow[] = [];
   const submittedRespondentIds: string[] = [];
   const meanByResponse = new Map<string, number | null>();
@@ -218,7 +254,14 @@ function buildCourseRatingRows(
       }
       scaleKeys.add(scale.key);
       ratingRows.push(
-        toCourseRatingRow(item, scale, response.id, snapshotItems, bindingByQuestionKey, ciloMappings)
+        toCourseRatingRow(
+          item,
+          scale,
+          response.id,
+          snapshotItems,
+          bindingByQuestionKey,
+          ciloMappings
+        )
       );
       return [item.rating_value];
     });
@@ -249,7 +292,11 @@ function toCourseRatingRow(
     responseId,
     scale,
     cilo: binding
-      ? { id: binding.cilo_id ?? `binding-${item.section_key}-${item.item_key}`, label: binding.cilo_description_snapshot, description: binding.cilo_description_snapshot }
+      ? {
+          id: binding.cilo_id ?? `binding-${item.section_key}-${item.item_key}`,
+          label: binding.cilo_description_snapshot,
+          description: binding.cilo_description_snapshot,
+        }
       : null,
     ploMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
   };

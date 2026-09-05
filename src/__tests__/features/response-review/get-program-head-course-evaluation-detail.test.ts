@@ -257,6 +257,49 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     expect(result!.qualitative.topTerms.length).toBeGreaterThan(0);
   });
 
+  it("prefers published snapshot labels when the live assignment changed", async () => {
+    courseBoundEvaluationFindFirstMock.mockResolvedValue({
+      ...MOCK_EVALUATION,
+      course_info_snapshot: {
+        snapshotSchemaVersion: 2,
+        courseAssignmentId: "assignment-1",
+        courseId: "course-1",
+        courseCode: "IT101-PREV",
+        courseTitle: "Intro to Computing (previous edition)",
+        courseScope: "PROGRAM_SPECIFIC",
+        programId: "prog-beed",
+        programCode: "BEED",
+        programName: "BEED",
+        majorId: null,
+        majorName: null,
+        termInstanceId: "term-ti1",
+        schoolYearCode: "2024-2025",
+        semester: "SECOND",
+        term: "SECOND_TERM",
+        yearLevel: "SECOND_YEAR",
+        section: "AFTERNOON",
+        facultyId: "faculty-1",
+        facultyName: "Dr. Previous",
+        capturedAt: "2025-06-01T00:00:00.000Z",
+        assignmentContextSource: "PUBLICATION",
+      },
+    });
+    evaluationAssignmentFindManyMock.mockResolvedValue([]);
+    responseFindManyMock.mockResolvedValue([]);
+
+    const result = await getProgramHeadCourseEvaluationDetail("prog-beed", "eval-1");
+
+    expect(result).not.toBeNull();
+    expect(result!.evaluation).toMatchObject({
+      courseCode: "IT101-PREV",
+      courseTitle: "Intro to Computing (previous edition)",
+      facultyName: "Dr. Previous",
+      yearLevel: "SECOND_YEAR",
+      section: "AFTERNOON",
+      periodLabel: "2024-2025 — 2nd Semester — 2nd Term",
+    });
+  });
+
   it("never fetches IN_PROGRESS response bodies", async () => {
     courseBoundEvaluationFindFirstMock.mockResolvedValue(MOCK_EVALUATION);
     evaluationAssignmentFindManyMock.mockResolvedValue([]);

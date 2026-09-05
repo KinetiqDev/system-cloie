@@ -56,7 +56,7 @@ Per the [official guide, Chapter 4](../guide/technical-document-guide-2026.md): 
 
 ### Working notes (from repository evidence)
 
-- Prisma models split by domain: [prisma/schema.prisma](../../../prisma/schema.prisma), [prisma/models/](../../../prisma/models/) (`responses.prisma`, `outcomes.prisma`, `evaluations-deployments.prisma`, `course-assignments.prisma`, `academic-calendar.prisma`, `academic-structure.prisma`, `curriculum.prisma`, `identity-access.prisma`, `instruments.prisma`)
+- Prisma models split by domain: [prisma/schema.prisma](../../../prisma/schema.prisma), [prisma/models/](../../../prisma/models/) (`responses.prisma`, `outcomes.prisma`, `evaluations-deployments.prisma`, `course-assignments.prisma`, `academic-calendar.prisma`, `academic-structure.prisma`, `identity-access.prisma`, `instruments.prisma`)
 - Data invariants and snapshot immutability semantics live in the domain CONTEXT.md files (e.g. [src/features/responses/CONTEXT.md](../../../src/features/responses/CONTEXT.md), [src/features/outcomes/CONTEXT.md](../../../src/features/outcomes/CONTEXT.md))
 - Sensitive-data handling (confidential responses, restricted qualitative comments): [docs/cloie-techstack.md](../../cloie-techstack.md)
 

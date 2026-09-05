@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import {
   createCourseAssignmentSchema,
   updateCourseAssignmentSchema,
@@ -23,12 +22,6 @@ import {
 import { listCourseAssignmentsForFaculty } from "@/features/course-assignments/services/list-course-assignments-for-faculty";
 import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import { searchFacultyPool } from "@/features/course-assignments/services/search-faculty-pool";
-import { listPublishedCurriculumCourseOptions } from "@/features/curriculum/services/read-curriculum-pages";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
-import { ROLES } from "@/lib/constants/roles";
-import type { PublishedCurriculumCourseOption } from "@/features/curriculum/types";
-import type { ServiceResult } from "@/lib/utils/service-result";
 import type {
   CreateCourseAssignmentInput,
   UpdateCourseAssignmentInput,
@@ -82,7 +75,6 @@ function normalizeCreateCourseAssignmentInput(input: CreateCourseAssignmentActio
     programId: formDataValue(input, "programId", "program_id"),
     yearLevel: formDataValue(input, "yearLevel", "year_level"),
     section: formDataValue(input, "section"),
-    curriculumCourseId: formDataValue(input, "curriculumCourseId", "curriculum_course_id"),
     selectedProgramId: formDataValue(input, "selectedProgramId", "selected_program_id"),
   };
 }
@@ -106,56 +98,6 @@ export async function createCourseAssignmentAction(input: CreateCourseAssignment
   }
 
   return result;
-}
-
-const curriculumProgramIdSchema = z.string().uuid();
-
-/**
- * Load published CurriculumCourses for the assignment picker. Dean access is
- * explicit here because curriculum authoring reads intentionally exclude Dean.
- */
-export async function loadCurriculumCoursesForProgramAction(
-  programId: string
-): Promise<ServiceResult<PublishedCurriculumCourseOption[]>> {
-  const parsed = curriculumProgramIdSchema.safeParse(programId);
-  if (!parsed.success) return { success: false, error: "Invalid program ID." };
-
-  const session = await resolveAuthSession();
-  if (!session) return { success: false, error: "Authentication is required." };
-
-  if (session.activeRole === ROLES.PROGRAM_HEAD) {
-    const context = await resolveProgramHeadContext(parsed.data);
-    if (!context.success) return context;
-  } else if (
-    session.activeRole !== ROLES.SECRETARY &&
-    session.activeRole !== ROLES.DEAN &&
-    session.activeRole !== ROLES.GEN_ED_COORDINATOR
-  ) {
-    return { success: false, error: "Course assignment management access required." };
-  }
-
-  try {
-    const options = await listPublishedCurriculumCourseOptions(parsed.data);
-    const filtered =
-      session.activeRole === ROLES.GEN_ED_COORDINATOR
-        ? options.filter((option) => option.courseScope === "GENERAL_EDUCATION")
-        : session.activeRole === ROLES.PROGRAM_HEAD
-          ? options.filter((option) => option.courseScope !== "GENERAL_EDUCATION")
-          : options;
-    return {
-      success: true,
-      data: filtered,
-    };
-  } catch (error) {
-    console.error("Failed to load curriculum course options", {
-      programId: parsed.data,
-      error: error instanceof Error ? { name: error.name } : { type: typeof error },
-    });
-    return {
-      success: false,
-      error: "Unable to load published curriculum courses. Please try again.",
-    };
-  }
 }
 
 /**

@@ -2662,22 +2662,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
 
   {
-    path: "src/features/curriculum/components/curriculum-course-table.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-  },
-  {
-    path: "src/features/curriculum/components/curriculum-version-form.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-  },
-  {
-    path: "src/features/curriculum/components/curriculum-version-list.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-  },
-
-  {
     path: "src/features/enrollments/components/enrollment-editor-dialog.tsx",
     disposition: "task",
     taskId: 16,

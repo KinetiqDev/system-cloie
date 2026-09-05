@@ -4,7 +4,6 @@ import { evaluateCompleteness } from "../../../scripts/verify-database-suite-com
 describe("verify-database-suite-completeness helpers (539)", () => {
   it("passes when suites include required gated suites and no orphans", () => {
     const suites = [
-      "src/__tests__/features/curriculum/curriculum-version-program-major-pairing.test.ts",
       "src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts",
       "a.test.ts",
       "b.test.ts",
@@ -19,7 +18,11 @@ describe("verify-database-suite-completeness helpers (539)", () => {
   });
 
   it("fails when orphans exist", () => {
-    const result = evaluateCompleteness(["a.test.ts"], ["a.test.ts", "orphan.test.ts"], ["orphan.test.ts"]);
+    const result = evaluateCompleteness(
+      ["a.test.ts"],
+      ["a.test.ts", "orphan.test.ts"],
+      ["orphan.test.ts"]
+    );
     expect(result.ok).toBe(false);
     expect(result.errors.join()).toMatch(/orphan/);
   });

@@ -48,7 +48,7 @@ Per the [official guide, Chapter 1](../guide/technical-document-guide-2026.md): 
 - System-level product boundary ("not an LMS or SIS; does not deliver instruction, manage individual grades or transcripts, or replace enrollment systems"): [AGENTS.md](../../../AGENTS.md)
 - Bounded contexts and their relationships: [CONTEXT-MAP.md](../../../CONTEXT-MAP.md)
 - Stakeholder decisions on system boundary (in scope: response collection, analytics, evidence, reports; out of scope: curriculum revision decisions and academic decision-making): [docs/capstone/evidence/stakeholder-decisions.md](../evidence/stakeholder-decisions.md)
-- Explicit "NOT automating curriculum revision decisions" scoping: [docs/adr/0013-versioned-curriculum-course-placement.md](../../adr/0013-versioned-curriculum-course-placement.md)
+- Explicit "NOT automating curriculum revision decisions" and removal of curriculum versioning: [docs/adr/0021-remove-curriculum-versioning.md](../../adr/0021-remove-curriculum-versioning.md) (supersedes [docs/adr/0013-versioned-curriculum-course-placement.md](../../adr/0013-versioned-curriculum-course-placement.md))
 
 ## 1.5 Significance and Intended Beneficiaries
 

@@ -93,9 +93,10 @@ const MOCK_ASSIGNMENT = {
   is_active: true,
   major_id: null,
   program_id: "program-1",
-  section: null,
+  section: "MORNING",
   term_instance_id: "term-instance-1",
   year_level: "FOURTH_YEAR",
+  faculty: { name: "Faculty One" },
   course: {
     code: "IT-401",
     id: "course-1",
@@ -268,7 +269,10 @@ describe("publishCourseBoundEvaluation", () => {
         description: "Apply capstone planning fundamentals.",
         id: "cilo-1",
         cilo_mappings: [
-          { manifestation: "LEARNING", plo: { id: "plo-1", program_id: "program-1", is_active: true } },
+          {
+            manifestation: "LEARNING",
+            plo: { id: "plo-1", program_id: "program-1", is_active: true },
+          },
         ],
         cilo_institutional_outcome_mappings: [],
       },
@@ -276,7 +280,10 @@ describe("publishCourseBoundEvaluation", () => {
         description: "Produce a proposal-aligned outline defense artifact.",
         id: "cilo-2",
         cilo_mappings: [
-          { manifestation: "PRACTICE", plo: { id: "plo-1", program_id: "program-1", is_active: true } },
+          {
+            manifestation: "PRACTICE",
+            plo: { id: "plo-1", program_id: "program-1", is_active: true },
+          },
         ],
         cilo_institutional_outcome_mappings: [],
       },
@@ -346,10 +353,7 @@ describe("publishCourseBoundEvaluation", () => {
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
-    courseAssignmentFindUniqueMock.mockResolvedValue({
-      ...MOCK_ASSIGNMENT,
-      curriculumCourse: null,
-    });
+    courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
     getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
     instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
     courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
@@ -395,12 +399,27 @@ describe("publishCourseBoundEvaluation", () => {
     expect(courseBoundEvaluationCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         course_info_snapshot: {
+          snapshotSchemaVersion: 2,
+          courseAssignmentId: "assignment-1",
+          courseId: "course-1",
           courseCode: "IT-401",
-          courseScope: "PROGRAM_SPECIFIC",
           courseTitle: "Capstone 1",
-          majorName: null,
+          courseScope: "PROGRAM_SPECIFIC",
+          programId: "program-1",
           programCode: "BSIT",
           programName: "BS Information Technology",
+          majorId: null,
+          majorName: null,
+          termInstanceId: "term-instance-1",
+          schoolYearCode: "2025-2026",
+          semester: "FIRST",
+          term: null,
+          yearLevel: "FOURTH_YEAR",
+          section: "MORNING",
+          facultyId: "faculty-1",
+          facultyName: "Faculty One",
+          capturedAt: expect.any(String),
+          assignmentContextSource: "PUBLICATION",
         },
       }),
     });
@@ -450,10 +469,7 @@ describe("publishCourseBoundEvaluation", () => {
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
-    courseAssignmentFindUniqueMock.mockResolvedValue({
-      ...MOCK_ASSIGNMENT,
-      curriculumCourse: null,
-    });
+    courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
     getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
     instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
     courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
@@ -477,20 +493,14 @@ describe("publishCourseBoundEvaluation", () => {
     expect(studentEnrollmentFindManyMock).not.toHaveBeenCalled();
   });
 
-  it("captures curriculum version and course in the snapshot when the assignment is linked", async () => {
+  it("writes a flat v2 course info snapshot without curriculum references", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,
       profileGate: { status: "COMPLETE" },
       roles: [ROLES.FACULTY],
       userId: "faculty-1",
     });
-    courseAssignmentFindUniqueMock.mockResolvedValue({
-      ...MOCK_ASSIGNMENT,
-      curriculumCourse: {
-        id: "curriculum-course-1",
-        curriculum_version_id: "curriculum-version-1",
-      },
-    });
+    courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
     getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT);
     instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
     courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
@@ -504,14 +514,27 @@ describe("publishCourseBoundEvaluation", () => {
     expect(courseBoundEvaluationCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         course_info_snapshot: {
+          snapshotSchemaVersion: 2,
+          courseAssignmentId: "assignment-1",
+          courseId: "course-1",
           courseCode: "IT-401",
-          courseScope: "PROGRAM_SPECIFIC",
           courseTitle: "Capstone 1",
-          curriculumCourseId: "curriculum-course-1",
-          curriculumVersionId: "curriculum-version-1",
-          majorName: null,
+          courseScope: "PROGRAM_SPECIFIC",
+          programId: "program-1",
           programCode: "BSIT",
           programName: "BS Information Technology",
+          majorId: null,
+          majorName: null,
+          termInstanceId: "term-instance-1",
+          schoolYearCode: "2025-2026",
+          semester: "FIRST",
+          term: null,
+          yearLevel: "FOURTH_YEAR",
+          section: "MORNING",
+          facultyId: "faculty-1",
+          facultyName: "Faculty One",
+          capturedAt: expect.any(String),
+          assignmentContextSource: "PUBLICATION",
         },
       }),
     });

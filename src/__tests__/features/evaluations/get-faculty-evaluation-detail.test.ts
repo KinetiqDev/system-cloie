@@ -108,6 +108,57 @@ describe("getFacultyEvaluationDetail – historical visibility", () => {
     expect(absent).toEqual(missing);
   });
 
+  it("prefers published snapshot labels when the live course changed", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    prismaMocks.courseBoundEvaluationFindFirst.mockResolvedValue({
+      ...evaluation,
+      course_info_snapshot: {
+        snapshotSchemaVersion: 2,
+        courseAssignmentId: "assignment-1",
+        courseId: "course-1",
+        courseCode: "IT-401-PREV",
+        courseTitle: "Capstone 1 (previous edition)",
+        courseScope: "PROGRAM_SPECIFIC",
+        programId: "program-1",
+        programCode: "BSIT",
+        programName: "BS Information Technology",
+        majorId: null,
+        majorName: null,
+        termInstanceId: "term-instance-previous",
+        schoolYearCode: "2024-2025",
+        semester: "SECOND",
+        term: "SECOND_TERM",
+        yearLevel: "FOURTH_YEAR",
+        section: "MORNING",
+        facultyId: "faculty-1",
+        facultyName: "Faculty One",
+        capturedAt: "2025-06-01T00:00:00.000Z",
+        assignmentContextSource: "PUBLICATION",
+      },
+    });
+
+    const result = await getFacultyEvaluationDetail("evaluation-1");
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        courseInfo: {
+          courseCode: "IT-401-PREV",
+          courseScope: "PROGRAM_SPECIFIC",
+          courseTitle: "Capstone 1 (previous edition)",
+          programCode: "BSIT",
+          programName: "BS Information Technology",
+        },
+        termInstanceLabel: "2024-2025 — 2nd Semester — 2nd Term",
+      },
+    });
+  });
+
   it("projects opaque exclusion student names without split keys", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,
