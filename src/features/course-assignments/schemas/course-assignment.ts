@@ -10,9 +10,8 @@ export const createCourseAssignmentSchema = z.object({
   facultyId: z.string().uuid(),
   courseId: z.string().uuid(),
   programId: z.string().uuid(),
-  yearLevel: z.nativeEnum(YearLevel).optional(),
+  yearLevel: z.nativeEnum(YearLevel),
   section: z.nativeEnum(StudentSection),
-  curriculumCourseId: z.string().uuid().nullable().optional(),
   selectedProgramId: z.string().uuid().optional(),
 });
 
@@ -89,9 +88,7 @@ export const confirmRosterResolutionSchema = z
       )
       .min(1)
       .max(COURSE_ROSTER_MAX_ROWS),
-    skippedIndexes: z
-      .array(z.number().int().nonnegative())
-      .max(COURSE_ROSTER_MAX_ROWS),
+    skippedIndexes: z.array(z.number().int().nonnegative()).max(COURSE_ROSTER_MAX_ROWS),
     suggestedAcknowledged: z.boolean(),
   })
   .superRefine((data, ctx) => {
@@ -136,7 +133,6 @@ export const restoreRosterMembershipSchema = z.object({
 
 export const removeRosterMembershipSchema = restoreRosterMembershipSchema;
 
-
 export const previewCourseRosterSchema = z.object({
   assignmentId: z.string().uuid(),
   programId: z.string().uuid().optional(),
@@ -157,7 +153,6 @@ export const searchScopedRosterStudentsSchema = z.object({
   programId: z.string().uuid().optional(),
   query: z.string().max(200),
 });
-
 
 /**
  * TypeScript types derived from schemas.
