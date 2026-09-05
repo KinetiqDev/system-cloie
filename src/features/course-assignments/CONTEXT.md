@@ -1,6 +1,6 @@
 # Course Catalog and Assignments
 
-Course Catalog and Assignments define the subjects offered by the institution, when they are scheduled in the curriculum, and how they are assigned to faculty members.
+Course Catalog and Assignments define the institution's stable Course catalog and the actual academic-period classes assigned to Faculty members.
 
 ## General Education assignment stewardship (approved scope, issue #477)
 
@@ -9,7 +9,7 @@ Shared institutional Courses where `course.course_scope == GENERAL_EDUCATION`. E
 _Avoid_: Deriving Course scope from nullable program_id, Program-owned General Education Course
 
 **Course assignment authority — approved matrix (server-enforced)**:
-Secretary: no Course assignment mutation; read-only visibility only. `GEN_ED_COORDINATOR`: college-wide stewardship — read and mutation — of General Education assignments only (every list read, Course picker, curriculum option read, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it; faculty search is role-allowlist gated instead — `searchFacultyPool` has no `course_scope` predicate, so the Coordinator searches the whole active Faculty pool cross-program). Program Head: stewardship of Program-specific assignments within the Authorized Program set; read-only for General Education. Dean: retains all-program mutation for General Education and Program-specific assignments.
+Secretary: no Course assignment mutation; read-only visibility only. `GEN_ED_COORDINATOR`: college-wide stewardship — read and mutation — of General Education assignments only (every list read, Course picker, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it; faculty search is role-allowlist gated instead — `searchFacultyPool` has no `course_scope` predicate, so the Coordinator searches the whole active Faculty pool cross-program). Program Head: stewardship of Program-specific assignments within the Authorized Program set; read-only for General Education. Dean: retains all-program mutation. Secretary retains all-program read visibility only.
 _Avoid_: Client-provided course_scope, Secretary assignment mutation, Coordinator Program-specific mutation
 
 **Coordinator assignment UX mode**:
@@ -20,9 +20,6 @@ _Avoid_: Roster management by Coordinator, generic permission-configured compone
 All Coordinators share the single college-wide General Education scope (`course.course_scope == GENERAL_EDUCATION`). No portfolio assignment table exists in this change; a partitioned scope requires a separately approved capability change and a new assignment model.
 _Avoid_: Coordinator portfolio assignment, fake General Education Program
 
-**Curriculum provenance (advisory, unchanged in this slice)**:
-An optional published `CurriculumCourse` link where `CourseAssignment.course_id == CurriculumCourse.course_id` and `CourseAssignment.program_id == CurriculumVersion.program_id`. `CourseAssignment` remains the operational class record and roster/evaluation authority.
-_Avoid_: Required curriculum link, curriculum as roster authority
 
 **Resolved** (transfer-ilo-catalog-to-gen-ed-coordinator / ADR 0018): Institutional Learning Outcome catalog ownership is `GEN_ED_COORDINATOR` college-wide (CRUD/reorder/archive/restore; `SECRETARY` no access, `/secretary/learning-outcomes/**` redirects). Course Catalog and Assignments adds no ILO catalog mutation path.
 _Avoid_: Secretary ILO write, Coordinator Program-specific ILO scope
@@ -47,8 +44,8 @@ The advisory `year_level`, `semester`, and `term` stored on a `Course`. A catalo
 _Avoid_: Course offering default, scheduled term
 
 **Course assignment**:
-A term-scoped mapping between a teacher, a course, a program, a year level, and a section that grants teaching capability. Once it has a Course-assignment membership, its course, academic period, program, year level, and section are immutable; Faculty reassignment remains allowed and transfers roster-management access without changing the roster.
-_Avoid_: Teaching assignment, roster record
+A term-scoped historical fact recording the actual Faculty member, Course, Program, year level, section, and academic period. Course catalog defaults only prefill creation and never rewrite it. Once it has a Course-assignment membership, its Course, academic period, Program, year level, and section are immutable; Faculty reassignment remains allowed only until an evaluation is published.
+_Avoid_: Curriculum placement, roster record
 
 **Course-assignment roster**:
 The collection of active student memberships for one Course assignment. A student may belong to multiple Course-assignment rosters during the same academic period.

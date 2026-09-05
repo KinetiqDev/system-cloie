@@ -135,7 +135,6 @@ Key demo scripts:
 | `pnpm verify:demo-target-isolation`        | Validate the demo reset target is the isolated demo DB                       |
 | `pnpm fallow:audit`                        | Run the fallow static-analysis audit                                         |
 | `pnpm fallow:baseline`                     | Refresh fallow baselines                                                     |
-| `pnpm curriculum:generate-baseline`        | Generate baseline curricula                                                  |
 | `pnpm start`                               | Run the production build                                                     |
 
 The full list of scripts lives in `package.json`.
@@ -168,13 +167,12 @@ src/
 │   └── api/               # API routes (auth, dean)
 ├── components/            # Shared UI components
 │   └── ui/               # shadcn/ui base components (Base UI primitives)
-├── features/             # Feature-based domain modules (16 domains)
+├── features/             # Feature-based domain modules (15 domains)
 │   ├── academic-calendar/    # School years, semesters, terms, active periods
 │   ├── academic-structure/   # Programs and majors
 │   ├── analytics/            # Faculty/program analytics dashboards
 │   ├── auth/                 # Authentication, sessions, role identity
-│   ├── course-assignments/   # Courses, sections, teaching assignments, enrollment
-│   ├── curriculum/           # Curricula, versions, course placement
+│   ├── course-assignments/   # Stable Course catalog and actual class assignments
 │   ├── dean/                 # Dean college-wide oversight views
 │   ├── design-system/        # Shared design system and showcase
 │   ├── enrollments/          # Student enrollment interfaces
@@ -211,28 +209,30 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 
 ### Architectural Decision Records
 
-| ADR  | Title                                                      |
-| ---- | ---------------------------------------------------------- |
-| 0001 | Complete secretary-created accounts                        |
-| 0001 | Single-role accounts                                       |
-| 0002 | Separate domain users from auth identities                 |
-| 0003 | Course catalog and assignment refactor                     |
-| 0004 | Strict program deletion                                    |
-| 0005 | Outcome ownership and dean oversight                       |
-| 0006 | Dean PWA offline cache contract                            |
-| 0007 | Course assignment roster membership                        |
-| 0008 | Dedicated demo deployment authentication                   |
-| 0009 | Program head selected program context                      |
-| 0010 | Unified appearance and protected showcase                  |
-| 0011 | Fallow code intelligence policy                            |
-| 0012 | Secretary-controlled academic calendar state               |
-| 0013 | Versioned curriculum course placement                      |
-| 0014 | Google authoritative account names                         |
-| 0015 | Name-based course roster resolution and student ID removal |
-| 0016 | Server-side bounded AI interpretation boundary             |
-| 0017 | Program learning outcome canonical terminology             |
-
-### Key Architectural Patterns
+| ADR  | Title                                                            |
+| ---- | ---------------------------------------------------------------- |
+| 0001 | Complete secretary-created accounts                              |
+| 0001 | Single-role accounts                                             |
+| 0002 | Separate domain users from auth identities                       |
+| 0003 | Course catalog and assignment refactor                           |
+| 0004 | Strict program deletion                                          |
+| 0005 | Outcome ownership and dean oversight                             |
+| 0006 | Dean PWA offline cache contract                                  |
+| 0007 | Course assignment roster membership                              |
+| 0008 | Dedicated demo deployment authentication                         |
+| 0009 | Program head selected program context                            |
+| 0010 | Unified appearance and protected showcase                        |
+| 0011 | Fallow code intelligence policy                                  |
+| 0012 | Secretary-controlled academic calendar state                     |
+| 0013 | Versioned curriculum course placement _(Superseded by ADR 0021)_ |
+| 0014 | Google authoritative account names                               |
+| 0015 | Name-based course roster resolution and student ID removal       |
+| 0016 | Server-side bounded AI interpretation boundary                   |
+| 0017 | Program learning outcome canonical terminology                   |
+| 0018 | Transfer ILO catalog ownership to General Education Coordinator  |
+| 0019 | Removing Secretary Course Assignment Mutation                    |
+| 0020 | Self-Hosted Supabase Only — Target-Neutral Backends              |
+| 0021 | Remove Curriculum Versioning                                     |
 
 #### Request Flow
 
@@ -439,13 +439,11 @@ Point `DATABASE_URL` at a disposable test database, never a shared backend. `pnp
 - `src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts`
 - `src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts`
 - `src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts`
-- `src/__tests__/features/curriculum/curriculum-version-program-major-pairing.test.ts`
 - `src/__tests__/features/evaluations/publication-roster-lock-db-invariants.test.ts`
 - `src/__tests__/features/responses/response-lifecycle-invariants.test.ts`
 - `src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts`
 - `src/__tests__/features/users/services/secretary-account-creation-atomicity.test.ts`
 - `src/__tests__/modules/course-assignments/course-assignments-section-constraint.test.ts`
-- `src/__tests__/modules/curriculum/curriculum-rls-behavior.test.ts`
 - `src/__tests__/modules/identity-access/secretary-rls-policy.test.ts`
 - `src/__tests__/modules/identity-access/table-access-dispositions.test.ts`
 

@@ -13,11 +13,11 @@ Front door for System CLOIE documentation. Orientation starts at [AGENTS.md](../
 
 One `CONTEXT.md` per bounded domain, indexed with relationships in [CONTEXT-MAP.md](../CONTEXT-MAP.md):
 
-[auth](../src/features/auth/CONTEXT.md) · [users](../src/features/users/CONTEXT.md) · [academic-calendar](../src/features/academic-calendar/CONTEXT.md) · [academic-structure](../src/features/academic-structure/CONTEXT.md) · [curriculum](../src/features/curriculum/CONTEXT.md) · [course-assignments](../src/features/course-assignments/CONTEXT.md) · [outcomes](../src/features/outcomes/CONTEXT.md) · [instruments](../src/features/instruments/CONTEXT.md) · [evaluations](../src/features/evaluations/CONTEXT.md) · [responses](../src/features/responses/CONTEXT.md) · [response-review](../src/features/response-review/CONTEXT.md) · [analytics](../src/features/analytics/CONTEXT.md) · [enrollments](../src/features/enrollments/CONTEXT.md) · [dean](../src/features/dean/CONTEXT.md) · [legal](../src/features/legal/CONTEXT.md) · [design-system](../src/features/design-system/CONTEXT.md)
+[auth](../src/features/auth/CONTEXT.md) · [users](../src/features/users/CONTEXT.md) · [academic-calendar](../src/features/academic-calendar/CONTEXT.md) · [academic-structure](../src/features/academic-structure/CONTEXT.md) · [course-assignments](../src/features/course-assignments/CONTEXT.md) · [outcomes](../src/features/outcomes/CONTEXT.md) · [instruments](../src/features/instruments/CONTEXT.md) · [evaluations](../src/features/evaluations/CONTEXT.md) · [responses](../src/features/responses/CONTEXT.md) · [response-review](../src/features/response-review/CONTEXT.md) · [analytics](../src/features/analytics/CONTEXT.md) · [enrollments](../src/features/enrollments/CONTEXT.md) · [dean](../src/features/dean/CONTEXT.md) · [legal](../src/features/legal/CONTEXT.md)
 
 ## Durable Decisions
 
-[docs/adr/](adr/) — 21 numbered ADRs. Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
+[docs/adr/](adr/) — 22 numbered ADRs. Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
 
 ## Product
 

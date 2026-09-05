@@ -16,7 +16,7 @@ Prisma is the **canonical application schema representation**. The schema is org
 - `prisma/schema.prisma` — entrypoint only: the `prisma-client-js` generator and the `postgresql` datasource (`DATABASE_URL` pooled runtime connection, `DIRECT_URL` for schema operations).
 - `prisma/models/` — one file per domain boundary:
   - `identity-access.prisma` (users, roles, sessions, profiles)
-  - `academic-structure.prisma`, `academic-calendar.prisma`, `curriculum.prisma`
+  - `academic-structure.prisma`, `academic-calendar.prisma`
   - `course-assignments.prisma`, `instruments.prisma`, `evaluations-deployments.prisma`, `responses.prisma`, `outcomes.prisma`
 
 Multi-file schemas stay organized by these existing domain boundaries; new models belong in the domain file that owns them. The domain model files are generated into the client at install time (`postinstall` runs `prisma generate --schema prisma`).
