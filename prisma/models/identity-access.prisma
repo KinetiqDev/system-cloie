@@ -55,7 +55,6 @@ model User {
   created_enrollments                         StudentEnrollment[]                 @relation("EnrollmentCreator")
   course_assignments                          CourseAssignment[]                  @relation("faculty")
   created_assignments                         CourseAssignment[]                  @relation("AssignmentAssigner")
-  published_curriculum_versions               CurriculumVersion[]                 @relation("CurriculumVersionPublisher")
   course_assignment_memberships               CourseAssignmentMembership[]        @relation("CourseAssignmentMembershipStudent")
   created_course_assignment_memberships       CourseAssignmentMembership[]        @relation("CourseAssignmentMembershipCreator")
   updated_course_assignment_memberships       CourseAssignmentMembership[]        @relation("CourseAssignmentMembershipUpdater")
