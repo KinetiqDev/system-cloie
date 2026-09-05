@@ -169,6 +169,29 @@ describe("PublishedDeploymentsCollection", () => {
     expect(screen.getByText("Deployment details here")).toBeInTheDocument();
   });
 
+  test("expands a row from its disclosure button", () => {
+    render(
+      <PublishedDeploymentsCollection
+        view="list"
+        items={[makeItem({ id: "d-1", name: "Survey" })]}
+        empty={<p>Empty</p>}
+        renderExpanded={() => <p>Deployment details here</p>}
+        renderMenuItems={NOOP_MENU}
+      />
+    );
+
+    const trigger = screen.getByRole("button", { name: "Expand Survey" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+
+    expect(screen.getByText("Deployment details here")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse Survey" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+  });
+
   test("renders the empty state when there are no deployments", () => {
     render(
       <PublishedDeploymentsCollection
