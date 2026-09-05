@@ -10,6 +10,7 @@ import {
   resolveCourseBoundEvaluationEligibilities,
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
+import { parseCourseInfoSnapshot } from "@/features/evaluations/services/course-info-snapshot";
 import { isCourseBoundEvaluationAvailable } from "./course-bound-availability";
 import { mapStructureSnapshotToSections } from "./get-student-course-bound-evaluation-session";
 
@@ -207,9 +208,8 @@ export async function listStudentCourseBoundEvaluations(): Promise<{
             const eligibility = courseBoundEligibilities.get(courseBound.course_assignment.id);
             if (!eligibility?.eligible) return null;
           }
-
           const ca = courseBound.course_assignment;
-
+          const courseInfo = parseCourseInfoSnapshot(courseBound.course_info_snapshot);
           const sections = mapStructureSnapshotToSections(
             courseBound.instrument.structure_snapshot
           );
@@ -236,14 +236,18 @@ export async function listStudentCourseBoundEvaluations(): Promise<{
 
           return buildStudentEvaluationListItem({
             assignmentId: assignment.id,
-            courseTitle: ca.course.title,
+            courseTitle: courseInfo?.courseTitle ?? ca.course.title,
             deadlineAt: courseBound.deadline_at,
             evaluationId: assignment.id,
             evaluationTitle: courseBound.deployment_name ?? courseBound.instrument.template.name,
-            facultyName: ca.faculty ? ca.faculty.name : null,
+            facultyName: courseInfo?.facultyName ?? (ca.faculty ? ca.faculty.name : null),
             href,
             now,
-            programLabel: ca.course.major?.name ?? ca.program.name,
+            programLabel:
+              courseInfo?.majorName ??
+              courseInfo?.programName ??
+              ca.course.major?.name ??
+              ca.program.name,
             section,
             session,
           });

@@ -1,8 +1,9 @@
-import { CourseScope } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, CourseScope } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
+import { parseCourseInfoSnapshot } from "./course-info-snapshot";
 import type {
   FacultyPublishedEvaluationItem,
   ListFacultyPublishedEvaluationsResult,
@@ -111,36 +112,29 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
   });
 
   const evaluations: FacultyPublishedEvaluationItem[] = rawEvaluations.map((evalItem) => {
-    const courseInfoSnapshot = evalItem.course_info_snapshot as {
-      courseCode?: string;
-      courseTitle?: string;
-      courseScope?: string;
-      majorName?: string | null;
-      programCode?: string;
-      programName?: string;
-    } | null;
-
+    const courseInfo = parseCourseInfoSnapshot(evalItem.course_info_snapshot);
     const ti = evalItem.term_instance;
-    const termInstanceLabel = formatTermInstanceLabel(ti.school_year.code, ti.semester, ti.term);
-
+    const termInstanceLabel = formatTermInstanceLabel(
+      courseInfo?.schoolYearCode ?? ti.school_year.code,
+      (courseInfo?.semester as AcademicSemester | null) ?? ti.semester,
+      (courseInfo?.term as AcademicTerm | null) ?? ti.term
+    );
     const ca = evalItem.course_assignment;
-
     return {
       termInstanceLabel,
       activationAt: evalItem.activation_at,
-      courseCode: courseInfoSnapshot?.courseCode ?? ca.course.code,
+      courseCode: courseInfo?.courseCode ?? ca.course.code,
       courseId: ca.course.id,
-      courseScope:
-        (courseInfoSnapshot?.courseScope as CourseScope | undefined) ?? ca.course.course_scope,
-      courseTitle: courseInfoSnapshot?.courseTitle ?? ca.course.title,
+      courseScope: (courseInfo?.courseScope as CourseScope | null) ?? ca.course.course_scope,
+      courseTitle: courseInfo?.courseTitle ?? ca.course.title,
       deadlineAt: evalItem.deadline_at,
       deploymentName: evalItem.deployment_name,
       evaluationId: evalItem.id,
       majorId: ca.course.major_id,
-      majorName: courseInfoSnapshot?.majorName ?? ca.course.major?.name ?? null,
-      programCode: courseInfoSnapshot?.programCode ?? ca.program.code,
+      majorName: courseInfo?.majorName ?? ca.course.major?.name ?? null,
+      programCode: courseInfo?.programCode ?? ca.program.code,
       programId: ca.program.id,
-      programName: courseInfoSnapshot?.programName ?? ca.program.name,
+      programName: courseInfo?.programName ?? ca.program.name,
       publishedAt: evalItem.published_at,
       responseCount: evalItem.assignments.length,
       status: evalItem.status,
