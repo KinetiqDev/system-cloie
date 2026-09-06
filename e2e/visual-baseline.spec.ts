@@ -70,7 +70,7 @@ test.describe("@visual curated baseline (desktop)", () => {
     await expect(dialog).toBeVisible();
     await dialog.getByRole("tab", { name: "Add one Student" }).click();
     await dialog
-      .getByRole("searchbox", { name: "Search scoped Students" })
+      .getByRole("searchbox", { name: "Search students" })
       .fill(fx.rosterStudents.suggested.name);
     await dialog
       .getByRole("button", { name: new RegExp(fx.rosterStudents.suggested.name) })

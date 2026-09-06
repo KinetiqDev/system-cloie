@@ -49,7 +49,7 @@ test.describe("Faculty Course roster mutation", () => {
     const dialog = page.getByRole("dialog", { name: "Manage roster" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("tab", { name: "Add one Student" }).click();
-    const search = dialog.getByRole("searchbox", { name: "Search scoped Students" });
+    const search = dialog.getByRole("searchbox", { name: "Search students" });
     await search.fill(fx.rosterStudents.addable.name);
     await dialog.getByRole("button", { name: new RegExp(fx.rosterStudents.addable.name) }).click();
 
@@ -133,7 +133,7 @@ test.describe("Faculty Course roster mutation", () => {
     await page.getByRole("button", { name: "Manage roster" }).click();
     const dialog = page.getByRole("dialog", { name: "Manage roster" });
     await dialog.getByRole("tab", { name: "Add one Student" }).click();
-    const search = dialog.getByRole("searchbox", { name: "Search scoped Students" });
+    const search = dialog.getByRole("searchbox", { name: "Search students" });
     await search.fill(fx.rosterStudents.alreadyActive.name);
     await dialog
       .getByRole("button", { name: new RegExp(fx.rosterStudents.alreadyActive.name) })
@@ -152,7 +152,7 @@ test.describe("Faculty Course roster mutation", () => {
     await page.getByRole("button", { name: "Manage roster" }).click();
     const itresDialog = page.getByRole("dialog", { name: "Manage roster" });
     await itresDialog.getByRole("tab", { name: "Add one Student" }).click();
-    const itresSearch = itresDialog.getByRole("searchbox", { name: "Search scoped Students" });
+    const itresSearch = itresDialog.getByRole("searchbox", { name: "Search students" });
     await itresSearch.fill(fx.rosterStudents.outOfScope.name);
     await expect(itresDialog.getByText("No scoped Students match this search.")).toBeVisible();
     await expect(itresDialog.getByText(fx.rosterStudents.outOfScope.email)).not.toBeVisible();
