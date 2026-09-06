@@ -51,6 +51,7 @@ import type {
   FacultyAnalyticsFilters,
   FacultyAnalyticsOptions,
   FacultyAnalyticsView,
+  FacultyCiloMetric,
   FacultyScaleDistribution,
   FacultyTrendPoint,
 } from "../types";
@@ -535,47 +536,50 @@ function CiloView({
   pending: boolean;
 }) {
   const metrics = data.ciloMetrics.filter((metric) => metric.scaleGroups.length > 0);
+  const courseGroups = groupCiloMetrics(metrics);
   return (
     <EvidenceCard
       title="CILO ratings"
-      description="Combined student ratings for each Course Intended Learning Outcome. These are evaluation results, not mastery grades."
+      description="Student ratings for each Course Intended Learning Outcome, organized by course and evaluation. These are evaluation results, not mastery grades."
     >
-      {metrics.length ? (
-        <div className="flex flex-col gap-5">
-          {metrics.map((metric) => {
-            const group = metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : null;
-            const position =
-              group?.mean === null || !group
-                ? 0
-                : ((group.mean - group.scaleMin) / Math.max(1, group.scaleMax - group.scaleMin)) *
-                  100;
-            return (
-              <div
-                key={metric.key}
-                className="grid gap-2 md:grid-cols-[minmax(13rem,1fr)_minmax(18rem,1.4fr)_6rem]"
-              >
-                <div>
-                  <p className="font-medium">{metric.label}</p>
-                  <p className="text-muted-foreground text-sm">{metric.description}</p>
-                </div>
-                <div className="relative mt-2 h-6">
-                  <div className="bg-muted absolute inset-x-0 top-2 h-1.5 rounded-full" />
-                  <div
-                    className="bg-chart-2 ring-card absolute top-0 size-5 -translate-x-1/2 rounded-full ring-4"
-                    style={{ left: `${position}%` }}
-                  />
-                  <div className="text-muted-foreground mt-5 flex justify-between text-xs tabular-nums">
-                    <span>{group?.scaleMin ?? "—"}</span>
-                    <span>{group?.scaleMax ?? "—"}</span>
+      <p className="text-body-sm text-text-secondary">
+        This view includes only questions bound to a CILO, so its rating totals may be lower than
+        the all-question KPI above.
+      </p>
+      {courseGroups.length ? (
+        <div className="flex flex-col gap-8">
+          {courseGroups.map((courseGroup) => (
+            <section
+              key={courseGroup.key}
+              aria-labelledby={`cilo-course-${courseGroup.key}`}
+              className="min-w-0"
+            >
+              <header className="bg-brand-accent-soft border-brand-accent-border flex flex-col gap-2 rounded-lg border px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-brand-accent-soft text-brand-accent dark:text-brand-accent-highlight border-brand-accent-border border tabular-nums">
+                      {courseGroup.courseCode}
+                    </Badge>
+                    <h3 id={`cilo-course-${courseGroup.key}`} className="text-title-md break-words">
+                      {courseGroup.courseTitle}
+                    </h3>
                   </div>
+                  <p className="text-body-sm text-text-secondary mt-1 break-words">
+                    {courseGroup.evaluationName}
+                  </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-title-lg tabular-nums">{group?.mean?.toFixed(2) ?? "—"}</p>
-                  <p className="text-muted-foreground text-xs">{group?.ratingCount ?? 0} ratings</p>
-                </div>
+                <p className="text-caption text-text-muted shrink-0 tabular-nums">
+                  {courseGroup.metrics.length} outcome
+                  {courseGroup.metrics.length === 1 ? "" : "s"}
+                </p>
+              </header>
+              <div className="divide-border mt-1 divide-y">
+                {courseGroup.metrics.map((metric) => (
+                  <CiloMetricRow key={metric.key} metric={metric} />
+                ))}
               </div>
-            );
-          })}
+            </section>
+          ))}
         </div>
       ) : (
         <NoMetric
@@ -586,7 +590,7 @@ function CiloView({
       <PlainSummary>
         {rankedSummary(
           metrics.map((metric) => ({
-            label: metric.label,
+            label: `${metric.courseCode} ${metric.label}`,
             mean: metric.scaleGroups.length === 1 ? metric.scaleGroups[0].mean : null,
           })),
           "CILO"
@@ -595,6 +599,85 @@ function CiloView({
       <AIOverview insight={ai} state={aiState} pending={pending} data={data} />
       <ExactCiloTable data={data} />
     </EvidenceCard>
+  );
+}
+
+function CiloMetricRow({ metric }: { metric: FacultyCiloMetric }) {
+  const group = metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : null;
+  const position =
+    group?.mean === null || !group
+      ? 0
+      : ((group.mean - group.scaleMin) / Math.max(1, group.scaleMax - group.scaleMin)) * 100;
+  return (
+    <div className="grid min-w-0 gap-4 py-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,1fr)_5rem] lg:items-center lg:gap-6">
+      <div className="min-w-0">
+        <p className="text-label-lg">{metric.label}</p>
+        <p className="text-body-sm text-text-secondary mt-1 text-pretty break-words">
+          {metric.description}
+        </p>
+      </div>
+      {group ? (
+        <div className="min-w-0 px-2 pb-4 lg:px-0">
+          <div className="relative h-6" aria-hidden="true">
+            <div className="bg-muted absolute inset-x-0 top-2 h-1.5 rounded-full" />
+            <div
+              className="bg-chart-2 ring-card absolute top-0 size-5 -translate-x-1/2 rounded-full ring-4"
+              style={{
+                left: `clamp(0.625rem, ${position}%, calc(100% - 0.625rem))`,
+              }}
+            />
+            <div className="text-caption text-text-muted mt-5 flex justify-between tabular-nums">
+              <span>{group.scaleMin}</span>
+              <span>{group.scaleMax}</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <p className="text-body-sm text-text-secondary">Multiple rating scales</p>
+      )}
+      <div className="flex items-baseline justify-between gap-3 lg:block lg:text-right">
+        <p className="text-caption text-text-muted lg:hidden">Mean rating</p>
+        <div>
+          <p className="text-title-lg tabular-nums">{group?.mean?.toFixed(2) ?? "—"}</p>
+          <p className="text-caption text-text-muted">
+            {group?.ratingCount ?? 0} rating{group?.ratingCount === 1 ? "" : "s"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function groupCiloMetrics(metrics: FacultyCiloMetric[]) {
+  return Array.from(
+    metrics
+      .reduce(
+        (groups, metric) => {
+          const key = `${metric.courseId}-${metric.evaluationId}`;
+          const existing = groups.get(key);
+          if (existing) existing.metrics.push(metric);
+          else
+            groups.set(key, {
+              key,
+              courseCode: metric.courseCode,
+              courseTitle: metric.courseTitle,
+              evaluationName: metric.evaluationName,
+              metrics: [metric],
+            });
+          return groups;
+        },
+        new Map<
+          string,
+          {
+            key: string;
+            courseCode: string;
+            courseTitle: string;
+            evaluationName: string;
+            metrics: FacultyCiloMetric[];
+          }
+        >()
+      )
+      .values()
   );
 }
 
@@ -1043,42 +1126,95 @@ function ClassSummary({ data }: { data: FacultyAnalyticsData }) {
   );
 }
 function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
+  const rows = data.ciloMetrics.flatMap((metric) =>
+    metric.scaleGroups.map((group) => ({ metric, group }))
+  );
   return (
-    <div className="overflow-x-auto">
-      <Table aria-label="Exact CILO rating values">
-        <TableHeader>
-          <TableRow>
-            <TableHead>CILO</TableHead>
-            <TableHead>Bound question</TableHead>
-            <TableHead>Scale</TableHead>
-            <TableHead className="text-right">Mean</TableHead>
-            <TableHead className="text-right">Ratings</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.ciloMetrics.flatMap((metric) =>
-            metric.scaleGroups.map((group) => (
+    <section aria-labelledby="exact-cilo-values-title" className="min-w-0">
+      <div className="mb-3">
+        <h3 id="exact-cilo-values-title" className="text-title-sm">
+          Exact CILO values
+        </h3>
+        <p className="text-body-sm text-text-secondary mt-1">
+          The same course-grouped results in a compact reference format.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:hidden">
+        {rows.map(({ metric, group }) => (
+          <article
+            key={`${metric.key}:${group.scaleKey}:mobile`}
+            className="border-border rounded-lg border p-3"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-label-md tabular-nums">
+                  {metric.courseCode} · {metric.label}
+                </p>
+                <p className="text-body-sm text-text-secondary mt-1 break-words">
+                  {metric.description}
+                </p>
+              </div>
+              <p className="text-title-md shrink-0 tabular-nums">{group.mean?.toFixed(2) ?? "—"}</p>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div>
+                <dt className="text-caption text-text-muted">Scale</dt>
+                <dd>{group.scaleLabel}</dd>
+              </div>
+              <div className="text-right">
+                <dt className="text-caption text-text-muted">Ratings</dt>
+                <dd className="tabular-nums">{group.ratingCount}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-caption text-text-muted">Bound question</dt>
+                <dd className="text-body-sm mt-0.5 break-words">{metric.questionPrompt}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
+        <Table aria-label="Exact CILO rating values">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-44">Course</TableHead>
+              <TableHead className="min-w-64">CILO</TableHead>
+              <TableHead className="min-w-64">Bound question</TableHead>
+              <TableHead className="min-w-32">Scale</TableHead>
+              <TableHead className="text-right">Mean</TableHead>
+              <TableHead className="text-right">Ratings</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map(({ metric, group }) => (
               <TableRow key={`${metric.key}:${group.scaleKey}`}>
-                <TableCell>
-                  <span className="font-medium">{metric.label}</span>
-                  <span className="text-muted-foreground block max-w-md text-sm">
-                    {metric.description}
+                <TableCell className="align-top whitespace-normal">
+                  <span className="font-semibold tabular-nums">{metric.courseCode}</span>
+                  <span className="text-text-secondary block text-sm">{metric.courseTitle}</span>
+                  <span className="text-text-muted mt-1 block text-xs">
+                    {metric.evaluationName}
                   </span>
                 </TableCell>
-                <TableCell className="max-w-md whitespace-normal">
+                <TableCell className="align-top whitespace-normal">
+                  <span className="font-medium">{metric.label}</span>
+                  <span className="text-text-secondary block text-sm">{metric.description}</span>
+                </TableCell>
+                <TableCell className="align-top whitespace-normal">
                   {metric.questionPrompt}
                 </TableCell>
-                <TableCell>{group.scaleLabel}</TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="align-top whitespace-nowrap">{group.scaleLabel}</TableCell>
+                <TableCell className="text-right align-top tabular-nums">
                   {group.mean?.toFixed(2) ?? "—"}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{group.ratingCount}</TableCell>
+                <TableCell className="text-right align-top tabular-nums">
+                  {group.ratingCount}
+                </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
   );
 }
 function TrendTable({ data }: { data: FacultyAnalyticsData }) {
@@ -1142,7 +1278,6 @@ function PromptCountTable({ data }: { data: FacultyAnalyticsData }) {
     </EvidenceCard>
   );
 }
-
 function NoEvidence({ filters }: { filters: FacultyAnalyticsFilters }) {
   return (
     <Empty className="border-border rounded-xl border py-16">
@@ -1192,5 +1327,13 @@ function rankedSummary(rows: Array<{ label: string; mean: number | null }>, noun
   if (!rated.length) return `No ${noun} means are available.`;
   if (rated.length === 1)
     return `${rated[0].label} has a mean rating of ${rated[0].mean.toFixed(2)}.`;
-  return `The highest ${noun} mean is ${rated[0].label} (${rated[0].mean.toFixed(2)}). The lowest is ${rated[rated.length - 1].label} (${rated[rated.length - 1].mean.toFixed(2)}).`;
+  const highestMean = rated[0].mean;
+  const lowestMean = rated[rated.length - 1].mean;
+  const highest = rated.filter((row) => row.mean === highestMean).map((row) => row.label);
+  const lowest = rated.filter((row) => row.mean === lowestMean).map((row) => row.label);
+  const highestLabel = highest.length === 1 ? highest[0] : `${highest.length} ${noun}s`;
+  const lowestLabel = lowest.length === 1 ? lowest[0] : `${lowest.length} ${noun}s`;
+  const highVerb = highest.length === 1 ? "belongs to" : "is shared by";
+  const lowVerb = lowest.length === 1 ? "belongs to" : "is shared by";
+  return `The highest ${noun} mean ${highVerb} ${highestLabel} (${highestMean.toFixed(2)}). The lowest ${lowVerb} ${lowestLabel} (${lowestMean.toFixed(2)}).`;
 }

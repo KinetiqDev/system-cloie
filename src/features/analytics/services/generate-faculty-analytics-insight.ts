@@ -79,6 +79,9 @@ export async function generateFacultyAnalyticsInsight(
     ratings: data.ratingDistributions,
     cilos: data.ciloMetrics.map((metric) => ({
       label: metric.label,
+      courseCode: metric.courseCode,
+      courseTitle: metric.courseTitle,
+      evaluationName: metric.evaluationName,
       description: metric.description,
       scaleGroups: metric.scaleGroups,
     })),

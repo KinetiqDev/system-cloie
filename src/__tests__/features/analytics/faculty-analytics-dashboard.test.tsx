@@ -68,4 +68,83 @@ describe("FacultyAnalyticsDashboard", () => {
       expect.arrayContaining([expect.stringContaining("expected a native <button>")])
     );
   });
+
+  it("groups repeated CILO labels under their course and evaluation context", () => {
+    const scaleGroup = {
+      scaleKey: "scale-1",
+      scaleLabel: "1–5 (5-point)",
+      scaleMin: 1,
+      scaleMax: 5,
+      mean: 4.5,
+      ratingCount: 2,
+      responseCount: 2,
+      excludedRatingCount: 0,
+      categories: [],
+    };
+    const ciloData: FacultyAnalyticsData = {
+      ...data,
+      filters: { view: "cilos" },
+      evaluations: [
+        {
+          id: "evaluation-1",
+          deploymentName: "Capstone exit evaluation",
+          assignmentId: "assignment-1",
+          courseId: "course-1",
+          courseCode: "ITRES1",
+          courseTitle: "Capstone Project 1",
+          classLabel: "BSIT · 4th year · Morning",
+          programName: "BSIT",
+          termInstanceId: "term-1",
+          termInstanceLabel: "2026–2027 · 2nd Semester",
+          status: "CLOSED",
+          responseCount: 2,
+          opportunityCount: 2,
+        },
+      ],
+      ciloMetrics: [
+        {
+          key: "binding-1",
+          ciloId: "cilo-1",
+          courseId: "course-1",
+          courseCode: "ITRES1",
+          courseTitle: "Capstone Project 1",
+          evaluationId: "evaluation-1",
+          evaluationName: "Capstone exit evaluation",
+          label: "CILO 1",
+          description: "Defend the proposed capstone scope and methodology.",
+          questionPrompt: "I achieved the first course intended learning outcome.",
+          scaleGroups: [scaleGroup],
+        },
+        {
+          key: "binding-2",
+          ciloId: "cilo-2",
+          courseId: "course-2",
+          courseCode: "IT201",
+          courseTitle: "Data Structures",
+          evaluationId: "evaluation-2",
+          evaluationName: "End-of-term evaluation",
+          label: "CILO 1",
+          description:
+            "Implement fundamental data structures (arrays, linked lists, trees, graphs) in a programming language.",
+          questionPrompt: "I achieved the first course intended learning outcome.",
+          scaleGroups: [{ ...scaleGroup, scaleKey: "scale-2" }],
+        },
+      ],
+    };
+
+    render(<FacultyAnalyticsDashboard data={ciloData} options={options} />);
+
+    expect(screen.getByRole("heading", { name: "Capstone Project 1" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Data Structures" })).toBeInTheDocument();
+    expect(screen.getAllByText("CILO 1")).toHaveLength(4);
+    expect(screen.getAllByText("ITRES1").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("IT201").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Capstone exit evaluation").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("End-of-term evaluation").length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getByText(
+        "The highest CILO mean is shared by 2 CILOs (4.50). The lowest is shared by 2 CILOs (4.50)."
+      )
+    ).toBeInTheDocument();
+  });
 });

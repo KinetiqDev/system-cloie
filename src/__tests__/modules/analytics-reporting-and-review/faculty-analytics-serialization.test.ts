@@ -134,6 +134,14 @@ describe("faculty analytics serialization", () => {
       overallScaleMax: 5,
       spansMultipleScales: false,
     });
+    expect(result.data.ciloMetrics[0]).toMatchObject({
+      courseId: "33333333-3333-4333-8333-333333333333",
+      courseCode: "IT 201",
+      courseTitle: "Software Engineering",
+      evaluationId: "evaluation-1",
+      evaluationName: "End-of-term evaluation",
+      label: "CILO 1",
+    });
     expect(result.data.qualitative).toMatchObject({
       available: true,
       responseCount: 5,

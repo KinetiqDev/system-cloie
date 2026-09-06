@@ -161,6 +161,11 @@ export type FacultyCiloMetric = {
   key: string;
   ciloId: string | null;
   label: string;
+  courseId: string;
+  courseCode: string;
+  courseTitle: string;
+  evaluationId: string;
+  evaluationName: string;
   description: string;
   questionPrompt: string;
   scaleGroups: FacultyScaleDistribution[];
