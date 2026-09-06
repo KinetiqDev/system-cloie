@@ -1163,21 +1163,16 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
                   {metric.description}
                 </p>
               </div>
-              <p className="text-title-md shrink-0 tabular-nums">{group.mean?.toFixed(2) ?? "—"}</p>
+              <p className="shrink-0 text-right tabular-nums">
+                <span className="text-title-md block">{group.mean?.toFixed(2) ?? "—"}</span>
+                <span className="text-caption text-text-muted block">
+                  {group.ratingCount} {group.ratingCount === 1 ? "rating" : "ratings"}
+                </span>
+              </p>
             </div>
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <div>
-                <dt className="text-caption text-text-muted">Scale</dt>
-                <dd>{group.scaleLabel}</dd>
-              </div>
-              <div className="text-right">
-                <dt className="text-caption text-text-muted">Ratings</dt>
-                <dd className="tabular-nums">{group.ratingCount}</dd>
-              </div>
-              <div className="col-span-2">
-                <dt className="text-caption text-text-muted">Bound question</dt>
-                <dd className="text-body-sm mt-0.5 break-words">{metric.questionPrompt}</dd>
-              </div>
+            <dl className="mt-3 text-sm">
+              <dt className="text-caption text-text-muted">Bound question</dt>
+              <dd className="mt-0.5 break-words">{metric.questionPrompt}</dd>
             </dl>
           </article>
         ))}
@@ -1189,7 +1184,6 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
               <TableHead className="min-w-44">Course</TableHead>
               <TableHead className="min-w-64">CILO</TableHead>
               <TableHead className="min-w-64">Bound question</TableHead>
-              <TableHead className="min-w-32">Scale</TableHead>
               <TableHead className="text-right">Mean</TableHead>
               <TableHead className="text-right">Ratings</TableHead>
             </TableRow>
@@ -1211,7 +1205,6 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
                 <TableCell className="align-top whitespace-normal">
                   {metric.questionPrompt}
                 </TableCell>
-                <TableCell className="align-top whitespace-nowrap">{group.scaleLabel}</TableCell>
                 <TableCell className="text-right align-top tabular-nums">
                   {group.mean?.toFixed(2) ?? "—"}
                 </TableCell>
