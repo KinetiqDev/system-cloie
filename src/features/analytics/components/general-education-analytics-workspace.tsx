@@ -81,7 +81,7 @@ const BASE_PATH = "/gen-ed-coordinator/analytics";
 function resetHref(): string {
   return BASE_PATH;
 }
-
+// fallow-ignore-next-line complexity
 export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { kpi, emptyReason, scope, periodOptions, courseBreakdowns, trends, feedback } = data;

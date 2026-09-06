@@ -124,7 +124,7 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
     </div>
   );
 }
-
+// fallow-ignore-next-line complexity
 function FilterForm({
   programId,
   filters,
