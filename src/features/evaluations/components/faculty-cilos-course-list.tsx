@@ -183,6 +183,9 @@ function ViewEditCilosModal({
   };
 
   const handleSave = async () => {
+    // An empty payload would archive every active CILO, so saving is only
+    // meaningful once the initial load has populated the list.
+    if (isLoading || !loaded) return;
     setIsSaving(true);
     setError(null);
     setSuccessMessage(null);
@@ -281,7 +284,7 @@ function ViewEditCilosModal({
       <Button variant="outline" onClick={() => handleOpenChange(false)}>
         Close
       </Button>
-      <Button onClick={handleSave} loading={isSaving}>
+      <Button onClick={handleSave} loading={isSaving} disabled={isLoading || !loaded}>
         {isSaving ? "Saving..." : "Save Changes"}
       </Button>
     </div>

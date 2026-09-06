@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/drawer";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { CourseForm } from "@/features/academic-structure/components/course-form";
+import { captureCourseTextDraft, type CourseTextDraft } from "./course-text-draft";
 import { createCourseAction } from "@/lib/actions/management-foundation-actions";
 import type { ProgramFilterOption } from "@/features/academic-structure/services/list-management-courses-summary";
 
@@ -35,6 +36,9 @@ export function CourseCreateDialog({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  // Snapshot of the uncontrolled text fields, re-applied if the responsive
+  // shell swap remounts CourseForm (Dialog ↔ Drawer crossing the 768px breakpoint).
+  const [draft, setDraft] = useState<CourseTextDraft>({});
   // Set synchronously on the submit event; `pending` state only flips after
   // CourseForm's microtask and effect, leaving a dismissal window without it.
   const submittingRef = useRef(false);
@@ -59,6 +63,9 @@ export function CourseCreateDialog({
 
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
+  const captureDraft = (event: React.FormEvent<HTMLDivElement>) =>
+    captureCourseTextDraft(event, setDraft);
+
   const form = (
     <CourseForm
       action={createCourseAction}
@@ -66,6 +73,7 @@ export function CourseCreateDialog({
       majors={majors}
       submitLabel="Create Course"
       formId={FORM_ID}
+      defaultValues={{ code: draft.code, title: draft.title }}
       onPendingChange={(nextPending) => {
         setPending(nextPending);
         if (!nextPending) {
@@ -79,6 +87,8 @@ export function CourseCreateDialog({
       }}
     />
   );
+
+  const formWithDraftCapture = <div onChange={captureDraft}>{form}</div>;
 
   const footer = (
     <div
@@ -108,7 +118,7 @@ export function CourseCreateDialog({
               downstream publishing flows.
             </DrawerDescription>
           </DrawerHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{form}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{formWithDraftCapture}</div>
           {footer}
         </DrawerContent>
       </Drawer>
@@ -132,7 +142,7 @@ export function CourseCreateDialog({
             submittingRef.current = true;
           }}
         >
-          {form}
+          {formWithDraftCapture}
         </div>
 
         {footer}
