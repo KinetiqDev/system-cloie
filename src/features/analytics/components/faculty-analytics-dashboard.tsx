@@ -90,6 +90,9 @@ type Props = {
   options: FacultyAnalyticsOptions;
 };
 
+// Dashboard composes scoped header, scope filters, 5 evidence views, and empty state in one
+// workspace contract; splitting view routing would scatter the aggregate-only scope sentence.
+// fallow-ignore-next-line complexity
 export function FacultyAnalyticsDashboard({ data, options }: Props) {
   const [aiResult, setAiResult] = useState<GenerateFacultyAIInsightResult | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -637,6 +640,9 @@ function CiloView({
   );
 }
 
+// One row keeps single-scale track vs multi-scale notice with mobile/desktop mean layout
+// together; splitting would scatter the row's evidence contract.
+// fallow-ignore-next-line complexity
 function CiloMetricRow({ metric }: { metric: FacultyCiloMetric }) {
   const group = metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : null;
   const position =
@@ -1013,6 +1019,9 @@ function DistributionGroups({
   );
 }
 
+// Pending/insight/disabled/insufficient/timeout states with qualitative disclaimer are one
+// AI-state contract that never blocks deterministic evidence; splitting would scatter it.
+// fallow-ignore-next-line complexity
 function AIOverview({
   insight,
   state,

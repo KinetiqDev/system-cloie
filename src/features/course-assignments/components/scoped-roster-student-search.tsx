@@ -92,8 +92,8 @@ export function ScopedRosterStudentSearch({
   return (
     <section className="flex flex-col gap-2" aria-label="Search students eligible for this roster">
       <p id={`${inputId}-hint`} className="text-body-sm text-muted-foreground">
-        Type at least 2 letters of the student&apos;s enrolled name. Only students who can join
-        this class are shown.
+        Type at least 2 letters of the student&apos;s enrolled name. Only students who can join this
+        class are shown.
       </p>
       <Input
         id={inputId}

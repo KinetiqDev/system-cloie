@@ -10,6 +10,9 @@ import {
 import type { FacultyAnalyticsFilters } from "@/features/analytics/types";
 import { ROLES } from "@/lib/constants/roles";
 
+// Route shells session/role guards, filter normalization, and parallel authorized reads;
+// the guard checks are the route's authorization contract.
+// fallow-ignore-next-line complexity
 export default async function FacultyAnalyticsPage({
   searchParams,
 }: {

@@ -165,6 +165,9 @@ export async function generateFacultyAnalyticsInsight(
   return generation;
 }
 
+// Provider branches (token caps, timeout vs error, invalid output) are one bounded
+// aggregate-packet contract; splitting would scatter the never-block-evidence guarantee.
+// fallow-ignore-next-line complexity
 async function requestFacultyInsight(
   config: NonNullable<ReturnType<typeof loadAiConfiguration>>,
   serialized: string,

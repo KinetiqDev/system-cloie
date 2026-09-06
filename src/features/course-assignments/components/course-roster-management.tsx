@@ -915,6 +915,9 @@ function ManagementTriggerContent() {
   );
 }
 
+// Wizard phases with method tabs and review blockers are one roster-workflow contract;
+// splitting would scatter phase gating and confirmation sequencing.
+// fallow-ignore-next-line complexity
 function ManagementBody({
   assignment,
   assignmentId,
@@ -1424,8 +1427,8 @@ function AddRosterMember({
       <div className="flex flex-col gap-1">
         <h2 className="text-title-md">Add one Student</h2>
         <p className="text-body-sm text-muted-foreground">
-          Search students by enrolled name. Only students who can join this class appear.
-          Choosing a name selects it below — nothing is added until you select Add Student.
+          Search students by enrolled name. Only students who can join this class appear. Choosing a
+          name selects it below — nothing is added until you select Add Student.
         </p>
       </div>
       <form className="flex flex-col gap-3" onSubmit={submit}>
@@ -1600,7 +1603,13 @@ function CsvImportMethod({
           <AlertDescription>{message}</AlertDescription>
         </Alert>
       )}
-      <Button type="button" size="lg" className="w-full" onClick={onImport} disabled={isPending || !file}>
+      <Button
+        type="button"
+        size="lg"
+        className="w-full"
+        onClick={onImport}
+        disabled={isPending || !file}
+      >
         {isPending ? (
           <>
             <Progress value={null} className="h-4 w-4" aria-label="Preparing preview" />

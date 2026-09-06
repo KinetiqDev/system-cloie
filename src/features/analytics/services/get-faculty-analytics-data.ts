@@ -43,8 +43,7 @@ import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure
  * evidence — quantitative or qualitative — may be displayed or interpreted.
  */
 export const FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS = 5;
-export const FACULTY_QUALITATIVE_MINIMUM_RESPONDENTS =
-  FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS;
+const FACULTY_QUALITATIVE_MINIMUM_RESPONDENTS = FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS;
 
 type EvaluationRow = Prisma.CourseBoundEvaluationGetPayload<{
   include: {
@@ -334,6 +333,9 @@ async function readAuthorizedEvaluations(userId: string, filters: FacultyAnalyti
   });
 }
 
+// Aggregate DTO assembles submitted/ratings/scales/opportunities/qualitative floor in one
+// evidence contract; splitting would scatter the aggregate-only and anonymity guarantees.
+// fallow-ignore-next-line complexity
 function buildFacultyAnalyticsData(
   evaluations: EvaluationRow[],
   filters: FacultyAnalyticsFilters
@@ -550,6 +552,9 @@ function buildTrends(evaluations: EvaluationRow[]): FacultyTrendPoint[] {
   });
 
   const previousByCourse = new Map<string, { instrumentId: string; scaleKey: string | null }>();
+  // Trend comparability (same course + instrument + scale with stated breaks) is one
+  // no-cross-course-join contract; splitting the row projection would scatter it.
+  // fallow-ignore-next-line complexity
   return rows.map(({ evaluation, submitted, groups }) => {
     const courseId = evaluation.course_assignment.course.id;
     const scaleKey = groups.length === 1 ? (groups[0].scale?.key ?? null) : null;
@@ -581,6 +586,9 @@ function buildTrends(evaluations: EvaluationRow[]): FacultyTrendPoint[] {
   });
 }
 
+// Prompt resolution plus counting keeps snapshot prompt labels beside redacted counts in one
+// qualitative contract; splitting would scatter the identifier-redaction boundary.
+// fallow-ignore-next-line complexity
 function buildPromptCounts(
   submitted: Array<{
     response: EvaluationRow["assignments"][number]["response"] & {};

@@ -4,7 +4,6 @@ import { ROLES } from "@/lib/constants/roles";
 import { getCourseBoundResponseReview } from "@/features/analytics/services/get-course-bound-response-review";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { getProgramHeadFeedback } from "@/features/analytics/services/get-program-head-analytics";
-import { getFacultyAnalyticsData } from "@/features/analytics/services/get-faculty-analytics-data";
 
 const {
   responseFindFirstMock,

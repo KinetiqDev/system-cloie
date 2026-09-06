@@ -111,7 +111,6 @@ describe("getCourseBoundReviewDetail", () => {
     );
   });
 
-
   it("builds section and question means plus anonymized response cards", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.DEAN,
@@ -311,7 +310,6 @@ describe("getCourseBoundReviewDetail", () => {
     expect(serialized).not.toContain("assignments");
     expect(serialized).not.toContain("text_content");
   });
-
 
   it("does not apply program filter for dean scope", async () => {
     resolveAuthSessionMock.mockResolvedValue({

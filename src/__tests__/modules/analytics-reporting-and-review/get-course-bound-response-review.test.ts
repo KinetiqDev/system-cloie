@@ -51,8 +51,6 @@ describe("getCourseBoundResponseReview", () => {
     expect(responseFindFirstMock).not.toHaveBeenCalled();
   });
 
-
-
   it("rejects a response from another selected Program", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.PROGRAM_HEAD,
@@ -111,5 +109,4 @@ describe("getCourseBoundResponseReview", () => {
       })
     );
   });
-
 });

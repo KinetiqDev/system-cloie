@@ -52,7 +52,6 @@ describe("listCourseBoundReviewItems", () => {
     expect(courseBoundEvaluationFindManyMock).not.toHaveBeenCalled();
   });
 
-
   it("does not add program filters for deans", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.DEAN,
@@ -74,7 +73,6 @@ describe("listCourseBoundReviewItems", () => {
       })
     );
   });
-
 
   it("limits Program Head review rows to the selected Program", async () => {
     resolveAuthSessionMock.mockResolvedValue({
@@ -115,5 +113,4 @@ describe("listCourseBoundReviewItems", () => {
       })
     );
   });
-
 });
