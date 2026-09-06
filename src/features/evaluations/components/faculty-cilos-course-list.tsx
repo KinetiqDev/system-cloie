@@ -113,6 +113,10 @@ function ViewEditCilosModal({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Set after a successful save until the reload reconciles local entries
+  // with persisted IDs; while set, a second save would resubmit entries
+  // without IDs and duplicate them.
+  const [needsReconcile, setNeedsReconcile] = useState(false);
 
   // Load CILOs when modal opens
   const handleLoad = async () => {
@@ -128,6 +132,7 @@ function ViewEditCilosModal({
           }))
         );
         setLoaded(true);
+        setNeedsReconcile(false);
       } else {
         setError(result.error ?? "Failed to load CILOs.");
       }
@@ -152,6 +157,7 @@ function ViewEditCilosModal({
     if (!nextOpen) {
       setCilos([]);
       setLoaded(false);
+      setNeedsReconcile(false);
       setError(null);
       setSuccessMessage(null);
       setNewCiloText("");
@@ -184,8 +190,10 @@ function ViewEditCilosModal({
 
   const handleSave = async () => {
     // An empty payload would archive every active CILO, so saving is only
-    // meaningful once the initial load has populated the list.
-    if (isLoading || !loaded) return;
+    // meaningful once the initial load has populated the list. Entries also
+    // stay isNew until the post-save reload assigns persisted IDs, so a
+    // second save before that reconciliation would duplicate them.
+    if (isLoading || !loaded || needsReconcile) return;
     setIsSaving(true);
     setError(null);
     setSuccessMessage(null);
@@ -197,6 +205,9 @@ function ViewEditCilosModal({
       const result = await saveCilosAction(course.id, payload);
       if (result.success) {
         setSuccessMessage("CILOs saved successfully.");
+        // Entries stay isNew until the reload below assigns persisted IDs;
+        // fence Save until that reconciliation lands.
+        setNeedsReconcile(true);
         // Reload to get fresh IDs
         await handleLoad();
       } else {
@@ -294,7 +305,11 @@ function ViewEditCilosModal({
       <Button variant="outline" onClick={() => handleOpenChange(false)}>
         Close
       </Button>
-      <Button onClick={handleSave} loading={isSaving} disabled={isLoading || !loaded}>
+      <Button
+        onClick={handleSave}
+        loading={isSaving}
+        disabled={isLoading || !loaded || needsReconcile}
+      >
         {isSaving ? "Saving..." : "Save Changes"}
       </Button>
     </div>
