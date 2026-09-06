@@ -3,10 +3,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { FacultyAnalyticsDashboard } from "@/features/analytics/components/faculty-analytics-dashboard";
 import type { FacultyAnalyticsData, FacultyAnalyticsOptions } from "@/features/analytics/types";
 
-const pushMock = vi.fn();
+const { pushMock, generateInsightMock } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  generateInsightMock: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
+}));
+
+vi.mock("@/lib/actions/faculty-analytics-actions", () => ({
+  generateFacultyAnalyticsInsightAction: generateInsightMock,
 }));
 
 const data: FacultyAnalyticsData = {
@@ -146,5 +153,42 @@ describe("FacultyAnalyticsDashboard", () => {
         "The highest CILO mean is shared by 2 CILOs (4.50). The lowest is shared by 2 CILOs (4.50)."
       )
     ).toBeInTheDocument();
+  });
+
+  it("shows an accessible, reduced-motion-safe skeleton while AI interpretation is pending", async () => {
+    const { promise } = Promise.withResolvers<never>();
+    generateInsightMock.mockReturnValue(promise);
+    const loadingData: FacultyAnalyticsData = {
+      ...data,
+      evaluations: [
+        {
+          id: "evaluation-1",
+          deploymentName: "End-of-term evaluation",
+          assignmentId: "assignment-1",
+          courseId: "course-1",
+          courseCode: "IT201",
+          courseTitle: "Data Structures",
+          classLabel: "BSIT · 2nd year · Morning",
+          programName: "BSIT",
+          termInstanceId: "term-1",
+          termInstanceLabel: "2026–2027 · 1st Semester",
+          status: "CLOSED",
+          responseCount: 1,
+          opportunityCount: 1,
+        },
+      ],
+      kpi: { ...data.kpi, submittedResponseCount: 1, validRatingCount: 1 },
+    };
+
+    render(<FacultyAnalyticsDashboard data={loadingData} options={options} />);
+
+    const statuses = await screen.findAllByRole("status", { name: "Generating AI insight" });
+    expect(statuses).toHaveLength(2);
+    for (const status of statuses) {
+      expect(status).toHaveAttribute("aria-busy", "true");
+      const skeletons = status.querySelectorAll('[data-slot="skeleton"]');
+      expect(skeletons).toHaveLength(3);
+      expect(skeletons[0]).toHaveClass("animate-pulse", "motion-reduce:animate-none");
+    }
   });
 });

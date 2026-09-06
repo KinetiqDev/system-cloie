@@ -115,6 +115,17 @@ export function normalizeFacultyAnalyticsFilters(
 export async function getFacultyAnalyticsData(
   filters: Partial<FacultyAnalyticsFilters> = {}
 ): Promise<GetFacultyAnalyticsDataResult> {
+  const result = await getFacultyAnalyticsDataWithPrincipal(filters);
+  if (!result.success) return result;
+  return { success: true, data: result.data };
+}
+
+export async function getFacultyAnalyticsDataWithPrincipal(
+  filters: Partial<FacultyAnalyticsFilters> = {}
+): Promise<
+  | { success: true; data: FacultyAnalyticsData; facultyUserId: string }
+  | { success: false; error: string }
+> {
   const session = await resolveAuthSession();
   if (!session) return { success: false, error: "Not authenticated" };
   if (session.activeRole !== ROLES.FACULTY) {
@@ -124,7 +135,11 @@ export async function getFacultyAnalyticsData(
   try {
     const normalized = normalizeFacultyAnalyticsFilters(filters);
     const evaluations = await readAuthorizedEvaluations(session.userId, normalized);
-    return { success: true, data: buildFacultyAnalyticsData(evaluations, normalized) };
+    return {
+      success: true,
+      data: buildFacultyAnalyticsData(evaluations, normalized),
+      facultyUserId: session.userId,
+    };
   } catch (error) {
     console.error("getFacultyAnalyticsData error:", error);
     return { success: false, error: "Failed to load analytics data" };

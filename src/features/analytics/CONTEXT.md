@@ -21,8 +21,18 @@ Written-feedback analytics require at least five distinct submitted respondents 
 _Avoid_: Lifetime evaluation threshold, answer-count threshold, singleton term, threshold countdown
 
 **Faculty inline AI overview**:
-One automatic, non-persisted request rebuilds and re-authorizes the current Faculty filter scope server-side, sends one bounded aggregate packet, and returns section-keyed interpretations displayed beneath deterministic charts. Disabled, insufficient, timeout, and provider-error states never block verified analytics.
-_Avoid_: One request per chart, manual first-generation button, stale interpretation, persisted insight
+One automatic request rebuilds and re-authorizes the current Faculty filter scope server-side, then resolves a section-keyed interpretation beneath deterministic charts. Validated output may be reused only from a bounded process-local cache keyed by the authorized Faculty user, provider, model and prompt version, and a SHA-256 fingerprint of the complete bounded aggregate evidence packet. Tab-only navigation and reloads reuse unchanged evidence; any aggregate evidence change produces a new fingerprint and provider request. The cache never contains sessions, authorization decisions, response rows, respondent identifiers, roster data, or raw comments, and it is cleared on process restart or deployment. Disabled, insufficient, timeout, and provider-error states never block verified analytics.
+_Avoid_: One request per chart, manual first-generation button, TTL-only freshness, shared cross-Faculty cache, persistent AI history, cached authorization, stale interpretation
+
+| Faculty AI cache dimension | Contract |
+| --- | --- |
+| Key | SHA-256 over prompt version, authorized Faculty user ID, provider base URL, model, and the complete bounded aggregate evidence packet |
+| Scope | One Faculty principal and one exact aggregate evidence state; analytics tabs share an entry when their evidence is identical |
+| Lifetime | Bounded to 128 validated entries in one application process; cleared on restart or deployment |
+| Tags | None; this is not a persistent Next.js Data Cache entry |
+| Invalidation triggers | Any packet change, including submitted-response counts, opportunities, distributions, CILO/question aggregates, trends, qualitative tokens, prompt version, provider, or model |
+| Authorization boundary | Session, Faculty role, course ownership, and filters are re-authorized and evidence is rebuilt before every lookup |
+| Stale behavior | No stale result is served after evidence changes; the new fingerprint waits for one fresh provider result, with concurrent identical requests sharing that call |
 
 ## Program Head analytics surface (shipped contract)
 

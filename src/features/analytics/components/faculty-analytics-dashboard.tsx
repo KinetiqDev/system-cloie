@@ -42,6 +42,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import { generateFacultyAnalyticsInsightAction } from "@/lib/actions/faculty-analytics-actions";
@@ -997,16 +998,24 @@ function AIOverview({
   if (pending)
     return (
       <div
-        className="bg-information-soft border-information/25 rounded-lg border p-4"
+        className="bg-information-soft border-information/25 min-h-36 rounded-lg border p-4"
         role="status"
+        aria-label="Generating AI insight"
+        aria-busy="true"
       >
         <div className="flex items-center gap-2 font-medium">
           <Bot aria-hidden="true" className="size-4" />
-          Preparing AI overview
+          Interpreting this evidence
         </div>
         <p className="text-body-sm text-text-secondary mt-1">
-          The verified chart remains available while System CLOIE interprets this scope.
+          System CLOIE is preparing an AI-generated overview. The verified analytics remain
+          available while this finishes.
         </p>
+        <div className="mt-4 flex flex-col gap-2" aria-hidden="true">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-[88%]" />
+          <Skeleton className="h-3 w-[64%]" />
+        </div>
       </div>
     );
   if (insight)

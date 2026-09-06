@@ -1,13 +1,25 @@
+import { createHash } from "node:crypto";
 import OpenAI from "openai";
 import { z } from "zod";
 import type { FacultyAnalyticsFilters } from "../types";
-import { getFacultyAnalyticsData } from "./get-faculty-analytics-data";
+import { getFacultyAnalyticsDataWithPrincipal } from "./get-faculty-analytics-data";
 import {
   AI_MAX_OUTPUT_CHARS,
   AI_MAX_OUTPUT_TOKENS,
   AI_PROVIDER_TIMEOUT_MS,
   loadAiConfiguration,
 } from "./program-head-ai-schema";
+
+/**
+ * Bounded, process-local reuse only. Authorization and aggregate evidence are
+ * rebuilt before lookup; the cache stores validated AI output, never source
+ * responses, sessions, or authorization decisions. Process restart/deploy
+ * clears every entry, preserving ADR 0016's non-persistence boundary.
+ */
+const FACULTY_AI_CACHE_MAX_ENTRIES = 128;
+const FACULTY_AI_PROMPT_VERSION = "faculty-analytics-v1";
+const insightCache = new Map<string, FacultyAIInsight>();
+const inFlightInsights = new Map<string, Promise<GenerateFacultyAIInsightResult>>();
 const sectionInsightSchema = z.object({
   observation: z.string().trim().min(1).max(320),
   worthChecking: z.string().trim().min(1).max(240),
@@ -55,7 +67,7 @@ export async function generateFacultyAnalyticsInsight(
   const config = loadAiConfiguration();
   if (!config) return { ok: false, state: "disabled" };
 
-  const analytics = await getFacultyAnalyticsData(filters);
+  const analytics = await getFacultyAnalyticsDataWithPrincipal(filters);
   if (!analytics.success) {
     return {
       ok: false,
@@ -102,7 +114,46 @@ export async function generateFacultyAnalyticsInsight(
   };
   const serialized = JSON.stringify(packet);
   if (serialized.length > config.maxPacketChars) return { ok: false, state: "unexpected" };
+  const cacheKey = createHash("sha256")
+    .update(FACULTY_AI_PROMPT_VERSION)
+    .update("\0")
+    .update(analytics.facultyUserId)
+    .update("\0")
+    .update(config.model)
+    .update("\0")
+    .update(config.baseUrl)
+    .update("\0")
+    .update(serialized)
+    .digest("hex");
+  const cached = insightCache.get(cacheKey);
+  if (cached) {
+    insightCache.delete(cacheKey);
+    insightCache.set(cacheKey, cached);
+    return { ok: true, data: cached };
+  }
+  const inFlight = inFlightInsights.get(cacheKey);
+  if (inFlight) return inFlight;
+  const evidence = {
+    submittedResponseCount: data.kpi.submittedResponseCount,
+    validRatingCount: data.kpi.validRatingCount,
+    qualitativeItemCount: data.qualitative.available ? data.qualitative.itemCount : 0,
+  };
+  const generation = requestFacultyInsight(config, serialized, data.qualitative.available, evidence)
+    .then((result) => {
+      if (result.ok) cacheFacultyInsight(cacheKey, result.data);
+      return result;
+    })
+    .finally(() => inFlightInsights.delete(cacheKey));
+  inFlightInsights.set(cacheKey, generation);
+  return generation;
+}
 
+async function requestFacultyInsight(
+  config: NonNullable<ReturnType<typeof loadAiConfiguration>>,
+  serialized: string,
+  qualitativeAvailable: boolean,
+  evidence: FacultyAIInsight["evidence"]
+): Promise<GenerateFacultyAIInsightResult> {
   const client = new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseUrl,
@@ -143,15 +194,19 @@ export async function generateFacultyAnalyticsInsight(
       ok: true,
       data: {
         ...parsed.data,
-        qualitative: data.qualitative.available ? parsed.data.qualitative : null,
-        evidence: {
-          submittedResponseCount: data.kpi.submittedResponseCount,
-          validRatingCount: data.kpi.validRatingCount,
-          qualitativeItemCount: data.qualitative.available ? data.qualitative.itemCount : 0,
-        },
+        qualitative: qualitativeAvailable ? parsed.data.qualitative : null,
+        evidence,
       },
     };
   } catch {
     return { ok: false, state: "invalid-output" };
+  }
+}
+
+function cacheFacultyInsight(key: string, insight: FacultyAIInsight) {
+  insightCache.set(key, insight);
+  if (insightCache.size > FACULTY_AI_CACHE_MAX_ENTRIES) {
+    const oldestKey = insightCache.keys().next().value;
+    if (oldestKey) insightCache.delete(oldestKey);
   }
 }
