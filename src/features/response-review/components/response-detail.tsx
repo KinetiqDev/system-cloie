@@ -145,8 +145,9 @@ function QuantitativeAnswerCard({
             variant="outline"
             className="border-info/30 bg-info-soft text-info h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"
           >
-            <span className="shrink-0 font-semibold">CILO:</span>
-            <span className="break-words">{binding.ciloLabel}</span>
+            <span>
+              <span className="font-semibold">CILO:</span> {binding.ciloLabel}
+            </span>
             {binding.ploMappings.length > 0 && (
               <span className="text-text-muted ml-1 inline-flex flex-wrap items-center gap-1">
                 <span>→</span>
@@ -172,20 +173,22 @@ function QuantitativeAnswerCard({
             variant="outline"
             className="border-success/30 bg-success-soft text-success h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"
           >
-            <span className="shrink-0 font-semibold">PLO:</span>
-            {binding.ploBindings.map((p, index) => (
-              <Fragment key={p.key}>
-                {index > 0 ? ", " : null}
-                <span>
-                  <Link
-                    href={outcomeHref(p.key)}
-                    className="hover:text-foreground font-medium underline underline-offset-2"
-                  >
-                    {p.code}
-                  </Link>
-                </span>
-              </Fragment>
-            ))}
+            <span>
+              <span className="font-semibold">PLO:</span>{" "}
+              {binding.ploBindings.map((p, index) => (
+                <Fragment key={p.key}>
+                  {index > 0 ? ", " : null}
+                  <span>
+                    <Link
+                      href={outcomeHref(p.key)}
+                      className="hover:text-foreground font-medium underline underline-offset-2"
+                    >
+                      {p.code}
+                    </Link>
+                  </span>
+                </Fragment>
+              ))}
+            </span>
           </Badge>
         )}
         {binding.type === "GENERAL" && (
