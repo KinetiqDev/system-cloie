@@ -143,7 +143,7 @@ export function ProgramHeadOutcomeRankingChart({
       </p>
       <details className="group">
         <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden">
-          <span>View exact values table</span>
+          <span>View exact values</span>
         </summary>
         <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
           <Table aria-label="Ranked mean ratings by graduate outcome">

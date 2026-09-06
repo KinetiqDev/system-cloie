@@ -242,8 +242,13 @@ function FilterForm({
 }
 
 function activeFilterCount(filters: AnalyticsFilterState): number {
-  return [filters.termInstanceId, filters.evidenceSource, filters.stakeholder].filter(Boolean)
-    .length;
+  return [
+    filters.termInstanceId,
+    filters.schoolYearId,
+    filters.semester,
+    filters.evidenceSource,
+    filters.stakeholder,
+  ].filter(Boolean).length;
 }
 
 type OptionItem = { value: string; label: string };
