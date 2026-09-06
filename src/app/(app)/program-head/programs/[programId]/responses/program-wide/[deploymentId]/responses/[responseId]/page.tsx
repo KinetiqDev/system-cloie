@@ -69,27 +69,34 @@ export default async function CentralResponseDetailPage({
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Breadcrumbs
-        items={
-          openedFromTools
-            ? [
-                { label: "Evaluation Tools", href: toolsHref },
-                { label: response.evaluation.title, href: evaluationHref },
-                { label: response.respondent.name },
-              ]
-            : [
-                { label: "Responses", href: responsesHref },
-                { label: "Program-wide evaluations", href: responsesHref },
-                { label: response.evaluation.title, href: evaluationHref },
-                { label: response.respondent.name },
-              ]
-        }
-      />
-      <div>
-        <Button render={<Link href={evaluationHref} />} variant="outline" size="sm">
-          <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-          Back to Evaluation
-        </Button>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div>
+          <Button
+            render={<Link href={evaluationHref} />}
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground -ml-2 w-fit gap-1.5"
+          >
+            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+            Back to evaluation
+          </Button>
+        </div>
+        <Breadcrumbs
+          items={
+            openedFromTools
+              ? [
+                  { label: "Evaluation Tools", href: toolsHref },
+                  { label: response.evaluation.title, href: evaluationHref },
+                  { label: response.respondent.name },
+                ]
+              : [
+                  { label: "Responses", href: responsesHref },
+                  { label: "Program-wide evaluations", href: responsesHref },
+                  { label: response.evaluation.title, href: evaluationHref },
+                  { label: response.respondent.name },
+                ]
+          }
+        />
       </div>
       <ResponseDetail
         response={response}

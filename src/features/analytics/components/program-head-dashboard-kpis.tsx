@@ -49,7 +49,7 @@ export function ProgramHeadDashboardKpiGrid({
     evidenceHref: responsesHref,
   };
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-2">
@@ -127,8 +127,12 @@ export function ProgramHeadDashboardKpiGrid({
           </CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground text-body-sm flex flex-col gap-2">
-          <p>{activeEvaluations.closingWithin7Days} close within the next 7 days</p>
-          <p>{pendingResponses.toLocaleString()} assignments still open</p>
+          <p>
+            {`${activeEvaluations.closingWithin7Days} close within the next 7 days`}
+          </p>
+          <p>
+            {`${pendingResponses.toLocaleString()} assignment${pendingResponses === 1 ? "" : "s"} still open`}
+          </p>
           <div className="flex flex-col gap-1">
             <Link
               href={responsesActiveCourseHref}
@@ -156,14 +160,18 @@ export function ProgramHeadDashboardKpiGrid({
         <CardContent>
           <dl className="text-body-sm grid gap-y-2">
             {sourceMeans.map((source) => (
-              <div key={source.sourceKey} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3">
-                <dt className="text-muted-foreground truncate" title={source.label}>
-                  {source.label}
-                </dt>
+              <div
+                key={source.sourceKey}
+                className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-2"
+              >
+                <dt className="text-muted-foreground min-w-0 break-words">{source.label}</dt>
                 <dd className="flex items-center gap-1 text-right font-semibold tabular-nums">
                   {source.spansMultipleScales ? (
-                    <span title="Evidence spans incompatible scales; no combined mean">
+                    <span>
                       Multiple scales
+                      <span className="sr-only">
+                        ; evidence uses incompatible rating scales, so no combined mean is shown
+                      </span>
                     </span>
                   ) : source.mean === null ? (
                     <span className="font-normal">—</span>

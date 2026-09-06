@@ -277,8 +277,14 @@ export function QualitativeWordCloud({ title, tokens, answerCount }: Qualitative
         </CardHeader>
         <CardContent>
           <Empty className="h-64">
-            <EmptyTitle>No qualitative responses yet</EmptyTitle>
-            <EmptyDescription>No qualitative response data available yet.</EmptyDescription>
+            <EmptyTitle>
+              {answerCount > 0 ? "No recurring terms to chart" : "No qualitative answers yet"}
+            </EmptyTitle>
+            <EmptyDescription>
+              {answerCount > 0
+                ? "Qualitative answers exist, but no safe recurring terms were available for this summary."
+                : "Frequent terms appear after respondents submit open-text answers."}
+            </EmptyDescription>
           </Empty>
         </CardContent>
       </Card>

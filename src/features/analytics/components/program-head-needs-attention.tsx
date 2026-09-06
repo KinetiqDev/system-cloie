@@ -12,7 +12,7 @@ const RULE_LABELS: Record<NeedsAttentionRule, string> = {
   "zero-plo-ratings": "No ratings",
 };
 
-const MAX_VISIBLE_ITEMS = 10;
+const MAX_VISIBLE_ITEMS = 6;
 
 /**
  * Needs attention (spec §13.9): exactly the three resolved operational rules.
@@ -72,9 +72,34 @@ export function ProgramHeadNeedsAttention({ items }: { items: NeedsAttentionItem
               ))}
             </ul>
             {remaining > 0 && (
-              <p className="text-muted-foreground text-label-sm mt-2">
-                +{remaining} more across sources and evaluations
-              </p>
+              <details className="mt-2">
+                <summary className="text-link focus-visible:ring-ring inline-flex min-h-11 cursor-pointer list-none items-center font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none">
+                  Show {remaining} more
+                </summary>
+                <ul className="flex flex-col border-t">
+                  {items.slice(MAX_VISIBLE_ITEMS).map((item) => (
+                    <li key={item.id} className="border-border/60 border-b last:border-b-0">
+                      <Link
+                        href={item.href}
+                        className="focus-visible:ring-ring -mx-2 flex min-h-11 items-start gap-3 rounded-lg px-2 py-2.5 focus-visible:ring-2 focus-visible:outline-none"
+                      >
+                        <span aria-hidden="true" className="text-muted-foreground mt-0.5">
+                          ·
+                        </span>
+                        <span className="min-w-0">
+                          <span className="text-label-md block font-bold break-words">
+                            {item.title}
+                          </span>
+                          <span className="text-muted-foreground text-label-sm mt-0.5 block">
+                            {RULE_LABELS[item.rule]}
+                            {item.note ? ` · ${item.note}` : ""}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             )}
           </>
         )}

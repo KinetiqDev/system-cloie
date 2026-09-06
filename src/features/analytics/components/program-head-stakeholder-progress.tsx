@@ -43,11 +43,12 @@ export function ProgramHeadStakeholderProgress({
             <Link
               key={row.stakeholder}
               href={stakeholdersHref}
-              className="focus-visible:ring-ring -mx-2 grid grid-cols-[6.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none pointer-coarse:min-h-11"
-              aria-label={`${STAKEHOLDER_LABELS[row.stakeholder]}: ${row.submitted} of ${row.assigned} submitted, ${Math.round((row.completionRate ?? 0) * 100)} percent complete, ${row.inProgress} in progress, ${row.notStarted} not started`}
+              className="focus-visible:ring-ring -mx-2 grid grid-cols-[minmax(5rem,auto)_minmax(3rem,1fr)_auto] items-center gap-2 rounded-lg px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none sm:grid-cols-[6.5rem_minmax(0,1fr)_auto] sm:gap-3 pointer-coarse:min-h-11"
+              aria-label={`${STAKEHOLDER_LABELS[row.stakeholder] ?? row.stakeholder.replaceAll("_", " ").toLowerCase()}: ${row.submitted} of ${row.assigned} submitted, ${Math.round((row.completionRate ?? 0) * 100)} percent complete, ${row.inProgress} in progress, ${row.notStarted} not started`}
             >
-              <span className="text-label-md truncate font-semibold">
-                {STAKEHOLDER_LABELS[row.stakeholder]}
+              <span className="text-label-sm sm:text-label-md min-w-0 font-semibold break-words">
+                {STAKEHOLDER_LABELS[row.stakeholder] ??
+                  row.stakeholder.replaceAll("_", " ").toLowerCase()}
               </span>
               <span aria-hidden="true" className="bg-muted flex h-3 overflow-hidden rounded-full">
                 <span

@@ -90,20 +90,24 @@ export function ProgramHeadPloSummary({
         <CardDescription>
           One evidence source at a time; select a PLO to open Analytics.
         </CardDescription>
-        <div role="group" aria-label="Evidence source" className="mt-1 flex flex-wrap gap-1">
+        <div
+          role="group"
+          aria-label="Evidence source"
+          className="mt-1 grid grid-cols-2 gap-1 sm:flex sm:flex-wrap"
+        >
           {DASHBOARD_SOURCE_ORDER.map((key) => (
             <button
               key={key}
               type="button"
               aria-pressed={sourceKey === key}
               onClick={() => setSourceKey(key)}
-              className={`text-label-md focus-visible:ring-ring rounded-lg px-2.5 py-1.5 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none pointer-coarse:min-h-11 ${
+              className={`text-label-sm focus-visible:ring-ring sm:text-label-md min-h-10 min-w-0 rounded-lg px-2 py-1.5 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none sm:px-2.5 pointer-coarse:min-h-11 ${
                 sourceKey === key
                   ? "bg-primary-soft text-selected-fg"
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
               }`}
             >
-              {PLO_SOURCE_LABELS[key]}
+              <span className="line-clamp-2">{PLO_SOURCE_LABELS[key]}</span>
             </button>
           ))}
         </div>
@@ -119,8 +123,8 @@ export function ProgramHeadPloSummary({
         ) : (
           rows.map((row) => (
             <div key={row.ploId} className="border-border/60 border-b py-2 last:border-b-0">
-              <div className="focus-within:ring-ring -mx-2 grid grid-cols-[3.5rem_minmax(0,1fr)_5rem] items-center gap-3 rounded-lg px-2 focus-within:ring-2">
-                <span className="text-label-md truncate font-bold" title={row.ploCode}>
+              <div className="focus-within:ring-ring -mx-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg px-2 focus-within:ring-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_5rem]">
+                <span className="text-label-md min-w-0 truncate font-bold" title={row.ploCode}>
                   <Link href={rowHref(row.ploId)} className="hover:underline">
                     {row.ploCode}
                   </Link>
@@ -129,7 +133,7 @@ export function ProgramHeadPloSummary({
                   href={rowHref(row.ploId)}
                   aria-hidden="true"
                   tabIndex={-1}
-                  className="bg-muted relative block h-3.5 overflow-hidden rounded border"
+                  className="bg-muted relative col-span-2 row-start-2 block h-3.5 overflow-hidden rounded border sm:col-span-1 sm:row-start-auto"
                 >
                   {row.mean !== null && row.scaleMax !== null ? (
                     <span
@@ -142,10 +146,13 @@ export function ProgramHeadPloSummary({
                     />
                   ) : null}
                 </Link>
-                <span className="text-label-md flex items-center justify-end gap-1 font-bold tabular-nums">
+                <span className="text-label-md col-start-2 row-start-1 flex items-center justify-end gap-1 font-bold tabular-nums sm:col-start-auto sm:row-start-auto">
                   {row.spansMultipleScales ? (
                     <span className="text-muted-foreground text-label-sm font-semibold">
                       Multiple scales
+                      <span className="sr-only">
+                        ; evidence uses incompatible rating scales, so no combined mean is shown
+                      </span>
                     </span>
                   ) : row.mean === null ? (
                     <span className="text-muted-foreground">—</span>

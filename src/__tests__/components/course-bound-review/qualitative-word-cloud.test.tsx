@@ -261,10 +261,15 @@ describe("QualitativeWordCloud", () => {
     expect(firstCall.fontSize(tokens[0])).toBe(lastCall.fontSize(tokens[0]));
   });
 
-  it("renders empty-state text when no tokens exist", () => {
-    render(<QualitativeWordCloud title="Qualitative Feedback" tokens={[]} answerCount={3} />);
-    expect(screen.getByText("No qualitative responses yet")).toBeInTheDocument();
-    expect(screen.getByText("No qualitative response data available yet.")).toBeInTheDocument();
+  it("distinguishes submitted answers without safe chart terms from no answers", () => {
+    const { rerender } = render(
+      <QualitativeWordCloud title="Qualitative Feedback" tokens={[]} answerCount={3} />
+    );
+    expect(screen.getByText("No recurring terms to chart")).toBeInTheDocument();
+    expect(screen.getByText(/no safe recurring terms were available/)).toBeInTheDocument();
+
+    rerender(<QualitativeWordCloud title="Qualitative Feedback" tokens={[]} answerCount={0} />);
+    expect(screen.getByText("No qualitative answers yet")).toBeInTheDocument();
   });
 
   it("names the cloud region from its title and insight", () => {
