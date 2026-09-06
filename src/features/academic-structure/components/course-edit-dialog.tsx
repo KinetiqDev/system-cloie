@@ -12,17 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { CourseForm } from "@/features/academic-structure/components/course-form";
-import { captureCourseTextDraft, type CourseTextDraft } from "./course-text-draft";
 import { Spinner } from "@/components/ui/spinner";
+import { CourseForm } from "@/features/academic-structure/components/course-form";
 import {
   getCourseEditDataAction,
   updateCourseAction,
@@ -89,66 +80,10 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
 
   const displayCourse = course ?? activeCourse;
 
-  // Snapshot of the uncontrolled text fields, re-applied if the responsive
-  // shell swap remounts CourseForm (Dialog ↔ Drawer crossing 768px).
-  const [draft, setDraft] = useState<CourseTextDraft>({});
-  const captureDraft = (event: React.FormEvent<HTMLDivElement>) =>
-    captureCourseTextDraft(event, setDraft);
-
   const handleSuccess = () => {
     onOpenChange(false);
     router.refresh();
   };
-
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-  const footer = (
-    <div
-      className={
-        isDesktop
-          ? "bg-muted/50 flex flex-col-reverse gap-2 rounded-b-xl border-t px-5 py-4 sm:flex-row sm:justify-end"
-          : "flex justify-end gap-2 pt-3"
-      }
-    >
-      <Button variant="outline" onClick={() => onOpenChange(false)}>
-        Cancel
-      </Button>
-      {status === "ready" && (
-        <Button form="course-edit-form" type="submit" disabled={pending}>
-          {pending ? "Updating..." : "Update Course"}
-        </Button>
-      )}
-    </div>
-  );
-
-  const bodyWithDraftCapture = (
-    <div onChange={captureDraft}>
-      <CourseEditBody
-        status={status}
-        data={data}
-        draft={draft}
-        onRetry={() => setAttempt((n) => n + 1)}
-        onPendingChange={setPending}
-        onSuccess={handleSuccess}
-      />
-    </div>
-  );
-  if (!isDesktop) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-        <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
-            <DrawerTitle>Edit Course</DrawerTitle>
-            <DrawerDescription className="line-clamp-2">
-              Update details for {data?.course.code ?? displayCourse?.code} –{" "}
-              {data?.course.title ?? displayCourse?.title}.
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{bodyWithDraftCapture}</div>
-          {footer}
-        </DrawerContent>
-      </Drawer>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,79 +96,68 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 overflow-y-auto px-5 py-4">{bodyWithDraftCapture}</div>
+        <div className="min-h-0 overflow-y-auto px-5 py-4">
+          {status === "loading" && (
+            <div className="flex items-center justify-center py-10">
+              <Spinner size="lg" label="Loading course details" />
+            </div>
+          )}
 
-        {footer}
+          {status === "error" && (
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription className="flex items-center justify-between gap-3">
+                Unable to load course details. Please try again.
+                <Button variant="outline" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {status === "missing" && (
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>This course is no longer available.</AlertDescription>
+            </Alert>
+          )}
+
+          {status === "ready" && data && (
+            <CourseForm
+              action={updateCourseAction}
+              programs={data.programs}
+              majors={data.majors}
+              defaultValues={{
+                id: data.course.id,
+                code: data.course.code,
+                title: data.course.title,
+                course_scope: data.course.course_scope,
+                program_id: data.course.program_id,
+                major_id: data.course.major_id,
+                default_year_level: data.course.default_year_level,
+                default_semester: data.course.default_semester,
+                default_term: data.course.default_term,
+                updated_at: data.course.updated_at.toISOString(),
+              }}
+              submitLabel="Update Course"
+              formId="course-edit-form"
+              onPendingChange={setPending}
+              onSuccess={handleSuccess}
+            />
+          )}
+        </div>
+
+        <div className="bg-muted/50 flex flex-col-reverse gap-2 rounded-b-xl border-t px-5 py-4 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          {status === "ready" && (
+            <Button form="course-edit-form" type="submit" disabled={pending}>
+              {pending ? "Updating..." : "Update Course"}
+            </Button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function CourseEditBody({
-  status,
-  data,
-  draft,
-  onRetry,
-  onPendingChange,
-  onSuccess,
-}: {
-  status: LoadState;
-  data: CourseEditData | null;
-  draft: CourseTextDraft;
-  onRetry: () => void;
-  onPendingChange: (pending: boolean) => void;
-  onSuccess: () => void;
-}) {
-  return (
-    <div className="space-y-4">
-      {status === "loading" && (
-        <div className="flex items-center justify-center py-10">
-          <Spinner size="lg" label="Loading course details" />
-        </div>
-      )}
-
-      {status === "error" && (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertDescription className="flex items-center justify-between gap-3">
-            Unable to load course details. Please try again.
-            <Button variant="outline" size="sm" onClick={onRetry}>
-              Retry
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {status === "missing" && (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertDescription>This course is no longer available.</AlertDescription>
-        </Alert>
-      )}
-
-      {status === "ready" && data && (
-        <CourseForm
-          action={updateCourseAction}
-          programs={data.programs}
-          majors={data.majors}
-          defaultValues={{
-            id: data.course.id,
-            code: draft.code ?? data.course.code,
-            title: draft.title ?? data.course.title,
-            course_scope: data.course.course_scope,
-            program_id: data.course.program_id,
-            major_id: data.course.major_id,
-            default_year_level: data.course.default_year_level,
-            default_semester: data.course.default_semester,
-            default_term: data.course.default_term,
-            updated_at: data.course.updated_at.toISOString(),
-          }}
-          submitLabel="Update Course"
-          formId="course-edit-form"
-          onPendingChange={onPendingChange}
-          onSuccess={onSuccess}
-        />
-      )}
-    </div>
   );
 }
