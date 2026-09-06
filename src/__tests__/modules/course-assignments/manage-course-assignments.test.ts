@@ -884,7 +884,7 @@ describe("manage-course-assignments", () => {
       expect(tx.courseAssignment.delete).toHaveBeenCalledWith({ where: { id: "assignment-1" } });
     });
 
-    it("allows deletion when confirming with the course code", async () => {
+    it("rejects deletion when confirming only with the course code instead of the complete label", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const tx = {
@@ -907,8 +907,11 @@ describe("manage-course-assignments", () => {
         removedMembershipCount: 0,
       });
 
-      expect(result.success).toBe(true);
-      expect(tx.courseAssignment.delete).toHaveBeenCalledWith({ where: { id: "assignment-1" } });
+      expect(result).toEqual({
+        success: false,
+        error: "Course assignment label confirmation does not match.",
+      });
+      expect(tx.courseAssignment.delete).not.toHaveBeenCalled();
     });
 
     it("rejects deletion when confirmation code does not match", async () => {
@@ -936,7 +939,7 @@ describe("manage-course-assignments", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Course assignment confirmation does not match.",
+        error: "Course assignment label confirmation does not match.",
       });
       expect(tx.courseAssignment.delete).not.toHaveBeenCalled();
     });

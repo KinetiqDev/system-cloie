@@ -555,12 +555,7 @@ export function CourseAssignmentsTable({
 
     if (confirmDialog.type === "deactivate") {
       handleDeactivate(assignmentId);
-    } else if (
-      deletionPreflight &&
-      (confirmationLabel.trim().toUpperCase() === deletionPreflight.label.trim().toUpperCase() ||
-        confirmationLabel.trim() ===
-          (deletionPreflight.fullLabel ?? deletionPreflight.label).trim())
-    ) {
+    } else if (deletionPreflight && confirmationLabel.trim() === deletionPreflight.label.trim()) {
       handleDelete(assignmentId, deletionPreflight);
     }
 
@@ -934,41 +929,28 @@ export function CourseAssignmentsTable({
                     </Alert>
                   )}
                   <Field>
-                    <div className="flex items-center justify-between gap-2">
-                      <FieldLabel
-                        htmlFor="assignment-delete-confirmation"
-                        className="text-xs font-medium"
-                      >
-                        Type{" "}
-                        <span className="text-foreground font-semibold">
-                          {deletionPreflight.label}
-                        </span>{" "}
-                        to confirm
-                      </FieldLabel>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        className="text-muted-foreground hover:text-foreground h-6 px-1.5 text-xs font-normal"
-                        onClick={() => setConfirmationLabel(deletionPreflight.label)}
-                      >
-                        Fill code
-                      </Button>
-                    </div>
+                    <FieldLabel
+                      htmlFor="assignment-delete-confirmation"
+                      className="text-xs font-medium"
+                    >
+                      Type{" "}
+                      <span className="text-foreground font-semibold select-all">
+                        {deletionPreflight.label}
+                      </span>{" "}
+                      to confirm
+                    </FieldLabel>
                     <FieldContent>
                       <Input
                         id="assignment-delete-confirmation"
                         value={confirmationLabel}
                         onChange={(event) => setConfirmationLabel(event.target.value)}
                         placeholder={deletionPreflight.label}
-                        className="font-mono text-sm uppercase"
+                        className="font-mono text-sm"
                         autoComplete="off"
                       />
                     </FieldContent>
                     <FieldDescription className="text-muted-foreground text-[11px] leading-normal">
-                      Enter the Course code (e.g.{" "}
-                      <span className="text-foreground font-medium">{deletionPreflight.label}</span>
-                      ) to authorize permanent deletion.
+                      Enter the complete course assignment label to authorize permanent deletion.
                     </FieldDescription>
                   </Field>
                 </>
@@ -990,10 +972,7 @@ export function CourseAssignmentsTable({
                 confirmDialog.type === "delete" &&
                 (!deletionPreflight ||
                   deletionPreflight.courseBoundEvaluationCount > 0 ||
-                  (confirmationLabel.trim().toUpperCase() !==
-                    deletionPreflight.label.trim().toUpperCase() &&
-                    confirmationLabel.trim() !==
-                      (deletionPreflight.fullLabel ?? deletionPreflight.label).trim()))
+                  confirmationLabel.trim() !== deletionPreflight.label.trim())
               }
             >
               {confirmButtonText}
