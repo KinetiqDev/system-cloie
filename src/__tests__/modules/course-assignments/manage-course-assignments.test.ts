@@ -896,9 +896,7 @@ describe("manage-course-assignments", () => {
         programHeadAssignment: { findMany: vi.fn() },
         $queryRaw: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
-        callback(tx as never)
-      );
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => callback(tx as never));
 
       const result = await deleteCourseAssignment({
         assignmentId: "assignment-1",
@@ -925,9 +923,7 @@ describe("manage-course-assignments", () => {
         programHeadAssignment: { findMany: vi.fn() },
         $queryRaw: vi.fn().mockResolvedValue([]),
       };
-      vi.mocked(prisma.$transaction).mockImplementation(async (callback) =>
-        callback(tx as never)
-      );
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => callback(tx as never));
 
       const result = await deleteCourseAssignment({
         assignmentId: "assignment-1",

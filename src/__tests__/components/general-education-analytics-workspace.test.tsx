@@ -36,8 +36,9 @@ const mockDTO: GeneralEducationAnalyticsDTO = {
       meanRating: 4.5,
       ratingCount: 24,
       submittedResponseCount: 6,
-      scaleLabel: "1–5 (5-point)",
-      evaluationIds: ["eval-1"],
+      instrumentContext: null,
+      scaleContext: "1–5 (5-point)",
+      outcomeCodes: [],
     },
   ],
   trends: {
@@ -46,6 +47,8 @@ const mockDTO: GeneralEducationAnalyticsDTO = {
     emptyReason: null,
   },
   feedback: {
+    emptyReason: null,
+    sourceLabel: "Course-bound General Education",
     tokens: [],
     qualitativeResponseCount: 0,
     qualitativeItemCount: 0,
@@ -64,18 +67,13 @@ describe("GeneralEducationAnalyticsWorkspace Filter Controls", () => {
   });
 
   it("shows active filter indicator and renders conditional Reset link when filter is applied", () => {
-    const { rerender } = render(
-      <GeneralEducationAnalyticsWorkspace data={mockDTO} filters={{}} />
-    );
+    const { rerender } = render(<GeneralEducationAnalyticsWorkspace data={mockDTO} filters={{}} />);
 
     expect(screen.getAllByText("All periods").length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "Reset filters" })).not.toBeInTheDocument();
 
     rerender(
-      <GeneralEducationAnalyticsWorkspace
-        data={mockDTO}
-        filters={{ termInstanceId: "term-1" }}
-      />
+      <GeneralEducationAnalyticsWorkspace data={mockDTO} filters={{ termInstanceId: "term-1" }} />
     );
 
     expect(screen.getByText("1 filter active")).toBeInTheDocument();
@@ -87,10 +85,7 @@ describe("GeneralEducationAnalyticsWorkspace Filter Controls", () => {
 
   it("opens mobile drawer with scope filters and Apply button", async () => {
     render(
-      <GeneralEducationAnalyticsWorkspace
-        data={mockDTO}
-        filters={{ termInstanceId: "term-1" }}
-      />
+      <GeneralEducationAnalyticsWorkspace data={mockDTO} filters={{ termInstanceId: "term-1" }} />
     );
 
     const drawerTrigger = screen.getByRole("button", { name: /Scope filters/ });

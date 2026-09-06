@@ -92,14 +92,14 @@ export function ProgramHeadOutcomeRankingChart({
       : `Highest mean: ${ranked[0].code} (${ranked[0].value.toFixed(2)}). Lowest mean: ${ranked[ranked.length - 1].code} (${ranked[ranked.length - 1].value.toFixed(2)}).`;
 
   return (
-    <div className="space-y-4 rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
-        <h3 id={titleId} className="text-title-md font-semibold text-foreground tracking-tight">
+    <div className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5">
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
           {title}
         </h3>
-        <span className="text-xs text-muted-foreground font-medium">Ranked by Mean Rating</span>
+        <span className="text-muted-foreground text-xs font-medium">Ranked by Mean Rating</span>
       </div>
-      <div className="border-border/60 h-72 w-full rounded-xl border bg-background/50 p-3">
+      <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">
         <ChartContainer
           id={chartId}
           role="region"
@@ -142,7 +142,7 @@ export function ProgramHeadOutcomeRankingChart({
         {insight}
       </p>
       <details className="group">
-        <summary className="text-label-sm font-medium text-text-secondary cursor-pointer hover:text-foreground focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-2 rounded-sm py-1 select-none flex items-center gap-1.5 transition-colors">
+        <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden">
           <span>View exact values table</span>
         </summary>
         <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">

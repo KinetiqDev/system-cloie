@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants, Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -95,15 +95,15 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
       <header className="border-border/80 flex flex-col gap-3 border-b pb-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            <div className="bg-primary-soft text-selected-fg flex size-7 items-center justify-center rounded-lg">
               <BarChart3 aria-hidden="true" className="size-4" />
             </div>
-            <span className="text-label-sm font-semibold tracking-wider text-muted-foreground uppercase">
+            <span className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
               General Education Evidence
             </span>
           </div>
           {scope.periodLabel ? (
-            <span className="inline-flex items-center rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground border border-border/60">
+            <span className="bg-secondary text-secondary-foreground border-border/60 inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium">
               {scope.periodLabel}
             </span>
           ) : null}
@@ -113,17 +113,18 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
             General Education Analytics
           </h1>
           <p className="text-body-sm text-muted-foreground max-w-3xl text-pretty">
-            Cross-program Course-bound General Education evidence, evaluation attainment, trends, and qualitative feedback.
+            Cross-program Course-bound General Education evidence, evaluation attainment, trends,
+            and qualitative feedback.
           </p>
         </div>
       </header>
 
       {hasPeriodOptions ? (
         <div className="border-border/80 bg-card rounded-xl border shadow-xs transition-shadow">
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
+          <div className="border-border/60 flex min-w-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
             <div className="min-w-0">
               <div className="flex items-center gap-2.5">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                <div className="bg-primary-soft text-selected-fg flex size-7 items-center justify-center rounded-lg">
                   <SlidersHorizontal aria-hidden="true" className="size-4" />
                 </div>
                 <h2 className="text-title-sm font-semibold tracking-tight">Evidence scope</h2>
@@ -146,7 +147,10 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
               <div className="hidden items-center gap-2 lg:flex">
                 <Link
                   href={resetHref()}
-                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground hover:text-foreground")}
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" }),
+                    "text-muted-foreground hover:text-foreground"
+                  )}
                 >
                   <X data-icon="inline-start" aria-hidden="true" className="size-3.5" />
                   Reset filters
@@ -155,11 +159,8 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
             ) : null}
           </div>
 
-          <div className="hidden p-4 lg:block sm:px-5">
-            <FilterForm
-              filters={filters}
-              options={periodOptions}
-            />
+          <div className="hidden p-4 sm:px-5 lg:block">
+            <FilterForm filters={filters} options={periodOptions} />
           </div>
 
           <div className="p-3 lg:hidden">
@@ -168,7 +169,7 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
                 render={
                   <Button variant="outline" className="min-h-11 w-full justify-between sm:min-h-9">
                     <span className="flex items-center gap-2">
-                      <Filter className="size-4 text-muted-foreground" aria-hidden="true" />
+                      <Filter className="text-muted-foreground size-4" aria-hidden="true" />
                       <span>Scope filters</span>
                     </span>
                     <span className="text-muted-foreground font-normal">
@@ -178,18 +179,12 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
                 }
               />
               <DrawerContent className="max-h-[88dvh]">
-                <DrawerHeader className="text-left border-b border-border/60 pb-3">
+                <DrawerHeader className="border-border/60 border-b pb-3 text-left">
                   <DrawerTitle>Analytics scope filters</DrawerTitle>
-                  <DrawerDescription>
-                    Choose the academic term to evaluate.
-                  </DrawerDescription>
+                  <DrawerDescription>Choose the academic term to evaluate.</DrawerDescription>
                 </DrawerHeader>
                 <div className="overflow-y-auto px-4 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-                  <FilterForm
-                    filters={filters}
-                    options={periodOptions}
-                    drawer
-                  />
+                  <FilterForm filters={filters} options={periodOptions} drawer />
                 </div>
               </DrawerContent>
             </Drawer>
@@ -249,7 +244,9 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
           <Card key={card.label} size="sm" className="border-border/80 bg-card shadow-2xs">
             <CardContent className="pt-3.5 pb-3">
               <p className="text-muted-foreground text-xs font-medium">{card.label}</p>
-              <p className="text-title-lg font-bold tabular-nums text-foreground tracking-tight mt-0.5">{card.value}</p>
+              <p className="text-title-lg text-foreground mt-0.5 font-bold tracking-tight tabular-nums">
+                {card.value}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -299,7 +296,11 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
     </div>
   );
 }
-function activeFilterCount(filters: { schoolYearId?: string; semester?: string; termInstanceId?: string }): number {
+function activeFilterCount(filters: {
+  schoolYearId?: string;
+  semester?: string;
+  termInstanceId?: string;
+}): number {
   return [filters.termInstanceId, filters.schoolYearId, filters.semester].filter(Boolean).length;
 }
 
@@ -326,13 +327,16 @@ function FilterForm({
       className={cn(
         drawer
           ? "flex flex-col gap-4"
-          : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 items-end"
+          : "grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-12"
       )}
     >
       <div className={cn(drawer ? "w-full" : "lg:col-span-8")}>
         <Field className="gap-1.5">
-          <FieldLabel htmlFor={termId} className="text-label-sm text-foreground flex items-center gap-1.5 font-medium">
-            <Calendar className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <FieldLabel
+            htmlFor={termId}
+            className="text-label-sm text-foreground flex items-center gap-1.5 font-medium"
+          >
+            <Calendar className="text-muted-foreground size-3.5" aria-hidden="true" />
             <span>Academic Term</span>
           </FieldLabel>
           <Select
@@ -342,7 +346,7 @@ function FilterForm({
           >
             <SelectTrigger
               id={termId}
-              className="w-full bg-background border-input/80 hover:border-input focus-visible:ring-ring focus-visible:ring-2 min-h-10 sm:min-h-8"
+              className="bg-background border-input/80 hover:border-input focus-visible:ring-ring min-h-10 w-full focus-visible:ring-2 sm:min-h-8"
             >
               <SelectValue placeholder="All academic terms" />
             </SelectTrigger>
@@ -363,11 +367,15 @@ function FilterForm({
         className={cn(
           "flex items-center gap-2 pt-1",
           drawer
-            ? "sticky bottom-0 bg-background pt-3 pb-1 border-t border-border/60"
+            ? "bg-background border-border/60 sticky bottom-0 border-t pt-3 pb-1"
             : "lg:col-span-4 lg:justify-end"
         )}
       >
-        <Button type="submit" size="default" className={cn(drawer ? "flex-1 min-h-11 sm:min-h-9" : "w-28")}>
+        <Button
+          type="submit"
+          size="default"
+          className={cn(drawer ? "min-h-11 flex-1 sm:min-h-9" : "w-28")}
+        >
           Apply
         </Button>
         {count > 0 ? (
@@ -375,7 +383,7 @@ function FilterForm({
             href={resetHref()}
             className={cn(
               buttonVariants({ variant: "outline", size: "default" }),
-              drawer ? "min-h-11 sm:min-h-9 px-4" : "lg:hidden"
+              drawer ? "min-h-11 px-4 sm:min-h-9" : "lg:hidden"
             )}
           >
             Reset
@@ -398,15 +406,20 @@ function CourseBreakdownSection({
   const titleId = `${chartId}-title`;
   const chartData = data.map((d) => ({ ...d, chartValue: d.value ?? 0 }));
   return (
-    <section aria-labelledby={titleId} className="space-y-4 rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+    <section
+      aria-labelledby={titleId}
+      className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5"
+    >
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
         <div>
-          <h2 id={titleId} className="text-title-md font-semibold text-foreground tracking-tight">Mean Rating by Course</h2>
+          <h2 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+            Mean Rating by Course
+          </h2>
           <p className="text-body-sm text-muted-foreground mt-0.5">
             Cross-program Course-bound General Education evidence only.
           </p>
         </div>
-        <span className="text-xs text-muted-foreground font-medium">Course Breakdown</span>
+        <span className="text-muted-foreground text-xs font-medium">Course Breakdown</span>
       </div>
       {ranked.length > 0 ? (
         <>
@@ -540,13 +553,23 @@ function TrendsSection({ trends }: { trends: GeneralEducationAnalyticsDTO["trend
     .map((p) => p.periodLabel);
   const titleId = `${chartId}-title`;
   return (
-    <section aria-labelledby={titleId} className="space-y-4 rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
-        <h2 id={titleId} className="text-title-md font-semibold text-foreground tracking-tight">Trends</h2>
-        <span className="text-xs text-muted-foreground font-medium">Period Comparison</span>
+    <section
+      aria-labelledby={titleId}
+      className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5"
+    >
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <h2 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+          Trends
+        </h2>
+        <span className="text-muted-foreground text-xs font-medium">Period Comparison</span>
       </div>
-      <div className="border-border/60 h-72 w-full rounded-xl border bg-background/50 p-3">
-        <ChartContainer id={chartId} role="region" aria-labelledby={titleId} className="aspect-auto h-full w-full">
+      <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">
+        <ChartContainer
+          id={chartId}
+          role="region"
+          aria-labelledby={titleId}
+          className="aspect-auto h-full w-full"
+        >
           <LineChart data={data} margin={{ bottom: 10, left: 0, right: 0, top: 10 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis

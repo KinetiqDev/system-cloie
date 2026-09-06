@@ -143,9 +143,9 @@ function QuantitativeAnswerCard({
         {binding.type === "CILO" && (
           <Badge
             variant="outline"
-            className="border-info/30 bg-info-soft text-info h-auto max-w-full justify-start py-1 whitespace-normal text-left break-words leading-relaxed text-xs"
+            className="border-info/30 bg-info-soft text-info h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"
           >
-            <span className="font-semibold shrink-0">CILO:</span>
+            <span className="shrink-0 font-semibold">CILO:</span>
             <span className="break-words">{binding.ciloLabel}</span>
             {binding.ploMappings.length > 0 && (
               <span className="text-text-muted ml-1 inline-flex flex-wrap items-center gap-1">
@@ -156,7 +156,7 @@ function QuantitativeAnswerCard({
                     <span>
                       <Link
                         href={outcomeHref(m.ploId)}
-                        className="hover:text-foreground underline underline-offset-2 font-medium"
+                        className="hover:text-foreground font-medium underline underline-offset-2"
                       >
                         {m.ploCode}
                       </Link>
@@ -170,16 +170,16 @@ function QuantitativeAnswerCard({
         {binding.type === "PLO" && (
           <Badge
             variant="outline"
-            className="border-success/30 bg-success-soft text-success h-auto max-w-full justify-start py-1 whitespace-normal text-left break-words leading-relaxed text-xs"
+            className="border-success/30 bg-success-soft text-success h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"
           >
-            <span className="font-semibold shrink-0">PLO:</span>
+            <span className="shrink-0 font-semibold">PLO:</span>
             {binding.ploBindings.map((p, index) => (
               <Fragment key={p.key}>
                 {index > 0 ? ", " : null}
                 <span>
                   <Link
                     href={outcomeHref(p.key)}
-                    className="hover:text-foreground underline underline-offset-2 font-medium"
+                    className="hover:text-foreground font-medium underline underline-offset-2"
                   >
                     {p.code}
                   </Link>

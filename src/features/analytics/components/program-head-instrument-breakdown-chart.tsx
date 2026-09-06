@@ -31,7 +31,7 @@ type ProgramHeadInstrumentBreakdownChartProps = {
 function InstrumentExactValuesTable({ rows }: { rows: ProgramHeadInstrumentBreakdownRowDTO[] }) {
   return (
     <details className="group">
-      <summary className="text-label-sm font-medium text-text-secondary cursor-pointer pointer-coarse:min-h-11 hover:text-foreground focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-2 rounded-sm py-1 select-none flex items-center gap-1.5 transition-colors">
+      <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11">
         <span>View exact values table</span>
       </summary>
       <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
@@ -152,19 +152,19 @@ export function ProgramHeadInstrumentBreakdownChart({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-border/80 bg-card p-4 sm:p-5 shadow-xs">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+    <div className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5">
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
         <div>
-          <h3 id={titleId} className="text-title-md font-semibold text-foreground tracking-tight">
+          <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
             Mean Rating by Instrument and Evidence Source
           </h3>
           <p className="text-body-sm text-muted-foreground mt-0.5">
             One group per instrument version, one bar per evidence source. Sources are never pooled.
           </p>
         </div>
-        <span className="text-xs text-muted-foreground font-medium">Instrument Comparison</span>
+        <span className="text-muted-foreground text-xs font-medium">Instrument Comparison</span>
       </div>
-      <div className="border-border/60 h-72 w-full rounded-xl border bg-background/50 p-3">
+      <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">
         <ChartContainer
           id={chartId}
           role="region"

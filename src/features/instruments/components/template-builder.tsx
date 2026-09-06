@@ -2328,7 +2328,7 @@ function PloMultiSelect({
       id={`plo-binding-${questionKey}`}
       type="button"
       variant="outline"
-      className="w-full justify-between border-input text-left font-normal"
+      className="border-input w-full justify-between text-left font-normal"
       aria-labelledby={labelId}
       aria-controls={listboxId}
       aria-haspopup="listbox"
@@ -2379,8 +2379,8 @@ function PloMultiSelect({
                 className={`flex items-start gap-2 rounded-md border px-2 py-1.5 transition-colors motion-reduce:transition-none pointer-coarse:py-2.5 ${
                   isSelected
                     ? "border-primary-border bg-selected-bg"
-                    : "border-transparent hover:border-border hover:bg-accent"
-                } focus-within:border-ring focus-within:ring-3 focus-within:ring-ring`}
+                    : "hover:border-border hover:bg-accent border-transparent"
+                } focus-within:border-ring focus-within:ring-ring focus-within:ring-3`}
               >
                 <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
                   <input
@@ -2391,8 +2391,16 @@ function PloMultiSelect({
                     aria-label={`${plo.code}: ${plo.description}`}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className={`text-sm font-semibold ${isSelected ? "text-selected-fg" : ""}`}>{plo.code}</span>
-                    <span className={`ml-2 text-sm ${isSelected ? "text-selected-fg/80" : "text-muted-foreground"}`}>{plo.description}</span>
+                    <span
+                      className={`text-sm font-semibold ${isSelected ? "text-selected-fg" : ""}`}
+                    >
+                      {plo.code}
+                    </span>
+                    <span
+                      className={`ml-2 text-sm ${isSelected ? "text-selected-fg/80" : "text-muted-foreground"}`}
+                    >
+                      {plo.description}
+                    </span>
                   </span>
                 </label>
               </li>

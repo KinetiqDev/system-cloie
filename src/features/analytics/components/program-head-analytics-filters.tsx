@@ -40,10 +40,10 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
 
   return (
     <div className="border-border/80 bg-card rounded-xl border shadow-xs transition-shadow">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-5">
+      <div className="border-border/60 flex min-w-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-7 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            <div className="bg-primary-soft text-selected-fg flex size-7 items-center justify-center rounded-lg">
               <SlidersHorizontal aria-hidden="true" className="size-4" />
             </div>
             <h2 className="text-title-sm font-semibold tracking-tight">Evidence scope</h2>
@@ -66,7 +66,10 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
           <div className="hidden items-center gap-2 lg:flex">
             <Link
               href={buildAnalyticsUrl(programId, { tab: filters.tab })}
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground hover:text-foreground")}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "text-muted-foreground hover:text-foreground"
+              )}
             >
               <X data-icon="inline-start" aria-hidden="true" className="size-3.5" />
               Reset filters
@@ -75,7 +78,7 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
         ) : null}
       </div>
 
-      <div className="hidden p-4 lg:block sm:px-5">
+      <div className="hidden p-4 sm:px-5 lg:block">
         <FilterForm
           programId={programId}
           filters={filters}
@@ -90,7 +93,7 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
             render={
               <Button variant="outline" className="min-h-11 w-full justify-between sm:min-h-9">
                 <span className="flex items-center gap-2">
-                  <Filter className="size-4 text-muted-foreground" aria-hidden="true" />
+                  <Filter className="text-muted-foreground size-4" aria-hidden="true" />
                   <span>Scope filters</span>
                 </span>
                 <span className="text-muted-foreground font-normal">
@@ -100,7 +103,7 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
             }
           />
           <DrawerContent className="max-h-[88dvh]">
-            <DrawerHeader className="text-left border-b border-border/60 pb-3">
+            <DrawerHeader className="border-border/60 border-b pb-3 text-left">
               <DrawerTitle>Analytics scope filters</DrawerTitle>
               <DrawerDescription>
                 Choose the academic term and evidence sources to evaluate.
@@ -142,7 +145,7 @@ function FilterForm({
       className={cn(
         drawer
           ? "flex flex-col gap-4"
-          : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 items-end"
+          : "grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-12"
       )}
     >
       {filters.tab !== "outcomes" ? <input type="hidden" name="tab" value={filters.tab} /> : null}
@@ -154,7 +157,7 @@ function FilterForm({
           name="evidenceSource"
           value={filters.evidenceSource ?? ""}
           blankLabel="All sources"
-          icon={<Layers className="size-3.5 text-muted-foreground" aria-hidden="true" />}
+          icon={<Layers className="text-muted-foreground size-3.5" aria-hidden="true" />}
           options={[
             { value: "COURSE", label: "Course evaluations" },
             { value: "PROGRAM_WIDE_STUDENT", label: "Program-wide students" },
@@ -172,7 +175,7 @@ function FilterForm({
             name="stakeholder"
             value={filters.stakeholder ?? ""}
             blankLabel="All stakeholders"
-            icon={<UserCheck className="size-3.5 text-muted-foreground" aria-hidden="true" />}
+            icon={<UserCheck className="text-muted-foreground size-3.5" aria-hidden="true" />}
             options={[
               { value: "STUDENT", label: "Students" },
               { value: "ALUMNI", label: "Alumni" },
@@ -183,14 +186,22 @@ function FilterForm({
       ) : null}
 
       {hasPeriodOptions ? (
-        <div className={cn(drawer ? "w-full" : filters.evidenceSource !== "COURSE" ? "lg:col-span-3" : "lg:col-span-6")}>
+        <div
+          className={cn(
+            drawer
+              ? "w-full"
+              : filters.evidenceSource !== "COURSE"
+                ? "lg:col-span-3"
+                : "lg:col-span-6"
+          )}
+        >
           <FilterSelect
             id={termId}
             label="Academic Term"
             name="termInstanceId"
             value={filters.termInstanceId ?? ""}
             blankLabel="All academic terms"
-            icon={<Calendar className="size-3.5 text-muted-foreground" aria-hidden="true" />}
+            icon={<Calendar className="text-muted-foreground size-3.5" aria-hidden="true" />}
             options={options.termInstances.map((item) => ({
               value: item.id,
               label: item.label,
@@ -203,11 +214,15 @@ function FilterForm({
         className={cn(
           "flex items-center gap-2 pt-1",
           drawer
-            ? "sticky bottom-0 bg-background pt-3 pb-1 border-t border-border/60"
+            ? "bg-background border-border/60 sticky bottom-0 border-t pt-3 pb-1"
             : "lg:col-span-2 lg:justify-end"
         )}
       >
-        <Button type="submit" size="default" className={cn(drawer ? "flex-1 min-h-11 sm:min-h-9" : "w-full")}>
+        <Button
+          type="submit"
+          size="default"
+          className={cn(drawer ? "min-h-11 flex-1 sm:min-h-9" : "w-full")}
+        >
           Apply
         </Button>
         {count > 0 ? (
@@ -215,7 +230,7 @@ function FilterForm({
             href={buildAnalyticsUrl(programId, { tab: filters.tab })}
             className={cn(
               buttonVariants({ variant: "outline", size: "default" }),
-              drawer ? "min-h-11 sm:min-h-9 px-4" : "lg:hidden"
+              drawer ? "min-h-11 px-4 sm:min-h-9" : "lg:hidden"
             )}
           >
             Reset
@@ -227,11 +242,8 @@ function FilterForm({
 }
 
 function activeFilterCount(filters: AnalyticsFilterState): number {
-  return [
-    filters.termInstanceId,
-    filters.evidenceSource,
-    filters.stakeholder,
-  ].filter(Boolean).length;
+  return [filters.termInstanceId, filters.evidenceSource, filters.stakeholder].filter(Boolean)
+    .length;
 }
 
 type OptionItem = { value: string; label: string };
@@ -257,18 +269,17 @@ function FilterSelect({
 
   return (
     <Field className="gap-1.5">
-      <FieldLabel htmlFor={id} className="text-label-sm text-foreground flex items-center gap-1.5 font-medium">
+      <FieldLabel
+        htmlFor={id}
+        className="text-label-sm text-foreground flex items-center gap-1.5 font-medium"
+      >
         {icon}
         <span>{label}</span>
       </FieldLabel>
-      <Select
-        name={name}
-        defaultValue={value}
-        items={allOptions}
-      >
+      <Select name={name} defaultValue={value} items={allOptions}>
         <SelectTrigger
           id={id}
-          className="w-full bg-background border-input/80 hover:border-input focus-visible:ring-ring focus-visible:ring-2 min-h-10 sm:min-h-8"
+          className="bg-background border-input/80 hover:border-input focus-visible:ring-ring min-h-10 w-full focus-visible:ring-2 sm:min-h-8"
         >
           <SelectValue placeholder={blankLabel} />
         </SelectTrigger>

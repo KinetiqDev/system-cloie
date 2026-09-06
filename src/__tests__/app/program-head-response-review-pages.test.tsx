@@ -117,9 +117,10 @@ describe("program head identified response-review pages", () => {
         "Course detail: Post-Term CILO Evaluation | response href: /program-head/programs/program-1/responses/course/eval-1/responses/response-1"
       )
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /Back to course evaluations/ })
-    ).toHaveAttribute("href", "/program-head/programs/program-1/responses");
+    expect(screen.getByRole("link", { name: /Back to course evaluations/ })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/responses"
+    );
   });
 
   it("preserves period and stakeholder scope in course evaluation respondent links", async () => {

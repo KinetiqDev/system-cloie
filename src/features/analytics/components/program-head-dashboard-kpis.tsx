@@ -127,9 +127,7 @@ export function ProgramHeadDashboardKpiGrid({
           </CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground text-body-sm flex flex-col gap-2">
-          <p>
-            {`${activeEvaluations.closingWithin7Days} close within the next 7 days`}
-          </p>
+          <p>{`${activeEvaluations.closingWithin7Days} close within the next 7 days`}</p>
           <p>
             {`${pendingResponses.toLocaleString()} assignment${pendingResponses === 1 ? "" : "s"} still open`}
           </p>

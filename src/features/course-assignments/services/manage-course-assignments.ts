@@ -568,8 +568,7 @@ export async function deleteCourseAssignment(
       const courseCode = existing.course.code.trim().toUpperCase();
       const trimmedConfirmation = input.confirmationLabel.trim();
       const isConfirmed =
-        trimmedConfirmation.toUpperCase() === courseCode ||
-        trimmedConfirmation === fullLabel;
+        trimmedConfirmation.toUpperCase() === courseCode || trimmedConfirmation === fullLabel;
       if (!isConfirmed) {
         return { success: false, error: "Course assignment confirmation does not match." };
       }

@@ -1882,6 +1882,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/collapsible.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes: "Base UI collapsible primitive; public shadcn inventory",
+  },
+  {
     path: "src/components/ui/combobox.tsx",
     disposition: "already_compliant",
     category: "ui_primitive",

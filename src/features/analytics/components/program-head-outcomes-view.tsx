@@ -328,7 +328,7 @@ function OutcomesExactValueTable({
                     <details open={isSelected} className="group">
                       <summary
                         id={detailId}
-                        className="text-label-sm font-medium text-text-secondary hover:text-foreground cursor-pointer pointer-coarse:min-h-11 focus-visible:ring-ring focus-visible:outline-hidden focus-visible:ring-2 rounded-sm py-1 select-none inline-flex items-center gap-1.5 transition-colors"
+                        className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring inline-flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11"
                       >
                         Details for {outcome.code}
                       </summary>

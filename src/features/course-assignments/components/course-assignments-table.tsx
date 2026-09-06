@@ -558,7 +558,8 @@ export function CourseAssignmentsTable({
     } else if (
       deletionPreflight &&
       (confirmationLabel.trim().toUpperCase() === deletionPreflight.label.trim().toUpperCase() ||
-        confirmationLabel.trim() === (deletionPreflight.fullLabel ?? deletionPreflight.label).trim())
+        confirmationLabel.trim() ===
+          (deletionPreflight.fullLabel ?? deletionPreflight.label).trim())
     ) {
       handleDelete(assignmentId, deletionPreflight);
     }
@@ -876,23 +877,23 @@ export function CourseAssignmentsTable({
           {confirmDialog.assignment && (
             <div className="bg-muted/60 divide-border/60 divide-y rounded-lg border text-sm">
               <div className="flex items-baseline justify-between gap-3 px-3.5 py-2.5">
-                <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   Course
                 </span>
-                <span className="font-medium text-right text-foreground">
+                <span className="text-foreground text-right font-medium">
                   {confirmDialog.assignment.courseCode} - {confirmDialog.assignment.courseTitle}
                 </span>
               </div>
               <div className="flex items-baseline justify-between gap-3 px-3.5 py-2.5">
-                <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   Faculty
                 </span>
-                <span className="font-medium text-foreground">
+                <span className="text-foreground font-medium">
                   {confirmDialog.assignment.facultyName}
                 </span>
               </div>
               <div className="flex items-baseline justify-between gap-3 px-3.5 py-2.5">
-                <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                   Term
                 </span>
                 <span className="text-muted-foreground text-right tabular-nums">
@@ -911,16 +912,17 @@ export function CourseAssignmentsTable({
               )}
               {deletionPreflight ? (
                 <>
-                  <div className="bg-destructive/5 text-muted-foreground rounded-lg border border-destructive/20 p-3 text-xs leading-relaxed">
-                    <p className="font-medium text-foreground">Roster and history impact:</p>
+                  <div className="bg-destructive/5 text-muted-foreground border-destructive/20 rounded-lg border p-3 text-xs leading-relaxed">
+                    <p className="text-foreground font-medium">Roster and history impact:</p>
                     <p className="mt-1">
-                      This permanently removes {deletionPreflight.activeMembershipCount} current roster{" "}
-                      {deletionPreflight.activeMembershipCount === 1 ? "member" : "members"}
+                      This permanently removes {deletionPreflight.activeMembershipCount} current
+                      roster {deletionPreflight.activeMembershipCount === 1 ? "member" : "members"}
                       {deletionPreflight.removedMembershipCount > 0 &&
                         `, ${deletionPreflight.removedMembershipCount} removed history ${
                           deletionPreflight.removedMembershipCount === 1 ? "record" : "records"
                         }`}{" "}
-                      and the roster&apos;s membership history. Student accounts and term placements are not deleted.
+                      and the roster&apos;s membership history. Student accounts and term placements
+                      are not deleted.
                     </p>
                   </div>
 
@@ -933,8 +935,15 @@ export function CourseAssignmentsTable({
                   )}
                   <Field>
                     <div className="flex items-center justify-between gap-2">
-                      <FieldLabel htmlFor="assignment-delete-confirmation" className="text-xs font-medium">
-                        Type <span className="font-semibold text-foreground">{deletionPreflight.label}</span> to confirm
+                      <FieldLabel
+                        htmlFor="assignment-delete-confirmation"
+                        className="text-xs font-medium"
+                      >
+                        Type{" "}
+                        <span className="text-foreground font-semibold">
+                          {deletionPreflight.label}
+                        </span>{" "}
+                        to confirm
                       </FieldLabel>
                       <Button
                         type="button"
@@ -957,7 +966,9 @@ export function CourseAssignmentsTable({
                       />
                     </FieldContent>
                     <FieldDescription className="text-muted-foreground text-[11px] leading-normal">
-                      Enter the Course code (e.g. <span className="font-medium text-foreground">{deletionPreflight.label}</span>) to authorize permanent deletion.
+                      Enter the Course code (e.g.{" "}
+                      <span className="text-foreground font-medium">{deletionPreflight.label}</span>
+                      ) to authorize permanent deletion.
                     </FieldDescription>
                   </Field>
                 </>
@@ -979,8 +990,10 @@ export function CourseAssignmentsTable({
                 confirmDialog.type === "delete" &&
                 (!deletionPreflight ||
                   deletionPreflight.courseBoundEvaluationCount > 0 ||
-                  (confirmationLabel.trim().toUpperCase() !== deletionPreflight.label.trim().toUpperCase() &&
-                    confirmationLabel.trim() !== (deletionPreflight.fullLabel ?? deletionPreflight.label).trim()))
+                  (confirmationLabel.trim().toUpperCase() !==
+                    deletionPreflight.label.trim().toUpperCase() &&
+                    confirmationLabel.trim() !==
+                      (deletionPreflight.fullLabel ?? deletionPreflight.label).trim()))
               }
             >
               {confirmButtonText}
