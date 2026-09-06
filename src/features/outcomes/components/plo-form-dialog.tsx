@@ -235,7 +235,8 @@ export function PLOFormDialog({ mode, programId, plo, open, onOpenChange }: PLOF
       <EditForm programId={programId} plo={plo} onClose={() => onOpenChange(false)} />
     );
 
-  const title = mode === "create" ? "Add Program Learning Outcome" : "Edit Program Learning Outcome";
+  const title =
+    mode === "create" ? "Add Program Learning Outcome" : "Edit Program Learning Outcome";
   const description =
     mode === "create"
       ? "Create a new Program Learning Outcome for your program."

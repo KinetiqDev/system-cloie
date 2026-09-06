@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
 import { EnrollmentSource, YearLevel, StudentSection } from "@prisma/client";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,15 +33,13 @@ import { adminUpsertEnrollmentAction } from "@/lib/actions/enrollment-actions";
 import type { EnrollmentItem } from "@/features/enrollments/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
-const enrollmentFormSchema = z.object({
-  termInstanceId: z.string().uuid(),
-  programId: z.string().uuid(),
-  majorId: z.string().uuid().optional(),
-  yearLevel: z.nativeEnum(YearLevel),
-  section: z.nativeEnum(StudentSection).optional(),
-});
-
-type EnrollmentFormData = z.infer<typeof enrollmentFormSchema>;
+type EnrollmentFormData = {
+  termInstanceId: string;
+  programId: string;
+  majorId?: string;
+  yearLevel: YearLevel;
+  section?: StudentSection;
+};
 
 interface EnrollmentEditorDialogProps {
   open: boolean;
@@ -53,33 +61,38 @@ export function EnrollmentEditorDialog({
   onSuccess,
 }: EnrollmentEditorDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedProgramId, setSelectedProgramId] = useState(existingEnrollment?.programId || "");
-
-  const {
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<EnrollmentFormData>({
-    defaultValues: {
-      termInstanceId: existingEnrollment?.termInstanceId || "",
-      programId: existingEnrollment?.programId || "",
-      majorId: existingEnrollment?.majorId || undefined,
-      yearLevel: existingEnrollment?.yearLevel || YearLevel.FIRST_YEAR,
-      section: existingEnrollment?.section || undefined,
-    },
+  const [values, setValues] = useState<EnrollmentFormData>({
+    termInstanceId: existingEnrollment?.termInstanceId || "",
+    programId: existingEnrollment?.programId || "",
+    majorId: existingEnrollment?.majorId || undefined,
+    yearLevel: existingEnrollment?.yearLevel || YearLevel.FIRST_YEAR,
+    section: existingEnrollment?.section || undefined,
   });
+  const [errors, setErrors] = useState<Partial<Record<keyof EnrollmentFormData, string>>>({});
 
-  const onSubmit = async (data: EnrollmentFormData) => {
+  function setField<K extends keyof EnrollmentFormData>(key: K, value: EnrollmentFormData[K]) {
+    setValues((current) => ({ ...current, [key]: value }));
+    setErrors((current) => ({ ...current, [key]: undefined }));
+  }
+
+  const onSubmit = async () => {
+    const nextErrors: Partial<Record<keyof EnrollmentFormData, string>> = {};
+    if (!values.termInstanceId) nextErrors.termInstanceId = "Please select a term";
+    if (!values.programId) nextErrors.programId = "Please select a program";
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
     setIsSubmitting(true);
 
     const result = await adminUpsertEnrollmentAction({
       studentUserId: userId,
-      termInstanceId: data.termInstanceId,
-      programId: data.programId,
-      majorId: data.majorId || null,
-      yearLevel: data.yearLevel,
-      section: data.section || null,
+      termInstanceId: values.termInstanceId,
+      programId: values.programId,
+      majorId: values.majorId || null,
+      yearLevel: values.yearLevel,
+      section: values.section || null,
       source: existingEnrollment ? existingEnrollment.source : EnrollmentSource.SECRETARY,
     });
 
@@ -107,29 +120,34 @@ export function EnrollmentEditorDialog({
     : "Enroll the student for a specific term and class configuration.";
 
   const form = (
-    <form id="enrollment-editor-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      id="enrollment-editor-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSubmit();
+      }}
+      className="space-y-4"
+      noValidate
+    >
       <div className="space-y-2">
         <Label>Academic Term</Label>
         <TermInstancePicker
           termInstances={termInstances}
-          value={watch("termInstanceId")}
-          onChange={(value) =>
-            value && setValue("termInstanceId", value, { shouldValidate: true })
-          }
+          value={values.termInstanceId}
+          onChange={(value) => value && setField("termInstanceId", value)}
         />
         {errors.termInstanceId && (
-          <p className="text-destructive text-sm">Please select a term</p>
+          <p className="text-destructive text-sm">{errors.termInstanceId}</p>
         )}
       </div>
 
       <div className="space-y-2">
         <Label>Program</Label>
         <Select
-          value={watch("programId")}
+          value={values.programId}
           onValueChange={(value) => {
             if (value) {
-              setValue("programId", value, { shouldValidate: true });
-              setSelectedProgramId(value);
+              setField("programId", value);
             }
           }}
         >
@@ -144,16 +162,15 @@ export function EnrollmentEditorDialog({
             ))}
           </SelectContent>
         </Select>
+        {errors.programId && <p className="text-destructive text-sm">{errors.programId}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Year Level</Label>
           <Select
-            value={watch("yearLevel")}
-            onValueChange={(value) =>
-              setValue("yearLevel", value as YearLevel, { shouldValidate: true })
-            }
+            value={values.yearLevel}
+            onValueChange={(value) => value && setField("yearLevel", value as YearLevel)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select year" />
@@ -171,10 +188,8 @@ export function EnrollmentEditorDialog({
         <div className="space-y-2">
           <Label>Section (Optional)</Label>
           <Select
-            value={watch("section")}
-            onValueChange={(value) =>
-              setValue("section", value as StudentSection, { shouldValidate: true })
-            }
+            value={values.section}
+            onValueChange={(value) => value && setField("section", value as StudentSection)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select section" />

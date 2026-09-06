@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -150,8 +156,8 @@ export function SchoolYearForm({ open, onOpenChange, onSuccess }: SchoolYearForm
           <DialogHeader>
             <DialogTitle>Create School Year</DialogTitle>
             <DialogDescription>
-              Create a new school year (e.g., 2025-2026). This will serve as a
-              container for academic term instances.
+              Create a new school year (e.g., 2025-2026). This will serve as a container for
+              academic term instances.
             </DialogDescription>
           </DialogHeader>
           {formBody}

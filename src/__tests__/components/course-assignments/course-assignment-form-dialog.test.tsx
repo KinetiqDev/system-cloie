@@ -477,9 +477,7 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     expect(await screen.findByText(/review the assignment details/i)).toBeInTheDocument();
     expect(screen.getByText(/2025-2026.*1st semester.*1st term/i)).toBeInTheDocument();
     expect(screen.getByText(/cs201 — data structures/i)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/cross-program assignment/i)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/cross-program assignment/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /confirm assignment/i }));
 

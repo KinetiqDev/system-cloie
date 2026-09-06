@@ -418,22 +418,22 @@ export function FacultyCilosCourseList({
         </div>
 
         <div className="w-48 shrink-0">
-        <Select value={typeFilter} onValueChange={handleTypeChange}>
-          <SelectTrigger className="w-full">
-            <SelectValue>
-              {typeFilter === "__all__"
-                ? "All Course Types"
-                : typeFilter === "program_specific"
-                  ? "Program-Specific"
-                  : "General Education"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All Course Types</SelectItem>
-            <SelectItem value="program_specific">Program-Specific</SelectItem>
-            <SelectItem value="general_education">General Education</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select value={typeFilter} onValueChange={handleTypeChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue>
+                {typeFilter === "__all__"
+                  ? "All Course Types"
+                  : typeFilter === "program_specific"
+                    ? "Program-Specific"
+                    : "General Education"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Course Types</SelectItem>
+              <SelectItem value="program_specific">Program-Specific</SelectItem>
+              <SelectItem value="general_education">General Education</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="relative ml-auto w-full max-w-xs">
@@ -476,33 +476,33 @@ export function FacultyCilosCourseList({
                 </TableCell>
                 <TableCell>{course.majorName ?? "—"}</TableCell>
                 <TableCell className="text-right">{course.ciloCount}</TableCell>
-            <TableCell>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Actions for ${course.code}`}
-                    />
-                  }
-                >
-                  <MoreVertical className="size-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setModalCourse(course)}>
-                    <Eye className="size-4" />
-                    View CILOs
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
-                  >
-                    <ArrowRightLeft className="size-4" />
-                    Map CILOs
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Actions for ${course.code}`}
+                        />
+                      }
+                    >
+                      <MoreVertical className="size-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setModalCourse(course)}>
+                        <Eye className="size-4" />
+                        View CILOs
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
+                      >
+                        <ArrowRightLeft className="size-4" />
+                        Map CILOs
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
             ))
           )}
@@ -516,7 +516,11 @@ export function FacultyCilosCourseList({
             {(safePage - 1) * PAGE_SIZE + 1}–
             {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length}
           </span>
-          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
 

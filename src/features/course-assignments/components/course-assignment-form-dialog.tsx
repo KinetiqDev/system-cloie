@@ -466,8 +466,8 @@ export function CourseAssignmentFormDialog({
     setShowCrossProgramWarning(
       Boolean(
         selectedFaculty &&
-          selectedProgram &&
-          !selectedFaculty.affiliations.includes(selectedProgram.name)
+        selectedProgram &&
+        !selectedFaculty.affiliations.includes(selectedProgram.name)
       )
     );
     setStep("confirm");

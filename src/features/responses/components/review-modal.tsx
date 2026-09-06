@@ -1,7 +1,21 @@
 "use client";
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from "@/components/ui/drawer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
@@ -72,8 +86,8 @@ export function ReviewModal({
         <AlertCircle className="size-5 shrink-0" />
         <AlertTitle>Responses are final after submission</AlertTitle>
         <AlertDescription>
-          Please review your answers carefully. By clicking submit, your responses will be
-          finalized and locked. You cannot edit them after this step.
+          Please review your answers carefully. By clicking submit, your responses will be finalized
+          and locked. You cannot edit them after this step.
         </AlertDescription>
       </Alert>
     </div>
@@ -84,11 +98,7 @@ export function ReviewModal({
       <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="font-bold">
         Go Back
       </Button>
-      <Button
-        onClick={onSubmit}
-        disabled={isSubmitting}
-        className="min-w-[140px] px-8 font-bold"
-      >
+      <Button onClick={onSubmit} disabled={isSubmitting} className="min-w-[140px] px-8 font-bold">
         {isSubmitting ? "Submitting..." : "Confirm & Submit"}
       </Button>
     </>
@@ -98,7 +108,7 @@ export function ReviewModal({
     return (
       <Drawer open={isOpen} onOpenChange={onClose} showSwipeHandle>
         <DrawerContent className="flex h-[min(88dvh,52rem)] flex-col overflow-hidden px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-          <DrawerHeader className="shrink-0 border-border border-b px-0 pt-4 pb-3 text-left">
+          <DrawerHeader className="border-border shrink-0 border-b px-0 pt-4 pb-3 text-left">
             <DrawerTitle className="font-heading flex items-center gap-2 text-lg font-bold">
               <CheckCircle2 className="text-success size-5" />
               Review Your Answers
