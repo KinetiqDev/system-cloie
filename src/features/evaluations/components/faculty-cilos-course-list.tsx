@@ -234,6 +234,19 @@ function ViewEditCilosModal({
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       )}
+      {needsReconcile && !isLoading && (
+        <Alert variant="warning">
+          <AlertDescription className="flex flex-col items-start gap-2">
+            <span>
+              Your changes were saved, but the list could not be refreshed. Saving again before
+              refreshing would create duplicates.
+            </span>
+            <Button variant="outline" size="sm" onClick={() => void handleLoad()}>
+              Retry refresh
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {isLoading ? (
         <div className="text-muted-foreground py-8 text-center text-sm">Loading CILOs...</div>
