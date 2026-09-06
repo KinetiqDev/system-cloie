@@ -17,8 +17,8 @@ Faculty receive no individual-response route or DTO. Retired Faculty Course-boun
 _Avoid_: Anonymized response card, individual Faculty response review, raw comment drill-through
 
 **Faculty qualitative confidentiality floor**:
-Written-feedback analytics require at least five distinct submitted respondents in the currently filtered scope. Below five, word-cloud tokens, ranked terms, prompt counts, themes, sentiment, and qualitative AI evidence are withheld. At or above five, only identifier-redacted terms mentioned more than once can reach the Faculty browser or AI packet.
-_Avoid_: Lifetime evaluation threshold, answer-count threshold, singleton term, threshold countdown
+Written-feedback analytics require at least five distinct submitted respondents in the currently filtered scope. Below five, word-cloud tokens, ranked terms, prompt counts, themes, sentiment, qualitative AI evidence, and every qualitative contribution count (submitted/response/item/evaluation counts read as zero) are withheld. At or above five, only identifier-redacted terms mentioned more than once can reach the Faculty browser or AI packet.
+_Avoid_: Lifetime evaluation threshold, answer-count threshold, singleton term, threshold countdown, exact small-cohort counts
 
 **Faculty inline AI overview**:
 One automatic request rebuilds and re-authorizes the current Faculty filter scope server-side, then resolves a section-keyed interpretation beneath deterministic charts. Validated output may be reused only from a bounded process-local cache keyed by the authorized Faculty user, provider, model and prompt version, and a SHA-256 fingerprint of the complete bounded aggregate evidence packet. Tab-only navigation and reloads reuse unchanged evidence; any aggregate evidence change produces a new fingerprint and provider request. The cache never contains sessions, authorization decisions, response rows, respondent identifiers, roster data, or raw comments, and it is cleared on process restart or deployment. Disabled, insufficient, timeout, and provider-error states never block verified analytics.

@@ -418,16 +418,18 @@ function buildFacultyAnalyticsData(
     trends: buildTrends(evaluations),
     qualitative: {
       available: qualitativeAvailable,
-      submittedResponseCount: submitted.length,
-      responseCount: qualitativeResponseCount,
-      itemCount: qualitativeTexts.length,
-      evaluationCount: new Set(
-        submitted
-          .filter(({ response }) =>
-            response.qual_items.some((item) => item.text_content.trim().length > 0)
-          )
-          .map(({ evaluation }) => evaluation.id)
-      ).size,
+      submittedResponseCount: qualitativeAvailable ? submitted.length : 0,
+      responseCount: qualitativeAvailable ? qualitativeResponseCount : 0,
+      itemCount: qualitativeAvailable ? qualitativeTexts.length : 0,
+      evaluationCount: qualitativeAvailable
+        ? new Set(
+            submitted
+              .filter(({ response }) =>
+                response.qual_items.some((item) => item.text_content.trim().length > 0)
+              )
+              .map(({ evaluation }) => evaluation.id)
+          ).size
+        : 0,
       tokens: qualitativeAvailable
         ? buildRedactedWordCloudTokens(qualitativeTexts).filter((token) => token.value > 1)
         : [],

@@ -182,7 +182,10 @@ describe("faculty analytics serialization", () => {
     if (!result.success) return;
     expect(result.data.qualitative).toMatchObject({
       available: false,
-      submittedResponseCount: 4,
+      submittedResponseCount: 0,
+      responseCount: 0,
+      itemCount: 0,
+      evaluationCount: 0,
       tokens: [],
       promptCounts: [],
     });
