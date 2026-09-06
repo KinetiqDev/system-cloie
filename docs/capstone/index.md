@@ -29,6 +29,8 @@ Persistent repository knowledge for the BSIT Capstone Project (System CLOIE). Ma
 
 Abstract guidance lives in the [official guide](guide/technical-document-guide-2026.md) (200–300 words, single paragraph, three to five keywords; reflects the completed project, not the proposed work). The Abstract is written last, after Chapters 1–5 have content.
 
+Latest Google Docs export: [manuscript/current.md](manuscript/current.md); synchronization rules in [manuscript/README.md](manuscript/README.md). Agents review the snapshot but do not rewrite it.
+
 ### Evidence (appendix-aligned records)
 
 - [requirements-traceability.md](evidence/requirements-traceability.md) — RTM per Appendix F, with ID-stability policy and provenance rules
