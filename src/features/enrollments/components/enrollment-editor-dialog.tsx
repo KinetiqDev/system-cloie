@@ -51,6 +51,80 @@ interface EnrollmentEditorDialogProps {
   onSuccess?: () => void;
 }
 
+type EnrollmentFieldErrors = Partial<Record<"termInstanceId" | "programId", string>>;
+
+function ProgramSelect({
+  availablePrograms,
+  value,
+  onChange,
+}: {
+  availablePrograms: { id: string; code: string; name: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={(next) => next && onChange(next)}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select program" />
+      </SelectTrigger>
+      <SelectContent>
+        {availablePrograms.map((program) => (
+          <SelectItem key={program.id} value={program.id}>
+            {program.code} — {program.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function YearLevelSelect({
+  value,
+  onChange,
+}: {
+  value: YearLevel;
+  onChange: (value: YearLevel) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={(next) => next && onChange(next as YearLevel)}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select year" />
+      </SelectTrigger>
+      <SelectContent>
+        {YEAR_LEVEL_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function SectionSelect({
+  value,
+  onChange,
+}: {
+  value?: StudentSection;
+  onChange: (value: StudentSection) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={(next) => next && onChange(next as StudentSection)}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select section" />
+      </SelectTrigger>
+      <SelectContent>
+        {STUDENT_SECTION_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// fallow-ignore-next-line complexity
 export function EnrollmentEditorDialog({
   open,
   onOpenChange,
@@ -62,21 +136,29 @@ export function EnrollmentEditorDialog({
 }: EnrollmentEditorDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [values, setValues] = useState<EnrollmentFormData>({
-    termInstanceId: existingEnrollment?.termInstanceId || "",
-    programId: existingEnrollment?.programId || "",
-    majorId: existingEnrollment?.majorId || undefined,
-    yearLevel: existingEnrollment?.yearLevel || YearLevel.FIRST_YEAR,
-    section: existingEnrollment?.section || undefined,
+    termInstanceId: existingEnrollment?.termInstanceId ?? "",
+    programId: existingEnrollment?.programId ?? "",
+    majorId: existingEnrollment?.majorId ?? undefined,
+    yearLevel: existingEnrollment?.yearLevel ?? YearLevel.FIRST_YEAR,
+    section: existingEnrollment?.section ?? undefined,
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof EnrollmentFormData, string>>>({});
+  const [errors, setErrors] = useState<EnrollmentFieldErrors>({});
 
-  function setField<K extends keyof EnrollmentFormData>(key: K, value: EnrollmentFormData[K]) {
+  const setField = <K extends keyof EnrollmentFormData>(key: K, value: EnrollmentFormData[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: undefined }));
-  }
+  };
 
-  const onSubmit = async () => {
-    const nextErrors: Partial<Record<keyof EnrollmentFormData, string>> = {};
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const title = existingEnrollment ? "Edit Enrollment" : "Add Enrollment";
+  const description = existingEnrollment
+    ? "Update the student's enrollment details for the selected term."
+    : "Enroll the student for a specific term and class configuration.";
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextErrors: EnrollmentFieldErrors = {};
     if (!values.termInstanceId) nextErrors.termInstanceId = "Please select a term";
     if (!values.programId) nextErrors.programId = "Please select a program";
     if (Object.keys(nextErrors).length > 0) {
@@ -112,23 +194,8 @@ export function EnrollmentEditorDialog({
     }
   };
 
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-
-  const title = existingEnrollment ? "Edit Enrollment" : "Add Enrollment";
-  const description = existingEnrollment
-    ? "Update the student's enrollment details for the selected term."
-    : "Enroll the student for a specific term and class configuration.";
-
   const form = (
-    <form
-      id="enrollment-editor-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void onSubmit();
-      }}
-      className="space-y-4"
-      noValidate
-    >
+    <form id="enrollment-editor-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="space-y-2">
         <Label>Academic Term</Label>
         <TermInstancePicker
@@ -143,65 +210,26 @@ export function EnrollmentEditorDialog({
 
       <div className="space-y-2">
         <Label>Program</Label>
-        <Select
+        <ProgramSelect
+          availablePrograms={availablePrograms}
           value={values.programId}
-          onValueChange={(value) => {
-            if (value) {
-              setField("programId", value);
-            }
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select program" />
-          </SelectTrigger>
-          <SelectContent>
-            {availablePrograms.map((program) => (
-              <SelectItem key={program.id} value={program.id}>
-                {program.code} — {program.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onChange={(value) => setField("programId", value)}
+        />
         {errors.programId && <p className="text-destructive text-sm">{errors.programId}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Year Level</Label>
-          <Select
+          <YearLevelSelect
             value={values.yearLevel}
-            onValueChange={(value) => value && setField("yearLevel", value as YearLevel)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select year" />
-            </SelectTrigger>
-            <SelectContent>
-              {YEAR_LEVEL_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(value) => setField("yearLevel", value)}
+          />
         </div>
 
         <div className="space-y-2">
           <Label>Section (Optional)</Label>
-          <Select
-            value={values.section}
-            onValueChange={(value) => value && setField("section", value as StudentSection)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select section" />
-            </SelectTrigger>
-            <SelectContent>
-              {STUDENT_SECTION_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <SectionSelect value={values.section} onChange={(value) => setField("section", value)} />
         </div>
       </div>
     </form>
