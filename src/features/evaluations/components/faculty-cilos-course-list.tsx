@@ -226,6 +226,16 @@ function ViewEditCilosModal({
 
       {isLoading ? (
         <div className="text-muted-foreground py-8 text-center text-sm">Loading CILOs...</div>
+      ) : !loaded ? (
+        <div className="flex flex-col items-start gap-3 py-6">
+          <p className="text-muted-foreground text-sm">
+            CILOs could not be loaded. Retry to enable editing — nothing you type before a
+            successful load can be saved.
+          </p>
+          <Button variant="outline" onClick={() => void handleLoad()}>
+            Retry loading CILOs
+          </Button>
+        </div>
       ) : (
         <div className="space-y-4">
           {/* Existing CILOs */}
