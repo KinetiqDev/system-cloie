@@ -28,6 +28,12 @@ Every file here carries the frontmatter `kind: historical-project-source` /
 
 ## docs/history/requirements/
 
+### project-cloie-vision-overview.md
+
+Initial PROJECT CLOIE vision overview, handed over when the capstone project was assigned. Department-level evaluation vision: PLO and GO attainment from stakeholder feedback, OBE evidence, CHECK step of the PDCA cycle, and system boundaries that exclude instruction, grades, and LMS/SIS replacement.
+
+Why historical: vision-level proposal only, written before the current design was fleshed out. Some ideas carried through, others changed. Current behavior lives in CONTEXT.md files, ADRs, implementation, schema, and tests, not here. Source DOCX retained at [Project-CLOIE-Vision-Overview.docx](../_sources/project-history/Project-CLOIE-Vision-Overview.docx). Body transcribed verbatim.
+
 ### gen-ed-coordinator-implementation-proposal-2026-08.md
 
 Implementation proposal for the `GEN_ED_COORDINATOR` role (single-role identity,
