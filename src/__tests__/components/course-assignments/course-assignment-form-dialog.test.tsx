@@ -466,13 +466,22 @@ describe("CourseAssignmentFormDialog visible wizard", () => {
     expect(await screen.findByText(/course default: 2nd year/i)).toBeInTheDocument();
   });
 
-  it("creates an assignment directly when the faculty belongs to the selected program", async () => {
+  it("shows a confirmation summary before creating the assignment", async () => {
     render(<Wrapper />);
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /pick faculty/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(await screen.findByText(/review the assignment details/i)).toBeInTheDocument();
+    expect(screen.getByText(/2025-2026.*1st semester.*1st term/i)).toBeInTheDocument();
+    expect(screen.getByText(/cs201 — data structures/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/cross-program assignment/i)
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /confirm assignment/i }));
 
     await waitFor(() => {
       expect(createCourseAssignmentAction).toHaveBeenCalledWith({
