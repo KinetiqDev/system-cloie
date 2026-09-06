@@ -5,15 +5,23 @@ import { YearLevel, StudentSection, CourseScope } from "@prisma/client";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { showToast } from "@/components/ui/toast";
 import { ClassIdentityFields } from "./shared/class-identity-fields";
 import { FacultySearchPopover } from "./shared/faculty-search-popover";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { updateCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
 import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 
@@ -115,82 +123,108 @@ export function EditCourseAssignmentDialog({
       section !== assignment.section ||
       facultyId !== assignment.facultyId);
 
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const body = assignment && (
+    <div className="space-y-4">
+      <div className="bg-muted/40 space-y-1 rounded-md border p-3 text-sm">
+        <p>
+          <strong>Course:</strong> {assignment.courseCode} — {assignment.courseTitle}
+        </p>
+        <p>
+          <strong>Faculty:</strong> {assignment.facultyName}
+        </p>
+        <p>
+          <strong>Term:</strong> {assignment.termLabel}
+        </p>
+        <p className="text-muted-foreground pt-1 text-xs">
+          {identityLocked
+            ? "Course, academic period, program, year level, and section are locked because this assignment has roster membership history. Faculty reassignment remains available."
+            : "Course and academic period cannot be edited here. Class identity locks after the first roster membership; Faculty reassignment remains available."}
+        </p>
+      </div>
+
+      <ClassIdentityFields
+        programId={programId}
+        yearLevel={yearLevel}
+        section={section}
+        availablePrograms={availablePrograms}
+        onProgramChange={setProgramId}
+        onYearLevelChange={setYearLevel}
+        onSectionChange={(value) => value && setSection(value)}
+        disabled={identityLocked}
+        programDisabled={programDisabled}
+        suggestedYearLevel={course?.default_year_level ?? null}
+      />
+
+      {isGeneralEducation ? (
+        <p className="text-muted-foreground text-xs">
+          General Education assignments can be assigned to any active program.
+        </p>
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          Program-specific assignments are locked to the course&apos;s owning program.
+        </p>
+      )}
+
+      <Field>
+        <FieldLabel htmlFor="assignment-faculty">Faculty</FieldLabel>
+        <FieldContent>
+          <FacultySearchPopover
+            id="assignment-faculty"
+            selectedFacultyId={facultyId || null}
+            selectedFacultyName={facultyName}
+            targetProgramId={assignment.programId}
+            targetProgramName={assignment.programName}
+            onSelect={(faculty) => {
+              setFacultyId(faculty.id);
+              setFacultyName(faculty.name);
+            }}
+          />
+        </FieldContent>
+      </Field>
+    </div>
+  );
+
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+        Cancel
+      </Button>
+      <Button loading={isSubmitting} onClick={handleSubmit} disabled={!hasChanges}>
+        Save Changes
+      </Button>
+    </div>
+  );
+
+  if (!isDesktop) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>
+        <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
+            <DrawerTitle>Edit Course Assignment</DrawerTitle>
+            <DrawerDescription className="line-clamp-2">
+              Update the class identity or reassign faculty for this assignment.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{body}</div>
+          <div className="shrink-0 pt-3">{footer}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Course Assignment</DialogTitle>
+          <DialogDescription>
+            Update the class identity or reassign faculty for this assignment.
+          </DialogDescription>
         </DialogHeader>
-
-        {assignment && (
-          <div className="space-y-4">
-            <div className="bg-muted/40 space-y-1 rounded-md border p-3 text-sm">
-              <p>
-                <strong>Course:</strong> {assignment.courseCode} — {assignment.courseTitle}
-              </p>
-              <p>
-                <strong>Faculty:</strong> {assignment.facultyName}
-              </p>
-              <p>
-                <strong>Term:</strong> {assignment.termLabel}
-              </p>
-              <p className="text-muted-foreground pt-1 text-xs">
-                {identityLocked
-                  ? "Course, academic period, program, year level, and section are locked because this assignment has roster membership history. Faculty reassignment remains available."
-                  : "Course and academic period cannot be edited here. Class identity locks after the first roster membership; Faculty reassignment remains available."}
-              </p>
-            </div>
-
-            <ClassIdentityFields
-              programId={programId}
-              yearLevel={yearLevel}
-              section={section}
-              availablePrograms={availablePrograms}
-              onProgramChange={setProgramId}
-              onYearLevelChange={setYearLevel}
-              onSectionChange={(value) => value && setSection(value)}
-              disabled={identityLocked}
-              programDisabled={programDisabled}
-              suggestedYearLevel={course?.default_year_level ?? null}
-            />
-
-            {isGeneralEducation ? (
-              <p className="text-muted-foreground text-xs">
-                General Education assignments can be assigned to any active program.
-              </p>
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                Program-specific assignments are locked to the course&apos;s owning program.
-              </p>
-            )}
-
-            <Field>
-              <FieldLabel htmlFor="assignment-faculty">Faculty</FieldLabel>
-              <FieldContent>
-                <FacultySearchPopover
-                  id="assignment-faculty"
-                  selectedFacultyId={facultyId || null}
-                  selectedFacultyName={facultyName}
-                  targetProgramId={assignment.programId}
-                  targetProgramName={assignment.programName}
-                  onSelect={(faculty) => {
-                    setFacultyId(faculty.id);
-                    setFacultyName(faculty.name);
-                  }}
-                />
-              </FieldContent>
-            </Field>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button loading={isSubmitting} onClick={handleSubmit} disabled={!hasChanges}>
-            Save Changes
-          </Button>
-        </DialogFooter>
+        {body}
+        {footer}
       </DialogContent>
     </Dialog>
   );

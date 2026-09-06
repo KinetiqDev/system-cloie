@@ -123,13 +123,7 @@ function CreateForm({ onClose }: { onClose: () => void }) {
 
 // fallow-ignore-next-line code-duplication
 // fallow-ignore-next-line complexity
-function EditForm({
-  ilo,
-  onClose,
-}: {
-  ilo: InstitutionalOutcomeItem;
-  onClose: () => void;
-}) {
+function EditForm({ ilo, onClose }: { ilo: InstitutionalOutcomeItem; onClose: () => void }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const {

@@ -22,6 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -105,6 +113,10 @@ function ViewEditCilosModal({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Set after a successful save until the reload reconciles local entries
+  // with persisted IDs; while set, a second save would resubmit entries
+  // without IDs and duplicate them.
+  const [needsReconcile, setNeedsReconcile] = useState(false);
 
   // Load CILOs when modal opens
   const handleLoad = async () => {
@@ -120,6 +132,7 @@ function ViewEditCilosModal({
           }))
         );
         setLoaded(true);
+        setNeedsReconcile(false);
       } else {
         setError(result.error ?? "Failed to load CILOs.");
       }
@@ -144,6 +157,7 @@ function ViewEditCilosModal({
     if (!nextOpen) {
       setCilos([]);
       setLoaded(false);
+      setNeedsReconcile(false);
       setError(null);
       setSuccessMessage(null);
       setNewCiloText("");
@@ -175,6 +189,11 @@ function ViewEditCilosModal({
   };
 
   const handleSave = async () => {
+    // An empty payload would archive every active CILO, so saving is only
+    // meaningful once the initial load has populated the list. Entries also
+    // stay isNew until the post-save reload assigns persisted IDs, so a
+    // second save before that reconciliation would duplicate them.
+    if (isLoading || !loaded || needsReconcile) return;
     setIsSaving(true);
     setError(null);
     setSuccessMessage(null);
@@ -186,6 +205,9 @@ function ViewEditCilosModal({
       const result = await saveCilosAction(course.id, payload);
       if (result.success) {
         setSuccessMessage("CILOs saved successfully.");
+        // Entries stay isNew until the reload below assigns persisted IDs;
+        // fence Save until that reconciliation lands.
+        setNeedsReconcile(true);
         // Reload to get fresh IDs
         await handleLoad();
       } else {
@@ -198,6 +220,141 @@ function ViewEditCilosModal({
     }
   };
 
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const body = (
+    <>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {successMessage && (
+        <Alert variant="success" role="status">
+          <AlertDescription>{successMessage}</AlertDescription>
+        </Alert>
+      )}
+      {needsReconcile && !isLoading && (
+        <Alert variant="warning">
+          <AlertDescription className="flex flex-col items-start gap-2">
+            <span>
+              Your changes were saved, but the list could not be refreshed. Saving again before
+              refreshing would create duplicates.
+            </span>
+            <Button variant="outline" size="sm" onClick={() => void handleLoad()}>
+              Retry refresh
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isLoading ? (
+        <div className="text-muted-foreground py-8 text-center text-sm">Loading CILOs...</div>
+      ) : !loaded ? (
+        <div className="flex flex-col items-start gap-3 py-6">
+          <p className="text-muted-foreground text-sm">
+            CILOs could not be loaded. Retry to enable editing — nothing you type before a
+            successful load can be saved.
+          </p>
+          <Button variant="outline" onClick={() => void handleLoad()}>
+            Retry loading CILOs
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Existing CILOs */}
+          {cilos.length === 0 ? (
+            <div className="border-border text-muted-foreground rounded-lg border border-dashed py-8 text-center text-sm">
+              No CILOs defined for this course yet.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {cilos.map((cilo, index) => (
+                <div
+                  key={cilo.id}
+                  className="border-border bg-surface flex items-start gap-3 rounded-lg border p-3"
+                >
+                  <span className="bg-primary/10 text-link mt-1 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                    {index + 1}
+                  </span>
+                  <Textarea
+                    value={cilo.description}
+                    onChange={(e) => handleUpdateCilo(cilo.id, e.target.value)}
+                    className="min-h-12 min-w-0 flex-1 text-sm"
+                    disabled={needsReconcile}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove CILO ${index + 1}`}
+                    className="text-destructive hover:bg-destructive/10 min-h-11 min-w-11 shrink-0"
+                    onClick={() => handleRemoveCilo(cilo.id)}
+                    disabled={needsReconcile}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new CILO */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Textarea
+              placeholder="Type a new CILO description..."
+              value={newCiloText}
+              onChange={(e) => setNewCiloText(e.target.value)}
+              className="max-h-56 min-w-0"
+              disabled={needsReconcile}
+            />
+            <Button
+              variant="outline"
+              onClick={handleAddCilo}
+              className="shrink-0"
+              disabled={needsReconcile}
+            >
+              Add
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const footer = (
+    <div className="border-border flex justify-end gap-2 border-t pt-4">
+      <Button variant="outline" onClick={() => handleOpenChange(false)}>
+        Close
+      </Button>
+      <Button
+        onClick={handleSave}
+        loading={isSaving}
+        disabled={isLoading || !loaded || needsReconcile}
+      >
+        {isSaving ? "Saving..." : "Save Changes"}
+      </Button>
+    </div>
+  );
+
+  if (!isDesktop) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>
+        <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
+            <DrawerTitle>
+              CILOs — {course.code}: {course.title}
+            </DrawerTitle>
+            <DrawerDescription className="line-clamp-2">
+              View and manage Course-Intended Learning Outcomes for this course.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{body}</div>
+          <div className="shrink-0 pt-3">{footer}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
@@ -209,80 +366,8 @@ function ViewEditCilosModal({
             View and manage Course-Intended Learning Outcomes for this course.
           </DialogDescription>
         </DialogHeader>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {successMessage && (
-          <Alert variant="success" role="status">
-            <AlertDescription>{successMessage}</AlertDescription>
-          </Alert>
-        )}
-
-        {isLoading ? (
-          <div className="text-muted-foreground py-8 text-center text-sm">Loading CILOs...</div>
-        ) : (
-          <div className="space-y-4">
-            {/* Existing CILOs */}
-            {cilos.length === 0 ? (
-              <div className="border-border text-muted-foreground rounded-lg border border-dashed py-8 text-center text-sm">
-                No CILOs defined for this course yet.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {cilos.map((cilo, index) => (
-                  <div
-                    key={cilo.id}
-                    className="border-border bg-surface flex items-start gap-3 rounded-lg border p-3"
-                  >
-                    <span className="bg-primary/10 text-link mt-1 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
-                      {index + 1}
-                    </span>
-                    <Textarea
-                      value={cilo.description}
-                      onChange={(e) => handleUpdateCilo(cilo.id, e.target.value)}
-                      className="min-h-12 min-w-0 flex-1 text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remove CILO ${index + 1}`}
-                      className="text-destructive hover:bg-destructive/10 min-h-11 min-w-11 shrink-0"
-                      onClick={() => handleRemoveCilo(cilo.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add new CILO */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <Textarea
-                placeholder="Type a new CILO description..."
-                value={newCiloText}
-                onChange={(e) => setNewCiloText(e.target.value)}
-                className="max-h-56 min-w-0"
-              />
-              <Button variant="outline" onClick={handleAddCilo} className="shrink-0">
-                Add
-              </Button>
-            </div>
-
-            {/* Save */}
-            <div className="border-border flex justify-end gap-2 border-t pt-4">
-              <Button variant="outline" onClick={() => handleOpenChange(false)}>
-                Close
-              </Button>
-              <Button onClick={handleSave} loading={isSaving}>
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          </div>
-        )}
+        {body}
+        {footer}
       </DialogContent>
     </Dialog>
   );
@@ -382,22 +467,22 @@ export function FacultyCilosCourseList({
         </div>
 
         <div className="w-48 shrink-0">
-        <Select value={typeFilter} onValueChange={handleTypeChange}>
-          <SelectTrigger className="w-full">
-            <SelectValue>
-              {typeFilter === "__all__"
-                ? "All Course Types"
-                : typeFilter === "program_specific"
-                  ? "Program-Specific"
-                  : "General Education"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All Course Types</SelectItem>
-            <SelectItem value="program_specific">Program-Specific</SelectItem>
-            <SelectItem value="general_education">General Education</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select value={typeFilter} onValueChange={handleTypeChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue>
+                {typeFilter === "__all__"
+                  ? "All Course Types"
+                  : typeFilter === "program_specific"
+                    ? "Program-Specific"
+                    : "General Education"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Course Types</SelectItem>
+              <SelectItem value="program_specific">Program-Specific</SelectItem>
+              <SelectItem value="general_education">General Education</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="relative ml-auto w-full max-w-xs">
@@ -440,33 +525,33 @@ export function FacultyCilosCourseList({
                 </TableCell>
                 <TableCell>{course.majorName ?? "—"}</TableCell>
                 <TableCell className="text-right">{course.ciloCount}</TableCell>
-            <TableCell>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Actions for ${course.code}`}
-                    />
-                  }
-                >
-                  <MoreVertical className="size-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setModalCourse(course)}>
-                    <Eye className="size-4" />
-                    View CILOs
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
-                  >
-                    <ArrowRightLeft className="size-4" />
-                    Map CILOs
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Actions for ${course.code}`}
+                        />
+                      }
+                    >
+                      <MoreVertical className="size-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setModalCourse(course)}>
+                        <Eye className="size-4" />
+                        View CILOs
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
+                      >
+                        <ArrowRightLeft className="size-4" />
+                        Map CILOs
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
             ))
           )}
@@ -480,7 +565,11 @@ export function FacultyCilosCourseList({
             {(safePage - 1) * PAGE_SIZE + 1}–
             {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length}
           </span>
-          <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={setCurrentPage} />
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
 

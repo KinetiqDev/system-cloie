@@ -40,6 +40,7 @@ import type { AssignableCourse, FacultySearchResult } from "@/features/course-as
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface Program {
@@ -174,7 +175,7 @@ function AssignmentStepContent({
         />
       );
     case "confirm":
-      return showCrossProgramWarning ? (
+      return (
         <ConfirmStep
           selectedCourse={selectedCourse}
           selectedProgramCode={selectedProgramCode}
@@ -182,8 +183,11 @@ function AssignmentStepContent({
           selectedFaculty={selectedFaculty}
           yearLevel={yearLevel}
           section={section}
+          termInstances={termInstances}
+          termInstanceId={termInstanceId}
+          showCrossProgramWarning={showCrossProgramWarning}
         />
-      ) : null;
+      );
   }
 }
 
@@ -286,6 +290,9 @@ function ConfirmStep({
   selectedFaculty,
   yearLevel,
   section,
+  termInstances,
+  termInstanceId,
+  showCrossProgramWarning,
 }: Pick<
   AssignmentStepContentProps,
   | "selectedCourse"
@@ -294,18 +301,36 @@ function ConfirmStep({
   | "selectedFaculty"
   | "yearLevel"
   | "section"
+  | "termInstances"
+  | "termInstanceId"
+  | "showCrossProgramWarning"
 >) {
+  const selectedTerm = termInstances.find((term) => term.id === termInstanceId);
+  const termLabel = selectedTerm
+    ? formatTermInstanceLabel(selectedTerm.schoolYearCode, selectedTerm.semester, selectedTerm.term)
+    : null;
   return (
-    <>
-      <Alert variant="warning">
-        <AlertTitle>Cross-Program Assignment</AlertTitle>
-        <AlertDescription>
-          {selectedFaculty?.name} is not affiliated with {selectedProgramName}. Are you sure you
-          want to proceed?
-        </AlertDescription>
-      </Alert>
+    <div className="flex min-w-0 flex-col gap-4">
+      <p className="text-muted-foreground text-sm">
+        Review the assignment details before confirming.
+      </p>
+      {showCrossProgramWarning && (
+        <Alert variant="warning">
+          <AlertTitle>Cross-Program Assignment</AlertTitle>
+          <AlertDescription>
+            {selectedFaculty?.name} is not affiliated with {selectedProgramName}. Are you sure you
+            want to proceed?
+          </AlertDescription>
+        </Alert>
+      )}
       <AssignmentSummaryBlock title="Assignment Summary">
         <div className="flex flex-col gap-1.5 text-sm">
+          {termLabel && (
+            <div className="flex gap-2">
+              <span className="text-muted-foreground w-16 shrink-0">Term</span>
+              <span className="font-medium">{termLabel}</span>
+            </div>
+          )}
           <div className="flex gap-2">
             <span className="text-muted-foreground w-16 shrink-0">Course</span>
             <span className="font-medium">
@@ -332,7 +357,7 @@ function ConfirmStep({
           </div>
         </div>
       </AssignmentSummaryBlock>
-    </>
+    </div>
   );
 }
 
@@ -438,16 +463,14 @@ export function CourseAssignmentFormDialog({
       return;
     }
     if (step !== "faculty") return;
-    if (
-      selectedFaculty &&
-      selectedProgram &&
-      !selectedFaculty.affiliations.includes(selectedProgram.name)
-    ) {
-      setShowCrossProgramWarning(true);
-      setStep("confirm");
-      return;
-    }
-    handleSubmit();
+    setShowCrossProgramWarning(
+      Boolean(
+        selectedFaculty &&
+        selectedProgram &&
+        !selectedFaculty.affiliations.includes(selectedProgram.name)
+      )
+    );
+    setStep("confirm");
   };
 
   const handleBack = () => {
@@ -577,16 +600,16 @@ export function CourseAssignmentFormDialog({
   const footer = (
     <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
       <div>
+        <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+          Cancel
+        </Button>
+      </div>
+      <div className="flex min-w-0 justify-end gap-2">
         {step !== "term" && (
           <Button variant="outline" onClick={handleBack} disabled={isSubmitting}>
             Back
           </Button>
         )}
-      </div>
-      <div className="flex min-w-0 justify-end gap-2">
-        <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
-          Cancel
-        </Button>
         {step === "confirm" ? (
           <Button loading={isSubmitting} onClick={handleSubmit}>
             Confirm Assignment
@@ -599,7 +622,6 @@ export function CourseAssignmentFormDialog({
       </div>
     </div>
   );
-
   if (!isDesktop) {
     return (
       <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>

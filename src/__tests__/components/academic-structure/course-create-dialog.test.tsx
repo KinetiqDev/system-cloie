@@ -1,6 +1,18 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// The dialog shell chooses Dialog vs Drawer via useMediaQuery; jsdom has no
+// matchMedia, so stub a desktop viewport (matches: true) for these tests.
+vi.stubGlobal(
+  "matchMedia",
+  vi.fn((query: string) => ({
+    matches: true,
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }))
+);
+
 const { createCourseActionMock, showToastMock, refreshMock } = vi.hoisted(() => ({
   createCourseActionMock: vi.fn(),
   showToastMock: vi.fn(),
