@@ -13,10 +13,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
+import type { InstitutionalOutcomeItem } from "../services/manage-gen-ed-outcomes";
 import {
   createILOSchema,
   updateILOSchema,
@@ -24,7 +33,6 @@ import {
   type UpdateILOInput,
 } from "../schemas/ilo";
 import { createILOAction, updateILOAction } from "@/lib/actions/gen-ed-outcome-actions";
-import type { InstitutionalOutcomeItem } from "../services/manage-gen-ed-outcomes";
 
 type ILOFormDialogProps =
   | {
@@ -212,30 +220,49 @@ function EditForm({
 
 // fallow-ignore-next-line code-duplication
 export function ILOFormDialog(props: ILOFormDialogProps) {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   function handleOpenChange(nextOpen: boolean) {
     props.onOpenChange(nextOpen);
+  }
+
+  const form =
+    props.mode === "create" ? (
+      <CreateForm onClose={() => props.onOpenChange(false)} />
+    ) : (
+      <EditForm ilo={props.ilo} onClose={() => props.onOpenChange(false)} />
+    );
+
+  const title =
+    props.mode === "create"
+      ? "Add Institutional Learning Outcome"
+      : "Edit Institutional Learning Outcome";
+  const description =
+    props.mode === "create"
+      ? "Create a new Institutional Learning Outcome in the college-wide catalog."
+      : "Update Institutional Learning Outcome details.";
+
+  if (!isDesktop) {
+    return (
+      <Drawer open={props.open} onOpenChange={handleOpenChange} showSwipeHandle>
+        <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+            <DrawerDescription className="line-clamp-2">{description}</DrawerDescription>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{form}</div>
+        </DrawerContent>
+      </Drawer>
+    );
   }
 
   return (
     <Dialog open={props.open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>
-            {props.mode === "create"
-              ? "Add Institutional Learning Outcome"
-              : "Edit Institutional Learning Outcome"}
-          </DialogTitle>
-          <DialogDescription>
-            {props.mode === "create"
-              ? "Create a new Institutional Learning Outcome in the college-wide catalog."
-              : "Update Institutional Learning Outcome details."}
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        {props.mode === "create" ? (
-          <CreateForm onClose={() => props.onOpenChange(false)} />
-        ) : (
-          <EditForm ilo={props.ilo} onClose={() => props.onOpenChange(false)} />
-        )}
+        {form}
       </DialogContent>
     </Dialog>
   );

@@ -22,6 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -198,6 +206,106 @@ function ViewEditCilosModal({
     }
   };
 
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const body = (
+    <>
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {successMessage && (
+        <Alert variant="success" role="status">
+          <AlertDescription>{successMessage}</AlertDescription>
+        </Alert>
+      )}
+
+      {isLoading ? (
+        <div className="text-muted-foreground py-8 text-center text-sm">Loading CILOs...</div>
+      ) : (
+        <div className="space-y-4">
+          {/* Existing CILOs */}
+          {cilos.length === 0 ? (
+            <div className="border-border text-muted-foreground rounded-lg border border-dashed py-8 text-center text-sm">
+              No CILOs defined for this course yet.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {cilos.map((cilo, index) => (
+                <div
+                  key={cilo.id}
+                  className="border-border bg-surface flex items-start gap-3 rounded-lg border p-3"
+                >
+                  <span className="bg-primary/10 text-link mt-1 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                    {index + 1}
+                  </span>
+                  <Textarea
+                    value={cilo.description}
+                    onChange={(e) => handleUpdateCilo(cilo.id, e.target.value)}
+                    className="min-h-12 min-w-0 flex-1 text-sm"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove CILO ${index + 1}`}
+                    className="text-destructive hover:bg-destructive/10 min-h-11 min-w-11 shrink-0"
+                    onClick={() => handleRemoveCilo(cilo.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add new CILO */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Textarea
+              placeholder="Type a new CILO description..."
+              value={newCiloText}
+              onChange={(e) => setNewCiloText(e.target.value)}
+              className="max-h-56 min-w-0"
+            />
+            <Button variant="outline" onClick={handleAddCilo} className="shrink-0">
+              Add
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const footer = (
+    <div className="border-border flex justify-end gap-2 border-t pt-4">
+      <Button variant="outline" onClick={() => handleOpenChange(false)}>
+        Close
+      </Button>
+      <Button onClick={handleSave} loading={isSaving}>
+        {isSaving ? "Saving..." : "Save Changes"}
+      </Button>
+    </div>
+  );
+
+  if (!isDesktop) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>
+        <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
+            <DrawerTitle>
+              CILOs — {course.code}: {course.title}
+            </DrawerTitle>
+            <DrawerDescription className="line-clamp-2">
+              View and manage Course-Intended Learning Outcomes for this course.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{body}</div>
+          <div className="shrink-0 pt-3">{footer}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
@@ -209,80 +317,8 @@ function ViewEditCilosModal({
             View and manage Course-Intended Learning Outcomes for this course.
           </DialogDescription>
         </DialogHeader>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {successMessage && (
-          <Alert variant="success" role="status">
-            <AlertDescription>{successMessage}</AlertDescription>
-          </Alert>
-        )}
-
-        {isLoading ? (
-          <div className="text-muted-foreground py-8 text-center text-sm">Loading CILOs...</div>
-        ) : (
-          <div className="space-y-4">
-            {/* Existing CILOs */}
-            {cilos.length === 0 ? (
-              <div className="border-border text-muted-foreground rounded-lg border border-dashed py-8 text-center text-sm">
-                No CILOs defined for this course yet.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {cilos.map((cilo, index) => (
-                  <div
-                    key={cilo.id}
-                    className="border-border bg-surface flex items-start gap-3 rounded-lg border p-3"
-                  >
-                    <span className="bg-primary/10 text-link mt-1 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
-                      {index + 1}
-                    </span>
-                    <Textarea
-                      value={cilo.description}
-                      onChange={(e) => handleUpdateCilo(cilo.id, e.target.value)}
-                      className="min-h-12 min-w-0 flex-1 text-sm"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remove CILO ${index + 1}`}
-                      className="text-destructive hover:bg-destructive/10 min-h-11 min-w-11 shrink-0"
-                      onClick={() => handleRemoveCilo(cilo.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add new CILO */}
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <Textarea
-                placeholder="Type a new CILO description..."
-                value={newCiloText}
-                onChange={(e) => setNewCiloText(e.target.value)}
-                className="max-h-56 min-w-0"
-              />
-              <Button variant="outline" onClick={handleAddCilo} className="shrink-0">
-                Add
-              </Button>
-            </div>
-
-            {/* Save */}
-            <div className="border-border flex justify-end gap-2 border-t pt-4">
-              <Button variant="outline" onClick={() => handleOpenChange(false)}>
-                Close
-              </Button>
-              <Button onClick={handleSave} loading={isSaving}>
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
-          </div>
-        )}
+        {body}
+        {footer}
       </DialogContent>
     </Dialog>
   );

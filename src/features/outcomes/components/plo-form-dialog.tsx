@@ -3,8 +3,14 @@
 import { useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { showToast } from "@/components/ui/toast";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
+import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
   Dialog,
   DialogContent,
@@ -12,11 +18,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
-import { showToast } from "@/components/ui/toast";
-import { customZodResolver } from "@/lib/forms/zod-resolver";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   createPLOSchema,
   updatePLOSchema,
@@ -214,28 +222,47 @@ function EditForm({
 }
 
 export function PLOFormDialog({ mode, programId, plo, open, onOpenChange }: PLOFormDialogProps) {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
   function handleOpenChange(nextOpen: boolean) {
     onOpenChange(nextOpen);
+  }
+
+  const form =
+    mode === "create" ? (
+      <CreateForm programId={programId} onClose={() => onOpenChange(false)} />
+    ) : (
+      <EditForm programId={programId} plo={plo} onClose={() => onOpenChange(false)} />
+    );
+
+  const title = mode === "create" ? "Add Program Learning Outcome" : "Edit Program Learning Outcome";
+  const description =
+    mode === "create"
+      ? "Create a new Program Learning Outcome for your program."
+      : "Update Program Learning Outcome details.";
+
+  if (!isDesktop) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>
+        <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+            <DrawerDescription className="line-clamp-2">{description}</DrawerDescription>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{form}</div>
+        </DrawerContent>
+      </Drawer>
+    );
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>
-            {mode === "create" ? "Add Program Learning Outcome" : "Edit Program Learning Outcome"}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === "create"
-              ? "Create a new Program Learning Outcome for your program."
-              : "Update Program Learning Outcome details."}
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        {mode === "create" ? (
-          <CreateForm programId={programId} onClose={() => onOpenChange(false)} />
-        ) : (
-          <EditForm programId={programId} plo={plo} onClose={() => onOpenChange(false)} />
-        )}
+        {form}
       </DialogContent>
     </Dialog>
   );

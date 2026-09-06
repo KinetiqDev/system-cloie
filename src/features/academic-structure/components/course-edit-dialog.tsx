@@ -12,8 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { CourseForm } from "@/features/academic-structure/components/course-form";
+import { Spinner } from "@/components/ui/spinner";
 import {
   getCourseEditDataAction,
   updateCourseAction,
@@ -85,6 +93,98 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
     router.refresh();
   };
 
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const body = (
+    <div className="space-y-4">
+      {status === "loading" && (
+        <div className="flex items-center justify-center py-10">
+          <Spinner size="lg" label="Loading course details" />
+        </div>
+      )}
+
+      {status === "error" && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription className="flex items-center justify-between gap-3">
+            Unable to load course details. Please try again.
+            <Button variant="outline" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {status === "missing" && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>This course is no longer available.</AlertDescription>
+        </Alert>
+      )}
+
+      {status === "ready" && data && (
+        <CourseForm
+          action={updateCourseAction}
+          programs={data.programs}
+          majors={data.majors}
+          defaultValues={{
+            id: data.course.id,
+            code: data.course.code,
+            title: data.course.title,
+            course_scope: data.course.course_scope,
+            program_id: data.course.program_id,
+            major_id: data.course.major_id,
+            default_year_level: data.course.default_year_level,
+            default_semester: data.course.default_semester,
+            default_term: data.course.default_term,
+            updated_at: data.course.updated_at.toISOString(),
+          }}
+          submitLabel="Update Course"
+          formId="course-edit-form"
+          onPendingChange={setPending}
+          onSuccess={handleSuccess}
+        />
+      )}
+    </div>
+  );
+
+  const footer = (
+    <div
+      className={
+        isDesktop
+          ? "bg-muted/50 flex flex-col-reverse gap-2 rounded-b-xl border-t px-5 py-4 sm:flex-row sm:justify-end"
+          : "flex justify-end gap-2 pt-3"
+      }
+    >
+      <Button variant="outline" onClick={() => onOpenChange(false)}>
+        Cancel
+      </Button>
+      {status === "ready" && (
+        <Button form="course-edit-form" type="submit" disabled={pending}>
+          {pending ? "Updating..." : "Update Course"}
+        </Button>
+      )}
+    </div>
+  );
+
+  if (!isDesktop) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
+        <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
+            <DrawerTitle>Edit Course</DrawerTitle>
+            <DrawerDescription className="line-clamp-2">
+              Update details for {data?.course.code ?? displayCourse?.code} –{" "}
+              {data?.course.title ?? displayCourse?.title}.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-2">{body}</div>
+          {footer}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[min(85vh,720px)] sm:max-w-xl">
@@ -96,67 +196,9 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 overflow-y-auto px-5 py-4">
-          {status === "loading" && (
-            <div className="flex items-center justify-center py-10">
-              <Spinner size="lg" label="Loading course details" />
-            </div>
-          )}
+        <div className="min-h-0 overflow-y-auto px-5 py-4">{body}</div>
 
-          {status === "error" && (
-            <Alert variant="destructive">
-              <AlertCircle className="size-4" />
-              <AlertDescription className="flex items-center justify-between gap-3">
-                Unable to load course details. Please try again.
-                <Button variant="outline" size="sm" onClick={() => setAttempt((n) => n + 1)}>
-                  Retry
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {status === "missing" && (
-            <Alert variant="destructive">
-              <AlertCircle className="size-4" />
-              <AlertDescription>This course is no longer available.</AlertDescription>
-            </Alert>
-          )}
-
-          {status === "ready" && data && (
-            <CourseForm
-              action={updateCourseAction}
-              programs={data.programs}
-              majors={data.majors}
-              defaultValues={{
-                id: data.course.id,
-                code: data.course.code,
-                title: data.course.title,
-                course_scope: data.course.course_scope,
-                program_id: data.course.program_id,
-                major_id: data.course.major_id,
-                default_year_level: data.course.default_year_level,
-                default_semester: data.course.default_semester,
-                default_term: data.course.default_term,
-                updated_at: data.course.updated_at.toISOString(),
-              }}
-              submitLabel="Update Course"
-              formId="course-edit-form"
-              onPendingChange={setPending}
-              onSuccess={handleSuccess}
-            />
-          )}
-        </div>
-
-        <div className="bg-muted/50 flex flex-col-reverse gap-2 rounded-b-xl border-t px-5 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          {status === "ready" && (
-            <Button form="course-edit-form" type="submit" disabled={pending}>
-              {pending ? "Updating..." : "Update Course"}
-            </Button>
-          )}
-        </div>
+        {footer}
       </DialogContent>
     </Dialog>
   );
