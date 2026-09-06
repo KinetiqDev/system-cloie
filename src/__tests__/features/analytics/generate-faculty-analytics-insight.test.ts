@@ -18,14 +18,36 @@ vi.mock("openai", () => ({
 }));
 
 const insight = {
-  participation: { observation: "Participation is steady.", worthChecking: "Review open scopes." },
-  ratings: { observation: "Ratings cluster near four.", worthChecking: "Compare distributions." },
-  cilos: { observation: "CILO ratings are consistent.", worthChecking: "Review lower outcomes." },
-  questions: {
-    observation: "Question ratings are consistent.",
-    worthChecking: "Check item spread.",
+  participation: {
+    summary: "5 of 5 invited students submitted responses.",
+    implication: "Participation is complete, so the ratings represent the whole class.",
+    sentiment: "positive",
+    watchPoints: [],
   },
-  trends: { observation: "No comparable trend yet.", worthChecking: "Wait for another period." },
+  ratings: {
+    summary: "Most ratings were 4 or 5 on the 1-5 scale.",
+    implication: "Respondents consistently chose the favorable descriptors.",
+    sentiment: "positive",
+    watchPoints: ["Compare distributions across terms."],
+  },
+  cilos: {
+    summary: "CILO ratings are consistent.",
+    implication: "No outcome trails its peers in this scope.",
+    sentiment: "neutral",
+    watchPoints: [],
+  },
+  questions: {
+    summary: "Question ratings are consistent.",
+    implication: "No single item stands apart from the rest.",
+    sentiment: "neutral",
+    watchPoints: ["Check item spread."],
+  },
+  trends: {
+    summary: "No comparable trend periods exist yet.",
+    implication: "Trend interpretation needs another comparable period.",
+    sentiment: "neutral",
+    watchPoints: [],
+  },
   qualitative: null,
 };
 
@@ -163,5 +185,90 @@ describe("generateFacultyAnalyticsInsight cache", () => {
     await generateFacultyAnalyticsInsight({ view: "overview" });
 
     expect(createCompletionMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("generateFacultyAnalyticsInsight output contract", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    vi.stubEnv("CLOIE_AI_ENABLED", "true");
+    vi.stubEnv("CLOIE_AI_API_KEY", "test-key");
+    vi.stubEnv("CLOIE_AI_BASE_URL", "https://example.test/v1");
+    vi.stubEnv("CLOIE_AI_MODEL", "test-model");
+    vi.stubEnv("CLOIE_AI_MIN_SUBMITTED_RESPONSES", "1");
+    vi.stubEnv("CLOIE_AI_MIN_QUALITATIVE_ITEMS", "1");
+    analyticsMock.mockResolvedValue({
+      success: true,
+      facultyUserId: "faculty-contract",
+      data: analyticsData(),
+    });
+  });
+
+  it("accepts provider JSON fenced in markdown", async () => {
+    createCompletionMock.mockResolvedValue({
+      choices: [{ message: { content: "```json\n" + JSON.stringify(insight) + "\n```" } }],
+    });
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "overview" });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.data.ratings.summary).toContain("4 or 5");
+  });
+
+  it("rejects output missing the required sentiment signal", async () => {
+    const { participation: _omitted, ...rest } = insight;
+    void _omitted;
+    createCompletionMock.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              ...rest,
+              participation: {
+                summary: "5 of 5 invited students submitted responses.",
+                implication: "Participation is complete.",
+                watchPoints: [],
+              },
+            }),
+          },
+        },
+      ],
+    });
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "overview" });
+
+    expect(result).toEqual({ ok: false, state: "invalid-output" });
+  });
+
+  it("forces qualitative to null when the evidence is unavailable", async () => {
+    createCompletionMock.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              ...insight,
+              qualitative: {
+                summary: "Common terms recur across answers.",
+                implication: "Written feedback clusters around a few topics.",
+                sentiment: "neutral",
+                watchPoints: [],
+              },
+            }),
+          },
+        },
+      ],
+    });
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "overview" });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.data.qualitative).toBeNull();
   });
 });

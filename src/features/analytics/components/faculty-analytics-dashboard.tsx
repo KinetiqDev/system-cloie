@@ -43,6 +43,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import { generateFacultyAnalyticsInsightAction } from "@/lib/actions/faculty-analytics-actions";
@@ -70,6 +71,20 @@ const VIEW_LABELS: Record<FacultyAnalyticsView, string> = {
   qualitative: "Written feedback",
 };
 
+const SENTIMENT_LABELS = {
+  positive: "Positive",
+  negative: "Negative",
+  neutral: "Neutral",
+  mixed: "Mixed",
+} as const;
+
+const SENTIMENT_VARIANTS = {
+  positive: "success",
+  negative: "destructive",
+  neutral: "outline",
+  mixed: "warning",
+} as const;
+
 type Props = {
   data: FacultyAnalyticsData;
   options: FacultyAnalyticsOptions;
@@ -78,6 +93,10 @@ type Props = {
 export function FacultyAnalyticsDashboard({ data, options }: Props) {
   const [aiResult, setAiResult] = useState<GenerateFacultyAIInsightResult | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const scopedEvaluation = data.filters.evaluationId
+    ? (options.evaluations.find((item) => item.id === data.filters.evaluationId) ?? null)
+    : null;
 
   useEffect(() => {
     if (data.kpi.submittedResponseCount === 0) return;
@@ -90,10 +109,25 @@ export function FacultyAnalyticsDashboard({ data, options }: Props) {
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-3xl">
-          <h1 className="text-heading-lg text-balance">My evaluation analytics</h1>
+          {scopedEvaluation ? (
+            <Breadcrumbs
+              className="mb-3"
+              items={[
+                {
+                  label: "My evaluation analytics",
+                  href: analyticsHref({ ...data.filters, evaluationId: undefined }),
+                },
+                { label: scopedEvaluation.deploymentName },
+              ]}
+            />
+          ) : null}
+          <h1 className="text-heading-lg text-balance">
+            {scopedEvaluation ? scopedEvaluation.deploymentName : "My evaluation analytics"}
+          </h1>
           <p className="text-body-md text-text-secondary mt-2 text-pretty">
-            Review anonymous, combined results from evaluations for the classes you teach.
-            Individual students and individual submissions are never shown.
+            {scopedEvaluation
+              ? "Aggregated results for this evaluation across the classes you teach."
+              : "Review anonymous, combined results from evaluations for the classes you teach. Individual students and individual submissions are never shown."}
           </p>
         </div>
         <Badge variant="secondary" className="w-fit gap-1.5">
@@ -1021,14 +1055,35 @@ function AIOverview({
   if (insight)
     return (
       <div className="bg-information-soft border-information/25 rounded-lg border p-4">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Bot aria-hidden="true" className="size-4" />
           <h3 className="text-label-lg">AI-generated overview</h3>
+          <Badge variant={SENTIMENT_VARIANTS[insight.sentiment]} className="ml-auto">
+            <span className="sr-only">Overall sentiment:&nbsp;</span>
+            {SENTIMENT_LABELS[insight.sentiment]}
+          </Badge>
         </div>
-        <p className="text-body-md mt-2">{insight.observation}</p>
-        <p className="text-body-sm mt-3">
-          <span className="font-semibold">Worth checking:</span> {insight.worthChecking}
+        <p className="text-body-md mt-2">{insight.summary}</p>
+        <p className="text-body-sm text-text-secondary mt-2">
+          <span className="text-foreground font-semibold">What this suggests: </span>
+          {insight.implication}
         </p>
+        {insight.watchPoints.length > 0 ? (
+          <div className="mt-3">
+            <p className="text-label-sm font-semibold">Worth checking</p>
+            <ul className="mt-1 flex flex-col gap-1">
+              {insight.watchPoints.map((point) => (
+                <li key={point} className="text-body-sm flex items-start gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="bg-information mt-[0.45rem] size-1.5 shrink-0 rounded-full"
+                  />
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <p className="text-muted-foreground mt-3 text-xs">
           Based on {basis}. AI can be wrong. Use the chart and exact values as the evidence.
         </p>

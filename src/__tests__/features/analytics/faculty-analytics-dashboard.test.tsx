@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FacultyAnalyticsDashboard } from "@/features/analytics/components/faculty-analytics-dashboard";
 import type { FacultyAnalyticsData, FacultyAnalyticsOptions } from "@/features/analytics/types";
@@ -156,7 +156,7 @@ describe("FacultyAnalyticsDashboard", () => {
   });
 
   it("shows an accessible, reduced-motion-safe skeleton while AI interpretation is pending", async () => {
-    const { promise } = Promise.withResolvers<never>();
+    const { promise, resolve } = Promise.withResolvers<unknown>();
     generateInsightMock.mockReturnValue(promise);
     const loadingData: FacultyAnalyticsData = {
       ...data,
@@ -190,5 +190,87 @@ describe("FacultyAnalyticsDashboard", () => {
       expect(skeletons).toHaveLength(3);
       expect(skeletons[0]).toHaveClass("animate-pulse", "motion-reduce:animate-none");
     }
+    resolve({ ok: false, state: "disabled" });
+    await act(async () => {});
+  });
+  it("renders the AI overview with summary, implication, sentiment, and watch points", async () => {
+    generateInsightMock.mockReset();
+    generateInsightMock.mockResolvedValue({
+      ok: true,
+      data: {
+        participation: {
+          summary: "5 of 5 invited students submitted responses.",
+          implication: "Participation is complete, so the ratings represent the whole class.",
+          sentiment: "positive",
+          watchPoints: [],
+        },
+        ratings: {
+          summary: "Most ratings were 4 or 5 on the 1-5 scale.",
+          implication: "Respondents consistently chose the favorable descriptors.",
+          sentiment: "positive",
+          watchPoints: ["Compare distributions across terms."],
+        },
+        cilos: {
+          summary: "CILO ratings are consistent.",
+          implication: "No outcome trails its peers in this scope.",
+          sentiment: "neutral",
+          watchPoints: [],
+        },
+        questions: {
+          summary: "Question ratings are consistent.",
+          implication: "No single item stands apart from the rest.",
+          sentiment: "neutral",
+          watchPoints: [],
+        },
+        trends: {
+          summary: "No comparable trend periods exist yet.",
+          implication: "Trend interpretation needs another comparable period.",
+          sentiment: "neutral",
+          watchPoints: [],
+        },
+        qualitative: null,
+        evidence: {
+          submittedResponseCount: 1,
+          validRatingCount: 1,
+          qualitativeItemCount: 0,
+        },
+      },
+    });
+    const loadedData: FacultyAnalyticsData = {
+      ...data,
+      evaluations: [
+        {
+          id: "evaluation-1",
+          deploymentName: "End-of-term evaluation",
+          assignmentId: "assignment-1",
+          courseId: "course-1",
+          courseCode: "IT201",
+          courseTitle: "Data Structures",
+          classLabel: "BSIT · 2nd year · Morning",
+          programName: "BSIT",
+          termInstanceId: "term-1",
+          termInstanceLabel: "2026–2027 · 1st Semester",
+          status: "CLOSED",
+          responseCount: 1,
+          opportunityCount: 1,
+        },
+      ],
+      kpi: { ...data.kpi, submittedResponseCount: 1, validRatingCount: 1 },
+    };
+
+    render(<FacultyAnalyticsDashboard data={loadedData} options={options} />);
+    await act(async () => {
+      await vi.waitFor(() => expect(generateInsightMock).toHaveBeenCalled());
+    });
+    expect(
+      await screen.findByText("5 of 5 invited students submitted responses.")
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        /Participation is complete, so the ratings represent the whole class./
+      )
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Compare distributions across terms.")).toBeInTheDocument();
+    expect(await screen.findAllByText("Positive")).toHaveLength(2);
   });
 });
