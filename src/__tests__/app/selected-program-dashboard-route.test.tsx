@@ -356,6 +356,25 @@ describe("selected Program dashboard route", () => {
     ).toHaveAttribute("href", "/program-head/programs/p1/responses?tab=program-wide&status=ACTIVE");
   });
 
+  it("provides the four required Program Head workflow shortcuts", async () => {
+    await loadPage();
+    const workflows = screen.getByRole("navigation", { name: "Program workflows" });
+    expect(within(workflows).getByRole("link", { name: "Review responses" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/p1/responses"
+    );
+    expect(within(workflows).getByRole("link", { name: "Explore analytics" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/p1/analytics?tab=outcomes"
+    );
+    expect(
+      within(workflows).getByRole("link", { name: "Manage course assignments" })
+    ).toHaveAttribute("href", "/program-head/programs/p1/course-assignments");
+    expect(
+      within(workflows).getByRole("link", { name: "Manage learning outcomes" })
+    ).toHaveAttribute("href", "/program-head/programs/p1/outcomes");
+  });
+
   it("links header actions into Responses and Analytics", async () => {
     await loadPage();
     expect(screen.getByRole("link", { name: "View Responses" })).toHaveAttribute(

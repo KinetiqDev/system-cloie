@@ -30,11 +30,11 @@ type ProgramHeadInstrumentBreakdownChartProps = {
 /** Exact per-source values shared by the chart and its unrated empty state. */
 function InstrumentExactValuesTable({ rows }: { rows: ProgramHeadInstrumentBreakdownRowDTO[] }) {
   return (
-    <details>
-      <summary className="text-label-sm text-text-secondary cursor-pointer pointer-coarse:min-h-11">
-        View exact values
+    <details className="group">
+      <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11">
+        <span>View exact values</span>
       </summary>
-      <div className="border-border mt-3 overflow-x-auto rounded-lg border">
+      <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
         <Table aria-label="Exact values by instrument and evidence source">
           <TableHeader>
             <TableRow>
@@ -152,15 +152,19 @@ export function ProgramHeadInstrumentBreakdownChart({
   }
 
   return (
-    <div className="space-y-3">
-      <h3 id={titleId} className="text-title-sm text-foreground">
-        Mean Rating by Instrument and Evidence Source
-      </h3>
-      <p className="text-body-sm text-text-secondary">
-        One group per instrument version, one bar per evidence source. Sources are never pooled;
-        missing bars mean that source has no ratings for the instrument in this scope.
-      </p>
-      <div className="border-border h-72 w-full rounded-xl border p-3">
+    <div className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5">
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <div>
+          <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+            Mean Rating by Instrument and Evidence Source
+          </h3>
+          <p className="text-body-sm text-muted-foreground mt-0.5">
+            One group per instrument version, one bar per evidence source. Sources are never pooled.
+          </p>
+        </div>
+        <span className="text-muted-foreground text-xs font-medium">Instrument Comparison</span>
+      </div>
+      <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">
         <ChartContainer
           id={chartId}
           role="region"

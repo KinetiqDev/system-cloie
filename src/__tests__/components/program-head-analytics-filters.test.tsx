@@ -31,7 +31,7 @@ describe("ProgramHeadAnalyticsFilters", () => {
       />
     );
 
-    expect(screen.getByLabelText("Evidence source")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Evidence source").length).toBeGreaterThan(0);
     expect(screen.queryByLabelText("School Year")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Semester")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Academic Term")).not.toBeInTheDocument();
@@ -45,13 +45,12 @@ describe("ProgramHeadAnalyticsFilters", () => {
         options={options}
       />
     );
-
-    expect(screen.getByText("All periods")).toBeInTheDocument();
+    expect(screen.getAllByText("All periods").length).toBeGreaterThan(0);
 
     rerender(
       <ProgramHeadAnalyticsFilters
         programId="program-bsed"
-        filters={{ ...baseFilters, schoolYearId: "sy-2025" }}
+        filters={{ ...baseFilters, termInstanceId: "term-1" }}
         options={options}
       />
     );
@@ -60,11 +59,11 @@ describe("ProgramHeadAnalyticsFilters", () => {
     rerender(
       <ProgramHeadAnalyticsFilters
         programId="program-bsed"
-        filters={{ ...baseFilters, schoolYearId: "sy-2025", semester: "FIRST", termInstanceId: "term-1" }}
+        filters={{ ...baseFilters, termInstanceId: "term-1", evidenceSource: "COURSE" }}
         options={options}
       />
     );
-    expect(screen.getByText("3 active")).toBeInTheDocument();
+    expect(screen.getByText("2 active")).toBeInTheDocument();
   });
 
   it("submits the canonical analytics URL and preserves the active tab", () => {
@@ -92,12 +91,12 @@ describe("ProgramHeadAnalyticsFilters", () => {
     render(
       <ProgramHeadAnalyticsFilters
         programId="program-bsed"
-        filters={{ ...baseFilters, tab: "outcomes", schoolYearId: "sy-2025" }}
+        filters={{ ...baseFilters, tab: "outcomes", termInstanceId: "term-1" }}
         options={options}
       />
     );
 
-    const resetLinks = screen.getAllByRole("link", { name: "Reset" });
+    const resetLinks = screen.getAllByRole("link", { name: /Reset/ });
     for (const link of resetLinks) {
       expect(link).toHaveAttribute(
         "href",
@@ -115,15 +114,15 @@ describe("ProgramHeadAnalyticsFilters", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Filters/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Scope filters/ }));
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
 
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("Analytics scope filters")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("School Year")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Semester")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("School Year")).not.toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Semester")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Academic Term")).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Apply filters" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /Apply/ })).toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: "Reset" })).toBeInTheDocument();
   });
 });

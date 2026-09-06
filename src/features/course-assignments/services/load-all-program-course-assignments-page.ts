@@ -9,6 +9,7 @@ export type FacultyOption = {
   /** Opaque canonical account name (ADR 0014). No first/last aliases. */
   name: string;
   email: string;
+  programCodes: string[];
 };
 
 export type ProgramOption = {
@@ -46,10 +47,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
     prisma.schoolYear.findMany({
       include: {
         term_instances: {
-          orderBy: [
-            { semester: "asc" },
-            { term: "asc" },
-          ],
+          orderBy: [{ semester: "asc" }, { term: "asc" }],
         },
       },
       orderBy: { created_at: "desc" },
@@ -77,6 +75,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
     prisma.facultyProgramAffiliation.findMany({
       where: { is_active: true },
       select: {
+        program: { select: { code: true } },
         faculty: {
           select: {
             id: true,
@@ -88,14 +87,23 @@ export async function loadAllProgramCourseAssignmentsPageData(
     }),
   ]);
 
-  const availableFaculty = [
-    ...new Map(
-      faculty.map(({ faculty: f }) => [
-        f.id,
-        { id: f.id, name: f.name, email: f.email },
-      ])
-    ).values(),
-  ].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  const facultyById = new Map<string, FacultyOption>();
+  for (const affiliation of faculty) {
+    const current = facultyById.get(affiliation.faculty.id);
+    if (current) {
+      current.programCodes.push(affiliation.program.code);
+    } else {
+      facultyById.set(affiliation.faculty.id, {
+        id: affiliation.faculty.id,
+        name: affiliation.faculty.name,
+        email: affiliation.faculty.email,
+        programCodes: [affiliation.program.code],
+      });
+    }
+  }
+  const availableFaculty = [...facultyById.values()]
+    .map((option) => ({ ...option, programCodes: option.programCodes.sort() }))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
 
   // fallow-ignore-next-line code-duplication
   const termInstances: TermInstanceItem[] = schoolYears.flatMap((sy) =>
@@ -122,8 +130,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
     program_id: c.program_id,
   }));
 
-  const activeTermInstanceId =
-    termInstances.find((t) => t.status === "ACTIVE")?.id ?? null;
+  const activeTermInstanceId = termInstances.find((t) => t.status === "ACTIVE")?.id ?? null;
 
   return {
     availableCourses,

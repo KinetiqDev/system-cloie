@@ -325,10 +325,10 @@ function OutcomesExactValueTable({
                 </TableRow>,
                 <TableRow key={`${outcome.ploId}-detail`}>
                   <TableCell colSpan={7}>
-                    <details open={isSelected}>
+                    <details open={isSelected} className="group">
                       <summary
                         id={detailId}
-                        className="text-label-sm text-text-secondary cursor-pointer"
+                        className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring inline-flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11"
                       >
                         Details for {outcome.code}
                       </summary>

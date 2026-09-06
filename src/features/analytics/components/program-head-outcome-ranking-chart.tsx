@@ -92,11 +92,14 @@ export function ProgramHeadOutcomeRankingChart({
       : `Highest mean: ${ranked[0].code} (${ranked[0].value.toFixed(2)}). Lowest mean: ${ranked[ranked.length - 1].code} (${ranked[ranked.length - 1].value.toFixed(2)}).`;
 
   return (
-    <div className="space-y-3">
-      <h3 id={titleId} className="text-title-sm text-foreground">
-        {title}
-      </h3>
-      <div className="border-border h-72 w-full rounded-xl border p-3">
+    <div className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5">
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+          {title}
+        </h3>
+        <span className="text-muted-foreground text-xs font-medium">Ranked by Mean Rating</span>
+      </div>
+      <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">
         <ChartContainer
           id={chartId}
           role="region"
@@ -138,11 +141,11 @@ export function ProgramHeadOutcomeRankingChart({
       <p id={insightId} className="text-body-sm text-text-secondary">
         {insight}
       </p>
-      <details>
-        <summary className="text-label-sm text-text-secondary cursor-pointer">
-          View exact values
+      <details className="group">
+        <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden">
+          <span>View exact values</span>
         </summary>
-        <div className="border-border mt-3 overflow-x-auto rounded-lg border">
+        <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
           <Table aria-label="Ranked mean ratings by graduate outcome">
             <TableHeader>
               <TableRow>

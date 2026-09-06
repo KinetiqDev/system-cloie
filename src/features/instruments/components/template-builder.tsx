@@ -502,10 +502,11 @@ export function TemplateBuilder({
 
   const facultyMode = Boolean(facultyConfig);
   const effectiveTemplateType: EvaluationTemplateType = facultyMode ? "COURSE_BOUND" : templateType;
-  /** PLO question bindings are a Program-owned template concern only.
-   *  Program heads editing an institutional baseline may bind PLOs before
-   *  saving a program-owned copy (`onSaveAsCopy` marks that flow). */
+  /** PLO question bindings belong to Program-owned templates. The owning
+   *  Program Head flow supplies `ploOptions`, including an empty catalog when
+   *  no active PLOs exist. Institution-level builders do not supply it. */
   const programWideMode =
+    ploOptions !== undefined &&
     !facultyMode &&
     effectiveTemplateType === "PROGRAM_WIDE" &&
     (!isInstitutionalBaseline || Boolean(onSaveAsCopy));
@@ -2327,7 +2328,7 @@ function PloMultiSelect({
       id={`plo-binding-${questionKey}`}
       type="button"
       variant="outline"
-      className="w-full justify-between text-left font-normal"
+      className="border-input w-full justify-between text-left font-normal"
       aria-labelledby={labelId}
       aria-controls={listboxId}
       aria-haspopup="listbox"
@@ -2368,25 +2369,38 @@ function PloMultiSelect({
           No PLOs match your search.
         </p>
       ) : (
-        <ul className="space-y-0.5">
+        <ul className="space-y-1.5">
           {filteredOptions.map((plo) => {
             const isSelected = selectedSet.has(plo.id);
             return (
               <li
                 key={plo.id}
-                className="hover:bg-accent flex items-start gap-2 rounded-md px-2 py-1.5"
+                data-state={isSelected ? "selected" : undefined}
+                className={`flex items-start gap-2 rounded-md border px-2 py-1.5 transition-colors motion-reduce:transition-none pointer-coarse:py-2.5 ${
+                  isSelected
+                    ? "border-primary-border bg-selected-bg"
+                    : "hover:border-border hover:bg-accent border-transparent"
+                } focus-within:border-ring focus-within:ring-ring focus-within:ring-3`}
               >
                 <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2.5">
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggle(plo.id)}
-                    className="accent-primary mt-0.5 size-4 shrink-0"
+                    className="accent-primary mt-0.5 size-5 shrink-0 cursor-pointer focus-visible:outline-none pointer-coarse:size-6"
                     aria-label={`${plo.code}: ${plo.description}`}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold">{plo.code}</span>
-                    <span className="text-muted-foreground ml-2 text-sm">{plo.description}</span>
+                    <span
+                      className={`text-sm font-semibold ${isSelected ? "text-selected-fg" : ""}`}
+                    >
+                      {plo.code}
+                    </span>
+                    <span
+                      className={`ml-2 text-sm ${isSelected ? "text-selected-fg/80" : "text-muted-foreground"}`}
+                    >
+                      {plo.description}
+                    </span>
                   </span>
                 </label>
               </li>

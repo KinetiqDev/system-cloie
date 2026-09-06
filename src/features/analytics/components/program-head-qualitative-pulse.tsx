@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardDescription, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import type { QualitativePulse } from "@/features/analytics/services/get-program-head-dashboard";
@@ -21,18 +21,18 @@ export function ProgramHeadQualitativePulse({
   feedbackHref: string;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <div className="min-w-0">
-          <CardTitle className="text-base font-bold">Qualitative pulse</CardTitle>
-          <CardDescription>
-            Aggregated comments with source context; raw answers stay in Responses.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border px-3 py-2">
+    <section aria-labelledby="qualitative-pulse-heading" className="min-w-0">
+      <header className="mb-4 min-w-0">
+        <CardTitle id="qualitative-pulse-heading" className="text-title-md font-bold">
+          Qualitative pulse
+        </CardTitle>
+        <CardDescription>
+          Aggregated comments with source context; raw answers stay in Responses.
+        </CardDescription>
+      </header>
+      <div className="flex flex-col gap-4">
+        <dl className="border-border grid grid-cols-1 divide-y border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="py-3 sm:px-4 sm:first:pl-0">
             <dt className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase">
               Respondents
             </dt>
@@ -40,7 +40,7 @@ export function ProgramHeadQualitativePulse({
               {pulse.respondentCount.toLocaleString()}
             </dd>
           </div>
-          <div className="rounded-lg border px-3 py-2">
+          <div className="py-3 sm:px-4">
             <dt className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase">
               Qualitative answers
             </dt>
@@ -48,7 +48,7 @@ export function ProgramHeadQualitativePulse({
               {pulse.answerCount.toLocaleString()}
             </dd>
           </div>
-          <div className="rounded-lg border px-3 py-2">
+          <div className="py-3 sm:px-4 sm:last:pr-0">
             <dt className="text-muted-foreground text-label-sm font-bold tracking-wider uppercase">
               Evaluations
             </dt>
@@ -92,7 +92,7 @@ export function ProgramHeadQualitativePulse({
           Open qualitative analysis
           <ArrowRight data-icon="inline-end" aria-hidden="true" />
         </Link>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

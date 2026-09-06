@@ -102,6 +102,21 @@ describe("CalendarStructureView", () => {
     expect(screen.getAllByText("PLANNED").length).toBeGreaterThan(0);
   });
 
+  it("folds each School Year while keeping the active year open by default", () => {
+    render(<CalendarStructureView schoolYears={[schoolYear()]} />);
+
+    const trigger = screen.getByRole("button", {
+      name: "Toggle details for school year 2026-2027",
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("shows the Active badge and Deactivate for an active School Year", () => {
     render(<CalendarStructureView schoolYears={[schoolYear()]} />);
 
@@ -149,9 +164,7 @@ describe("CalendarStructureView", () => {
       />
     );
 
-    expect(
-      screen.getByText(/Archived Mar 18, 2025 · by Maria Santos/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Archived Mar 18, 2025 · by Maria Santos/)).toBeInTheDocument();
   });
 
   it("omits the archive metadata line when no audit record exists", () => {
@@ -164,9 +177,7 @@ describe("CalendarStructureView", () => {
     archiveSchoolYearActionMock.mockResolvedValue({ success: true });
     render(
       <CalendarStructureView
-        schoolYears={[
-          schoolYear({ code: "2024-2025", isActive: false, activeSemester: null }),
-        ]}
+        schoolYears={[schoolYear({ code: "2024-2025", isActive: false, activeSemester: null })]}
       />
     );
 

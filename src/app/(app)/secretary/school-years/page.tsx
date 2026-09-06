@@ -6,29 +6,26 @@ import { listSchoolYears } from "@/features/academic-calendar/services/list-scho
 import { SchoolYearsClientPage, type SchoolYearsTab } from "./client-page";
 
 export const metadata: Metadata = {
-  title: "School Years | Admin",
-  description: "Manage school years and academic terms",
+  title: "School Years | Secretary | System CLOIE",
+  description: "Manage school years and academic periods in System CLOIE",
 };
 
 interface SchoolYearsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function SchoolYearsPage({
-  searchParams,
-}: SchoolYearsPageProps) {
+export default async function SchoolYearsPage({ searchParams }: SchoolYearsPageProps) {
   const session = await resolveAuthSession();
 
   if (!session || !session.roles.includes(ROLES.SECRETARY)) {
     redirect("/dashboard");
   }
 
-  const [{ items: activeYears }, { items: archivedYears }, params] =
-    await Promise.all([
-      listSchoolYears({ includeArchived: false }),
-      listSchoolYears({ onlyArchived: true }),
-      searchParams,
-    ]);
+  const [{ items: activeYears }, { items: archivedYears }, params] = await Promise.all([
+    listSchoolYears({ includeArchived: false }),
+    listSchoolYears({ onlyArchived: true }),
+    searchParams,
+  ]);
 
   const initialTab: SchoolYearsTab = params.tab === "archived" ? "archived" : "active";
 

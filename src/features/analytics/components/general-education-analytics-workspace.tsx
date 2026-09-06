@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import {
   Bar,
@@ -13,10 +13,27 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ClipboardList, Inbox, MessageSquareText } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buttonVariants, Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Field, FieldLabel } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import {
   ChartContainer,
   ChartTooltip,
@@ -32,6 +49,16 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import {
+  BarChart3,
+  Calendar,
+  ClipboardList,
+  Filter,
+  Inbox,
+  MessageSquareText,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import {
   Table,
   TableBody,
@@ -54,73 +81,115 @@ const BASE_PATH = "/gen-ed-coordinator/analytics";
 function resetHref(): string {
   return BASE_PATH;
 }
-
 // fallow-ignore-next-line complexity
 export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { kpi, emptyReason, scope, periodOptions, courseBreakdowns, trends, feedback } = data;
   const resetClass = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
-  const hasOptions =
-    periodOptions.schoolYears.length > 0 ||
-    periodOptions.semesters.length > 0 ||
-    periodOptions.termInstances.length > 0;
+  const count = activeFilterCount(filters);
+  const hasPeriodOptions = periodOptions.termInstances.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-heading-lg">Analytics</h1>
-        <p className="text-text-secondary text-sm">
-          General Education evidence — Course-bound, submitted only, across Programs.
-          {scope.periodLabel ? <span> · {scope.periodLabel}</span> : null}
-        </p>
-      </div>
+      <header className="border-border/80 flex flex-col gap-3 border-b pb-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="bg-primary-soft text-selected-fg flex size-7 items-center justify-center rounded-lg">
+              <BarChart3 aria-hidden="true" className="size-4" />
+            </div>
+            <span className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
+              General Education Evidence
+            </span>
+          </div>
+          {scope.periodLabel ? (
+            <span className="bg-secondary text-secondary-foreground border-border/60 inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium">
+              {scope.periodLabel}
+            </span>
+          ) : null}
+        </div>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-heading-lg text-foreground tracking-tight text-balance">
+            General Education Analytics
+          </h1>
+          <p className="text-body-sm text-muted-foreground max-w-3xl text-pretty">
+            Cross-program Course-bound General Education evidence, evaluation attainment, trends,
+            and qualitative feedback.
+          </p>
+        </div>
+      </header>
 
-      {hasOptions ? (
-        <Card size="sm">
-          <CardHeader>
-            <CardTitle>Scope</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              method="get"
-              action={BASE_PATH}
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-            >
-              <Select
-                label="School Year"
-                name="schoolYearId"
-                value={filters.schoolYearId ?? ""}
-                options={periodOptions.schoolYears.map((o) => ({ value: o.id, label: o.label }))}
-                blankLabel="All school years"
-              />
-              <Select
-                label="Semester"
-                name="semester"
-                value={filters.semester ?? ""}
-                options={periodOptions.semesters}
-                blankLabel="All semesters"
-              />
-              <Select
-                label="Academic Term"
-                name="termInstanceId"
-                value={filters.termInstanceId ?? ""}
-                options={periodOptions.termInstances.map((o) => ({ value: o.id, label: o.label }))}
-                blankLabel="All terms"
-              />
-              <div className="flex items-end gap-2">
-                <button type="submit" className={cn(buttonVariants({ size: "sm" }))}>
-                  Apply
-                </button>
+      {hasPeriodOptions ? (
+        <div className="border-border/80 bg-card rounded-xl border shadow-xs transition-shadow">
+          <div className="border-border/60 flex min-w-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-primary-soft text-selected-fg flex size-7 items-center justify-center rounded-lg">
+                  <SlidersHorizontal aria-hidden="true" className="size-4" />
+                </div>
+                <h2 className="text-title-sm font-semibold tracking-tight">Evidence scope</h2>
+                {count > 0 ? (
+                  <Badge variant="secondary" className="font-medium">
+                    {count} {count === 1 ? "filter active" : "filters active"}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground text-xs font-normal">All periods</span>
+                )}
+              </div>
+              <p className="text-body-sm text-muted-foreground mt-1 text-pretty">
+                {count > 0
+                  ? "Showing analytics filtered by the selected academic term."
+                  : "Showing all available historical General Education evidence."}
+              </p>
+            </div>
+
+            {count > 0 ? (
+              <div className="hidden items-center gap-2 lg:flex">
                 <Link
                   href={resetHref()}
-                  className="text-link inline-flex min-h-11 items-center px-3 text-sm underline-offset-3 hover:underline"
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" }),
+                    "text-muted-foreground hover:text-foreground"
+                  )}
                 >
-                  Reset
+                  <X data-icon="inline-start" aria-hidden="true" className="size-3.5" />
+                  Reset filters
                 </Link>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            ) : null}
+          </div>
+
+          <div className="hidden p-4 sm:px-5 lg:block">
+            <FilterForm filters={filters} options={periodOptions} />
+          </div>
+
+          <div className="p-3 lg:hidden">
+            <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} showSwipeHandle>
+              <DrawerTrigger
+                render={
+                  <Button variant="outline" className="min-h-11 w-full justify-between sm:min-h-9">
+                    <span className="flex items-center gap-2">
+                      <Filter className="text-muted-foreground size-4" aria-hidden="true" />
+                      <span>Scope filters</span>
+                    </span>
+                    <span className="text-muted-foreground font-normal">
+                      {count > 0 ? `${count} active` : "All periods"}
+                    </span>
+                  </Button>
+                }
+              />
+              <DrawerContent className="max-h-[88dvh]">
+                <DrawerHeader className="border-border/60 border-b pb-3 text-left">
+                  <DrawerTitle>Analytics scope filters</DrawerTitle>
+                  <DrawerDescription>Choose the academic term to evaluate.</DrawerDescription>
+                </DrawerHeader>
+                <div className="overflow-y-auto px-4 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                  <FilterForm filters={filters} options={periodOptions} drawer />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          </div>
+        </div>
       ) : null}
 
       {/* Overview KPIs */}
@@ -158,7 +227,7 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
         </Empty>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[
           { label: "Submitted Responses", value: String(kpi.submittedResponseCount) },
           { label: "Opportunities", value: String(kpi.evaluationOpportunityCount) },
@@ -172,10 +241,12 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
             value: kpi.meanRating === null ? "—" : kpi.meanRating.toFixed(2),
           },
         ].map((card) => (
-          <Card key={card.label} size="sm">
-            <CardContent className="pt-4">
-              <p className="text-muted-foreground text-xs">{card.label}</p>
-              <p className="text-xl font-semibold tabular-nums">{card.value}</p>
+          <Card key={card.label} size="sm" className="border-border/80 bg-card shadow-2xs">
+            <CardContent className="pt-3.5 pb-3">
+              <p className="text-muted-foreground text-xs font-medium">{card.label}</p>
+              <p className="text-title-lg text-foreground mt-0.5 font-bold tracking-tight tabular-nums">
+                {card.value}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -225,39 +296,101 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
     </div>
   );
 }
+function activeFilterCount(filters: {
+  schoolYearId?: string;
+  semester?: string;
+  termInstanceId?: string;
+}): number {
+  return [filters.termInstanceId, filters.schoolYearId, filters.semester].filter(Boolean).length;
+}
 
-function Select({
-  label,
-  name,
-  value,
+function FilterForm({
+  filters,
   options,
-  blankLabel,
+  drawer = false,
 }: {
-  label: string;
-  name: string;
-  value: string;
-  options: Array<{ value: string; label: string }>;
-  blankLabel: string;
+  filters: { schoolYearId?: string; semester?: string; termInstanceId?: string };
+  options: GeneralEducationAnalyticsDTO["periodOptions"];
+  drawer?: boolean;
 }) {
-  if (options.length === 0) return null;
-  // Native select keeps the GET form working without JS (progressive enhancement).
-  // Keep h-11 for 44px touch target; shadcn Select would need hidden inputs for form submission.
+  const idPrefix = useId();
+  const termId = `${idPrefix}-term`;
+  const count = activeFilterCount(filters);
+  const termOptions = [{ value: "", label: "All academic terms" }].concat(
+    options.termInstances.map((o) => ({ value: o.id, label: o.label }))
+  );
+
   return (
-    <label className="flex min-w-0 flex-col gap-1.5 text-sm font-medium">
-      {label}
-      <select
-        name={name}
-        defaultValue={value}
-        className="border-border bg-background focus-visible:ring-ring h-11 rounded-lg border px-3 text-sm outline-none focus-visible:ring-2 pointer-coarse:min-h-11"
+    <form
+      method="get"
+      action={BASE_PATH}
+      className={cn(
+        drawer
+          ? "flex flex-col gap-4"
+          : "grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-12"
+      )}
+    >
+      <div className={cn(drawer ? "w-full" : "lg:col-span-8")}>
+        <Field className="gap-1.5">
+          <FieldLabel
+            htmlFor={termId}
+            className="text-label-sm text-foreground flex items-center gap-1.5 font-medium"
+          >
+            <Calendar className="text-muted-foreground size-3.5" aria-hidden="true" />
+            <span>Academic Term</span>
+          </FieldLabel>
+          <Select
+            name="termInstanceId"
+            defaultValue={filters.termInstanceId ?? ""}
+            items={termOptions}
+          >
+            <SelectTrigger
+              id={termId}
+              className="bg-background border-input/80 hover:border-input focus-visible:ring-ring min-h-10 w-full focus-visible:ring-2 sm:min-h-8"
+            >
+              <SelectValue placeholder="All academic terms" />
+            </SelectTrigger>
+            <SelectContent align="start" className="max-w-(--anchor-width) min-w-48">
+              <SelectGroup>
+                {termOptions.map((opt) => (
+                  <SelectItem key={opt.value || "all"} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+
+      <div
+        className={cn(
+          "flex items-center gap-2 pt-1",
+          drawer
+            ? "bg-background border-border/60 sticky bottom-0 border-t pt-3 pb-1"
+            : "lg:col-span-4 lg:justify-end"
+        )}
       >
-        <option value="">{blankLabel}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
+        <Button
+          type="submit"
+          size="default"
+          className={cn(drawer ? "min-h-11 flex-1 sm:min-h-9" : "w-28")}
+        >
+          Apply
+        </Button>
+        {count > 0 ? (
+          <Link
+            href={resetHref()}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "default" }),
+              drawer ? "min-h-11 px-4 sm:min-h-9" : "lg:hidden"
+            )}
+          >
+            Reset
+          </Link>
+        ) : null}
+      </div>
+    </form>
   );
 }
 
@@ -273,11 +406,21 @@ function CourseBreakdownSection({
   const titleId = `${chartId}-title`;
   const chartData = data.map((d) => ({ ...d, chartValue: d.value ?? 0 }));
   return (
-    <section aria-label="Course breakdown" className="space-y-3">
-      <h2 className="text-title-sm text-foreground">Mean Rating by Course</h2>
-      <p className="text-body-sm text-text-secondary">
-        Cross-program Course-bound General Education evidence only.
-      </p>
+    <section
+      aria-labelledby={titleId}
+      className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5"
+    >
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <div>
+          <h2 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+            Mean Rating by Course
+          </h2>
+          <p className="text-body-sm text-muted-foreground mt-0.5">
+            Cross-program Course-bound General Education evidence only.
+          </p>
+        </div>
+        <span className="text-muted-foreground text-xs font-medium">Course Breakdown</span>
+      </div>
       {ranked.length > 0 ? (
         <>
           <div className="border-border h-72 w-full rounded-xl border p-3">
@@ -408,11 +551,25 @@ function TrendsSection({ trends }: { trends: GeneralEducationAnalyticsDTO["trend
   const breakLabels = chartable
     .filter((p) => breakSet.has(p.periodLabel))
     .map((p) => p.periodLabel);
+  const titleId = `${chartId}-title`;
   return (
-    <section aria-label="Trends" className="space-y-3">
-      <h2 className="text-title-sm text-foreground">Trends</h2>
-      <div className="border-border h-72 w-full rounded-xl border p-3">
-        <ChartContainer id={chartId} role="region" className="aspect-auto h-full w-full">
+    <section
+      aria-labelledby={titleId}
+      className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5"
+    >
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <h2 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+          Trends
+        </h2>
+        <span className="text-muted-foreground text-xs font-medium">Period Comparison</span>
+      </div>
+      <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">
+        <ChartContainer
+          id={chartId}
+          role="region"
+          aria-labelledby={titleId}
+          className="aspect-auto h-full w-full"
+        >
           <LineChart data={data} margin={{ bottom: 10, left: 0, right: 0, top: 10 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis

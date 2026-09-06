@@ -1,6 +1,5 @@
 import { execSync, spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-
+import { lstatSync } from "node:fs";
 function run(cmd) {
   return execSync(cmd, { encoding: "utf8", stdio: "pipe" }).trim();
 }
@@ -56,7 +55,13 @@ export function getChangedFiles(baseRef) {
  * no longer exists.
  */
 export function existingFiles(paths) {
-  return paths.filter((f) => existsSync(f));
+  return paths.filter((f) => {
+    try {
+      return lstatSync(f).isFile();
+    } catch {
+      return false;
+    }
+  });
 }
 
 export function runCheck(label, cmd, args) {

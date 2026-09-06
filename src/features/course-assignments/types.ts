@@ -98,6 +98,7 @@ export type DeleteCourseAssignmentInput = {
 export type CourseAssignmentDeletionPreflight = {
   id: string;
   label: string;
+  fullLabel?: string;
   revision: string;
   membershipCount: number;
   activeMembershipCount: number;

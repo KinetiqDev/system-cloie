@@ -52,18 +52,27 @@ export default async function CourseResponseDetailPage({
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Breadcrumbs
-        items={[
-          { label: "Responses", href: responsesHref },
-          { label: "Course evaluations", href: responsesHref },
-          { label: response.evaluation.title, href: evaluationHref },
-          { label: response.respondent.name },
-        ]}
-      />
-      <Button render={<Link href={evaluationHref} />} variant="outline">
-        <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-        Back to evaluation
-      </Button>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div>
+          <Button
+            render={<Link href={evaluationHref} />}
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground -ml-2 w-fit gap-1.5"
+          >
+            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+            Back to evaluation
+          </Button>
+        </div>
+        <Breadcrumbs
+          items={[
+            { label: "Responses", href: responsesHref },
+            { label: "Course evaluations", href: responsesHref },
+            { label: response.evaluation.title, href: evaluationHref },
+            { label: response.respondent.name },
+          ]}
+        />
+      </div>
       <ResponseDetail
         response={response}
         evaluationHref={evaluationHref}

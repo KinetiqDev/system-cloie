@@ -45,7 +45,8 @@ test("empty states differentiate the reason", async ({ page }) => {
   // differentiated empty state.
   await page.getByRole("link", { name: "Analytics", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
-  await page.getByLabel("Evidence source").selectOption("ALUMNI");
+  await page.getByRole("combobox", { name: "Evidence source" }).click();
+  await page.getByRole("option", { name: "Alumni" }).click();
   await page.getByRole("button", { name: "Apply filters" }).click();
   await expect(page.getByText("No program-wide PLO evidence")).toBeVisible();
 });

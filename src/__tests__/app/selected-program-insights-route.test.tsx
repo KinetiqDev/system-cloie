@@ -203,13 +203,9 @@ describe("selected Program insights routes", () => {
 
     render(page);
 
-    expect(screen.getByLabelText("School Year")).toBeInTheDocument();
-    expect(screen.getByLabelText("Semester")).toBeInTheDocument();
     expect(screen.getByLabelText("Academic Term")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Reset" })).toHaveAttribute(
-      "href",
-      "/program-head/programs/program-bsed/analytics?tab=outcomes"
-    );
+    expect(screen.queryByLabelText("School Year")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Semester")).not.toBeInTheDocument();
   });
 
   it("redirects to canonical URL when tab is invalid", async () => {

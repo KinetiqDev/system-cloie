@@ -164,6 +164,25 @@ describe("SecretaryUsersList", () => {
     expect(screen.getByRole("combobox", { name: "Sort direction" })).toBeInTheDocument();
   });
 
+  it("offers the General Education Coordinator role filter", () => {
+    render(
+      <SecretaryUsersList
+        users={mockUsers}
+        total={2}
+        page={1}
+        pageSize={15}
+        query={{ page: 1, sort: "name", direction: "asc" }}
+        kpi={mockKPI}
+        programs={mockPrograms}
+        yearLevels={mockYearLevels}
+        currentUserId="admin-1"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Filter by role" }));
+    expect(screen.getByRole("option", { name: "Gen Ed Coordinator" })).toBeInTheDocument();
+  });
+
   it("navigates to the server-filtered search URL after debounce", async () => {
     replaceMock.mockClear();
     render(

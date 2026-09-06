@@ -90,7 +90,7 @@ describe("TemplateCollection", () => {
     expect(table.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
   });
 
-  test("uses a compact card list instead of a wide table on mobile", () => {
+  test("keeps list view as a horizontally scrollable table on mobile", () => {
     render(
       <TemplateCollection
         view="list"
@@ -105,14 +105,17 @@ describe("TemplateCollection", () => {
       />
     );
 
-    const mobileList = screen.getByRole("list", { name: "My Templates" });
-    const desktopTable = screen.getByRole("table", { name: "My Templates" });
+    const table = screen.getByRole("table", { name: "My Templates" });
+    const scrollRegion = table.closest('[data-slot="table-container"]');
 
-    expect(mobileList).toHaveClass("sm:hidden");
-    expect(desktopTable.closest(".hidden.sm\\:block")).not.toBeNull();
-    expect(within(mobileList).getByText("Program Evaluation")).toBeInTheDocument();
-    expect(within(mobileList).getByText("My copy")).toBeInTheDocument();
-    expect(within(mobileList).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(table).toHaveClass("min-w-[44rem]");
+    expect(scrollRegion).toHaveClass("overflow-x-auto");
+    expect(scrollRegion?.parentElement).toHaveClass("max-h-[70dvh]", "overflow-y-auto");
+    expect(scrollRegion).toHaveAttribute("tabindex", "0");
+    expect(screen.queryByRole("list", { name: "My Templates" })).not.toBeInTheDocument();
+    expect(within(table).getByText("Program Evaluation")).toBeInTheDocument();
+    expect(within(table).getByText("My copy")).toBeInTheDocument();
+    expect(within(table).getByRole("button", { name: "Edit" })).toBeInTheDocument();
   });
 
   test("renders section headings and omits empty sections", () => {
@@ -212,7 +215,7 @@ describe("TemplateCollection", () => {
       />
     );
 
-    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
-    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Actions" })).toHaveLength(1);
   });
 });

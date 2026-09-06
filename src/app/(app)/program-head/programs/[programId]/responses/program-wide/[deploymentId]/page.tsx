@@ -51,30 +51,33 @@ export default async function CentralEvaluationDetailPage({
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Breadcrumbs
-        items={
-          openedFromTools
-            ? [
-                { label: "Evaluation Tools", href: toolsHref },
-                { label: "Published", href: toolsHref },
-                { label: detail.evaluation.title },
-              ]
-            : [
-                { label: "Responses", href: responsesHref },
-                { label: "Program-wide evaluations", href: responsesHref },
-                { label: detail.evaluation.title },
-              ]
-        }
-      />
-      <div>
-        <Button
-          render={<Link href={openedFromTools ? toolsHref : responsesHref} />}
-          variant="outline"
-          size="sm"
-        >
-          <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-          {openedFromTools ? "Back to Evaluation Tools" : "Back to Program-wide evaluations"}
-        </Button>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div>
+          <Button
+            render={<Link href={openedFromTools ? toolsHref : responsesHref} />}
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground -ml-2 w-fit gap-1.5"
+          >
+            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
+            {openedFromTools ? "Back to Evaluation Tools" : "Back to Program-wide evaluations"}
+          </Button>
+        </div>
+        <Breadcrumbs
+          items={
+            openedFromTools
+              ? [
+                  { label: "Evaluation Tools", href: toolsHref },
+                  { label: "Published", href: toolsHref },
+                  { label: detail.evaluation.title },
+                ]
+              : [
+                  { label: "Responses", href: responsesHref },
+                  { label: "Program-wide evaluations", href: responsesHref },
+                  { label: detail.evaluation.title },
+                ]
+          }
+        />
       </div>
       <CentralEvaluationDetail
         detail={detail}

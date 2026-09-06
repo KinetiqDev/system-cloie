@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { SlidersHorizontal, X } from "lucide-react";
+import { useState, useId } from "react";
+import { Calendar, Filter, Layers, SlidersHorizontal, UserCheck, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -13,6 +13,15 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { Field, FieldLabel } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { ProgramHeadAnalyticsPeriodOptions } from "@/features/analytics/program-head-analytics-types";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
@@ -26,50 +35,50 @@ type Props = {
 
 export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const activeCount = [
-    filters.schoolYearId,
-    filters.semester,
-    filters.termInstanceId,
-    filters.evidenceSource,
-    filters.stakeholder,
-  ].filter(Boolean).length;
-  const hasPeriodOptions =
-    options.schoolYears.length > 0 ||
-    options.semesters.length > 0 ||
-    options.termInstances.length > 0;
+  const count = activeFilterCount(filters);
+  const hasPeriodOptions = options.termInstances.length > 0;
 
   return (
-    <div className="border-border bg-card rounded-xl border p-3 shadow-sm sm:p-4">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+    <div className="border-border/80 bg-card rounded-xl border shadow-xs transition-shadow">
+      <div className="border-border/60 flex min-w-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal aria-hidden="true" className="text-muted-foreground" />
-            <h2 className="text-title-sm font-semibold">Evidence scope</h2>
-            {activeCount > 0 ? <Badge variant="secondary">Filtered</Badge> : null}
+          <div className="flex items-center gap-2.5">
+            <div className="bg-primary-soft text-selected-fg flex size-7 items-center justify-center rounded-lg">
+              <SlidersHorizontal aria-hidden="true" className="size-4" />
+            </div>
+            <h2 className="text-title-sm font-semibold tracking-tight">Evidence scope</h2>
+            {count > 0 ? (
+              <Badge variant="secondary" className="font-medium">
+                {count} {count === 1 ? "filter active" : "filters active"}
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground text-xs font-normal">All periods</span>
+            )}
           </div>
-          <p className="text-body-sm text-muted-foreground mt-1">
-            {activeCount > 0
-              ? "Showing a filtered evidence set."
-              : "Showing all available evidence."}
+          <p className="text-body-sm text-muted-foreground mt-1 text-pretty">
+            {count > 0
+              ? "Showing analytics filtered by the selected academic term and evidence source."
+              : "Showing all historical evidence for this program across all terms."}
           </p>
         </div>
 
-        <div className="hidden items-center gap-2 lg:flex">
-          <Link
-            href={buildAnalyticsUrl(programId, { tab: filters.tab })}
-            aria-disabled={activeCount === 0}
-            className={cn(
-              buttonVariants({ variant: "ghost" }),
-              activeCount === 0 && "pointer-events-none opacity-60"
-            )}
-          >
-            <X data-icon="inline-start" aria-hidden="true" />
-            Reset
-          </Link>
-        </div>
+        {count > 0 ? (
+          <div className="hidden items-center gap-2 lg:flex">
+            <Link
+              href={buildAnalyticsUrl(programId, { tab: filters.tab })}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <X data-icon="inline-start" aria-hidden="true" className="size-3.5" />
+              Reset filters
+            </Link>
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-4 hidden lg:block">
+      <div className="hidden p-4 sm:px-5 lg:block">
         <FilterForm
           programId={programId}
           filters={filters}
@@ -78,39 +87,44 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
         />
       </div>
 
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerTrigger
-          render={
-            <Button variant="outline" className="mt-4 w-full justify-between lg:hidden">
-              <span>Filters</span>
-              <span className="text-muted-foreground">
-                {activeCount > 0 ? `${activeCount} active` : "All periods"}
-              </span>
-            </Button>
-          }
-        />
-        <DrawerContent className="max-h-[88dvh]">
-          <DrawerHeader className="text-left">
-            <DrawerTitle>Analytics scope filters</DrawerTitle>
-            <DrawerDescription>
-              Choose the evidence sources and academic period to include.
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-            <FilterForm
-              programId={programId}
-              filters={filters}
-              options={options}
-              hasPeriodOptions={hasPeriodOptions}
-              drawer
-            />
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <div className="p-3 lg:hidden">
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} showSwipeHandle>
+          <DrawerTrigger
+            render={
+              <Button variant="outline" className="min-h-11 w-full justify-between sm:min-h-9">
+                <span className="flex items-center gap-2">
+                  <Filter className="text-muted-foreground size-4" aria-hidden="true" />
+                  <span>Scope filters</span>
+                </span>
+                <span className="text-muted-foreground font-normal">
+                  {count > 0 ? `${count} active` : "All periods"}
+                </span>
+              </Button>
+            }
+          />
+          <DrawerContent className="max-h-[88dvh]">
+            <DrawerHeader className="border-border/60 border-b pb-3 text-left">
+              <DrawerTitle>Analytics scope filters</DrawerTitle>
+              <DrawerDescription>
+                Choose the academic term and evidence sources to evaluate.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="overflow-y-auto px-4 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+              <FilterForm
+                programId={programId}
+                filters={filters}
+                options={options}
+                hasPeriodOptions={hasPeriodOptions}
+                drawer
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </div>
     </div>
   );
 }
-
+// fallow-ignore-next-line complexity
 function FilterForm({
   programId,
   filters,
@@ -118,71 +132,106 @@ function FilterForm({
   drawer = false,
   hasPeriodOptions,
 }: Props & { drawer?: boolean; hasPeriodOptions: boolean }) {
+  const idPrefix = useId();
+  const sourceId = `${idPrefix}-source`;
+  const stakeholderId = `${idPrefix}-stakeholder`;
+  const termId = `${idPrefix}-term`;
+  const count = activeFilterCount(filters);
+
   return (
     <form
       method="get"
       action={buildAnalyticsUrl(programId)}
-      className={cn(drawer ? "flex flex-col gap-4" : "grid grid-cols-2 gap-3 xl:grid-cols-6")}
+      className={cn(
+        drawer
+          ? "flex flex-col gap-4"
+          : "grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-12"
+      )}
     >
       {filters.tab !== "outcomes" ? <input type="hidden" name="tab" value={filters.tab} /> : null}
-      <Select
-        label="Evidence source"
-        name="evidenceSource"
-        value={filters.evidenceSource}
-        options={[
-          { value: "COURSE", label: "Course evaluations" },
-          { value: "PROGRAM_WIDE_STUDENT", label: "Program-wide students" },
-          { value: "ALUMNI", label: "Alumni" },
-          { value: "INDUSTRY", label: "Industry partners" },
-        ]}
-        blank="All sources"
-      />
-      {filters.evidenceSource !== "COURSE" ? (
-        <Select
-          label="Stakeholder"
-          name="stakeholder"
-          value={filters.stakeholder}
+
+      <div className={cn(drawer ? "w-full" : "lg:col-span-4")}>
+        <FilterSelect
+          id={sourceId}
+          label="Evidence source"
+          name="evidenceSource"
+          value={filters.evidenceSource ?? ""}
+          blankLabel="All sources"
+          icon={<Layers className="text-muted-foreground size-3.5" aria-hidden="true" />}
           options={[
-            { value: "STUDENT", label: "Students" },
+            { value: "COURSE", label: "Course evaluations" },
+            { value: "PROGRAM_WIDE_STUDENT", label: "Program-wide students" },
             { value: "ALUMNI", label: "Alumni" },
-            { value: "INDUSTRY_PARTNER", label: "Industry partners" },
+            { value: "INDUSTRY", label: "Industry partners" },
           ]}
-          blank="All stakeholders"
         />
+      </div>
+
+      {filters.evidenceSource !== "COURSE" ? (
+        <div className={cn(drawer ? "w-full" : "lg:col-span-3")}>
+          <FilterSelect
+            id={stakeholderId}
+            label="Stakeholder"
+            name="stakeholder"
+            value={filters.stakeholder ?? ""}
+            blankLabel="All stakeholders"
+            icon={<UserCheck className="text-muted-foreground size-3.5" aria-hidden="true" />}
+            options={[
+              { value: "STUDENT", label: "Students" },
+              { value: "ALUMNI", label: "Alumni" },
+              { value: "INDUSTRY_PARTNER", label: "Industry partners" },
+            ]}
+          />
+        </div>
       ) : null}
+
       {hasPeriodOptions ? (
-        <>
-          <Select
-            label="School Year"
-            name="schoolYearId"
-            value={filters.schoolYearId}
-            options={options.schoolYears.map((item) => ({ value: item.id, label: item.label }))}
-            blank="All school years"
-          />
-          <Select
-            label="Semester"
-            name="semester"
-            value={filters.semester}
-            options={options.semesters}
-            blank="All semesters"
-          />
-          <Select
+        <div
+          className={cn(
+            drawer
+              ? "w-full"
+              : filters.evidenceSource !== "COURSE"
+                ? "lg:col-span-3"
+                : "lg:col-span-6"
+          )}
+        >
+          <FilterSelect
+            id={termId}
             label="Academic Term"
             name="termInstanceId"
-            value={filters.termInstanceId}
-            options={options.termInstances.map((item) => ({ value: item.id, label: item.label }))}
-            blank="All terms"
+            value={filters.termInstanceId ?? ""}
+            blankLabel="All academic terms"
+            icon={<Calendar className="text-muted-foreground size-3.5" aria-hidden="true" />}
+            options={options.termInstances.map((item) => ({
+              value: item.id,
+              label: item.label,
+            }))}
           />
-        </>
+        </div>
       ) : null}
-      <div className={cn("flex items-end gap-2", drawer && "bg-background sticky bottom-0 pt-2")}>
-        <Button type="submit" className={cn(drawer && "flex-1")}>
+
+      <div
+        className={cn(
+          "flex items-center gap-2 pt-1",
+          drawer
+            ? "bg-background border-border/60 sticky bottom-0 border-t pt-3 pb-1"
+            : "lg:col-span-2 lg:justify-end"
+        )}
+      >
+        <Button
+          type="submit"
+          size="default"
+          className={cn(drawer ? "min-h-11 flex-1 sm:min-h-9" : "w-full")}
+        >
           Apply filters
         </Button>
-        {drawer && activeCount(filters) > 0 ? (
+        {count > 0 ? (
           <Link
             href={buildAnalyticsUrl(programId, { tab: filters.tab })}
-            className={buttonVariants({ variant: "outline" })}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "default" }),
+              drawer ? "min-h-11 px-4 sm:min-h-9" : "lg:hidden"
+            )}
           >
             Reset
           </Link>
@@ -192,44 +241,63 @@ function FilterForm({
   );
 }
 
-function activeCount(filters: AnalyticsFilterState): number {
+function activeFilterCount(filters: AnalyticsFilterState): number {
   return [
+    filters.termInstanceId,
     filters.schoolYearId,
     filters.semester,
-    filters.termInstanceId,
     filters.evidenceSource,
     filters.stakeholder,
   ].filter(Boolean).length;
 }
 
-function Select({
+type OptionItem = { value: string; label: string };
+
+function FilterSelect({
+  id,
   label,
   name,
   value,
+  blankLabel,
   options,
-  blank,
+  icon,
 }: {
+  id: string;
   label: string;
   name: string;
-  value?: string;
-  options: Array<{ value: string; label: string }>;
-  blank: string;
+  value: string;
+  blankLabel: string;
+  options: OptionItem[];
+  icon?: React.ReactNode;
 }) {
+  const allOptions = [{ value: "", label: blankLabel }, ...options];
+
   return (
-    <label className="text-label-md text-foreground flex min-w-0 flex-col gap-1.5">
-      {label}
-      <select
-        name={name}
-        defaultValue={value ?? ""}
-        className="border-input bg-background text-body-sm focus-visible:border-ring focus-visible:ring-ring h-9 min-w-0 rounded-lg border px-3 outline-none focus-visible:ring-3"
+    <Field className="gap-1.5">
+      <FieldLabel
+        htmlFor={id}
+        className="text-label-sm text-foreground flex items-center gap-1.5 font-medium"
       >
-        <option value="">{blank}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+        {icon}
+        <span>{label}</span>
+      </FieldLabel>
+      <Select name={name} defaultValue={value} items={allOptions}>
+        <SelectTrigger
+          id={id}
+          className="bg-background border-input/80 hover:border-input focus-visible:ring-ring min-h-10 w-full focus-visible:ring-2 sm:min-h-8"
+        >
+          <SelectValue placeholder={blankLabel} />
+        </SelectTrigger>
+        <SelectContent align="start" className="max-w-(--anchor-width) min-w-48">
+          <SelectGroup>
+            {allOptions.map((opt) => (
+              <SelectItem key={opt.value || "all"} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
   );
 }

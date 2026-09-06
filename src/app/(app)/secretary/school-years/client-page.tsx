@@ -55,17 +55,17 @@ export function SchoolYearsClientPage({
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">School Years</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage academic years, semesters, and their terms
+    <div className="container mx-auto flex w-full max-w-6xl flex-col gap-6 py-4 sm:py-6">
+      <div className="flex max-w-3xl flex-col gap-2">
+        <h1 className="text-heading-lg tracking-tight text-balance">School Years</h1>
+        <p className="text-body-sm text-text-secondary leading-relaxed text-pretty">
+          Manage academic years, semesters, and their terms.
         </p>
       </div>
 
       <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList variant="line" className="h-auto gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <TabsList variant="line" className="h-auto w-full justify-start gap-5 sm:w-auto">
             <TabsTrigger value="active" className="px-1 py-2.5 text-sm">
               Active
             </TabsTrigger>
@@ -74,17 +74,17 @@ export function SchoolYearsClientPage({
             </TabsTrigger>
           </TabsList>
 
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={() => setOpen(true)} className="w-full sm:w-auto">
+            <Plus data-icon="inline-start" aria-hidden="true" />
             Create School Year
           </Button>
         </div>
 
-        <TabsContent value="active" className="pt-6">
+        <TabsContent value="active" className="pt-2 sm:pt-4">
           <CalendarStructureView schoolYears={initialActive} />
         </TabsContent>
 
-        <TabsContent value="archived" className="pt-6">
+        <TabsContent value="archived" className="pt-2 sm:pt-4">
           {initialArchived.length === 0 ? (
             <Empty>
               <EmptyHeader>
@@ -97,11 +97,7 @@ export function SchoolYearsClientPage({
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleTabChange("active")}
-                >
+                <Button variant="outline" size="sm" onClick={() => handleTabChange("active")}>
                   View active school years
                 </Button>
               </EmptyContent>
@@ -112,11 +108,7 @@ export function SchoolYearsClientPage({
         </TabsContent>
       </Tabs>
 
-      <SchoolYearForm
-        open={open}
-        onOpenChange={setOpen}
-        onSuccess={() => setOpen(false)}
-      />
+      <SchoolYearForm open={open} onOpenChange={setOpen} onSuccess={() => setOpen(false)} />
     </div>
   );
 }

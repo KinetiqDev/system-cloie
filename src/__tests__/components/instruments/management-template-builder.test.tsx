@@ -49,6 +49,7 @@ describe("ManagementTemplateBuilder", () => {
 
     expect(screen.getByText("Template Settings")).toBeInTheDocument();
     expect(screen.queryByText("CILO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
   });
 
   test("saves Secretary instrument templates in place", async () => {
