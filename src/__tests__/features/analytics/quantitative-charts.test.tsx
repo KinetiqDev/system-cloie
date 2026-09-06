@@ -2,9 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { CourseMeanPieChart } from "@/features/analytics/components/course-mean-pie-chart";
 import { StakeholderMeanPieChart } from "@/features/analytics/components/stakeholder-mean-pie-chart";
-import { FacultyCiloAnalyticsChart } from "@/features/analytics/components/faculty-cilo-analytics-chart";
 import { MeanBarChart } from "@/features/analytics/components/mean-bar-chart";
-import type { FacultyAnalyticsData } from "@/features/analytics/types";
 
 function sectorFills(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll(".recharts-pie-sector path")).map(
@@ -126,100 +124,6 @@ describe("StakeholderMeanPieChart", () => {
     const exactTable = container.querySelector("table");
     expect(exactTable!.textContent).toContain("4.42");
     expect(exactTable!.textContent).toContain("128");
-  });
-});
-
-describe("FacultyCiloAnalyticsChart", () => {
-  const baseEval: FacultyAnalyticsData = {
-    evaluationId: "e1",
-    deploymentName: "Deployment",
-    courseTitle: "Course",
-    programName: "Program",
-    termInstanceLabel: "2025-2026",
-    status: "ACTIVE",
-    overallMean: 4.2,
-    responseCount: 10,
-    totalAssignments: 10,
-    qualitativeItemCount: 0,
-    ciloMetrics: [],
-    quantitativeQuestions: [],
-    wordCloudTokens: [],
-  };
-
-  const data: FacultyAnalyticsData[] = [
-    {
-      ...baseEval,
-      ciloMetrics: [
-        {
-          ciloId: "c1",
-          ciloLabel: "Analyze problems",
-          ciloDescription: "Applies analysis",
-          bindingId: "b1",
-          mean: 4.5,
-          responseCount: 2,
-        },
-        {
-          ciloId: "c2",
-          ciloLabel: "Design solutions",
-          ciloDescription: "Creates designs",
-          bindingId: "b2",
-          mean: 3.0,
-          responseCount: 1,
-        },
-        {
-          ciloId: "c3",
-          ciloLabel: "Communicate results",
-          ciloDescription: "Writes reports",
-          bindingId: "b3",
-          mean: 4.0,
-          responseCount: 1,
-        },
-        {
-          ciloId: "c4",
-          ciloLabel: "Work in teams",
-          ciloDescription: "Collaborates",
-          bindingId: "b4",
-          mean: 3.5,
-          responseCount: 1,
-        },
-        {
-          ciloId: "c5",
-          ciloLabel: "Ethical practice",
-          ciloDescription: "Applies ethics",
-          bindingId: "b5",
-          mean: 4.2,
-          responseCount: 1,
-        },
-        {
-          ciloId: "c6",
-          ciloLabel: "Critical thinking",
-          ciloDescription: "Evaluates",
-          bindingId: "b6",
-          mean: 3.8,
-          responseCount: 1,
-        },
-      ],
-    },
-  ];
-
-  it("renders an empty state when no CILO data exists", () => {
-    render(<FacultyCiloAnalyticsChart data={[{ ...baseEval, ciloMetrics: [] }]} />);
-
-    expect(screen.getByText("No CILO data yet")).toBeInTheDocument();
-  });
-
-  it("aggregates, resolves semantic fills, and hatches beyond five categories", () => {
-    const { container } = render(<FacultyCiloAnalyticsChart data={data} />);
-
-    const fills = sectorFills(container);
-    expect(fills[0]).toBe("var(--chart-1)");
-    expect(fills[5]).toMatch(/^url\(#cilo-mean-[A-Za-z0-9_]+-hatch-0-c1\)$/);
-    expect(screen.getByText("Analyze problems: 4.5")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Highest attainment: Analyze problems \(4\.5\)\. Lowest attainment: Design solutions \(3\)\./
-      )
-    ).toBeInTheDocument();
   });
 });
 

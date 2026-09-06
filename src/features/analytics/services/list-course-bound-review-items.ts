@@ -39,11 +39,7 @@ export async function listCourseBoundReviewItems(
 
   const evaluations = await prisma.courseBoundEvaluation.findMany({
     where: {
-      ...buildReviewerEvaluationScope({
-        programScope,
-        reviewerId: authSession.userId,
-        reviewerRole,
-      }),
+      ...buildReviewerEvaluationScope({ programScope }),
       assignments: {
         some: {
           response: {

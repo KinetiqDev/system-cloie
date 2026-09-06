@@ -49,17 +49,18 @@ describe("navigation helpers", () => {
     ).toBeUndefined();
   });
 
-  it("orders faculty navigation correctly", () => {
-    expect(getMainNavByRoles([ROLES.FACULTY]).map((item) => item.name)).toEqual([
+  it("places Analytics in faculty navigation without legacy review links", () => {
+    const facultyNav = getMainNavByRoles([ROLES.FACULTY]);
+    expect(facultyNav.map((item) => item.name)).toEqual([
       "Dashboard",
       "My Course Rosters",
       "Manage CILOs",
       "Tools",
+      "Analytics",
       "Profile",
     ]);
-    expect(getMainNavByRoles([ROLES.FACULTY]).map((item) => item.href)).not.toContain(
-      "/faculty/analytics"
-    );
+    expect(facultyNav.map((item) => item.href)).toContain("/faculty/analytics");
+    expect(facultyNav.map((item) => item.href)).not.toContain("/faculty/cilo-evaluations");
   });
 
   it("does not include cilo-reviews in program head and dean nav", () => {

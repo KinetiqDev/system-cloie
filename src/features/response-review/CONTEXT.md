@@ -1,16 +1,20 @@
 # Response Review
 
-Response Review defines how System CLOIE surfaces submitted evaluation responses for review: an identified Program Head flow and an anonymized flow for Faculty and Dean, the outcome binding of each submitted quantitative answer, and aggregate qualitative summarization.
+Response Review defines how System CLOIE surfaces submitted evaluation responses for authorized review: identified Program Head detail, anonymized Dean review, and aggregate-only Faculty analytics. It also owns the outcome binding of each submitted quantitative answer and aggregate qualitative summarization.
 
 ## Review flows
 
 **Identified review**:
-The Program Head review flow serving submitted-response detail with respondent identity and academic context (student, alumni, or industry context). Identity fields live only in Program Head DTOs, which sit in a distinct feature boundary so respondent identity can never join a shared Faculty-facing DTO.
+The Program Head review flow serving submitted-response detail with respondent identity and academic context (student, alumni, or industry context). Identity fields live only in Program Head DTOs, which sit in a distinct feature boundary so respondent identity can never join a Faculty-facing DTO.
 _Avoid_: Faculty review with identity, de-anonymized Faculty flow
 
-**Anonymized review**:
-The Faculty and Dean review flow over the same submitted responses without respondent identity; it keeps an anonymized respondent label rather than the identified shape. Faculty and Dean never receive the identified detail DTO.
-_Avoid_: Identified Faculty review
+**Anonymized Dean review**:
+The Dean review flow over submitted responses without respondent identity; it keeps an anonymized respondent label rather than the identified shape. Dean never receives the identified detail DTO.
+_Avoid_: Identified Dean review
+
+**Aggregate-only Faculty review**:
+Faculty review submitted evidence only through the Faculty Analytics aggregate contract. Faculty receive no anonymized respondent label, response card, individual answer set, or raw qualitative comment; retired Faculty detail routes redirect to the matching aggregate evaluation scope.
+_Avoid_: Faculty response detail, anonymized Faculty respondent, raw Faculty comment
 
 **SUBMITTED gate**:
 Identified response bodies are served only after status SUBMITTED, with PROGRAM_HEAD role, a resolved selected-Program context, and membership of the response in that Program (course-bound or program-wide). IN_PROGRESS bodies are never fetched.

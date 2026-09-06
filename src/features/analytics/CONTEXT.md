@@ -2,6 +2,28 @@
 
 Analytics defines how System CLOIE presents stakeholder-evaluation evidence for monitoring and continuous quality improvement without treating ratings as individual mastery or grades.
 
+## Faculty analytics surface
+
+**Faculty evaluation evidence**:
+Aggregate-only Course-bound evaluation evidence for Course Assignments owned by the active Faculty member, regardless of whether that Faculty member, a Dean, or a Secretary published the evaluation. Only submitted responses contribute. Faculty affiliation alone grants no evidence access.
+_Avoid_: Deployer-owned evidence, affiliation-wide evidence, another Faculty member's class
+
+**Faculty analytics workspace**:
+The URL-filtered `Overview`, `CILO results`, `Question results`, `Trends`, and `Written feedback` views over faculty-owned evaluation evidence. Means pool valid raw ratings within one compatible frozen scale; incompatible scales remain separate. Response rate uses historical EvaluationAssignment opportunities, and a scope with no opportunities reports unavailable.
+_Avoid_: Evaluation checkbox dashboard, mean of means, CILO attainment claim, cross-course trend
+
+**Faculty aggregate-only review**:
+Faculty receive no individual-response route or DTO. Retired Faculty Course-bound review deep links redirect to the matching aggregate Analytics scope. Browser payloads contain no respondent label, response identifier, roster record, raw rating row, or raw written comment.
+_Avoid_: Anonymized response card, individual Faculty response review, raw comment drill-through
+
+**Faculty qualitative confidentiality floor**:
+Written-feedback analytics require at least five distinct submitted respondents in the currently filtered scope. Below five, word-cloud tokens, ranked terms, prompt counts, themes, sentiment, and qualitative AI evidence are withheld. At or above five, only identifier-redacted terms mentioned more than once can reach the Faculty browser or AI packet.
+_Avoid_: Lifetime evaluation threshold, answer-count threshold, singleton term, threshold countdown
+
+**Faculty inline AI overview**:
+One automatic, non-persisted request rebuilds and re-authorizes the current Faculty filter scope server-side, sends one bounded aggregate packet, and returns section-keyed interpretations displayed beneath deterministic charts. Disabled, insufficient, timeout, and provider-error states never block verified analytics.
+_Avoid_: One request per chart, manual first-generation button, stale interpretation, persisted insight
+
 ## Program Head analytics surface (shipped contract)
 
 **Program Head analytics tabs**:

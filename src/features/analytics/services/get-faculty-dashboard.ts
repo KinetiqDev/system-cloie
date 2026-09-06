@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { countEligibleCourseBoundEvaluationAssignments } from "@/features/course-assignments/services/course-assignment-roster";
 import { ROLES } from "@/lib/constants/roles";
+import { FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS } from "./get-faculty-analytics-data";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { buildRedactedWordCloudTokens } from "./qualitative-analytics";
 import { groupRatingsByScale } from "../aggregators/quantitative";
@@ -114,8 +115,6 @@ type SubmittedResponse = {
   status: ResponseStatus;
   quant_items: Array<{ rating_value: number; section_key: string; item_key: string }>;
 };
-
-const MINIMUM_ANONYMIZED_RESPONSE_COUNT = 3;
 
 function roundToTwo(value: number): number {
   return Math.round(value * 100) / 100;
@@ -308,7 +307,8 @@ function collectRatingEvidence(evaluations: EvaluationRow[]): RatingEvidence {
   );
   const distinctRatedResponses = new Set(resolvedEntries.map((entry) => entry.responseId)).size;
   const singleMetric =
-    scaleGroups.length === 1 && distinctRatedResponses >= MINIMUM_ANONYMIZED_RESPONSE_COUNT
+    scaleGroups.length === 1 &&
+    distinctRatedResponses >= FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS
       ? scaleGroups[0].metric
       : null;
   return { resolvedEntries, scaleGroups, distinctRatedResponses, singleMetric };
@@ -359,7 +359,8 @@ function buildFacultyKpi({
     overallScaleMax: singleMetric ? (scaleGroups[0].scale?.max ?? null) : null,
     overallRatingCount: singleMetric ? resolvedEntries.length : 0,
     spansMultipleScales:
-      distinctRatedResponses >= MINIMUM_ANONYMIZED_RESPONSE_COUNT && scaleGroups.length > 1,
+      distinctRatedResponses >= FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS &&
+      scaleGroups.length > 1,
     pendingResponses,
   };
 }
@@ -440,7 +441,7 @@ function buildCourseOverviewEvidence(
   const resolvedEntries = entries.filter((entry) => entry.scale !== null);
   const groups = groupRatingsByScale(resolvedEntries);
   const distinctResponses = new Set(resolvedEntries.map((entry) => entry.rating.responseId)).size;
-  const mayDisplayEvidence = distinctResponses >= MINIMUM_ANONYMIZED_RESPONSE_COUNT;
+  const mayDisplayEvidence = distinctResponses >= FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS;
   return {
     evaluationId: evaluation?.id ?? null,
     evaluationStatus: evaluation?.status ?? null,
@@ -558,7 +559,7 @@ function buildQualitativeSummary(
     qualitativeResponseCount,
     qualitativeEvaluationCount: evaluationIds.size,
     wordCloudTokens:
-      qualitativeResponseCount >= MINIMUM_ANONYMIZED_RESPONSE_COUNT
+      qualitativeResponseCount >= FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS
         ? buildRedactedWordCloudTokens(texts)
         : [],
   };
@@ -627,7 +628,7 @@ function buildCourseEvidence(
     for (const group of groups) {
       if (
         group.metric.mean === null ||
-        group.metric.responseCount < MINIMUM_ANONYMIZED_RESPONSE_COUNT
+        group.metric.responseCount < FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS
       )
         continue;
       courseEvidence.push({

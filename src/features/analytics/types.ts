@@ -1,6 +1,6 @@
 import type { Role } from "@/lib/constants/roles";
 
-export type ReviewerRole = Extract<Role, "FACULTY" | "PROGRAM_HEAD" | "DEAN">;
+export type ReviewerRole = Extract<Role, "PROGRAM_HEAD" | "DEAN">;
 
 export type CourseBoundReviewListItem = {
   evaluationId: string;
@@ -103,71 +103,126 @@ export type CourseBoundResponseReview = {
   sections: CourseBoundResponseSection[];
 };
 
-// ─── Faculty Analytics Types ───────────────────────────────────────────────
+// Faculty Analytics is aggregate-only. No response, respondent, roster, or raw-comment
+// shape belongs in this contract.
+export const FACULTY_ANALYTICS_VIEWS = [
+  "overview",
+  "cilos",
+  "questions",
+  "trends",
+  "qualitative",
+] as const;
+
+export type FacultyAnalyticsView = (typeof FACULTY_ANALYTICS_VIEWS)[number];
+
+export type FacultyAnalyticsFilters = {
+  termInstanceId?: string;
+  courseId?: string;
+  assignmentId?: string;
+  evaluationId?: string;
+  status?: "ACTIVE" | "CLOSED";
+  view: FacultyAnalyticsView;
+};
 
 export type FacultyAnalyticsEvaluationItem = {
   id: string;
   deploymentName: string;
+  assignmentId: string;
   courseId: string;
   courseCode: string;
   courseTitle: string;
-  programId: string;
+  classLabel: string;
   programName: string;
+  termInstanceId: string;
   termInstanceLabel: string;
-  schoolYearCode: string;
   status: string;
-  publishedAt: Date | null;
   responseCount: number;
-  totalAssignments: number;
+  opportunityCount: number;
+};
+
+export type FacultyScaleDistribution = {
+  scaleKey: string;
+  scaleLabel: string;
+  scaleMin: number;
+  scaleMax: number;
+  mean: number | null;
+  ratingCount: number;
+  responseCount: number;
+  excludedRatingCount: number;
+  categories: Array<{
+    value: number;
+    label: string;
+    count: number;
+    percentage: number;
+  }>;
 };
 
 export type FacultyCiloMetric = {
+  key: string;
   ciloId: string | null;
-  ciloLabel: string;
-  ciloDescription: string;
-  bindingId: string;
-  mean: number | null;
-  responseCount: number;
+  label: string;
+  description: string;
+  questionPrompt: string;
+  scaleGroups: FacultyScaleDistribution[];
 };
 
-export type FacultyQuantitativeQuestion = {
-  sectionKey: string;
+export type FacultyQuestionMetric = {
+  key: string;
   sectionTitle: string;
-  itemKey: string;
   prompt: string;
-  mean: number | null;
-  min: number | null;
-  max: number | null;
-  responseCount: number;
+  ciloLabel: string | null;
+  scaleGroups: FacultyScaleDistribution[];
 };
 
-export type FacultyQualitativeItem = {
-  sectionKey: string;
-  promptKey: string;
-  prompt: string;
-  textContent: string;
+export type FacultyTrendPoint = {
+  key: string;
+  courseId: string;
+  courseCode: string;
+  periodLabel: string;
+  mean: number | null;
+  responseCount: number;
+  ratingCount: number;
+  scaleLabel: string | null;
+  comparableWithPrevious: boolean;
+  breakReason: string | null;
 };
 
 export type FacultyAnalyticsData = {
-  evaluationId: string;
-  deploymentName: string;
-  courseTitle: string;
-  programName: string;
-  termInstanceLabel: string;
-  status: string;
-  overallMean: number | null;
-  responseCount: number;
-  totalAssignments: number;
+  filters: FacultyAnalyticsFilters;
+  scopeLabel: string;
+  evaluations: FacultyAnalyticsEvaluationItem[];
+  kpi: {
+    submittedResponseCount: number;
+    opportunityCount: number;
+    responseRate: number | null;
+    validRatingCount: number;
+    overallMean: number | null;
+    overallScaleLabel: string | null;
+    overallScaleMax: number | null;
+    spansMultipleScales: boolean;
+  };
+  ratingDistributions: FacultyScaleDistribution[];
   ciloMetrics: FacultyCiloMetric[];
-  quantitativeQuestions: FacultyQuantitativeQuestion[];
-  qualitativeItemCount: number;
-  wordCloudTokens: WordCloudToken[];
+  questionMetrics: FacultyQuestionMetric[];
+  trends: FacultyTrendPoint[];
+  qualitative: {
+    available: boolean;
+    submittedResponseCount: number;
+    responseCount: number;
+    itemCount: number;
+    evaluationCount: number;
+    tokens: WordCloudToken[];
+    promptCounts: Array<{ prompt: string; itemCount: number; responseCount: number }>;
+  };
 };
 
-export type ListFacultyAnalyticsEvaluationsResult =
-  | { success: true; evaluations: FacultyAnalyticsEvaluationItem[] }
-  | { success: false; error: string };
+export type FacultyAnalyticsOptions = {
+  terms: Array<{ id: string; label: string }>;
+  courses: Array<{ id: string; label: string }>;
+  assignments: Array<{ id: string; courseId: string; termInstanceId: string; label: string }>;
+  evaluations: FacultyAnalyticsEvaluationItem[];
+};
 
 export type GetFacultyAnalyticsDataResult =
-  | { success: true; data: FacultyAnalyticsData[] }
+  | { success: true; data: FacultyAnalyticsData }
   | { success: false; error: string };

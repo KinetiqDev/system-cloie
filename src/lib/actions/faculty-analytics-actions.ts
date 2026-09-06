@@ -1,23 +1,34 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import {
-  listFacultyAnalyticsEvaluations,
-  FacultyAnalyticsFilters,
-} from "@/features/analytics/services/list-faculty-analytics-evaluations";
+import { z } from "zod";
 import { getFacultyAnalyticsData } from "@/features/analytics/services/get-faculty-analytics-data";
+import { generateFacultyAnalyticsInsight } from "@/features/analytics/services/generate-faculty-analytics-insight";
+import { FACULTY_ANALYTICS_VIEWS, type FacultyAnalyticsFilters } from "@/features/analytics/types";
 
-export async function listFacultyAnalyticsEvaluationsAction(filters: FacultyAnalyticsFilters = {}) {
-  const result = await listFacultyAnalyticsEvaluations(filters);
-  return result;
+const filtersSchema = z
+  .object({
+    view: z.enum(FACULTY_ANALYTICS_VIEWS).optional(),
+    termInstanceId: z.string().uuid().optional(),
+    courseId: z.string().uuid().optional(),
+    assignmentId: z.string().uuid().optional(),
+    evaluationId: z.string().uuid().optional(),
+    status: z.enum(["ACTIVE", "CLOSED"]).optional(),
+  })
+  .strict();
+
+function parseFilters(input: unknown): Partial<FacultyAnalyticsFilters> | null {
+  const parsed = filtersSchema.safeParse(input);
+  return parsed.success ? parsed.data : null;
 }
 
-export async function getFacultyAnalyticsDataAction(evaluationIds: string[]) {
-  const result = await getFacultyAnalyticsData(evaluationIds);
+export async function getFacultyAnalyticsDataAction(input: unknown) {
+  const filters = parseFilters(input);
+  if (!filters) return { success: false as const, error: "Invalid analytics filters" };
+  return getFacultyAnalyticsData(filters);
+}
 
-  if (result.success) {
-    revalidatePath("/faculty/analytics");
-  }
-
-  return result;
+export async function generateFacultyAnalyticsInsightAction(input: unknown) {
+  const filters = parseFilters(input);
+  if (!filters) return { ok: false as const, state: "invalid-request" as const };
+  return generateFacultyAnalyticsInsight(filters);
 }

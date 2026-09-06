@@ -60,7 +60,7 @@ const detail: CourseBoundReviewDetail = {
     },
   ],
   responseCount: 1,
-  reviewerRole: "FACULTY",
+  reviewerRole: "DEAN",
   qualitativeItemCount: 2,
   sections: [
     {

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getFacultyAnalyticsData } from "@/features/analytics/services/get-faculty-analytics-data";
-import { listFacultyAnalyticsEvaluations } from "@/features/analytics/services/list-faculty-analytics-evaluations";
+import {
+  getFacultyAnalyticsData,
+  getFacultyAnalyticsOptions,
+} from "@/features/analytics/services/get-faculty-analytics-data";
 import { ROLES } from "@/lib/constants/roles";
 
 const { courseBoundEvaluationFindManyMock, resolveAuthSessionMock } = vi.hoisted(() => ({
@@ -33,11 +35,11 @@ describe("faculty analytics access", () => {
       userId: "dean-1",
     });
 
-    await expect(listFacultyAnalyticsEvaluations()).resolves.toEqual({
+    await expect(getFacultyAnalyticsOptions()).resolves.toEqual({
       success: false,
       error: "Faculty access required",
     });
-    await expect(getFacultyAnalyticsData(["evaluation-1"])).resolves.toEqual({
+    await expect(getFacultyAnalyticsData({ evaluationId: "evaluation-1" })).resolves.toEqual({
       success: false,
       error: "Faculty access required",
     });
