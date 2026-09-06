@@ -76,12 +76,12 @@ export function ProgramHeadAnalyticsShell({
           ) : null}
         </div>
         <div className="flex flex-col gap-1">
-          <h1 className="text-heading-lg text-foreground tracking-tight text-balance">
-            {scope.programCode} — {scope.programName}
-          </h1>
-          <p className="text-body-sm text-muted-foreground max-w-3xl text-pretty">
-            Outcome-Based Education attainment metrics, course evidence, stakeholder evaluations,
-            and continuous quality improvement data.
+          <h1 className="text-heading-lg text-foreground tracking-tight text-balance">Analytics</h1>
+          <p className="text-body-md text-text-secondary max-w-3xl text-pretty">
+            <span className="text-foreground font-semibold">
+              {scope.programCode} — {scope.programName}
+            </span>
+            {scope.periodLabel ? <span> · {scope.periodLabel}</span> : null}
           </p>
         </div>
       </header>

@@ -223,7 +223,7 @@ function FilterForm({
           size="default"
           className={cn(drawer ? "min-h-11 flex-1 sm:min-h-9" : "w-full")}
         >
-          Apply
+          Apply filters
         </Button>
         {count > 0 ? (
           <Link

@@ -122,7 +122,7 @@ describe("ProgramHeadAnalyticsFilters", () => {
     expect(within(dialog).queryByLabelText("School Year")).not.toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Semester")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Academic Term")).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Apply" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /Apply/ })).toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: "Reset" })).toBeInTheDocument();
   });
 });
