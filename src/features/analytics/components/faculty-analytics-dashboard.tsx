@@ -371,6 +371,7 @@ function ViewNavigation({ filters }: { filters: FacultyAnalyticsFilters }) {
             <TabsTrigger
               key={view}
               value={view}
+              nativeButton={false}
               render={
                 <Link href={analyticsHref({ ...filters, view: view as FacultyAnalyticsView })} />
               }
