@@ -67,13 +67,6 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Breadcrumbs
-        items={[
-          { label: "Evaluation Tools", href: "/faculty/tools?tab=published" },
-          { label: safeDetail.deploymentName },
-        ]}
-      />
-
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/faculty/tools?tab=published"
@@ -83,6 +76,12 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
           Back to Evaluation Tools
         </Link>
       </div>
+      <Breadcrumbs
+        items={[
+          { label: "Evaluation Tools", href: "/faculty/tools?tab=published" },
+          { label: safeDetail.deploymentName },
+        ]}
+      />
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-heading text-text-primary text-xl font-semibold tracking-tight sm:text-2xl">
