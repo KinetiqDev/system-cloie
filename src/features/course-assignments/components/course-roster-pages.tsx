@@ -119,19 +119,19 @@ function RosterDetailContext({ assignment }: { assignment: CourseRosterAssignmen
         <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
           Course code
         </dt>
-        <dd className="font-medium">{assignment.courseCode}</dd>
+        <dd className="text-title-md font-semibold tracking-tight">{assignment.courseCode}</dd>
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
           Course title
         </dt>
-        <dd className="font-medium">{assignment.courseTitle}</dd>
+        <dd className="text-title-md font-semibold">{assignment.courseTitle}</dd>
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
           Program
         </dt>
-        <dd>
+        <dd className="font-medium">
           {assignment.programName} ({assignment.programCode})
         </dd>
       </div>
@@ -165,13 +165,23 @@ function CountCards({
     <div className="grid gap-3 sm:grid-cols-2">
       <Card size="sm">
         <CardHeader>
-          <CardDescription>Active roster</CardDescription>
+          <CardDescription className="flex items-center gap-2">
+            <span className="bg-selected-bg text-selected-fg inline-flex size-7 items-center justify-center rounded-full">
+              <UsersRound aria-hidden="true" className="size-4" />
+            </span>
+            Active roster
+          </CardDescription>
           <CardTitle className="text-heading-xl tabular-nums">{activeRosterCount}</CardTitle>
         </CardHeader>
       </Card>
       <Card size="sm">
         <CardHeader>
-          <CardDescription>Currently evaluation-eligible</CardDescription>
+          <CardDescription className="flex items-center gap-2">
+            <span className="bg-success-soft text-success inline-flex size-7 items-center justify-center rounded-full">
+              <CheckCircle2 aria-hidden="true" className="size-4" />
+            </span>
+            Currently evaluation-eligible
+          </CardDescription>
           <CardTitle className="text-heading-xl tabular-nums">{evaluationEligibleCount}</CardTitle>
         </CardHeader>
       </Card>
@@ -337,7 +347,7 @@ function CourseRosterList({ assignments }: { assignments: CourseRosterAssignment
               <DiscoveryTableCell>
                 <Link
                   href={`/course-rosters/${assignment.assignmentId}`}
-                  className={cn(buttonVariants({ size: "sm" }), "w-full md:w-auto")}
+                  className={cn(buttonVariants(), "w-full md:w-auto")}
                 >
                   Open roster
                   <ArrowRight data-icon="inline-end" aria-hidden="true" />
@@ -639,7 +649,7 @@ export function CourseRosterDetailPage({
             <CardTitle>Manage roster</CardTitle>
             <CardDescription>
               Add one Student, or upload up to {COURSE_ROSTER_MAX_ROWS} official names from a CSV.
-              Review parsed rows before continuing roster reconciliation.
+              Review parsed rows before anyone is added.
             </CardDescription>
             <CardAction className="col-start-1 row-start-auto mt-2 w-full justify-self-stretch sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
               <RosterManagementDialog
@@ -716,33 +726,33 @@ function RosterTable({
     >
       <table className="w-full min-w-[72rem] text-left text-sm">
         <caption className="sr-only">Course roster members and current eligibility</caption>
-        <thead className="bg-muted/40 text-foreground border-b text-xs">
+        <thead className="bg-muted/40 text-text-secondary border-b">
           <tr>
-            <th scope="col" className="px-3 py-3 font-medium">
+            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
               Student
             </th>
-            <th scope="col" className="px-3 py-3 font-medium">
+            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
               Program
             </th>
-            <th scope="col" className="px-3 py-3 font-medium">
+            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
               Major
             </th>
-            <th scope="col" className="px-3 py-3 font-medium">
+            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
               Class context
             </th>
-            <th scope="col" className="px-3 py-3 font-medium">
+            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
               Added
             </th>
-            <th scope="col" className="px-3 py-3 font-medium">
+            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
               Current status
             </th>
             {includeRemoved && (
-              <th scope="col" className="px-3 py-3 font-medium">
+              <th scope="col" className="text-label-md px-3 py-3 font-semibold">
                 Removal history
               </th>
             )}
             {canWrite && (
-              <th scope="col" className="px-3 py-3 font-medium">
+              <th scope="col" className="text-label-md px-3 py-3 font-semibold">
                 Actions
               </th>
             )}
@@ -762,24 +772,24 @@ function RosterTable({
               </td>
               <td className="px-3 py-4">{dateLabel(member.membershipAddedAt)}</td>
               <td className="px-3 py-4">
-                <div className="flex flex-col items-start gap-1">
-                  <Badge variant={member.isActive ? "outline" : "secondary"}>
+                <div className="flex flex-col items-start gap-1.5">
+                  <Badge variant={member.isActive ? "secondary" : "outline"}>
                     {member.isActive ? "Active membership" : "Removed"}
                   </Badge>
                   {member.isActive && member.eligibility.eligible ? (
-                    <span className="text-link inline-flex items-center gap-1 text-xs">
+                    <Badge variant="success">
                       <CheckCircle2 aria-hidden="true" /> Evaluation-eligible
-                    </span>
+                    </Badge>
                   ) : !member.isActive ? (
                     <span className="text-muted-foreground text-xs">
                       Removed from active roster
                     </span>
                   ) : (
-                    <span className="text-muted-foreground text-xs">
+                    <Badge variant="warning">
                       {member.eligibility.reason
                         ? eligibilityLabels[member.eligibility.reason]
                         : "Not evaluation-eligible"}
-                    </span>
+                    </Badge>
                   )}
                 </div>
               </td>

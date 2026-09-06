@@ -700,7 +700,7 @@ describe("course roster pages", () => {
     render(<CourseRosterDetailPage data={detail} />);
 
     expect(
-      screen.getByText(/Review parsed rows before continuing roster reconciliation/i)
+      screen.getByText(/Review parsed rows before anyone is added/i)
     ).toBeInTheDocument();
   });
 

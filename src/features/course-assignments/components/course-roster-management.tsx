@@ -970,14 +970,16 @@ function ManagementBody({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-0.5 py-1">
-      <WizardStepper
-        steps={[
-          { key: "add", label: "Add members" },
-          { key: "review", label: "Review and resolve" },
-          { key: "results", label: "Results" },
-        ]}
-        currentStep={phase}
-      />
+      {!(phase === "add" && method === "single") && (
+        <WizardStepper
+          steps={[
+            { key: "add", label: "Add members" },
+            { key: "review", label: "Review and resolve" },
+            { key: "results", label: "Results" },
+          ]}
+          currentStep={phase}
+        />
+      )}
 
       {phase === "add" && (
         <Tabs
@@ -1281,7 +1283,7 @@ export function RosterManagementDialog({
 
   return (
     <>
-      <Button variant="outline" ref={triggerRef} onClick={() => handleOpenChange(true)}>
+      <Button size="lg" ref={triggerRef} onClick={() => handleOpenChange(true)}>
         <ManagementTriggerContent />
       </Button>
 
@@ -1291,8 +1293,8 @@ export function RosterManagementDialog({
             <DialogHeader className="shrink-0">
               <DialogTitle>Manage roster</DialogTitle>
               <DialogDescription>
-                Prepare a preview of up to {COURSE_ROSTER_MAX_ROWS} official Student names before
-                any roster change.
+                Add one student directly, or check a CSV list of up to {COURSE_ROSTER_MAX_ROWS}{" "}
+                names before anyone is added.
               </DialogDescription>
             </DialogHeader>
             {body}
@@ -1327,8 +1329,8 @@ export function RosterManagementDialog({
             <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
               <DrawerTitle>Manage roster</DrawerTitle>
               <DrawerDescription>
-                Prepare a preview of up to {COURSE_ROSTER_MAX_ROWS} official Student names before
-                any roster change.
+                Add one student directly, or check a CSV list of up to {COURSE_ROSTER_MAX_ROWS}{" "}
+                names before anyone is added.
               </DrawerDescription>
             </DrawerHeader>
             {body}
@@ -1419,17 +1421,17 @@ function AddRosterMember({
 
   return (
     <div className="flex flex-col gap-3">
-      <div>
-        <h2 className="text-title-md">Add Student to roster</h2>
+      <div className="flex flex-col gap-1">
+        <h2 className="text-title-md">Add one Student</h2>
         <p className="text-body-sm text-muted-foreground">
-          Search assignment-scoped Students by canonical name. Eligibility is checked against this
-          assignment.
+          Search students by enrolled name. Only students who can join this class appear.
+          Choosing a name selects it below — nothing is added until you select Add Student.
         </p>
       </div>
       <form className="flex flex-col gap-3" onSubmit={submit}>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <label htmlFor="roster-student-search" className="text-label-md">
-            Scoped Student search
+          <label htmlFor="roster-student-search" className="text-label-md font-medium">
+            Search students
           </label>
           <ScopedRosterStudentSearch
             assignmentId={assignmentId}
@@ -1440,16 +1442,22 @@ function AddRosterMember({
           />
         </div>
         {selectedCandidate && (
-          <div className="rounded-lg border p-3" aria-live="polite">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-label-md">Selected Student</p>
-                <CandidateContext candidate={selectedCandidate} />
+          <div
+            className="border-primary-border bg-primary-soft rounded-lg border p-3"
+            aria-live="polite"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-label-md font-semibold">Selected Student</p>
+                <div className="min-w-0 break-words">
+                  <CandidateContext candidate={selectedCandidate} />
+                </div>
               </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                className="shrink-0 self-start"
                 onClick={() => setSelectedCandidate(null)}
               >
                 Clear selection
@@ -1457,10 +1465,20 @@ function AddRosterMember({
             </div>
           </div>
         )}
-        <Button type="submit" disabled={isPending || selectedCandidate === null}>
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={isPending || selectedCandidate === null}
+        >
           <UserPlus data-icon="inline-start" />
           {isPending ? "Adding..." : "Add Student"}
         </Button>
+        {!selectedCandidate && (
+          <p className="text-body-sm text-muted-foreground">
+            Choose a student from the search results to enable Add Student.
+          </p>
+        )}
       </form>
       <MutationMessage message={message} />
     </div>
@@ -1510,13 +1528,12 @@ function CsvImportMethod({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h2 className="text-title-md">Import Students from CSV</h2>
+        <h2 className="text-title-md">Import students from CSV</h2>
         <p className="text-body-sm text-muted-foreground">
-          Upload official Student names to prepare a roster preview. No roster membership changes
-          yet.
+          Upload a CSV list to check names first. Nothing is added until you review and confirm.
         </p>
       </div>
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex flex-wrap justify-start gap-2">
         <Button
           type="button"
           variant="outline"
@@ -1583,7 +1600,7 @@ function CsvImportMethod({
           <AlertDescription>{message}</AlertDescription>
         </Alert>
       )}
-      <Button type="button" onClick={onImport} disabled={isPending || !file}>
+      <Button type="button" size="lg" className="w-full" onClick={onImport} disabled={isPending || !file}>
         {isPending ? (
           <>
             <Progress value={null} className="h-4 w-4" aria-label="Preparing preview" />
