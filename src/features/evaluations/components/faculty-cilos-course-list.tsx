@@ -281,6 +281,7 @@ function ViewEditCilosModal({
                     value={cilo.description}
                     onChange={(e) => handleUpdateCilo(cilo.id, e.target.value)}
                     className="min-h-12 min-w-0 flex-1 text-sm"
+                    disabled={needsReconcile}
                   />
                   <Button
                     variant="ghost"
@@ -288,6 +289,7 @@ function ViewEditCilosModal({
                     aria-label={`Remove CILO ${index + 1}`}
                     className="text-destructive hover:bg-destructive/10 min-h-11 min-w-11 shrink-0"
                     onClick={() => handleRemoveCilo(cilo.id)}
+                    disabled={needsReconcile}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -303,8 +305,14 @@ function ViewEditCilosModal({
               value={newCiloText}
               onChange={(e) => setNewCiloText(e.target.value)}
               className="max-h-56 min-w-0"
+              disabled={needsReconcile}
             />
-            <Button variant="outline" onClick={handleAddCilo} className="shrink-0">
+            <Button
+              variant="outline"
+              onClick={handleAddCilo}
+              className="shrink-0"
+              disabled={needsReconcile}
+            >
               Add
             </Button>
           </div>
