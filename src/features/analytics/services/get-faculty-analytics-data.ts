@@ -1,8 +1,15 @@
-import { AcademicSemester, AcademicTerm, type Prisma } from "@prisma/client";
+import {
+  AcademicSemester,
+  AcademicTerm,
+  StudentSection,
+  YearLevel,
+  type Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
+import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import {
   parseCourseInfoSnapshot,
   resolveSnapshotNullableText,
@@ -47,7 +54,7 @@ type EvaluationRow = Prisma.CourseBoundEvaluationGetPayload<{
         year_level: true;
         section: true;
         course: { select: { id: true; code: true; title: true } };
-        program: { select: { id: true; name: true } };
+        program: { select: { id: true; code: true; name: true } };
       };
     };
     assignments: {
@@ -244,7 +251,7 @@ async function readAuthorizedEvaluationOptions(
           year_level: true,
           section: true,
           course: { select: { id: true, code: true, title: true } },
-          program: { select: { id: true, name: true } },
+          program: { select: { id: true, code: true, name: true } },
         },
       },
       term_instance: {
@@ -286,7 +293,7 @@ async function readAuthorizedEvaluations(userId: string, filters: FacultyAnalyti
           year_level: true,
           section: true,
           course: { select: { id: true, code: true, title: true } },
-          program: { select: { id: true, name: true } },
+          program: { select: { id: true, code: true, name: true } },
         },
       },
       assignments: {
@@ -637,7 +644,7 @@ type SnapshotContextRow = {
     year_level: string;
     section: string;
     course: { code: string; title: string };
-    program: { name: string };
+    program: { code: string; name: string };
   };
   term_instance: {
     id: string;
@@ -682,17 +689,21 @@ function courseTitle(evaluation: SnapshotContextRow): string {
 
 function classLabel(evaluation: SnapshotContextRow): string {
   const snapshot = parseCourseInfoSnapshot(evaluation.course_info_snapshot);
-  const year = resolveSnapshotText(
+  const yearLevel = resolveSnapshotText(
     snapshot,
     "yearLevel",
     evaluation.course_assignment.year_level
-  ).replaceAll("_", " ");
-  const section = resolveSnapshotText(
-    snapshot,
-    "section",
-    evaluation.course_assignment.section
-  ).replaceAll("_", " ");
-  return `${evaluation.course_assignment.program.name} · ${year} · ${section}`;
+  );
+  const section = resolveSnapshotText(snapshot, "section", evaluation.course_assignment.section);
+  return [
+    resolveSnapshotText(snapshot, "programCode", evaluation.course_assignment.program.code),
+    getYearLevelDisplay(normalizeEnumLabel(yearLevel) as YearLevel),
+    getSectionLabel(normalizeEnumLabel(section) as StudentSection),
+  ].join(" · ");
+}
+
+function normalizeEnumLabel(value: string): string {
+  return value.trim().replaceAll(/\s+/g, "_").toUpperCase();
 }
 
 function buildScopeLabel(evaluations: EvaluationRow[], submittedResponseCount: number): string {

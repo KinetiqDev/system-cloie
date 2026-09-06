@@ -56,7 +56,11 @@ function evaluation(assignments: ReturnType<typeof response>[]) {
         code: "IT 201",
         title: "Software Engineering",
       },
-      program: { id: "44444444-4444-4444-8444-444444444444", name: "BSIT" },
+      program: {
+        id: "44444444-4444-4444-8444-444444444444",
+        code: "BSIT",
+        name: "Bachelor of Science in Information Technology",
+      },
     },
     assignments,
     cilo_question_bindings: [
@@ -134,6 +138,7 @@ describe("faculty analytics serialization", () => {
       overallScaleMax: 5,
       spansMultipleScales: false,
     });
+    expect(result.data.evaluations[0].classLabel).toBe("BSIT · 2nd Year · Morning");
     expect(result.data.ciloMetrics[0]).toMatchObject({
       courseId: "33333333-3333-4333-8333-333333333333",
       courseCode: "IT 201",
