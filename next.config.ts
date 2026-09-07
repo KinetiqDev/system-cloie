@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["127.0.0.1:*", "*.trycloudflare.com"],
+      allowedOrigins: ["127.0.0.1:*", "*.trycloudflare.com", "*.system-cloie.app"],
     },
     optimizePackageImports: [
       "lucide-react",
@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
       "@dnd-kit/sortable",
     ],
   },
-  allowedDevOrigins: ["*.trycloudflare.com", "127.0.0.1"],
+  allowedDevOrigins: ["*.trycloudflare.com", "127.0.0.1", "*.system-cloie.app"],
   turbopack: {
     resolveAlias: {
       // Absolute alias so Turbopack's CSS @import resolver finds tailwindcss
