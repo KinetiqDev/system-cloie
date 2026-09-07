@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useId } from "react";
+import { useState, useId, type FormEvent } from "react";
 import { Calendar, Filter, Layers, SlidersHorizontal, UserCheck, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -22,10 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import type { ProgramHeadAnalyticsPeriodOptions } from "@/features/analytics/program-head-analytics-types";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
 import { cn } from "@/lib/utils";
+import { useProgramHeadAnalyticsNavigation } from "./program-head-analytics-workspace";
 
 type Props = {
   programId: string;
@@ -34,10 +36,24 @@ type Props = {
 };
 
 export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Props) {
+  const { isPending, navigate } = useProgramHeadAnalyticsNavigation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const count = activeFilterCount(filters);
   const hasPeriodOptions = options.termInstances.length > 0;
 
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const nextFilters: AnalyticsFilterState = {
+      tab: filters.tab,
+      evidenceSource: formValue(data, "evidenceSource") as AnalyticsFilterState["evidenceSource"],
+      stakeholder: formValue(data, "stakeholder") as AnalyticsFilterState["stakeholder"],
+      termInstanceId: formValue(data, "termInstanceId"),
+    };
+
+    setDrawerOpen(false);
+    navigate(buildAnalyticsUrl(programId, nextFilters));
+  }
   return (
     <div className="border-border/80 bg-card rounded-xl border shadow-xs transition-shadow">
       <div className="border-border/60 flex min-w-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
@@ -84,6 +100,8 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
           filters={filters}
           options={options}
           hasPeriodOptions={hasPeriodOptions}
+          isPending={isPending}
+          onSubmit={applyFilters}
         />
       </div>
 
@@ -115,6 +133,8 @@ export function ProgramHeadAnalyticsFilters({ programId, filters, options }: Pro
                 filters={filters}
                 options={options}
                 hasPeriodOptions={hasPeriodOptions}
+                isPending={isPending}
+                onSubmit={applyFilters}
                 drawer
               />
             </div>
@@ -131,7 +151,14 @@ function FilterForm({
   options,
   drawer = false,
   hasPeriodOptions,
-}: Props & { drawer?: boolean; hasPeriodOptions: boolean }) {
+  isPending,
+  onSubmit,
+}: Props & {
+  drawer?: boolean;
+  hasPeriodOptions: boolean;
+  isPending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
   const idPrefix = useId();
   const sourceId = `${idPrefix}-source`;
   const stakeholderId = `${idPrefix}-stakeholder`;
@@ -140,8 +167,8 @@ function FilterForm({
 
   return (
     <form
-      method="get"
-      action={buildAnalyticsUrl(programId)}
+      onSubmit={onSubmit}
+      aria-busy={isPending || undefined}
       className={cn(
         drawer
           ? "flex flex-col gap-4"
@@ -221,9 +248,11 @@ function FilterForm({
         <Button
           type="submit"
           size="default"
+          disabled={isPending}
           className={cn(drawer ? "min-h-11 flex-1 sm:min-h-9" : "w-full")}
         >
-          Apply filters
+          {isPending ? <Spinner data-icon="inline-start" /> : null}
+          {isPending ? "Applying filters" : "Apply filters"}
         </Button>
         {count > 0 ? (
           <Link
@@ -239,6 +268,11 @@ function FilterForm({
       </div>
     </form>
   );
+}
+
+function formValue(data: FormData, name: string): string | undefined {
+  const value = data.get(name);
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
 function activeFilterCount(filters: AnalyticsFilterState): number {

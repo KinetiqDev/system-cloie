@@ -2357,6 +2357,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "New server component using semantic tokens, no client boundary needed",
   },
   {
+    path: "src/features/analytics/components/program-head-analytics-workspace.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Narrow client transition boundary preserving analytics controls while the active evidence region reloads",
+  },
+  {
     path: "src/features/analytics/components/program-head-analytics-content-fallback.tsx",
     disposition: "already_compliant",
     category: "feature_component",

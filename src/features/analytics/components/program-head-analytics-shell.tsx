@@ -1,4 +1,4 @@
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -8,7 +8,7 @@ import type {
 import { ProgramHeadAnalyticsFilters } from "./program-head-analytics-filters";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { NavigationLink } from "@/components/layout/navigation-link";
-import { ProgramHeadAnalyticsContentFallback } from "./program-head-analytics-content-fallback";
+import { ProgramHeadAnalyticsWorkspace } from "./program-head-analytics-workspace";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import {
   ANALYTICS_TABS,
@@ -114,15 +114,18 @@ export function ProgramHeadAnalyticsShell({
           })}
         </nav>
       </div>
-      <ProgramHeadAnalyticsFilters
-        programId={programId}
-        filters={filters}
-        options={periodOptions}
-      />
-
-      <section aria-label={`${ANALYTICS_TAB_LABELS[filters.tab]} evidence`} className="min-w-0">
-        <Suspense fallback={<ProgramHeadAnalyticsContentFallback />}>{children}</Suspense>
-      </section>
+      <ProgramHeadAnalyticsWorkspace
+        tab={filters.tab}
+        filters={
+          <ProgramHeadAnalyticsFilters
+            programId={programId}
+            filters={filters}
+            options={periodOptions}
+          />
+        }
+      >
+        {children}
+      </ProgramHeadAnalyticsWorkspace>
     </div>
   );
 }

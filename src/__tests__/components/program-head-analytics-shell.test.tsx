@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type React from "react";
 import { ProgramHeadAnalyticsShell } from "@/features/analytics/components/program-head-analytics-shell";
+import { ProgramHeadAnalyticsContentFallback } from "@/features/analytics/components/program-head-analytics-content-fallback";
+import SelectedProgramAnalyticsLoading from "@/app/(app)/program-head/programs/[programId]/analytics/loading";
 
 vi.mock("next/link", () => ({
   default: ({
@@ -14,6 +16,9 @@ vi.mock("next/link", () => ({
     </a>
   ),
   useLinkStatus: () => ({ pending: false }),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 vi.mock("@/features/analytics/components/program-head-analytics-filters", () => ({
@@ -53,5 +58,29 @@ describe("ProgramHeadAnalyticsShell", () => {
       "href",
       "/program-head/programs/program-1/analytics?tab=courses&semester=FIRST&evidenceSource=COURSE"
     );
+  });
+
+  it("models the active analytics view without replacing the page shell", () => {
+    const { rerender } = render(<ProgramHeadAnalyticsContentFallback tab="outcomes" />);
+
+    expect(screen.getByRole("status", { name: "Loading Outcomes evidence" })).toBeInTheDocument();
+    expect(screen.getByTestId("analytics-alert-skeleton")).toBeInTheDocument();
+    expect(screen.getByTestId("analytics-chart-skeleton")).toBeInTheDocument();
+    expect(screen.getByTestId("analytics-table-skeleton")).toBeInTheDocument();
+
+    rerender(<ProgramHeadAnalyticsContentFallback tab="stakeholders" />);
+    expect(
+      screen.getByRole("status", { name: "Loading Stakeholders evidence" })
+    ).toBeInTheDocument();
+    expect(screen.getAllByTestId("analytics-chart-skeleton")).toHaveLength(2);
+  });
+
+  it("uses analytics workspace geometry for cold route loading", () => {
+    render(<SelectedProgramAnalyticsLoading />);
+
+    expect(screen.getByRole("status", { name: "Loading analytics" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Loading analytics views" })).toBeInTheDocument();
+    expect(screen.getByTestId("analytics-filter-skeleton")).toBeInTheDocument();
+    expect(screen.getByTestId("analytics-chart-skeleton")).toBeInTheDocument();
   });
 });
