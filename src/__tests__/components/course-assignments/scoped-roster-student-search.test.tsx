@@ -24,7 +24,7 @@ describe("ScopedRosterStudentSearch", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "J" } });
 
     expect(searchScopedRosterStudentsAction).not.toHaveBeenCalled();
-    expect(screen.getByText("Enter at least 2 characters to search Students.")).toBeInTheDocument();
+    expect(screen.getByText("Enter at least 2 characters to search students.")).toBeInTheDocument();
   });
 
   it("debounces query requests by 300ms and renders the bounded candidates", async () => {
@@ -71,8 +71,9 @@ describe("ScopedRosterStudentSearch", () => {
 
   it("ignores a stale search response after the manager changes the query", async () => {
     vi.useFakeTimers();
-    let resolveFirst: (value: Awaited<ReturnType<typeof searchScopedRosterStudentsAction>>) => void =
-      () => undefined;
+    let resolveFirst: (
+      value: Awaited<ReturnType<typeof searchScopedRosterStudentsAction>>
+    ) => void = () => undefined;
     vi.mocked(searchScopedRosterStudentsAction)
       .mockImplementationOnce(
         () =>

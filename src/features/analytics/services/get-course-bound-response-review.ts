@@ -50,11 +50,7 @@ export async function getCourseBoundResponseReview(
       status: "SUBMITTED",
       assignment: {
         course_bound: {
-          ...buildReviewerEvaluationScope({
-            programScope,
-            reviewerId: authSession.userId,
-            reviewerRole,
-          }),
+          ...buildReviewerEvaluationScope({ programScope }),
         },
       },
     },

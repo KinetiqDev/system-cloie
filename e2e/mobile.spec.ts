@@ -107,7 +107,7 @@ test("faculty roster drawer: same workflow, focus restoration, and dismissal pro
   // result (no write, no duplicate membership).
   await drawer.getByRole("tab", { name: "Add one Student" }).click();
   await drawer
-    .getByRole("searchbox", { name: "Search scoped Students" })
+    .getByRole("searchbox", { name: "Search students" })
     .fill(fx.rosterStudents.suggested.name);
   await drawer.getByRole("button", { name: new RegExp(fx.rosterStudents.suggested.name) }).click();
   await drawer.getByRole("button", { name: "Add Student" }).click();

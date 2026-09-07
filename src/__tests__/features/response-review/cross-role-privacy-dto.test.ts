@@ -60,40 +60,6 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
     expectTypeOf<ProgramHeadSubmittedResponseDetail>().toHaveProperty("sections");
   });
 
-  it("serialised Faculty anonymized payload does not leak respondent email or domain user ID", () => {
-    const review: CourseBoundResponseReview = {
-      responseId: "response-1",
-      respondentLabel: "Respondent R-827493",
-      submittedAt: new Date("2026-01-05T08:00:00.000Z"),
-      evaluationId: "eval-1",
-      evaluationTitle: "IT201 Post-Term CILO Evaluation",
-      courseTitle: "IT201 Systems",
-      programLabel: "BSIT",
-      termInstanceLabel: "2025-2026 — 2nd Semester — 1st Term",
-      overallMean: 4.5,
-      reviewerRole: "FACULTY",
-      sections: [
-        {
-          id: "teaching",
-          name: "Teaching",
-          mean: 4.5,
-          quantitativeResponses: [{ itemKey: "clarity", prompt: "Clarity", rating: 5 }],
-          qualitativeResponses: [
-            { prompt: "How was teaching?", promptKey: "open", text: "Very clear delivery." },
-          ],
-        },
-      ],
-    };
-
-    const serialized = JSON.stringify(review);
-    expect(serialized).not.toContain("demo-student@cloie.test");
-    expect(serialized).not.toContain("55555555-5555-4555-8555-555555555555");
-    expect(serialized).not.toContain("Demo Student");
-    // Label stays deterministic and anonymized
-    expect(serialized).toContain("Respondent R-827493");
-    expect(serialized).toContain("Very clear delivery.");
-  });
-
   it("aggregate-only analytics DTOs remain de-identified: no raw text, no respondent IDs", () => {
     // Program Head Overview is KPI-only — no comments, no emails.
     expectTypeOf<ProgramHeadOverviewDTO>().not.toHaveProperty("text_content");
@@ -145,27 +111,40 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
     expectTypeOf<GeneralEducationFeedbackDTO>().not.toHaveProperty("respondent");
   });
 
-  it("Faculty analytics evaluation data stays de-identified and excludes raw respondent identity", () => {
+  it("Faculty analytics stays aggregate-only and carries no response-level fields", () => {
     expectTypeOf<FacultyAnalyticsData>().not.toHaveProperty("respondent");
     expectTypeOf<FacultyAnalyticsData>().not.toHaveProperty("email");
     expectTypeOf<FacultyAnalyticsData>().not.toHaveProperty("respondentId");
-    expectTypeOf<FacultyAnalyticsData>().toHaveProperty("wordCloudTokens");
-    expectTypeOf<FacultyAnalyticsData>().toHaveProperty("qualitativeItemCount");
+    expectTypeOf<FacultyAnalyticsData>().toHaveProperty("qualitative");
+    expectTypeOf<FacultyAnalyticsData>().toHaveProperty("ratingDistributions");
 
     const feedbackClone: FacultyAnalyticsData = {
-      evaluationId: "eval-1",
-      deploymentName: "IT201 Post-Term",
-      courseTitle: "IT201",
-      programName: "BSIT",
-      termInstanceLabel: "2025-2026 — 2nd Semester — 1st Term",
-      status: "ACTIVE",
-      overallMean: 4.5,
-      responseCount: 1,
-      totalAssignments: 2,
+      filters: { view: "overview" },
+      scopeLabel: "One faculty-owned evaluation",
+      evaluations: [],
+      kpi: {
+        submittedResponseCount: 5,
+        opportunityCount: 6,
+        responseRate: 5 / 6,
+        validRatingCount: 10,
+        overallMean: 4.5,
+        overallScaleLabel: "1–5 (5-point)",
+        overallScaleMax: 5,
+        spansMultipleScales: false,
+      },
+      ratingDistributions: [],
       ciloMetrics: [],
-      quantitativeQuestions: [],
-      qualitativeItemCount: 1,
-      wordCloudTokens: [{ text: "learning", value: 2 }],
+      questionMetrics: [],
+      trends: [],
+      qualitative: {
+        available: true,
+        submittedResponseCount: 5,
+        responseCount: 5,
+        itemCount: 5,
+        evaluationCount: 1,
+        tokens: [{ text: "learning", value: 2 }],
+        promptCounts: [],
+      },
     };
     const serialized = JSON.stringify(feedbackClone);
     expect(serialized).not.toContain("demo-student@cloie.test");

@@ -4,7 +4,6 @@ import { ROLES } from "@/lib/constants/roles";
 import { getCourseBoundResponseReview } from "@/features/analytics/services/get-course-bound-response-review";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { getProgramHeadFeedback } from "@/features/analytics/services/get-program-head-analytics";
-import { getFacultyAnalyticsData } from "@/features/analytics/services/get-faculty-analytics-data";
 
 const {
   responseFindFirstMock,
@@ -128,107 +127,17 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
     vi.clearAllMocks();
   });
 
-  describe("Faculty Member anonymized review scoping", () => {
-    it("returns anonymized response label without respondent ID or email for owned assignment", async () => {
+  describe("Faculty aggregate-only review boundary", () => {
+    it("denies individual response reads before querying response content", async () => {
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.FACULTY,
         roles: [ROLES.FACULTY],
         userId: "fac-bsit",
       });
-      resolveReviewerProgramScopeMock.mockResolvedValue(["prog-bsit"]);
-      responseFindFirstMock.mockResolvedValue(MOCK_COURSE_BOUND_RESPONSE);
 
-      const review = await getCourseBoundResponseReview("response-548");
-
-      expect(review).not.toBeNull();
-      expect(review!.respondentLabel).toMatch(/^Respondent R-\d{6}$/);
-      expect(review!.responseId).toBe("response-548");
-      expect(review!.evaluationTitle).toBe("IT201 Post-Term CILO Evaluation");
-      expect(review!.overallMean).toBe(5);
-      expect(review!.sections[0].qualitativeResponses[0].text).toBe(
-        "The hands-on coding exercises were very effective in solidifying CILO 1."
-      );
-
-      // Verify the query strictly scoped by faculty_id and program_id
-      expect(responseFindFirstMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            id: "response-548",
-            status: "SUBMITTED",
-            assignment: {
-              course_bound: {
-                course_assignment: {
-                  faculty_id: "fac-bsit",
-                  program_id: { in: ["prog-bsit"] },
-                },
-              },
-            },
-          }),
-        })
-      );
-    });
-
-    it("denies access to an unrelated Faculty Member (unowned assignment) with a safe null", async () => {
-      resolveAuthSessionMock.mockResolvedValue({
-        activeRole: ROLES.FACULTY,
-        roles: [ROLES.FACULTY],
-        userId: "unrelated-faculty-id",
-      });
-      resolveReviewerProgramScopeMock.mockResolvedValue(["prog-bsit"]);
-      // DB where clause will not match since faculty_id does not match
-      responseFindFirstMock.mockResolvedValue(null);
-
-      const review = await getCourseBoundResponseReview("response-548");
-
-      expect(review).toBeNull();
-      expect(responseFindFirstMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            id: "response-548",
-            assignment: {
-              course_bound: {
-                course_assignment: {
-                  faculty_id: "unrelated-faculty-id",
-                  program_id: { in: ["prog-bsit"] },
-                },
-              },
-            },
-          }),
-        })
-      );
-    });
-
-    it("denies access when response is IN_PROGRESS (SUBMITTED gate)", async () => {
-      resolveAuthSessionMock.mockResolvedValue({
-        activeRole: ROLES.FACULTY,
-        roles: [ROLES.FACULTY],
-        userId: "fac-bsit",
-      });
-      resolveReviewerProgramScopeMock.mockResolvedValue(["prog-bsit"]);
-      responseFindFirstMock.mockResolvedValue(null);
-
-      const review = await getCourseBoundResponseReview("in-progress-resp");
-
-      expect(review).toBeNull();
-      expect(responseFindFirstMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ status: "SUBMITTED" }),
-        })
-      );
-    });
-
-    it("returns null for non-existent / guessed deep link IDs without leaking data", async () => {
-      resolveAuthSessionMock.mockResolvedValue({
-        activeRole: ROLES.FACULTY,
-        roles: [ROLES.FACULTY],
-        userId: "fac-bsit",
-      });
-      resolveReviewerProgramScopeMock.mockResolvedValue(["prog-bsit"]);
-      responseFindFirstMock.mockResolvedValue(null);
-
-      const review = await getCourseBoundResponseReview("00000000-0000-0000-0000-000000000000");
-
-      expect(review).toBeNull();
+      await expect(getCourseBoundResponseReview("response-548")).resolves.toBeNull();
+      expect(resolveReviewerProgramScopeMock).not.toHaveBeenCalled();
+      expect(responseFindFirstMock).not.toHaveBeenCalled();
     });
   });
 
@@ -411,66 +320,6 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
       expect(serialized).not.toContain(
         "Student student-548@cloie.test said Professor Maria Santos had great teaching."
       );
-    });
-
-    it("Faculty analytics data returns de-identified word cloud without respondent identities", async () => {
-      resolveAuthSessionMock.mockResolvedValue({
-        activeRole: ROLES.FACULTY,
-        roles: [ROLES.FACULTY],
-        userId: "fac-bsit",
-      });
-      courseBoundEvaluationFindManyMock.mockResolvedValue([
-        {
-          id: "eval-it201",
-          deployment_name: "IT201 Post-Term CILO Evaluation",
-          instrument: {
-            structure_snapshot: MOCK_STRUCTURE_SNAPSHOT,
-            template: { name: "IT201 Template" },
-          },
-          course_assignment: {
-            faculty_id: "fac-bsit",
-            course: { title: "Systems Analysis" },
-            program: { name: "BSIT" },
-          },
-          term_instance: {
-            semester: "SECOND",
-            term: "FIRST_TERM",
-            school_year: { code: "2025-2026" },
-          },
-          cilo_question_bindings: [],
-          _count: { assignments: 1 },
-          assignments: [
-            {
-              id: "ea-1",
-              response: {
-                id: "resp-1",
-                status: "SUBMITTED",
-                quant_items: [{ section_key: "teaching", item_key: "clarity", rating_value: 5 }],
-                qual_items: [
-                  {
-                    section_key: "teaching",
-                    prompt_key: "remarks",
-                    text_content: "Contact me at demo-student@cloie.test for study groups.",
-                  },
-                ],
-              },
-            },
-          ],
-        },
-      ]);
-
-      const result = await getFacultyAnalyticsData(["eval-it201"]);
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data).toHaveLength(1);
-        const evalData = result.data[0];
-        expect(evalData.overallMean).toBe(5);
-        expect(evalData.qualitativeItemCount).toBe(1);
-        const serialized = JSON.stringify(evalData);
-        expect(serialized).not.toContain("demo-student@cloie.test");
-        expect(serialized).not.toContain("student-user-1");
-      }
     });
   });
 });

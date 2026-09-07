@@ -2223,24 +2223,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/analytics/components/faculty-analytics-filters.tsx",
-    disposition: "task",
-    taskId: 9,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/faculty-analytics-summary.tsx",
-    disposition: "task",
-    taskId: 9,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/faculty-cilo-analytics-chart.tsx",
-    disposition: "task",
-    taskId: 9,
-    category: "feature_component",
-  },
-  {
     path: "src/features/analytics/components/faculty-course-evidence-chart.tsx",
     disposition: "task",
     taskId: 10,
@@ -2256,18 +2238,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/faculty-dashboard-visualizations.tsx",
     disposition: "task",
     taskId: 10,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/faculty-qualitative-cloud.tsx",
-    disposition: "task",
-    taskId: 10,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/faculty-quantitative-breakdown.tsx",
-    disposition: "task",
-    taskId: 9,
     category: "feature_component",
   },
   {

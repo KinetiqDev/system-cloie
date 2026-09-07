@@ -1,24 +1,14 @@
 import { ROLES } from "@/lib/constants/roles";
 import type { ReviewerRole } from "../types";
 
-export function buildReviewerEvaluationScope({
-  programScope,
-  reviewerId,
-  reviewerRole,
-}: {
-  programScope: string[] | null;
-  reviewerId: string;
-  reviewerRole: ReviewerRole;
-}) {
+export function buildReviewerEvaluationScope({ programScope }: { programScope: string[] | null }) {
   const courseAssignmentWhere: Record<string, unknown> = {};
 
   if (programScope) {
     courseAssignmentWhere.program_id = { in: programScope };
   }
 
-  if (reviewerRole === ROLES.FACULTY) {
-    courseAssignmentWhere.faculty_id = reviewerId;
-  }
+  // Faculty review is aggregate-only through /faculty/analytics.
 
   return Object.keys(courseAssignmentWhere).length > 0
     ? { course_assignment: courseAssignmentWhere }
@@ -26,11 +16,7 @@ export function buildReviewerEvaluationScope({
 }
 
 export function pickReviewerRole(activeRole: string | null | undefined): ReviewerRole | null {
-  if (
-    activeRole === ROLES.DEAN ||
-    activeRole === ROLES.PROGRAM_HEAD ||
-    activeRole === ROLES.FACULTY
-  ) {
+  if (activeRole === ROLES.DEAN || activeRole === ROLES.PROGRAM_HEAD) {
     return activeRole;
   }
 

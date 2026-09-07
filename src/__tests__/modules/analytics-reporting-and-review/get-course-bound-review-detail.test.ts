@@ -111,30 +111,6 @@ describe("getCourseBoundReviewDetail", () => {
     );
   });
 
-  it("limits faculty detail access to evaluations owned by the reviewer", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      activeRole: ROLES.FACULTY,
-      roles: [ROLES.FACULTY],
-      userId: "faculty-1",
-    });
-    resolveReviewerProgramScopeMock.mockResolvedValue(["program-1"]);
-    courseBoundEvaluationFindFirstMock.mockResolvedValue(null);
-
-    await expect(getCourseBoundReviewDetail("eval-1")).resolves.toBeNull();
-
-    expect(courseBoundEvaluationFindFirstMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          id: "eval-1",
-          course_assignment: {
-            faculty_id: "faculty-1",
-            program_id: { in: ["program-1"] },
-          },
-        }),
-      })
-    );
-  });
-
   it("builds section and question means plus anonymized response cards", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.DEAN,
@@ -333,18 +309,6 @@ describe("getCourseBoundReviewDetail", () => {
     expect(serialized).not.toContain("qual_items");
     expect(serialized).not.toContain("assignments");
     expect(serialized).not.toContain("text_content");
-  });
-
-  it("returns null when reviewer scope resolves to empty set", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      activeRole: ROLES.FACULTY,
-      roles: [ROLES.FACULTY],
-      userId: "faculty-1",
-    });
-    resolveReviewerProgramScopeMock.mockResolvedValue([]);
-
-    await expect(getCourseBoundReviewDetail("eval-1")).resolves.toBeNull();
-    expect(courseBoundEvaluationFindFirstMock).not.toHaveBeenCalled();
   });
 
   it("does not apply program filter for dean scope", async () => {

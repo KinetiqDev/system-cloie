@@ -699,9 +699,7 @@ describe("course roster pages", () => {
   it("describes the currently available name parsing step", () => {
     render(<CourseRosterDetailPage data={detail} />);
 
-    expect(
-      screen.getByText(/Review parsed rows before continuing roster reconciliation/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Review parsed rows before anyone is added/i)).toBeInTheDocument();
   });
 
   it.each([

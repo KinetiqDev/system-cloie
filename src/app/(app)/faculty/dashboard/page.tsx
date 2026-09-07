@@ -360,7 +360,7 @@ function UpcomingDeadlineRow({ item }: { item: FacultyUpcomingEvaluation }) {
     item.assignedCount === 0 ? 0 : Math.round((item.submittedCount / item.assignedCount) * 100);
   return (
     <Link
-      href={`/faculty/cilo-evaluations/${item.evaluationId}`}
+      href={`/faculty/analytics?evaluationId=${encodeURIComponent(item.evaluationId)}`}
       className="hover:bg-surface-hover focus-visible:ring-ring block rounded-lg py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
       <div className="flex items-start justify-between gap-3">
@@ -394,7 +394,7 @@ function UpcomingDeadlineRow({ item }: { item: FacultyUpcomingEvaluation }) {
 // fallow-ignore-next-line complexity
 function CourseOverviewRow({ item }: { item: FacultyCourseOverviewItem }) {
   const href = item.evaluationId
-    ? `/faculty/cilo-evaluations/${item.evaluationId}`
+    ? `/faculty/analytics?evaluationId=${encodeURIComponent(item.evaluationId)}`
     : "/faculty/tools";
   return (
     <Link

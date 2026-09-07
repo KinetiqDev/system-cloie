@@ -144,6 +144,9 @@ describe("FacultyEvaluationDetailView – DTO contract", () => {
 
     const breadcrumbsLink = screen.getByRole("link", { name: /^evaluation tools$/i });
     expect(breadcrumbsLink).toHaveAttribute("href", "/faculty/tools?tab=published");
+    expect(
+      backLink.compareDocumentPosition(breadcrumbsLink) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
 
     const badge = screen.getByText("Active");
     expect(badge).toHaveClass("bg-success-soft");

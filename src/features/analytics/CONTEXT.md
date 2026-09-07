@@ -2,6 +2,38 @@
 
 Analytics defines how System CLOIE presents stakeholder-evaluation evidence for monitoring and continuous quality improvement without treating ratings as individual mastery or grades.
 
+## Faculty analytics surface
+
+**Faculty evaluation evidence**:
+Aggregate-only Course-bound evaluation evidence for Course Assignments owned by the active Faculty member, regardless of whether that Faculty member, a Dean, or a Secretary published the evaluation. Only submitted responses contribute. Faculty affiliation alone grants no evidence access.
+_Avoid_: Deployer-owned evidence, affiliation-wide evidence, another Faculty member's class
+
+**Faculty analytics workspace**:
+The URL-filtered `Overview`, `CILO results`, `Question results`, `Trends`, and `Written feedback` views over faculty-owned evaluation evidence. Means pool valid raw ratings within one compatible frozen scale; incompatible scales remain separate. Response rate uses historical EvaluationAssignment opportunities, and a scope with no opportunities reports unavailable.
+_Avoid_: Evaluation checkbox dashboard, mean of means, CILO attainment claim, cross-course trend
+
+**Faculty aggregate-only review**:
+Faculty receive no individual-response route or DTO. Retired Faculty Course-bound review deep links redirect to the matching aggregate Analytics scope. Browser payloads contain no respondent label, response identifier, roster record, raw rating row, or raw written comment.
+_Avoid_: Anonymized response card, individual Faculty response review, raw comment drill-through
+
+**Faculty qualitative confidentiality floor**:
+Written-feedback analytics require at least five distinct submitted respondents in the currently filtered scope. Below five, word-cloud tokens, ranked terms, prompt counts, themes, sentiment, qualitative AI evidence, and every qualitative contribution count (submitted/response/item/evaluation counts read as zero) are withheld. At or above five, only identifier-redacted terms mentioned more than once can reach the Faculty browser or AI packet.
+_Avoid_: Lifetime evaluation threshold, answer-count threshold, singleton term, threshold countdown, exact small-cohort counts
+
+**Faculty inline AI overview**:
+One automatic request rebuilds and re-authorizes the current Faculty filter scope server-side, then resolves a section-keyed interpretation beneath deterministic charts. Validated output may be reused only from a bounded process-local cache keyed by the authorized Faculty user, provider, model and prompt version, and a SHA-256 fingerprint of the complete bounded aggregate evidence packet. Tab-only navigation and reloads reuse unchanged evidence; any aggregate evidence change produces a new fingerprint and provider request. The cache never contains sessions, authorization decisions, response rows, respondent identifiers, roster data, or raw comments, and it is cleared on process restart or deployment. Disabled, insufficient, timeout, and provider-error states never block verified analytics.
+_Avoid_: One request per chart, manual first-generation button, TTL-only freshness, shared cross-Faculty cache, persistent AI history, cached authorization, stale interpretation
+
+| Faculty AI cache dimension | Contract |
+| --- | --- |
+| Key | SHA-256 over prompt version, authorized Faculty user ID, provider base URL, model, and the complete bounded aggregate evidence packet |
+| Scope | One Faculty principal and one exact aggregate evidence state; analytics tabs share an entry when their evidence is identical |
+| Lifetime | Bounded to 128 validated entries in one application process; cleared on restart or deployment |
+| Tags | None; this is not a persistent Next.js Data Cache entry |
+| Invalidation triggers | Any packet change, including submitted-response counts, opportunities, distributions, CILO/question aggregates, trends, qualitative tokens, prompt version, provider, or model |
+| Authorization boundary | Session, Faculty role, course ownership, and filters are re-authorized and evidence is rebuilt before every lookup |
+| Stale behavior | No stale result is served after evidence changes; the new fingerprint waits for one fresh provider result, with concurrent identical requests sharing that call |
+
 ## Program Head analytics surface (shipped contract)
 
 **Program Head analytics tabs**:

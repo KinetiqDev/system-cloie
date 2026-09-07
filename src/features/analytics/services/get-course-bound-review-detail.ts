@@ -84,11 +84,7 @@ export async function getCourseBoundReviewDetail(
   const evaluation = await prisma.courseBoundEvaluation.findFirst({
     where: {
       id: evaluationId,
-      ...buildReviewerEvaluationScope({
-        programScope,
-        reviewerId: authSession.userId,
-        reviewerRole,
-      }),
+      ...buildReviewerEvaluationScope({ programScope }),
     },
     include: {
       assignments: {

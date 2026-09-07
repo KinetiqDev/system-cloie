@@ -12,7 +12,7 @@ const response: CourseBoundResponseReview = {
   programLabel: "BSIT",
   responseId: "response-1",
   respondentLabel: "Respondent R-827493",
-  reviewerRole: "FACULTY",
+  reviewerRole: "DEAN",
   sections: [
     {
       id: "teaching",
