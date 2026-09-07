@@ -61,6 +61,12 @@ describe("supabase workflow helpers", () => {
     ).toBe("postgresql://postgres:secret@db:5432/postgres?sslmode=require");
   });
 
+  it("preserves encoded query bytes when defaulting sslmode", () => {
+    const url =
+      "postgresql://postgres:secret@127.0.0.1:55432/postgres?application_name=my-app&options=-c%20search_path%3Dprivate";
+    expect(withPlaintextSslmode(url)).toBe(`${url}&sslmode=disable`);
+  });
+
   it("parses the local and remote targets", () => {
     expect(parseTarget("local")).toBe("local");
     expect(parseTarget("remote")).toBe("remote");

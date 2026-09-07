@@ -5,11 +5,23 @@ export function getSupabaseCommand() {
 }
 
 export function withPlaintextSslmode(directUrl: string): string {
-  const url = new URL(directUrl);
-  if (!url.searchParams.has("sslmode")) {
-    url.searchParams.set("sslmode", "disable");
+  const queryIndex = directUrl.indexOf("?");
+  if (queryIndex === -1) {
+    return `${directUrl}?sslmode=disable`;
   }
-  return url.toString();
+  for (const pair of directUrl.slice(queryIndex + 1).split("&")) {
+    const [rawName = ""] = pair.split("=");
+    try {
+      if (decodeURIComponent(rawName.replace(/\+/g, " ")) === "sslmode") {
+        return directUrl;
+      }
+    } catch {
+      if (rawName === "sslmode") {
+        return directUrl;
+      }
+    }
+  }
+  return `${directUrl}${queryIndex === directUrl.length - 1 ? "" : "&"}sslmode=disable`;
 }
 
 export function requireDirectUrl(): string {
