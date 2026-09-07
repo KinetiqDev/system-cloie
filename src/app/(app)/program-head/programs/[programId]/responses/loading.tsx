@@ -1,5 +1,5 @@
-import { OperationalRouteLoading } from "@/components/layout/operational-route-loading";
+import { ProgramHeadResponsesRouteFallback } from "@/features/analytics/components/program-head-responses-content-fallback";
 
 export default function Loading() {
-  return <OperationalRouteLoading variant="list" />;
+  return <ProgramHeadResponsesRouteFallback />;
 }

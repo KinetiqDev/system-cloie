@@ -7,6 +7,9 @@ vi.mock("next/link", () => ({
   default: ({ children, ...props }: React.ComponentProps<"a">) => <a {...props}>{children}</a>,
   useLinkStatus: () => ({ pending: false }),
 }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 vi.mock("@/features/analytics/components/program-head-responses-filters", () => ({
   ProgramHeadResponsesFilters: () => <div>Filters</div>,
