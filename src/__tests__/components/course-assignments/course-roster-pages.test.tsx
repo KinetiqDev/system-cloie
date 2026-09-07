@@ -21,14 +21,16 @@ import type {
   CourseRosterPreviewRow,
 } from "@/features/course-assignments/types";
 
-const { replaceMock, refreshMock } = vi.hoisted(() => ({
+const { replaceMock, refreshMock, showToastMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   refreshMock: vi.fn(),
+  showToastMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, refresh: refreshMock }),
 }));
+vi.mock("@/components/ui/toast", () => ({ showToast: showToastMock }));
 
 function mockMatchMedia(matches: boolean) {
   vi.stubGlobal(
@@ -679,14 +681,12 @@ describe("course roster pages", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /remove/i }));
 
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("Grace Hopper");
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("CS101 - Computing");
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      /does not affect the Student account or term placement/i
-    );
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      /future Course-bound evaluation eligibility/i
-    );
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toHaveTextContent("Grace Hopper");
+    expect(dialog).toHaveTextContent(/only the CS101 roster changes/i);
+    expect(dialog).toHaveTextContent(/student account and other classes are not affected/i);
+    expect(dialog).toHaveTextContent(/will not receive evaluations for this class/i);
+    expect(dialog).toHaveTextContent(/can be added back later/i);
   });
 
   it("hides write controls for read-only or unauthorized detail data", () => {
@@ -2238,11 +2238,19 @@ describe("course roster confirmation results", () => {
         ],
       },
     });
-    const addSpy = vi.spyOn(rosterActions, "addRosterMembershipAction");
+    const addSpy = vi.spyOn(rosterActions, "addRosterMembershipAction").mockResolvedValue({
+      success: true,
+      data: { outcome: "CREATED", message: "Student added to Course roster." },
+    });
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Maria" } });
     fireEvent.click(await screen.findByRole("button", { name: /maria santos/i }));
-    expect(screen.getByText("Selected Student")).toBeInTheDocument();
-    expect(screen.getAllByText("Education").length).toBeGreaterThan(0);
+    expect(screen.getByText(/ready to add:/i)).toBeInTheDocument();
+    expect(screen.getByText(/ready to add:/i).closest("div")).toHaveTextContent("Maria Santos");
+    fireEvent.click(screen.getByRole("button", { name: /maria santos/i }));
+    expect(screen.queryByText(/ready to add:/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add student/i })).toBeDisabled();
+    fireEvent.click(await screen.findByRole("button", { name: /maria santos/i }));
+    expect(screen.getByText(/ready to add:/i)).toBeInTheDocument();
     fireEvent.submit(screen.getByRole("button", { name: /add student/i }).closest("form")!);
     await waitFor(() =>
       expect(addSpy).toHaveBeenCalledWith({
@@ -2250,6 +2258,48 @@ describe("course roster confirmation results", () => {
         studentUserId: "student-9",
       })
     );
+    await waitFor(() =>
+      expect(showToastMock).toHaveBeenCalledWith("Maria Santos added to Course roster.", "success")
+    );
+    expect(screen.queryByText(/ready to add:/i)).not.toBeInTheDocument();
+  });
+  it("keeps the selection and reports a failed single-add inline and as an error toast", async () => {
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /add one student/i }));
+    vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        candidates: [
+          {
+            userId: "student-9",
+            name: "Maria Santos",
+            email: "maria.santos@acd.edu.ph",
+            programId: "program-1",
+            programCode: "BSED",
+            programName: "Education",
+            yearLevel: null,
+            section: null,
+            majorName: null,
+            selectable: true,
+            reason: null,
+          },
+        ],
+      },
+    });
+    vi.spyOn(rosterActions, "addRosterMembershipAction").mockResolvedValue({
+      success: false,
+      error: "Course assignment not found.",
+    });
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Maria" } });
+    fireEvent.click(await screen.findByRole("button", { name: /maria santos/i }));
+    fireEvent.submit(screen.getByRole("button", { name: /add student/i }).closest("form")!);
+    await waitFor(() =>
+      expect(showToastMock).toHaveBeenCalledWith("Course assignment not found.", "error")
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Course assignment not found.");
+    expect(screen.getByText(/ready to add:/i)).toBeInTheDocument();
   });
 
   it("shows informational already-active results when nothing needs writing", async () => {

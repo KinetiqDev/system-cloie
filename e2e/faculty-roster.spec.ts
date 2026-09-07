@@ -53,14 +53,21 @@ test.describe("Faculty Course roster mutation", () => {
     await search.fill(fx.rosterStudents.addable.name);
     await dialog.getByRole("button", { name: new RegExp(fx.rosterStudents.addable.name) }).click();
 
-    // Identity evidence: the selected Student's canonical name and email.
-    await expect(dialog.getByText("Selected Student")).toBeVisible();
+    // Identity evidence: the compact confirmation names the selected student.
+    await expect(dialog.getByText(/ready to add:/i)).toBeVisible();
     await expect(
-      dialog.getByText("Selected Student").locator("..").getByText(fx.rosterStudents.addable.email)
+      dialog
+        .getByText(/ready to add:/i)
+        .locator("..")
+        .getByText(fx.rosterStudents.addable.name)
     ).toBeVisible();
 
     await dialog.getByRole("button", { name: "Add Student" }).click();
-    await expect(dialog.getByText("Student added to Course roster.")).toBeVisible();
+    await expect(
+      page
+        .getByRole("status")
+        .getByText(`${fx.rosterStudents.addable.name} added to Course roster.`)
+    ).toBeVisible();
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
 
