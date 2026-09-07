@@ -1,12 +1,9 @@
-import { ArrowRight, Building2, Library, Mail, User } from "lucide-react";
-import Link from "next/link";
+import { Building2, Library, Mail, User } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { prisma } from "@/lib/db/prisma";
-import { cn } from "@/lib/utils";
 
 // fallow-ignore-next-line complexity
 export default async function GenEdCoordinatorProfilePage() {
@@ -24,16 +21,6 @@ export default async function GenEdCoordinatorProfilePage() {
       <div>
         <h1 className="text-heading-lg">Profile</h1>
         <p className="text-text-muted text-sm">Review your account information and coordinator scope.</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/gen-ed-coordinator/dashboard" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Back to Dashboard
-            <ArrowRight aria-hidden="true" className="size-4" data-icon="inline-end" />
-          </Link>
-          <Link href="/gen-ed-coordinator/course-assignments" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Manage assignments
-            <ArrowRight aria-hidden="true" className="size-4" data-icon="inline-end" />
-          </Link>
-        </div>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="border-border shadow-sm">
