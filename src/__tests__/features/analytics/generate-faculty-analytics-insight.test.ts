@@ -218,6 +218,33 @@ describe("generateFacultyAnalyticsInsight output contract", () => {
     expect(result.ok && result.data.ratings.summary).toContain("4 or 5");
   });
 
+  it("requires the provider to enforce the complete section schema", async () => {
+    createCompletionMock.mockImplementation(async (request) => ({
+      choices: [
+        {
+          message: {
+            content:
+              request.response_format?.type === "json_schema"
+                ? JSON.stringify(insight)
+                : JSON.stringify({
+                    ...insight,
+                    ratings: "Most ratings were favorable.",
+                  }),
+          },
+        },
+      ],
+    }));
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "overview" });
+
+    expect(createCompletionMock.mock.calls[0][0].response_format).toMatchObject({
+      type: "json_schema",
+      json_schema: { strict: true },
+    });
+    expect(result.ok).toBe(true);
+  });
   it("rejects output missing the required sentiment signal", async () => {
     const { participation: _omitted, ...rest } = insight;
     void _omitted;
