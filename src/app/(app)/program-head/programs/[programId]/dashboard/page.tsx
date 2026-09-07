@@ -1,8 +1,9 @@
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
-import { BarChart3, ClipboardCheck, Layers3, ListChecks } from "lucide-react";
+import { ArrowRight, BarChart3, ClipboardCheck, Layers3, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
 import { parseAnalyticsSearchParams } from "@/features/analytics/services/program-head-analytics-state";
 import {
@@ -40,7 +41,32 @@ export default async function SelectedProgramDashboardPage({
   if (!dashboard) {
     notFound();
   }
-
+  const workflows = [
+    {
+      label: "Review responses",
+      detail: "Read submitted stakeholder evidence.",
+      href: dashboard.links.responses,
+      icon: ClipboardCheck,
+    },
+    {
+      label: "Explore analytics",
+      detail: "Compare outcomes, stakeholders, and feedback.",
+      href: dashboard.links.analyticsOutcomes,
+      icon: BarChart3,
+    },
+    {
+      label: "Manage course assignments",
+      detail: "Assign faculty to course offerings.",
+      href: buildProgramHeadCourseAssignmentsPath(programId),
+      icon: ListChecks,
+    },
+    {
+      label: "Manage learning outcomes",
+      detail: "Maintain the program PLO catalog.",
+      href: buildProgramHeadOutcomesPath(programId),
+      icon: Layers3,
+    },
+  ];
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs items={[{ label: "Dashboard" }]} />
@@ -99,48 +125,49 @@ export default async function SelectedProgramDashboardPage({
         </div>
         <div className="grid min-w-0 gap-6">
           <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
-          <section aria-labelledby="dashboard-workflows-heading">
-            <div className="mb-3">
-              <h2 id="dashboard-workflows-heading" className="text-title-md font-bold">
-                Program workflows
-              </h2>
-              <p className="text-muted-foreground text-body-sm mt-1">
-                Review evidence or continue program setup.
-              </p>
-            </div>
-            <nav
-              aria-label="Program workflows"
-              className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1"
-            >
-              <Link
-                href={dashboard.links.responses}
-                className={cn(buttonVariants({ variant: "outline" }), "justify-start")}
-              >
-                <ClipboardCheck data-icon="inline-start" aria-hidden="true" />
-                Review responses
-              </Link>
-              <Link
-                href={dashboard.links.analyticsOutcomes}
-                className={cn(buttonVariants({ variant: "outline" }), "justify-start")}
-              >
-                <BarChart3 data-icon="inline-start" aria-hidden="true" />
-                Explore analytics
-              </Link>
-              <Link
-                href={buildProgramHeadCourseAssignmentsPath(programId)}
-                className={cn(buttonVariants({ variant: "outline" }), "justify-start")}
-              >
-                <ListChecks data-icon="inline-start" aria-hidden="true" />
-                Manage course assignments
-              </Link>
-              <Link
-                href={buildProgramHeadOutcomesPath(programId)}
-                className={cn(buttonVariants({ variant: "outline" }), "justify-start")}
-              >
-                <Layers3 data-icon="inline-start" aria-hidden="true" />
-                Manage learning outcomes
-              </Link>
-            </nav>
+          <section aria-labelledby="dashboard-workflows-heading" className="min-w-0">
+            <Card>
+              <CardHeader>
+                <h2
+                  id="dashboard-workflows-heading"
+                  className="font-heading text-base leading-snug font-bold text-balance"
+                >
+                  Program workflows
+                </h2>
+                <CardDescription>Review evidence or continue program setup.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <nav aria-label="Program workflows">
+                  <ul className="flex flex-col">
+                    {workflows.map(({ label, detail, href, icon: Icon }) => (
+                      <li key={href} className="border-border/60 border-b last:border-b-0">
+                        <Link
+                          href={href}
+                          aria-label={label}
+                          className="focus-visible:ring-ring hover:bg-surface-hover group -mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none pointer-coarse:min-h-12"
+                        >
+                          <span className="bg-primary-soft text-selected-fg flex size-9 shrink-0 items-center justify-center rounded-lg">
+                            <Icon aria-hidden="true" className="size-4" />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span className="text-title-sm text-text-primary text-pretty">
+                              {label}
+                            </span>
+                            <span className="text-caption text-muted-foreground text-pretty">
+                              {detail}
+                            </span>
+                          </span>
+                          <ArrowRight
+                            aria-hidden="true"
+                            className="text-text-secondary size-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+                          />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </CardContent>
+            </Card>
           </section>
         </div>
       </div>
