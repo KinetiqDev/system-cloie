@@ -1,6 +1,6 @@
 # System CLOIE deployment inventory
 
-Last verified: 2026-08-31
+Last verified: 2026-09-07
 Operator: tugeru
 
 ## Host
@@ -25,7 +25,7 @@ Operator: tugeru
 - Resource UUID: q5lnvl1jcuyeqejgakvqzw64
 - Repository: KinetiqDev/system-cloie
 - Branch: main
-- Dockerfile: /Dockerfile
+- Deployed commit: c8cf224f637175491af9268a39175e00e7626373 (2026-09-07 redeploy; was fc78b8a8a1a9aaf341bd25d44ad3c37c36cbee7c from 2026-09-04)
 - Internal port: 3000
 - Domain: https://system-cloie.app
 - Coolify origin route: http://system-cloie.app, because Cloudflare Tunnel terminates HTTPS
@@ -97,7 +97,7 @@ The current backups are on the same server and are not disaster recovery.
 - Supabase Auth through local Coolify route: HTTP 200
 - Google provider: enabled
 - Google authorize endpoint: redirects to Google with callback `https://api.system-cloie.app/auth/v1/callback`
-- System CLOIE migrations: local and remote histories match through 20260827064353
+- System CLOIE migrations: local and remote histories match through 20260905090100 (2 pending found 2026-09-07: 20260905090000, 20260905090100; applied with pre-apply backup at ~/system-cloie-backups/pre-migration-20260907.dump)
 - Prisma private database access: `SELECT 1` succeeded from the application container through Supavisor
 - Application image: healthy
 - Public application: HTTP 200
@@ -118,9 +118,9 @@ The current backups are on the same server and are not disaster recovery.
 - Run and record a full restore drill against a disposable non-production target.
 - Capture a fresh backup after the first real OAuth/account activity and after the latest credential rotation.
 - Establish encrypted recovery custody for runtime secrets; secrets are intentionally absent from Git and the config archive.
-- Repair and verify the repository production migration command before the next schema change; direct migration history currently matches through `20260827064353`.
+- Production migration command repaired and verified 2026-09-07: CLI bumped to ^2.116.0 (older releases ignore `sslmode` and force TLS against the plaintext target) and remote commands now default to `?sslmode=disable`; `migration:list` and `push --dry-run` confirmed green against the maintenance endpoint.
 - Configure at least one Coolify notification channel for deployment, backup, host reachability, and disk failures.
 - Add disk-capacity monitoring and Docker build-cache cleanup; the root filesystem was 82% used and Docker build cache held about 16 GB at the readiness audit.
-- Commit and push this deployment inventory.
 - Define and rehearse application and Supabase rollback procedures with named operators and recovery objectives.
+- Investigate Kong gateway `503 remote connection failure` on `/rest/v1/*` (PostgREST itself healthy, direct 200, schema cache current at 37 relations; System CLOIE does not use PostgREST so no user impact; observed 2026-09-07, predates the migration apply).
 - Record a maintenance cadence for Ubuntu, Docker, Coolify, cloudflared, Tailscale, and the pinned Supabase self-hosted release.
