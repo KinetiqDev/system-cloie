@@ -3,7 +3,11 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { getSupabaseCommand, requireDirectUrl } from "../../../scripts/supabase-cli";
+import {
+  getSupabaseCommand,
+  requireDirectUrl,
+  withPlaintextSslmode,
+} from "../../../scripts/supabase-cli";
 import {
   buildMigrationArgs,
   buildMigrationFilePath,
@@ -35,15 +39,26 @@ describe("supabase workflow helpers", () => {
     }
   });
 
-  it("returns the configured DIRECT_URL when present", () => {
+  it("returns the configured DIRECT_URL with plaintext sslmode for remote commands", () => {
     const previous = process.env.DIRECT_URL;
-    process.env.DIRECT_URL = "postgresql://direct-url";
+    process.env.DIRECT_URL = "postgresql://postgres:secret@127.0.0.1:55432/postgres";
     try {
-      expect(requireDirectUrl()).toBe("postgresql://direct-url");
+      expect(requireDirectUrl()).toBe(
+        "postgresql://postgres:secret@127.0.0.1:55432/postgres?sslmode=disable"
+      );
     } finally {
       if (previous !== undefined) process.env.DIRECT_URL = previous;
       else delete process.env.DIRECT_URL;
     }
+  });
+
+  it("adds plaintext sslmode only when the url does not set one", () => {
+    expect(withPlaintextSslmode("postgresql://postgres:secret@db:5432/postgres")).toBe(
+      "postgresql://postgres:secret@db:5432/postgres?sslmode=disable"
+    );
+    expect(
+      withPlaintextSslmode("postgresql://postgres:secret@db:5432/postgres?sslmode=require")
+    ).toBe("postgresql://postgres:secret@db:5432/postgres?sslmode=require");
   });
 
   it("parses the local and remote targets", () => {

@@ -17,7 +17,15 @@ describe("Supabase CLI config", () => {
 
     await Promise.all(scriptEntryFiles.map((file) => access(path.join(process.cwd(), file))));
 
-    expect(pkg.devDependencies.supabase).toBeDefined();
+    // CLI releases before 2.116 ignore `sslmode` on `--db-url` and force TLS,
+    // which cannot reach the plaintext self-hosted Postgres target.
+    const cliRange = String(pkg.devDependencies.supabase);
+    const cliVersion = cliRange
+      .replace(/^[~^>=< ]+/, "")
+      .split(".")
+      .map(Number);
+    expect(cliVersion.length).toBe(3);
+    expect(cliVersion[0] > 2 || (cliVersion[0] === 2 && cliVersion[1] >= 116)).toBe(true);
 
     expect(pkg.scripts["supabase:init"]).toBe("tsx scripts/run-supabase-command.ts init");
     expect(pkg.scripts["supabase:start"]).toBe("tsx scripts/run-supabase-command.ts local start");

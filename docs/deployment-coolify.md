@@ -1009,6 +1009,8 @@ postgresql://postgres:<POSTGRES_PASSWORD>@127.0.0.1:55432/postgres
 
 If the password contains URI-reserved characters, URL-encode it before constructing a PostgreSQL URL.
 
+Remote repository commands (`pnpm supabase:migration:list`, `pnpm supabase:push*`, `pnpm supabase:types`) append `?sslmode=disable` automatically when the URL sets no `sslmode`, because the self-hosted Postgres endpoint is plaintext. This requires Supabase CLI 2.116.0 or later (see the `supabase` devDependency and its version-floor test); older releases ignore the parameter and fail with a TLS error.
+
 Run in this order:
 
 ```bash

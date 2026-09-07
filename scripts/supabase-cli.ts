@@ -4,6 +4,14 @@ export function getSupabaseCommand() {
   return resolveLocalBin("supabase");
 }
 
+export function withPlaintextSslmode(directUrl: string): string {
+  const url = new URL(directUrl);
+  if (!url.searchParams.has("sslmode")) {
+    url.searchParams.set("sslmode", "disable");
+  }
+  return url.toString();
+}
+
 export function requireDirectUrl(): string {
   const value = process.env.DIRECT_URL;
 
@@ -14,5 +22,5 @@ export function requireDirectUrl(): string {
     );
   }
 
-  return value;
+  return withPlaintextSslmode(value);
 }
