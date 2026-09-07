@@ -152,4 +152,33 @@ describe("ProgramHeadAnalyticsFilters", () => {
     expect(within(dialog).getByRole("button", { name: /Apply/ })).toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: "Reset" })).toBeInTheDocument();
   });
+  it("keeps mounted selects controlled when soft navigation delivers new filters", () => {
+    const errors: unknown[][] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      errors.push(args);
+    });
+    try {
+      const view = render(
+        <ProgramHeadAnalyticsFilters
+          programId="program-bsed"
+          filters={baseFilters}
+          options={options}
+        />
+      );
+      view.rerender(
+        <ProgramHeadAnalyticsFilters
+          programId="program-bsed"
+          filters={{ ...baseFilters, evidenceSource: "COURSE" }}
+          options={options}
+        />
+      );
+      expect(
+        errors.filter((args) =>
+          String(args[0] ?? "").includes("changing the default value state of an uncontrolled")
+        )
+      ).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
