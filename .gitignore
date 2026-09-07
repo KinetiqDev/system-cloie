@@ -70,6 +70,7 @@ prisma/*.db-journal
 skills-lock.json
 .opencode
 .pi
+.impeccable/live
 
 # IDE
 .idea

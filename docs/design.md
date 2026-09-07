@@ -8,53 +8,22 @@
 
 This file defines System CLOIE's visual language, theme behavior, page patterns, components, responsive behavior, interaction, and accessibility. It applies to both light and dark themes.
 
-| Subject                                        | Source of truth                              |
-| ---------------------------------------------- | -------------------------------------------- |
-| Architecture, stack, binding engineering rules | `AGENTS.md`                                  |
-| Product workflows and requirements             | GitHub issues, feature `CONTEXT.md`          |
-| Domain terms and invariants                    | `CONTEXT-MAP.md`, feature `CONTEXT.md`, ADRs |
-| Visual and interaction behavior                | `docs/design.md`                             |
-| Numerical design values                        | `src/styles/tokens.css`                      |
-| Tailwind/shadcn mappings and type utilities    | `src/app/globals.css`                        |
-| Current behavior                               | existing code and tests                      |
-| Execution and verification                     | `AGENTS.md`                                  |
+| Subject                                                  | Source of truth                                             |
+| -------------------------------------------------------- | ----------------------------------------------------------- |
+| Visual and interaction behavior                          | `docs/design.md`                                            |
+| Numerical design values                                  | `src/styles/tokens.css`                                     |
+| Tailwind/shadcn mappings and type utilities              | `src/app/globals.css`                                       |
+| Product workflows, architecture, execution, verification | `AGENTS.md`                                                 |
+| Product requirements, domain terms, invariants           | GitHub issues, `CONTEXT-MAP.md`, feature `CONTEXT.md`, ADRs |
+| Current behavior                                         | existing code and tests                                     |
 
-Surface conflicts explicitly. This file does not define product scope, authorization, database behavior, or engineering workflow.
+Surface conflicts explicitly. This file does not define product scope, authorization, database behavior, or engineering workflow. UI work follows `AGENTS.md`; this file supplies only the visual contract.
 
 **Keywords:** MUST/MUST NOT are binding; SHOULD/SHOULD NOT require a documented reason to deviate; MAY is optional.
 
 ---
 
-## 2. Agent Workflow
-
-Before changing UI:
-
-1. Identify the role, domain, and page type.
-2. Read the relevant context, ADRs, code, and tests.
-3. Reuse the existing shell and `src/components/ui/` primitives.
-4. Use semantic tokens; never choose light/dark values in components.
-5. Cover relevant default, hover, focus, pressed, selected, disabled, loading, error, and empty states.
-6. Verify light, dark, desktop, mobile, keyboard, contrast, and reduced motion.
-7. Run focused tests, `pnpm lint`, and `pnpm build`.
-
-A change is done when every step above holds:
-
-- [ ] Correct role, domain, and page type
-- [ ] Relevant context and current implementation inspected
-- [ ] Existing shell and primitives reused
-- [ ] Semantic tokens only
-- [ ] Correct light/dark hierarchy
-- [ ] Required component and system states covered
-- [ ] Desktop and mobile verified
-- [ ] Keyboard, focus, contrast, touch, and reduced motion verified
-- [ ] Status/chart meaning is not color-only
-- [ ] No forbidden pattern (§14)
-- [ ] Focused tests, `pnpm lint`, and `pnpm build` pass
-- [ ] Result is recognizably System CLOIE
-
----
-
-## 3. Product Design Intent
+## 2. Product Design Intent
 
 - **Product:** institutional academic evaluation, learning-outcome monitoring, analytics, and reporting platform
 - **Institution:** Assumption College of Davao
@@ -74,7 +43,7 @@ A change is done when every step above holds:
 
 ---
 
-## 4. Theme Architecture
+## 3. Theme Architecture
 
 ### 4.1 Model and Status
 
@@ -138,7 +107,7 @@ Theme-adaptive:
 
 ---
 
-## 5. Semantic Token System
+## 4. Semantic Token System
 
 ### 5.1 Ownership and Layers
 
@@ -211,7 +180,7 @@ Five categorical chart series (`--chart-1` … `--chart-5`), theme-resolved in `
 
 ---
 
-## 6. Visual Foundations
+## 5. Visual Foundations
 
 ### 6.1 Typography
 
@@ -268,7 +237,7 @@ Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only
 
 ---
 
-## 7. Page-Type Patterns
+## 6. Page-Type Patterns
 
 | Page type             | Density     | Structure                      | Emphasize                    | Avoid                  |
 | --------------------- | ----------- | ------------------------------ | ---------------------------- | ---------------------- |
@@ -296,7 +265,7 @@ The installable PWA shell exists. Offline data caching and mutation queues remai
 
 ---
 
-## 8. Shared Components
+## 7. Shared Components
 
 ### 8.1 Required States
 
@@ -409,7 +378,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 
 ---
 
-## 9. Module-Specific Rules
+## 8. Module-Specific Rules
 
 | Module                               | Emphasis                       | Required pattern                                                  |
 | ------------------------------------ | ------------------------------ | ----------------------------------------------------------------- |
@@ -437,19 +406,19 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 
 ---
 
-## 10. Responsive Behavior
+## 9. Responsive Behavior
 
 Tailwind defaults: `sm` 640, `md` 768, `lg` 1024, `xl` 1280.
 
 - **Desktop:** expanded navigation, full chart/table density, multi-column cards, dialogs.
 - **Tablet:** Dean icon rail, two-column cards, reduced chart density.
-- **Mobile:** respondent bottom nav; admin hamburger/drawer; single-column forms; contained horizontal tables; `pb-safe`; touch targets per §6.2.
+- **Mobile:** respondent bottom nav; admin hamburger/drawer; single-column forms; contained horizontal tables; `pb-safe`; touch targets per §5.2.
 
 Appearance must not alter breakpoints, density, information hierarchy, navigation mode, or responsive substitution.
 
 ---
 
-## 11. Interaction and Motion
+## 10. Interaction and Motion
 
 - Hover: color, opacity, or surface change; never the only discovery method.
 - Focus: visible on every surface; never remove the ring.
@@ -461,7 +430,7 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 
 ---
 
-## 12. Accessibility
+## 11. Accessibility
 
 - Normal text: ≥4.5:1 contrast.
 - Large text and meaningful non-text boundaries: ≥3:1 where applicable.
@@ -476,7 +445,7 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 
 ---
 
-## 13. Content and Copy
+## 12. Content and Copy
 
 - Professional, institutional, direct.
 - CTAs are imperative and role-specific.
@@ -488,7 +457,7 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 
 ---
 
-## 14. Allowed, Forbidden, and Exceptions
+## 13. Allowed, Forbidden, and Exceptions
 
 ### Allowed
 
@@ -525,7 +494,7 @@ Exceptions must be documented, scoped, and tokenized when reusable. Institutiona
 
 ---
 
-## 15. Visual References
+## 14. Visual References
 
 Store companion boards at:
 
