@@ -1930,6 +1930,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/responsive-dialog.tsx",
+    disposition: "task",
+    taskId: 6,
+    category: "ui_primitive",
+  },
+  {
     path: "src/components/ui/select.tsx",
     disposition: "task",
     taskId: 4,

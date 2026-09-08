@@ -174,8 +174,8 @@ describe("CourseForm temporal fields", () => {
         default_term: AcademicTerm.SECOND_TERM,
       });
 
-      await openAndSelect(/year level/i, "None");
-      expect(screen.getByLabelText(/year level/i)).toHaveTextContent("None");
+      await openAndSelect(/year level/i, "No default");
+      expect(screen.getByLabelText(/year level/i)).toHaveTextContent("No default");
     });
   });
 
