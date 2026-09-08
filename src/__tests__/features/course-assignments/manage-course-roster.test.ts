@@ -222,6 +222,40 @@ describe("manage course roster service", () => {
     expect(prismaMock.evaluationAssignment.create).not.toHaveBeenCalled();
   });
 
+  it("retries restoration when a concurrent reversal wins the assignment race", async () => {
+    prismaMock.courseAssignment.findUnique.mockResolvedValue({
+      ...assignment,
+      course_bound_evaluations: [
+        {
+          id: "evaluation-1",
+          published_at: new Date(),
+          status: "ACTIVE",
+          deadline_at: null,
+        },
+      ],
+    } as never);
+    prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue({
+      id: "membership-1",
+      course_assignment_id: "assignment-1",
+      student_user_id: "student-1",
+      is_active: false,
+      created_by: "original-creator",
+      created_at: new Date("2026-07-01T00:00:00Z"),
+    } as never);
+    prismaMock.user.findUnique.mockResolvedValue(student as never);
+    prismaMock.evaluationAssignment.create.mockRejectedValueOnce({ code: "P2002" });
+
+    await expect(restoreRosterMembership("assignment-1", "membership-1")).resolves.toEqual({
+      success: true,
+      data: {
+        outcome: "RESTORED",
+        message: "Student membership restored and added to the open evaluation.",
+      },
+    });
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(2);
+    expect(prismaMock.evaluationAssignment.create).toHaveBeenCalledTimes(2);
+  });
+
   it("soft-removes membership with removal audit fields", async () => {
     prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue({
       id: "membership-1",

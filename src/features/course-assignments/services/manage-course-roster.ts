@@ -447,87 +447,103 @@ export async function addRosterMembership(
     const authorization = await authorizeForWrite(assignmentId, programId);
     if (!authorization.success) return authorization;
 
-    return await prisma.$transaction(async (tx) => {
-      const assignment = await lockAssignment(tx, assignmentId);
-      if (!assignment) return { success: false, error: NOT_FOUND_ERROR };
-      const authorization = await confirmWriteAuthorization(tx, session, assignment, programId);
-      if (authorization === false || !authorization.allowed) {
-        return { success: false, error: NOT_FOUND_ERROR };
-      }
-      const lifecycleFailure = safeMutabilityFailure(assignment);
-      if (lifecycleFailure) return lifecycleFailure;
+    // A concurrent writer (e.g. a late-include reversal creating the same
+    // EvaluationAssignment) can win the race after our reads but before our
+    // writes, failing the transaction on a unique constraint. Re-reading
+    // fresh state and converging replaces the false conflict report.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await prisma.$transaction(async (tx) => {
+          const assignment = await lockAssignment(tx, assignmentId);
+          if (!assignment) return { success: false, error: NOT_FOUND_ERROR };
+          const authorization = await confirmWriteAuthorization(tx, session, assignment, programId);
+          if (authorization === false || !authorization.allowed) {
+            return { success: false, error: NOT_FOUND_ERROR };
+          }
+          const lifecycleFailure = safeMutabilityFailure(assignment);
+          if (lifecycleFailure) return lifecycleFailure;
 
-      const student = await tx.user.findUnique({
-        where: { id: studentUserId },
-        select: studentSelect(assignment.term_instance_id),
-      });
-      if (!student) return { success: false, error: eligibilityMessages.UNKNOWN_ACCOUNT };
+          const student = await tx.user.findUnique({
+            where: { id: studentUserId },
+            select: studentSelect(assignment.term_instance_id),
+          });
+          if (!student) return { success: false, error: eligibilityMessages.UNKNOWN_ACCOUNT };
 
-      const existing = await tx.courseAssignmentMembership.findUnique({
-        where: {
-          course_assignment_id_student_user_id: {
-            course_assignment_id: assignment.id,
-            student_user_id: student.id,
-          },
-        },
-        select: { id: true, is_active: true },
-      });
-      if (existing?.is_active) {
-        return {
-          success: false,
-          error: "Student is already an active member of this Course roster.",
-        };
-      }
+          const existing = await tx.courseAssignmentMembership.findUnique({
+            where: {
+              course_assignment_id_student_user_id: {
+                course_assignment_id: assignment.id,
+                student_user_id: student.id,
+              },
+            },
+            select: { id: true, is_active: true },
+          });
+          if (existing?.is_active) {
+            return {
+              success: false,
+              error: "Student is already an active member of this Course roster.",
+            };
+          }
 
-      const projection = projectRosterEligibility(
-        { courseScope: assignment.course.course_scope, programId: assignment.program_id },
-        studentForEligibility(student)
-      );
-      if (!projection.eligible) {
-        return { success: false, error: eligibilityMessages[projection.reason!] };
-      }
+          const projection = projectRosterEligibility(
+            { courseScope: assignment.course.course_scope, programId: assignment.program_id },
+            studentForEligibility(student)
+          );
+          if (!projection.eligible) {
+            return { success: false, error: eligibilityMessages[projection.reason!] };
+          }
 
-      if (await activeSectionConflict(tx, assignment, student.id)) return activeSectionError();
+          if (await activeSectionConflict(tx, assignment, student.id)) return activeSectionError();
 
-      if (existing) {
-        await tx.courseAssignmentMembership.update({
-          where: { id: existing.id },
-          data: { is_active: true, updated_by: session.userId, removed_by: null, removed_at: null },
+          if (existing) {
+            await tx.courseAssignmentMembership.update({
+              where: { id: existing.id },
+              data: {
+                is_active: true,
+                updated_by: session.userId,
+                removed_by: null,
+                removed_at: null,
+              },
+            });
+            const included = await includeStudentInOpenEvaluation(tx, assignment, student.id);
+            return {
+              success: true,
+              data: {
+                outcome: "RESTORED",
+                message: included
+                  ? "Student membership restored and added to the open evaluation."
+                  : "Student membership restored.",
+              },
+            };
+          }
+
+          await tx.courseAssignmentMembership.create({
+            data: {
+              course_assignment_id: assignment.id,
+              student_user_id: student.id,
+              course_id: assignment.course_id,
+              term_instance_id: assignment.term_instance_id,
+              program_id: assignment.program_id,
+              created_by: session.userId,
+              updated_by: session.userId,
+            },
+          });
+          const included = await includeStudentInOpenEvaluation(tx, assignment, student.id);
+          return {
+            success: true,
+            data: {
+              outcome: "CREATED",
+              message: included
+                ? "Student added to the Course roster and the open evaluation."
+                : "Student added to Course roster.",
+            },
+          };
         });
-        const included = await includeStudentInOpenEvaluation(tx, assignment, student.id);
-        return {
-          success: true,
-          data: {
-            outcome: "RESTORED",
-            message: included
-              ? "Student membership restored and added to the open evaluation."
-              : "Student membership restored.",
-          },
-        };
+      } catch (error) {
+        if (!isUniqueError(error) || attempt === 2) throw error;
       }
-
-      await tx.courseAssignmentMembership.create({
-        data: {
-          course_assignment_id: assignment.id,
-          student_user_id: student.id,
-          course_id: assignment.course_id,
-          term_instance_id: assignment.term_instance_id,
-          program_id: assignment.program_id,
-          created_by: session.userId,
-          updated_by: session.userId,
-        },
-      });
-      const included = await includeStudentInOpenEvaluation(tx, assignment, student.id);
-      return {
-        success: true,
-        data: {
-          outcome: "CREATED",
-          message: included
-            ? "Student added to the Course roster and the open evaluation."
-            : "Student added to Course roster.",
-        },
-      };
-    });
+    }
+    throw new Error("Course roster mutation retry limit exceeded.");
   } catch (error) {
     if (isUniqueError(error)) return uniqueMembershipError(assignmentId, studentUserId);
     return unexpectedRosterFailure("add_membership", actorId, assignmentId, error);
@@ -548,72 +564,88 @@ export async function restoreRosterMembership(
     const authorization = await authorizeForWrite(assignmentId, programId);
     if (!authorization.success) return authorization;
 
-    return await prisma.$transaction(async (tx) => {
-      const assignment = await lockAssignment(tx, assignmentId);
-      if (!assignment) return { success: false, error: NOT_FOUND_ERROR };
-      const authorization = await confirmWriteAuthorization(tx, session, assignment, programId);
-      if (authorization === false || !authorization.allowed) {
-        return { success: false, error: NOT_FOUND_ERROR };
-      }
-      const lifecycleFailure = safeMutabilityFailure(assignment);
-      if (lifecycleFailure) return lifecycleFailure;
+    // A concurrent writer (e.g. a late-include reversal creating the same
+    // EvaluationAssignment) can win the race after our reads but before our
+    // writes, failing the transaction on a unique constraint. Re-reading
+    // fresh state and converging replaces the false conflict report.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await prisma.$transaction(async (tx) => {
+          const assignment = await lockAssignment(tx, assignmentId);
+          if (!assignment) return { success: false, error: NOT_FOUND_ERROR };
+          const authorization = await confirmWriteAuthorization(tx, session, assignment, programId);
+          if (authorization === false || !authorization.allowed) {
+            return { success: false, error: NOT_FOUND_ERROR };
+          }
+          const lifecycleFailure = safeMutabilityFailure(assignment);
+          if (lifecycleFailure) return lifecycleFailure;
 
-      const membership = await tx.courseAssignmentMembership.findUnique({
-        where: { id: membershipId },
-        select: {
-          id: true,
-          course_assignment_id: true,
-          student_user_id: true,
-          is_active: true,
-          created_by: true,
-          created_at: true,
-        },
-      });
-      if (!membership || membership.course_assignment_id !== assignment.id) {
-        return { success: false, error: "Roster membership not found." };
-      }
-      studentUserId = membership.student_user_id;
-      if (membership.is_active) {
-        return {
-          success: false,
-          error: "Student is already an active member of this Course roster.",
-        };
-      }
+          const membership = await tx.courseAssignmentMembership.findUnique({
+            where: { id: membershipId },
+            select: {
+              id: true,
+              course_assignment_id: true,
+              student_user_id: true,
+              is_active: true,
+              created_by: true,
+              created_at: true,
+            },
+          });
+          if (!membership || membership.course_assignment_id !== assignment.id) {
+            return { success: false, error: "Roster membership not found." };
+          }
+          studentUserId = membership.student_user_id;
+          if (membership.is_active) {
+            return {
+              success: false,
+              error: "Student is already an active member of this Course roster.",
+            };
+          }
 
-      const student = await tx.user.findUnique({
-        where: { id: membership.student_user_id },
-        select: studentSelect(assignment.term_instance_id),
-      });
-      const projection = projectRosterEligibility(
-        { courseScope: assignment.course.course_scope, programId: assignment.program_id },
-        student ? studentForEligibility(student) : null
-      );
-      if (!projection.eligible) {
-        return { success: false, error: eligibilityMessages[projection.reason!] };
-      }
-      if (await activeSectionConflict(tx, assignment, membership.student_user_id)) {
-        return activeSectionError();
-      }
+          const student = await tx.user.findUnique({
+            where: { id: membership.student_user_id },
+            select: studentSelect(assignment.term_instance_id),
+          });
+          const projection = projectRosterEligibility(
+            { courseScope: assignment.course.course_scope, programId: assignment.program_id },
+            student ? studentForEligibility(student) : null
+          );
+          if (!projection.eligible) {
+            return { success: false, error: eligibilityMessages[projection.reason!] };
+          }
+          if (await activeSectionConflict(tx, assignment, membership.student_user_id)) {
+            return activeSectionError();
+          }
 
-      await tx.courseAssignmentMembership.update({
-        where: { id: membership.id },
-        data: { is_active: true, updated_by: session.userId, removed_by: null, removed_at: null },
-      });
-      const included = await includeStudentInOpenEvaluation(
-        tx,
-        assignment,
-        membership.student_user_id
-      );
-      return {
-        success: true,
-        data: {
-          outcome: "RESTORED",
-          message: included
-            ? "Student membership restored and added to the open evaluation."
-            : "Student membership restored.",
-        },
-      };
-    });
+          await tx.courseAssignmentMembership.update({
+            where: { id: membership.id },
+            data: {
+              is_active: true,
+              updated_by: session.userId,
+              removed_by: null,
+              removed_at: null,
+            },
+          });
+          const included = await includeStudentInOpenEvaluation(
+            tx,
+            assignment,
+            membership.student_user_id
+          );
+          return {
+            success: true,
+            data: {
+              outcome: "RESTORED",
+              message: included
+                ? "Student membership restored and added to the open evaluation."
+                : "Student membership restored.",
+            },
+          };
+        });
+      } catch (error) {
+        if (!isUniqueError(error) || attempt === 2) throw error;
+      }
+    }
+    throw new Error("Course roster mutation retry limit exceeded.");
   } catch (error) {
     if (isUniqueError(error)) return uniqueMembershipError(assignmentId, studentUserId);
     return unexpectedRosterFailure("restore_membership", actorId, assignmentId, error);
