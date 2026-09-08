@@ -91,13 +91,12 @@ test.describe("Faculty Course roster mutation", () => {
     await expect(memberRow.getByText(fx.rosterStudents.addable.email)).toBeVisible();
     await expect(memberRow.getByText("Ready")).toBeVisible();
 
-    // Active-roster and evaluation-eligible counts include the added Student.
-    await expect(
-      page.getByText("Active roster").locator("..").getByText("3", { exact: true })
-    ).toBeVisible();
-    await expect(
-      page.getByText("Currently evaluation-eligible").locator("..").getByText("3", { exact: true })
-    ).toBeVisible();
+    // Readiness summary tells one story: 3 on roster, 3 ready, none needing
+    // attention.
+    const summary = page.getByRole("region", { name: "Roster evaluation-readiness summary" });
+    await expect(summary.getByText("On roster")).toBeVisible();
+    await expect(summary.getByText("Ready for evaluation")).toBeVisible();
+    await expect(summary.getByText("3", { exact: true })).toHaveCount(2);
 
     // Fresh read: the persisted membership and eligibility state survive reload.
     await page.reload();
