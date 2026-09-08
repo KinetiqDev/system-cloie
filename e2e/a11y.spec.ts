@@ -168,7 +168,7 @@ test.describe("accessibility sweep", () => {
 
     await loginAs(page, fx.demoFaculty.email);
     await page.goto(`/course-rosters/${fx.gestechBsba.id}`);
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
 
     const trigger = page.getByRole("button", { name: "Manage roster" });
     await trigger.click();

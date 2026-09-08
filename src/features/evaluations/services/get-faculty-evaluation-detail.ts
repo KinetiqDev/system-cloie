@@ -7,6 +7,7 @@ import type { FacultyEvaluationDetail, GetFacultyEvaluationDetailResult } from "
 import { parsePublishedInstrument } from "@/features/instruments/services/parse-published-instrument";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { parseCourseInfoSnapshot, resolveSnapshotNullableText } from "./course-info-snapshot";
+import { getEffectiveDeploymentStatus } from "../policies";
 
 export async function getFacultyEvaluationDetail(
   evaluationId: string
@@ -205,7 +206,11 @@ export async function getFacultyEvaluationDetail(
     evaluationId: evaluation.id,
     publishedAt: evaluation.published_at,
     responseCount,
-    status: evaluation.status,
+    status: getEffectiveDeploymentStatus(
+      evaluation.status,
+      evaluation.activation_at,
+      evaluation.deadline_at
+    ),
     targets: evaluation.targets.map((target) => ({
       programCode: target.program.code,
       programId: target.program.id,

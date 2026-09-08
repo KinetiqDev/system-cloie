@@ -4,6 +4,7 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { ROLES } from "@/lib/constants/roles";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { parseCourseInfoSnapshot, resolveSnapshotNullableText } from "./course-info-snapshot";
+import { getEffectiveDeploymentStatus } from "../policies";
 import type {
   FacultyPublishedEvaluationItem,
   ListFacultyPublishedEvaluationsResult,
@@ -141,7 +142,11 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
       programName: courseInfo?.programName ?? ca.program.name,
       publishedAt: evalItem.published_at,
       responseCount: evalItem.assignments.length,
-      status: evalItem.status,
+      status: getEffectiveDeploymentStatus(
+        evalItem.status,
+        evalItem.activation_at,
+        evalItem.deadline_at
+      ),
       targetYearLevels: evalItem.targets
         .map((t) => t.year_level)
         .filter((yl): yl is NonNullable<typeof yl> => yl !== null),

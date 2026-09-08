@@ -1,11 +1,36 @@
 import { ROLES } from "@/lib/constants/roles";
-import { CourseScope } from "@prisma/client";
+import { CourseScope, DeploymentStatus } from "@prisma/client";
 import type { AuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
 
 export interface CourseAssignmentContext {
   faculty_id: string;
   program_id: string | null;
   course_scope: CourseScope;
+}
+
+export function getEffectiveDeploymentStatus(
+  status: DeploymentStatus,
+  activationAt: Date | null,
+  deadlineAt: Date | null,
+  now: Date = new Date()
+): DeploymentStatus {
+  if (
+    (status === DeploymentStatus.ACTIVE || status === DeploymentStatus.SCHEDULED) &&
+    deadlineAt !== null &&
+    deadlineAt.getTime() < now.getTime()
+  ) {
+    return DeploymentStatus.CLOSED;
+  }
+
+  if (
+    status === DeploymentStatus.SCHEDULED &&
+    activationAt !== null &&
+    activationAt.getTime() <= now.getTime()
+  ) {
+    return DeploymentStatus.ACTIVE;
+  }
+
+  return status;
 }
 
 /**

@@ -262,6 +262,10 @@ export type ListFacultyPublishedEvaluationsResult = ServiceResult<{
 export type GetFacultyEvaluationDetailResult = ServiceResult<FacultyEvaluationDetail>;
 
 export type CloseFacultyEvaluationResult = ServiceResult;
+export type ReopenFacultyEvaluationResult = ServiceResult<{
+  activationAt: Date;
+  deadlineAt: Date;
+}>;
 
 // ============================================================================
 // Preview Central Deployment Respondents (Program Head publish flow)

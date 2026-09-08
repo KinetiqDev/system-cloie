@@ -5,12 +5,14 @@ import type { FacultyPublishedEvaluationItem } from "@/features/evaluations/type
 
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
 
-const { closeFacultyEvaluationActionMock } = vi.hoisted(() => ({
+const { closeFacultyEvaluationActionMock, reopenFacultyEvaluationActionMock } = vi.hoisted(() => ({
   closeFacultyEvaluationActionMock: vi.fn(),
+  reopenFacultyEvaluationActionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/actions/faculty-evaluation-actions", () => ({
   closeFacultyEvaluationAction: closeFacultyEvaluationActionMock,
+  reopenFacultyEvaluationAction: reopenFacultyEvaluationActionMock,
 }));
 
 function makeItem(
@@ -150,6 +152,48 @@ describe("FacultyPublishedEvaluations", () => {
     await waitFor(() => expect(closeFacultyEvaluationActionMock).toHaveBeenCalledWith("e1"));
     await waitFor(() =>
       expect(within(screen.getByRole("table")).getByText("Closed")).toHaveClass("bg-secondary")
+    );
+  });
+
+  it("requires a new deadline and reopens a closed evaluation", async () => {
+    const activationAt = new Date("2026-09-08T01:00:00.000Z");
+    const deadlineAt = new Date("2026-09-10T01:00:00.000Z");
+    reopenFacultyEvaluationActionMock.mockResolvedValue({
+      success: true,
+      data: { activationAt, deadlineAt },
+    });
+
+    render(
+      <FacultyPublishedEvaluations
+        view="card"
+        evaluations={[
+          makeItem({ evaluationId: "e1", deploymentName: "Closed Eval", status: "CLOSED" }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /reopen evaluation/i }));
+    const dialog = screen.getByRole("dialog", { name: /reopen evaluation/i });
+    expect(dialog).toHaveTextContent(/saved drafts and submitted responses will remain unchanged/i);
+
+    fireEvent.change(within(dialog).getByLabelText(/new deadline/i), {
+      target: { value: "2000-01-01T00:00" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: /reopen evaluation/i }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(/choose a deadline/i);
+    expect(reopenFacultyEvaluationActionMock).not.toHaveBeenCalled();
+
+    fireEvent.change(within(dialog).getByLabelText(/new deadline/i), {
+      target: { value: "2099-09-10T09:00" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: /reopen evaluation/i }));
+
+    await waitFor(() => expect(reopenFacultyEvaluationActionMock).toHaveBeenCalledTimes(1));
+    expect(reopenFacultyEvaluationActionMock.mock.calls[0][0]).toBe("e1");
+    expect(reopenFacultyEvaluationActionMock.mock.calls[0][1]).toBeInstanceOf(Date);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByText("Active", { selector: "[data-slot=badge]" })).toHaveClass(
+      "bg-success-soft"
     );
   });
 });

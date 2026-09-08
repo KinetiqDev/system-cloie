@@ -348,7 +348,7 @@ The Faculty Member owns the authoring and operational work for the Course contex
 
 Roster eligibility requires an active Student account, Student role, completed Student profile, and active term placement for the assignment period. Program-specific assignments require a matching program; General Education assignments accept any eligible active-term Student placement. Existing memberships are retained but marked ineligible when account, profile, or placement state later changes. They are excluded from current evaluation eligibility without being silently removed.
 
-Roster operations are locked when the assignment is inactive, its period is completed, or a Course-bound evaluation is published. Faculty cannot edit Student profiles or term placement from the roster.
+Roster operations are locked only when the assignment is inactive or its Academic Period is no longer active. A published evaluation does not lock the roster: eligible Students added or restored while the evaluation is open receive it automatically. Removing a Student revokes unsubmitted access while preserving any submitted response. Faculty cannot edit Student profiles or term placement from the roster.
 
 ### 5.3 Course-level CILO journey
 

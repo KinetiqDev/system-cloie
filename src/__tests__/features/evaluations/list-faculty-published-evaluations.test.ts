@@ -155,6 +155,50 @@ describe("listFacultyPublishedEvaluations – course info snapshots", () => {
       courseTitle: "Legacy Capstone",
     });
   });
+
+  it("reports a scheduled evaluation as active once its activation time has passed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-08T01:00:00.000Z"));
+
+    try {
+      prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
+      prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
+        {
+          ...publishedEvaluation,
+          activation_at: new Date("2026-09-08T00:00:00.000Z"),
+          status: "SCHEDULED",
+        },
+      ] as never);
+
+      const result = await listFacultyPublishedEvaluations();
+
+      expect(result.success && result.data.evaluations[0]?.status).toBe("ACTIVE");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reports an evaluation as closed once its deadline has passed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-08T01:00:00.000Z"));
+
+    try {
+      prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
+      prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
+        {
+          ...publishedEvaluation,
+          deadline_at: new Date("2026-09-08T00:00:00.000Z"),
+          status: "ACTIVE",
+        },
+      ] as never);
+
+      const result = await listFacultyPublishedEvaluations();
+
+      expect(result.success && result.data.evaluations[0]?.status).toBe("CLOSED");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("listFacultyPublishedEvaluations – historical visibility", () => {

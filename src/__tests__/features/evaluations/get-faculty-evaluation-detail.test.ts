@@ -89,6 +89,30 @@ describe("getFacultyEvaluationDetail – historical visibility", () => {
     );
   });
 
+  it("reports a scheduled evaluation as active once its activation time has passed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-08T01:00:00.000Z"));
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    prismaMocks.courseBoundEvaluationFindFirst.mockResolvedValue({
+      ...evaluation,
+      activation_at: new Date("2026-09-08T00:00:00.000Z"),
+      status: "SCHEDULED",
+    });
+
+    try {
+      const result = await getFacultyEvaluationDetail("evaluation-1");
+
+      expect(result.success && result.data.status).toBe("ACTIVE");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("returns an indistinguishable not-found response for a non-owning faculty member", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Eye, XCircle } from "lucide-react";
+import { Eye, RotateCcw, XCircle } from "lucide-react";
 import { YearLevel } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,12 @@ import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { cn } from "@/lib/utils";
 import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
-import { closeFacultyEvaluationAction } from "@/lib/actions/faculty-evaluation-actions";
+import {
+  closeFacultyEvaluationAction,
+  reopenFacultyEvaluationAction,
+} from "@/lib/actions/faculty-evaluation-actions";
 import { CloseEvaluationDialog } from "./close-evaluation-dialog";
+import { ReopenEvaluationDialog } from "./reopen-evaluation-dialog";
 import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
@@ -51,6 +55,9 @@ export function FacultyPublishedEvaluations({
   const [evaluationToClose, setEvaluationToClose] = useState<FacultyPublishedEvaluationItem | null>(
     null
   );
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [evaluationToReopen, setEvaluationToReopen] =
+    useState<FacultyPublishedEvaluationItem | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const items: PublishedDeploymentItem[] = localEvaluations.map((evalItem) => ({
@@ -72,6 +79,15 @@ export function FacultyPublishedEvaluations({
     if (target) {
       setEvaluationToClose(target);
       setCloseDialogOpen(true);
+    }
+  }
+
+  function handleRequestReopen(evaluationId: string) {
+    const target = localEvaluations.find((evaluation) => evaluation.evaluationId === evaluationId);
+
+    if (target) {
+      setEvaluationToReopen(target);
+      setReopenDialogOpen(true);
     }
   }
 
@@ -97,6 +113,39 @@ export function FacultyPublishedEvaluations({
       showToast("Evaluation closed successfully.");
       setCloseDialogOpen(false);
       setEvaluationToClose(null);
+    });
+  }
+
+  function handleConfirmReopen(deadlineAt: Date) {
+    if (!evaluationToReopen) return;
+
+    startTransition(async () => {
+      const result = await reopenFacultyEvaluationAction(
+        evaluationToReopen.evaluationId,
+        deadlineAt
+      );
+
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
+
+      setLocalEvaluations((previous) =>
+        previous.map((evaluation) =>
+          evaluation.evaluationId === evaluationToReopen.evaluationId
+            ? {
+                ...evaluation,
+                activationAt: result.data.activationAt,
+                deadlineAt: result.data.deadlineAt,
+                status: "ACTIVE" as const,
+              }
+            : evaluation
+        )
+      );
+
+      showToast("Evaluation reopened successfully.");
+      setReopenDialogOpen(false);
+      setEvaluationToReopen(null);
     });
   }
 
@@ -133,6 +182,15 @@ export function FacultyPublishedEvaluations({
                 </DropdownMenuItem>
               </>
             )}
+            {item.status === "CLOSED" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleRequestReopen(item.id)}>
+                  <RotateCcw className="mr-2 size-4" />
+                  Reopen Evaluation
+                </DropdownMenuItem>
+              </>
+            )}
           </>
         )}
         renderCardActions={(item) => (
@@ -150,6 +208,12 @@ export function FacultyPublishedEvaluations({
                 Close Evaluation
               </Button>
             )}
+            {item.status === "CLOSED" && (
+              <Button variant="outline" size="sm" onClick={() => handleRequestReopen(item.id)}>
+                <RotateCcw data-icon="inline-start" />
+                Reopen Evaluation
+              </Button>
+            )}
           </>
         )}
       />
@@ -164,6 +228,19 @@ export function FacultyPublishedEvaluations({
         onConfirm={handleConfirmClose}
         isPending={isPending}
       />
+
+      {evaluationToReopen && (
+        <ReopenEvaluationDialog
+          deploymentName={evaluationToReopen.deploymentName}
+          open={reopenDialogOpen}
+          onOpenChange={(open) => {
+            setReopenDialogOpen(open);
+            if (!open) setEvaluationToReopen(null);
+          }}
+          onConfirm={handleConfirmReopen}
+          isPending={isPending}
+        />
+      )}
     </div>
   );
 }

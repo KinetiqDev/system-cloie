@@ -40,7 +40,7 @@ export function CloseEvaluationDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>
             Are you sure you want to close <span className="font-semibold">{deploymentName}</span>?
-            This action cannot be undone. Respondents will no longer be able to submit responses.
+            Respondents will no longer be able to submit until you reopen it with a new deadline.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2">
