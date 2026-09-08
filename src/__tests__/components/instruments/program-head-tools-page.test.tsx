@@ -176,12 +176,33 @@ describe("ProgramHeadToolsPage", () => {
     );
   });
 
+  test("duplicates an institutional baseline directly into the selected program", async () => {
+    duplicateTemplateActionMock.mockResolvedValue({ success: true });
+
+    renderPage();
+    const baselines = screen
+      .getByRole("heading", { name: "Institutional Baselines" })
+      .closest("section");
+    expect(baselines).not.toBeNull();
+    fireEvent.click(within(baselines!).getByRole("button", { name: "Duplicate" }));
+
+    await waitFor(() => {
+      expect(duplicateTemplateActionMock).toHaveBeenCalledWith("program-1", "baseline-1");
+      expect(showToastMock).toHaveBeenCalledWith("Template duplicated successfully.");
+      expect(routerRefreshMock).toHaveBeenCalledOnce();
+    });
+  });
+
   test("does not surface a stale operation error inside the delete confirmation", async () => {
     duplicateTemplateActionMock.mockResolvedValue({ success: false, error: "Duplicate failed." });
 
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: /duplicate/i }));
+    const programTemplates = screen
+      .getByRole("heading", { name: "Program Templates" })
+      .closest("section");
+    expect(programTemplates).not.toBeNull();
+    fireEvent.click(within(programTemplates!).getByRole("button", { name: "Duplicate" }));
 
     await waitFor(() => {
       expect(showToastMock).toHaveBeenCalledWith("Duplicate failed.", "error");

@@ -326,15 +326,37 @@ function ProgramHeadTemplateActions({
 }
 
 function BaselineActions({ item, programId }: { item: TemplateCollectionItem; programId: string }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function handleDuplicate() {
+    startTransition(async () => {
+      const result = await duplicateTemplateAction(programId, item.id);
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
+
+      showToast("Template duplicated successfully.");
+      router.refresh();
+    });
+  }
+
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      render={<Link href={buildProgramHeadEditToolPath(programId, item.id)} />}
-    >
-      <Pencil className="size-3.5" data-icon="inline-start" />
-      Edit &amp; Copy
-    </Button>
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        render={<Link href={buildProgramHeadEditToolPath(programId, item.id)} />}
+      >
+        <Pencil className="size-3.5" data-icon="inline-start" />
+        Edit &amp; Copy
+      </Button>
+      <Button variant="outline" size="sm" disabled={isPending} onClick={handleDuplicate}>
+        <Copy className="size-3.5" data-icon="inline-start" />
+        Duplicate
+      </Button>
+    </>
   );
 }
 
