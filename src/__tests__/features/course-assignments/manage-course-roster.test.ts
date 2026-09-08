@@ -47,6 +47,7 @@ const prismaMock = vi.hoisted(() => ({
     create: vi.fn(),
     update: vi.fn(),
   },
+  evaluationAssignment: { findFirst: vi.fn(), create: vi.fn() },
   programHeadAssignment: { findMany: vi.fn() },
   program: { findUnique: vi.fn() },
   user: { findUnique: vi.fn() },
@@ -77,8 +78,13 @@ describe("manage course roster service", () => {
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
     prismaMock.courseAssignment.findUnique.mockResolvedValue(assignment as never);
     prismaMock.$queryRaw.mockResolvedValue([]);
-    prismaMock.program.findUnique.mockResolvedValue({ id: "program-1", code: "BSED", name: "Education" });
+    prismaMock.program.findUnique.mockResolvedValue({
+      id: "program-1",
+      code: "BSED",
+      name: "Education",
+    });
     prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue(null);
+    prismaMock.evaluationAssignment.findFirst.mockResolvedValue(null);
     scopedCandidatesMock.mockResolvedValue({
       success: true,
       data: {
@@ -142,12 +148,10 @@ describe("manage course roster service", () => {
     prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue({
       id: "other-membership",
     } as never);
-    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject(
-      {
-        success: false,
-        error: expect.stringContaining("another section"),
-      }
-    );
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining("another section"),
+    });
   });
 
   it("restores membership without replacing creation provenance", async () => {
@@ -203,12 +207,10 @@ describe("manage course roster service", () => {
     prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue(null);
     prismaMock.courseAssignmentMembership.create.mockRejectedValue({ code: "P2002" });
 
-    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject(
-      {
-        success: false,
-        error: expect.stringContaining("another section"),
-      }
-    );
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining("another section"),
+    });
   });
 
   it("blocks writes after assignment lifecycle changes are observed in transaction", async () => {
@@ -232,11 +234,9 @@ describe("manage course roster service", () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
       createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
     );
-    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject(
-      {
-        success: true,
-      }
-    );
+    await expect(addRosterMembership("assignment-1", "student-1")).resolves.toMatchObject({
+      success: true,
+    });
 
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
       createAuthSessionSnapshot({ userId: "faculty-2", roles: [ROLES.FACULTY] })
@@ -261,25 +261,23 @@ describe("manage course roster service", () => {
         selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
       },
     });
-    await expect(addRosterMembership("assignment-1", "student-1", "program-1")).resolves.toMatchObject(
-      {
-        success: true,
-      }
-    );
+    await expect(
+      addRosterMembership("assignment-1", "student-1", "program-1")
+    ).resolves.toMatchObject({
+      success: true,
+    });
 
     prismaMock.courseAssignment.findUnique.mockResolvedValue({
       ...assignment,
       course: { course_scope: CourseScope.GENERAL_EDUCATION },
     } as never);
-    await expect(
-      addRosterMembership("assignment-1", "student-1", "program-1")
-    ).resolves.toEqual({
+    await expect(addRosterMembership("assignment-1", "student-1", "program-1")).resolves.toEqual({
       success: false,
       error: "Program Heads cannot manage General Education assignments.",
     });
   });
 
-  it("blocks completed-period and published-evaluation writes with lifecycle messages", async () => {
+  it("blocks completed-period writes but includes new members in an open published evaluation", async () => {
     prismaMock.courseAssignment.findUnique.mockResolvedValue({
       ...assignment,
       term_instance: { status: "COMPLETED" },
@@ -291,12 +289,27 @@ describe("manage course roster service", () => {
 
     prismaMock.courseAssignment.findUnique.mockResolvedValue({
       ...assignment,
-      course_bound_evaluations: [{ published_at: new Date() }],
+      course_bound_evaluations: [
+        {
+          id: "evaluation-1",
+          published_at: new Date(),
+          status: "ACTIVE",
+          deadline_at: null,
+        },
+      ],
     } as never);
+    prismaMock.user.findUnique.mockResolvedValue(student as never);
+    prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue(null);
+
     await expect(addRosterMembership("assignment-1", "student-1")).resolves.toEqual({
-      success: false,
-      error:
-        "A Course-bound evaluation has been published for this assignment. The roster is locked.",
+      success: true,
+      data: {
+        outcome: "CREATED",
+        message: "Student added to the Course roster and the open evaluation.",
+      },
+    });
+    expect(prismaMock.evaluationAssignment.create).toHaveBeenCalledWith({
+      data: { course_bound_id: "evaluation-1", respondent_id: "student-1" },
     });
   });
 
@@ -312,18 +325,18 @@ describe("manage course roster service", () => {
         selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
       },
     });
-    const { revalidateProgramHeadAssignment } = await import(
-      "@/features/auth/services/resolve-program-head-context"
-    );
+    const { revalidateProgramHeadAssignment } =
+      await import("@/features/auth/services/resolve-program-head-context");
     vi.mocked(revalidateProgramHeadAssignment).mockResolvedValueOnce(null);
     prismaMock.programHeadAssignment.findMany.mockResolvedValue([
       { program_id: "program-1" },
     ] as never);
     prismaMock.courseAssignment.findUnique.mockResolvedValue(assignment as never);
 
-    await expect(
-      addRosterMembership("assignment-1", "student-1", "program-1")
-    ).resolves.toEqual({ success: false, error: "Course assignment not found." });
+    await expect(addRosterMembership("assignment-1", "student-1", "program-1")).resolves.toEqual({
+      success: false,
+      error: "Course assignment not found.",
+    });
     expect(prismaMock.courseAssignmentMembership.create).not.toHaveBeenCalled();
   });
 });
@@ -347,7 +360,11 @@ describe("confirmRosterResolution", () => {
     prismaMock.$transaction.mockImplementation(async (callback) => callback(prismaMock));
     prismaMock.courseAssignment.findUnique.mockResolvedValue(assignment as never);
     prismaMock.$queryRaw.mockResolvedValue([]);
-    prismaMock.program.findUnique.mockResolvedValue({ id: "program-1", code: "BSED", name: "Education" });
+    prismaMock.program.findUnique.mockResolvedValue({
+      id: "program-1",
+      code: "BSED",
+      name: "Education",
+    });
     prismaMock.courseAssignmentMembership.findUnique.mockResolvedValue(null);
     prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue(null);
     scopedCandidatesMock.mockResolvedValue({
@@ -364,10 +381,13 @@ describe("confirmRosterResolution", () => {
   });
 
   it("continues after an expected other-section conflict", async () => {
-    prismaMock.user.findUnique.mockImplementation(async ({ where }) => ({
-      ...student,
-      id: where.id,
-    }) as never);
+    prismaMock.user.findUnique.mockImplementation(
+      async ({ where }) =>
+        ({
+          ...student,
+          id: where.id,
+        }) as never
+    );
     prismaMock.courseAssignmentMembership.findFirst
       .mockResolvedValueOnce({ id: "other-membership" } as never)
       .mockResolvedValueOnce(null);
@@ -379,7 +399,8 @@ describe("confirmRosterResolution", () => {
           {
             sourceIndex: 0,
             outcome: "OTHER_SECTION_CONFLICT",
-            error: "Student is already active in another section for this Course and Academic Period.",
+            error:
+              "Student is already active in another section for this Course and Academic Period.",
           },
           {
             sourceIndex: 1,
@@ -418,10 +439,13 @@ describe("confirmRosterResolution", () => {
         candidates: [{ userId: "student-2", selectable: true }],
       },
     });
-    prismaMock.user.findUnique.mockImplementation(async ({ where }) => ({
-      ...student,
-      id: where.id,
-    }) as never);
+    prismaMock.user.findUnique.mockImplementation(
+      async ({ where }) =>
+        ({
+          ...student,
+          id: where.id,
+        }) as never
+    );
 
     await expect(confirmRosterResolution(confirmation)).resolves.toEqual({
       success: true,
@@ -466,10 +490,13 @@ describe("confirmRosterResolution", () => {
   });
 
   it("preserves prior commits and marks later rows unprocessed after an unexpected failure", async () => {
-    prismaMock.user.findUnique.mockImplementation(async ({ where }) => ({
-      ...student,
-      id: where.id,
-    }) as never);
+    prismaMock.user.findUnique.mockImplementation(
+      async ({ where }) =>
+        ({
+          ...student,
+          id: where.id,
+        }) as never
+    );
     prismaMock.courseAssignmentMembership.create
       .mockResolvedValueOnce({})
       .mockRejectedValueOnce(new Error("database unavailable"));
@@ -511,11 +538,16 @@ describe("confirmRosterResolution", () => {
   });
 
   it("stops unknown safe mutation failures rather than treating them as a conflict", async () => {
-    prismaMock.user.findUnique.mockImplementation(async ({ where }) => ({
-      ...student,
-      id: where.id,
-    }) as never);
-    prismaMock.courseAssignmentMembership.create.mockRejectedValueOnce(new Error("database unavailable"));
+    prismaMock.user.findUnique.mockImplementation(
+      async ({ where }) =>
+        ({
+          ...student,
+          id: where.id,
+        }) as never
+    );
+    prismaMock.courseAssignmentMembership.create.mockRejectedValueOnce(
+      new Error("database unavailable")
+    );
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const result = await confirmRosterResolution({
@@ -527,7 +559,11 @@ describe("confirmRosterResolution", () => {
       success: true,
       data: {
         rows: [
-          { sourceIndex: 0, outcome: "UNEXPECTED_FAILURE", error: "The roster request could not be completed." },
+          {
+            sourceIndex: 0,
+            outcome: "UNEXPECTED_FAILURE",
+            error: "The roster request could not be completed.",
+          },
           { sourceIndex: 1, outcome: "UNPROCESSED" },
           { sourceIndex: 2, outcome: "UNPROCESSED" },
         ],
@@ -557,17 +593,17 @@ describe("preflightRosterConfirmation", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
-  it("rejects a read-only roster before any write", async () => {
+  it("rejects an inactive roster before any write", async () => {
     prismaMock.courseAssignment.findUnique.mockResolvedValue({
       ...assignment,
-      course_bound_evaluations: [{ published_at: new Date("2026-08-01T00:00:00Z") }],
+      is_active: false,
     } as never);
 
     const result = await preflightRosterConfirmation("assignment-1");
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toMatch(/locked/i);
+      expect(result.error).toMatch(/inactive/i);
     }
   });
 

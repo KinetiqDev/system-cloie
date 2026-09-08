@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { Fragment, useCallback, useState, useTransition } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,6 +12,7 @@ import {
   History,
   LockKeyhole,
   SearchX,
+  TriangleAlert,
   UsersRound,
 } from "lucide-react";
 
@@ -72,19 +73,22 @@ const rosterStateLabels: Record<RosterState, string> = {
   ACTIVE: "Open roster",
   INACTIVE_ASSIGNMENT: "Inactive assignment",
   INACTIVE_ACADEMIC_PERIOD: "Inactive academic period",
-  PUBLISHED_EVALUATION_LOCK: "Published evaluation lock",
 };
+
+function stateVariant(state: RosterState): "default" | "outline" {
+  return state === "ACTIVE" ? "default" : "outline";
+}
 
 function dateLabel(value: Date | null) {
   return value
-    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(value)
+    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(value)
     : "Not recorded";
 }
 
-function stateVariant(state: RosterState): "default" | "secondary" | "outline" {
-  if (state === "ACTIVE") return "default";
-  if (state === "PUBLISHED_EVALUATION_LOCK") return "secondary";
-  return "outline";
+function removedLabel(value: Date | null) {
+  return value
+    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(value)
+    : "Not recorded";
 }
 
 function RosterStateBadge({ state }: { state: RosterState }) {
@@ -99,8 +103,6 @@ function RosterStateBanner({ state }: { state: RosterState }) {
       "This Course assignment is inactive. The roster is available for review only.",
     INACTIVE_ACADEMIC_PERIOD:
       "This Academic Period is no longer active. The roster is available for review only.",
-    PUBLISHED_EVALUATION_LOCK:
-      "A Course-bound evaluation has been published for this assignment. The roster is locked for review.",
   }[state];
 
   return (
@@ -112,80 +114,78 @@ function RosterStateBanner({ state }: { state: RosterState }) {
   );
 }
 
-function RosterDetailContext({ assignment }: { assignment: CourseRosterAssignmentSummary }) {
-  return (
-    <dl className="bg-card grid gap-x-6 gap-y-3 rounded-xl border p-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-      <div className="flex min-w-0 flex-col gap-1">
-        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
-          Course code
-        </dt>
-        <dd className="text-title-md font-semibold tracking-tight">{assignment.courseCode}</dd>
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
-          Course title
-        </dt>
-        <dd className="text-title-md font-semibold">{assignment.courseTitle}</dd>
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
-          Program
-        </dt>
-        <dd className="font-medium">
-          {assignment.programName} ({assignment.programCode})
-        </dd>
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
-          Year level
-        </dt>
-        <dd>{getYearLevelDisplay(assignment.yearLevel)}</dd>
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
-          Class section
-        </dt>
-        <dd>{getSectionLabel(assignment.section)}</dd>
-      </div>
-      <div className="flex min-w-0 flex-col gap-1 sm:col-span-2 lg:col-span-1">
-        <dt className="text-caption text-muted-foreground font-medium tracking-wide uppercase">
-          Academic Period
-        </dt>
-        <dd>{assignment.termLabel}</dd>
-      </div>
-    </dl>
-  );
-}
-
-function CountCards({
+function RosterEvidenceStrip({
   activeRosterCount,
   evaluationEligibleCount,
-}: Pick<CourseRosterAssignmentSummary, "activeRosterCount" | "evaluationEligibleCount">) {
+  attentionCount,
+}: {
+  activeRosterCount: number;
+  evaluationEligibleCount: number;
+  attentionCount: number;
+}) {
+  const cells = [
+    {
+      key: "roster",
+      icon: <UsersRound aria-hidden="true" className="size-4" />,
+      iconClass: "bg-selected-bg text-selected-fg",
+      label: "On roster",
+      value: activeRosterCount,
+      detail: "active members",
+    },
+    {
+      key: "ready",
+      icon: <CheckCircle2 aria-hidden="true" className="size-4" />,
+      iconClass: "bg-success-soft text-success",
+      label: "Ready for evaluation",
+      value: evaluationEligibleCount,
+      detail: "eligible this period",
+    },
+    {
+      key: "attention",
+      icon:
+        attentionCount > 0 ? (
+          <TriangleAlert aria-hidden="true" className="size-4" />
+        ) : (
+          <CheckCircle2 aria-hidden="true" className="size-4" />
+        ),
+      iconClass:
+        attentionCount > 0 ? "bg-warning-soft text-warning" : "bg-success-soft text-success",
+      label: "Need attention",
+      value: attentionCount,
+      detail: attentionCount > 0 ? "active but not eligible" : "every active member is eligible",
+    },
+  ];
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <Card size="sm">
-        <CardHeader>
-          <CardDescription className="flex items-center gap-2">
-            <span className="bg-selected-bg text-selected-fg inline-flex size-7 items-center justify-center rounded-full">
-              <UsersRound aria-hidden="true" className="size-4" />
-            </span>
-            Active roster
-          </CardDescription>
-          <CardTitle className="text-heading-xl tabular-nums">{activeRosterCount}</CardTitle>
-        </CardHeader>
-      </Card>
-      <Card size="sm">
-        <CardHeader>
-          <CardDescription className="flex items-center gap-2">
-            <span className="bg-success-soft text-success inline-flex size-7 items-center justify-center rounded-full">
-              <CheckCircle2 aria-hidden="true" className="size-4" />
-            </span>
-            Currently evaluation-eligible
-          </CardDescription>
-          <CardTitle className="text-heading-xl tabular-nums">{evaluationEligibleCount}</CardTitle>
-        </CardHeader>
-      </Card>
-    </div>
+    <section
+      aria-label="Roster evaluation-readiness summary"
+      className="bg-card flex flex-wrap items-stretch gap-4 rounded-xl border p-4"
+    >
+      {cells.map((cell, index) => (
+        <Fragment key={cell.key}>
+          {index > 0 && (
+            <div aria-hidden="true" className="bg-border hidden w-px self-stretch sm:block" />
+          )}
+          <div className="flex min-w-[10rem] flex-1 flex-col gap-2">
+            <p className="text-label-md text-muted-foreground flex items-center gap-2 font-medium">
+              <span
+                className={cn(
+                  "inline-flex size-7 items-center justify-center rounded-full",
+                  cell.iconClass
+                )}
+              >
+                {cell.icon}
+              </span>
+              {cell.label}
+            </p>
+            <p>
+              <span className="text-heading-lg tabular-nums">{cell.value}</span>{" "}
+              <span className="text-body-sm text-muted-foreground">{cell.detail}</span>
+            </p>
+          </div>
+        </Fragment>
+      ))}
+    </section>
   );
 }
 
@@ -245,8 +245,8 @@ export function CourseRosterDiscoveryPage({
       <div className="flex flex-col gap-2">
         <h1 className="text-heading-lg">My Course Rosters</h1>
         <p className="text-body-md text-muted-foreground max-w-2xl">
-          Review and manage active Course assignments you own. Historical, inactive,
-          completed-period, and published-evaluation-locked rosters remain review-only.
+          Review and manage active Course assignments you own. Inactive assignments and completed
+          Academic Periods remain review-only.
         </p>
       </div>
 
@@ -616,6 +616,7 @@ export function CourseRosterDetailPage({
     return <SafeRosterError message={error ?? "The roster request could not be completed."} />;
   const { assignment } = data;
   const canWrite = data.canManage && data.canMutate && assignment.rosterState === "ACTIVE";
+  const attentionCount = Math.max(0, data.activeRosterCount - data.evaluationEligibleCount);
 
   return (
     <div className="flex flex-col gap-6">
@@ -626,30 +627,41 @@ export function CourseRosterDetailPage({
         >
           <ArrowLeft aria-hidden="true" /> {backLabel}
         </Link>
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-heading-lg">Course roster</h1>
-            <RosterStateBadge state={assignment.rosterState} />
-          </div>
-          <p className="text-body-md text-muted-foreground max-w-3xl">
-            Review membership and current evaluation eligibility for this Course assignment.
-          </p>
+        <p className="text-label-md text-muted-foreground font-medium tracking-wide uppercase">
+          Course roster
+        </p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h1 className="text-heading-xl tracking-tight">
+            {assignment.courseCode} · {assignment.courseTitle}
+          </h1>
+          <RosterStateBadge state={assignment.rosterState} />
         </div>
+        <p className="text-body-md text-muted-foreground max-w-3xl">
+          {[
+            assignment.programName,
+            getYearLevelDisplay(assignment.yearLevel),
+            getSectionLabel(assignment.section),
+            assignment.termLabel,
+          ].join(" · ")}
+        </p>
       </div>
 
-      <RosterDetailContext assignment={assignment} />
       <RosterStateBanner state={assignment.rosterState} />
-      <CountCards
+      <RosterEvidenceStrip
         activeRosterCount={data.activeRosterCount}
         evaluationEligibleCount={data.evaluationEligibleCount}
+        attentionCount={attentionCount}
       />
+
       {canWrite && (
         <Card>
           <CardHeader className="has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
             <CardTitle>Manage roster</CardTitle>
             <CardDescription>
               Add one Student, or upload up to {COURSE_ROSTER_MAX_ROWS} official names from a CSV.
-              Review parsed rows before anyone is added.
+              {assignment.hasPublishedEvaluation
+                ? " Eligible students added while the evaluation is open receive it automatically."
+                : " Review parsed rows before anyone is added."}
             </CardDescription>
             <CardAction className="col-start-1 row-start-auto mt-2 w-full justify-self-stretch sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:justify-self-end">
               <RosterManagementDialog
@@ -682,7 +694,11 @@ export function CourseRosterDetailPage({
             members={data.members}
             includeRemoved={data.includeRemoved}
             assignment={assignment}
+            search={data.search}
+            rosterBasePath={rosterBasePath}
+            sortDirection={data.sortDirection}
             canWrite={canWrite}
+            hasPublishedEvaluation={assignment.hasPublishedEvaluation}
             programId={programId}
           />
           <DetailPagination
@@ -696,64 +712,107 @@ export function CourseRosterDetailPage({
   );
 }
 
+function memberStatus(member: CourseRosterMember) {
+  if (!member.isActive) {
+    return <Badge variant="outline">Removed</Badge>;
+  }
+  if (member.eligibility.eligible) {
+    return (
+      <Badge variant="success">
+        <CheckCircle2 aria-hidden="true" /> Ready
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="warning">
+      <TriangleAlert aria-hidden="true" />{" "}
+      {member.eligibility.reason ? eligibilityLabels[member.eligibility.reason] : "Not eligible"}
+    </Badge>
+  );
+}
+
 function RosterTable({
   members,
   includeRemoved,
   assignment,
+  sortDirection,
+  search,
+  rosterBasePath,
   canWrite,
+  hasPublishedEvaluation,
   programId,
 }: {
   members: CourseRosterMember[];
   includeRemoved: boolean;
   assignment: CourseRosterAssignmentSummary;
+  sortDirection: "asc" | "desc";
+  search: string;
+  rosterBasePath?: string;
   canWrite: boolean;
+  hasPublishedEvaluation: boolean;
   programId?: string;
 }) {
   if (members.length === 0) {
+    const basePath = `${rosterBasePath ?? "/course-rosters"}/${assignment.assignmentId}`;
+    const params = new URLSearchParams({ sort: sortDirection });
+    if (includeRemoved) params.set("removed", "1");
     return (
-      <p className="text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm">
-        No students match this view.
-      </p>
+      <div className="text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm">
+        <p>
+          No students match{search ? ` “${search}”` : " this view"}.{" "}
+          {includeRemoved ? "Removed students are included." : "Removed students are hidden."}
+        </p>
+        {(search || includeRemoved) && (
+          <Link
+            href={`${basePath}?${params}`}
+            className={cn(buttonVariants({ variant: "outline" }), "mt-4")}
+          >
+            Clear filters
+          </Link>
+        )}
+      </div>
     );
   }
 
+  const showRemovedHistory = includeRemoved && members.some((member) => !member.isActive);
+
   return (
     <div
-      className="overflow-x-auto rounded-lg border"
+      className="relative min-w-0 overflow-x-auto rounded-lg border"
       role="region"
       aria-label="Course roster members"
       tabIndex={0}
     >
-      <table className="w-full min-w-[72rem] text-left text-sm">
+      <table className="w-full min-w-[48rem] text-left text-sm">
         <caption className="sr-only">Course roster members and current eligibility</caption>
         <thead className="bg-muted/40 text-text-secondary border-b">
           <tr>
-            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
+            <th
+              scope="col"
+              aria-sort={sortDirection === "asc" ? "ascending" : "descending"}
+              className="text-label-md px-4 py-3 font-semibold"
+            >
               Student
             </th>
-            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
-              Program
+            {assignment.courseScope === "GENERAL_EDUCATION" && (
+              <th scope="col" className="text-label-md px-4 py-3 font-semibold">
+                Program
+              </th>
+            )}
+            <th scope="col" className="text-label-md px-4 py-3 font-semibold">
+              Status
             </th>
-            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
-              Major
-            </th>
-            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
-              Class context
-            </th>
-            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
+            <th scope="col" className="text-label-md px-4 py-3 font-semibold">
               Added
             </th>
-            <th scope="col" className="text-label-md px-3 py-3 font-semibold">
-              Current status
-            </th>
-            {includeRemoved && (
-              <th scope="col" className="text-label-md px-3 py-3 font-semibold">
+            {showRemovedHistory && (
+              <th scope="col" className="text-label-md px-4 py-3 font-semibold">
                 Removal history
               </th>
             )}
             {canWrite && (
-              <th scope="col" className="text-label-md px-3 py-3 font-semibold">
-                Actions
+              <th scope="col" className="text-label-md px-4 py-3 text-right font-semibold">
+                <span className="sr-only">Actions</span>
               </th>
             )}
           </tr>
@@ -761,56 +820,36 @@ function RosterTable({
         <tbody className="divide-y">
           {members.map((member) => (
             <tr key={member.membershipId} className="hover:bg-muted/30">
-              <th scope="row" className="px-3 py-4 font-medium">
+              <th scope="row" className="px-4 py-4 font-medium">
                 <span className="block">{member.studentName}</span>
                 <span className="text-muted-foreground block font-normal">{member.email}</span>
               </th>
-              <td className="px-3 py-4">{member.programCode ?? "Not available"}</td>
-              <td className="px-3 py-4">{member.majorName ?? "Not available"}</td>
-              <td className="px-3 py-4">
-                {getYearLevelDisplay(member.yearLevel)} | {getSectionLabel(member.section)}
+              {assignment.courseScope === "GENERAL_EDUCATION" && (
+                <td className="px-4 py-4">{member.programCode ?? "—"}</td>
+              )}
+              <td className="px-4 py-4">{memberStatus(member)}</td>
+              <td className="text-muted-foreground px-4 py-4 whitespace-nowrap">
+                {dateLabel(member.membershipAddedAt)}
               </td>
-              <td className="px-3 py-4">{dateLabel(member.membershipAddedAt)}</td>
-              <td className="px-3 py-4">
-                <div className="flex flex-col items-start gap-1.5">
-                  <Badge variant={member.isActive ? "secondary" : "outline"}>
-                    {member.isActive ? "Active membership" : "Removed"}
-                  </Badge>
-                  {member.isActive && member.eligibility.eligible ? (
-                    <Badge variant="success">
-                      <CheckCircle2 aria-hidden="true" /> Evaluation-eligible
-                    </Badge>
-                  ) : !member.isActive ? (
-                    <span className="text-muted-foreground text-xs">
-                      Removed from active roster
-                    </span>
-                  ) : (
-                    <Badge variant="warning">
-                      {member.eligibility.reason
-                        ? eligibilityLabels[member.eligibility.reason]
-                        : "Not evaluation-eligible"}
-                    </Badge>
-                  )}
-                </div>
-              </td>
-              {includeRemoved && (
-                <td className="text-muted-foreground px-3 py-4 text-xs">
+              {showRemovedHistory && (
+                <td className="text-muted-foreground px-4 py-4 text-xs whitespace-nowrap">
                   {member.isActive ? (
-                    "Not removed"
+                    "—"
                   ) : (
                     <span className="flex flex-col gap-1">
-                      <span>{dateLabel(member.removedAt)}</span>
+                      <span>{removedLabel(member.removedAt)}</span>
                       <span>By {member.removedByName ?? "Recorded actor"}</span>
                     </span>
                   )}
                 </td>
               )}
               {canWrite && (
-                <td className="px-3 py-4">
+                <td className="px-4 py-4 text-right">
                   {member.isActive ? (
                     <RemoveRosterMember
                       assignment={assignment}
                       member={member}
+                      hasPublishedEvaluation={hasPublishedEvaluation}
                       programId={programId}
                     />
                   ) : (
@@ -829,7 +868,6 @@ function RosterTable({
     </div>
   );
 }
-
 function DetailPagination({
   data,
   assignmentId,

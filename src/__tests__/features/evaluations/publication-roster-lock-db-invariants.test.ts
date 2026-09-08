@@ -4,19 +4,12 @@ import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db/prisma";
 
 /**
- * Course-bound publication roster-lock invariants (issue #546): the
- * `prevent_published_course_assignment_roster_mutation` trigger rejects
- * INSERT/UPDATE/DELETE on `course_assignment_memberships` once the
- * assignment has a published evaluation, the publication transaction is
- * atomic (no partial writes survive a mid-transaction failure), the roster
- * lock does not block legitimate late-inclusion writes (reversal update +
- * new EvaluationAssignment), and a duplicate deployment cannot be created
- * for the same assignment.
+ * Course-bound publication invariants: the publication transaction is atomic,
+ * post-publication roster writes remain available for late corrections, and a
+ * duplicate deployment cannot be created for the same assignment.
  *
- * Every test owns its disposable rows (course, assignment, users,
- * membership, evaluation) and cleans them up in the finally block. The
- * seeded catalog (active term instance, program, faculty, CILO_EVAL
- * template version) is reused read-only.
+ * Every test owns its disposable rows and cleans them up in the finally block.
+ * The seeded catalog is reused read-only.
  */
 
 function randomSuffix(): string {
@@ -48,10 +41,8 @@ const seedPromise = (async () => {
 })();
 
 /**
- * Creates the disposable course/assignment/roster for one test. When
- * `withPublishedEvaluation` is true the assignment also carries a published
- * Course-bound evaluation (arming the roster-lock trigger); the rollback
- * test needs the assignment unlocked so its own transaction owns the write.
+ * Creates the disposable course, assignment, roster, and optional published
+ * Course-bound evaluation used by each invariant test.
  */
 async function seedOwnedRows(withPublishedEvaluation: boolean): Promise<OwnedRows> {
   const suffix = randomSuffix();
@@ -147,46 +138,51 @@ async function cleanupOwnedRows(rows: OwnedRows): Promise<void> {
 }
 
 describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1")(
-  "Course-bound publication roster-lock invariants",
+  "Course-bound publication database invariants",
   () => {
-    it("rejects membership INSERT/UPDATE/DELETE after publication", async () => {
+    it("allows membership INSERT, UPDATE, and DELETE after publication", async () => {
       const rows = await seedOwnedRows(true);
+      const secondStudentId = crypto.randomUUID();
 
       try {
-        // INSERT: the trigger must reject a new membership for the assignment.
+        await prisma.user.create({
+          data: {
+            id: secondStudentId,
+            email: `late-roster-${randomSuffix()}@test.invalid`,
+            name: "Late Roster Student",
+          },
+        });
+        await prisma.userRole.create({
+          data: { user_id: secondStudentId, role: "STUDENT" },
+        });
+        const added = await prisma.courseAssignmentMembership.create({
+          data: {
+            course_assignment_id: rows.assignmentId,
+            student_user_id: secondStudentId,
+            course_id: rows.courseId,
+            term_instance_id: rows.termInstanceId,
+            program_id: rows.programId,
+            is_active: true,
+            created_by: rows.actorId,
+            updated_by: rows.actorId,
+          },
+        });
+        const removed = await prisma.courseAssignmentMembership.update({
+          where: { id: added.id },
+          data: {
+            is_active: false,
+            updated_by: rows.actorId,
+            removed_by: rows.actorId,
+            removed_at: new Date(),
+          },
+        });
+        expect(removed.is_active).toBe(false);
         await expect(
-          prisma.courseAssignmentMembership.create({
-            data: {
-              course_assignment_id: rows.assignmentId,
-              student_user_id: rows.actorId,
-              course_id: rows.courseId,
-              term_instance_id: rows.termInstanceId,
-              program_id: rows.programId,
-              is_active: true,
-              created_by: rows.actorId,
-              updated_by: rows.actorId,
-            },
-          })
-        ).rejects.toThrow(/locked after evaluation publication/);
-
-        // UPDATE: deactivating an existing membership is also a roster write.
-        await expect(
-          prisma.courseAssignmentMembership.update({
-            where: { id: rows.membershipId },
-            data: {
-              is_active: false,
-              updated_by: rows.actorId,
-              removed_by: rows.actorId,
-              removed_at: new Date(),
-            },
-          })
-        ).rejects.toThrow(/locked after evaluation publication/);
-
-        // DELETE: removal of a membership is a roster write.
-        await expect(
-          prisma.courseAssignmentMembership.delete({ where: { id: rows.membershipId } })
-        ).rejects.toThrow(/locked after evaluation publication/);
+          prisma.courseAssignmentMembership.delete({ where: { id: added.id } })
+        ).resolves.toMatchObject({ id: added.id });
       } finally {
+        await prisma.userRole.deleteMany({ where: { user_id: secondStudentId } });
+        await prisma.user.deleteMany({ where: { id: secondStudentId } });
         await cleanupOwnedRows(rows);
       }
     }, 30000);
@@ -254,14 +250,10 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       }
     }, 30000);
 
-    it("late-inclusion writes bypass the roster lock", async () => {
+    it("keeps exclusion reversal and late-inclusion writes independent of roster mutation", async () => {
       const rows = await seedOwnedRows(true);
 
       try {
-        // Record an exclusion at publication time (the seeded deployment is
-        // already published). Reversal updates the exclusion row and creates a
-        // new EvaluationAssignment — the roster-lock trigger must NOT block
-        // either write, because they never touch course_assignment_memberships.
         const exclusion = await prisma.courseBoundEvaluationExclusion.create({
           data: {
             course_bound_evaluation_id: rows.evaluationId!,
@@ -289,10 +281,16 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         });
         expect(lateAssignment.id).toBeTruthy();
 
-        // The roster itself stays locked: a membership write is still rejected.
-        await expect(
-          prisma.courseAssignmentMembership.delete({ where: { id: rows.membershipId } })
-        ).rejects.toThrow(/locked after evaluation publication/);
+        const removedMembership = await prisma.courseAssignmentMembership.update({
+          where: { id: rows.membershipId },
+          data: {
+            is_active: false,
+            updated_by: rows.actorId,
+            removed_by: rows.actorId,
+            removed_at: new Date(),
+          },
+        });
+        expect(removedMembership.is_active).toBe(false);
 
         await prisma.evaluationAssignment.delete({ where: { id: lateAssignment.id } });
       } finally {

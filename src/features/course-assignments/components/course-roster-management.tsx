@@ -1432,12 +1432,7 @@ function AddRosterMember({
         studentUserId: selectedCandidate.userId,
       });
       if (result.success) {
-        showToast(
-          result.data?.outcome === "RESTORED"
-            ? `${addedName} restored to Course roster.`
-            : `${addedName} added to Course roster.`,
-          "success"
-        );
+        showToast(result.data.message.replace(/^Student/, addedName), "success");
         setSelectedCandidate(null);
         return;
       }
@@ -1648,10 +1643,12 @@ function CsvImportMethod({
 export function RemoveRosterMember({
   assignment,
   member,
+  hasPublishedEvaluation,
   programId,
 }: {
   assignment: CourseRosterAssignmentSummary;
   member: CourseRosterMember;
+  hasPublishedEvaluation: boolean;
   programId?: string;
 }) {
   const [message, setMessage] = useState<string | null>(null);
@@ -1683,8 +1680,11 @@ export function RemoveRosterMember({
             <AlertDialogTitle>Remove {member.studentName}?</AlertDialogTitle>
             <AlertDialogDescription>
               Only the {assignment.courseCode} roster changes. {member.studentName}&apos;s student
-              account and other classes are not affected. They will not receive evaluations for this
-              class while removed, and can be added back later.
+              account and other classes are not affected. Their submitted response, if any, is kept.
+              {hasPublishedEvaluation
+                ? " They lose access to this evaluation while removed."
+                : " They will not receive evaluations for this class while removed."}{" "}
+              They can be added back later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

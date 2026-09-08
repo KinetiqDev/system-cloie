@@ -125,13 +125,10 @@ function projectMembershipEligibility(
 }
 
 function rosterState(
-  assignment: Pick<AssignmentReadRow, "is_active" | "term_instance" | "course_bound_evaluations">
+  assignment: Pick<AssignmentReadRow, "is_active" | "term_instance">
 ): RosterState {
   if (!assignment.is_active) return "INACTIVE_ASSIGNMENT";
   if (assignment.term_instance.status !== "ACTIVE") return "INACTIVE_ACADEMIC_PERIOD";
-  if (assignment.course_bound_evaluations.some((evaluation) => evaluation.published_at !== null)) {
-    return "PUBLISHED_EVALUATION_LOCK";
-  }
   return "ACTIVE";
 }
 
@@ -540,10 +537,7 @@ export async function getCourseRosterDetail(
           },
           remover: { select: { name: true } },
         },
-        orderBy: [
-          { student: { name: sortDirection } },
-          { student_user_id: sortDirection },
-        ],
+        orderBy: [{ student: { name: sortDirection } }, { student_user_id: sortDirection }],
         skip: (page - 1) * COURSE_ROSTER_DETAIL_PAGE_SIZE,
         take: COURSE_ROSTER_DETAIL_PAGE_SIZE,
       }),

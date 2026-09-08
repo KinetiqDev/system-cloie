@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowDownAZ, ArrowUpAZ } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -153,16 +154,14 @@ export function CourseRosterMemberFilters({
   }, [searchDraft, includeRemoved, sortDirection]);
 
   return (
-    <div
+    <FieldGroup
       role="search"
       aria-label="Search roster members"
       aria-busy={isPending || undefined}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3"
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <label htmlFor="member-search" className="text-sm font-medium">
-          Search students
-        </label>
+      <Field>
+        <FieldLabel htmlFor="member-search">Search students</FieldLabel>
         <Input
           id="member-search"
           type="search"
@@ -171,31 +170,34 @@ export function CourseRosterMemberFilters({
           value={searchDraft}
           onChange={(event) => setSearchDraft(event.target.value)}
         />
-      </div>
-      <div className="flex flex-wrap items-center gap-4">
+      </Field>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {isPending ? <Spinner size="sm" label="Updating roster members" /> : null}
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <input
-            type="checkbox"
+        <Field orientation="horizontal" className="min-h-11 w-fit">
+          <Checkbox
+            id="member-removed"
             checked={includeRemoved}
-            onChange={(event) => {
-              const checked = event.target.checked;
+            onCheckedChange={(checked) => {
               setIncludeRemoved(checked);
               navigate(searchDraft, checked, sortDirection);
             }}
-            className="accent-primary size-4"
           />
-          Include removed students
-        </label>
+          <FieldLabel htmlFor="member-removed">Include removed students</FieldLabel>
+        </Field>
         <button
           type="button"
-          aria-label={`Sort by name ${nextSort === "asc" ? "ascending" : "descending"}`}
-          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          aria-pressed={sortDirection === "desc"}
+          className="focus-visible:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium focus-visible:ring-3 focus-visible:outline-none"
           onClick={() => navigate(searchDraft, includeRemoved, nextSort)}
         >
-          Sort by name {nextSort === "asc" ? "ascending" : "descending"}
+          {sortDirection === "asc" ? (
+            <ArrowDownAZ aria-hidden="true" className="size-4" />
+          ) : (
+            <ArrowUpAZ aria-hidden="true" className="size-4" />
+          )}
+          Name {sortDirection === "asc" ? "A→Z" : "Z→A"}
         </button>
       </div>
-    </div>
+    </FieldGroup>
   );
 }

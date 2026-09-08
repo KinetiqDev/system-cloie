@@ -375,10 +375,7 @@ export async function resolveAuthorizedCourseAssignmentRoster(
       if (!context.success) return { success: false, error: NOT_FOUND_ERROR };
     }
 
-    if (
-      session.activeRole === ROLES.PROGRAM_HEAD &&
-      assignment.program_id !== options.programId
-    ) {
+    if (session.activeRole === ROLES.PROGRAM_HEAD && assignment.program_id !== options.programId) {
       return { success: false, error: NOT_FOUND_ERROR };
     }
 
@@ -411,9 +408,6 @@ export async function resolveAuthorizedCourseAssignmentRoster(
     const mutability = canMutateCourseRoster({
       isActive: assignment.is_active,
       periodStatus: assignment.term_instance.status,
-      hasPublishedEvaluation: assignment.course_bound_evaluations.some(
-        (evaluation) => evaluation.published_at !== null
-      ),
     });
 
     return {
@@ -470,7 +464,6 @@ export async function resolveCurrentRosterEligibility(
       const mutability = canMutateCourseRoster({
         isActive: rawAssignment.is_active,
         periodStatus: rawAssignment.term_instance.status,
-        hasPublishedEvaluation,
       });
       assignment = {
         assignmentId: rawAssignment.id,

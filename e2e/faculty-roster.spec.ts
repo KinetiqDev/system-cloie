@@ -35,7 +35,7 @@ test.describe("Faculty Course roster mutation", () => {
 
     // The mutable roster detail is writable: ACTIVE state, no lock banner,
     // manage card present, seeded members listed.
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
     await expect(page.getByText("GESTECH", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Open roster", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Manage roster" })).toBeVisible();
@@ -74,21 +74,21 @@ test.describe("Faculty Course roster mutation", () => {
     // The live table reflects the mutation immediately.
     const addedRow = page.getByRole("row", { name: new RegExp(fx.rosterStudents.addable.name) });
     await expect(addedRow).toBeVisible();
-    await expect(addedRow.getByText("Evaluation-eligible")).toBeVisible();
+    await expect(addedRow.getByText("Ready")).toBeVisible();
   });
 
   test("reload shows the persisted membership with its eligibility state", async ({ page }) => {
     const fx = fixture();
     await loginAs(page, fx.demoFaculty.email);
     await page.goto(`/course-rosters/${fx.gestechBsba.id}`);
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
 
     const memberRow = page.getByRole("row", {
       name: new RegExp(fx.rosterStudents.addable.name),
     });
     await expect(memberRow).toBeVisible();
     await expect(memberRow.getByText(fx.rosterStudents.addable.email)).toBeVisible();
-    await expect(memberRow.getByText("Evaluation-eligible")).toBeVisible();
+    await expect(memberRow.getByText("Ready")).toBeVisible();
 
     // Active-roster and evaluation-eligible counts include the added Student.
     await expect(
@@ -100,27 +100,29 @@ test.describe("Faculty Course roster mutation", () => {
 
     // Fresh read: the persisted membership and eligibility state survive reload.
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
     const reloadedRow = page.getByRole("row", {
       name: new RegExp(fx.rosterStudents.addable.name),
     });
     await expect(reloadedRow).toBeVisible();
-    await expect(reloadedRow.getByText("Evaluation-eligible")).toBeVisible();
+    await expect(reloadedRow.getByText("Ready")).toBeVisible();
   });
 
-  test("owned-but-locked and unowned rosters stay review-only or not-found", async ({ page }) => {
+  test("keeps an owned published roster manageable and unowned rosters undisclosed", async ({
+    page,
+  }) => {
     const fx = fixture();
     await loginAs(page, fx.demoFaculty.email);
 
-    // Owned but published-evaluation-locked roster: review-only banner, no
-    // write controls.
     await page.goto(`/course-rosters/${fx.gestechBsit.id}`);
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
+    await expect(page.getByText("Open roster", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Manage roster" })).toBeVisible();
     await expect(
-      page.getByText("Published evaluation lock", { exact: true }).first()
+      page.getByText(
+        /eligible students added while the evaluation is open receive it automatically/i
+      )
     ).toBeVisible();
-    await expect(page.getByText("The roster is locked for review", { exact: false })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Manage roster" })).not.toBeVisible();
 
     // An assignment owned by another Faculty is indistinguishable from a
     // missing one (no data disclosure).
@@ -136,7 +138,7 @@ test.describe("Faculty Course roster mutation", () => {
 
     // Already-active member: explicit safe message, no duplicate row.
     await page.goto(`/course-rosters/${fx.gestechBsba.id}`);
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
     await page.getByRole("button", { name: "Manage roster" }).click();
     const dialog = page.getByRole("dialog", { name: "Manage roster" });
     await dialog.getByRole("tab", { name: "Add one Student" }).click();
@@ -155,7 +157,7 @@ test.describe("Faculty Course roster mutation", () => {
     // Out-of-scope Student (BSBA profile vs BSIT assignment): the scoped
     // search must not disclose the candidate at all.
     await page.goto(`/course-rosters/${fx.itres1Afternoon.id}`);
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
     await page.getByRole("button", { name: "Manage roster" }).click();
     const itresDialog = page.getByRole("dialog", { name: "Manage roster" });
     await itresDialog.getByRole("tab", { name: "Add one Student" }).click();
@@ -191,7 +193,7 @@ test.describe("Faculty Course roster mutation", () => {
     const fx = fixture();
     await loginAs(page, fx.demoFaculty.email);
     await page.goto(`/course-rosters/${fx.gestechBsba.id}`);
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Manage roster" }).click();
     const dialog = page.getByRole("dialog", { name: "Manage roster" });
@@ -253,10 +255,10 @@ test.describe("Faculty Course roster mutation", () => {
 
     // Fresh read: the reconciled membership persisted with eligibility.
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
     const row = page.getByRole("row", { name: new RegExp(fx.rosterStudents.csvAdd.name) });
     await expect(row).toBeVisible();
-    await expect(row.getByText("Evaluation-eligible")).toBeVisible();
+    await expect(row.getByText("Ready")).toBeVisible();
   });
 
   test("roster workspace states are free of serious/critical axe findings", async ({ page }) => {
@@ -265,7 +267,7 @@ test.describe("Faculty Course roster mutation", () => {
 
     // Stable roster detail state.
     await page.goto(`/course-rosters/${fx.gestechBsba.id}`);
-    await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
     await expectNoAxeViolations(page);
 
     // Roster management workspace (add phase).

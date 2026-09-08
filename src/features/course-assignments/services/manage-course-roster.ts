@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Prisma, type CourseScope, type SystemRole } from "@prisma/client";
+import { DeploymentStatus, Prisma, type CourseScope, type SystemRole } from "@prisma/client";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { prisma } from "@/lib/db/prisma";
@@ -38,8 +38,6 @@ const eligibilityMessages = {
 const mutabilityMessages = {
   INACTIVE_ASSIGNMENT: "This Course assignment is inactive. The roster is read-only.",
   INACTIVE_ACADEMIC_PERIOD: "This Academic Period is no longer active. The roster is read-only.",
-  PUBLISHED_EVALUATION_LOCK:
-    "A Course-bound evaluation has been published for this assignment. The roster is locked.",
 } as const;
 
 type WriteAssignment = {
@@ -51,7 +49,12 @@ type WriteAssignment = {
   is_active: boolean;
   course: { course_scope: CourseScope };
   term_instance: { status: "PLANNED" | "ACTIVE" | "COMPLETED" | "CANCELLED" };
-  course_bound_evaluations: Array<{ published_at: Date | null }>;
+  course_bound_evaluations: Array<{
+    id: string;
+    published_at: Date | null;
+    status: "DRAFT" | "SCHEDULED" | "ACTIVE" | "CLOSED" | "ARCHIVED";
+    deadline_at: Date | null;
+  }>;
 };
 
 const assignmentSelect = {
@@ -63,7 +66,9 @@ const assignmentSelect = {
   is_active: true,
   course: { select: { course_scope: true } },
   term_instance: { select: { status: true } },
-  course_bound_evaluations: { select: { published_at: true } },
+  course_bound_evaluations: {
+    select: { id: true, published_at: true, status: true, deadline_at: true },
+  },
 } as const;
 
 const studentSelect = (termInstanceId: string) => ({
@@ -77,14 +82,9 @@ const studentSelect = (termInstanceId: string) => ({
   },
 });
 
-function mutabilityReason(
-  assignment: Pick<WriteAssignment, "is_active" | "term_instance" | "course_bound_evaluations">
-) {
+function mutabilityReason(assignment: Pick<WriteAssignment, "is_active" | "term_instance">) {
   if (!assignment.is_active) return "INACTIVE_ASSIGNMENT" as const;
   if (assignment.term_instance.status !== "ACTIVE") return "INACTIVE_ACADEMIC_PERIOD" as const;
-  if (assignment.course_bound_evaluations.some((evaluation) => evaluation.published_at !== null)) {
-    return "PUBLISHED_EVALUATION_LOCK" as const;
-  }
   return null;
 }
 
@@ -111,13 +111,6 @@ function isUniqueError(error: unknown) {
   return (
     isUniqueConstraintError(error) ||
     (typeof error === "object" && error !== null && "code" in error && error.code === "P2002")
-  );
-}
-
-function isPublishedLockError(error: unknown) {
-  return (
-    error instanceof Error &&
-    error.message.includes("Course-assignment roster is locked after evaluation publication")
   );
 }
 
@@ -182,9 +175,11 @@ export async function preflightRosterConfirmation(
   return { success: true, data: { assignmentId: authorization.data.assignmentId } };
 }
 
-function confirmationOutcome(
-  result: RosterServiceResult<CourseRosterMutation>
-): { outcome: CourseRosterConfirmationOutcome; error: string | null; referenceId?: string } {
+function confirmationOutcome(result: RosterServiceResult<CourseRosterMutation>): {
+  outcome: CourseRosterConfirmationOutcome;
+  error: string | null;
+  referenceId?: string;
+} {
   if (result.success) {
     const outcome =
       result.data.outcome === "CREATED"
@@ -213,7 +208,6 @@ function confirmationOutcome(
     [activeSectionError().error]: "OTHER_SECTION_CONFLICT",
     [mutabilityMessages.INACTIVE_ASSIGNMENT]: "READ_ONLY",
     [mutabilityMessages.INACTIVE_ACADEMIC_PERIOD]: "READ_ONLY",
-    [mutabilityMessages.PUBLISHED_EVALUATION_LOCK]: "READ_ONLY",
   };
   return {
     outcome: outcomeByError[result.error] ?? "UNEXPECTED_FAILURE",
@@ -238,7 +232,11 @@ async function processConfirmationRows(
       });
       continue;
     }
-    const result = await addRosterMembership(input.assignmentId, row.studentUserId, input.programId);
+    const result = await addRosterMembership(
+      input.assignmentId,
+      row.studentUserId,
+      input.programId
+    );
     const outcome = confirmationOutcome(result);
     if (rows.length === 0 && outcome.outcome === "READ_ONLY") {
       return { success: false, error: outcome.error! };
@@ -283,7 +281,9 @@ export async function confirmRosterResolution(
     const scoped = await loadScopedRosterCandidates(input.assignmentId, input.programId);
     if (!scoped.success) return scoped;
     const selectableUserIds = new Set(
-      scoped.data.candidates.filter((candidate) => candidate.selectable).map((candidate) => candidate.userId)
+      scoped.data.candidates
+        .filter((candidate) => candidate.selectable)
+        .map((candidate) => candidate.userId)
     );
     return processConfirmationRows(input, selectableUserIds, actorId);
   } catch (error) {
@@ -364,6 +364,32 @@ function activeSectionError() {
     success: false as const,
     error: "Student is already active in another section for this Course and Academic Period.",
   };
+}
+async function includeStudentInOpenEvaluation(
+  tx: Prisma.TransactionClient,
+  assignment: WriteAssignment,
+  studentUserId: string
+) {
+  const now = new Date();
+  const evaluation = assignment.course_bound_evaluations.find(
+    (candidate) =>
+      candidate.published_at !== null &&
+      (candidate.status === DeploymentStatus.ACTIVE ||
+        candidate.status === DeploymentStatus.SCHEDULED) &&
+      (candidate.deadline_at === null || candidate.deadline_at >= now)
+  );
+  if (!evaluation) return false;
+
+  const existingAssignment = await tx.evaluationAssignment.findFirst({
+    where: { course_bound_id: evaluation.id, respondent_id: studentUserId },
+    select: { id: true },
+  });
+  if (existingAssignment) return false;
+
+  await tx.evaluationAssignment.create({
+    data: { course_bound_id: evaluation.id, respondent_id: studentUserId },
+  });
+  return true;
 }
 
 async function uniqueMembershipError(
@@ -452,9 +478,15 @@ export async function addRosterMembership(
           where: { id: existing.id },
           data: { is_active: true, updated_by: session.userId, removed_by: null, removed_at: null },
         });
+        const included = await includeStudentInOpenEvaluation(tx, assignment, student.id);
         return {
           success: true,
-          data: { outcome: "RESTORED", message: "Student membership restored." },
+          data: {
+            outcome: "RESTORED",
+            message: included
+              ? "Student membership restored and added to the open evaluation."
+              : "Student membership restored.",
+          },
         };
       }
 
@@ -469,16 +501,19 @@ export async function addRosterMembership(
           updated_by: session.userId,
         },
       });
+      const included = await includeStudentInOpenEvaluation(tx, assignment, student.id);
       return {
         success: true,
-        data: { outcome: "CREATED", message: "Student added to Course roster." },
+        data: {
+          outcome: "CREATED",
+          message: included
+            ? "Student added to the Course roster and the open evaluation."
+            : "Student added to Course roster.",
+        },
       };
     });
   } catch (error) {
     if (isUniqueError(error)) return uniqueMembershipError(assignmentId, studentUserId);
-    if (isPublishedLockError(error)) {
-      return { success: false, error: mutabilityMessages.PUBLISHED_EVALUATION_LOCK };
-    }
     return unexpectedRosterFailure("add_membership", actorId, assignmentId, error);
   }
 }
@@ -548,16 +583,23 @@ export async function restoreRosterMembership(
         where: { id: membership.id },
         data: { is_active: true, updated_by: session.userId, removed_by: null, removed_at: null },
       });
+      const included = await includeStudentInOpenEvaluation(
+        tx,
+        assignment,
+        membership.student_user_id
+      );
       return {
         success: true,
-        data: { outcome: "RESTORED", message: "Student membership restored." },
+        data: {
+          outcome: "RESTORED",
+          message: included
+            ? "Student membership restored and added to the open evaluation."
+            : "Student membership restored.",
+        },
       };
     });
   } catch (error) {
     if (isUniqueError(error)) return uniqueMembershipError(assignmentId, studentUserId);
-    if (isPublishedLockError(error)) {
-      return { success: false, error: mutabilityMessages.PUBLISHED_EVALUATION_LOCK };
-    }
     return unexpectedRosterFailure("restore_membership", actorId, assignmentId, error);
   }
 }
@@ -610,9 +652,6 @@ export async function removeRosterMembership(
       };
     });
   } catch (error) {
-    if (isPublishedLockError(error)) {
-      return { success: false, error: mutabilityMessages.PUBLISHED_EVALUATION_LOCK };
-    }
     return unexpectedRosterFailure("remove_membership", actorId, assignmentId, error);
   }
 }
